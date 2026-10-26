@@ -1,0 +1,11 @@
+<!doctype html><head><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
+S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return s.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};
+S.key=function(i){var a=[];for(var j=0;j<this.length;j++){var y=k.call(this,j);if(y&&y.indexOf(P)===0)a.push(y.slice(P.length))}return a[i]===undefined?null:a[i]};
+S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script><meta charset="utf-8"><script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script></head><body><script type="module">
+// 발 보폭: 걷기/달리기 동안 발뼈의 앞뒤(z) 범위 → 맞는 이동 속도 = 보폭×2/주기
+import * as THREE from 'three'; import { load, spawn } from './src/assets.js';
+const q = new URLSearchParams(location.search), id = q.get('id'), clip = q.get('clip') || 'run'; await load(id); const c = spawn(id); const mx = new THREE.AnimationMixer(c.root); const cl = c.clips[clip]; mx.clipAction(cl).play();
+const feet = []; c.root.traverse(b => { if (b.isBone && /foot$/i.test(b.name)) feet.push(b); }); const res = {};
+for (const f of feet) { let sum = 0, prev = null, n = 0; for (let t = 0; t <= cl.duration; t += 0.01) { mx.setTime(t); c.root.updateMatrixWorld(true); const p = new THREE.Vector3().setFromMatrixPosition(f.matrixWorld); if (prev) { sum += Math.abs(p.z - prev.z); n++; } prev = p; } res[f.name] = Math.round(sum / (n * 0.01)); }
+const v = Object.values(res); window.info = { dur: +cl.duration.toFixed(2), feet: res, speed: Math.round(v.reduce((a, b) => a + b, 0) / v.length) }; window.done = 1;
+</script></body>
