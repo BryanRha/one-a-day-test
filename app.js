@@ -1,13 +1,14 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.63.1';
-import * as R from './rules.js?v=0.63.1';
-import * as I from './install.js?v=0.63.1';
+import { PLANNED } from './catalog.js?v=0.64.0';
+import * as R from './rules.js?v=0.64.0';
+import * as I from './install.js?v=0.64.0';
+import * as T from './track.js?v=0.64.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.63.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.64.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.63.1';
+const VERSION = '0.64.0';
 let tab = 'today', timer = null;
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -22,6 +23,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 // ── 탭 ─────────────────────────────────────────────
 const RENDER = { today: renderToday, library: renderLibrary, collection: renderCollection, settings: renderSettings };
 function go(t) {
+  if (tab !== t) T.track('tab', { tab: t });
   tab = t;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   clearInterval(timer);
@@ -110,6 +112,7 @@ async function fortuneDetail() {
     <p class="sdfoot">명리학(사주팔자) 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요. 특정인을 단정하지 않아요. 입력 정보는 이 기기에만 저장돼요.</p>
     <div class="sdbtns"><button class="sdbtn ghost" data-fortune-edit>내 정보 고치기</button><button class="sdbtn" data-sd-close>닫기</button></div></div>`;
   document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
+  T.track('fortune_view', { ch: f.ch, score: f.total });
 }
 function birthFields(v, who) {
   const opt = (a, b, x) => Array.from({ length: b - a + 1 }, (_, i) => a + i).map(n => `<option ${n === x ? 'selected' : ''}>${n}</option>`).join('');
@@ -124,7 +127,7 @@ async function partnerForm() {
   const m = await ft(); const p = m.loadPartner() || { sex: 'm' };
   sdClose(); openSheet(`<form class="fform sdform" id="pForm"><h2>그 사람의 사주를 내놔라</h2><p class="fsub">애인·배우자·썸 상대의 생년월일. 시간까지 알면 더 정확하다. 이 기기에만 저장돼요.</p>${birthFields(p, '그 사람')}<div class="stack"><button class="sdbtn" type="submit">바람기 사주 무료 미리보기</button></div></form>`);
   $('#sheet .panel').classList.add('sdpanel');
-  $('#pForm').onsubmit = async e => { e.preventDefault(); const v = readBirth(new FormData(e.target)); try { const me = m.loadMe(); await m.cheatingPreview(me, v); m.savePartner(v); } catch { toast('날짜를 다시 확인해 주세요'); return; } closeSheet(); cheatingPage(); };
+  $('#pForm').onsubmit = async e => { e.preventDefault(); const v = readBirth(new FormData(e.target)); try { const me = m.loadMe(); await m.cheatingPreview(me, v); m.savePartner(v); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('partner_form', { hour: v.h == null ? 0 : 1 }); closeSheet(); cheatingPage(); };
 }
 async function cheatingPage() {
   const m = await ft(), me = m.loadMe(), pt = m.loadPartner(); const rp = await m.cheatingPreview(me, pt), PR = m.PAID[0];
@@ -144,6 +147,7 @@ async function cheatingPage() {
     <p class="sdfoot">사주 원국의 경향을 풀이한 것으로 특정인의 실제 행동을 단정하지 않아요. 재미로 참고해 주세요. 두 사람 정보는 이 기기에만 저장돼요.</p>
     <div class="sdbtns"><button class="sdbtn ghost" data-paid="cheating">그 사람 정보 고치기</button><button class="sdbtn" data-sd-close>닫기</button></div></div>`;
   document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
+  T.track('paywall_view', { product: 'cheating', score: rp.score, level: rp.grade.level });
 }
 function fortuneForm() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ } me ||= { name: '', y: 1995, m: 1, d: 1, cal: 'solar', sex: 'f', h: null, mi: 0, lon: 126.98 };
@@ -157,7 +161,7 @@ function fortuneForm() {
     <div class="stack"><button class="sdbtn" type="submit">오늘의 신점 보기</button>${localStorage.getItem('oad_fortune_me') ? '<button class="btn ghost small" type="button" data-fortune-del>내 정보 지우기</button>' : ''}</div></form>`);
   $('#fForm').onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target), n = k => fd.get(k) === '' || fd.get(k) == null ? null : Number(fd.get(k));
     const v = { name: String(fd.get('name')).trim().slice(0, 10) || '나', y: n('y'), m: n('m'), d: n('d'), h: n('h'), mi: n('h') == null ? 0 : n('mi'), cal: fd.get('cal'), leap: !!fd.get('leap'), lon: n('lon') || null, sex: fd.get('sex') };
-    try { const m = await ft(); m.myChart(v); m.saveMe(v); } catch { toast('날짜를 다시 확인해 주세요'); return; } closeSheet(); go('today'); setTimeout(fortuneDetail, 200); };
+    try { const m = await ft(); m.myChart(v); m.saveMe(v); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('fortune_form', { hour: v.h == null ? 0 : 1 }); closeSheet(); go('today'); setTimeout(fortuneDetail, 200); };
   $('#sheet .panel').classList.add('sdpanel'); }
 
 // 홈 화면 추가 배너 (설치 전 · 오늘 닫지 않았을 때)
@@ -252,11 +256,12 @@ function detail(id) {
 
 function watchAd(id) {
   let left = R.RULES.adSeconds;
+  T.track('ad_view', { game: id });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
     <div class="stack"><button class="btn" id="adok" disabled>보상 받기</button></div></div>`);
   const iv = setInterval(() => {
     left--; const c = $('#adc'); if (c) c.textContent = left;
-    if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => { R.unlockByAd(id); closeSheet(); toast(`${G(id).title} 열림!`); play(id); }; } }
+    if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => { T.track('ad_done', { game: id }); R.unlockByAd(id); closeSheet(); toast(`${G(id).title} 열림!`); play(id); }; } }
   }, 1000);
 }
 
@@ -272,10 +277,12 @@ function intro() {
 // ── 게임 실행 ──────────────────────────────────────
 // 게임 화면(iframe)은 열 때마다 새로 만들고 닫을 때 지움 → 방문 기록이 쌓이지 않고, 소리·메모리도 깨끗이 정리됨
 const player = $('#player');
-let frame = null;
+let frame = null, playing = null;
 function play(id) {
   if (!R.canPlay(id)) return detail(id);
   closeSheet();
+  playing = { id, t: Date.now() };
+  T.track('game_start', { game: id, how: R.access(id), today: R.gameOn(R.dayIndex()) === id ? 1 : 0 });
   R.recordPlay(id);
   // 게임용 기록 여러 칸을 '누른 순간', 게임 화면(iframe)을 넣기 '전에' 만들어 둠
   //   · 폰 크롬은 터치 없이 만든 기록을 뒤로가기 때 건너뛰어 앱이 꺼짐 → 터치 순간에 미리 쌓고, 하나씩 씀
@@ -285,11 +292,14 @@ function play(id) {
   frame.id = 'frame'; frame.title = G(id).title; frame.allow = 'autoplay; fullscreen; vibrate';
   frame.src = `${G(id).path}${G(id).path.includes('?') ? '&' : '?'}v=${VERSION}`;
   player.prepend(frame);
+  // 게임 안 오류도 함께 기록 (같은 주소라 직접 들을 수 있음)
+  frame.addEventListener('load', () => { try { const w = frame && frame.contentWindow; if (!w) return; w.addEventListener('error', e => T.trackError('game:' + id, e.error || e.message)); w.addEventListener('unhandledrejection', e => T.trackError('game:' + id, e.reason)); } catch { /* 다른 주소면 건너뜀 */ } });
   player.hidden = false;
   document.body.style.overflow = 'hidden';
   watch();
 }
 function closeGame() {
+  if (playing) { T.track('game_end', { game: playing.id, sec: Math.round((Date.now() - playing.t) / 1000) }); playing = null; }
   player.hidden = true;
   if (frame) { frame.remove(); frame = null; }
   document.body.style.overflow = '';
@@ -327,6 +337,8 @@ addEventListener('message', e => {
   const d = e.data; if (!d || player.hidden) return;
   if (d.type === 'oad:exit') exitGame();
   else if (d.type === 'oad:ready') backReady = !!d.back;
+  else if (d.type === 'oad:error' && playing) T.trackError('game:' + playing.id, d.msg);
+  else if (d.type === 'oad:track' && playing && typeof d.name === 'string') T.track('g_' + d.name.slice(0, 20), { game: playing.id, ...(d.p && typeof d.p === 'object' ? d.p : {}) });
   else if (d.type === 'oad:back-result' && backWait) { clearTimeout(backWait); backWait = null; if (d.handled) { watch(); rearm(); } else leaveGame(); }
 });
 
@@ -336,8 +348,8 @@ document.addEventListener('click', e => {
   if (!t) return;
   const d = t.dataset;
   if ('sdClose' in d) { if (sdOpen) history.back(); else sdClose(); }
-  else if (d.paid) d.paid === 'cheating' ? partnerForm() : toast('곧 열려요 · 지금은 바람기 사주만 미리보기 돼요');
-  else if ('buy' in d) toast('결제는 테스트 서버 연결 후 열려요');
+  else if (d.paid) (T.track('paid_click', { product: d.paid }), d.paid === 'cheating') ? partnerForm() : toast('곧 열려요 · 지금은 바람기 사주만 미리보기 돼요');
+  else if ('buy' in d) T.track('buy_click', { product: d.buy }), toast('결제는 테스트 서버 연결 후 열려요');
   else if ('fortune' in d) fortuneDetail();
   else if ('fortuneEdit' in d) fortuneForm();
   else if ('fortuneDel' in d) { localStorage.removeItem('oad_fortune_me'); closeSheet(); go('today'); toast('사주 정보를 지웠어요'); }
@@ -373,7 +385,8 @@ async function checkUpdate() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
 setTimeout(checkUpdate, 1500);
 document.addEventListener('oad:installable', () => { if (tab === 'today' || tab === 'settings') go(tab); });
-document.addEventListener('oad:installed', () => { toast('홈 화면에 추가됐어요!'); go(tab); });
+document.addEventListener('oad:installed', () => { T.track('installed'); toast('홈 화면에 추가됐어요!'); go(tab); });
+T.start(VERSION);
 go('today');
 if (!R.state().intro) setTimeout(intro, 400);
 window.__oad = { R, go, play };
