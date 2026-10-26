@@ -208,3 +208,10 @@ h1, h2, h3, .jua { font-family: 'Jua', sans-serif; font-weight: 400; margin: 0; 
 .rsec small { color: var(--sgold); font-size: 11px; letter-spacing: 2px; } .rsec.lock { opacity: .9; } .rsec.lock h3 { color: var(--paper2); }
 .paywall { margin: 6px 16px 16px; padding: 18px; border-radius: 18px; text-align: center; background: linear-gradient(160deg, #3a0d16, #1a0b0e); border: 1px solid var(--blood2); box-shadow: 0 0 30px -8px rgba(224,36,64,.6); }
 .paywall b { font: 900 22px serif; color: var(--paper); } .paywall p { color: var(--paper2); font-size: 13px; margin: 6px 0 12px; } .paywall small { display: block; margin-top: 8px; font-size: 11px; color: var(--paper2); }
+/* 결제 확인 */
+.paysheet .payrow{display:flex;justify-content:space-between;align-items:center;background:#ffffff10;border-radius:12px;padding:14px 16px;margin:14px 0;font-size:15px}
+.paysheet .payrow b{font-size:20px}
+.paysheet .paynote{font-size:12px;color:var(--sub);line-height:1.6;margin:0 0 12px}
+.paysheet .paynote a{color:var(--text)}
+.btnlink{color:var(--text);text-decoration:none;border-radius:12px;padding:8px 12px;background:rgba(255,255,255,.1);font:14px 'Jua';white-space:nowrap}
+.group button,.group .btnlink{white-space:nowrap;flex:none}

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
+S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return s.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};
+S.key=function(i){var a=[];for(var j=0;j<this.length;j++){var y=k.call(this,j);if(y&&y.indexOf(P)===0)a.push(y.slice(P.length))}return a[i]===undefined?null:a[i]};
+S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14102E">
+<title>One a Day · 약관 및 정책</title>
+<style>
+:root{--bg:#14102E;--card:#221A4A;--text:#F6F2FF;--sub:#B9AEE0;--line:rgba(255,255,255,.1);--gold:#FFC93C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+.back{display:inline-block;color:var(--sub);text-decoration:none;margin-bottom:10px}
+nav{position:sticky;top:0;background:var(--bg);display:flex;gap:6px;padding:10px 0;z-index:2;border-bottom:1px solid var(--line);overflow-x:auto}
+nav a{color:var(--sub);text-decoration:none;padding:6px 12px;border-radius:99px;border:1px solid var(--line);white-space:nowrap;font-size:14px}
+nav a:hover{color:var(--text)}
+h1{font-size:24px;margin:28px 0 4px}
+h2{font-size:17px;margin:26px 0 6px;color:var(--gold)}
+p,li{color:#E3DDF7}
+ol,ul{padding-left:20px}
+.meta{color:var(--sub);font-size:13px}
+.box{background:var(--card);border-radius:12px;padding:14px 16px;margin:12px 0;font-size:14px}
+.todo{color:#FFB37A}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:500}
+section{scroll-margin-top:60px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="./">← One a Day 로 돌아가기</a>
+<nav><a href="#terms">이용약관</a><a href="#privacy">개인정보처리방침</a><a href="#refund">결제·환불</a><a href="#biz">사업자 정보</a></nav>
+
+<section id="terms">
+<h1>이용약관</h1>
+<p class="meta">시행일: <span class="todo">[서비스 시작일]</span></p>
+<h2>제1조 (목적)</h2>
+<p>이 약관은 <span class="todo">[회사명]</span>(이하 "회사")가 제공하는 One a Day 서비스(게임, 오늘의 운세, 유료 운세 풀이 등, 이하 "서비스")의 이용 조건과 절차, 회사와 이용자의 권리·의무를 정합니다.</p>
+<h2>제2조 (서비스 내용)</h2>
+<ol><li>매일 공개되는 게임과 게임 라이브러리</li><li>생년월일시를 바탕으로 한 오늘의 운세(무료)</li><li>결제 후 제공되는 운세 상세 풀이(유료 디지털 콘텐츠)</li><li>광고 시청 보상 등 부가 기능</li></ol>
+<h2>제3조 (운세 콘텐츠의 성격)</h2>
+<p>운세 풀이는 명리학(사주팔자) 등 전통 이론의 규칙으로 계산한 <b>오락·참고용 콘텐츠</b>입니다. 특정인의 실제 행동이나 미래를 단정하지 않으며, 의학·법률·재정적 판단의 근거가 될 수 없습니다. 이용자는 다른 사람의 정보를 입력할 때 그 사람을 비방하거나 해치는 목적으로 쓰지 않아야 합니다.</p>
+<h2>제4조 (이용자의 의무)</h2>
+<ol><li>타인의 결제 수단을 쓰거나 서비스를 부정한 방법으로 이용하지 않습니다.</li><li>서비스의 콘텐츠를 무단으로 복제·배포·판매하지 않습니다.</li><li>서비스 운영을 방해하는 행위(자동화된 대량 요청, 보안 우회 등)를 하지 않습니다.</li></ol>
+<h2>제5조 (서비스 변경·중단)</h2>
+<p>회사는 운영상·기술상 필요한 경우 서비스의 일부를 변경하거나 중단할 수 있으며, 이용자에게 중대한 영향이 있으면 미리 서비스 화면에 알립니다. 유료로 구매한 풀이를 더 이상 제공할 수 없게 되면 제공하지 못한 부분에 대해 환불합니다.</p>
+<h2>제6조 (책임의 제한)</h2>
+<p>회사는 천재지변, 이용자의 기기·네트워크 문제 등 회사의 책임이 없는 사유로 생긴 손해에 대해 책임지지 않습니다. 운세 내용을 근거로 한 이용자의 결정과 그 결과에 대해서는 책임지지 않습니다.</p>
+<h2>제7조 (분쟁 해결)</h2>
+<p>서비스 이용과 관련한 분쟁은 대한민국 법을 따르며, 관할 법원은 민사소송법에 따릅니다.</p>
+</section>
+
+<section id="privacy">
+<h1>개인정보처리방침</h1>
+<p class="meta">시행일: <span class="todo">[서비스 시작일]</span></p>
+<div class="box">요약 — <b>이름·생년월일·태어난 시는 이 기기에만 저장</b>되고, 서버로 보내는 건 유료 풀이를 만들 때 한 번뿐이며 저장하지 않아요. 이용 통계는 이름 없이 무작위 기기 번호로만 모아요.</div>
+<h2>1. 처리하는 정보와 목적</h2>
+<table>
+<tr><th>정보</th><th>목적</th><th>보관</th></tr>
+<tr><td>이름(별명), 생년월일, 태어난 시·장소, 성별 (본인·상대)</td><td>운세 계산</td><td>이용자 기기(브라우저)에만 저장 · 이용자가 직접 삭제 가능</td></tr>
+<tr><td>위 정보 (유료 풀이 요청 시)</td><td>결제한 풀이 생성</td><td>서버에서 풀이를 만든 즉시 폐기 · 저장하지 않음</td></tr>
+<tr><td>무작위 기기 번호, 이용 기록(방문·게임·화면 이동·오류), 유입 경로, 기기 종류, 국가</td><td>서비스 개선·통계·오류 수정</td><td>수집일로부터 2년</td></tr>
+<tr><td>주문번호, 상품, 금액, 결제 시각·수단 종류</td><td>결제·환불 처리, 법정 기록</td><td>전자상거래법에 따라 5년</td></tr>
+</table>
+<p>카드번호 등 결제 정보는 결제대행사(토스페이먼츠)가 직접 처리하며 회사는 받지 않습니다.</p>
+<h2>2. 제3자 제공·처리 위탁</h2>
+<table>
+<tr><th>받는 곳</th><th>내용</th></tr>
+<tr><td>(주)토스페이먼츠</td><td>결제 처리</td></tr>
+<tr><td>Vercel Inc. (미국)</td><td>서버 운영 (서울 지역 처리)</td></tr>
+<tr><td>Supabase Inc. (미국)</td><td>데이터베이스 운영 (서울 지역 저장)</td></tr>
+<tr><td>Anthropic PBC (미국)</td><td>운영 통계 분석 — 개인을 알아볼 수 없는 집계 숫자만 전달</td></tr>
+</table>
+<h2>3. 이용자의 권리</h2>
+<ol><li>설정 → 「이용 기록 보내지 않기」로 통계 수집을 언제든 끌 수 있습니다.</li><li>운세 입력 정보는 운세 화면의 「내 정보 지우기」로 바로 삭제됩니다.</li><li>그 밖의 열람·정정·삭제 요청은 아래 개인정보 보호책임자에게 연락해 주세요.</li></ol>
+<h2>4. 만 14세 미만</h2>
+<p>유료 서비스는 만 14세 이상만 이용할 수 있습니다.</p>
+<h2>5. 개인정보 보호책임자</h2>
+<p><span class="todo">[이름 · 이메일 · 전화]</span></p>
+</section>
+
+<section id="refund">
+<h1>결제·환불 규정</h1>
+<h2>1. 상품</h2>
+<p>유료 운세 풀이는 결제 즉시 화면에 제공되는 디지털 콘텐츠입니다. 한 번 결제하면 같은 두 사람(같은 입력 정보)의 풀이를 이 기기에서 계속 다시 볼 수 있습니다.</p>
+<h2>2. 청약철회(환불)</h2>
+<ol>
+<li>전자상거래법 제17조 제2항에 따라, 결제 후 풀이가 화면에 제공되면 디지털 콘텐츠 제공이 시작된 것으로 보아 <b>단순 변심에 의한 환불은 제한</b>됩니다. 결제 화면에서 이를 미리 알립니다.</li>
+<li>다음의 경우에는 전액 환불합니다.
+  <ul><li>결제했으나 오류로 풀이를 받지 못한 경우</li><li>같은 풀이를 실수로 두 번 이상 결제한 경우 (중복분)</li><li>제공된 풀이가 안내된 내용과 현저히 다른 경우</li></ul></li>
+<li>환불 요청: 고객센터로 주문번호와 함께 연락해 주세요. 확인 후 3영업일 안에 결제 수단으로 취소해 드립니다.</li>
+</ol>
+<h2>3. 미성년자</h2>
+<p>미성년자가 법정대리인의 동의 없이 결제한 경우 법정대리인이 취소할 수 있습니다.</p>
+</section>
+
+<section id="biz">
+<h1>사업자 정보</h1>
+<div class="box">
+상호 <span class="todo">[회사명]</span> · 대표 <span class="todo">[대표자]</span><br>
+사업자등록번호 <span class="todo">[000-00-00000]</span> · 통신판매업 신고 <span class="todo">[제0000-○○-0000호]</span><br>
+주소 <span class="todo">[주소]</span><br>
+고객센터 <span class="todo">[전화]</span> · <span class="todo">[이메일]</span>
+</div>
+</section>
+</div>
+</body>
+</html>

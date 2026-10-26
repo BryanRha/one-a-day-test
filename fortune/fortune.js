@@ -95,5 +95,5 @@ export const ELEMENT_NAME = ELEMENT_KO;
 const PKEY = 'oad_fortune_partner';
 export const loadPartner = () => { try { return JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch { return null; } };
 export const savePartner = p => localStorage.setItem(PKEY, JSON.stringify(p));
-const toInput = p => ({ name: p.name, gender: p.sex === 'm' ? 'male' : 'female', year: p.y, month: p.m, day: p.d, hour: p.h ?? undefined, minute: p.mi ?? 0, calendar: p.cal || 'solar', isLeapMonth: !!p.leap, longitude: p.lon || undefined });
+export const toInput = p => ({ name: p.name, gender: p.sex === 'm' ? 'male' : 'female', year: p.y, month: p.m, day: p.d, hour: p.h ?? undefined, minute: p.mi ?? 0, calendar: p.cal || 'solar', isLeapMonth: !!p.leap, longitude: p.lon || undefined });
 export async function cheatingPreview(me, partner) { const { buildCheatingReport } = await import('./saju.min.js'); return buildCheatingReport(toInput(me), toInput(partner), false); }

@@ -1,14 +1,15 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.64.0';
-import * as R from './rules.js?v=0.64.0';
-import * as I from './install.js?v=0.64.0';
-import * as T from './track.js?v=0.64.0';
+import { PLANNED } from './catalog.js?v=0.65.0';
+import * as R from './rules.js?v=0.65.0';
+import * as I from './install.js?v=0.65.0';
+import * as T from './track.js?v=0.65.0';
+import * as P from './pay.js?v=0.65.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.64.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.65.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.64.0';
+const VERSION = '0.65.0';
 let tab = 'today', timer = null;
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -130,24 +131,48 @@ async function partnerForm() {
   $('#pForm').onsubmit = async e => { e.preventDefault(); const v = readBirth(new FormData(e.target)); try { const me = m.loadMe(); await m.cheatingPreview(me, v); m.savePartner(v); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('partner_form', { hour: v.h == null ? 0 : 1 }); closeSheet(); cheatingPage(); };
 }
 async function cheatingPage() {
-  const m = await ft(), me = m.loadMe(), pt = m.loadPartner(); const rp = await m.cheatingPreview(me, pt), PR = m.PAID[0];
+  const m = await ft(), me = m.loadMe(), pt = m.loadPartner(), PR = m.PAID[0];
+  let rp = await m.cheatingPreview(me, pt), paid = false;
+  // 이 두 사람을 결제했으면 서버에서 전체 풀이를 받아 옴 (유료 본문은 이 앱 코드에 없음)
+  const rc = P.ON && P.receiptFor('cheating', m.toInput(me), m.toInput(pt));
+  if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
   const lvlCol = ['#6EDC8A', '#F2C14E', '#FF8A3C', '#E02440'][rp.grade.level];
-  const sec = s => s.free ? `<section class="rsec"><small>${s.chapter}</small><h3>${s.title}</h3>${s.body.map(x => `<p>${x}</p>`).join('')}</section>`
+  const sec = s => s.free || (paid && s.body) ? `<section class="rsec"><small>${s.chapter}</small><h3>${s.title}</h3>${s.body.map(x => `<p>${x}</p>`).join('')}</section>`
     : `<section class="rsec lock"><small>${s.chapter} · 🔒</small><h3>${s.title}</h3><p class="blur">${pt.name}의 사주 원국에서 이 부분은 가장 민감하게 드러난다. 특히 ██월과 ██월 사이에 흐름이 바뀌는데 그 이유는 일지와 ████이 부딪치기 때문이다. 이 시기에는 연락 패턴이 달라지고 ███한 핑계가 늘어난다.</p></section>`;
   const el = document.createElement('div'); el.id = 'sd'; el.innerHTML = `<div class="sdpage">
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
-    <div class="sdhero"><img src="fortune/char/heukryeon.webp" alt=""><div class="sdheroin"><div class="sdtag">흑련낭자의 바람기 사주 · 무료 미리보기</div><h1>${pt.name},<br><em>바람피울 사주</em>인가?</h1>
+    <div class="sdhero"><img src="fortune/char/heukryeon.webp" alt=""><div class="sdheroin"><div class="sdtag">흑련낭자의 바람기 사주 · ${paid ? '전체 풀이 · 결제 완료' : '무료 미리보기'}</div><h1>${pt.name},<br><em>바람피울 사주</em>인가?</h1>
       <div class="gauge"><div class="gv" style="--p:${rp.score};--c:${lvlCol}"><b>${rp.score}</b><small>바람기 지수</small></div><div class="gl" style="color:${lvlCol}">${rp.grade.label}</div></div></div><span class="seal lg">黑蓮</span></div>
     <section><blockquote>“${rp.grade.summary}”</blockquote>${rp.factors.length ? `<div class="factors">${rp.factors.map(f => `<span>${f.label}</span>`).join('')}</div>` : ''}</section>
     ${rp.sections.filter(s => s.free).map(sec).join('')}
-    <div class="paywall"><b>여기서부터 진짜다.</b><p>남은 ${rp.sections.filter(s => !s.free).length}개 풀이 — 지금 다른 사람이 있을 가능성 · 가장 위험한 시기 · 거짓말할 때 드러나는 신호 · 관계를 지키는 현실 전략</p>
-      <button class="sdbtn" data-buy="cheating">전체 풀이 열기 · ${won(PR.price)}</button><small>한 번 결제하면 이 두 사람 풀이는 계속 볼 수 있어요</small></div>
+    ${paid ? '' : `<div class="paywall"><b>여기서부터 진짜다.</b><p>남은 ${rp.sections.filter(s => !s.free).length}개 풀이 — 지금 다른 사람이 있을 가능성 · 가장 위험한 시기 · 거짓말할 때 드러나는 신호 · 관계를 지키는 현실 전략</p>
+      <button class="sdbtn" data-buy="cheating">전체 풀이 열기 · ${won(PR.price)}</button><small>한 번 결제하면 이 두 사람 풀이는 계속 볼 수 있어요</small></div>`}
     ${rp.sections.filter(s => !s.free).map(sec).join('')}
-    <div class="paywall"><button class="sdbtn" data-buy="cheating">🔓 ${won(PR.price)}에 전부 열기</button></div>
+    ${paid ? '' : `<div class="paywall"><button class="sdbtn" data-buy="cheating">🔓 ${won(PR.price)}에 전부 열기</button></div>`}
     <p class="sdfoot">사주 원국의 경향을 풀이한 것으로 특정인의 실제 행동을 단정하지 않아요. 재미로 참고해 주세요. 두 사람 정보는 이 기기에만 저장돼요.</p>
     <div class="sdbtns"><button class="sdbtn ghost" data-paid="cheating">그 사람 정보 고치기</button><button class="sdbtn" data-sd-close>닫기</button></div></div>`;
   document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
-  T.track('paywall_view', { product: 'cheating', score: rp.score, level: rp.grade.level });
+  T.track(paid ? 'report_view' : 'paywall_view', { product: 'cheating', score: rp.score, level: rp.grade.level });
+}
+// 결제: 토스 키가 있으면 토스 결제창, 테스트 서버는 모의 결제, 그 밖에는 '곧 열려요'
+async function buy(product) {
+  const c = await P.config();
+  if (c.mode === 'off') return toast('결제는 곧 열려요 · 조금만 기다려 주세요');
+  const m = await ft(), me = m.toInput(m.loadMe()), pt = m.toInput(m.loadPartner()), PR = m.PAID.find(p => p.id === product);
+  let o; try { o = await P.order(product, me, pt); } catch (e) { return toast(e.message); }
+  if (c.mode === 'toss') { try { await P.toss(o, me, pt); } catch { toast('결제창을 열지 못했어요'); } return; }
+  sdClose();
+  openSheet(`<div class="intro paysheet"><h2>🔓 ${PR.title} 전체 풀이</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
+    <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div>
+    <p class="paynote">결제 후 풀이가 바로 제공되어 단순 변심 환불은 제한돼요 (오류 · 중복 결제는 전액 환불). <a href="legal.html#refund" target="_blank">결제·환불 규정</a> · <a href="legal.html#terms" target="_blank">이용약관</a></p>
+    <div class="stack"><button class="sdbtn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" id="payCancel">취소</button></div></div>`);
+  $('#sheet .panel').classList.add('sdpanel');
+  $('#payCancel').onclick = () => { closeSheet(); cheatingPage(); };
+  $('#mockPay').onclick = async e => {
+    const b = e.target; b.disabled = true; b.textContent = '결제 중…';
+    try { await P.confirm(o, 'mock_' + Date.now(), o.amount, me, pt); closeSheet(); toast('결제 완료! 전체 풀이가 열렸어요'); cheatingPage(); }
+    catch (er) { toast(er.message); b.disabled = false; b.textContent = '동의하고 테스트로 결제하기'; }
+  };
 }
 function fortuneForm() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ } me ||= { name: '', y: 1995, m: 1, d: 1, cal: 'solar', sex: 'f', h: null, mi: 0, lon: 126.98 };
@@ -220,6 +245,11 @@ function renderSettings() {
       <div><span>홈 화면에 추가</span>${I.installed() ? '<span class="badge open">추가됨</span>' : '<button data-install>추가하기</button>'}</div>
       <div><span>이용 방법 다시 보기</span><button data-intro>보기</button></div>
       <div><span>버전</span><span class="badge">v${VERSION}</span></div>
+    </div>
+    <div class="group">
+      <div><span>이용 기록 보내지 않기<br><small style="color:var(--mute)">이름 없는 통계만 모아요 · 끄면 서비스 개선에 쓰지 않아요</small></span><button data-track-off>${T.optedOut() ? '켜기' : '끄기'}</button></div>
+      <div><span>이용약관 · 개인정보처리방침</span><a class="btnlink" href="legal.html">보기</a></div>
+      <div><span>결제 · 환불 규정</span><a class="btnlink" href="legal.html#refund">보기</a></div>
     </div>
     <div class="group">
       <div><span>테스트: 날짜 이동 <span class="badge">${s.dayOffset >= 0 ? '+' : ''}${s.dayOffset}일</span></span><span><button data-day="-1">‹ 하루 전</button> <button data-day="1">하루 뒤 ›</button></span></div>
@@ -344,12 +374,13 @@ addEventListener('message', e => {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if ('sdClose' in d) { if (sdOpen) history.back(); else sdClose(); }
+  if ('trackOff' in d) { T.setOptOut(!T.optedOut()); go('settings'); toast(T.optedOut() ? '이용 기록을 보내지 않아요' : '이용 기록 보내기를 다시 켰어요'); }
+  else if ('sdClose' in d) { if (sdOpen) history.back(); else sdClose(); }
   else if (d.paid) (T.track('paid_click', { product: d.paid }), d.paid === 'cheating') ? partnerForm() : toast('곧 열려요 · 지금은 바람기 사주만 미리보기 돼요');
-  else if ('buy' in d) T.track('buy_click', { product: d.buy }), toast('결제는 테스트 서버 연결 후 열려요');
+  else if ('buy' in d) { T.track('buy_click', { product: d.buy }); buy(d.buy); }
   else if ('fortune' in d) fortuneDetail();
   else if ('fortuneEdit' in d) fortuneForm();
   else if ('fortuneDel' in d) { localStorage.removeItem('oad_fortune_me'); closeSheet(); go('today'); toast('사주 정보를 지웠어요'); }
@@ -387,6 +418,8 @@ setTimeout(checkUpdate, 1500);
 document.addEventListener('oad:installable', () => { if (tab === 'today' || tab === 'settings') go(tab); });
 document.addEventListener('oad:installed', () => { T.track('installed'); toast('홈 화면에 추가됐어요!'); go(tab); });
 T.start(VERSION);
+// 토스 결제창에서 돌아온 경우
+P.resume().then(r => { if (!r) return; if (r.ok) { toast('결제 완료! 전체 풀이가 열렸어요'); cheatingPage(); } else toast(r.msg); });
 go('today');
 if (!R.state().intro) setTimeout(intro, 400);
 window.__oad = { R, go, play };

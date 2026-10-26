@@ -3,7 +3,8 @@
 //   모아서 5초마다 · 화면을 떠날 때 한 번에 보냄 → 게임 성능에 영향 없음
 
 const HOST = location.hostname;
-const ON = /(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app') || (() => { try { return localStorage.getItem('oad_track') === '1'; } catch { return false; } })();
+const OFF = (() => { try { return localStorage.getItem('oad_track_off') === '1'; } catch { return false; } })();
+const ON = !OFF && (/(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app') || (() => { try { return localStorage.getItem('oad_track') === '1'; } catch { return false; } })());
 const URL_EV = '/api/ev';
 const MAX_Q = 200;
 
@@ -81,3 +82,6 @@ export function start(version) {
 }
 
 export const enabled = ON;
+// 설정의 「이용 기록 보내지 않기」 — 바꾼 뒤 다음 접속부터 적용, 지금 쌓인 것도 버림
+export const optedOut = () => { try { return localStorage.getItem('oad_track_off') === '1'; } catch { return false; } };
+export function setOptOut(off) { try { if (off) { localStorage.setItem('oad_track_off', '1'); q.length = 0; } else localStorage.removeItem('oad_track_off'); } catch { /* 저장 불가 */ } }
