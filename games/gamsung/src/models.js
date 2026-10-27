@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.67.2';
+import { BRAND } from './data.js?v=0.67.3';
 
 const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -78,14 +78,27 @@ export function room(sc, theme = {}) {
   for (let i = 0; i < 4; i++) { const b = cyl(9, 22, 170, 0x8E6038, 0, 0, 0, tree, 10); b.position.set(Math.cos(i * 1.57 + 0.4) * 40, 250, Math.sin(i * 1.57 + 0.4) * 40); b.rotation.set(Math.sin(i * 1.57 + 0.4) * 0.9, 0, -Math.cos(i * 1.57 + 0.4) * 0.9); }
   /* 서예 (고정, 뒷벽): 「이 한잔으로 마음을 달랠 수만 있다면」 */
   callig(sc, '이한잔으로/마음을/달랠수만/있다면', -620, 285, -D / 2 + 18, 0, 120, 200);
-  /* 바 카운터 · 뒤 선반 · 메뉴판 */
-  box(820, 105, 120, 0xEFE6D8, 100, 0, -480, sc); box(840, 12, 136, C.wood, 100, 105, -480, sc); box(820, 30, 10, C.woodL, 100, 20, -418, sc);
-  for (const y of [170, 235]) box(700, 8, 50, C.wood, 140, y, -670, sc);
-  for (let i = 0; i < 9; i++) cyl(10, 10, 26, [0xF2EBE0, 0xE8D8C4, 0xFFFFFF][i % 3], -150 + i * 70, 178, -668, sc, 10);
-  for (let i = 0; i < 7; i++) box(34, 40, 30, [0xD8C8B0, 0xB8946A, 0xE8DCCB][i % 3], -120 + i * 80, 243, -668, sc);
+  /* 제작 공간: 타일 바닥 · 뒷벽 작업대(머신 · 오븐) · 선반 · 메뉴판 */
+  const tt = cvTex(128, 128, x => { x.fillStyle = '#E8E2D8'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#CFC6B8'; x.lineWidth = 3; for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32, 128); x.stroke(); x.beginPath(); x.moveTo(0, i * 32); x.lineTo(128, i * 32); x.stroke(); } });
+  tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(10, 1.6); mesh(new THREE.BoxGeometry(W - 30, 2, 200), new THREE.MeshToonMaterial({ map: tt, gradientMap: gm }), 15, 1, -D / 2 + 115, sc).castShadow = false;
+  box(840, 95, 90, 0xEFE6D8, 90, 0, -625, sc); box(856, 12, 100, C.wood, 90, 95, -625, sc); box(840, 22, 6, C.woodL, 90, 18, -578, sc);
+  for (const y of [190, 252]) box(560, 8, 44, C.wood, -50, y, -672, sc);
+  for (let i = 0; i < 8; i++) cyl(10, 10, 26, [0xF2EBE0, 0xE8D8C4, 0xFFFFFF][i % 3], -300 + i * 70, 198, -670, sc, 10);
+  for (let i = 0; i < 6; i++) box(34, 40, 30, [0xD8C8B0, 0xB8946A, 0xE8DCCB][i % 3], -280 + i * 90, 260, -670, sc);
   for (let i = 0; i < 3; i++) { box(80, 120, 8, 0x6B4A30, 300 + i * 95, 175, -D / 2 + 20, sc); box(64, 96, 2, 0x3B3028, 300 + i * 95, 187, -D / 2 + 25, sc); for (let k = 0; k < 4; k++) box(44 - k * 4, 3, 1, 0xF4ECDD, 300 + i * 95, 270 - k * 20, -D / 2 + 26.5, sc); }
-  /* 바 위 펜던트 조명 */
-  for (const x of [-200, 100, 400]) { cyl(1.5, 1.5, 80, C.ink, x, 260, -480, sc, 6); cyl(28, 8, 24, 0xE8C48A, x, 240, -480, sc, 14); const l = new THREE.PointLight(0xFFC77A, 9000, 460, 2); l.position.set(x, 220, -470); sc.add(l); }
+  /* 경계: 낮은 나무 칸막이 + 화분 (손님 쪽과 제작 공간을 나눔) */
+  for (const [cx0, w] of [[-190, 300], [470, 180]]) { box(w, 88, 30, C.woodD, cx0, 0, -455, sc); box(w + 10, 8, 40, C.wood, cx0, 88, -455, sc); }
+  for (const x of [-300, -190, -80, 430, 520]) { cyl(16, 13, 22, C.pot, x, 96, -455, sc, 10); sph(20, x % 3 ? C.leaf : C.leaf2, x, 128, -455, sc, 10, 8); }
+  /* 받는 공간: 픽업대 + 「PICK UP」 간판 */
+  box(380, 105, 100, 0xEFE6D8, 150, 0, -455, sc); box(396, 12, 112, C.wood, 150, 105, -455, sc); box(380, 14, 6, C.woodD, 150, 18, -403, sc);
+  const pk = new THREE.Group(); pk.position.set(150, 0, -455); sc.add(pk);
+  /* 「PICK UP」 은 픽업대 앞면에 (뒤쪽 머신을 가리지 않음) */
+  const draw = x => { x.fillStyle = '#A92E2B'; x.fillRect(0, 0, 512, 80); x.fillStyle = '#F6EFE4'; x.textAlign = 'center'; x.font = '900 46px P, sans-serif'; x.fillText('PICK UP', 200, 56); x.font = '700 34px "Gowun Batang", serif'; x.fillText('픽업', 410, 54); };
+  const pt = cvTex(512, 80, draw); const pl = new THREE.Mesh(new THREE.PlaneGeometry(330, 52), new THREE.MeshBasicMaterial({ map: pt })); pl.position.set(0, 66, 51); pk.add(pl);
+  document.fonts && document.fonts.ready.then(() => { draw(pt.image.getContext('2d')); pt.needsUpdate = true; });
+  /* 조명: 픽업대 위 펜던트 · 작업대 위 은은하게 */
+  for (const x of [60, 240]) { cyl(1.5, 1.5, 80, C.ink, x, 250, -455, sc, 6); cyl(28, 8, 24, 0xE8C48A, x, 230, -455, sc, 14); const l = new THREE.PointLight(0xFFC77A, 9000, 460, 2); l.position.set(x, 210, -445); sc.add(l); }
+  for (const x of [-200, 100]) { const l = new THREE.PointLight(0xFFE2BC, 5000, 420, 2); l.position.set(x, 260, -600); sc.add(l); }
 }
 export function callig(p, txt, x, y, z, ry, w = 110, h = 180, poem = false) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; p.add(g); box(w + 12, h + 12, 6, C.woodD, 0, -h / 2 - 6, 0, g);
