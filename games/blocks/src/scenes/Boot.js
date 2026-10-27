@@ -1,9 +1,10 @@
-// 로딩 + 코드로 그리는 그림들: 블록 스킨 5종 × 7색 · 보석 3종 · 배경 테마 · 아이콘
-import { W, H, TITLE } from '../config.js?v=0.73.1';
-import { SFX } from '../audio.js?v=0.73.1';
-import { makeTextures } from '../fx.js?v=0.73.1';
-import { makeIcons } from '../pui.js?v=0.73.1';
-import { load } from '../save.js?v=0.73.1';
+// 로딩 + 코드로 그리는 그림들: 블록 스킨 7종 × 7색 · 보석 3종 · 배경 테마 · 아이콘
+import { W, H, TITLE } from '../config.js?v=0.73.2';
+import { SFX } from '../audio.js?v=0.73.2';
+import { makeTextures } from '../fx.js?v=0.73.2';
+import { makeIcons } from '../pui.js?v=0.73.2';
+import { load } from '../save.js?v=0.73.2';
+import { helloOnce, effSkin } from '../bmflow.js?v=0.73.2';
 
 // 블록 색: [기본, 밝은 면, 어두운 면]
 export const PALETTE = [
@@ -49,6 +50,32 @@ function drawBlock(g, S, [base, light, dark], skin) {
     rr(g, p, p, s, s, r); g.fillStyle = dark; g.fill();
     rr(g, p, p, s, s * 0.94, r); g.fillStyle = base; g.fill();
     rr(g, p + s * 0.08, p + s * 0.08, s * 0.84, s * 0.76, r * 0.7); const gi = g.createLinearGradient(0, p, 0, p + s); gi.addColorStop(0, 'rgba(255,255,255,0.16)'); gi.addColorStop(1, 'rgba(0,0,0,0.08)'); g.fillStyle = gi; g.fill();
+    g.restore(); return;
+  }
+  if (skin === 'aurora') {
+    /* 오로라: 깊은 밤색 몸체 + 아래에서 번지는 제 색 빛 + 청록→보라 빛띠 + 얇은 빛 테두리 */
+    rr(g, p, p, s, s, r); g.fillStyle = '#0A1030'; g.fill();
+    g.save(); rr(g, p, p, s, s, r); g.clip();
+    const rg = g.createRadialGradient(p + s * 0.3, p + s * 0.95, 0, p + s * 0.3, p + s * 0.95, s * 1.05); rg.addColorStop(0, light); rg.addColorStop(0.45, base); rg.addColorStop(1, 'rgba(10,16,48,0)');
+    g.globalAlpha = 0.95; g.fillStyle = rg; g.fillRect(p, p, s, s);
+    const band = g.createLinearGradient(p, p + s * 0.2, p + s, p + s * 0.55); band.addColorStop(0, 'rgba(90,255,210,0)'); band.addColorStop(0.35, 'rgba(90,255,210,0.55)'); band.addColorStop(0.7, 'rgba(190,120,255,0.45)'); band.addColorStop(1, 'rgba(190,120,255,0)');
+    g.globalAlpha = 1; g.fillStyle = band; g.beginPath(); g.moveTo(p, p + s * 0.38); g.bezierCurveTo(p + s * 0.35, p + s * 0.12, p + s * 0.65, p + s * 0.5, p + s, p + s * 0.22); g.lineTo(p + s, p + s * 0.42); g.bezierCurveTo(p + s * 0.65, p + s * 0.7, p + s * 0.35, p + s * 0.32, p, p + s * 0.58); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.9)'; [[0.22, 0.2, 0.022], [0.72, 0.14, 0.016], [0.84, 0.7, 0.014]].forEach(([x, y, k]) => { g.beginPath(); g.arc(p + s * x, p + s * y, S * k, 0, Math.PI * 2); g.fill(); });
+    g.restore();
+    rr(g, p + 2, p + 2, s - 4, s - 4, r); g.lineWidth = S * 0.035; g.strokeStyle = light; g.globalAlpha = 0.85; g.stroke(); g.globalAlpha = 1;
+    g.restore(); return;
+  }
+  if (skin === 'prism') {
+    /* 프리즘: 가운데로 모이는 네 면(크리스탈 컷) + 무지개 빛줄기 + 가운데 반짝임 */
+    const cx = p + s / 2, cy = p + s / 2, tri = (ax, ay, bx, by, col, a = 1) => { g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.lineTo(cx, cy); g.closePath(); g.globalAlpha = a; g.fillStyle = col; g.fill(); g.globalAlpha = 1; };
+    g.save(); rr(g, p, p, s, s, r); g.clip();
+    tri(p, p, p + s, p, light); tri(p + s, p, p + s, p + s, base); tri(p + s, p + s, p, p + s, dark); tri(p, p + s, p, p, base, 0.8);
+    const rb = g.createLinearGradient(p, p + s, p + s, p); ['#FF5C7A', '#FFB347', '#FFF27A', '#7CFFB2', '#6FD3FF', '#9C8CFF', '#FF7AE0'].forEach((c, k) => rb.addColorStop(k / 6, c));
+    g.globalAlpha = 0.5; g.fillStyle = rb; g.beginPath(); g.moveTo(p + s * 0.05, p + s); g.lineTo(p + s * 0.62, p); g.lineTo(p + s * 0.84, p); g.lineTo(p + s * 0.27, p + s); g.closePath(); g.fill(); g.globalAlpha = 1;
+    g.restore();
+    g.beginPath(); g.moveTo(cx, cy - s * 0.16); g.lineTo(cx + s * 0.05, cy); g.lineTo(cx, cy + s * 0.16); g.lineTo(cx - s * 0.05, cy); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.95)'; g.fill();
+    g.beginPath(); g.moveTo(cx - s * 0.16, cy); g.lineTo(cx, cy - s * 0.05); g.lineTo(cx + s * 0.16, cy); g.lineTo(cx, cy + s * 0.05); g.closePath(); g.fill();
+    rr(g, p + 1, p + 1, s - 2, s - 2, r); g.lineWidth = S * 0.03; g.strokeStyle = 'rgba(255,255,255,0.8)'; g.stroke();
     g.restore(); return;
   }
   if (skin === 'gold') { base = '#E8B54A'; light = '#FFF0B8'; dark = '#8A5F12'; }
@@ -145,10 +172,13 @@ export class BootScene extends Phaser.Scene {
     makeTextures(this);
     makeIcons(this);
     makeThemeTextures(this);
-    makeBlockTextures(this, load().skin);
     const m = this.cache.json.get('manifest');
     for (const [n, s] of Object.entries(m.sheets)) this.anims.create({ key: n, frames: this.anims.generateFrameNumbers(n, { start: 0, end: s.frames - 1 }), frameRate: s.fps, repeat: 0 });
     const q = new URLSearchParams(location.search);
-    this.scene.start(q.has('play') ? 'Play' : q.has('adv') ? 'Adventure' : 'Home');
+    /* 원어데이 전용 스킨은 hello 결과로 열림 판단 (최대 0.8초 · 밖이면 바로) */
+    helloOnce().then(() => {
+      makeBlockTextures(this, effSkin());
+      this.scene.start(q.has('play') ? 'Play' : q.has('adv') ? 'Adventure' : 'Home');
+    });
   }
 }

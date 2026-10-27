@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.73.1';
-import * as R from './rules.js?v=0.73.1';
-import * as I from './install.js?v=0.73.1';
-import * as T from './track.js?v=0.73.1';
-import * as P from './pay.js?v=0.73.1';
-import * as A from './account.js?v=0.73.1';
-import * as C from './cloud.js?v=0.73.1';
-import * as BM from './bm.js?v=0.73.1';
+import { PLANNED } from './catalog.js?v=0.73.2';
+import * as R from './rules.js?v=0.73.2';
+import * as I from './install.js?v=0.73.2';
+import * as T from './track.js?v=0.73.2';
+import * as P from './pay.js?v=0.73.2';
+import * as A from './account.js?v=0.73.2';
+import * as C from './cloud.js?v=0.73.2';
+import * as BM from './bm.js?v=0.73.2';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.73.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.73.2').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.73.1';
+const VERSION = '0.73.2';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -574,7 +574,7 @@ async function gameReq(gid, d) {
     const sb = $('#bmShop'); if (sb) sb.onclick = () => { onSheetClose = () => done({ ok: false, reason: 'short' }); shop(); };
     const ub = $('#bmUse'); if (ub) ub.onclick = async () => {
       ub.disabled = true; ub.textContent = '쓰는 중…';
-      try { const r = await A.call({ act: 'use', game: gid, item, ref }); onSheetClose = null; closeSheet(); T.track('bm_use', { game: gid, item, gold: x.gold }); done({ ok: true, ref, gold: r.gold && r.gold.total }); }
+      try { const r = await A.call({ act: 'use', game: gid, item, ref }); onSheetClose = null; closeSheet(); T.track('bm_use', { game: gid, item, gold: x.gold }); done({ ok: true, ref, gold: r.gold && r.gold.total }); if (x.kind === 'item') A.refresh(); }
       catch (e) { onSheetClose = null; closeSheet(); toast(e.message); done({ ok: false, reason: e.reason || (e.short ? 'short' : 'error') }); }
     };
     return;

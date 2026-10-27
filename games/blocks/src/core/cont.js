@@ -54,6 +54,11 @@ export function contOffer(st, used, info) {
   return gold ? { kind: 'second', gold, h } : null;
 }
 
+// 클래식 판 끝 기본 별 조각 (점수 구간 · 작게 — 근거는 tools/starsim.js)
+//   2,000점 미만 1 · 6,000 미만 2 · 15,000 미만 3 · 그 이상 4  → 어떤 판이든 1개 이상이라 '별 2배'가 매 판 뜰 수 있음
+export const STAR_BANDS = [[15000, 4], [6000, 3], [2000, 2], [0, 1]];
+export function roundStars(score) { for (const [min, n] of STAR_BANDS) if (score >= min) return n; return 1; }
+
 // 별 조각 2배 버튼을 보여 줄지 (판에서 받은 별이 있고 · 원어데이 안 · 광고 남음 · 하루 3번)
 export function canDouble(stars, info, usedToday) {
   return stars > 0 && !!info && !!info.ok && !!(info.ads && info.ads.reward) && usedToday < DOUBLE_PER_DAY;

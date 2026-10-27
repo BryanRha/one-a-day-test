@@ -29,7 +29,7 @@ function ask(fn, args, ms) {
 }
 let wallet = 999;
 function fake(fn, args) {
-  if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: { continue: 20, continue2: 40, walk: 5, gems100: 100, energy: 25 }, items: [], ads: { reward: true, rewardLeft: 5, inter: false } };
+  if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: { continue: 20, continue2: 40, walk: 5, gems100: 100, energy: 25, outfit: 300, skin: 250 }, items: [], ads: { reward: true, rewardLeft: 5, inter: false } };
   if (fn === 'spend') { const p = (cache && cache.prices[args[0]]) || 20; if (wallet < p) return { ok: false, reason: 'short' }; wallet -= p; return { ok: true, gold: wallet }; }
   if (fn === 'rewardedAd') return { ok: true, via: 'test' };
   return { ok: true, shown: false };

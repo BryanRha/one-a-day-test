@@ -1,6 +1,6 @@
 // 진행·재방문 장치: 연속 출석 · 오늘의 미션 · 어드벤처 시즌(주간 96레벨 그림) · 블록 스킨 · 기록
-import { load, save } from './save.js?v=0.73.1';
-import { seasonInfo, SEASON_LEVELS } from './core/levels.js?v=0.73.1';
+import { load, save } from './save.js?v=0.73.2';
+import { seasonInfo, SEASON_LEVELS } from './core/levels.js?v=0.73.2';
 
 export const PICS = 10;   // 주간 그림 수 (assets season_0~9, 주마다 돌아감)
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -13,6 +13,9 @@ export const SKINS = [
   { id: 'neon', name: '네온', cost: 240, desc: '어둠 속에 빛나는 선' },
   { id: 'matte', name: '매트', cost: 360, desc: '차분한 무광 세라믹' },
   { id: 'gold', name: '골드', cost: 800, desc: '모든 블록이 금빛으로' },
+  /* 원어데이 전용 (밖에서는 숨김): owner = 소장하면 무료 · sku = 골드 상품 (서버 SHOP.blocks.skin) */
+  { id: 'aurora', name: '오로라', cost: 0, owner: true, desc: '밤하늘에 번지는 빛' },
+  { id: 'prism', name: '프리즘', cost: 0, sku: 'skin', desc: '빛을 일곱 갈래로 쪼개는 크리스탈' },
 ];
 
 // ── 오늘의 미션 (매일 3개) ──

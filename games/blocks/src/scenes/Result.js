@@ -1,12 +1,12 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.73.1';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.73.1';
-import { audio } from '../audio.js?v=0.73.1';
-import { load } from '../save.js?v=0.73.1';
-import * as M from '../meta.js?v=0.73.1';
-import { bm } from '../oad_bm.js?v=0.73.1';
-import { canDouble } from '../core/cont.js?v=0.73.1';
-import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.73.1';
+import { W, H } from '../config.js?v=0.73.2';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.73.2';
+import { audio } from '../audio.js?v=0.73.2';
+import { load } from '../save.js?v=0.73.2';
+import * as M from '../meta.js?v=0.73.2';
+import { bm } from '../oad_bm.js?v=0.73.2';
+import { canDouble } from '../core/cont.js?v=0.73.2';
+import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.73.2';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -43,8 +43,8 @@ export class ResultScene extends Phaser.Scene {
         else { db.setEnabled(true); if (res && res.reason === 'limit') { toast(this, '오늘 광고 보상을 다 받았어요', C.sub); db.setEnabled(false); } }
       }, { style: 'indigo', icon: own ? 'i_star' : 'i_film', size: 34 });
       dbl = db; window.__dbl = db;
-    }
-    const by = Math.min(H - 150, cy + 420 + (dbl ? 75 : 0));
+    } else if (r.stars) T(this, W / 2, cy + 345, `★ +${r.stars} 별 조각`, 36, C.gold, { w: 800 });
+    const by = Math.min(H - 150, cy + 420 + (dbl || r.stars ? 75 : 0));
     btn(this, W / 2 + 90, by, 560, 140, '다시 하기', () => this.go('Play', { mode: 'classic' }), { style: 'gold', icon: 'i_retry', size: 46 });
     iconBtn(this, W / 2 - 300, by - 4, 'i_home', () => this.go('Home'), 130);
     this.cameras.main.fadeIn(260, 8, 10, 24);

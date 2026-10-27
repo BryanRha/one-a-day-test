@@ -1,13 +1,14 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.73.1';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.73.1';
-import { audio } from '../audio.js?v=0.73.1';
-import { load, save, reset } from '../save.js?v=0.73.1';
-import { CATS } from '../core/run.js?v=0.73.1';
-import * as M from '../meta.js?v=0.73.1';
-import { wind, ELEMENT } from '../fx.js?v=0.73.1';
-import { WITCHES } from '../core/run.js?v=0.73.1';
-import { bm } from '../oad_bm.js?v=0.73.1';
+import { W, H } from '../config.js?v=0.73.2';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.73.2';
+import { audio } from '../audio.js?v=0.73.2';
+import { load, save, reset } from '../save.js?v=0.73.2';
+import { CATS } from '../core/run.js?v=0.73.2';
+import * as M from '../meta.js?v=0.73.2';
+import { wind, ELEMENT } from '../fx.js?v=0.73.2';
+import { WITCHES } from '../core/run.js?v=0.73.2';
+import { bm } from '../oad_bm.js?v=0.73.2';
+import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.73.2';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -34,6 +35,10 @@ export class LobbyScene extends Phaser.Scene {
     this.btn.cats = iconButton(this, W - 95, ly + gap, 'ico_cat', () => this.catsPopup(), 140, { label: '고양이' });
     this.btn.shop = iconButton(this, W - 95, ly + gap * 2, 'ico_shop', () => this.shopPopup(), 140, { label: '상점' });
     iconButton(this, W - 95, ly + gap * 3, 'ico_settings', () => this.settingsPopup(), 120);
+    /* 의상 (원어데이 안에서만 — 인사가 끝나면 나타남) */
+    this.btn.outfit = iconButton(this, 95, ly + gap * 3, 'ico_hat', () => this.outfitPopup(), 140, { label: '의상' }).setVisible(false);
+    this.ofx = null; this.ofxId = null;
+    bm.hello().then(() => { if (this.sys.isActive()) { this.btn.outfit.setVisible(outfitShown()); this.refresh(); } });
 
     // 무대: 마녀 + 고양이
     const cy = Math.min(H * 0.38, 760);
@@ -123,7 +128,8 @@ export class LobbyScene extends Phaser.Scene {
     this.bar.refresh();
     this.title.setText(info.title);
     this.name.setText(info.name);
-    this.witch.setTexture(`witch_${id}_portrait`).setTint(lv ? 0xFFFFFF : 0x2A2050);
+    this.witch.setTexture(lv ? outfitKey(this, `witch_${id}_portrait`) : `witch_${id}_portrait`).setTint(lv ? 0xFFFFFF : 0x2A2050);
+    this.stageOutfit(lv ? activeOutfit() : null);
     this.lock.setVisible(!lv);
     this.glow.setTint(info.color); this.rays.setTint(info.color);
     const E = ELEMENT[WITCHES[id].element];
@@ -275,6 +281,50 @@ export class LobbyScene extends Phaser.Scene {
     // 스크롤 위치를 유지한 채 다시 그림
     const redraw = () => { scrollY = pop.area ? pop.area.y : null; draw(); this.refresh(); };
     draw();
+  }
+
+  // 무대 위 의상 장식 (후광 · 가루) — 의상이 바뀔 때만 다시 만듦
+  stageOutfit(id) {
+    if (this.ofxId === id) return;
+    if (this.ofx) this.ofx.destroy();
+    this.ofx = id ? outfitFx(this, id, 1.5) : null; this.ofxId = id;
+    if (this.ofx) { this.ofx.setPos(W / 2, this.stageY + 20); this.children.moveBelow(this.ofx.halo, this.witch); this.children.moveBelow(this.ofx.dust, this.witch); }
+  }
+
+  // 의상 (겉모습만 · 능력치 없음): 기본 · 달빛 예복(소장자 전용) · 황금 별자리(🪙300)
+  outfitPopup() {
+    const pop = popup(this, '의상', 1180, { onClose: () => this.refresh() });
+    let busy = false;
+    const draw = () => pop.redraw(b => {
+      const d = load(), cur = activeOutfit(), wid = d.witch;
+      const list = [null, ...OUTFIT_ORDER];
+      list.forEach((id, i) => {
+        const x = -290 + i * 290, y = -110;
+        const o = id ? OUTFITS[id] : { name: '기본', desc: '처음 모습' };
+        const open = !id || outfitUnlocked(id), on = cur === id;
+        b.add(this.add.nineslice(x, y, 'card', null, 275, 620, 50, 50, 50, 50).setTint(on ? 0xFFE8A8 : 0xFFFFFF));
+        if (id) { const fx = outfitFx(this, id, 0.55); fx.setPos(x, y - 120); b.add([fx.halo, fx.dust]); }
+        const pt = fit(this.add.image(x, y - 120, open ? outfitKey(this, `witch_${wid}_portrait`, id) : `witch_${wid}_portrait`), 250);
+        if (!open && id) pt.setTint(0x6A5A9A);
+        b.add(pt);
+        b.add(txt(this, x, y + 60, o.name, 38, '#FFFFFF'));
+        b.add(txt(this, x, y + 120, o.desc, 26, '#D8CCFF', { wrap: 240 }));
+        const by = y + 235;
+        if (on) b.add(txt(this, x, by, '입는 중', 36, '#FFE14D'));
+        else if (open) b.add(button(this, x, by, '입기', () => { wear(id); audio.play('sfx_upgrade'); draw(); this.refresh(); }, { key: 'btn_purple', w: 220, h: 100, size: 36 }));
+        else if (o.how === 'owner') b.add(txt(this, x, by, '소장하면\n열려요', 30, '#FFC0E0'));
+        else if (bm.price(o.sku) > 0) b.add(button(this, x, by, `🪙 ${fmt(bm.price(o.sku))}`, async () => {
+          if (busy) return; busy = true;
+          const r = await buyGold(); busy = false;
+          if (r.ok) { audio.play('sfx_record'); toast(this, `${o.name} 열렸어요!`, '#FFE14D'); draw(); this.refresh(); }
+          else { const m = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요', login: '로그인하면 쓸 수 있어요' }[r.reason]; if (m) toast(this, m); }
+        }, { key: 'btn_gold', w: 230, h: 100, size: 36 }));
+        else b.add(txt(this, x, by, '준비 중', 30, '#B8A6F0'));
+      });
+      b.add(txt(this, 0, 400, '의상은 겉모습만 바뀌어요 · 모든 마녀에게 어울려요', 30, '#B8A6F0'));
+    });
+    draw();
+    window.__outfitPop = pop;
   }
 
   // 산책 바로 끝내기 (원어데이): 광고 보고 | 🪙5 — 같은 크기 나란히 · 쓸 수 있는 게 없으면 줄을 만들지 않음 (반환: 차지한 높이)

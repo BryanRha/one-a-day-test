@@ -2,9 +2,9 @@
 // 원화 결제(PROVIDER): 지금은 꺼짐(enabled=false) → 원어데이 밖에선 '곧 열려요', 원어데이 안에선 골드 상품으로 대체
 // 원어데이 안(oad_bm hello().ok): 광고 자리 3곳(energy · bubble · dailyBonus) = bm.rewardedAd · 골드 = bm.spend (가격은 서버 SHOP.beauty 만 기준)
 //   소장자는 rewardedAd 가 via:'owner' 로 광고 없이 바로 성공 · 원어데이 밖에선 광고 · 골드 버튼을 숨기고 지금처럼
-import { load, save } from './save.js?v=0.73.1';
-import { bm } from './oad_bm.js?v=0.73.1';
-import { today } from './state.js?v=0.73.1';
+import { load, save } from './save.js?v=0.73.2';
+import { bm } from './oad_bm.js?v=0.73.2';
+import { today } from './state.js?v=0.73.2';
 
 export const PRODUCTS = [
   { id: 'gems_s', n: '보석 한 줌', price: 1200, gems: 80, tag: '' },
@@ -47,11 +47,15 @@ export function grant(p) {
   save();
 }
 // ── 원어데이 연결 (게임 시작 때 initBM 한 번 → 이후 화면은 캐시만 봄)
-export const initBM = () => bm.hello().catch(() => null);
+let helloP = null;
+export const initBM = () => helloP || (helloP = bm.hello().catch(() => null));
 export const oadOn = () => !!bm.info.ok;
 export const isOwner = () => !!(bm.info.ok && (bm.info.owned || bm.info.noAds));
 export const goldPrice = item => bm.price(item);            /* 0 이면 그 골드 상품 없음 */
 export const GOLD_GEMS = 100;                               /* gems100 = 보석 100개 */
+// 소장자 전용 장식 1종 (겉모습만 · 능력치 없음 · 골드 상품 아님): 원어데이 밖 'hidden' · 소장 'open' · 아니면 'locked'(소장하면 열려요)
+export const OWNER_DECO = { n: '할머니의 황금 동백함', img: 'camellia10', desc: '소장자만 가게에 둘 수 있는 황금 진열대' };
+export const ownerDeco = () => !oadOn() ? 'hidden' : bm.info.owned ? 'open' : 'locked';
 // 광고 자리별 하루 횟수 (게임 쪽 상한 · 앱의 게임당 한도와 둘 다 지킴)
 export const AD_LIMIT = { energy: 3, bubble: 3, dailyBonus: 1 };
 export const AD_ENERGY = 20;

@@ -1,15 +1,30 @@
 // 매장 (원작의 식당 꾸미기): 낡은 가게 → 할 일(코인)로 이야기 · 수리 · 디자인 3종 선택(언제든 무료 변경)
-import { W, H } from '../config.js?v=0.73.1';
-import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip } from '../ui.js?v=0.73.1';
-import { load as loadSave } from '../save.js?v=0.73.1';
-import { audio } from '../audio.js?v=0.73.1';
-import { load, save } from '../save.js?v=0.73.1';
-import { hud } from '../hud.js?v=0.73.1';
-import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.73.1';
-import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.73.1';
-import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.73.1';
-import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.73.1';
-import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.73.1';
+import { W, H } from '../config.js?v=0.73.2';
+import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip } from '../ui.js?v=0.73.2';
+import { load as loadSave } from '../save.js?v=0.73.2';
+import { audio } from '../audio.js?v=0.73.2';
+import { load, save } from '../save.js?v=0.73.2';
+import { hud } from '../hud.js?v=0.73.2';
+import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.73.2';
+import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.73.2';
+import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.73.2';
+import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.73.2';
+import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.73.2';
+import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.73.2';
+
+const OWNER_POS = [444, 1470, 150];
+// 받침 그림 (한 번만 만듦): 금 받침 · 크림 대리석 기둥(세로 홈) · 금 머리 · 진홍 벨벳
+function ownerPedestal(sc) {
+  const key = 'own_pedestal'; if (sc.textures.exists(key)) return key; const Wd = 240, Hd = 104, c = sc.textures.createCanvas(key, Wd, Hd), g = c.getContext();
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  const gold = (y0, y1) => { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, '#FFE9A8'); gr.addColorStop(0.45, '#E8B84A'); gr.addColorStop(1, '#A8742A'); return gr; };
+  rr(4, Hd - 22, Wd - 8, 20, 8); g.fillStyle = gold(Hd - 22, Hd - 2); g.fill();
+  const mb = g.createLinearGradient(30, 0, Wd - 30, 0); mb.addColorStop(0, '#FFFDF8'); mb.addColorStop(0.6, '#F6EBDD'); mb.addColorStop(1, '#E2CDB6'); g.fillStyle = mb; g.fillRect(28, 34, Wd - 56, Hd - 56);
+  for (let i = 1; i < 6; i++) { const fx = 28 + i * (Wd - 56) / 6; g.fillStyle = 'rgba(190,160,130,0.35)'; g.fillRect(fx - 2, 40, 4, Hd - 68); g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(fx + 2, 40, 2, Hd - 68); }
+  rr(14, 18, Wd - 28, 20, 8); g.fillStyle = gold(18, 38); g.fill(); g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(22, 21, Wd - 44, 3);
+  rr(34, 2, Wd - 68, 20, 10); const vv = g.createLinearGradient(0, 2, 0, 22); vv.addColorStop(0, '#E0405E'); vv.addColorStop(1, '#8E1730'); g.fillStyle = vv; g.fill();
+  c.refresh(); return key;
+}   /* 소장 장식 자리 (방 그림 좌표: x · 바닥 y · 폭) — 맨 앞 바닥, 가구보다 앞에 그림 */
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -19,7 +34,8 @@ export class HomeScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, 0xFBEFE8);
     const top = 130, bot = 380; // 방은 위 막대 밑부터 할 일 카드까지 꽉 채움 (긴 화면은 양옆이 조금 잘림)
     this.s = (H - bot + 30 - (top - 40)) / ROOM.h; this.ox = (W - ROOM.w * this.s) / 2; this.oy = top - 40;
-    this.drawRoom();
+    this.odT = null; this.drawRoom();
+    if (ownerDeco() === 'hidden') initBM().then(() => { if (this.sys.isActive() && ownerDeco() === 'open') this.drawRoom(); });   /* 원어데이 확인이 늦게 오면 그때 장식 */
     this.hud = hud(this, { left: 80 });
     // 지역 바꾸기 (원작처럼 지난 장소도 다시 볼 수 있음)
     const ay = top + 56, lt = T(this, W / 2, ay, `${this.view + 1}장 · ${this.C.n}`, 28, C.ink, { w: 900 }).setDepth(31), lg = this.add.graphics().setDepth(30); lg.fillStyle(0xFFFFFF, 0.9).fillRoundedRect(W / 2 - lt.width / 2 - 34, ay - 30, lt.width + 68, 60, 30).lineStyle(3, 0xF1C6CF, 1).strokeRoundedRect(W / 2 - lt.width / 2 - 34, ay - 30, lt.width + 68, 60, 30);
@@ -96,8 +112,20 @@ export class HomeScene extends Phaser.Scene {
   }
   // 축제 장식 (꾸미기 사다리 보상): 어느 방에서나 같은 자리
   drawDeco() { const r = this.room, show = this.d.decoShow || 'spring', pos = { garland: [512, 330, 560, true], tree: [925, 1180, 190], booth: [110, 1260, 210] };
+    this.drawOwnerDeco();
     if (show === 'off') return; const dc = (this.d.deco || []).map(decoInfo).filter(x => x.theme === show);
     for (const di of dc) { const [x, y, w, hang] = pos[di.slot], im = this.add.image(x, y, di.img).setOrigin(0.5, hang ? 0.5 : 1); im.setScale(w / im.width); if (hang) r.add(im); else r.addAt(im, 1); } }   // 바닥 장식은 가구 뒤 · 등불은 맨 위
+  // 소장자 전용 장식: 대리석 받침 + 황금 동백함 + 은은한 빛 (겉모습만) · 설정에서 끌 수 있음
+  drawOwnerDeco() {
+    this.odT?.remove(); this.odT = null; if (ownerDeco() !== 'open' || this.d.ownerDecoOff) return; const r = this.room, [x, y, w] = OWNER_POS, ph = w * 0.42;
+    const sh = this.add.ellipse(x, y - 2, w * 1.2, w * 0.16, 0x5A3020, 0.25), g = this.add.image(x, y, ownerPedestal(this)).setOrigin(0.5, 1); g.setScale(w * 1.16 / g.width);
+    const gl = this.add.image(x, y - ph - w * 0.4, 'glow').setTint(0xFFD27A).setBlendMode('ADD').setDisplaySize(w * 2.2, w * 1.9).setAlpha(0.8);
+    const im = this.add.image(x, y - g.displayHeight + w * 0.05, OWNER_DECO.img).setOrigin(0.5, 1); im.setScale(w / im.width);
+    r.add([sh, g, gl, im]); this.tweens.add({ targets: gl, alpha: 0.4, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const tw = () => { if (!im.scene) return; const s = this.add.image(x + (Math.random() - 0.5) * w, y - ph - Math.random() * w, 'spark').setTint(0xFFE9A8).setBlendMode('ADD').setScale(0).setAlpha(0.9); r.add(s); this.tweens.add({ targets: s, scale: 0.35, alpha: 0, angle: 90, duration: 900, onComplete: () => s.destroy() }); };
+    this.odT = this.time.addEvent({ delay: 1300, loop: true, callback: tw });
+    im.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 40 }).on('pointerup', () => { if (!this.busy) toast(this, `「${OWNER_DECO.n}」 · 소장해 줘서 고마워요!`, 260); });
+  }
   doTask() {
     const t = curTask(); if (!t || this.busy || this.view !== (this.d.ch || 0)) return;
     if (this.d.coins < t.cost) return toast(this, `코인이 ${t.cost - this.d.coins} 부족해요 · 작업대에서 주문을 받아요`, H - 470);
@@ -237,6 +265,12 @@ export class HomeScene extends Phaser.Scene {
     const owned = [...new Set((this.d.deco || []).map(k => decoInfo(k).theme))];
     if (owned.length) { const opts = [...owned, 'off'], nm = id => id === 'off' ? '끄기' : THEMES.find(t => t.id === id).name; p.content.add([rbox(this, 0, y, 640, 104, { fill: '#FFF4EC' }), T(this, -280, y, '가게 장식', TS.h2 - 2, C.ink, { ox: 0, w: 800 })]);
       const b = btn(this, 170, y, 260, 80, nm(this.d.decoShow || owned[0]), () => { const i = opts.indexOf(this.d.decoShow || owned[0]); this.d.decoShow = opts[(i + 1) % opts.length]; save(); b.setLabel(nm(this.d.decoShow)); this.drawRoom(); }, { style: 'cream', size: 28 }); p.content.add(b); y += 120; }
+    // 소장자 전용 장식 (원어데이 안에서만 보임)
+    const od = ownerDeco();
+    if (od !== 'hidden') { p.content.add([rbox(this, 0, y, 640, 104, { fill: od === 'open' ? '#FFF1D6' : '#F6EAF0' }), T(this, -280, y - 16, '소장 장식', TS.h2 - 2, C.ink, { ox: 0, w: 800 }), T(this, -280, y + 26, OWNER_DECO.n, TS.min, C.dim, { ox: 0, w: 800 })]);
+      if (od === 'open') { const b = btn(this, 170, y, 260, 80, this.d.ownerDecoOff ? '꺼짐' : '놓기', () => { this.d.ownerDecoOff = !this.d.ownerDecoOff; save(); b.setLabel(this.d.ownerDecoOff ? '꺼짐' : '놓기'); this.drawRoom(); }, { style: 'gold', size: 28 }); p.content.add(b); }
+      else p.content.add(T(this, 170, y, '🔒 소장하면 열려요', TS.min + 2, '#C2408A', { w: 800 }));
+      y += 120; }
     // 저장 백업: 코드로 복사 · 붙여 넣어 불러오기 (폰을 바꾸거나 기록을 지웠을 때)
     p.content.add(T(this, 0, y + 10, '기록 백업', TS.cap, C.dim, { w: 900 }));
     p.content.add(btn(this, -160, y + 90, 300, 96, '백업 코드 복사', async () => { const code = 'KB1' + btoa(unescape(encodeURIComponent(localStorage.getItem('kbeauty_v1') || ''))); try { await navigator.clipboard.writeText(code); toast(this, '백업 코드를 복사했어요 · 메모장 등에 보관해요', H / 2); } catch { window.prompt('이 코드를 복사해 보관해요', code); } }, { style: 'cream', size: 28 }));

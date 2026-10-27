@@ -1,11 +1,12 @@
 // 결과: 거리·점수(최고 기록) · 주운 재화 · 입양 진행 · 미션 진행 → 다시 날기 / 로비
-import { W, H } from '../config.js?v=0.73.1';
-import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.73.1';
-import { audio } from '../audio.js?v=0.73.1';
-import { load } from '../save.js?v=0.73.1';
-import { wind } from '../fx.js?v=0.73.1';
-import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.73.1';
-import { bm } from '../oad_bm.js?v=0.73.1';
+import { W, H } from '../config.js?v=0.73.2';
+import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.73.2';
+import { audio } from '../audio.js?v=0.73.2';
+import { load } from '../save.js?v=0.73.2';
+import { wind } from '../fx.js?v=0.73.2';
+import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.73.2';
+import { bm } from '../oad_bm.js?v=0.73.2';
+import { outfitKey } from '../outfit.js?v=0.73.2';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -36,7 +37,7 @@ export class ResultScene extends Phaser.Scene {
       }
     }
     // 마녀 초상화 + 점수
-    const pt = fit(this.add.image(W / 2 - 300, top + 300, `witch_${r.witch}_portrait`), 330); wind(pt, 1, 0.012);
+    const pt = fit(this.add.image(W / 2 - 300, top + 300, outfitKey(this, `witch_${r.witch}_portrait`)), 330); wind(pt, 1, 0.012);
     txt(this, W / 2 + 120, top + 190, '점수', 40, '#B8A6F0');
     const sc = txt(this, W / 2 + 120, top + 265, '0', 96, '#FFE14D');
     this.tweens.addCounter({ from: 0, to: r.score, duration: 900, ease: 'Cubic.easeOut', onUpdate: tw => sc.setText(fmt(tw.getValue())) });

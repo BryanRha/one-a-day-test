@@ -1,13 +1,13 @@
 // 시작: 렌더러 · 직각 투영 카메라(쿼터뷰) · 저장 불러오기 · 쉬는 동안 번 돈 · 루프
 import * as THREE from 'three';
-import { Game } from './game.js?v=0.73.1';
-import { UI, IN } from './ui.js?v=0.73.1';
-import { S, loadSave, save } from './state.js?v=0.73.1';
-import { BRANCHES, MENU } from './data.js?v=0.73.1';
-import { music, setAudio, preloadSfx } from './audio.js?v=0.73.1';
-import { installBack } from './oad.js?v=0.73.1';
+import { Game } from './game.js?v=0.73.2';
+import { UI, IN } from './ui.js?v=0.73.2';
+import { S, loadSave, save } from './state.js?v=0.73.2';
+import { BRANCHES, MENU } from './data.js?v=0.73.2';
+import { music, setAudio, preloadSfx } from './audio.js?v=0.73.2';
+import { installBack } from './oad.js?v=0.73.2';
 
-const app = {}; window.__app = app; import("./state.js?v=0.73.1").then(m => { window.__S = () => m.S; });
+const app = {}; window.__app = app; import("./state.js?v=0.73.2").then(m => { window.__S = () => m.S; });
 const canvas = document.getElementById('view');
 const r = new THREE.WebGLRenderer({ canvas, antialias: true }); r.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); r.outputColorSpace = THREE.SRGBColorSpace; r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
 const sc = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 6000);
@@ -23,7 +23,7 @@ installBack({ back: () => { if (document.querySelector('#modal').firstChild) { a
 music(S.bi % 2 ? 'shop2' : 'shop');
 let last = performance.now();
 const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('fresh')) { localStorage.removeItem('marumi_v1'); q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
-if (q.get('bot')) import('./bot.js?v=0.73.1').then(m => m.startBot(app));
+if (q.get('bot')) import('./bot.js?v=0.73.2').then(m => m.startBot(app));
 /* 한 프레임의 오류가 화면 전체를 멈추지 않게: 오류는 기록하고 그리기는 계속 · 위치가 깨지면 되돌림 */
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 실행 */ } if (localStorage.getItem('__test_env') !== null || location.pathname.includes('-test')) app.ui.toast('오류: ' + String(e && e.message || e).slice(0, 60)); };

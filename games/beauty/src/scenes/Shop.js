@@ -1,15 +1,15 @@
 // 상점: 하루 무료 선물(원어데이 안에선 광고로 2배) + 상품
 //   원어데이 안: 원화 상품 대신 원어데이 골드 상품(서버 SHOP.beauty 가격) · 원어데이 밖: 원화 상품 '곧 열려요' 그대로
-import { W, H } from '../config.js?v=0.73.1';
-import { T, R, C, TS, btn, toast, rbox } from '../ui.js?v=0.73.1';
-import { audio } from '../audio.js?v=0.73.1';
-import { load, save } from '../save.js?v=0.73.1';
-import { goPrev } from '../nav.js?v=0.73.1';
-import { screen } from '../hud.js?v=0.73.1';
-import { PRODUCTS, won, storeOpen, purchase, oadOn, goldPrice, spendGold, goldMsg, GOLD_GEMS, canAd, adLabel, rewardAd } from '../store.js?v=0.73.1';
-import { ENERGY } from '../data.js?v=0.73.1';
-import { today } from '../state.js?v=0.73.1';
-import { PIGGY } from '../album.js?v=0.73.1';
+import { W, H } from '../config.js?v=0.73.2';
+import { T, R, C, TS, btn, toast, rbox } from '../ui.js?v=0.73.2';
+import { audio } from '../audio.js?v=0.73.2';
+import { load, save } from '../save.js?v=0.73.2';
+import { goPrev } from '../nav.js?v=0.73.2';
+import { screen } from '../hud.js?v=0.73.2';
+import { PRODUCTS, won, storeOpen, purchase, oadOn, goldPrice, spendGold, goldMsg, GOLD_GEMS, canAd, adLabel, rewardAd, ownerDeco, OWNER_DECO } from '../store.js?v=0.73.2';
+import { ENERGY } from '../data.js?v=0.73.2';
+import { today } from '../state.js?v=0.73.2';
+import { PIGGY } from '../album.js?v=0.73.2';
 
 const GIFT = { gems: 5, energy: 10 };   /* 오늘의 무료 선물 (광고 보면 2배) */
 
@@ -36,6 +36,14 @@ export class ShopScene extends Phaser.Scene {
       const g1 = this.add.graphics(); g1.fillStyle(0xF1DCD3, 1).fillRoundedRect(200, y + 122, 500, 14, 7).fillStyle(0xE86A8E, 1).fillRoundedRect(200, y + 122, Math.max(14, 500 * pv / PIGGY.max), 14, 7);
       btn(this, W - 170, y + 75, 220, 92, storeOpen() ? '깨기' : '곧 열려요', async () => { if (!storeOpen()) return toast(this, '저금통은 결제가 열리면 깰 수 있어요'); if (!pv) return toast(this, '아직 비어 있어요'); try { await purchase('piggy'); audio.play('sfx_levelup', { volume: 0.7 }); this.scene.restart(); } catch { toast(this, '구매하지 못했어요'); } }, { style: storeOpen() ? 'gold' : 'cream', size: 30 }); }
     y += 190;
+    // 소장자 전용 장식 (원어데이 안에서만 · 사는 상품 아님)
+    const od = ownerDeco();
+    if (od !== 'hidden') { rbox(this, 40, y, W - 80, 150, { fill: od === 'open' ? '#FFF6E2' : '#FFFFFF', line: od === 'open' ? '#E8B84A' : '#F1D2C8', lw: od === 'open' ? 5 : 3, ox: 0, oy: 0, r: 28 });
+      const oi = this.add.image(120, y + 75, OWNER_DECO.img); oi.setScale(116 / Math.max(oi.width, oi.height)); if (od !== 'open') oi.setAlpha(0.55);
+      T(this, 200, y + 48, `소장 전용 · ${OWNER_DECO.n}`, TS.body, C.ink, { ox: 0, w: 900 }); T(this, 200, y + 100, OWNER_DECO.desc, TS.min + 2, C.dim, { ox: 0, w: 800 });
+      if (od === 'open') btn(this, W - 170, y + 75, 220, 92, '가게에 있어요', () => toast(this, '설정에서 놓기 · 끄기를 바꿀 수 있어요'), { style: 'gold', size: 28 });
+      else T(this, W - 170, y + 75, '🔒 소장하면\n열려요', TS.min + 2, '#C2408A', { w: 800, align: 'center' });
+      y += 190; }
     if (oadOn() && (goldPrice('gems100') || goldPrice('energy'))) { this.goldShop(d, y); this.cameras.main.fadeIn(200, 255, 244, 236); window.__shop = this; return; }
     T(this, 50, y, storeOpen() ? '상품' : '상품 · 곧 열려요', TS.h2, C.brown, { ox: 0, w: 900 }); y += 50;
     const list = PRODUCTS.filter(p => !p.piggy), cols = 2, cw = (W - 100) / cols, rows = Math.ceil(list.length / cols), ch = Math.max(250, Math.min(340, (H - y - 30) / rows - 20));

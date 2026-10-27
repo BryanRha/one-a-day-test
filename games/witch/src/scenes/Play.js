@@ -1,14 +1,15 @@
 // 비행 화면: core/run.js 시뮬레이션을 고정 간격으로 돌리고, 상태(s)와 사건(events)을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.73.1';
-import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.73.1';
-import { decideX } from '../core/ai.js?v=0.73.1';
-import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.73.1';
-import { audio } from '../audio.js?v=0.73.1';
-import { load, save } from '../save.js?v=0.73.1';
-import { wind, tipOf, ELEMENT } from '../fx.js?v=0.73.1';
-import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.73.1';
-import { bm } from '../oad_bm.js?v=0.73.1';
-import { inOAD, exitToOAD } from '../oad.js?v=0.73.1';
+import { W, H } from '../config.js?v=0.73.2';
+import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.73.2';
+import { decideX } from '../core/ai.js?v=0.73.2';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.73.2';
+import { audio } from '../audio.js?v=0.73.2';
+import { load, save } from '../save.js?v=0.73.2';
+import { wind, tipOf, ELEMENT } from '../fx.js?v=0.73.2';
+import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.73.2';
+import { bm } from '../oad_bm.js?v=0.73.2';
+import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.73.2';
+import { inOAD, exitToOAD } from '../oad.js?v=0.73.2';
 
 const DT = 1 / 60;
 const SHOT_KEY = { star: 'bolt_star', fire: 'bolt_fire', ice: 'bolt_ice', bolt: 'bolt_bolt', furball: 'furball' };
@@ -134,7 +135,10 @@ export class PlayScene extends Phaser.Scene {
     this.streak = this.add.particles(0, 0, 'glow', { x: { min: -140, max: 140 }, y: { min: -160, max: 160 }, speedY: { min: 500, max: 800 }, lifespan: 260, scaleX: 0.08, scaleY: { start: 1.6, end: 0.4 }, alpha: { start: 0.55, end: 0 }, frequency: 18, tint: 0xFFFFFF, blendMode: 'ADD', emitting: false });
     this.backGlow = this.add.image(0, 0, 'glow').setScale(4.2, 5).setTint(E.color).setAlpha(0.28).setBlendMode('ADD');
     const key = `witch_${s.witch}_0`;
-    this.witch = this.add.image(0, 0, key);
+    /* 의상(원어데이 · 겉모습만): 다시 칠한 원화 + 따라다니는 후광 · 가루 */
+    const of = activeOutfit();
+    this.ofx = of ? outfitFx(this, of, 0.8) : null;
+    this.witch = this.add.image(0, 0, outfitKey(this, key, of));
     this.witch.setScale(420 / this.witch.height); this.witchScale = this.witch.scale;
     this.tip = tipOf(this, key);
     wind(this.witch, 0, 0.018);
@@ -146,7 +150,7 @@ export class PlayScene extends Phaser.Scene {
     this.catSprites = s.cats.map(c => { const sp = fit(this.add.image(0, 0, `cat_${c.id}`), 140); sp.base = sp.scale; sp.jump = 0; wind(sp, 2, 0.03); return sp; });
     this.catSparks = this.add.particles(0, 0, 'spark', { lifespan: 700, speed: { min: 20, max: 80 }, scale: { start: 0.3, end: 0 }, alpha: { start: 0.9, end: 0 }, tint: [0xFFE8F4, 0xFFF6A8, 0xD8C2FF], blendMode: 'ADD', emitting: false });
     this.catCircles = s.cats.map(() => this.add.image(0, 0, 'circle').setScale(0.5).setAlpha(0).setTint(0xFF9EC4).setBlendMode('ADD'));
-    L.player.add([this.streak, this.backGlow, this.dashFx, this.trail, this.aura, ...this.catCircles, this.witch, ...this.catSprites, this.catSparks, this.tipGlow, this.tipStar, this.shieldImg]);
+    L.player.add([this.streak, this.backGlow, ...(this.ofx ? [this.ofx.halo, this.ofx.dust] : []), this.dashFx, this.trail, this.aura, ...this.catCircles, this.witch, ...this.catSprites, this.catSparks, this.tipGlow, this.tipStar, this.shieldImg]);
     this.tilt = 0; this.lastX = s.player.x;
   }
 
@@ -263,6 +267,7 @@ export class PlayScene extends Phaser.Scene {
     if (!this.over) this.witch.setPosition(p.x - (this.tip.x - 0.5) * ww + this.vn * 12, p.y - 70 - (this.tip.y - 0.5) * wh + bob - Math.abs(this.vn) * 10).setAngle(this.tilt).setScale(ws * (1 + breath - bank), ws * (1 - breath + bank * 0.4));
     this.witch.setAlpha(p.inv > 0 && s.status === 'play' ? (Math.floor(t * 14) % 2 ? 0.4 : 1) : 1);
     const wx = this.witch.x, wy = this.witch.y;
+    if (this.ofx) this.ofx.setPos(wx, wy);
     this.backGlow.setPosition(wx, wy).setAlpha(0.22 + Math.sin(t * 3) * 0.06).setVisible(!this.over);
     this.trail.setPosition(wx - this.vn * 40, wy + wh * 0.42); this.trail.emitting = !this.over;
     this.trail.speedX = { min: -60 - this.vn * 300, max: 60 - this.vn * 300 };
@@ -581,6 +586,7 @@ export class PlayScene extends Phaser.Scene {
     this.fx('sheet_boom', s.player.x, s.player.y, 1.4);
     this.tweens.add({ targets: this.witch, angle: 540, y: H + 300, duration: 1100, ease: 'Quad.easeIn' });
     this.catSprites.forEach(c => this.tweens.add({ targets: c, alpha: 0, duration: 400 }));
+    if (this.ofx) this.ofx.setVisible(false);
     this.time.delayedCall(1100, () => this.askRevive());
   }
 
@@ -680,6 +686,7 @@ export class PlayScene extends Phaser.Scene {
     this.run.revive();
     this.witch.setAngle(0).setPosition(s.player.x, s.player.y + 34);
     this.catSprites.forEach(c => c.setAlpha(1));
+    if (this.ofx) this.ofx.setVisible(true);
     audio.play('sfx_revive');
     this.fx('sheet_ring', s.player.x, s.player.y, 2);
     this.flashScreen();
