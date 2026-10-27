@@ -1,12 +1,12 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER } from './catalog.js?v=0.70.1';
+import { LAUNCH, GAMES, ORDER } from './catalog.js?v=0.71.0';
 
 export const RULES = {
-  openAll: true,            // 테스트 기간: 모든 게임 자유 플레이 (BM 확정 후 false 로 바꾸면 하루 한 게임 규칙 적용)
+  openAll: (() => { try { return localStorage.getItem('oad_strict') !== '1'; } catch { return true; } })(),   // 테스트 기간: 모든 게임 자유 플레이 · 설정의 '테스트: 하루 한 게임 규칙'을 켜면 실제 규칙
   todayFree: true,          // 오늘의 게임은 하루 종일 무료
   adUnlock: 'day',          // 광고로 연 게임: 'day' = 그날 하루 동안 / 'once' = 한 판
   adSeconds: 5,             // 테스트용 가짜 광고 길이
-  purchase: false,          // 결제(소장) 아직 미연결
+  purchase: true,           // 골드로 소장 · 하루 열기 (로그인 필요 · 서버 지갑)
 };
 
 const KEY = 'oneaday_v1';
@@ -42,6 +42,14 @@ export function access(id) {
   if (s.owned[id]) return 'owned';
   if (s.unlocks[id] === keyOf(now())) return 'unlocked';
   return 'locked';
+}
+// 계정에서 가진 것(골드로 산 것)을 이 기기 기록에 반영: own:<게임> → 소장 · day:<게임>:<날짜> → 그날 열림
+export function syncItems(skus) {
+  const s = state(); let ch = false;
+  for (const k of skus || []) { const [t, g, d] = k.split(':');
+    if (t === 'own' && GAMES[g] && !s.owned[g]) { s.owned[g] = true; ch = true; }
+    if (t === 'day' && GAMES[g] && d && s.unlocks[g] !== d) { s.unlocks[g] = d; ch = true; } }
+  if (ch) save(); return ch;
 }
 export const canPlay = id => access(id) !== 'locked';
 

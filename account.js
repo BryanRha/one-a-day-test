@@ -24,4 +24,14 @@ async function load(session) {
 /* 앱을 열 때: 로그인돼 있으면 계정 불러오기 */
 export async function init() { if (!ON) return null; const c = await client(); if (!c) return null; const { data: { session } } = await c.auth.getSession(); return session ? load(session) : null; }
 export async function login() { const c = await client(); if (!c) throw new Error('로그인은 곧 열려요'); await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/?login=1' } }); }
+/* 서버에 계정 일 시키기 (골드 쓰기 · 내역): 로그인 토큰을 붙여 /api/me 로 */
+export async function token() { const c = await client(); if (!c) return ''; const { data: { session } } = await c.auth.getSession(); return session ? session.access_token : ''; }
+export async function call(body) {
+  const t = await token(); if (!t) throw new Error('로그인이 필요해요');
+  const r = await fetch('/api/me', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || '연결에 실패했어요'), j);
+  if (me && j.gold) { me.gold = j.gold; if (j.items) me.items = j.items; emit(); }
+  return j;
+}
+export async function refresh() { const c = await client(); if (!c) return null; const { data: { session } } = await c.auth.getSession(); return session ? load(session) : null; }
 export async function logout() { const c = await client(); if (c) await c.auth.signOut(); me = null; emit(); }

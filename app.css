@@ -232,3 +232,25 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .acct.in .av { width: 44px; height: 44px; }
 .acct.in .who b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .acct.in .gold { flex: none; } .acct.in .gold b { white-space: nowrap; } .acct.in .lo { flex: none; }
+
+/* ── 골드 상점 ── */
+.acct .gold { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.goldchip { margin-left: 6px; border: 1px solid rgba(255, 200, 80, .45); background: rgba(255, 190, 60, .12); color: var(--gold); font: 14px 'Jua'; cursor: pointer; }
+.shop h2 { margin-bottom: 6px; }
+.shop .wallet { display: flex; align-items: center; gap: 10px; background: rgba(255, 190, 60, .08); border: 1px solid rgba(255, 200, 80, .3); border-radius: 14px; padding: 12px 14px; margin: 10px 0 12px; }
+.shop .wallet span { color: var(--sub); font-size: 13px; } .shop .wallet b { flex: 1; font: 22px 'Jua'; color: var(--gold); }
+.shop .lnk { border: 0; background: none; color: var(--sub); font: 13px 'Jua'; text-decoration: underline; cursor: pointer; }
+.packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pack { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 12px 6px 10px; color: var(--text); cursor: pointer; font: inherit; }
+.pack .pc { font-size: 22px; } .pack b { font: 19px 'Jua'; color: var(--gold); } .pack em { font-style: normal; font-size: 11px; color: #7EE2A8; min-height: 14px; }
+.pack .pp { margin-top: 4px; font: 14px 'Jua'; background: rgba(255, 255, 255, .08); border-radius: 8px; padding: 4px 10px; }
+.pack:active { transform: scale(.97); }
+.pack.first { width: 100%; flex-direction: row; justify-content: flex-start; gap: 10px; margin-bottom: 10px; padding: 16px 14px 14px; border-color: rgba(255, 200, 80, .6); background: linear-gradient(135deg, rgba(255, 190, 60, .18), rgba(255, 120, 160, .12)); }
+.pack.first b { font-size: 24px; } .pack.first em { flex: 1; text-align: left; font-size: 12.5px; } .pack.first .pp { margin: 0; background: var(--gold); color: #3a2400; }
+.pack.first .tag { position: absolute; top: -9px; left: 12px; background: #FF6B8B; color: #fff; font: 11px 'Jua'; border-radius: 6px; padding: 2px 8px; }
+.btn.gold { font-size: 18px; }
+.btn.gold.ghost { background: rgba(255, 190, 60, .1); color: var(--gold); border: 1px solid rgba(255, 200, 80, .45); box-shadow: none; }
+.sdbtn.gfort { margin-top: 8px; }
+.ghist { max-height: 52vh; overflow: auto; margin: 8px 0; }
+.ghist div { display: flex; align-items: center; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.ghist small { display: block; color: var(--sub); font-size: 11.5px; } .ghist b { font: 17px 'Jua'; } .ghist b.p { color: #7EE2A8; } .ghist b.m { color: #FF9AA8; }

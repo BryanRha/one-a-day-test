@@ -20,6 +20,15 @@ const receipts = () => { try { return JSON.parse(localStorage.getItem(RKEY) || '
 export function receiptFor(product, me, pt) { const k = key(me, pt); return receipts().find(r => r.product === product && r.key === k) || null; }
 function keep(r, me, pt) { const all = receipts().filter(x => !(x.product === r.product && x.key === key(me, pt))); all.push({ ...r, key: key(me, pt), at: Date.now() }); try { localStorage.setItem(RKEY, JSON.stringify(all.slice(-50))); } catch { /* 저장 불가 */ } }
 
+// 골드 묶음 주문: 로그인 토큰을 붙여 (골드는 계정 지갑에 쌓임)
+export async function orderGold(product, token) {
+  const d = localStorage.getItem('oad_did') || '';
+  const r = await fetch('/api/pay/order', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ product, d }) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || '연결에 실패했어요');
+  return { ...j, product, d };
+}
+export const confirmGold = (o, paymentKey, amount) => post('/api/pay/confirm', { orderId: o.orderId, product: o.product, pair: o.pair, d: o.d, sig: o.sig, paymentKey, amount });
+export const keepReceipt = keep;
 export function order(product, me, pt) { const d = localStorage.getItem('oad_did') || ''; return post('/api/pay/order', { product, me, partner: pt, d }).then(o => ({ ...o, product, d })); }
 
 // 결제 승인 → 영수증 보관
@@ -30,8 +39,8 @@ export async function confirm(o, paymentKey, amount, me, pt) {
 }
 
 // 토스 결제창으로 이동 (돌아오면 resume() 이 이어서 처리)
-export async function toss(o, me, pt) {
-  sessionStorage.setItem(PKEY, JSON.stringify({ o, me, pt }));
+export async function toss(o, me, pt, gold) {
+  sessionStorage.setItem(PKEY, JSON.stringify({ o, me, pt, gold: !!gold }));
   if (!window.TossPayments) await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://js.tosspayments.com/v2/standard'; s.onload = ok; s.onerror = no; document.head.append(s); });
   const tp = window.TossPayments(cfg.clientKey);
   const p = tp.payment({ customerKey: window.TossPayments.ANONYMOUS });
@@ -46,7 +55,8 @@ export async function resume() {
   sessionStorage.removeItem(PKEY);
   if (st !== 'ok') return { ok: false, msg: q.get('message') || '결제가 취소됐어요' };
   if (!pend || pend.o.orderId !== q.get('orderId')) return { ok: false, msg: '주문 정보를 찾지 못했어요. 고객센터로 문의해 주세요' };
-  try { await confirm(pend.o, q.get('paymentKey'), Number(q.get('amount')), pend.me, pend.pt); return { ok: true, product: pend.o.product }; }
+  try { if (pend.gold) { const r = await confirmGold(pend.o, q.get('paymentKey'), Number(q.get('amount'))); return { ok: true, product: pend.o.product, gold: r.gold }; }
+    await confirm(pend.o, q.get('paymentKey'), Number(q.get('amount')), pend.me, pend.pt); return { ok: true, product: pend.o.product }; }
   catch (e) { return { ok: false, msg: e.message }; }
 }
 
