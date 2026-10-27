@@ -1,11 +1,11 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX } from './data.js?v=0.67.5';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.67.5';
-import { cup } from './models.js?v=0.67.5';
-import { fmt, machineCount, storeMult, WALL_SLOTS } from './game.js?v=0.67.5';
-import { sfx, setAudio } from './audio.js?v=0.67.5';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.67.5';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX } from './data.js?v=0.67.6';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.67.6';
+import { cup } from './models.js?v=0.67.6';
+import { fmt, machineCount, storeMult, WALL_SLOTS } from './game.js?v=0.67.6';
+import { sfx, setAudio } from './audio.js?v=0.67.6';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.67.6';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_';
@@ -41,10 +41,10 @@ export class UI {
   float(t, pos, cls) { const d = document.createElement('div'); d.className = 'float ' + (cls || ''); d.textContent = t; d._p = pos.clone(); d._t = 0; this.floats.append(d); }
   toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 2000); }
   modal(html, cls = '') { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.className = 'modal ' + cls; cur.innerHTML = html; return m; }
-    m.innerHTML = `<div class="mback"><div class="modal ${cls}">${html}</div></div>`; m.firstChild.onclick = e => { if (e.target === m.firstChild) this.close(); }; this._ub = pushBack(() => { this.close(); return true; }); return m; }
+    m.innerHTML = `<div class="mback"><div class="modal ${cls}">${html}</div></div>`; const t0 = performance.now(); m.firstChild.onclick = e => { if (e.target === m.firstChild && performance.now() - t0 > 400) this.close(); };   /* 연 손가락의 클릭이 바로 닫지 않게 */ this._ub = pushBack(() => { this.close(); return true; }); return m; }
   close() { $('#modal').innerHTML = ''; this._ub && this._ub(); this._ub = null; }
   // ── 화면 위 표시: 말풍선 · 머신 시간 · 치울 잔
-  chip(key, cls) { let d = this.chips.get(key); if (!d) { d = document.createElement('div'); d.className = 'chip ' + cls; this.tags.append(d); this.chips.set(key, d); } d._seen = true; return d; }
+  chip(key, cls, act) { let d = this.chips.get(key); if (!d) { d = document.createElement('div'); d.className = 'chip ' + cls; this.tags.append(d); this.chips.set(key, d); if (act) { d.classList.add('tap'); d.addEventListener('click', e => { e.stopPropagation(); this.tap(act()); }); } } d._seen = true; return d; }   /* 머리 위 표시도 누르면 그 설비를 누른 것과 같음 */
   frame(g) {
     const cam = this.app.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3(), at = (x, y, z) => { v.set(x, y, z).project(cam); return `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px)`; };
     $('#cn').textContent = fmt(S.coins); $('#hn').textContent = fmt(S.hearts); $('#bn').textContent = fmt(S.beans); $('#beanP').classList.toggle('low', S.beans < 6);
@@ -55,11 +55,11 @@ export class UI {
       if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('story', c.state === 'story'); c.tag.classList.toggle('reg', !!c.reg); c.tag.classList.toggle('has', ST().bar[c.menu] > 0); }
     for (const d of this.chips.values()) d._seen = false;
     if (!g.deco) {
-      for (const m of g.machines) { const p = g.progress(m), d = this.chip('m' + m.key, 'mach'); d.style.transform = at(m.x, 250, m.z) + ' translate(-50%,-100%)';
+      for (const m of g.machines) { const p = g.progress(m), d = this.chip('m' + m.key, 'mach', () => ({ kind: 'machine', m })); d.style.transform = at(m.x, 250, m.z) + ' translate(-50%,-100%)';
         const html = !p ? `<span class="idle">${m.kind === 'oven' ? '🍰' : '☕'} 비었어요</span>` : p.u >= 1 ? `<img src="${pic(p.s.menu)}"><b>완성! ×${p.s.n}</b>` : `<img src="${pic(p.s.menu)}"><s><i style="width:${p.u * 100}%"></i></s><em>${mmss(p.left)}</em>`;
         if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!p && p.u >= 1); d.classList.toggle('empty', !p); }
-      { const r = g.roastState(), d = this.chip('roast', 'mach'); d.style.transform = at(g.roaster.x, 330, g.roaster.z) + ' translate(-50%,-100%)'; const html = !r ? `<span class="idle">🫘 원두 볶기</span>` : r.u >= 1 ? `<b>🫘 원두 +${r.R.beans}</b>` : `<span>🫘</span><s><i style="width:${r.u * 100}%"></i></s><em>${mmss(r.left)}</em>`; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!r && r.u >= 1); d.classList.toggle('empty', !r); }
-      for (const o of g.furn) o.seats.forEach((s, k) => { if (!s.dirty) return; const d = this.chip('d' + o.f.uid + '_' + k, 'dirty'); d.style.transform = at(s.dirty.position.x, 150, s.dirty.position.z) + ' translate(-50%,-100%)'; if (!d._h) { d.innerHTML = '✨'; d._h = 1; } });
+      { const r = g.roastState(), d = this.chip('roast', 'mach', () => ({ kind: 'roaster' })); d.style.transform = at(g.roaster.x, 330, g.roaster.z) + ' translate(-50%,-100%)'; const html = !r ? `<span class="idle">🫘 원두 볶기</span>` : r.u >= 1 ? `<b>🫘 원두 +${r.R.beans}</b>` : `<span>🫘</span><s><i style="width:${r.u * 100}%"></i></s><em>${mmss(r.left)}</em>`; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!r && r.u >= 1); d.classList.toggle('empty', !r); }
+      for (const o of g.furn) o.seats.forEach((s, k) => { if (!s.dirty) return; const d = this.chip('d' + o.f.uid + '_' + k, 'dirty', () => ({ kind: 'dirty', o, k })); d.style.transform = at(s.dirty.position.x, 150, s.dirty.position.z) + ' translate(-50%,-100%)'; if (!d._h) { d.innerHTML = '✨'; d._h = 1; } });
     }
     for (const [k, d] of this.chips) if (!d._seen) { d.remove(); this.chips.delete(k); }
     const b = g.boostUntil - now(); $('#adT').textContent = b > 0 ? mmss(Math.ceil(b / 1000)) : '손님×2'; $('#bAd').classList.toggle('on', b > 0);

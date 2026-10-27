@@ -96,3 +96,6 @@ body.decoing .bottom, body.decoing .side, body.decoing .cp, body.decoing .brand 
 #boot b { font-family: var(--serif); font-size: 34px; letter-spacing: 8px; margin-top: 14px; } #boot em { font-style: normal; font-family: var(--serif); font-size: 16px; margin-top: 6px; opacity: .9; } #boot small { margin-top: 26px; font-size: 11px; opacity: .7; letter-spacing: 1px; }
 
 .float.say { color: var(--ink); font-size: 12px; background: var(--card); border-radius: 10px; padding: 3px 9px; text-shadow: none; box-shadow: 0 2px 6px #0002; }
+
+.chip.tap { pointer-events: auto; cursor: pointer; } .chip.tap:active { scale: 0.94; }
+#tags { pointer-events: none; } #tags .chip.tap { pointer-events: auto; }

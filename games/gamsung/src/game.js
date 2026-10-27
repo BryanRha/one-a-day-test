@@ -1,10 +1,10 @@
 // 카페 놀이: 머신으로 메뉴 내리기 → 바에 진열 → 손님이 앉아 주문 → 사장(나)이 내어 줌 → 치우기 · 원두 볶기 · 꾸미기 · 단골
 //   바닥은 100 단위 칸 — 가구가 놓인 칸은 못 지나감 · 길(문 → 모든 자리 · 바)이 막히는 배치는 안 됨
 import * as THREE from 'three';
-import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND } from './data.js?v=0.67.5';
-import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.67.5';
-import { M, box, cyl, sph, person, cup, tray, room, STATION, FURN_MODEL, poemFrame, ROOM } from './models.js?v=0.67.5';
-import { sfx } from './audio.js?v=0.67.5';
+import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND } from './data.js?v=0.67.6';
+import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.67.6';
+import { M, box, cyl, sph, person, cup, tray, room, STATION, FURN_MODEL, poemFrame, ROOM } from './models.js?v=0.67.6';
+import { sfx } from './audio.js?v=0.67.6';
 
 const V = THREE.Vector3, CELL = 100, N = 14, rnd = (a, b) => a + Math.random() * (b - a);
 export const fmt = n => Math.round(n).toLocaleString('en-US');
@@ -222,7 +222,7 @@ export class Game {
       for (const w of this.walls) { const p = w.position; if (ray.distanceToPoint(new V(p.x, 180, p.z)) < 80) return { kind: 'wall', slot: w.userData.slot }; }
       let best = null, bd = 1e9; for (const o of this.furn) { const d = ray.distanceToPoint(new V(o.f.x, 40, o.f.z)); if (d < 100 && d < bd) { bd = d; best = o; } } return best ? { kind: 'furn', o: best } : { kind: 'floor' }; }
     for (const c of this.cust) if (c.state === 'story' && ray.distanceToPoint(c.pos.clone().setY(100)) < 80) return { kind: 'story', c };
-    for (const m of this.machines) if (ray.distanceToPoint(new V(m.x, 150, m.z)) < 75) return { kind: 'machine', m };
+    for (const m of this.machines) if (ray.distanceToPoint(new V(m.x, 160, m.z)) < 95) return { kind: 'machine', m };
     if (ray.distanceToPoint(new V(this.roaster.x, 120, this.roaster.z)) < 100) return { kind: 'roaster' };
     for (const o of this.furn) o.seats.forEach((s, k) => { if (s.dirty && ray.distanceToPoint(s.dirty.position) < 70) this._dk = { o, k }; }); if (this._dk) { const d = this._dk; this._dk = null; return { kind: 'dirty', ...d }; }
     for (const c of this.cust) if (c.state === 'wait' && ray.distanceToPoint(c.pos.clone().setY(100)) < 70) return { kind: 'cust', c };
