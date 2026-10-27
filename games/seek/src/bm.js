@@ -3,12 +3,12 @@
 //   hint    광고 보고 힌트 1개 (하루 3) : 코인이 모자랄 때 (골드 상품 아님 · 옆에 코인 가격)
 //   next    다음 화 바로 보기 🪙50 : 앞 화를 끝내고 WAIT 시간 뒤면 무료 · 소장자는 기다림 없음 · 원어데이 밖도 기다림 없음
 //   outfit  특별 코디 🪙200 (item) : 오늘의 코디 옷장 · hello().items 로 복원
-//   choice  특별 선택지 🪙30 : 이번 차수에선 넣지 않음 (설계안만 — PROJECT_STATUS.md)
+//   choiceN 특별 선택지 🪙30 (item, 화별) : special.js — 첫 1회 맛보기 무료
 //   선택지는 광고로 열지 않음 (이야기 가치 보호)
-import { bm } from './oad_bm.js?v=0.75.0';
-import { inOAD } from './oad.js?v=0.75.0';
-import { load, save } from './save.js?v=0.75.0';
-import { EPISODES } from './episodes.js?v=0.75.0';
+import { bm } from './oad_bm.js?v=0.75.1';
+import { inOAD } from './oad.js?v=0.75.1';
+import { load, save } from './save.js?v=0.75.1';
+import { EPISODES } from './episodes.js?v=0.75.1';
 
 export { bm };
 export const HINT_COST = 10;                   // 힌트 = 게임 코인 10 (골드 상품 아님)

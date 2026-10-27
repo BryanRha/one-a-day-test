@@ -1,19 +1,23 @@
 // 이야기 (Choices 식): 배경 · 인물 상반신(표정) · 이름표 말풍선 · 한 글자씩 · 선택지 → 다음 단계(hunt/evidence/toon)
-import { W, H } from '../config.js?v=0.75.0';
-import { T, C, btn, iconBtn } from '../ui.js?v=0.75.0';
-import { audio } from '../audio.js?v=0.75.0';
-import { goPrev } from '../nav.js?v=0.75.0';
-import { load, save } from '../save.js?v=0.75.0';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.75.0';
-import { advance } from '../replay.js?v=0.75.0';
+import { W, H } from '../config.js?v=0.75.1';
+import { T, C, btn, iconBtn } from '../ui.js?v=0.75.1';
+import { audio } from '../audio.js?v=0.75.1';
+import { goPrev } from '../nav.js?v=0.75.1';
+import { load, save } from '../save.js?v=0.75.1';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.75.1';
+import { advance } from '../replay.js?v=0.75.1';
+import { SPECIAL, spShown, spOwned, tasteLeft, spPrice, spUnlock, addCard } from '../special.js?v=0.75.1';
+import { failText } from '../bm.js?v=0.75.1';
+import { toast } from '../ui.js?v=0.75.1';
 
 export class StoryScene extends Phaser.Scene {
   constructor() { super('Story'); }
   create(data) {
     this.ep = EPISODES.find(e => e.id === data.id);
     if (data.part === 'hunt') return this.scene.start('Hunt', { id: this.ep.id });
-    this.part = data.part; this.lines = this.ep[this.part]; this.i = -1; this.typing = null; this.busy = false; this.going = false;
-    advance(this.ep.id, this.part);
+    // part 'special': 추억 앨범에서 보너스 장면만 다시 보기 (진행 단계는 건드리지 않음)
+    this.part = data.part; this.lines = this.part === 'special' ? [...SPECIAL[this.ep.id].lines, { spDone: true }] : [...this.ep[this.part]]; this.i = -1; this.typing = null; this.busy = false; this.going = false;
+    if (this.part !== 'special') advance(this.ep.id, this.part);
     this.bg = this.add.image(W / 2, H / 2, 'bg_flower'); this.fitBg();
     this.shade = this.add.rectangle(W / 2, H / 2, W, H, 0x1A0814, 0.12);
     this.face = this.add.image(W / 2, H - 470, 'c_seoyun_smile').setOrigin(0.5, 1).setAlpha(0);
@@ -36,6 +40,8 @@ export class StoryScene extends Phaser.Scene {
   next() {
     if (this.going) return; this.i++; const L = this.cur = this.lines[this.i]; if (!L) return;
     if (L.go) return this.go(L.go);
+    if (L.spEnd) { if (addCard(this.ep.id)) this.time.delayedCall(200, () => toast(this, `추억 카드 「${SPECIAL[this.ep.id].card}」 · 추억 앨범에 넣었어요`, H * 0.3)); return this.next(); }
+    if (L.spDone) { this.going = true; return goPrev(this); }
     if (L.bg && this.bg.texture.key !== L.bg) { const nb = this.add.image(W / 2, H / 2, L.bg).setAlpha(0).setDepth(-1); nb.setScale(Math.max(W / nb.width, H / nb.height)); this.tweens.add({ targets: nb, alpha: 1, duration: 500, onComplete: () => { this.bg.destroy(); this.bg = nb; nb.setDepth(0); } }); }
     if (L.sfx === 'buzz') { audio.play('sfx_hint', { volume: 0.6 }); audio.buzz([60, 40, 60]); this.cameras.main.shake(200, 0.004); }
     if (L.choice) return this.choice(L.choice);
@@ -60,6 +66,22 @@ export class StoryScene extends Phaser.Scene {
       }, { style: k ? 'cream' : 'rose', size: 36 });
       b.setAlpha(0).y += 30; this.tweens.add({ targets: b, alpha: 1, y: b.y - 30, duration: 260, delay: k * 120 }); this.choiceL.add(b);
     });
+    if (spShown(this.ep)) this.specialBtn(list.length);
+  }
+  // 셋째 버튼 「💗 특별 선택지 · 🪙30」: 무료 선택지는 늘 위에 · 광고로는 안 엶 · 첫 1회 맛보기 무료
+  specialBtn(k) {
+    const sp = SPECIAL[this.ep.id], own = spOwned(this.ep), tag = own ? '열림' : tasteLeft() ? '첫 1회 무료' : `🪙${spPrice(this.ep)}`;
+    let busy = false;
+    const b = btn(this, W / 2, H * 0.42 + k * 170 + 10, 860, 150, `💗 특별 선택지 · ${tag}\n${sp.t}`, async () => {
+      if (busy) return; busy = true; const r = await spUnlock(this.ep); busy = false;
+      if (!r.ok) { const m = failText(r); if (m) toast(this, m, H * 0.3); return; }
+      if (r.via === 'taste') toast(this, '첫 특별 선택지는 선물이에요', H * 0.3);
+      const d = load(); d.choices[this.ep.id] = 'special'; save();
+      this.choiceL.removeAll(true); this.box.setAlpha(1); this.busy = false;
+      this.lines.splice(this.i + 1, 0, ...sp.lines, { spEnd: true }); this.next();
+    }, { style: 'gold', size: 30 });
+    b.label.setLineSpacing(6);
+    b.setAlpha(0).y += 30; this.tweens.add({ targets: b, alpha: 1, y: b.y - 30, duration: 260, delay: k * 120 }); this.choiceL.add(b);
   }
   // 이의 있음 (법정): 증거 셋 중 하나 · 틀리면 부드럽게 다시 · 맞히면 화면이 번쩍
   objection(o) {

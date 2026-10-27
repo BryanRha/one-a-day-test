@@ -120,6 +120,19 @@ export function tipOf(scene, key) {
   return (tipCache[key] = tip);
 }
 
+// 그림의 몸 중심 (불투명 픽셀의 무게중심, 0~1 비율) — 충돌 판정 자리에 몸을 맞춰 그리는 데 씀
+const bodyCache = {};
+export function bodyOf(scene, key) {
+  if (bodyCache[key]) return bodyCache[key];
+  const src = scene.textures.get(key).getSourceImage();
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const g = c.getContext('2d'); g.drawImage(src, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  let m = 0, sx = 0, sy = 0;
+  for (let y = 0; y < c.height; y += 2) for (let x = 0; x < c.width; x += 2) if (d[(y * c.width + x) * 4 + 3] > 128) { m++; sx += x; sy += y; }
+  return (bodyCache[key] = m ? { x: sx / m / c.width, y: sy / m / c.height } : { x: 0.5, y: 0.5 });
+}
+
 // 마녀 속성별 색·입자
 export const ELEMENT = {
   star: { color: 0xC9A8FF, tints: [0xFFF6A8, 0xD8C2FF, 0xFFFFFF], tex: 'spark', glow: 0xB89AFF },

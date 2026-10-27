@@ -1,16 +1,18 @@
 // 서재 (Choices 식): 작품 표지 · 화 목록(진행·잠금) · 곧 공개 모드(냥카페 · 오늘의 코디) · 코인
-import { W, H, TITLE, TITLE_EN, VERSION } from '../config.js?v=0.75.0';
-import { T, C, btn, iconBtn, panel, popup, toast } from '../ui.js?v=0.75.0';
-import { audio } from '../audio.js?v=0.75.0';
-import { load } from '../save.js?v=0.75.0';
-import { SERIES, EPISODES, SEASONS, seasonOf, epNo } from '../episodes.js?v=0.75.0';
-import { loadEp } from './Boot.js?v=0.75.0';
-import { medal, TIERS } from '../replay.js?v=0.75.0';
-import { cafeData } from '../cafe/state.js?v=0.75.0';
-import { coordData, todayTheme, doneToday, wearNow } from '../coord/state.js?v=0.75.0';
-import { buildLook } from '../coord/look.js?v=0.75.0';
-import { waitLeft, fmtWait } from '../bm.js?v=0.75.0';
-import { nextOffer } from '../bmui.js?v=0.75.0';
+import { W, H, TITLE, TITLE_EN, VERSION } from '../config.js?v=0.75.1';
+import { T, C, btn, iconBtn, panel, popup, toast } from '../ui.js?v=0.75.1';
+import { audio } from '../audio.js?v=0.75.1';
+import { load } from '../save.js?v=0.75.1';
+import { SERIES, EPISODES, SEASONS, seasonOf, epNo } from '../episodes.js?v=0.75.1';
+import { loadEp } from './Boot.js?v=0.75.1';
+import { medal, TIERS } from '../replay.js?v=0.75.1';
+import { cafeData } from '../cafe/state.js?v=0.75.1';
+import { coordData, todayTheme, doneToday, wearNow } from '../coord/state.js?v=0.75.1';
+import { buildLook } from '../coord/look.js?v=0.75.1';
+import { waitLeft, fmtWait } from '../bm.js?v=0.75.1';
+import { nextOffer } from '../bmui.js?v=0.75.1';
+import { oadOn } from '../bm.js?v=0.75.1';
+import { SPECIAL, hasCard } from '../special.js?v=0.75.1';
 
 export class LibraryScene extends Phaser.Scene {
   constructor() { super('Library'); }
@@ -53,6 +55,25 @@ export class LibraryScene extends Phaser.Scene {
       else card.add(T(this, 440, done ? -14 : 0, done ? '다시 보기' : st && st !== 'intro' ? '이어 보기' : open ? '보기' : '🔒', 28, done ? C.gold : open ? '#FFB6CB' : C.dim, { ox: 1, w: 900 }));
       if (open) { card.setSize(960, 132).setInteractive({ useHandCursor: true }).on('pointerup', p => { if (!this.dragged) this.play(ep); }); if (EPISODES.indexOf(ep) === nextUp) this.tweens.add({ targets: card, scale: 1.02, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); }
       this.cards.push(card); y += 156;
+    }
+    // 추억 앨범 (특별 선택지 보너스 장면의 추억 카드 · 이 시즌 10장) — 원어데이 안에서만
+    if (oadOn()) {
+      const got = eps.filter(e => hasCard(e.id)).length;
+      y += 20; T(this, 60, y, '추억 앨범', 34, C.text, { ox: 0, w: 900 }); T(this, W - 60, y, `${got} / ${eps.length}`, 26, C.gold, { ox: 1, w: 900 }); y += 46;
+      T(this, 60, y, '이야기 속 💗 특별 선택지에서 모여요 · 눌러서 다시 보기', 22, C.sub, { ox: 0, w: 700 }); y += 40;
+      const cw = 176, ch = 230;
+      eps.forEach((ep, i) => {
+        const x = 60 + cw / 2 + (i % 5) * (cw + 10), cy = y + ch / 2 + Math.floor(i / 5) * (ch + 14), have = hasCard(ep.id), sp = SPECIAL[ep.id];
+        const c = this.add.container(x, cy), g = this.add.graphics();
+        g.fillStyle(have ? 0xFFF6F8 : 0x3A2236, 1).fillRoundedRect(-cw / 2, -ch / 2, cw, ch, 18).lineStyle(3, have ? 0xF0B65A : 0x5A3A52, 1).strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 18); c.add(g);
+        const im = this.add.image(0, -40, this.thumb(ep)).setScale(1.12); if (!have) im.setAlpha(0.22); c.add(im);
+        c.add(T(this, 0, 50, have ? sp.card : `${epNo(ep)}화`, have ? 19 : 22, have ? C.ink : C.dim, { w: 900, wrap: cw - 16 }));
+        c.add(T(this, 0, 92, have ? '💗 다시 보기' : '🔒', 18, have ? '#E8628A' : C.dim, { w: 800 }));
+        c.setSize(cw, ch).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.dragged) return;
+          if (!have) return toast(this, `${epNo(ep)}화 이야기의 💗 특별 선택지에서 얻어요`);
+          audio.play('sfx_page', { volume: 0.6 }); this.cameras.main.fadeOut(250, 30, 10, 26); this.cameras.main.once('camerafadeoutcomplete', () => loadEp(this, ep, () => this.scene.start('Story', { id: ep.id, part: 'special' }))); });
+      });
+      y += Math.ceil(eps.length / 5) * (ch + 14) + 10;
     }
     // 곧 공개 모드
     // 나만의 공간: 냥카페 (+ 오늘의 코디 준비 중)

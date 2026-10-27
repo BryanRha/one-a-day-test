@@ -1,14 +1,21 @@
 // 차고: 메인 일러스트 + 드라이버 선택 · 자동차 선택 · 부품 강화 → 출발
-import { W, H } from '../config.js?v=0.75.0';
-import { txt, fmt, fit, button, toast, popup } from '../ui.js?v=0.75.0';
-import { audio } from '../audio.js?v=0.75.0';
-import { load, save } from '../save.js?v=0.75.0';
-import { wind } from '../fx.js?v=0.75.0';
-import * as M from '../meta.js?v=0.75.0';
-import { bm } from '../oad_bm.js?v=0.75.0';
-import { helloOnce } from '../bmflow.js?v=0.75.0';
-import { hallShown, hallPopup } from '../hall.js?v=0.75.0';
-import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.75.0';
+import { W, H } from '../config.js?v=0.75.1';
+import { txt, fmt, fit, button, toast, popup } from '../ui.js?v=0.75.1';
+import { audio } from '../audio.js?v=0.75.1';
+import { load, save } from '../save.js?v=0.75.1';
+import { wind } from '../fx.js?v=0.75.1';
+import * as M from '../meta.js?v=0.75.1';
+import { bm } from '../oad_bm.js?v=0.75.1';
+import { helloOnce } from '../bmflow.js?v=0.75.1';
+import { hallShown, hallPopup } from '../hall.js?v=0.75.1';
+import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.75.1';
+
+// 게임 코인 가격 (코인 그림 + 숫자) — 🪙 는 원어데이 골드 전용이라 게임 코인엔 쓰지 않음
+function coinTxt(scene, x, y, n, size) {
+  const t = txt(scene, x + size * 0.6, y, fmt(n), size, '#C2410C', { stroke: '#FFFFFF', thick: 4 });
+  scene.add.image(t.x - t.width / 2 - size * 0.65, y, 'item_coin').setDisplaySize(size * 1.1, size * 1.1);
+  return t;
+}
 
 // 밝은 카드 (흰 바탕 + 남색 테두리)
 function card(scene, x, y, w, h, on = false) {
@@ -75,7 +82,7 @@ export class LobbyScene extends Phaser.Scene {
       if (!own) pt.setTint(0x55607A);
       if (on) wind(pt, 1, 0.01);
       txt(this, x, y + 86, info.name, 38, '#1E2A52', { stroke: '#FFFFFF', thick: 6 });
-      txt(this, x, y + 124, own ? info.desc : `🪙 ${fmt(info.cost)}`, 24, own ? '#3B5BDB' : '#C2410C', { stroke: '#FFFFFF', thick: 4 });
+      if (own) txt(this, x, y + 124, info.desc, 24, '#3B5BDB', { stroke: '#FFFFFF', thick: 4 }); else coinTxt(this, x, y + 124, info.cost, 24);
       const z = this.add.zone(x, y, 240, 290).setInteractive({ useHandCursor: true });
       z.on('pointerup', () => { if (M.buyDriver(id)) { audio.play('sfx_honk_2', { volume: 0.6 }); this.build(); } else toast(this, '코인이 부족해요'); });
     });
@@ -95,7 +102,7 @@ export class LobbyScene extends Phaser.Scene {
       const c = fit(this.add.image(x - 80, y, on ? skinKey(this, info.key) : info.key), 210).setAngle(-12);
       if (!own) c.setTint(0x55607A);
       txt(this, x + 60, y - 50, info.name, 30, '#1E2A52', { stroke: '#FFFFFF', thick: 5 });
-      txt(this, x + 60, y + 4, own ? (info.bonus ? `성능 +${info.bonus}단계` : '기본 차') : `🪙 ${fmt(info.cost)}`, 26, own ? '#3B5BDB' : '#C2410C', { stroke: '#FFFFFF', thick: 4 });
+      if (own) txt(this, x + 60, y + 4, info.bonus ? `성능 +${info.bonus}단계` : '기본 차', 26, '#3B5BDB', { stroke: '#FFFFFF', thick: 4 }); else coinTxt(this, x + 60, y + 4, info.cost, 26);
       if (on) txt(this, x + 60, y + 56, '탑승 중', 28, '#FF8A1F', { stroke: '#FFFFFF', thick: 5 });
       const z = this.add.zone(x, y, 320, 250).setInteractive({ useHandCursor: true });
       z.on('pointerup', () => { if (M.buyCar(id)) { audio.play('sfx_honk_3', { volume: 0.6 }); this.build(); } else toast(this, '코인이 부족해요'); });
@@ -110,7 +117,7 @@ export class LobbyScene extends Phaser.Scene {
       txt(this, x, y - 56, `${info.name} Lv.${lv}`, 34, '#1E2A52', { stroke: '#FFFFFF', thick: 5 });
       for (let j = 0; j < M.PART_MAX; j++) this.add.rectangle(x - 126 + j * 28, y - 12, 22, 18, j < lv ? 0xFF8A1F : 0xD8DEEA);
       const max = lv >= M.PART_MAX;
-      const b = button(this, x, y + 46, max ? '최대' : `🪙 ${fmt(M.partCost(lv))}`, () => { if (M.upgradePart(k)) { audio.play('sfx_item', { volume: 0.6 }); this.build(); } else toast(this, '코인이 부족해요'); }, { key: 'btn_purple', w: 250, h: 80, size: 30 });
+      const b = button(this, x, y + 46, max ? '최대' : fmt(M.partCost(lv)), () => { if (M.upgradePart(k)) { audio.play('sfx_item', { volume: 0.6 }); this.build(); } else toast(this, '코인이 부족해요'); }, { key: 'btn_purple', w: 250, h: 80, size: 30, icon: max ? null : 'item_coin' });
       b.setEnabled(!max && d.coins >= M.partCost(lv));
     });
     // 내 기록 + 오늘의 팁 (빈 공간 채우기)

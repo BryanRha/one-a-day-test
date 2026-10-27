@@ -1,16 +1,16 @@
 // 비행 화면: core/run.js 시뮬레이션을 고정 간격으로 돌리고, 상태(s)와 사건(events)을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.75.0';
-import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.75.0';
-import { decideX } from '../core/ai.js?v=0.75.0';
-import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.75.0';
-import { audio } from '../audio.js?v=0.75.0';
-import { load, save } from '../save.js?v=0.75.0';
-import { wind, tipOf, ELEMENT } from '../fx.js?v=0.75.0';
-import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.75.0';
-import { bm } from '../oad_bm.js?v=0.75.0';
-import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.75.0';
-import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.75.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.75.0';
+import { W, H } from '../config.js?v=0.75.1';
+import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.75.1';
+import { decideX } from '../core/ai.js?v=0.75.1';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.75.1';
+import { audio } from '../audio.js?v=0.75.1';
+import { load, save } from '../save.js?v=0.75.1';
+import { wind, tipOf, bodyOf, ELEMENT } from '../fx.js?v=0.75.1';
+import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.75.1';
+import { bm } from '../oad_bm.js?v=0.75.1';
+import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.75.1';
+import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.75.1';
+import { inOAD, exitToOAD } from '../oad.js?v=0.75.1';
 
 const DT = 1 / 60;
 const SHOT_KEY = { star: 'bolt_star', fire: 'bolt_fire', ice: 'bolt_ice', bolt: 'bolt_bolt', furball: 'furball' };
@@ -63,7 +63,7 @@ export class PlayScene extends Phaser.Scene {
     // 장면 객체는 판마다 재사용되므로 상태를 모두 초기화
     this.finished = false; this.bossImg = null; this.bossFlash = 0; this.scoreShown = 0; this.bannerAt = 0; this.drag = null;
     this.acc = 0; this.paused = false; this.over = false; this.slow = 1; this.bossKills = 0; this.sRank = 0; this.items = 0;
-    this.oadRevives = 0; this.reviveAt = 0; this.reviveOffers = []; this.runsBefore = d.totals.runs; this.helped = false; this.quit = false;
+    this.oadRevives = 0; this.tipAt = null; this.reviveAt = 0; this.reviveOffers = []; this.runsBefore = d.totals.runs; this.helped = false; this.quit = false;
     const q = new URLSearchParams(location.search);
     this.bot = q.has('bot') || this.opts.bot;
     // 테스트용: ?from=1400 → 그 거리에서 시작
@@ -142,7 +142,7 @@ export class PlayScene extends Phaser.Scene {
     this.ofx = of ? outfitFx(this, of, 0.8) : null;
     this.witch = this.add.image(0, 0, outfitKey(this, key, of));
     this.witch.setScale(420 / this.witch.height); this.witchScale = this.witch.scale;
-    this.tip = tipOf(this, key);
+    this.tip = tipOf(this, key); this.body = bodyOf(this, key);
     wind(this.witch, 0, 0.018);
     // 지팡이 끝 빛 (쏠 때마다 번쩍)
     this.tipGlow = this.add.image(0, 0, 'glow').setTint(E.color).setBlendMode('ADD');
@@ -263,10 +263,12 @@ export class PlayScene extends Phaser.Scene {
     this.streak.emitting = Math.abs(vn) > 0.25 && !this.over;
     this.streak.speedX = -vn * 900;
     const bob = Math.sin(t * 3) * 6;
-    // 지팡이 끝이 탄 나가는 자리(p.x, p.y-70)에 오도록 그림 위치를 맞춤
+    // 몸 중심(그림 무게중심)을 충돌 판정 자리(p)에 맞춰 그림 — 보이는 몸 = 부딪히는 몸
+    //   (예전엔 지팡이 끝을 탄 나가는 자리에 맞춰, 몸이 판정보다 아래로 ~190px · 루나/시엘은 왼쪽으로 ~80px 비켜 그려졌음 → 몸에 겹쳐도 안 죽는 것처럼 보임)
+    //   탄은 판정상 p.x 열에서 나가고, 그림만 지팡이 끝에서 나와 그 열로 모이게 그림(아래 '내 탄')
     const ws = this.witchScale, ww = this.witch.width * ws, wh = this.witch.height * ws;
     const breath = Math.sin(t * 6) * 0.012, bank = Math.abs(this.vn) * 0.08;
-    if (!this.over) this.witch.setPosition(p.x - (this.tip.x - 0.5) * ww + this.vn * 12, p.y - 70 - (this.tip.y - 0.5) * wh + bob - Math.abs(this.vn) * 10).setAngle(this.tilt).setScale(ws * (1 + breath - bank), ws * (1 - breath + bank * 0.4));
+    if (!this.over) this.witch.setPosition(p.x - (this.body.x - 0.5) * ww + this.vn * 12, p.y - (this.body.y - 0.5) * wh + bob - Math.abs(this.vn) * 10).setAngle(this.tilt).setScale(ws * (1 + breath - bank), ws * (1 - breath + bank * 0.4));
     this.witch.setAlpha(p.inv > 0 && s.status === 'play' ? (Math.floor(t * 14) % 2 ? 0.4 : 1) : 1);
     const wx = this.witch.x, wy = this.witch.y;
     if (this.ofx) this.ofx.setPos(wx, wy);
@@ -276,7 +278,9 @@ export class PlayScene extends Phaser.Scene {
     this.streak.setPosition(wx, wy);
     this.aura.setPosition(wx, wy); this.aura.emitting = !this.over;
     this.flash = Math.max(0, this.flash - dt * 9);
-    const tx = p.x, ty = p.y - 70 + bob;
+    /* 지팡이 끝 (그려진 자리) — 빛 · 탄이 나오는 곳 */
+    const tx = this.witch.x + (this.tip.x - 0.5) * ww, ty = this.witch.y + (this.tip.y - 0.5) * wh;
+    this.tipAt = { x: tx, y: ty };
     this.tipGlow.setPosition(tx, ty).setScale(0.9 + this.flash * 0.9 + Math.sin(t * 9) * 0.08).setAlpha(this.over ? 0 : 0.75 + this.flash * 0.25);
     this.tipStar.setPosition(tx, ty).setScale(0.7 + this.flash * 0.8).setAngle(t * 120).setAlpha(this.over ? 0 : 1);
     this.shieldImg.setVisible(!!p.shield).setPosition(p.x, p.y + 20).setScale(0.9 + Math.sin(t * 5) * 0.03).setAngle(t * 30);
@@ -340,7 +344,9 @@ export class PlayScene extends Phaser.Scene {
         i.setTexture(SHOT_KEY[b.kind]); i.setScale(fur ? 0.75 : 1.1 + T * 0.14); i.setAngle(0); i.setBlendMode(fur ? 'NORMAL' : 'ADD');
         c.g.setTint(col); c.head.setVisible(T >= 1).setTint(col); c.o1.setVisible(T >= 2).setTint(col); c.o2.setVisible(T >= 2).setTint(0xFFFFFF);
       }
-      c.setPosition(b.x, b.y);
+      /* 마법탄: 지팡이 끝에서 나와 220px 안에 판정 열(b.x)로 모임 (판정은 core 그대로) */
+      if (!fur && this.tipAt) { const k = Math.max(0, 1 - (p.y - 70 - b.y) / 220); c.setPosition(b.x + (this.tipAt.x - p.x) * k, b.y + (this.tipAt.y - (p.y - 70)) * k); }
+      else c.setPosition(b.x, b.y);
       const gw = 0.85 + T * 0.22;
       c.g.setScale(gw + Math.sin(t * 30 + b.id) * 0.1, 1.4 + T * 0.25).setAlpha(0.7 + T * 0.05);
       if (T >= 1) c.head.setScale(0.5 + T * 0.12 + Math.sin(t * 40 + b.id) * 0.1).setAngle(t * 400);
