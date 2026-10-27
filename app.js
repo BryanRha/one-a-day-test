@@ -1,15 +1,16 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.69.0';
-import * as R from './rules.js?v=0.69.0';
-import * as I from './install.js?v=0.69.0';
-import * as T from './track.js?v=0.69.0';
-import * as P from './pay.js?v=0.69.0';
+import { PLANNED } from './catalog.js?v=0.70.0';
+import * as R from './rules.js?v=0.70.0';
+import * as I from './install.js?v=0.70.0';
+import * as T from './track.js?v=0.70.0';
+import * as P from './pay.js?v=0.70.0';
+import * as A from './account.js?v=0.70.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.69.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.70.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.69.0';
+const VERSION = '0.70.0';
 let tab = 'today', timer = null;
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -237,10 +238,17 @@ function renderCollection() {
 }
 
 // ── 설정 ───────────────────────────────────────────
+// 계정 카드: 로그인 전 = 구글 로그인 버튼 · 후 = 이름 · 골드
+function accountCard() {
+  const m = A.current();
+  if (!m) return `<div class="acct"><div><b>원어데이 계정</b><p>로그인하면 골드와 구매 내역이 계정에 저장돼 폰을 바꿔도 이어져요 · 게임은 로그인 없이도 그대로</p></div><button class="gbtn" data-login><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>구글로 로그인</button></div>`;
+  return `<div class="acct in"><div class="av">${(m.name || m.email || '?')[0]}</div><div class="who"><b>${m.name || '원어데이 친구'}</b><small>${m.email || ''}</small></div><div class="gold"><span>골드</span><b>🪙 ${(m.gold && m.gold.total) || 0}</b></div><button class="lo" data-logout>로그아웃</button></div>`;
+}
 function renderSettings() {
   const s = R.state();
   return `<div>${header()}
     <h1 style="font-size:28px;margin-bottom:14px">설정</h1>
+    ${A.ON ? accountCard() : ''}
     <div class="group">
       <div><span>홈 화면에 추가</span>${I.installed() ? '<span class="badge open">추가됨</span>' : '<button data-install>추가하기</button>'}</div>
       <div><span>이용 방법 다시 보기</span><button data-intro>보기</button></div>
@@ -386,10 +394,12 @@ addEventListener('message', e => {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if ('trackOff' in d) { T.setOptOut(!T.optedOut()); go('settings'); toast(T.optedOut() ? '이용 기록을 보내지 않아요' : '이용 기록 보내기를 다시 켰어요'); }
+  if ('login' in d) { T.track('login_click'); A.login().catch(er => toast(er.message)); }
+  else if ('logout' in d) { A.logout().then(() => { go('settings'); toast('로그아웃했어요'); }); }
+  else if ('trackOff' in d) { T.setOptOut(!T.optedOut()); go('settings'); toast(T.optedOut() ? '이용 기록을 보내지 않아요' : '이용 기록 보내기를 다시 켰어요'); }
   else if ('sdClose' in d) { if (sdOpen) history.back(); else sdClose(); }
   else if (d.paid) (T.track('paid_click', { product: d.paid }), d.paid === 'cheating') ? partnerForm() : toast('곧 열려요 · 지금은 바람기 사주만 미리보기 돼요');
   else if ('buy' in d) { T.track('buy_click', { product: d.buy }); buy(d.buy); }
@@ -430,6 +440,9 @@ setTimeout(checkUpdate, 1500);
 document.addEventListener('oad:installable', () => { if (tab === 'today' || tab === 'settings') go(tab); });
 document.addEventListener('oad:installed', () => { T.track('installed'); toast('홈 화면에 추가됐어요!'); go(tab); });
 T.start(VERSION);
+// 계정: 로그인돼 있으면 불러오기 · 구글에서 막 돌아왔으면 환영
+A.onChange(() => { if (tab === 'settings') go('settings'); });
+A.init().then(m => { if (new URLSearchParams(location.search).has('login')) { history.replaceState(null, '', location.pathname); if (m) { T.track('login', { new: m.isNew ? 1 : 0 }); toast(m.isNew ? `${m.name || ''}님, 원어데이에 오신 걸 환영해요!` : `${m.name || ''}님, 다시 오셨네요`); go('settings'); } } });
 // 토스 결제창에서 돌아온 경우
 P.resume().then(r => { if (!r) return; if (r.ok) { toast('결제 완료! 전체 풀이가 열렸어요'); cheatingPage(); } else toast(r.msg); });
 go('today');
