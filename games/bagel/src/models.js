@@ -1,6 +1,6 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (사람 · 베이글 · 커피 · 설비 · 가게)
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.65.0';
+import { BRAND } from './data.js?v=0.66.0';
 
 const gm = (() => { const d = new Uint8Array([95, 190, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -88,3 +88,18 @@ export const STATION = {
 // 자동차 (드라이브스루)
 export function car(col) { const g = new THREE.Group(); box(200, 60, 110, col, 0, 20, 0, g); box(120, 50, 100, col, -10, 80, 0, g); box(110, 40, 102, 0xBFE3F2, -10, 84, 0, g).scale.set(1, 1, 1.01);
   for (const [x, z] of [[60, 55], [-60, 55], [60, -55], [-60, -55]]) mesh(geo('wheel', () => new THREE.CylinderGeometry(22, 22, 16, 14).rotateX(Math.PI / 2)), M(0x2A2A30), x, 22, z, g); return g; }
+// ── 꾸미기 소품 (설비와 같은 3단 음영 · 브랜드 주황/브라운)
+const WOOD = 0x9A643A, LIGHT = 0xC08A5A, LEAF = 0x7FBF6A, LEAF2 = 0x5FA85A, POT = 0xE7B98A;
+export const DECO_MODEL = {
+  monstera(p) { cyl(40, 30, 60, POT, 0, 0, 0, p, 14); for (let i = 0; i < 6; i++) { const a = i / 6 * 6.28, l = sph(34, i % 2 ? LEAF : LEAF2, Math.cos(a) * 34, 90 + (i % 3) * 22, Math.sin(a) * 34, p, 10, 8); l.scale.set(1, 0.35, 0.7); l.rotation.y = -a; l.rotation.z = 0.5; } cyl(4, 4, 70, 0x5A8A3A, 0, 50, 0, p, 6); },
+  rug(p) { cyl(330, 330, 3, 0xD8B48A, 0, 0, 0, p, 40).scale.set(1, 1, 0.68); cyl(300, 300, 4, 0xE6C9A2, 0, 0, 0, p, 40).scale.set(1, 1, 0.66); cyl(250, 250, 5, 0xD8B48A, 0, 0, 0, p, 40).scale.set(1, 1, 0.64); },
+  bench(p) { box(80, 40, 260, WOOD, 0, 0, 0, p); box(70, 16, 250, 0xF2E2C8, 0, 40, 0, p); box(14, 60, 260, WOOD, -36, 40, 0, p); for (const z of [-80, 0, 80]) { const c = box(18, 44, 50, [0xFF8A50, 0xF2C14E, 0xE8E0D0][(z + 80) / 80], -20, 56, z, p); c.rotation.z = -0.2; } },
+  lamp(p) { cyl(26, 30, 8, 0x4A4A55, 0, 0, 0, p, 14); cyl(4, 4, 170, 0x4A4A55, 0, 8, 0, p, 6); cyl(22, 38, 40, 0xFFE9C2, 0, 170, 0, p, 16); const l = new THREE.PointLight(0xFFC77A, 6000, 420, 2); l.position.set(0, 175, 0); p.add(l); },
+  shelf(p) { for (const y of [150, 205]) { box(220, 8, 40, WOOD, 0, y, 20, p); for (let i = 0; i < 5; i++) { const b = mesh(geo('torus', () => new THREE.TorusGeometry(15, 7.5, 8, 18).rotateX(Math.PI / 2)), M(i % 2 ? 0xCF8A2E : 0xE2A55A), -80 + i * 40, y + 15, 22, p); b.rotation.x = Math.PI / 2.3; } } },
+  board(p) { box(90, 130, 8, 0x2A3A32, 0, 30, 0, p); box(100, 8, 14, LIGHT, 0, 160, 0, p); box(8, 160, 8, LIGHT, -40, 0, -20, p); box(8, 160, 8, LIGHT, 40, 0, -20, p); for (let i = 0; i < 4; i++) box(60 - i * 8, 4, 2, 0xFFFFFF, 0, 130 - i * 22, 5, p); box(20, 14, 2, BRAND.accentHex, 26, 60, 5, p); },
+  gallery(p) { [[-70, 170, 80, 100], [40, 190, 100, 70], [30, 120, 60, 50]].forEach(([z, y, w, h], i) => { box(6, h + 10, w + 10, WOOD, 0, y - h / 2 - 5, z, p); box(8, h, w, [0xBFE3F2, 0xF6D6A0, 0xE6F2C8][i], 2, y - h / 2, z, p); }); },
+  vase(p) { cyl(8, 10, 22, 0xFFFFFF, 0, 0, 0, p, 10); for (let i = 0; i < 3; i++) sph(7, [0xFF8A9A, 0xFFD24A, 0xFF7A59][i], -6 + i * 6, 30 + (i % 2) * 6, 0, p, 8, 6); },
+  plants2(p) { for (const [y, w] of [[0, 120], [60, 100], [120, 80]]) box(w, 8, 50, WOOD, 0, y + 50, 0, p); for (const x of [-48, 48]) box(8, 180, 8, WOOD, x, 0, -20, p); [[-30, 58], [30, 58], [-20, 118], [25, 118], [0, 178]].forEach(([x, y], i) => { cyl(14, 11, 20, POT, x, y, 0, p, 10); sph(18, i % 2 ? LEAF : LEAF2, x, y + 32, 0, p, 10, 8); }); },
+  terrace(p) { for (const x of [-170, 170]) { cyl(70, 70, 8, 0xFFFFFF, x, 70, 0, p, 20); cyl(8, 12, 70, WOOD, x, 0, 0, p, 8); cyl(4, 4, 200, 0xE8E0D0, x, 70, 0, p, 6); const u = mesh(new THREE.ConeGeometry(130, 50, 12), M(x < 0 ? BRAND.accentHex : 0xFFFFFF), x, 285, 0, p); u.castShadow = true; for (const s of [-1, 1]) cyl(24, 24, 10, LIGHT, x + s * 95, 40, 0, p); } box(560, 4, 200, 0xE6D2B4, 0, 0, 0, p); },
+  photo(p) { for (let i = 0; i < 6; i++) { const z = -120 + (i % 3) * 110, y = 200 - Math.floor(i / 3) * 90; box(6, 76, 90, 0xFFFFFF, 0, y - 38, z, p); box(8, 60, 74, [0xF6D6A0, 0xBFE3F2, 0xE6F2C8, 0xF6D6E8, 0xFFE9B8, 0xD8E8C8][i], 2, y - 30, z, p); } box(6, 14, 100, BRAND.accentHex, 0, 230, 0, p); },
+};

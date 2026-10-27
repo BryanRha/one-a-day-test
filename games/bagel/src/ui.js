@@ -1,9 +1,10 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP } from './data.js?v=0.65.0';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.65.0';
-import { sfx, setAudio } from './audio.js?v=0.65.0';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.65.0';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K } from './data.js?v=0.66.0';
+import { starOf, favLv } from './game.js?v=0.66.0';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.66.0';
+import { sfx, setAudio } from './audio.js?v=0.66.0';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.66.0';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -13,18 +14,20 @@ const ICON = { bagel: '🥯', cream: '🥯', coffee: '🥣', drink: '☕' }, SHO
 export class UI {
   constructor(app) {
     this.app = app; this.boostUntil = 0; const h = $('#hud');
-    h.innerHTML = `<div class="top"><div class="coin"><i class="c"></i><b id="cn">0</b></div><div class="lvl"><b id="bn"></b><em id="bl"></em><div class="pb"><s id="bp"></s></div></div></div>
+    h.innerHTML = `<div class="top"><div class="coin"><i class="c"></i><b id="cn">0</b></div><div class="scent" id="scent" title="베이글 향">🌿<b id="scv">0</b></div><div class="lvl"><b id="bn"></b><em id="bl"></em><div class="pb"><s id="bp"></s></div></div></div>
       <div class="cp" id="cp"><b>🎟 매장 쿠폰까지</b><div class="pb"><s id="cpb"></s></div><span id="cpt"></span></div>
+      <div class="lside"><button class="sb deco" id="bDeco"><b>🪴</b>꾸미기<i class="dot" id="decoDot"></i></button><button class="sb" id="bReg"><b>💌</b>단골<i class="dot" id="regDot"></i></button><button class="sb" id="bMenu"><b>📖</b>메뉴</button></div>
       <div class="side"><button class="sb ad" id="bAd"><b>×2</b><span id="adT">광고 보고</span></button><button class="sb up" id="bUp"><b>⬆</b>업그레이드<i class="dot" id="upDot"></i></button><button class="sb" id="bMs"><b>📋</b>미션<i class="dot" id="msDot"></i></button><button class="sb" id="bMap"><b>🗺</b>지점<i class="dot" id="mapDot"></i></button><button class="sb" id="bSet"><b>⚙</b>설정</button>${inOAD ? '<button class="sb" id="bExit"><b>↩</b>원어데이</button>' : ''}</div>
       <div class="joy" id="joy"><i id="knob"></i></div><div class="hint" id="hint">어디든 끌어서 움직여요</div>`;
     this.tags = $('#tags'); this.floats = $('#floats');
+    $('#bDeco').onclick = () => this.decoShop(); $('#bReg').onclick = () => this.regulars(); $('#bMenu').onclick = () => this.menuBook(); $('#scent').onclick = () => this.decoShop();
     $('#bAd').onclick = () => this.ad('boost'); $('#bUp').onclick = () => this.upgrades(); $('#bMs').onclick = () => this.missions(); $('#bMap').onclick = () => this.map(); $('#bSet').onclick = () => this.settings(); $('#cp').onclick = () => this.coupon();
     if ($('#bExit')) $('#bExit').onclick = () => exitToOAD();
     this.joy(); this.progress();
   }
   joy() {
     const area = $('#app'), base = $('#joy'), knob = $('#knob'); let id = null, cx = 0, cy = 0; const R = 50;
-    const down = e => { if (e.target.closest('button, .modal, .cp')) return; const t = e.changedTouches ? e.changedTouches[0] : e; id = e.changedTouches ? t.identifier : 'm'; cx = t.clientX; cy = t.clientY; base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.classList.add('on'); };
+    const down = e => { if (e.target.closest('button, .modal, .cp, .scent, .regcard')) return; const t = e.changedTouches ? e.changedTouches[0] : e; id = e.changedTouches ? t.identifier : 'm'; cx = t.clientX; cy = t.clientY; base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.classList.add('on'); };
     const move = e => { if (id === null) return; const t = e.changedTouches ? [...e.changedTouches].find(q => q.identifier === id) : e; if (!t) return; let dx = t.clientX - cx, dy = t.clientY - cy; const l = Math.hypot(dx, dy); if (l > R) { dx *= R / l; dy *= R / l; } IN.x = dx / R; IN.y = dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`; e.cancelable && e.preventDefault(); };
     const up = e => { if (id === null) return; if (e.changedTouches && ![...e.changedTouches].some(q => q.identifier === id)) return; id = null; IN.x = IN.y = 0; base.classList.remove('on'); knob.style.transform = ''; };
     area.addEventListener('touchstart', down, { passive: true }); area.addEventListener('touchmove', move, { passive: false }); area.addEventListener('touchend', up); area.addEventListener('touchcancel', up);
@@ -42,7 +45,7 @@ export class UI {
     for (const p of g.padList()) { v.set(p.s.x, 30, p.s.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
     for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.6; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; d.style.opacity = Math.max(0, 1 - d._t / 1.1); if (d._t > 1.1) d.remove(); }
     for (const c of g.cust) { if (!c.tag) continue; const o = c.order[0], left = o.n - o.got, show = (c.state === 'queue' || c.state === 'walkQ') && c.qi < 4; c.tag.style.display = show ? '' : 'none'; if (!show) continue;
-      v.set(c.pos.x, 215, c.pos.z).project(cam); c.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = `<b>${ICON[o.k]}</b><span>${SHORT[o.k]}</span><em>×${left}</em>`; if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('front', c.qi === 0); }
+      v.set(c.pos.x, 215, c.pos.z).project(cam); c.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const mood = c.w > 25 ? '😐 ' : c.w > 10 ? '' : ''; const html = `${c.reg ? `<i class="rn">💌 ${c.reg.name}</i>` : ''}${mood}<b>${ICON[o.k]}</b><span>${SHORT[o.k]}</span><em>×${left}</em>`; if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('front', c.qi === 0); c.tag.classList.toggle('reg', !!c.reg); }
     for (const cr of g.cars || []) { if (!cr.tag) continue; const show = cr.state === 'wait' || cr.state === 'in'; cr.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(cr.g.position.x, 190, cr.g.position.z).project(cam);
       cr.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = Object.entries(cr.order).map(([k, n]) => `<b>${ICON[k]}</b><em>${n - (cr.got[k] || 0)}</em>`).join(' '); if (cr.tag._h !== html) { cr.tag.innerHTML = '🚗 ' + html; cr.tag._h = html; } }
     /* 손에 든 것 표시 (머리 위): 아이콘 · 이름 · 개수 · 가득 차면 MAX */
@@ -56,7 +59,7 @@ export class UI {
     const g = this.app.game; if (!g || !g.unl) return; const B = BRANCHES[S.bi], all = B.slots.filter(s => !s.free).length, done = B.slots.filter(s => !s.free && g.unl.has(s.id)).length;
     $('#bn').textContent = B.name; $('#bl').textContent = `${done} / ${all}`; $('#bp').style.width = done / all * 100 + '%';
     const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '오늘 쿠폰 받았어요 · 눌러서 보기' : couponReady() ? '쿠폰 받기!' : `베이글 ${S.sold} / ${COUPON.goal}개 팔기`;
-    $('#cp').classList.toggle('ready', couponReady()); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
+    $('#cp').classList.toggle('ready', couponReady()); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
   }
   toast(t) { let el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 1800); }
   modal(html, onClose) { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.innerHTML = html; this._oc = onClose; return m; }   /* 이미 열린 창은 내용만 바꿈 (깜빡임 없음) */
@@ -100,6 +103,38 @@ export class UI {
       const br = (S.branch[S.bi] ||= { unl: [], staff: [], paid: {} }); (br.lv ||= {})[u.id] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${u.name} Lv.${lv + 1}!`); this.progress(); this.upgrades(); });
     md.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._tab = b.dataset.t; this.upgrades(); });
     md.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s, lv = this.slv(k), c = this.sCost(k); if (lv >= STAFF_UP.max || S.coins < c) return; S.coins -= c; const br = S.branch[S.bi]; (br.slv ||= {})[k] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${STAFF[k].name} Lv.${lv + 1}!`); this.progress(); this.upgrades(); }); }
+  // ── 꾸미기: 지점마다 정해진 자리에 소품 · 「베이글 향」 = 손님 더 자주 + 팁
+  decoCost(d) { return Math.round(d.cost * BRANCHES[S.bi].mult / 10) * 10; }
+  cheapDeco() { const own = S.deco[S.bi] || []; return DECO.some(d => !d.gift && !own.includes(d.id) && S.coins >= this.decoCost(d)); }
+  decoShop() {
+    const own = S.deco[S.bi] || [], g = this.app.game, sc = g.scent();
+    const list = DECO.filter(d => !d.gift || own.includes(d.id)).map(d => { const has = own.includes(d.id), c = this.decoCost(d);
+      return `<div class="upr ${has ? 'own' : ''}"><i>${d.icon}</i><div><b>${d.name} <em>향 +${d.score}</em></b><span>${d.desc}</span></div><button class="btn sm ${has || S.coins < c ? 'off' : ''}" data-d="${d.id}">${has ? '놓음' : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('');
+    const md = this.modal(`<h3>🪴 ${BRANCHES[S.bi].name} 꾸미기</h3><div class="scentbar">🌿 베이글 향 <b>${sc}</b><span>손님 +${Math.round(sc / 3)}% · 팁 확률 +${(sc / 20).toFixed(1)}%</span></div><div class="uplist">${list}</div><p class="sm">소품은 이 지점에 놓여요 · 단골이 선물로 주기도 해요</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+    md.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const d = DECO.find(x => x.id === b.dataset.d), c = this.decoCost(d); if ((S.deco[S.bi] || []).includes(d.id) || S.coins < c) return; S.coins -= c; this.app.game.addDeco(d.id); sfx('unlock', { vol: 0.6 }); this.toast(`${d.name} 놓았어요 · 향 +${d.score}`); this.progress(); this.decoShop(); });
+  }
+  // ── 단골
+  regulars() {
+    const opened = [...this.app.game.unl].filter(id => !BRANCHES[S.bi].slots.find(s => s.id === id)?.free).length;
+    const html = REGULARS.map(R0 => { const r = S.reg[R0.id] || { f: 0, lv: 0 }, lv = favLv(r.f), met = r.f > 0 || r.day, next = FAVOR[lv];
+      const fav = { bagel: '플레인 베이글', cream: '그날의 특별 베이글', coffee: '크림치즈 컵', drink: '아메리카노' }[R0.fav];
+      return `<div class="reg ${met ? '' : 'lock'}"><i class="av" style="background:#${R0.body.toString(16).padStart(6, '0')}">${met ? R0.name[0] : '?'}</i><div><b>${met ? R0.name : '아직 모르는 손님'} <small>${met ? R0.who : R0.need > opened ? '가게를 더 키우면 찾아와요' : '곧 찾아와요'}</small></b>
+        <div class="hearts">${'<s class="on">♥</s>'.repeat(lv)}${'<s>♥</s>'.repeat(5 - lv)}${next ? `<span>다음 ♥까지 ${next - r.f}</span>` : '<span>최고 단골!</span>'}</div>
+        ${met ? `<span class="fav">좋아하는 것: ${fav}</span>${R0.story.slice(0, lv).map(t => `<p>“${t}”</p>`).join('')}${lv < 5 ? `<p class="lk">♥${lv + 1}에서 다음 이야기${lv + 1 === 2 || lv + 1 === 4 ? ' · 🎁 꾸미기 선물' : ''}</p>` : ''}` : ''}</div></div>`; }).join('');
+    for (const r of Object.values(S.reg)) r.seen = r.lv || 0; save(); this.progress();
+    const m = this.modal(`<h3>💌 단골손님</h3><div class="uplist">${html}</div><p class="sm">단골은 하루 한 번 찾아와요 · 빨리 내주면 호감 +2</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+  }
+  regLevel(R0, lv, gift, coins) {
+    const d = document.createElement('div'); d.className = 'regcard'; d.innerHTML = `<i class="av" style="background:#${R0.body.toString(16).padStart(6, '0')}">${R0.name[0]}</i><div><b>${R0.name} ${'♥'.repeat(lv)}</b><p>“${R0.story[lv - 1]}”</p><span>${gift ? `🎁 선물: ${gift}` : `💰 +${fmt(coins)}`}</span></div>`;
+    document.body.append(d); d.onclick = () => d.remove(); setTimeout(() => d.classList.add('on'), 30); setTimeout(() => { d.classList.remove('on'); setTimeout(() => d.remove(), 400); }, 4500); this.progress();
+  }
+  // ── 메뉴 숙련
+  menuBook() {
+    const g = this.app.game, ks = ['bagel']; if (g.st.cc) ks.push('cream'); if (g.st.coffee) ks.push('coffee'); if (g.st.espresso) ks.push('drink');
+    const html = ks.map(k => { const nm = MENU[k].name, n = S.mast[nm] || 0, st = starOf(nm), nx = MASTERY[st], base = MASTERY[st - 1];
+      return `<div class="upr"><i>${MENU[k].icon || ICON[k]}</i><div><b>${nm} <em class="stars">${'★'.repeat(st)}<i>${'★'.repeat(5 - st)}</i></em></b><span>${fmt(n)}개 판매 · 값 +${Math.round((st - 1) * MASTERY_K * 100)}%</span>${nx ? `<div class="pb"><s style="width:${(n - base) / (nx - base) * 100}%"></s></div><span>★${st + 1}까지 ${fmt(nx - n)}개</span>` : '<span>대표 메뉴!</span>'}</div></div>`; }).join('');
+    const m = this.modal(`<h3>📖 메뉴 숙련</h3><div class="uplist">${html}</div><p class="sm">많이 팔수록 별이 오르고 값도 올라요 · 지점이 바뀌면 그 지점 메뉴</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+  }
   // ── 다 연 지점: 직원들이 계속 장사 → 지점 지도에서 받기
   finished(i) { const b = BRANCHES[i], br = S.branch[i]; return !!br && i !== S.bi && b.slots.filter(s => !s.free && s.id !== 'next').every(s => br.unl.includes(s.id)); }
   idleOf(i) { if (!this.finished(i)) return 0; const br = S.branch[i], t = Math.min(4 * 3600, (Date.now() - (br.idleAt || Date.now())) / 1000); return Math.floor(t * FINISHED_RATE * BRANCHES[i].mult * (1 + (br.lv?.price || 0) / 10)); }

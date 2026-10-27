@@ -60,3 +60,20 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .dev { margin-top: 14px; padding: 10px; border: 2px dashed #E2C9A6; border-radius: 14px; text-align: left; } .dev > b { font-size: 12px; color: #9A7A5C; } .dev .slot { display: flex; align-items: center; gap: 6px; margin-top: 6px; } .dev .slot span { flex: 1; font-size: 12px; } .dev .slot small { display: block; font-size: 10px; color: #B09070; }
 .dev .btn.sm { min-width: 60px; height: 34px; font-size: 12px; } .btn.danger { background: linear-gradient(#FF8A7A, #E2483A); box-shadow: 0 4px 0 #A02A1A; } .modal { max-height: 88vh; overflow-y: auto; }
 .held { position: absolute; left: 0; top: 0; background: #4A2B16; color: #FFF3E2; border-radius: 12px; padding: 3px 9px; font-size: 12px; font-weight: 900; white-space: nowrap; box-shadow: 0 3px 0 #2A180A; pointer-events: none; } .held em { font-style: normal; color: #FFD24A; } .held.max em { color: #FF7A59; } .held.trash { background: #6A6A6A; box-shadow: 0 3px 0 #3A3A3A; }
+/* ── 아이러브커피에서 가져온 재미 (꾸미기 · 단골 · 메뉴 숙련 · 손님 기분) */
+.scent { display: flex; align-items: center; gap: 3px; background: #fff; border-radius: 20px; padding: 5px 10px; font-weight: 900; font-size: 15px; box-shadow: 0 3px 0 var(--sh); color: #4A8A3A; pointer-events: auto; cursor: pointer; } .scent b { color: var(--br); }
+.lside { position: absolute; left: 12px; top: calc(var(--st) + 150px); display: flex; flex-direction: column; gap: 10px; }
+.sb.deco { background: linear-gradient(#C8EBB0, #8FCB7A); color: #2E5A22; box-shadow: 0 4px 0 #5E9A4A; }
+.bub .rn { font-style: normal; background: #FF6720; color: #fff; border-radius: 8px; padding: 1px 6px; margin-right: 2px; font-size: 10.5px; }
+.bub.reg { outline: 2px solid #FF6720; }
+.float.heart { color: #E8405A; font-size: 20px; } .float.say { color: #5A3A22; font-size: 13px; background: #fff; border-radius: 12px; padding: 4px 10px; text-shadow: none; box-shadow: 0 3px 0 var(--sh); }
+.regcard { position: fixed; left: 50%; top: calc(var(--st) + 70px); transform: translate(-50%, -20px); opacity: 0; transition: .35s; z-index: 60; display: flex; gap: 10px; align-items: flex-start; width: min(340px, 90vw); background: #FFFBF4; border: 2px solid #FF6720; border-radius: 18px; padding: 10px 12px; box-shadow: 0 8px 20px #0003; color: var(--br); }
+.regcard.on { transform: translate(-50%, 0); opacity: 1; } .regcard b { font-size: 14px; color: #E8405A; } .regcard p { margin: 3px 0; font-size: 13px; color: #5A3A22; } .regcard span { font-size: 12px; font-weight: 900; color: #E2702A; }
+.av { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-weight: 900; font-size: 16px; box-shadow: inset 0 -3px 0 #0002; }
+.reg { display: flex; gap: 10px; background: #fff; border-radius: 14px; padding: 10px; margin-bottom: 7px; text-align: left; } .reg > div { flex: 1; min-width: 0; } .reg b { font-size: 14px; } .reg b small { font-size: 10.5px; color: #9A7A5C; font-weight: 700; margin-left: 4px; }
+.reg .hearts { display: flex; align-items: center; gap: 1px; margin: 3px 0; } .reg .hearts s { text-decoration: none; color: #E8DCCB; font-size: 14px; } .reg .hearts s.on { color: #E8405A; } .reg .hearts span { font-size: 10.5px; color: #9A7A5C; margin-left: 6px; }
+.reg .fav { display: block; font-size: 11px; color: #E2702A; font-weight: 800; } .reg p { margin: 4px 0 0; font-size: 12px; color: #5A3A22; line-height: 1.45; } .reg p.lk { color: #B8A08A; font-size: 11px; } .reg.lock { opacity: .6; }
+.scentbar { display: flex; align-items: baseline; gap: 6px; background: #EAF6E2; color: #2E5A22; border-radius: 12px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; } .scentbar b { font-size: 20px; } .scentbar span { margin-left: auto; font-size: 11px; font-weight: 700; }
+.upr.own { opacity: .7; } .stars { color: #F2A23A !important; letter-spacing: 1px; }
+#toast { white-space: normal; width: max-content; max-width: min(340px, 88vw); text-align: center; line-height: 1.35; }
+.stars i { font-style: normal; color: #EADCC8; }

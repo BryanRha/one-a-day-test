@@ -1,11 +1,13 @@
 // 저장 (localStorage 'marumi_v1'): 돈 · 지점별 열린 것/직원/칸에 부은 돈 · 강화 · 오늘 판 개수(쿠폰) · 미션 · 출석
-import { COUPON } from './data.js?v=0.65.0';
+import { COUPON } from './data.js?v=0.66.0';
 const KEY = 'marumi_v1';
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const fresh = () => ({ v: 1, coins: 0, earned: 0, bi: 0, branch: {}, up: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), seen: {} });
+const fresh = () => ({ v: 1, coins: 0, earned: 0, bi: 0, branch: {}, up: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), seen: {}, mast: {}, deco: {}, reg: {} });   /* mast: 메뉴 이름별 판매 수 · deco: 지점별 놓은 소품 · reg: 단골 { f 호감, day 마지막 방문, lv 받은 단계 } */
 export let S = fresh();
 export function loadSave() { try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === 1) S = Object.assign(fresh(), s); } catch { /* */ }
   for (const b of Object.values(S.branch || {})) { b.unl = Array.isArray(b.unl) ? b.unl : []; b.staff = (Array.isArray(b.staff) ? b.staff : []).filter((k, i, a) => a.indexOf(k) === i); b.paid ||= {}; }   /* 옛 버전 저장 정리 */
+  for (const k of ['mast', 'deco', 'reg']) if (!S[k] || typeof S[k] !== 'object') S[k] = {};
+  for (const [k, v] of Object.entries(S.deco)) if (!Array.isArray(v)) delete S.deco[k];
   if (!Number.isFinite(S.coins)) S.coins = 0; dayTick(); return S; }
 let tm = null;
 export function save(now) { if (window.__noSave) return; S.last = Date.now(); clearTimeout(tm); const f = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* */ } }; if (now) f(); else tm = setTimeout(f, 400); }

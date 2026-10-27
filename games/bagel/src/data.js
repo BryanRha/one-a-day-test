@@ -86,3 +86,47 @@ export const STAFF = {
 export const STAFF_UP = { base: 150, max: 10 };   /* 직원 단계 비용 = base × 1.6^단계 × 지점 배수 */
 export const CUST_COLORS = [0x6A9AE8, 0xE86A8A, 0x9ACF6A, 0xF2C14E, 0xC08AE0, 0x5AC0B0, 0xE8A06A, 0x8AA0B8];
 export const COUPON = { goal: 100, text: '크림치즈 1개 무료 (베이글 구매 시) · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };   /* 쿠폰 내용은 트렌차이즈와 정함 */
+// ── 아이러브커피에서 가져온 재미 (2026-10-27): 메뉴 숙련 · 손님 기분 · 꾸미기 · 단골
+// 메뉴 숙련: 메뉴 이름별 판매 수 → ★1~5 · 별 하나마다 값 +6%
+export const MASTERY = [0, 60, 250, 700, 1600];
+export const MASTERY_K = 0.06;
+// 손님 기분: 줄 선 시간(초) — 빨리 받으면 하트 + 팁, 오래 기다리면 시무룩 (벌 없음, 팁만 없음)
+export const MOOD = { happy: 10, ok: 25, tip: 0.15 };
+// 꾸미기: 지점마다 정해진 자리에 놓는 소품 · score = 「베이글 향」 (손님이 더 자주 + 팁 확률)
+//   pos: 1호점 배치 기준 좌표 (모든 지점이 같은 배치) · r: 부딪힘 반지름 (0 = 바닥/벽이라 안 부딪힘)
+export const DECO = [
+  { id: 'monstera', name: '큰 몬스테라 화분', icon: '🪴', cost: 120, score: 10, pos: [-690, 690], r: 45, desc: '가게 구석이 싱그러워져요' },
+  { id: 'rug', name: '라탄 러그', icon: '🟫', cost: 180, score: 12, pos: [-240, 490], r: 0, desc: '테이블 사이 따뜻한 바닥' },
+  { id: 'bench', name: '창가 쿠션 벤치', icon: '🛋', cost: 260, score: 16, pos: [-700, 500], r: 0, desc: '벽을 따라 놓인 긴 의자' },
+  { id: 'lamp', name: '스탠드 조명', icon: '💡', cost: 300, score: 15, pos: [-700, -460], r: 30, desc: '반죽기 옆을 밝혀요' },
+  { id: 'shelf', name: '베이글 벽 선반', icon: '🥯', cost: 360, score: 18, pos: [300, -735], r: 0, desc: '갓 구운 베이글을 벽에 진열' },
+  { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 420, score: 18, pos: [600, 640], r: 30, desc: '문 앞 손글씨 칠판' },
+  { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 480, score: 20, pos: [-733, -480], r: 0, desc: '요요기 본점의 아침 풍경' },
+  { id: 'vase', name: '테이블 꽃병', icon: '💐', cost: 540, score: 22, pos: null, r: 0, desc: '열린 테이블마다 꽃 한 송이' },
+  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 640, score: 24, pos: [690, 690], r: 45, desc: '입구가 숲처럼' },
+  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 900, score: 30, pos: [-300, 930], r: 0, desc: '가게 앞 바깥 자리' },
+  { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [-733, 250], r: 0, desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
+];
+// 단골: 하루 한 번 찾아오는 동네 사람 · fav = 좋아하는 메뉴 칸(bagel 플레인 · cream 특별 · coffee 크림치즈 · drink 커피)
+//   하트 단계 = 호감 [1, 3, 6, 10, 15] · 단계마다 사연 한 줄 · 2·4단계는 꾸미기 선물
+export const FAVOR = [1, 3, 6, 10, 15];
+export const REGULARS = [
+  { id: 'jiwoo', name: '지우', who: '근처 회사원', body: 0x5A6A8A, hair: 0x2A1A10, fav: 'drink', need: 0,
+    hi: '오늘도 아아 하나요!', gift: ['monstera', 'lamp'],
+    story: ['출근 전에 여기 들르는 게 하루의 시작이에요.', '사실 커피보다 사장님 인사가 더 깨워 줘요.', '팀장님한테 베이글 사 갔더니 칭찬받았어요!', '이직 고민 중이었는데… 이 동네 떠나기 싫어서 남기로 했어요.', '오늘은 제가 살게요. 늘 고마웠어요.'] },
+  { id: 'halmae', name: '순자 할머니', who: '석촌호수 산책 단골', body: 0xB88AC8, hair: 0xD8D8D8, fav: 'bagel', need: 1,
+    hi: '플레인 하나 줘요, 손주 줄 거야', gift: ['rug', 'vase'],
+    story: ['손주가 여기 베이글만 먹어요.', '젊을 땐 나도 빵집을 했었지.', '반죽 소리가 우리 가게랑 똑같아서 좋아.', '손주가 대학 붙었대! 오늘은 두 개 사 갈게.', '이 가게 오래오래 해 줘요. 내가 꼭 올게.'] },
+  { id: 'minho', name: '민호', who: '대학생 · 베이글 덕후', body: 0xF2C14E, hair: 0x6A3A1A, fav: 'cream', need: 3,
+    hi: '오늘의 특별 베이글 뭐예요?', gift: ['shelf', 'board'],
+    story: ['베이글 지도 만드는 중인데 여기가 1등이에요.', '솔트버터는 겉바속쫄의 교과서예요.', '과제 하다 밤새면 아침에 여기로 와요.', '제 블로그에 소개했는데 조회수 대박!', '졸업하면 저도 이런 가게 하고 싶어요.'] },
+  { id: 'yuna', name: '유나', who: '필라테스 강사', body: 0x9ACF6A, hair: 0x3A2A1A, fav: 'coffee', need: 6,
+    hi: '크림치즈 컵 하나요, 가볍게!', gift: ['plants2', 'gallery'],
+    story: ['수업 끝나고 여기 크림치즈가 보상이에요.', '회원님들한테도 다 추천했어요.', '요즘 수업이 늘어서 바빠요. 그래도 여긴 와요.', '제 스튜디오 열었어요! 오픈 선물로 베이글 주문할게요.', '여기 오면 숨이 쉬어져요.'] },
+  { id: 'dad', name: '정우 아빠', who: '주말마다 아이와', body: 0x6AB0C8, hair: 0x1A1A1A, fav: 'cream', need: 10,
+    hi: '아이가 고른 걸로 주세요!', gift: ['terrace', 'bench'],
+    story: ['정우가 베이글 구멍으로 세상 보는 걸 좋아해요.', '주말 아침은 무조건 여기예요.', '정우가 커서 사장님 되고 싶대요.', '둘째가 생겼어요! 넷이 올 날을 기다려요.', '이 가게가 우리 가족 추억이 됐어요.'] },
+  { id: 'sora', name: '소라', who: '근처 작가', body: 0xE8A06A, hair: 0x5A2A1A, fav: 'drink', need: 14,
+    hi: '창가 자리 비었나요?', gift: ['vase', 'gallery'],
+    story: ['여기서 쓴 글이 제일 잘 써져요.', '반죽 냄새가 문장을 부드럽게 해요.', '이 가게를 배경으로 소설을 쓰고 있어요.', '책이 나왔어요! 첫 장에 이 가게가 나와요.', '사인한 책 한 권 놓고 갈게요. 선반에 둬 주세요.'] },
+];
