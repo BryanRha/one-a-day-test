@@ -1,18 +1,20 @@
-import { W, BASE_H, setH } from './config.js?v=0.73.0';
-import { audio } from './audio.js?v=0.73.0';
-import { BootScene } from './scenes/Boot.js?v=0.73.0';
-import { HomeScene } from './scenes/Home.js?v=0.73.0';
-import { BoardScene } from './scenes/Board.js?v=0.73.0';
-import { StoryScene } from './scenes/Story.js?v=0.73.0';
-import { SeasonScene } from './scenes/Season.js?v=0.73.0';
-import { ShopScene } from './scenes/Shop.js?v=0.73.0';
-import { AlbumScene } from './scenes/Album.js?v=0.73.0';
-import { MiniScene } from './scenes/Mini.js?v=0.73.0';
-import { installBack } from './oad.js?v=0.73.0';
-import { installNav } from './nav.js?v=0.73.0';
+import { W, BASE_H, setH } from './config.js?v=0.73.1';
+import { audio } from './audio.js?v=0.73.1';
+import { BootScene } from './scenes/Boot.js?v=0.73.1';
+import { HomeScene } from './scenes/Home.js?v=0.73.1';
+import { BoardScene } from './scenes/Board.js?v=0.73.1';
+import { StoryScene } from './scenes/Story.js?v=0.73.1';
+import { SeasonScene } from './scenes/Season.js?v=0.73.1';
+import { ShopScene } from './scenes/Shop.js?v=0.73.1';
+import { AlbumScene } from './scenes/Album.js?v=0.73.1';
+import { MiniScene } from './scenes/Mini.js?v=0.73.1';
+import { installBack } from './oad.js?v=0.73.1';
+import { installNav } from './nav.js?v=0.73.1';
+import { initBM } from './store.js?v=0.73.1';
+import { bm } from './oad_bm.js?v=0.73.1';
 
 async function start() {
-  installNav();
+  installNav(); initBM();   /* 원어데이 연결 확인(최대 0.8초, 기다리지 않음) — 결과는 화면이 그려질 때 캐시로 봄 */
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* */ }
   const game = new Phaser.Game({
     type: Phaser.AUTO, parent: 'game', width: W, height: BASE_H, backgroundColor: '#FBEFE8',
@@ -33,6 +35,7 @@ async function start() {
   const refresh = () => [60, 250, 600].forEach(ms => setTimeout(fitMode, ms));
   addEventListener('resize', refresh); addEventListener('orientationchange', refresh);
   window.__game = game;
+  bm.onPause = on => { try { game.sound.mute = !!on; } catch { /* */ } };   /* 광고 · 확인 창 동안 소리 끔 */
   installBack(game, { home: 'Home', roots: [] });
 }
 start();

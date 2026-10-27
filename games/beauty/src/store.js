@@ -1,8 +1,10 @@
-// 유료화 준비 — 상품 목록 · 구매 · 광고 보상의 '창구' 하나
-// 지금: 결제 · 광고 모두 꺼짐(enabled=false) → 화면에는 '곧 열려요'.
-// 나중에 결제를 켤 때: PROVIDER 를 실제 결제 연결(원어데이 앱 postMessage 등)로 바꾸고 enabled=true 만 하면
-//   상품 지급(grant) · 화면 · 저장 기록은 그대로 동작하도록 만들어 둠.
-import { load, save } from './save.js?v=0.73.0';
+// 유료화 창구 하나 — 상품 목록 · 구매 · 광고 보상 · 원어데이 골드
+// 원화 결제(PROVIDER): 지금은 꺼짐(enabled=false) → 원어데이 밖에선 '곧 열려요', 원어데이 안에선 골드 상품으로 대체
+// 원어데이 안(oad_bm hello().ok): 광고 자리 3곳(energy · bubble · dailyBonus) = bm.rewardedAd · 골드 = bm.spend (가격은 서버 SHOP.beauty 만 기준)
+//   소장자는 rewardedAd 가 via:'owner' 로 광고 없이 바로 성공 · 원어데이 밖에선 광고 · 골드 버튼을 숨기고 지금처럼
+import { load, save } from './save.js?v=0.73.1';
+import { bm } from './oad_bm.js?v=0.73.1';
+import { today } from './state.js?v=0.73.1';
 
 export const PRODUCTS = [
   { id: 'gems_s', n: '보석 한 줌', price: 1200, gems: 80, tag: '' },
@@ -25,7 +27,6 @@ const PROVIDER = {
   async showAd(/* placement */) { throw new Error('disabled'); },
 };
 export const storeOpen = () => PROVIDER.enabled;
-export const adsOpen = () => PROVIDER.adsEnabled;
 
 // 구매: 결제 성공 → 지급 → 기록 (영수증 id 로 중복 지급 방지)
 export async function purchase(id) {
@@ -45,5 +46,35 @@ export function grant(p) {
   if (p.ent) d.ent[p.ent] = true;
   save();
 }
-// 광고 보상 (자리: energy · bubble · dailyBonus)
-export async function rewardAd(placement) { await PROVIDER.showAd(placement); return true; }
+// ── 원어데이 연결 (게임 시작 때 initBM 한 번 → 이후 화면은 캐시만 봄)
+export const initBM = () => bm.hello().catch(() => null);
+export const oadOn = () => !!bm.info.ok;
+export const isOwner = () => !!(bm.info.ok && (bm.info.owned || bm.info.noAds));
+export const goldPrice = item => bm.price(item);            /* 0 이면 그 골드 상품 없음 */
+export const GOLD_GEMS = 100;                               /* gems100 = 보석 100개 */
+// 광고 자리별 하루 횟수 (게임 쪽 상한 · 앱의 게임당 한도와 둘 다 지킴)
+export const AD_LIMIT = { energy: 3, bubble: 3, dailyBonus: 1 };
+export const AD_ENERGY = 20;
+function adDay() { const d = load(); if (!d.adUse || d.adUse.day !== today()) { d.adUse = { day: today(), energy: 0, bubble: 0, dailyBonus: 0 }; } return d.adUse; }
+export const adLeft = placement => !oadOn() ? 0 : Math.max(0, (AD_LIMIT[placement] || 0) - (adDay()[placement] || 0));
+// 이 자리 광고 버튼을 보여 줄지: 원어데이 안 + (소장자이거나 앱이 보상형 허용)
+export const adsOpen = () => oadOn() && (isOwner() || !!(bm.info.ads && bm.info.ads.reward)) || PROVIDER.adsEnabled;
+export const canAd = placement => adsOpen() && adLeft(placement) > 0;
+// 버튼 글: 소장자는 '바로 받기', 아니면 '광고 보고'
+export const adLabel = (what, short) => isOwner() ? `바로 ${what}` : `▶ 광고${short ? '' : ' 보고'} ${what}`;
+// 광고 보상: 성공(true)이면 횟수 기록 → 호출한 쪽이 보상 지급 · 실패면 false (보상 없음)
+export async function rewardAd(placement) {
+  if (!canAd(placement)) return false;
+  const r = await bm.rewardedAd(placement);
+  if (!r || !r.ok) return false;
+  adDay()[placement]++; save(); return true;
+}
+// 골드 쓰기: 확인 창 · 로그인 · 충전은 앱이 → ok 면 호출한 쪽이 지급 (중복 지급 방지는 앱/서버가 요청 id 로)
+export async function spendGold(item) {
+  if (!oadOn() || !goldPrice(item)) return { ok: false, reason: 'off' };
+  const r = await bm.spend(item);
+  if (r && r.ok) { const d = load(); d.purchases.push({ id: `gold_${item}`, gold: goldPrice(item), at: Date.now() }); save(); }
+  return r || { ok: false, reason: 'error' };
+}
+// 골드 실패 이유 → 부드러운 한마디 (취소는 조용히)
+export const goldMsg = r => !r || r.reason === 'cancel' ? '' : r.reason === 'short' ? '골드가 조금 모자라요' : r.reason === 'login' ? '원어데이에 로그인하면 쓸 수 있어요' : r.reason === 'limit' ? '오늘은 더 살 수 없어요 · 내일 다시 열려요' : '지금은 쓸 수 없어요 · 잠시 뒤 다시 해 봐요';

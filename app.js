@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.73.0';
-import * as R from './rules.js?v=0.73.0';
-import * as I from './install.js?v=0.73.0';
-import * as T from './track.js?v=0.73.0';
-import * as P from './pay.js?v=0.73.0';
-import * as A from './account.js?v=0.73.0';
-import * as C from './cloud.js?v=0.73.0';
-import * as BM from './bm.js?v=0.73.0';
+import { PLANNED } from './catalog.js?v=0.73.1';
+import * as R from './rules.js?v=0.73.1';
+import * as I from './install.js?v=0.73.1';
+import * as T from './track.js?v=0.73.1';
+import * as P from './pay.js?v=0.73.1';
+import * as A from './account.js?v=0.73.1';
+import * as C from './cloud.js?v=0.73.1';
+import * as BM from './bm.js?v=0.73.1';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.73.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.73.1').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.73.0';
+const VERSION = '0.73.1';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 

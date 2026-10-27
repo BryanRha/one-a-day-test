@@ -1,10 +1,11 @@
 // 결과: 거리·점수(최고 기록) · 주운 재화 · 입양 진행 · 미션 진행 → 다시 날기 / 로비
-import { W, H } from '../config.js?v=0.73.0';
-import { txt, fmt, fit, button, iconButton } from '../ui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load } from '../save.js?v=0.73.0';
-import { wind } from '../fx.js?v=0.73.0';
-import { applyRun, CAT_INFO, missions, ranking } from '../meta.js?v=0.73.0';
+import { W, H } from '../config.js?v=0.73.1';
+import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load } from '../save.js?v=0.73.1';
+import { wind } from '../fx.js?v=0.73.1';
+import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.73.1';
+import { bm } from '../oad_bm.js?v=0.73.1';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -24,7 +25,9 @@ export class ResultScene extends Phaser.Scene {
     const top = Math.max(120, H / 2 - 860);
     this.add.nineslice(W / 2, top + 640, 'panel', null, 960, 1180, 100, 100, 100, 100);
     this.add.image(W / 2, top + 60, 'ribbon').setDisplaySize(940, 200);
-    txt(this, W / 2, top + 52, out.newBest ? '최고 기록!' : '비행 결과', 70, '#FFFFFF', { stroke: '#22105A', thick: 12 });
+    /* 칭찬 먼저: 신기록 > 보스 격파 > 멋진 비행 */
+    txt(this, W / 2, top + 52, out.newBest ? '최고 기록!' : r.bosses ? '보스 격파!' : '멋진 비행!', 70, '#FFFFFF', { stroke: '#22105A', thick: 12 });
+    if (r.revived && r.afterRevive > 0) this.time.delayedCall(900, () => toast(this, out.newBest ? `역전! 이어하기로 신기록!` : `이어하기로 ${fmt(r.afterRevive)}m 더 날았어요!`, '#FFE14D', top + 470));
     if (out.newBest) {
       for (let i = 0; i < 24; i++) {
         const s = this.add.image(W / 2, top + 260, 'star_on').setScale(0.5);
@@ -44,11 +47,11 @@ export class ResultScene extends Phaser.Scene {
 
     // 주운 것
     const items = [['cur_coin', r.coins], ['cur_gem', r.gems], ['cur_treat', r.treats], ['cur_crystal', r.crystals]];
-    items.forEach(([k, v], i) => {
+    const vals = items.map(([k, v], i) => {
       const x = W / 2 - 330 + i * 220, y = top + 560;
       this.add.rectangle(x, y, 190, 150, 0x120830, 0.7).setStrokeStyle(3, 0x8A6AD8);
       this.add.image(x, y - 22, k).setDisplaySize(80, 80);
-      txt(this, x, y + 46, `+${fmt(v)}`, 40, '#FFFFFF');
+      return txt(this, x, y + 46, `+${fmt(v)}`, 40, '#FFFFFF');
     });
     // 처치·보스
     txt(this, W / 2, top + 690, `몬스터 ${fmt(r.kills)} · 보스 ${r.bosses}${r.sRank ? ` (S ${r.sRank})` : ''}`, 40, '#FFE8A8');
@@ -76,10 +79,26 @@ export class ResultScene extends Phaser.Scene {
       txt(this, W / 2 + 400, yy, m.kind === 'runDist' ? (m.done ? '완료' : `${fmt(prog)}m`) : `${fmt(prog)}/${fmt(m.goal)}`, 32, '#FFFFFF', { ox: 1 });
     });
 
+    this.coins2x(r, vals[0], top + 1125);
     const by = Math.min(H - 170, top + 1330);
     button(this, W / 2 + 160, by, '다시 날기', () => this.go('Play'), { key: 'btn_gold', w: 520, h: 160, icon: 'ico_retry' });
     iconButton(this, W / 2 - 300, by, 'ico_home', () => this.go('Lobby'), 160);
     window.__result = r;
+  }
+  // 원어데이 안에서만: 광고 보고 코인 2배 (하루 3번 · 소장자는 광고 없이) — 원어데이 밖이면 버튼 없음
+  coins2x(r, label, y) {
+    const info = bm.info;
+    if (!info.ok || !(info.owned || (info.ads && info.ads.reward)) || r.coins < 10 || adLeft('coins2x') <= 0) return;
+    const btn = button(this, W / 2, y, info.owned ? `소장 혜택 · 코인 2배 (+${fmt(r.coins)})` : `광고 보고 코인 2배 (+${fmt(r.coins)})`, async () => {
+      if (btn.disabled) return; btn.setEnabled(false);
+      const a = await bm.rewardedAd('coins2x');
+      if (!a.ok) { btn.setEnabled(a.reason !== 'limit'); if (a.reason === 'limit') toast(this, '오늘은 여기까지예요'); return; }
+      adUse('coins2x'); grant({ coins: r.coins });
+      audio.play('sfx_coin'); label.setText(`+${fmt(r.coins * 2)}`).setColor('#FFE14D');
+      this.tweens.add({ targets: label, scale: 1.4, yoyo: true, duration: 180 });
+      btn.setLabel('코인 2배 받았어요!'); btn.setAlpha(1);
+    }, { key: 'btn_gold', w: 700, h: 100, size: 34 });
+    window.__coins2x = btn;
   }
   go(scene) {
     this.cameras.main.fadeOut(250, 10, 6, 30);

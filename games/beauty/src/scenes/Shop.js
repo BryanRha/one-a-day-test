@@ -1,13 +1,17 @@
-// 상점: 하루 무료 선물 + 유료 상품(지금은 '곧 열려요') — 결제가 열리면 store.js 만 켜면 됨
-import { W, H } from '../config.js?v=0.73.0';
-import { T, R, C, TS, btn, toast, rbox } from '../ui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load, save } from '../save.js?v=0.73.0';
-import { goPrev } from '../nav.js?v=0.73.0';
-import { screen } from '../hud.js?v=0.73.0';
-import { PRODUCTS, won, storeOpen, purchase } from '../store.js?v=0.73.0';
-import { today } from '../state.js?v=0.73.0';
-import { PIGGY } from '../album.js?v=0.73.0';
+// 상점: 하루 무료 선물(원어데이 안에선 광고로 2배) + 상품
+//   원어데이 안: 원화 상품 대신 원어데이 골드 상품(서버 SHOP.beauty 가격) · 원어데이 밖: 원화 상품 '곧 열려요' 그대로
+import { W, H } from '../config.js?v=0.73.1';
+import { T, R, C, TS, btn, toast, rbox } from '../ui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load, save } from '../save.js?v=0.73.1';
+import { goPrev } from '../nav.js?v=0.73.1';
+import { screen } from '../hud.js?v=0.73.1';
+import { PRODUCTS, won, storeOpen, purchase, oadOn, goldPrice, spendGold, goldMsg, GOLD_GEMS, canAd, adLabel, rewardAd } from '../store.js?v=0.73.1';
+import { ENERGY } from '../data.js?v=0.73.1';
+import { today } from '../state.js?v=0.73.1';
+import { PIGGY } from '../album.js?v=0.73.1';
+
+const GIFT = { gems: 5, energy: 10 };   /* 오늘의 무료 선물 (광고 보면 2배) */
 
 export class ShopScene extends Phaser.Scene {
   constructor() { super('Shop'); }
@@ -15,17 +19,24 @@ export class ShopScene extends Phaser.Scene {
     audio.music('bgm_shop');
     const d = load(); let y = screen(this, '상점');
     // 하루 무료 선물
-    const free = d.freeGift !== today(); rbox(this, 40, y, W - 80, 150, { fill: '#FFFFFF', line: free ? '#E86A8E' : '#F1D2C8', lw: free ? 5 : 3, ox: 0, oy: 0, r: 28 });
+    const free = d.freeGift !== today(), dbl = free && canAd('dailyBonus'), gh = dbl ? 250 : 150;
+    rbox(this, 40, y, W - 80, gh, { fill: '#FFFFFF', line: free ? '#E86A8E' : '#F1D2C8', lw: free ? 5 : 3, ox: 0, oy: 0, r: 28 });
     const gi = this.add.image(120, y + 75, 'gen_gift'); gi.setScale(110 / gi.width);
-    T(this, 200, y + 50, '오늘의 무료 선물', TS.body + 2, C.ink, { ox: 0, w: 900 }); R(this, 200, y + 104, '◆5 · ⚡10 · 매일 다시 받아요', TS.cap, C.dim, { ox: 0, w: 800 });
-    btn(this, W - 170, y + 75, 220, 92, free ? '받기' : '내일 또', () => { if (!free) return; d.freeGift = today(); d.gems += 5; d.energy += 10; save(); audio.play('sfx_order', { volume: 0.6 }); this.scene.restart(); }, { style: free ? 'rose' : 'cream', size: 32 });
-    y += 175;
+    T(this, 200, y + 50, '오늘의 무료 선물', TS.body + 2, C.ink, { ox: 0, w: 900 }); R(this, 200, y + 104, `◆${GIFT.gems} · ⚡${GIFT.energy} · 매일 다시 받아요`, TS.cap, C.dim, { ox: 0, w: 800 });
+    const take = k => { d.freeGift = today(); d.gems += GIFT.gems * k; d.energy += GIFT.energy * k; save(); audio.play(k > 1 ? 'sfx_levelup' : 'sfx_order', { volume: 0.6 }); this.scene.restart(); };
+    if (dbl) { /* 하루 보너스 2배: 그냥 받기 · 광고 2배 같은 크기로 나란히 */
+      const bw = (W - 140) / 2;
+      btn(this, 60 + bw / 2, y + 190, bw - 10, 92, `받기 ◆${GIFT.gems} ⚡${GIFT.energy}`, () => take(1), { style: 'cream', size: 30 });
+      btn(this, W - 60 - bw / 2, y + 190, bw - 10, 92, adLabel(`2배 ◆${GIFT.gems * 2} ⚡${GIFT.energy * 2}`, true), async () => { if (await rewardAd('dailyBonus')) take(2); else toast(this, '지금은 광고를 볼 수 없어요 · 그냥 받기도 돼요'); }, { style: 'rose', size: 30 });
+    } else btn(this, W - 170, y + 75, 220, 92, free ? '받기' : '내일 또', () => { if (free) take(1); }, { style: free ? 'rose' : 'cream', size: 32 });
+    y += gh + 25;
     // 보석 저금통: 주문마다 ◆2씩 쌓임 · 결제가 열리면 깰 수 있음
     { const pv = d.piggy || 0; rbox(this, 40, y, W - 80, 150, { fill: '#FFFFFF', line: '#F1D2C8', ox: 0, oy: 0, r: 28 });
       const pi = this.add.image(120, y + 75, 'piggy'); pi.setScale(110 / pi.height); R(this, 200, y + 44, `보석 저금통 ◆${pv}`, TS.body, C.ink, { ox: 0, w: 900 }); R(this, 200, y + 92, `주문마다 ◆${PIGGY.perOrder}씩 · 최대 ◆${PIGGY.max}`, TS.min + 2, C.dim, { ox: 0, w: 800 });
       const g1 = this.add.graphics(); g1.fillStyle(0xF1DCD3, 1).fillRoundedRect(200, y + 122, 500, 14, 7).fillStyle(0xE86A8E, 1).fillRoundedRect(200, y + 122, Math.max(14, 500 * pv / PIGGY.max), 14, 7);
       btn(this, W - 170, y + 75, 220, 92, storeOpen() ? '깨기' : '곧 열려요', async () => { if (!storeOpen()) return toast(this, '저금통은 결제가 열리면 깰 수 있어요'); if (!pv) return toast(this, '아직 비어 있어요'); try { await purchase('piggy'); audio.play('sfx_levelup', { volume: 0.7 }); this.scene.restart(); } catch { toast(this, '구매하지 못했어요'); } }, { style: storeOpen() ? 'gold' : 'cream', size: 30 }); }
     y += 190;
+    if (oadOn() && (goldPrice('gems100') || goldPrice('energy'))) { this.goldShop(d, y); this.cameras.main.fadeIn(200, 255, 244, 236); window.__shop = this; return; }
     T(this, 50, y, storeOpen() ? '상품' : '상품 · 곧 열려요', TS.h2, C.brown, { ox: 0, w: 900 }); y += 50;
     const list = PRODUCTS.filter(p => !p.piggy), cols = 2, cw = (W - 100) / cols, rows = Math.ceil(list.length / cols), ch = Math.max(250, Math.min(340, (H - y - 30) / rows - 20));
     list.forEach((p, k) => {
@@ -43,6 +54,22 @@ export class ShopScene extends Phaser.Scene {
       }, { style: storeOpen() && !owned ? 'gold' : 'cream', size: 28 });
     });
     this.cameras.main.fadeIn(200, 255, 244, 236); window.__shop = this;
+  }
+  // 원어데이 골드 상품 (가격은 서버 SHOP.beauty · 확인 창은 앱이 띄움)
+  goldShop(d, y) {
+    T(this, 50, y, '원어데이 골드로 사기', TS.h2, C.brown, { ox: 0, w: 900 }); y += 50;
+    const items = [
+      { id: 'gems100', n: `보석 ${GOLD_GEMS}개`, desc: `◆${GOLD_GEMS} · 비눗방울 · 충전에 써요`, icon: 'gem', give: () => { d.gems += GOLD_GEMS; }, msg: `◆${GOLD_GEMS} 받았어요!` },
+      { id: 'energy', n: '에너지 가득', desc: `⚡${ENERGY.max} 까지 바로 채워요`, icon: 'energy', give: () => { d.energy = Math.max(d.energy, ENERGY.max); d.eAt = Date.now(); }, msg: '에너지 가득!' },
+    ].filter(it => goldPrice(it.id));
+    items.forEach(it => {
+      rbox(this, 40, y, W - 80, 170, { fill: '#FFFFFF', line: '#F1D2C8', ox: 0, oy: 0, r: 28 });
+      const im = this.add.image(120, y + 85, it.icon); im.setScale(110 / Math.max(im.width, im.height));
+      T(this, 200, y + 58, it.n, TS.body + 2, C.ink, { ox: 0, w: 900 }); R(this, 200, y + 112, it.desc, TS.cap, C.dim, { ox: 0, w: 800 });
+      btn(this, W - 170, y + 85, 220, 92, `🪙${goldPrice(it.id)}`, async () => { const r = await spendGold(it.id); if (!r.ok) { const m = goldMsg(r); if (m) toast(this, m); return; } it.give(); save(); audio.play('sfx_levelup', { volume: 0.7 }); toast(this, it.msg); this.hud.update(); }, { style: 'gold', size: 32 });
+      y += 190;
+    });
+    T(this, W / 2, y + 20, '무료 선물 · 시즌 보상 · 광고 보상으로도 받을 수 있어요', TS.min, C.dim, { w: 800 });
   }
   onBack() { return goPrev(this); }
 }

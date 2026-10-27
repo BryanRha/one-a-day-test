@@ -1,13 +1,14 @@
 // 비행 화면: core/run.js 시뮬레이션을 고정 간격으로 돌리고, 상태(s)와 사건(events)을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.73.0';
-import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.73.0';
-import { decideX } from '../core/ai.js?v=0.73.0';
-import { txt, fmt, fit, iconButton, button, popup } from '../ui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load, save } from '../save.js?v=0.73.0';
-import { wind, tipOf, ELEMENT } from '../fx.js?v=0.73.0';
-import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, BOOSTERS, pay } from '../meta.js?v=0.73.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.73.0';
+import { W, H } from '../config.js?v=0.73.1';
+import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.73.1';
+import { decideX } from '../core/ai.js?v=0.73.1';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load, save } from '../save.js?v=0.73.1';
+import { wind, tipOf, ELEMENT } from '../fx.js?v=0.73.1';
+import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.73.1';
+import { bm } from '../oad_bm.js?v=0.73.1';
+import { inOAD, exitToOAD } from '../oad.js?v=0.73.1';
 
 const DT = 1 / 60;
 const SHOT_KEY = { star: 'bolt_star', fire: 'bolt_fire', ice: 'bolt_ice', bolt: 'bolt_bolt', furball: 'furball' };
@@ -60,6 +61,7 @@ export class PlayScene extends Phaser.Scene {
     // 장면 객체는 판마다 재사용되므로 상태를 모두 초기화
     this.finished = false; this.bossImg = null; this.bossFlash = 0; this.scoreShown = 0; this.bannerAt = 0; this.drag = null;
     this.acc = 0; this.paused = false; this.over = false; this.slow = 1; this.bossKills = 0; this.sRank = 0; this.items = 0;
+    this.oadRevives = 0; this.reviveAt = 0; this.reviveOffers = []; this.runsBefore = d.totals.runs;
     const q = new URLSearchParams(location.search);
     this.bot = q.has('bot') || this.opts.bot;
     // 테스트용: ?from=1400 → 그 거리에서 시작
@@ -582,34 +584,106 @@ export class PlayScene extends Phaser.Scene {
     this.time.delayedCall(1100, () => this.askRevive());
   }
 
+  // 이어하기 창: 희망일 때만 권함 (meta.reviveMood) · 칭찬 먼저 · 10초 카운트다운 · 시간이 끝나면 조용히 결과로
+  //   원어데이 안: 첫 번째 = 광고 보고(소장자는 광고 없이) | 🪙20 나란히 같은 크기 · 두 번째 = 🪙40 만 · 판당 2번까지
+  //   별가루 이어하기(5/10/20)는 예전 그대로 함께 둠 · 원어데이 밖이면 골드 · 광고 버튼 없이 예전처럼
   askRevive() {
     const s = this.s, d = load();
-    const cost = REVIVE_COST[s.revived];
-    if (cost === undefined || this.bot) return this.finish();
-    const pop = popup(this, '이어서 날까요?', 760, { closable: false, depth: 2000 });
+    const B = s.boss && s.boss.state === 'fight' ? s.boss : null;
+    const mood = reviveMood({ dist: s.dist, best: this.bestDist, runs: this.runsBefore, t: s.t, bossHp: B ? B.hp / B.maxHp : null });
+    const gemCost = REVIVE_COST[s.revived];
+    const info = bm.info;
+    const hope = mood === 'record' || mood === 'near' || mood === 'boss';
+    const oadN = this.oadRevives;
+    const adOk = info.ok && oadN === 0 && (info.owned || (info.ads && info.ads.reward));
+    const goldItem = oadN === 0 ? 'continue' : 'continue2';
+    const goldOk = info.ok && oadN < OAD_REVIVE_MAX && bm.price(goldItem) > 0;
+    const offerOad = hope && (adOk || goldOk);
+    const offerGem = gemCost !== undefined && mood !== 'early' && (hope || d.gems >= gemCost);
+    this.reviveOffers.push({ mood, oad: offerOad, gem: offerGem, dist: Math.floor(s.dist) });
+    if (this.bot || s.revived >= REVIVE_MAX || (!offerOad && !offerGem)) return this.finish();
+
+    const ph = 605 + (offerOad ? 160 : 0) + (offerGem ? 150 : 0);   /* 내용 높이에 맞춤 */
+    const pop = popup(this, hope ? '조금만 더!' : '이어서 날까요?', ph, { closable: false, depth: 2000 });
     const b = pop.box;
-    b.add(txt(this, 0, -150, `${fmt(s.dist)}m 비행 중`, 56, '#FFFFFF'));
-    const cnt = txt(this, 0, 0, '5', 110, '#FFE14D'); b.add(cnt);
-    let left = 5;
-    const timer = this.time.addEvent({ delay: 1000, repeat: 4, callback: () => { left--; cnt.setText(`${left}`); if (left <= 0) { pop.close(); this.finish(); } } });
-    const yes = button(this, 0, 170, `이어하기  ${cost}`, () => {
-      if (!pay({ gems: cost })) { yes.setLabel('별가루 부족'); return; }
-      timer.remove(); pop.close(); this.doRevive();
-    }, { key: 'btn_gold', w: 560, h: 150, icon: 'cur_gem' });
-    b.add(yes);
-    if (d.gems < cost) yes.setEnabled(false);
-    b.add(button(this, 0, 300, '그만하기', () => { timer.remove(); pop.close(); this.finish(); }, { key: 'btn_purple', w: 400, h: 110 }));
+    let y = -ph / 2 + 150;
+    /* 칭찬 먼저 → 희망 한 줄 */
+    const praise = mood === 'record' ? '신기록 비행 중이었어요!' : mood === 'boss' ? '보스가 거의 쓰러졌어요!' : `멋진 비행! ${fmt(s.dist)}m`;
+    const hopeLine = mood === 'near' ? `최고 기록까지 ${fmt(Math.max(1, this.bestDist - s.dist))}m! 한 번 더 가 볼까요?`
+      : mood === 'record' ? `벌써 ${fmt(s.dist)}m · 더 멀리 가 볼까요?` : mood === 'boss' ? '한 번만 더 몰아붙여 볼까요?' : `${fmt(s.dist)}m 에서 다시 날 수 있어요`;
+    b.add(txt(this, 0, y, praise, 58, '#FFE14D')); y += 80;
+    b.add(txt(this, 0, y, hopeLine, 40, '#FFFFFF', { wrap: 860 })); y += 90;
+    /* 남은 시간: 숫자 대신 조용히 줄어드는 막대 + 작은 숫자 */
+    const barW = 640;
+    b.add(this.add.rectangle(-barW / 2, y, barW, 18, 0x120830).setOrigin(0, 0.5).setStrokeStyle(3, 0x8A6AD8));
+    const bar = this.add.rectangle(-barW / 2 + 3, y, barW - 6, 12, 0xB89AFF).setOrigin(0, 0.5); b.add(bar);
+    const cnt = txt(this, barW / 2 + 50, y, `${REVIVE_SEC}`, 40, '#D8CCFF'); b.add(cnt);
+    let left = REVIVE_SEC, busy = false;
+    const close = () => { timer.remove(); pop.close(); };
+    const timer = this.time.addEvent({ delay: 1000, repeat: REVIVE_SEC - 1, callback: () => {
+      left--; cnt.setText(`${left}`); bar.width = (barW - 6) * left / REVIVE_SEC;
+      if (left <= 0 && !busy) { pop.close(); this.finish(); }
+    } });
+    y += 130;
+    const go = how => { close(); if (how !== 'gem') this.oadRevives++; this.doRevive(how); };
+    /* 요청 중엔 버튼을 잠금 · 확인 창 · 광고 동안 게임은 bm.onPause 로 멈춤(카운트다운도 멈춤) */
+    const ask = async (fn, btn) => {
+      if (busy) return; busy = true;
+      const r = await fn();
+      busy = false;
+      if (r.ok) return true;
+      if (left <= 0) { pop.close(); this.finish(); return false; }
+      const msg = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요 · 내일 또 만나요', login: '로그인하면 쓸 수 있어요', cancel: '' }[r.reason];
+      if (msg) toast(this, msg, '#FFE8A8', H * 0.25);
+      if (r.reason === 'limit' && btn) btn.setEnabled(false);
+      return false;
+    };
+    if (offerOad) {
+      if (oadN === 0) {
+        /* 광고 | 🪙20 — 같은 크기로 나란히 (둘 중 되는 것만이면 가운데 하나) */
+        const two = adOk && goldOk, bw = two ? 420 : 560;
+        if (adOk) {
+          const ab = button(this, two ? -225 : 0, y, info.owned ? '소장 혜택 · 바로' : '광고 보고 이어하기', () => ask(() => bm.rewardedAd('revive'), ab).then(ok => ok && go('ad')),
+            { key: 'btn_gold', w: bw, h: 150, size: 38 });
+          b.add(ab);
+        }
+        if (goldOk) {
+          const gb = button(this, two ? 225 : 0, y, `🪙 ${bm.price('continue')} 이어하기`, () => ask(() => bm.spend('continue'), gb).then(ok => ok && go('gold')),
+            { key: 'btn_gold', w: bw, h: 150, size: 38 });
+          b.add(gb);
+        }
+      } else {
+        const gb = button(this, 0, y, `🪙 ${bm.price('continue2')} 한 번 더 이어하기`, () => ask(() => bm.spend('continue2'), gb).then(ok => ok && go('gold')),
+          { key: 'btn_gold', w: 600, h: 150, size: 40 });
+        b.add(gb);
+      }
+      y += 160;
+    }
+    if (offerGem) {
+      const yes = button(this, 0, y, `별가루 ${gemCost}개로 이어하기`, () => {
+        if (busy) return;
+        if (!pay({ gems: gemCost })) { yes.setLabel('별가루가 조금 모자라요'); return; }
+        go('gem');
+      }, { key: offerOad ? 'btn_purple' : 'btn_gold', w: 600, h: 130, size: 38, icon: 'cur_gem' });
+      b.add(yes);
+      if (d.gems < gemCost) yes.setEnabled(false);
+      y += 150;
+    }
+    b.add(button(this, 0, y, '결과 보기', () => { if (busy) return; close(); this.finish(); }, { key: 'btn_purple', w: 600, h: 130, size: 38 }));
+    window.__revivePop = pop;
   }
 
-  doRevive() {
+  doRevive(how = 'gem') {
     const s = this.s;
     this.over = false;
+    this.reviveAt = s.dist; this.revivedHow = how;
     this.run.revive();
     this.witch.setAngle(0).setPosition(s.player.x, s.player.y + 34);
     this.catSprites.forEach(c => c.setAlpha(1));
     audio.play('sfx_revive');
     this.fx('sheet_ring', s.player.x, s.player.y, 2);
     this.flashScreen();
+    this.popText(W / 2, H * 0.42, '다시 날아올라요!', '#FFE14D', 80, 1000);
   }
 
   finish() {
@@ -618,10 +692,12 @@ export class PlayScene extends Phaser.Scene {
     const result = {
       dist: Math.floor(s.dist), score: s.score, coins: Math.floor(s.coins), gems: s.gems, treats: s.treats, crystals: s.crystals, paws: s.paws,
       kills: s.kills, bosses: this.bossKills, sRank: this.sRank, items: this.items, witch: s.witch,
+      revived: s.revived, afterRevive: s.revived ? Math.floor(s.dist - this.reviveAt) : 0, offers: this.reviveOffers,
     };
     audio.stopMusic();
     this.cameras.main.fadeOut(350, 10, 6, 30);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', result));
+    /* 판 끝: 전면 광고는 앱이 조건(그룹 · 간격 · 소장)에 맞을 때만 보여 줌 — 판마다 한 번 알림 */
+    this.cameras.main.once('camerafadeoutcomplete', () => { (this.bot ? Promise.resolve() : bm.interstitial('round_end')).finally(() => this.scene.start('Result', result)); });
   }
 
   // 뒤로가기 (One a Day): 게임 중이면 잠시 멈춤 창

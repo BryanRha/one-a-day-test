@@ -1,16 +1,17 @@
 // 작업대 (원작의 주방 보드): 7×9 머지-2 · 생산기 · 잠긴 상자 · 비눗방울 · 창고 · 주문 3장 · 팔기
-import { W, H } from '../config.js?v=0.73.0';
-import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load, save } from '../save.js?v=0.73.0';
-import { goPrev } from '../nav.js?v=0.73.0';
-import { hud } from '../hud.js?v=0.73.0';
-import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.73.0';
-import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward } from '../state.js?v=0.73.0';
-import { adsOpen, rewardAd } from '../store.js?v=0.73.0';
-import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.73.0';
-import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.73.0';
-import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.73.0';
+import { W, H } from '../config.js?v=0.73.1';
+import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load, save } from '../save.js?v=0.73.1';
+import { goPrev } from '../nav.js?v=0.73.1';
+import { hud } from '../hud.js?v=0.73.1';
+import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.73.1';
+import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.73.1';
+import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY } from '../store.js?v=0.73.1';
+import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.73.1';
+import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.73.1';
+import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.73.1';
+const E_GIFT = 15;   /* 하루 첫 에너지 바닥 응원 선물 */
 
 const COLS = 7, ROWS = 9, CS = 142, X0 = (1080 - COLS * CS) / 2, Y0 = 440;
 const idx = (c, r) => r * COLS + c, colOf = i => i % COLS, rowOf = i => Math.floor(i / COLS);
@@ -263,15 +264,35 @@ export class BoardScene extends Phaser.Scene {
     p.content.add(rbox(this, 0, 0, 300, 300, { fill: '#EAF6FF', r: 150 })); const im = this.add.image(0, 0, itemKey(c.c, c.l)); im.setScale(200 / Math.max(im.width, im.height)); p.content.add(im);
     p.content.add(T(this, 0, 190, itemName(c.c, c.l), TS.body, C.ink, { w: 900 }));
     const buy = () => { if (this.d.gems < cost) return toast(this, '보석이 부족해요'); this.d.gems -= cost; delete c.b; save(); p.close(); audio.play('sfx_bubble', { volume: 0.7, rate: 1.15 }); this.redraw(); this.hud.update(); this.fx(i, 0xFFD6E4); };
-    p.foot([{ t: `◆${cost} 로 갖기`, fn: buy }, ...(adsOpen() ? [{ t: '광고 보고 갖기', style: 'cream', fn: async () => { try { await rewardAd('bubble'); delete c.b; save(); p.close(); this.redraw(); } catch { toast(this, '지금은 광고를 볼 수 없어요'); } } }] : [])]);
+    /* 광고로 갖기: 보는 동안 방울이 터졌으면 받을 물건으로 넘김 (보상은 늘 지급) */
+    const adGet = async () => { if (!canAd('bubble')) return toast(this, '오늘 광고 보상은 다 받았어요 · 내일 또 열려요'); p.close(); if (!(await rewardAd('bubble'))) return toast(this, '지금은 광고를 볼 수 없어요 · 보석으로 가질 수 있어요');
+      if (this.d.board[i] === c) delete c.b; else this.d.pendingItems.push({ t: 'i', c: c.c, l: c.l }); save(); audio.play('sfx_bubble', { volume: 0.7, rate: 1.15 }); this.redraw(); this.hud.update(); if (this.d.board[i] === c) this.fx(i, 0xFFD6E4); else toast(this, '받을 물건에 넣어 뒀어요'); };
+    p.foot([{ t: `◆${cost} 로 갖기`, fn: buy }, ...(adsOpen() ? [{ t: canAd('bubble') ? adLabel('갖기') : '광고 · 내일 또', style: 'cream', fn: adGet }] : [])]);
   }
   // ── 에너지 부족
   noEnergy() {
-    audio.play('sfx_error', { volume: 0.5 }); const pk = ENERGY.gemPack, p = sheet(this, { size: 'M', title: '에너지가 부족해요', sub: '시간이 지나면 다시 차요 · 레벨이 오르면 가득 차요' });
+    audio.play('sfx_error', { volume: 0.5 }); const pk = ENERGY.gemPack;
+    // 좌절일 때 선물: 하루 첫 바닥엔 광고 · 골드 없이 작은 응원 선물부터
+    if (this.d.eGift !== today()) { const p = sheet(this, { size: 'S', title: '오늘의 응원 선물', sub: '부지런히 만들었어요! 오늘 첫 바닥엔 선물을 드려요' });
+      const ei = this.add.image(0, 0, 'energy'); ei.setScale(150 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 230, 230, { fill: '#FFF6DA', r: 115 }), ei, R(this, 0, 170, `⚡${E_GIFT} 무료`, TS.h2, C.gold, { w: 900 })]);
+      const take = () => { this.d.eGift = today(); this.d.energy += E_GIFT; save(); p.close(); audio.play('sfx_levelup', { volume: 0.6 }); this.hud.update(); toast(this, `⚡${E_GIFT} 받았어요 · 계속 만들어 봐요!`); };
+      p.foot([{ t: `⚡${E_GIFT} 받기`, fn: take }]); return; }
+    const p = sheet(this, { size: adsOpen() || goldPrice('energy') ? 'L' : 'M', title: '에너지가 부족해요', sub: '시간이 지나면 다시 차요 · 레벨이 오르면 가득 차요' });
     const ei = this.add.image(0, 0, 'energy'); ei.setScale(170 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 260, 260, { fill: '#FFF6DA', r: 130 }), ei]);
+    const gp = goldPrice('energy'), left = adLeft('energy');
     p.content.add(R(this, 0, 180, `◆${pk.gems} 로 ⚡${pk.amount} 충전할 수 있어요`, TS.body, C.ink, { w: 900 }));
+    if (adsOpen()) p.content.add(T(this, 0, 232, isOwner() ? `소장 혜택 · 오늘 ${left}번 바로 받기` : `광고 보상 오늘 ${left}번 남음`, TS.min, C.dim, { w: 800 }));
+    const done = (msg) => { save(); this.hud.update(); p.close(); audio.play('sfx_levelup', { volume: 0.6 }); toast(this, msg); };
     const charge = () => { if (this.d.gems < pk.gems) return toast(this, '보석이 부족해요'); this.d.gems -= pk.gems; this.d.energy += pk.amount; save(); this.hud.update(); p.close(); };
-    p.foot([{ t: `◆${pk.gems} 로 충전`, fn: charge }, ...(adsOpen() ? [{ t: '광고 보고 ⚡20', style: 'cream', fn: async () => { try { await rewardAd('energy'); this.d.energy += 20; save(); this.hud.update(); p.close(); } catch { toast(this, '지금은 광고를 볼 수 없어요'); } } }] : [{ t: '기다릴게요', style: 'cream' }])]);
+    const ad = async () => { p.close(); if (!(await rewardAd('energy'))) return toast(this, '지금은 광고를 볼 수 없어요'); this.d.energy += AD_ENERGY; done(`⚡${AD_ENERGY} 받았어요!`); };
+    const gold = async () => { const r = await spendGold('energy'); if (!r.ok) { const m = goldMsg(r); if (m) toast(this, m); return; } this.d.energy = Math.max(this.d.energy, ENERGY.max); this.d.eAt = Date.now(); done('에너지 가득!'); };
+    // 원어데이 안: 광고(남았으면) · 골드 가격을 같은 크기로 나란히 · 광고를 다 쓰면 그 자리도 골드 가격 · 원어데이 밖: 지금처럼
+    const list = [];
+    if (canAd('energy')) list.push({ t: adLabel(`⚡${AD_ENERGY}`, true), fn: ad });
+    if (gp) list.push({ t: `🪙${gp} 에너지 가득`, fn: gold, style: 'gold' });
+    list.push({ t: `◆${pk.gems} 로 충전`, fn: charge, style: list.length ? 'cream' : 'rose' });
+    if (list.length < 3) list.push({ t: '기다릴게요', style: 'cream' });
+    p.foot(list);
   }
   // ── 창고 (원작의 인벤토리)
   toStorage(from) {

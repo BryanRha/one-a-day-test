@@ -1,6 +1,6 @@
 // 게임 밖 성장: 마녀 강화 · 고양이 입양/성장 · 미션 · 출석 · 업적 · 산책 · 상점 · 주간 랭킹
 // 확률형 뽑기 없음 — 고양이는 비행 중 모은 발바닥 도장으로 "정해 둔 고양이"를 입양한다.
-import { load, save, todayKey, weekKey } from './save.js?v=0.73.0';
+import { load, save, todayKey, weekKey } from './save.js?v=0.73.1';
 
 export const WITCH_INFO = {
   luna: { name: '루나', title: '별빛 마녀', desc: '별빛 마법탄 · 코인 +10%', unlock: null, color: 0xB89AFF },
@@ -36,6 +36,25 @@ export const ROLE_NAME = { attack: '공격', support: '지원', explore: '탐험
 
 export const BOOSTERS = { dash: { name: '출발 대시', cost: 400, desc: '시작하자마자 혜성 대시' }, shield: { name: '보호막', cost: 250, desc: '한 번 막아 주는 보호막' } };
 export const REVIVE_COST = [5, 10, 20];
+export const REVIVE_MAX = REVIVE_COST.length;   /* 한 판 이어하기 전체 상한 (별가루 · 원어데이 합쳐서) */
+export const OAD_REVIVE_MAX = 2;                /* 원어데이 이어하기: 첫 번째 광고 또는 🪙20 · 두 번째 🪙40 · 세 번째 없음 */
+export const REVIVE_SEC = 10;                   /* 이어하기 창 카운트다운 (8초 이상 — 압박하지 않기) */
+
+// 이어하기 권유 판단 — "희망일 때 권하고, 좌절일 때 선물한다"
+//   early: 초반 실패(처음 3판 · 30초 안 · 400m 안) → 창 없이 바로 칭찬 결과
+//   record: 신기록 비행 중 · near: 최고 기록의 70% 이상 · boss: 보스 체력 35% 이하 → 원어데이 이어하기까지 권유
+//   none: 그 밖 → 예전처럼 별가루 이어하기만 (별가루가 있을 때)
+export function reviveMood({ dist, best, runs, t, bossHp }) {
+  if (runs < 3 || t < 30 || dist < 400) return 'early';
+  if (best > 0 && dist >= best) return 'record';
+  if (best > 0 && dist >= best * 0.7) return 'near';
+  if (bossHp != null && bossHp <= 0.35) return 'boss';
+  return 'none';
+}
+// 원어데이 보상형 광고: 게임 쪽 하루 횟수 (앱의 게임당 한도와 별개로 자리별로 아끼기)
+export const AD_DAY = { coins2x: 3, walk: 2 };
+export function adLeft(place) { const d = load(); if (!d.ads || d.ads.day !== todayKey()) return AD_DAY[place]; return Math.max(0, AD_DAY[place] - (d.ads[place] || 0)); }
+export function adUse(place) { const d = load(); if (!d.ads || d.ads.day !== todayKey()) d.ads = { day: todayKey() }; d.ads[place] = (d.ads[place] || 0) + 1; save(); }
 
 export const ZONES = ['별빛 마을', '속삭이는 숲', '구름 바다', '호박 언덕', '달빛 성'];
 export const BOSS_NAME = { ghostship: '유령 해적선', moonrabbit: '달토끼 대장', rival: '라이벌 마녀 노아' };
@@ -94,10 +113,11 @@ export function walkReward(id) {
 }
 export function startWalk(id) { const d = load(); if (d.walk.cat || !d.cats[id] || d.equip.includes(id)) return false; d.walk = { cat: id, until: Date.now() + WALK_MIN * 60000 }; save(); return true; }
 export function walkLeft() { const d = load(); return d.walk.cat ? Math.max(0, d.walk.until - Date.now()) : 0; }
+// skip: true = 별가루 5로 바로 · 'free' = 원어데이(광고 · 골드)로 이미 값을 치름
 export function finishWalk(skipWithGems = false) {
   const d = load();
   if (!d.walk.cat) return null;
-  if (walkLeft() > 0) { if (!skipWithGems || !pay({ gems: 5 })) return null; }
+  if (walkLeft() > 0 && skipWithGems !== 'free') { if (!skipWithGems || !pay({ gems: 5 })) return null; }
   const r = walkReward(d.walk.cat);
   d.coins += r.coins; d.treats += r.treats; d.walk = { cat: null, until: 0 };
   save(); return r;
@@ -214,6 +234,9 @@ export const SHOP = [
   { id: 'g1', give: { gems: 10 }, cost: { crystals: 6 }, label: '별가루 10' },
   { id: 'p1', give: { paws: 5 }, cost: { gems: 15 }, label: '발바닥 도장 5' },
 ];
+// 원어데이 골드 상품 (가격은 서버 gold.js SHOP.witch 가 정함 · 여기는 효과만)
+export const OAD_SHOP = [{ id: 'gems100', give: { gems: 100 }, label: '별가루 100' }];
+export function grant(give) { const d = load(); for (const [k, v] of Object.entries(give)) d[k] += v; save(); }
 export function buy(id) {
   const it = SHOP.find(s => s.id === id), d = load();
   if (it.give.paws && !d.adopt) return false;

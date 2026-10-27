@@ -1,12 +1,13 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.73.0';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load, save, reset } from '../save.js?v=0.73.0';
-import { CATS } from '../core/run.js?v=0.73.0';
-import * as M from '../meta.js?v=0.73.0';
-import { wind, ELEMENT } from '../fx.js?v=0.73.0';
-import { WITCHES } from '../core/run.js?v=0.73.0';
+import { W, H } from '../config.js?v=0.73.1';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load, save, reset } from '../save.js?v=0.73.1';
+import { CATS } from '../core/run.js?v=0.73.1';
+import * as M from '../meta.js?v=0.73.1';
+import { wind, ELEMENT } from '../fx.js?v=0.73.1';
+import { WITCHES } from '../core/run.js?v=0.73.1';
+import { bm } from '../oad_bm.js?v=0.73.1';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -246,7 +247,9 @@ export class LobbyScene extends Phaser.Scene {
           else toast(this, '별가루가 부족해요');
         }, { key: left ? 'btn_purple' : 'btn_gold', w: 330, h: 110, size: 36, icon: left ? 'cur_gem' : null }));
       } else b.add(txt(this, 0, wy, '장착하지 않은 고양이를 산책 보내면 30분 뒤 코인·간식을 가져와요', 32, '#D8CCFF', { wrap: 820 }));
-      const area = scrollArea(this, pop.box, 0, -ph / 2 + 240, 900, ph - 290, b);
+      /* 원어데이 안: 산책 바로 끝내기 — 광고 1회 또는 🪙5 (원어데이 밖이면 이 줄 없음) */
+      const extra = d.walk.cat && M.walkLeft() > 0 ? this.walkOad(b, wy + 125, redraw) : 0;
+      const area = scrollArea(this, pop.box, 0, -ph / 2 + 240 + extra, 900, ph - 290 - extra, b);
       const cw = 290, chh = 420;
       M.CAT_ORDER.forEach((id, i) => {
         const x = -cw + (i % 3) * cw, y = Math.floor(i / 3) * (chh + 20) + chh / 2;
@@ -272,6 +275,29 @@ export class LobbyScene extends Phaser.Scene {
     // 스크롤 위치를 유지한 채 다시 그림
     const redraw = () => { scrollY = pop.area ? pop.area.y : null; draw(); this.refresh(); };
     draw();
+  }
+
+  // 산책 바로 끝내기 (원어데이): 광고 보고 | 🪙5 — 같은 크기 나란히 · 쓸 수 있는 게 없으면 줄을 만들지 않음 (반환: 차지한 높이)
+  walkOad(b, y, redraw) {
+    const info = bm.info;
+    const adOk = info.ok && (info.owned || (info.ads && info.ads.reward)) && M.adLeft('walk') > 0;
+    const price = bm.price('walk');
+    if (!adOk && !price) return 0;
+    const two = adOk && price, bw = two ? 400 : 560;
+    let busy = false;
+    const done = r => { if (!r) return; audio.play('sfx_meow'); toast(this, rewardText(r), '#FFE14D'); this.bar.refresh(); redraw(); };
+    const tell = reason => { const m = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요', login: '로그인하면 쓸 수 있어요' }[reason]; if (m) toast(this, m); };
+    if (adOk) b.add(button(this, two ? -210 : 0, y, info.owned ? '소장 혜택 · 바로' : '광고 보고 바로', async () => {
+      if (busy) return; busy = true;
+      const a = await bm.rewardedAd('walk'); busy = false;
+      if (a.ok) { M.adUse('walk'); done(M.finishWalk('free')); } else tell(a.reason);
+    }, { key: 'btn_gold', w: bw, h: 110, size: 34 }));
+    if (price) b.add(button(this, two ? 210 : 0, y, `🪙 ${price} 바로 받기`, async () => {
+      if (busy) return; busy = true;
+      const g = await bm.spend('walk'); busy = false;
+      if (g.ok) done(M.finishWalk('free')); else tell(g.reason);
+    }, { key: 'btn_gold', w: bw, h: 110, size: 34 }));
+    return 130;
   }
 
   catDetail(id, redrawParent) {
@@ -386,18 +412,36 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   shopPopup() {
-    const pop = popup(this, '마법 상점', 1260, { onClose: () => this.refresh() });
+    /* 원어데이 안이면 아래에 '원어데이 골드' 칸을 더함 (밖이면 예전 그대로) */
+    const oad = M.OAD_SHOP.filter(it => bm.price(it.id) > 0), dy = oad.length ? -20 : 0;
+    const pop = popup(this, '마법 상점', oad.length ? 1300 : 1260, { onClose: () => this.refresh() });
     const b = pop.box;
     const ICON = { coins: 'cur_coin', gems: 'cur_gem', treats: 'cur_treat', crystals: 'cur_crystal', paws: 'cur_paw' };
     M.SHOP.forEach((it, i) => {
-      const x = -290 + (i % 3) * 290, y = -300 + Math.floor(i / 3) * 420;
+      const x = -290 + (i % 3) * 290, y = -300 + dy + Math.floor(i / 3) * 420;
       const [gk] = Object.keys(it.give), [ck, cv] = Object.entries(it.cost)[0];
       b.add(this.add.nineslice(x, y, 'card', null, 270, 390, 50, 50, 50, 50));
       b.add(this.add.image(x, y - 80, ICON[gk]).setDisplaySize(130, 130));
       b.add(txt(this, x, y + 30, it.label, 36, '#FFFFFF'));
       b.add(button(this, x, y + 120, fmt(cv), () => { if (M.buy(it.id)) { audio.play('sfx_coin'); this.bar.refresh(); toast(this, `${it.label} 구매!`, '#FFE14D'); } else toast(this, it.give.paws && !load().adopt ? '입양 목표가 없어요' : '재화가 부족해요'); }, { key: 'btn_purple', w: 220, h: 100, size: 36, icon: ICON[ck] }));
     });
-    b.add(txt(this, 0, 540, '별가루는 미션·업적·출석·보스·별똥별에서 얻어요', 30, '#B8A6F0'));
+    b.add(txt(this, 0, oad.length ? 322 : 540, '별가루는 미션·업적·출석·보스·별똥별에서 얻어요', 30, '#B8A6F0'));
+    oad.forEach((it, i) => this.shopOadRow(b, it, 440 + i * 220, ICON));
+  }
+  // 원어데이 골드 칸: 별가루 100 = 🪙100 — 가격은 서버(gold.js SHOP.witch)가 정하고, 게임은 받은 뒤 효과만
+  shopOadRow(b, it, y, ICON) {
+    const [gk] = Object.keys(it.give);
+    b.add(this.add.nineslice(0, y + 40, 'card', null, 850, 200, 50, 50, 50, 50).setTint(0xFFE8A8));
+    b.add(txt(this, -380, y - 40, '원어데이 골드', 28, '#FFE8A8', { ox: 0 }));
+    b.add(this.add.image(-320, y + 50, ICON[gk]).setDisplaySize(110, 110));
+    b.add(txt(this, -240, y + 50, it.label, 44, '#FFFFFF', { ox: 0 }));
+    let busy = false;
+    b.add(button(this, 240, y + 45, `🪙 ${fmt(bm.price(it.id))}`, async () => {
+      if (busy) return; busy = true;
+      const r = await bm.spend(it.id); busy = false;
+      if (r.ok) { M.grant(it.give); audio.play('sfx_coin'); this.bar.refresh(); toast(this, `${it.label} 받았어요!`, '#FFE14D'); }
+      else { const m = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요', login: '로그인하면 쓸 수 있어요' }[r.reason]; if (m) toast(this, m); }
+    }, { key: 'btn_gold', w: 300, h: 110, size: 40 }));
   }
 
   settingsPopup() {

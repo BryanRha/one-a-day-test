@@ -1,18 +1,22 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.73.0';
-import { T, C, fmt, panel, btn, iconBtn } from '../pui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load } from '../save.js?v=0.73.0';
-import * as M from '../meta.js?v=0.73.0';
+import { W, H } from '../config.js?v=0.73.1';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load } from '../save.js?v=0.73.1';
+import * as M from '../meta.js?v=0.73.1';
+import { bm } from '../oad_bm.js?v=0.73.1';
+import { canDouble } from '../core/cont.js?v=0.73.1';
+import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.73.1';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(r) {
+    this.going = false; window.__dbl = null;
     const d = load();
     const bg = this.add.image(W / 2, H / 2, `bg_t${d.theme % 5}`); bg.setDisplaySize(W, Math.max(H, W * 1300 / 540));
     const top = 240 + Math.max(0, (H - 1920) / 3);
     if (r.newBest) { this.add.image(W / 2, top - 30, 'i_crown').setDisplaySize(90, 90).setTint(0xF5C451); }
-    const title = T(this, W / 2, top + 60, r.newBest ? 'NEW BEST' : 'GAME OVER', 34, r.newBest ? C.gold : C.sub, { w: 900, ls: 10 });
+    const title = T(this, W / 2, top + 60, r.newBest ? (r.conts ? '역전! NEW BEST' : 'NEW BEST') : 'GOOD GAME', 34, r.newBest ? C.gold : C.sub, { w: 900, ls: 10 });
     const sc = T(this, W / 2, top + 190, '0', 170, C.text, { w: 900 });
     this.tweens.addCounter({ from: 0, to: r.score, duration: 1000, ease: 'Cubic.easeOut', onUpdate: tw => sc.setText(fmt(tw.getValue())) });
     const cy = top + 520;
@@ -27,11 +31,25 @@ export class ResultScene extends Phaser.Scene {
     const ms = M.missions(), done = ms.filter(m => m.done).length, ready = ms.filter(m => m.done && !m.claimed).length;
     T(this, W / 2, cy + 250, ready ? `🎁 받을 미션 보상 ${ready}개 — 홈에서 받으세요` : `오늘의 미션 ${done}/3 완료`, 32, ready ? C.gold : C.sub, { w: 800 });
     if (r.newBest) { audio.play('sfx_best', { volume: 0.7 }); this.time.delayedCall(200, () => this.cameras.main.flash(250, 255, 240, 200)); title.setScale(0); this.tweens.add({ targets: title, scale: 1, duration: 400, ease: 'Back.easeOut' }); }
-    const by = Math.min(H - 150, cy + 420);
+    // 별 조각 2배 (이번 판에 받은 별이 있을 때 · 광고 1회 · 하루 3번 · 원어데이 안에서만)
+    let dbl = null;
+    if (canDouble(r.stars || 0, bm.info, doubleUsed())) {
+      const own = bm.info.owned;
+      const db = btn(this, W / 2, cy + 345, 620, 104, `★ ${r.stars} → ${r.stars * 2}  ${own ? '무료로 2배' : '광고 보고 2배'}`, async () => {
+        if (db.disabled) return; db.setEnabled(false);
+        const res = await bm.rewardedAd('stars2x');
+        if (!this.scene.isActive()) return;
+        if (res && res.ok) { noteDouble(r.stars); db.setLabel(`★ +${r.stars} 더 받았어요!`); db.setAlpha(1); audio.play('sfx_best', { volume: 0.5 }); }
+        else { db.setEnabled(true); if (res && res.reason === 'limit') { toast(this, '오늘 광고 보상을 다 받았어요', C.sub); db.setEnabled(false); } }
+      }, { style: 'indigo', icon: own ? 'i_star' : 'i_film', size: 34 });
+      dbl = db; window.__dbl = db;
+    }
+    const by = Math.min(H - 150, cy + 420 + (dbl ? 75 : 0));
     btn(this, W / 2 + 90, by, 560, 140, '다시 하기', () => this.go('Play', { mode: 'classic' }), { style: 'gold', icon: 'i_retry', size: 46 });
     iconBtn(this, W / 2 - 300, by - 4, 'i_home', () => this.go('Home'), 130);
     this.cameras.main.fadeIn(260, 8, 10, 24);
     window.__result = r;
   }
-  go(k, data) { this.cameras.main.fadeOut(220, 8, 10, 24); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
+  go(k, data) { if (this.going) return; this.going = true; afterRound().then(() => this.fade(k, data)); }
+  fade(k, data) { this.cameras.main.fadeOut(220, 8, 10, 24); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

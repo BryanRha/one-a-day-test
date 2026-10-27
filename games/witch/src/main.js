@@ -1,12 +1,13 @@
-import { W, BASE_H, setH } from './config.js?v=0.73.0';
-import { audio } from './audio.js?v=0.73.0';
-import { BootScene } from './scenes/Boot.js?v=0.73.0';
-import { TitleScene } from './scenes/Title.js?v=0.73.0';
-import { LobbyScene } from './scenes/Lobby.js?v=0.73.0';
-import { PlayScene } from './scenes/Play.js?v=0.73.0';
-import { ResultScene } from './scenes/Result.js?v=0.73.0';
-import { WindFX } from './fx.js?v=0.73.0';
-import { installBack } from './oad.js?v=0.73.0';
+import { W, BASE_H, setH } from './config.js?v=0.73.1';
+import { audio } from './audio.js?v=0.73.1';
+import { BootScene } from './scenes/Boot.js?v=0.73.1';
+import { TitleScene } from './scenes/Title.js?v=0.73.1';
+import { LobbyScene } from './scenes/Lobby.js?v=0.73.1';
+import { PlayScene } from './scenes/Play.js?v=0.73.1';
+import { ResultScene } from './scenes/Result.js?v=0.73.1';
+import { WindFX } from './fx.js?v=0.73.1';
+import { installBack } from './oad.js?v=0.73.1';
+import { bm } from './oad_bm.js?v=0.73.1';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 기본 폰트 */ }
@@ -38,6 +39,15 @@ async function start() {
   addEventListener('resize', refresh);
   addEventListener('orientationchange', refresh);
   window.__game = game;
+  // 원어데이 게임 안 BM: 시작 때 한 번 인사 (원어데이 밖이면 ok:false → 골드 · 광고 버튼이 숨음)
+  //   광고 · 골드 확인 창이 떠 있는 동안은 게임 전체를 멈춤 (실시간 게임 — 타이머 · 카운트다운 · 소리까지)
+  bm.hello();
+  bm.onPause = on => {
+    try {
+      if (on) { game.loop.sleep(); game.sound.pauseAll(); }
+      else { game.loop.wake(); game.sound.resumeAll(); }
+    } catch { /* */ }
+  };
   installBack(game, { home: 'Lobby', roots: ['Title'] });   // One a Day 뒤로가기: 한 단계씩
 }
 // One a Day 앱 안에서 실행될 때(iframe)는 앱이 캐시를 관리하므로 게임 자체 서비스 워커는 쓰지 않음

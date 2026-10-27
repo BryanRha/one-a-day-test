@@ -1,15 +1,18 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.73.0';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.73.0';
-import { choose } from '../core/ai.js?v=0.73.0';
-import { makeLevel } from '../core/levels.js?v=0.73.0';
-import { TINT, THEMES } from './Boot.js?v=0.73.0';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.73.0';
-import { audio } from '../audio.js?v=0.73.0';
-import { load, save } from '../save.js?v=0.73.0';
-import * as M from '../meta.js?v=0.73.0';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.73.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.73.0';
+import { W, H } from '../config.js?v=0.73.1';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.73.1';
+import { choose } from '../core/ai.js?v=0.73.1';
+import { makeLevel } from '../core/levels.js?v=0.73.1';
+import { TINT, THEMES } from './Boot.js?v=0.73.1';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.73.1';
+import { audio } from '../audio.js?v=0.73.1';
+import { load, save } from '../save.js?v=0.73.1';
+import * as M from '../meta.js?v=0.73.1';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.73.1';
+import { inOAD, exitToOAD } from '../oad.js?v=0.73.1';
+import { bm } from '../oad_bm.js?v=0.73.1';
+import { contOffer, advProgress, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.73.1';
+import { roundOver, afterRound } from '../bmflow.js?v=0.73.1';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };
@@ -40,6 +43,7 @@ export class PlayScene extends Phaser.Scene {
       this.theme = d.theme % THEMES.length;
     }
     this.shown = 0; this.busy = false; this.paused = false; this.newBest = false; this.drag = null; this.revived = false;
+    this.conts = 0; this.contGold = false; this.roundStars = 0; this.contPop = null;
     this.BX = (W - BW) / 2; this.BY = Math.round(470 + Math.max(0, (H - 470 - 1420) / 2));
     this.trayY = Math.min(H - 210, this.BY + BW + 250);
 
@@ -351,7 +355,7 @@ export class PlayScene extends Phaser.Scene {
   allClearShow() {
     this.busy = true;
     const cx = W / 2, cy = this.BY + BW / 2, cam = this.cameras.main;
-    const d = load(); d.stars += 10; d.allClears = (d.allClears || 0) + 1; save();
+    const d = load(); d.stars += 10; d.allClears = (d.allClears || 0) + 1; save(); this.roundStars += 10;
     buzz([60, 40, 90, 40, 160]);
     cam.flash(380, 255, 255, 255); cam.shake(500, 0.012);
     this.tweens.add({ targets: cam, zoom: 1.07, duration: 160, yoyo: true, hold: 240, ease: 'Quad.easeOut' });
@@ -549,23 +553,93 @@ export class PlayScene extends Phaser.Scene {
     this.placeAt(m.i, m.r, m.c, this.slots[m.i].piece);
   }
 
-  // ── 더 놓을 곳이 없을 때: 이어하기(한 판에 한 번) → 끝 ──
+  // ── 더 놓을 곳이 없을 때: 이어하기 (가운데 4×4 비우기) → 끝 ──
+  //   원어데이 밖: 지금처럼 한 판에 한 번 무료 · 원어데이 안: 최고 기록 근처에서만 권유 (core/cont.js 규칙)
+  //   첫 번째 = 광고 1회 또는 🪙20 (같은 크기) · 소장자는 무료 · 두 번째 = 🪙40 · 판당 최대 2번 · 카운트다운 10초
+  contState() {
+    const d = load(), b = this.b;
+    return { mode: this.mode, score: b.score, best: d.best, plays: d.plays, moves: b.moves, n: this.n || 0, progress: advProgress(b.goals) };
+  }
   outOfMoves() {
     audio.play('sfx_over', { volume: 0.6 });
-    if (this.revived || this.bot) return this.endGame();
+    if (this.bot || this.conts >= MAX_CONT) return this.endGame();
+    const offer = contOffer(this.contState(), this.conts, bm.info);
+    window.__contOffer = offer;
+    if (!offer) return this.endGame();
+    if (offer.kind === 'free') return this.freeContPop();
+    this.paidContPop(offer);
+  }
+  // 원어데이 밖: 예전 그대로
+  freeContPop() {
     const pop = popup(this, '놓을 곳이 없어요', 820, 640, { closable: false, depth: 2000 });
     pop.content.add(T(this, 0, -110, '가운데 4×4 칸을 비우고 이어서 할까요?', 34, C.sub, { w: 700 }));
     pop.content.add(T(this, 0, -54, '한 판에 한 번', 28, C.dim, { w: 700 }));
-    pop.content.add(btn(this, 0, 70, 520, 130, '이어하기', () => { pop.close(); this.revive(); }, { style: 'gold', icon: 'i_retry', size: 42 }));
+    pop.content.add(btn(this, 0, 70, 520, 130, '이어하기', () => { pop.close(); this.conts++; this.revive(); }, { style: 'gold', icon: 'i_retry', size: 42 }));
     pop.content.add(btn(this, 0, 210, 420, 100, this.mode === 'adv' ? '포기하기' : '끝내기', () => { pop.close(); this.endGame(); }, { style: 'ghost', size: 34 }));
   }
+  // 원어데이 안: 칭찬 먼저 → 광고 · 골드 (같은 크기) → 결과 보기 (조용히, 10초 뒤 자동)
+  paidContPop(offer) {
+    const second = offer.kind === 'second';
+    const pop = popup(this, offer.h.praise, 900, 860, { closable: false, depth: 2000 });
+    this.contPop = pop;
+    const c = pop.content;
+    c.add(T(this, 0, -300, offer.h.sub, 36, C.gold, { w: 800 }));
+    c.add(T(this, 0, -235, '가운데 4×4 칸을 비우고 이어서 할 수 있어요', 32, C.sub, { w: 800 }));
+    // 카운트다운 고리 (멈출 수 있음: 광고 · 확인 창 동안)
+    const ring = this.add.graphics(), num = T(this, 0, -110, String(COUNTDOWN), 54, C.text, { w: 200 });
+    c.add([ring, num]);
+    let left = COUNTDOWN * 1000, hold = false, done = false;
+    const draw = () => { ring.clear(); ring.lineStyle(10, 0xFFFFFF, 0.12).strokeCircle(0, -110, 62); ring.lineStyle(10, 0xF5C451, 1).beginPath(); ring.arc(0, -110, 62, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (left / (COUNTDOWN * 1000)), false); ring.strokePath(); num.setText(String(Math.ceil(left / 1000))); };
+    draw();
+    const tick = this.time.addEvent({ delay: 50, loop: true, callback: () => { if (hold || done) return; left -= 50; if (left <= 0) { left = 0; finish(false); } draw(); } });
+    const finish = ok => {
+      if (done) return; done = true; tick.remove(); this.contPop = null; pop.close();
+      if (ok) this.revive(); else this.endGame();
+    };
+    const btns = [];
+    const lock = on => { hold = on; btns.forEach(b => b.setEnabled(!on)); };
+    const run = async (fn, gold) => {
+      if (hold || done) return;
+      lock(true);
+      let r; try { r = await fn(); } catch { r = { ok: false, reason: 'error' }; }
+      if (done) return;
+      if (r && r.ok) { this.conts++; if (gold) this.contGold = true; finish(true); return; }
+      lock(false);
+      const why = r && r.reason;
+      if (why === 'short') toast(this, '골드가 조금 모자라요', C.gold, H * 0.3);
+      else if (why === 'limit') { toast(this, '오늘 받을 수 있는 광고 보상을 다 받았어요', C.sub, H * 0.3); if (adB) adB.dead = true; }
+      else if (why === 'login') toast(this, '로그인하면 골드를 쓸 수 있어요', C.sub, H * 0.3);
+      else if (why && why !== 'cancel') toast(this, '지금은 할 수 없어요', C.sub, H * 0.3);
+      btns.forEach(b => { if (b.dead) b.setEnabled(false); });
+    };
+    let adB = null;
+    const BY = 60, BWD = 380, BH = 150;
+    if (second) {
+      btns.push(btn(this, 0, BY, 560, BH, `🪙 ${offer.gold}  한 번 더`, () => run(() => bm.spend('continue2'), true), { style: 'gold', size: 42, ls: 0 }));
+      c.add(T(this, 0, BY + 105, '마지막 이어하기예요', 28, C.dim, { w: 700 }));
+    } else if (offer.owner) {
+      btns.push(btn(this, 0, BY, 560, BH, '무료로 이어하기', () => run(() => bm.rewardedAd('continue'), false), { style: 'gold', icon: 'i_retry', size: 42 }));
+      c.add(T(this, 0, BY + 105, '소장 혜택 · 판마다 한 번', 28, C.dim, { w: 700 }));
+    } else {
+      const two = offer.ad && offer.gold, x1 = two ? -200 : 0, x2 = two ? 200 : 0;
+      if (offer.ad) { adB = btn(this, x1, BY, BWD, BH, '광고 보고', () => run(() => bm.rewardedAd('continue'), false), { style: 'gold', icon: 'i_film', size: 40 }); btns.push(adB); }
+      if (offer.gold) btns.push(btn(this, x2, BY, BWD, BH, `🪙 ${offer.gold}`, () => run(() => bm.spend('continue'), true), { style: 'gold', size: 42, ls: 0 }));
+      c.add(T(this, 0, BY + 105, '이어하기는 한 판에 두 번까지', 28, C.dim, { w: 700 }));
+    }
+    c.add(btns);
+    const goRes = btn(this, 0, 290, 560, 110, '결과 보기', () => { if (!hold) finish(false); }, { style: 'ghost', size: 36 });
+    c.add(goRes); btns.push(goRes);
+    pop.cont = { finish, get left() { return left; }, offer };
+  }
   revive() {
+    const again = this.revived;
     this.revived = true; this.b.revive();
     for (let r = 2; r < 6; r++) for (let c = 2; c < 6; c++) {
       const s = this.cells[r][c]; if (s) { this.cells[r][c] = null; this.tweens.add({ targets: s, scale: 0, alpha: 0, duration: 260, delay: (r + c) * 30, onComplete: () => s.destroy() }); }
       const gs = this.gemS[r][c]; if (gs) { this.gemS[r][c] = null; gs.destroy(); }
     }
     audio.play('sfx_allclear', { volume: 0.6 });
+    this.bigWord(again ? '한 번 더!' : '이어서 가요!', '#7CFFB2', 96, this.BY + BW / 2);
     this.fillTray(true); this.updateGoals(); this.analyze();
     this.time.delayedCall(400, () => { this.busy = false; });
   }
@@ -584,22 +658,23 @@ export class PlayScene extends Phaser.Scene {
     save();
     M.track('games'); M.track('score', b.score); M.noteClassic(b.score, b.moves);
     const st = this.stats;
-    this.leave('Result', { score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
+    roundOver();
+    this.leave('Result', { conts: this.conts, contGold: this.contGold, stars: this.roundStars, score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
   }
   advWin() {
     audio.play('sfx_best', { volume: 0.8 }); buzz([30, 40, 60]); this.voice('levelclear', 3);
     this.bigWord('LEVEL CLEAR', '#7CFFB2', 110, this.BY + BW / 2);
     const d = load(); d.plays++; d.lines += this.b.lines; save();
-    M.advWin(); M.track('adv'); M.track('games');
-    this.time.delayedCall(1300, () => this.leave('Adventure', { justWon: true }));
+    M.advWin(); M.track('adv'); M.track('games'); roundOver();
+    this.time.delayedCall(1300, () => afterRound().then(() => this.leave('Adventure', { justWon: true })));
   }
   advFail() {
-    M.advLose(); M.track('games');
+    M.advLose(); M.track('games'); roundOver();
     const pop = popup(this, `레벨 ${this.n} 실패`, 820, 600, { closable: false, depth: 2000 });
     const left = this.b.goals.map(g => g.type === 'score' ? `${fmt(Math.max(0, g.target - this.b.score))}점` : `${Math.max(0, g.count - g.have)}개`).join(' · ');
     pop.content.add(T(this, 0, -90, `남은 목표 ${left}`, 34, C.sub, { w: 700 }));
-    pop.content.add(btn(this, 0, 40, 520, 130, '다시 하기', () => { pop.close(); this.scene.restart({ mode: 'adv', n: this.n }); }, { style: 'gold', icon: 'i_retry', size: 42 }));
-    pop.content.add(btn(this, 0, 180, 420, 100, '그림으로', () => { pop.close(); this.leave('Adventure', {}); }, { style: 'ghost', size: 34 }));
+    pop.content.add(btn(this, 0, 40, 520, 130, '다시 하기', () => { pop.close(); afterRound().then(() => this.scene.restart({ mode: 'adv', n: this.n })); }, { style: 'gold', icon: 'i_retry', size: 42 }));
+    pop.content.add(btn(this, 0, 180, 420, 100, '그림으로', () => { pop.close(); afterRound().then(() => this.leave('Adventure', {})); }, { style: 'ghost', size: 34 }));
   }
   leave(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(300, 8, 10, 24); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 
