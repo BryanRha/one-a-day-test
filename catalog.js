@@ -107,6 +107,8 @@ export const SAVES = {
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
   bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'],
 };
+// 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
+export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
 export const ORDER = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung'];
 // 여명기사단 키우기(idle)는 2026-10-25 사용자 요청으로 목록에서 내림 — 보류 중 (CATALOG 항목·소스·idle/PROJECT_STATUS.md 남겨 둠)
 // K-다이스 투어(tour)는 2026-10-24 사용자 요청으로 목록에서 내림 — 대전 네트워크(서버)가 붙으면 다시 올림 (CATALOG 항목·소스는 남겨 둠)

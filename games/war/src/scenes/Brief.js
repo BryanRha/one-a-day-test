@@ -1,16 +1,19 @@
 // 작전 준비: 세로로 넘기는 작전 카드 목록 (다음 작전은 펼쳐서 · 잠긴 작전은 어둡게) → [출격] → 아래에서 올라오는 출격 준비(지휘관·난이도)
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, panel, btn, iconBtn, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import { pushBack } from '../oad.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { COS, WEATHER } from '../core/data.js?v=0.74.0';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.74.0';
-import { STORY } from '../story.js?v=0.74.0';
-import { rankOn } from '../rank.js?v=0.74.0';
-import { rankPopup } from '../rankui.js?v=0.74.0';
-import { Sim } from '../core/sim.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import { pushBack } from '../oad.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { COS, WEATHER } from '../core/data.js?v=0.75.0';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.75.0';
+import { STORY } from '../story.js?v=0.75.0';
+import { rankOn } from '../rank.js?v=0.75.0';
+import { rankPopup } from '../rankui.js?v=0.75.0';
+import { Sim } from '../core/sim.js?v=0.75.0';
+import { SUPPORT } from '../core/support.js?v=0.75.0';
+import { helpCheck, fails, track } from '../bmwar.js?v=0.75.0';
+import { paintKey } from '../color.js?v=0.75.0';
 
 const LV = { easy: '쉬움', normal: '보통', hard: '어려움' };
 const TCOL = { pipe: 0x8A8F96, seam: 0xC8A040, silo: 0x5A5048, silo_e: 0x6A6A5A, plain: 0x8DB05A, farm: 0x9BB45A, wheat: 0xD8B85A, forest: 0x3E7A34, mountain: 0x9A8C78, road: 0xC8A878, bridge: 0xB0A090, river: 0x4A9AD8, beach: 0xE8D8A0, sea: 0x2A6AB0, reef: 0x3A7A90, trench: 0x8A7A50 };
@@ -22,7 +25,7 @@ export class BriefScene extends Phaser.Scene {
   constructor() { super('Brief'); }
   create(data = {}) {
     const d = load();
-    Object.assign(this, { data0: data, mode: data.mode || 'campaign', custom: data.custom || null, sheet: null, sheetIn: false, listC: null, vy: 0, dragFrom: null, dragged: false, mapId: null, unback: null });
+    Object.assign(this, { giftPop: null, data0: data, mode: data.mode || 'campaign', custom: data.custom || null, sheet: null, sheetIn: false, listC: null, vy: 0, dragFrom: null, dragged: false, mapId: null, unback: null });
     this.versus = this.mode === 'free' && !!data.versus;
     this.level = data.level || d.level || 'normal';
     this.co = data.co1 && (this.versus || d.cos[data.co1]) ? data.co1 : d.cos[d.co] ? d.co : 'ella';
@@ -198,13 +201,32 @@ export class BriefScene extends Phaser.Scene {
     this.events.once('shutdown', () => { if (this.unback) { this.unback(); this.unback = null; } });
   }
   restart(o) { this.scene.restart({ ...this.data0, mapId: this.mapId || (this.sel && this.sel.id), custom: this.custom, level: this.level, versus: this.versus, co1: this.co, co2: this.co2, tag: this.tag ?? null, ...o }); }
-  start() {
+  start(gift) {
+    if (this.giftPop && this.giftPop.active && !this.giftPop.closing) return;
     if (!this.mapId && !this.custom) { const it = this.sel; this.custom = it.custom || null; this.mapId = it.custom ? null : it.id; this.ai = this.mode === 'campaign' ? it.st.ai : this.mode === 'daily' || this.mode === 'war' ? 'hard' : this.level; }
     const mode = this.versus ? 'versus' : this.mode, d = load();
     const play = { mode, mapId: this.custom ? null : this.mapId, custom: this.custom, level: this.ai, co: this.co, enemyCo: this.versus ? this.co2 : undefined, tag: this.versus || this.tag === this.co ? null : this.tag };
+    // 응원 선물: 같은 캠페인 작전 3연속 패배 → 이번 출격 시작 때 (순위 경쟁 판 · 자유 대전엔 없음)
+    if (gift === undefined && mode === 'campaign') { const kind = helpCheck(this.mapId); if (kind) return this.offerGift(kind); }
+    if (gift) play.support = gift;
     const st = mode === 'campaign' && STORY[this.mapId];
     if (st && st.pre && !(d.seen || {})[this.mapId]) { (d.seen ||= {})[this.mapId] = 1; save(); return this.story(st.pre, ['Play', play]); }
     this.go('Play', play);
+  }
+  // 응원 선물 창: 노력 인정 → "응원 선물 · 챙겨 드릴게요" → [받을게요] [혼자 해 볼게요]
+  offerGift(kind) {
+    const sp = SUPPORT[kind], n = fails(this.mapId), m = { m: this.mapId, gift: kind, fails: n };
+    track('help_offer', m);
+    const p = this.giftPop = popup(this, '응원 선물', 900, 960, { closable: false, onBack: () => { track('help_decline', m); p.close(); } });
+    p.content.add(T(this, 0, -250, `${n}번이나 끝까지 지휘했어요.`, 38, C.text, { w: 900 }));
+    p.content.add(T(this, 0, -195, '포기하지 않는 지휘, 정말 멋져요!', 32, C.gold, { w: 800 }));
+    const g = this.add.graphics(); g.fillStyle(0x14160A, 0.55).fillRoundedRect(-380, -140, 760, 230, 30); p.content.add(g);
+    sp.units.forEach((t, i) => { const im = this.add.image(-250 + i * 120, -25, paintKey(this, `u_${t.split(':')[0]}_b`)); im.setScale(150 / Math.max(im.width, im.height)); p.content.add(im); });
+    p.content.add(T(this, -130 + (sp.units.length - 1) * 60, -60, '응원 선물 · 챙겨 드릴게요', 30, C.text, { ox: 0, w: 900 }));
+    p.content.add(T(this, -130 + (sp.units.length - 1) * 60, -10, `${sp.desc} — 본부 옆에서 합류`, 26, C.green, { ox: 0, w: 800 }));
+    p.content.add(T(this, 0, 150, '이번 출격 한 번만 · 별 · 기록은 그대로', 24, C.sub, { w: 800 }));
+    p.content.add(btn(this, 0, 260, 560, 120, '받을게요', () => { track('help_take', m); p.close(); this.time.delayedCall(160, () => this.start(kind)); }, { style: 'gold', size: 38 }));
+    p.content.add(btn(this, 0, 380, 420, 90, '혼자 해 볼게요', () => { track('help_decline', m); p.close(); this.time.delayedCall(160, () => this.start(null)); }, { style: 'ghost', size: 28 }));
   }
   story(lines, next) {
     const id = this.mapId || (this.sel && this.sel.id), map = MAPS.find(m => m.id === id), stg = M.STAGES.find(s => s.id === id);

@@ -1,16 +1,20 @@
 // 전투 화면: 지도 · 유닛 선택 → 이동(파란 칸) → 행동(공격 · 점령 · 하차 · 대기) · 기지 생산 · 지휘관 필살기 · 상대 AI 턴
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.74.0';
-import { Sim, dist, hpOf } from '../core/sim.js?v=0.74.0';
-import { AI, apply } from '../core/ai.js?v=0.74.0';
-import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.74.0';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.74.0';
-import { STORY } from '../story.js?v=0.74.0';
-import { TALK, RADIO } from '../talk.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.75.0';
+import { Sim, dist, hpOf } from '../core/sim.js?v=0.75.0';
+import { AI, apply } from '../core/ai.js?v=0.75.0';
+import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.75.0';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.75.0';
+import { STORY } from '../story.js?v=0.75.0';
+import { TALK, RADIO } from '../talk.js?v=0.75.0';
+import { withSupport, SUPPORT } from '../core/support.js?v=0.75.0';
+import { COLORS, teamColor, paintKey } from '../color.js?v=0.75.0';
+import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
 
 const TOP = 196, BOTTOM = 360;
 const TEAM = { 1: 0x3E7FD8, 2: 0xD9472E }, TEAMS = { 1: 'b', 2: 'r' };
@@ -26,17 +30,26 @@ export class PlayScene extends Phaser.Scene {
   create(data = {}) {
     const d = load();
     // 판마다 새로 시작 (Phaser 는 같은 화면 객체를 다시 쓰므로 지난 판 값이 남으면 끝나지 않거나 멈춤)
-    Object.assign(this, { fogG: null, pendingEvs: null, unloadList: [], ended: false, ending: false, said: {}, talking: false, tileImg: null, seamT: null, wxLayer: null, wxKind: null, wxParts: null, paused: false, winWhy: null, enemySum: null, holdFast: false, dragFrom: null, dragged: false, nextIdx: -1, ghost: null, pending: null, tgts: [], spots: null, spotsCache: null, reach: null, autoAi: null, powers0: 0, captures: 0, hinted: false, powerHintObj: null, frozen: null, pw: null, danger: false });
+    Object.assign(this, { fogG: null, pendingEvs: null, unloadList: [], ended: false, ending: false, said: {}, talking: false, tileImg: null, seamT: null, wxLayer: null, wxKind: null, wxParts: null, paused: false, winWhy: null, enemySum: null, holdFast: false, dragFrom: null, dragged: false, nextIdx: -1, ghost: null, pending: null, tgts: [], spots: null, spotsCache: null, reach: null, autoAi: null, powers0: 0, captures: 0, hinted: false, powerHintObj: null, frozen: null, pw: null, danger: false, supportShown: false, undoPop: null, endAsk: null });
     this.mode = data.mode || 'free';
     this.map = data.custom || MAPS.find(m => m.id === data.mapId) || WAR.find(m => m.id === data.mapId) || MAPS[0];
     this.simMap = ['campaign', 'daily', 'war'].includes(this.mode) ? campaignMap(this.map) : this.map;
+    // 지원 부대 (광고 보급 보너스 · 응원 선물): 새로 시작할 때만 지도에 더함 (이어하기는 저장된 판에 이미 있음)
+    this.support = data.support || (data.resume && data.resume.support) || null;
+    if (data.support && !data.resume && SUPPORT[data.support] && !['daily', 'war', 'versus'].includes(this.mode)) this.simMap = withSupport(this.simMap, data.support);
+    // 되돌리기: 아군 턴 시작 상태 (화면을 다시 만들어도 이어받음)
+    this.snaps = (data.undo && data.undo.snaps) || []; this.undoN = (data.undo && data.undo.n) || 0;
+    // 부대 색 (꾸미기): 2인 대전은 파랑 · 빨강 그대로
+    this.colorK = this.mode === 'versus' ? 'blue' : teamColor(); TEAM[1] = COLORS[this.colorK].hex;
     this.tagCo = data.tag || null;
     this.level = data.level || 'normal';
     this.co = data.co || d.co || 'ella';
     this.enemyCo = data.enemyCo || this.map.enemyCo || 'scarlet';
     this.s = new Sim(this.simMap, [null, this.co, this.enemyCo], { limit: data.limit || this.map.par + 8, tag: [null, this.tagCo, data.enemyTag || this.map.enemyTag || null] });
-    this.resumed = !!data.resume;
+    for (const su of (this.simMap.units || []).filter(u => u.support)) { const u = this.s.unitAt(su.x, su.y); if (u) u.support = 1; }
+    this.data0 = data; this.resumed = !!data.resume && !data.undo; this.undone = !!data.undo;
     if (data.resume) { this.s.restore(data.resume.sim); this.captures = data.resume.captures || 0; this.powers0 = data.resume.powers || 0; }
+    if (data.undo && data.undo.said) this.said = { ...data.undo.said };
     this.ai = new AI(this.level);
     this.auto = new URLSearchParams(location.search).has('auto');   // 테스트: 아군도 AI
     this.state = 'idle'; this.sel = null; this.busy = false; this.speed = 1; this.powers = this.powers0 || 0; this.captures = this.captures || 0; this.danger = false;
@@ -67,6 +80,7 @@ export class PlayScene extends Phaser.Scene {
 
   // 사람이 조작하는 쪽: 2인 대전이면 지금 차례 · 아니면 파랑(1)
   get me() { return this.mode === 'versus' ? this.s.turn : 1; }
+  tk(key) { return paintKey(this, key, this.colorK); }   // 아군 그림은 부대 색으로
   get foe() { return this.me === 1 ? 2 : 1; }
   human(p) { return this.mode === 'versus' || p === 1; }
   // 안개 속에서 보이는지 (보는 쪽 = me)
@@ -180,7 +194,7 @@ export class PlayScene extends Phaser.Scene {
   }
   drawBld(x, y) {
     const t = this.s.tile(x, y), [px, py] = this.xy(x, y), ts = this.ts;
-    const key = `b_${BLD[t.t]}_${t.owner === 1 ? 'b' : t.owner === 2 ? 'r' : 'n'}`;
+    const key = this.tk(`b_${BLD[t.t]}_${t.owner === 1 ? 'b' : t.owner === 2 ? 'r' : 'n'}`);
     let v = this.bld.get(`${x},${y}`);
     if (!v) { v = this.add.container(px, py).setDepth(4 + y * 0.01); v.plate = this.add.graphics(); v.img = this.add.image(0, ts * 0.4, key).setOrigin(0.5, 1); v.bar = this.add.graphics().setPosition(px, py).setDepth(30); v.add([v.plate, v.img]); this.bld.set(`${x},${y}`, v); }
     v.img.setTexture(key); const sc = ts * 0.92 / Math.max(v.img.width, v.img.height * 0.95); v.img.setScale(sc);
@@ -194,7 +208,7 @@ export class PlayScene extends Phaser.Scene {
   // 유닛: 칸보다 크게 서 있는 말 + 흰 외곽선 + 팀 색 원판 + 큰 체력 배지 + 행동 상태(✓ · 발밑 빛)
   makeUnit(u) {
     const [px, py] = this.xy(u.x, u.y), ts = this.ts, c = this.add.container(px, py).setDepth(10 + u.y * 0.01);
-    const key = `u_${u.type}_${TEAMS[u.p]}`, foot = ts * 0.4;
+    const key = this.tk(`u_${u.type}_${TEAMS[u.p]}`), foot = ts * 0.4;
     const glow = this.add.ellipse(0, foot - ts * 0.04, ts * 0.98, ts * 0.36, 0xFFF2A0, 0).setBlendMode('ADD');
     const ring = this.add.ellipse(0, foot - ts * 0.04, ts * 0.86, ts * 0.3, TEAM[u.p], 0.9).setStrokeStyle(3, 0xFFFFFF, 0.9);
     const probe = this.textures.get(key).getSourceImage();
@@ -208,7 +222,7 @@ export class PlayScene extends Phaser.Scene {
     const hpT = T(this, 0, 1, '', Math.round(ts * 0.25), '#FFFFFF', { w: 900, shadow: false });
     hp.add([hpBg, hpT]);
     const done = T(this, -ts * 0.32, -ts * 0.28, '✓', Math.round(ts * 0.3), '#FFFFFF', { w: 900, stroke: '#14160A', thick: 6 }).setVisible(false);
-    const cargo = this.add.image(-ts * 0.32, -ts * 0.3, 'u_inf_' + TEAMS[u.p]).setScale(k * 0.5).setVisible(false);
+    const cargo = this.add.image(-ts * 0.32, -ts * 0.3, this.tk('u_inf_' + TEAMS[u.p])).setScale(k * 0.5).setVisible(false);
     c.add([glow, ring, ...outline, img, hp, done, cargo]);
     Object.assign(c, { img, outline, ring, glow, hp, hpBg, hpT, doneT: done, cargo, uid: u.id });
     this.views.set(u.id, c); this.syncUnit(u);
@@ -308,6 +322,8 @@ export class PlayScene extends Phaser.Scene {
     this.endBtn = btn(this, W - 150, H - 82, 250, 104, '턴 종료', () => this.askEnd(), { style: 'red', size: 34 }).setDepth(D);
     this.nextBtn = btn(this, 170, H - 82, 290, 104, '다음 유닛', () => this.nextUnit(), { style: 'olive', size: 30 }).setDepth(D);
     this.dangerBtn = btn(this, 470, H - 82, 270, 104, '위험 지역', () => this.toggleDanger(), { style: 'ghost', size: 30 }).setDepth(D);
+    // 한 턴 되돌리기 (원어데이 안 · 캠페인 · 자유 대전만 — 순위 경쟁 판엔 없음)
+    this.undoBtn = undoMode(this.mode) && !this.auto ? btn(this, 705, H - 82, 170, 104, '되돌리기', () => this.askUndo(), { style: 'ghost', size: 26 }).setDepth(D) : null;
     this.skipBtn = btn(this, W / 2, H - 82, 420, 104, '적 턴 건너뛰기 ▶▶', () => { this.speed = 14; this.skipBtn.setVisible(false); }, { style: 'ghost', size: 30 }).setDepth(D).setVisible(false);
     this.dangerLayer = this.add.layer().setDepth(19);
     this.showInfo(null);
@@ -340,7 +356,7 @@ export class PlayScene extends Phaser.Scene {
     if (x == null) return this.dashboard(y0);
     const t = this.s.tile(x, y), tr = TERRAIN[t.t], u = this.unitSeen(x, y);
     // 지형
-    const tk = BLD[t.t] ? `b_${BLD[t.t]}_${t.owner === 1 ? 'b' : t.owner === 2 ? 'r' : 'n'}` : `t_${t.t === 'road' ? 'road_h' : t.t === 'river' ? 'river_h' : t.t === 'bridge' ? 'bridge_h' : t.t === 'reef' ? 'sea' : t.t}`;
+    const tk = BLD[t.t] ? this.tk(`b_${BLD[t.t]}_${t.owner === 1 ? 'b' : t.owner === 2 ? 'r' : 'n'}`) : `t_${t.t === 'road' ? 'road_h' : t.t === 'river' ? 'river_h' : t.t === 'bridge' ? 'bridge_h' : t.t === 'reef' ? 'sea' : t.t}`;
     const ti = this.add.image(ix + 56, y0 + 56, tk); ti.setScale(104 / Math.max(ti.width, ti.height)); this.info.add(ti);
     this.info.add(T(this, ix + 124, y0 + 22, tr.name, 30, C.text, { ox: 0, w: 900 }));
     for (let k = 0; k < 4; k++) this.info.add(T(this, ix + 124 + k * 30, y0 + 62, '★', 28, k < tr.def ? C.gold : '#4A4A30', { ox: 0, w: 900, shadow: false }));
@@ -349,7 +365,7 @@ export class PlayScene extends Phaser.Scene {
     // 유닛
     if (u) {
       const U = UNITS[u.type], ux = 400;
-      const ui = this.add.image(ux + 60, y0 + 60, `u_${u.type}_${TEAMS[u.p]}`); ui.setScale(124 / Math.max(ui.width, ui.height)); this.info.add(ui);
+      const ui = this.add.image(ux + 60, y0 + 60, this.tk(`u_${u.type}_${TEAMS[u.p]}`)); ui.setScale(124 / Math.max(ui.width, ui.height)); this.info.add(ui);
       this.info.add(T(this, ux + 132, y0 + 20, `${U.name}`, 32, u.p === 1 ? C.blue : C.red, { ox: 0, w: 900 }));
       const n = hpOf(u), hb = this.add.graphics(); hb.fillStyle(0x000000, 0.5).fillRoundedRect(ux + 132, y0 + 46, 260, 18, 9).fillStyle(n <= 3 ? 0xD9301E : n <= 6 ? 0xE8A21C : 0x6FCB4A, 1).fillRoundedRect(ux + 132, y0 + 46, Math.max(18, 26 * n), 18, 9); this.info.add(hb);
       this.info.add(T(this, ux + 402, y0 + 55, `${n}/10`, 24, C.text, { ox: 0, w: 900 }));
@@ -367,7 +383,7 @@ export class PlayScene extends Phaser.Scene {
   }
   setActs(list) {
     this.acts.removeAll(true);
-    [this.endBtn, this.nextBtn, this.dangerBtn].forEach(b => b.setVisible(!list));
+    [this.endBtn, this.nextBtn, this.dangerBtn, this.undoBtn].forEach(b => b && b.setVisible(!list));
     if (!list) { this.updateIdle(); return; }
     const n = list.length, w = Math.min(240, (W - 80 - (n - 1) * 16) / n), y = H - 82;
     list.forEach(([label, fn, style], i) => this.acts.add(btn(this, 40 + w / 2 + i * (w + 16), y, w, 100, label, fn, { style: style || 'olive', size: 32 })));
@@ -379,6 +395,7 @@ export class PlayScene extends Phaser.Scene {
     const left = this.s.mine(this.me).filter(u => !u.done && !u.inside).length, h = this.human(this.s.turn);
     this.nextBtn.setLabel(left ? `다음 유닛 ${left}` : '모두 완료').setEnabled(left > 0 && h && !this.busy);
     this.dangerBtn.setEnabled(h && !this.busy);
+    if (this.undoBtn) this.undoBtn.setEnabled(h && !this.busy && this.snaps.length > 0);
   }
   nextUnit() {
     if (this.busy || !this.human(this.s.turn)) return;
@@ -407,10 +424,53 @@ export class PlayScene extends Phaser.Scene {
       this.dangerLayer.add(g);
     }
   }
+  // ── 한 턴 되돌리기: 아군 턴이 시작될 때마다 상태를 적어 둠 (이번 턴 · 지난 턴 두 개) ──
+  pushSnap() {
+    const sim = JSON.parse(JSON.stringify(this.s.snapshot()));
+    this.snaps.push({ sim, key: JSON.stringify(sim), day: this.s.day, captures: this.captures, powers: this.powers, said: { ...this.said } });
+    while (this.snaps.length > 2) this.snaps.shift();
+  }
+  askUndo() {
+    if (this.busy || this.ended || !this.human(this.s.turn) || !this.snaps.length || this.paused) return;
+    if (this.undoPop && this.undoPop.active && !this.undoPop.closing) return;
+    const n = this.snaps.length, cur = this.snaps[n - 1], changed = JSON.stringify(this.s.snapshot()) !== cur.key;
+    const idx = changed ? n - 1 : n - 2, to = this.snaps[idx];
+    if (!to) return toast(this, '되돌릴 수 있는 지난 턴이 없어요', C.sub, TOP + 60);
+    const free = undoFreeLeft(), price = bm.price('undo');
+    const p = this.undoPop = popup(this, '한 턴 되돌리기', 820, 640);
+    p.content.add(T(this, 0, -120, changed ? `DAY ${to.day} 아군 턴 처음으로` : `DAY ${to.day} 아군 턴 처음으로 (적 턴 전)`, 36, C.text, { w: 900, wrap: 720 }));
+    p.content.add(T(this, 0, -50, changed ? '이번 턴에 한 이동 · 공격 · 생산을 모두 되돌려요' : '지난 턴부터 다시 지휘해요', 26, C.sub, { w: 800, wrap: 720 }));
+    p.content.add(T(this, 0, 20, free ? `소장 혜택 · 오늘 무료 ${free}/3` : owned() ? '오늘 무료 되돌리기는 다 썼어요' : '', 26, C.gold, { w: 800 }));
+    p.content.add(btn(this, -180, 170, 300, 120, '계속 지휘', () => p.close(), { style: 'olive', size: 30 }));
+    p.content.add(btn(this, 180, 170, 300, 120, free ? '무료로 되돌리기' : `🪙${price} 되돌리기`, async () => {
+      p.close(); if (this.busy || this.ended) return;
+      this.busy = true; this.updateHud();
+      const r = await payUndo();
+      if (!r.ok) {
+        this.busy = false; this.updateHud();
+        const msg = { short: '골드가 조금 모자라요', login: '로그인하면 쓸 수 있어요', limit: '오늘 되돌리기는 다 썼어요', off: '지금은 쓸 수 없어요' }[r.reason];
+        if (msg) toast(this, msg, C.sub, TOP + 60);
+        return;
+      }
+      track('undo', { m: this.map.id, via: r.via || 'gold', day: this.s.day });
+      this.doUndo(idx);
+    }, { style: 'gold', size: free ? 28 : 30, ls: 0 }));
+  }
+  doUndo(idx) {
+    const to = this.snaps[idx], keep = this.snaps.slice(0, idx);
+    this.ended = true; audio.play('sfx_page', { volume: 0.6 });
+    this.scene.restart({ ...this.data0, support: null, resume: { sim: to.sim, captures: to.captures, powers: to.powers, support: this.support }, undo: { snaps: keep, said: to.said, n: this.undoN + 1 } });
+  }
+  // 지원 부대 알림: 본부 옆에 합류한 유닛을 반짝
+  showSupport() {
+    const sp = SUPPORT[this.support]; if (!sp || this.ended) return;
+    toast(this, `${sp.name} · ${sp.desc} — 본부 옆에 합류했어요`, C.gold, TOP + 140);
+    for (const u of this.s.units.filter(u => u.p === 1 && u.support)) { const c = this.views.get(u.id); if (!c) continue; this.follow(u.x, u.y); this.tweens.add({ targets: c, scale: 1.25, duration: 220, yoyo: true, repeat: 3 }); }
+  }
   // 이어하기 저장 (아군 턴 시작마다)
   autosave() {
     if (this.auto || this.mode === 'versus' || this.map.custom) return;
-    try { localStorage.setItem('front_tactics_resume', JSON.stringify({ mode: this.mode, mapId: this.map.id, level: this.level, co: this.co, enemyCo: this.enemyCo, tag: this.tagCo, captures: this.captures, powers: this.powers, sim: this.s.snapshot(), at: Date.now() })); } catch { /* */ }
+    try { localStorage.setItem('front_tactics_resume', JSON.stringify({ mode: this.mode, mapId: this.map.id, level: this.level, co: this.co, enemyCo: this.enemyCo, tag: this.tagCo, captures: this.captures, powers: this.powers, support: this.support, sim: this.s.snapshot(), at: Date.now() })); } catch { /* */ }
   }
 
   // ── 범위 칸 ──
@@ -425,12 +485,14 @@ export class PlayScene extends Phaser.Scene {
     const s = this.s; this.syncAll();
     if (s.turn === 1 && this.enemySum) { const m = this.enemySum; this.enemySum = null; this.time.delayedCall(900, () => toast(this, m, m.includes('없음') ? C.green : C.pink, TOP + 60)); }
     if (this.resumed) { this.resumed = false; toast(this, `이어하기 · DAY ${s.day}`, C.gold, TOP + 60); }
+    if (this.undone) { this.undone = false; toast(this, `한 턴 되돌렸어요 · DAY ${s.day}`, C.gold, TOP + 60); }
+    if (this.support && s.day === 1 && s.turn === 1 && !this.supportShown) { this.supportShown = true; this.time.delayedCall(1200, () => this.showSupport()); }
     if (this.mode === 'versus') { await this.handoff(); this.syncAll(); }
     else await this.banner(s.turn === 1 ? `DAY ${s.day}` : '적군 턴', s.turn === 1 ? '아군 턴 · 작전을 시작하세요' : COS[this.enemyCo].name + ' 장군이 움직여요', s.turn === 1 ? C.blue : C.red);
     this.themeMusic();
     await this.turnTalk();
-    if (!this.human(s.turn)) { this.themeMusic(); this.speed = 2; this.setActs(null); [this.endBtn, this.nextBtn, this.dangerBtn].forEach(b => b.setVisible(false)); this.skipBtn.setVisible(true); await this.enemyTurn(); }
-    else { this.themeMusic(); this.speed = 1; this.skipBtn.setVisible(false); this.setActs(null); this.autosave(); this.drawDanger(); if (this.auto) return this.enemyTurn(1); if (!load().tips.war) this.tutorial(); }
+    if (!this.human(s.turn)) { this.themeMusic(); this.speed = 2; this.setActs(null); [this.endBtn, this.nextBtn, this.dangerBtn, this.undoBtn].forEach(b => b && b.setVisible(false)); this.skipBtn.setVisible(true); await this.enemyTurn(); }
+    else { this.themeMusic(); this.speed = 1; this.skipBtn.setVisible(false); if (this.undoBtn) this.pushSnap(); this.setActs(null); this.autosave(); this.drawDanger(); if (this.auto) return this.enemyTurn(1); if (!load().tips.war) this.tutorial(); }
   }
   // ── 전투 중 대화 (원작처럼 짧은 대사 장면) ──
   talkOn() { return load().talk !== false && !this.auto && this.speed <= 2; }
@@ -777,8 +839,8 @@ export class PlayScene extends Phaser.Scene {
       this.info.add(T(this, bx + 124, y0 + 76, val, 40, col, { ox: 0, w: 900 }));
     };
     const eAfter = Math.max(0, Math.ceil((e.hp - f.dmg) / 10)), uAfter = Math.max(0, Math.ceil((u.hp - f.counter) / 10));
-    box(30, e.seam ? 't_seam_h' : `u_${e.type}_${TEAMS[e.p]}`, `${e.seam ? '이음매' : UNITS[e.type].name} 피해`, f.kill ? (e.seam ? '파괴!' : '격파!') : `${hpOf(e)} → ${eAfter}`, f.kill ? C.gold : '#FFE27A');
-    box(530, `u_${u.type}_${TEAMS[u.p]}`, '반격', f.counter ? `${hpOf(u)} → ${uAfter}` : '없음', f.counter ? C.pink : C.green);
+    box(30, e.seam ? 't_seam_h' : this.tk(`u_${e.type}_${TEAMS[e.p]}`), `${e.seam ? '이음매' : UNITS[e.type].name} 피해`, f.kill ? (e.seam ? '파괴!' : '격파!') : `${hpOf(e)} → ${eAfter}`, f.kill ? C.gold : '#FFE27A');
+    box(530, this.tk(`u_${u.type}_${TEAMS[u.p]}`), '반격', f.counter ? `${hpOf(u)} → ${uAfter}` : '없음', f.counter ? C.pink : C.green);
     this.setActs([['공격!', () => this.doAttack(e), 'red'], ['뒤로', () => this.toAct(), 'ghost']]);
     this.clearHl(); for (const t of this.tgts) this.mark(t.x, t.y, 0xFF5040, t === e ? 0.6 : 0.2, t !== e);
   }
@@ -845,7 +907,7 @@ export class PlayScene extends Phaser.Scene {
     list.forEach((t, i) => {
       const U = UNITS[t], bx = (i % 2 ? 1 : -1) * 232, by = -ph / 2 + 260 + Math.floor(i / 2) * 170, cost = this.s.costOf(t, me), pipeOk = t !== 'piper' || this.s.pipeBase(x, y), ok = this.s.funds[me] >= cost && pipeOk;
       const g = this.add.graphics(); g.fillStyle(0x000000, ok ? 0.28 : 0.12).fillRoundedRect(bx - 222, by - 76, 444, 152, 20).lineStyle(2, ok ? 0xFFD45A : 0x666655, 0.6).strokeRoundedRect(bx - 222, by - 76, 444, 152, 20); p.content.add(g);
-      const im = this.add.image(bx - 150, by, `u_${t}_${TEAMS[me]}`).setAlpha(ok ? 1 : 0.4); im.setScale(130 / Math.max(im.width, im.height)); p.content.add(im);
+      const im = this.add.image(bx - 150, by, this.tk(`u_${t}_${TEAMS[me]}`)).setAlpha(ok ? 1 : 0.4); im.setScale(130 / Math.max(im.width, im.height)); p.content.add(im);
       p.content.add(T(this, bx - 70, by - 36, U.name, 30, ok ? C.text : C.dim, { ox: 0, w: 900 }));
       p.content.add(T(this, bx - 70, by + 6, fmt(cost) + (cost < U.cost ? ' ▼' : ''), 28, ok ? (cost < U.cost ? '#9BE07A' : C.gold) : C.dim, { ox: 0, w: 900 }));
       p.content.add(T(this, bx - 70, by + 44, pipeOk ? U.desc : '파이프와 이어진 기지에서만 만들어요', 18, pipeOk ? C.sub : C.pink, { ox: 0, w: 700, wrap: 280 }));
@@ -903,7 +965,7 @@ export class PlayScene extends Phaser.Scene {
       c.add(this.add.rectangle(x0 + W / 4, cy - bh / 2 + 70, W / 2, 140, 0x000000, 0.25));
       c.add(this.add.rectangle(x0 + W / 4, cy, W / 2 - 6, bh, 0, 0).setStrokeStyle(6, S.p === 1 ? 0x3E7FD8 : 0xD9472E));
       S.x0 = x0; S.sprites = [];
-      const foot = FOOT.includes(S.type), n = foot ? Math.max(1, Math.ceil(S.hp / 20)) : 1, key2 = `u_${S.type}_${TEAMS[S.p]}`;
+      const foot = FOOT.includes(S.type), n = foot ? Math.max(1, Math.ceil(S.hp / 20)) : 1, key2 = this.tk(`u_${S.type}_${TEAMS[S.p]}`);
       const slots = foot ? [[0.3, 0.38], [0.65, 0.3], [0.45, 0.55], [0.75, 0.6], [0.25, 0.72]] : [[0.5, 0.52]];
       for (let i = 0; i < n; i++) { const [fx, fy] = slots[i]; const im = this.add.image(x0 + (S.p === 1 ? fx : 1 - fx) * W / 2, cy - bh / 2 + fy * bh + 60, key2); im.setScale((foot ? 190 : 360) / Math.max(im.width, im.height)); if (UNITS[S.type].dom === 'air') im.y -= 60; c.add(im); S.sprites.push(im); }
       S.hpT = T(this, x0 + W / 4, cy - bh / 2 + 50, '', 46, C.text, { w: 900, stroke: '#14160A', thick: 8 }); c.add(S.hpT); S.hpT.setText(`${UNITS[S.type].name}  ${Math.ceil(S.hp / 10)}`);
@@ -949,8 +1011,8 @@ export class PlayScene extends Phaser.Scene {
       this.time.delayedCall(surrender ? 100 : 900, () => { this.cameras.main.fadeOut(500, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', r)); });
       return;
     }
-    const r = { mode: this.mode, mapId: this.map.id, win, day: s.day, lost: s.stats.lost[1], kills: s.stats.kills[1], captures: this.captures, built: s.stats.built[1], powers: this.powers, co: this.co, tag: this.tagCo, why: surrender ? 'surrender' : this.winWhy, dealt: s.stats.dealt.slice(), units0: (this.simMap.units || []).filter(u => u.p === 1).length };
-    const res = M.finish(r);
+    const r = { mode: this.mode, mapId: this.map.id, win, day: s.day, lost: s.stats.lost[1], kills: s.stats.kills[1], captures: this.captures, built: s.stats.built[1], powers: this.powers, co: this.co, tag: this.tagCo, why: surrender ? 'surrender' : this.winWhy, dealt: s.stats.dealt.slice(), units0: (this.simMap.units || []).filter(u => u.p === 1 && !u.support).length, support: this.support, undos: this.undoN, custom: this.map.custom ? this.map : null, enemyTag: this.data0.enemyTag, limit: this.data0.limit };
+    const res = M.finish(r); r.fails = noteResult(r);
     const rd = { ...r, ...res, level: this.level, enemyCo: this.enemyCo }, st = this.mode === 'campaign' && win && STORY[this.map.id], d = load();
     const to = st && st.win && !(d.seenWin || {})[this.map.id] ? (((d.seenWin ||= {})[this.map.id] = 1), save(), ['Story', { lines: st.win, foe: this.enemyCo, title: '작전 성공', next: ['Result', rd] }]) : ['Result', rd];
     this.time.delayedCall(surrender ? 100 : 900, () => { this.cameras.main.fadeOut(500, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(...to)); });

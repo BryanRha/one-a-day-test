@@ -1,11 +1,11 @@
-import { BASE } from '../base.js?v=0.74.0';
+import { BASE } from '../base.js?v=0.75.0';
 // 마을 화면 (쿼터뷰): 땅 · 밭 · 건물 · 기차역 · 강아지 · 끌어서 이동 · 두 손가락/휠 확대 · 누르기 · 건물 놓기
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { BUILDS, CROPS, MAP, ZONE, RECIPES } from '../data.js?v=0.74.0';
-import { load, save, open, objAt, freeRect, cropReady, tickFactory, tickAnimal, digSpot, productOf, train, trainN, trainCount, zooCoins, pop } from '../state.js?v=0.74.0';
-import { TRAINS } from '../data.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { BUILDS, CROPS, MAP, ZONE, RECIPES } from '../data.js?v=0.75.0';
+import { load, save, open, objAt, freeRect, cropReady, tickFactory, tickAnimal, digSpot, productOf, train, trainN, trainCount, zooCoins, pop } from '../state.js?v=0.75.0';
+import { TRAINS } from '../data.js?v=0.75.0';
 
 export const TW = 180, TH = 90, OX = MAP * TW / 2 + 260, OY = 260;
 export const iso = (gx, gy) => [OX + (gx - gy) * TW / 2, OY + (gx + gy) * TH / 2];
@@ -97,7 +97,10 @@ export class TownScene extends Phaser.Scene {
   bars() { if (!this.spr) return; for (const id in this.spr) { const c = this.spr[id]; if (c && c.pb && c.pb.g.active) this.prog(c.pb); } for (const o of this.d.objs) { if (o.b !== 'field' || !o.crop) continue; const c = this.spr[o.id]; if (!c || !c.bar || !c.bar.active) continue; const [x, y] = iso(o.x + 0.5, o.y + 0.5), t = Math.max(0, (o.at - Date.now()) / 1000), k = Math.min(1, Math.max(0, 1 - t / CROPS[o.crop].t));
     c.bar.clear().fillStyle(0x000000, 0.4).fillRoundedRect(x - 40, y - 20, 80, 14, 7).fillStyle(0x8BE36A, 1).fillRoundedRect(x - 40, y - 20, Math.max(8, 80 * k), 14, 7); } }
   // 일하는 공장 굴뚝 연기
-  puffs() { if (this.dead || !this.spr) return; for (const o of this.d.objs) { const c = this.spr[o.id]; if (!c || !c.busy || !c.im || Math.random() < 0.45) continue; const B = BUILDS[o.b], [x, y] = iso(o.x + B.sz / 2, o.y + B.sz / 2), top = y - c.im.displayHeight * 0.78;
+  // 원어데이 장식(황금 수정 분수 · 별빛 정자): 반짝이는 별가루
+  twinkle(o, c) { const [x, y] = iso(o.x + 0.5, o.y + 0.5), h = c.im.displayHeight, st = this.add.text(x + (Math.random() - 0.5) * c.im.displayWidth * 0.7, y - h * (0.25 + Math.random() * 0.6), '✦', { fontFamily: 'Pretendard, sans-serif', fontSize: `${18 + Math.random() * 14}px`, color: BUILDS[o.b].oad === 'owner' ? '#FFF3B0' : '#FFE27A' }).setOrigin(0.5).setAlpha(0).setScale(0.4); this.fx.add(st);
+    this.tweens.add({ targets: st, alpha: 1, scale: 1, y: st.y - 16, duration: 520, yoyo: true, ease: 'Sine.easeInOut', onComplete: () => st.destroy() }); }
+  puffs() { if (this.dead || !this.spr) return; for (const o of this.d.objs) { const c = this.spr[o.id]; if (c && c.im && BUILDS[o.b].oad && Math.random() < 0.6) this.twinkle(o, c); if (!c || !c.busy || !c.im || Math.random() < 0.45) continue; const B = BUILDS[o.b], [x, y] = iso(o.x + B.sz / 2, o.y + B.sz / 2), top = y - c.im.displayHeight * 0.78;
       const pf = this.add.circle(x - 30 + Math.random() * 40, top, 14 + Math.random() * 8, 0xFFFFFF, 0.75); this.fx.add(pf); this.tweens.add({ targets: pf, y: top - 90, x: pf.x + 20 + Math.random() * 30, scale: 2.2, alpha: 0, duration: 1800, ease: 'Sine.easeOut', onComplete: () => pf.destroy() }); } }
   zoom(z) { this.cameras.main.setZoom(Phaser.Math.Clamp(z, 0.5, 1.6)); }
   // ── 땅: 열린 구역은 풀 · 닫힌 구역은 숲

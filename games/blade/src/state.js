@@ -1,5 +1,5 @@
-// 저장 · 성장 · 재화 · 장비 · 행동력 · 일일 미션 · 출석 (localStorage 'ashblade_v1')
-import { HERO, SLOTS, RARITY, ITEM_NAMES, STAGES, expNeed, MAX_LV, STAMINA, enhCost, enhRate, MAX_ENH, skillCost, MAX_SKILL, SKILL_SLOTS } from './data.js?v=0.74.0';
+// 저장 · 성장 · 재화(은화 = 저장 필드 gold · 보석 gems) · 장비 · 행동력 · 일일 미션 · 출석 (localStorage 'ashblade_v1')
+import { HERO, SLOTS, RARITY, ITEM_NAMES, STAGES, expNeed, MAX_LV, STAMINA, enhCost, enhRate, MAX_ENH, skillCost, MAX_SKILL, SKILL_SLOTS } from './data.js?v=0.75.0';
 
 const KEY = 'ashblade_v1';
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
@@ -42,10 +42,10 @@ export function addItem(it) { G.inv.push(it); if (G.inv.length > 60) { G.inv.sor
 export const salvage = it => Math.round(80 * Math.pow(2.2, it.r) * (1 + it.lv * 0.3));
 export function equip(it) { const old = G.gear[it.slot]; G.inv = G.inv.filter(x => x.u !== it.u); if (old) G.inv.push(old); G.gear[it.slot] = it; save(); }
 export function sell(it) { G.inv = G.inv.filter(x => x.u !== it.u); const g = salvage(it); G.gold += g; save(); return g; }
-export function enhance(it) { if (it.lv >= MAX_ENH) return { err: '최대 강화' }; const c = enhCost(it); if (G.gold < c) return { err: '골드가 부족해요' }; G.gold -= c; const ok = Math.random() < enhRate(it); if (ok) it.lv++; mission('enh'); save(); return { ok, cost: c }; }
+export function enhance(it) { if (it.lv >= MAX_ENH) return { err: '최대 강화' }; const c = enhCost(it); if (G.gold < c) return { err: '은화가 부족해요' }; G.gold -= c; const ok = Math.random() < enhRate(it); if (ok) it.lv++; mission('enh'); save(); return { ok, cost: c }; }
 export const itemScore = it => { const st = itemStat(it); return Math.round((st.atk || 0) * 4 + (st.hp || 0) * 0.35 + (st.def || 0) * 6 + (st.crit || 0) * 900 + (st.cdmg || 0) * 300); };
 // 스킬
-export function skillUp(k) { const lv = G.skillLv[k] || 1; if (lv >= MAX_SKILL) return { err: '최대 레벨' }; if (lv >= G.lv + 2) return { err: `영웅 레벨 ${lv - 1} 이상 필요` }; const c = skillCost(lv); if (G.gold < c.gold) return { err: '골드가 부족해요' }; if (G.books < c.book) return { err: '스킬서가 부족해요' };
+export function skillUp(k) { const lv = G.skillLv[k] || 1; if (lv >= MAX_SKILL) return { err: '최대 레벨' }; if (lv >= G.lv + 2) return { err: `영웅 레벨 ${lv - 1} 이상 필요` }; const c = skillCost(lv); if (G.gold < c.gold) return { err: '은화가 부족해요' }; if (G.books < c.book) return { err: '스킬서가 부족해요' };
   G.gold -= c.gold; G.books -= c.book; G.skillLv[k] = lv + 1; save(); return { ok: true }; }
 // 스테이지 진행
 export const stageOpen = id => { const i = STAGES.findIndex(s => s.id === id); return i <= 0 || (G.clear[STAGES[i - 1].id] || 0) > 0; };

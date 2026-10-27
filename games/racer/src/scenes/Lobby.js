@@ -1,10 +1,14 @@
 // 차고: 메인 일러스트 + 드라이버 선택 · 자동차 선택 · 부품 강화 → 출발
-import { W, H } from '../config.js?v=0.74.0';
-import { txt, fmt, fit, button, toast, popup } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import { wind } from '../fx.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { txt, fmt, fit, button, toast, popup } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import { wind } from '../fx.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { helloOnce } from '../bmflow.js?v=0.75.0';
+import { hallShown, hallPopup } from '../hall.js?v=0.75.0';
+import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.75.0';
 
 // 밝은 카드 (흰 바탕 + 남색 테두리)
 function card(scene, x, y, w, h, on = false) {
@@ -23,6 +27,8 @@ export class LobbyScene extends Phaser.Scene {
     audio.music('bgm_lobby', this);
     this.build();
     window.__lobby = this;
+    /* 원어데이 hello 가 늦게 오면(앱 안) 한 번 더 그려서 스킨 · 명예의 전당 버튼을 보임 */
+    if (!bm.info.ok) helloOnce().then(h => { if (h && h.ok && this.scene.isActive()) this.build(); });
   }
 
   build() {
@@ -50,6 +56,13 @@ export class LobbyScene extends Phaser.Scene {
     hb.add([this.add.rectangle(0, 0, 280, 72, 0x1E2A52, 0.85).setStrokeStyle(4, 0xFFE14D), txt(this, 0, 0, '❓ 게임 방법', 36, '#FFFFFF')]);
     hb.setSize(280, 72).setInteractive({ useHandCursor: true }).on('pointerup', () => { audio.play('sfx_click', { volume: 0.5 }); this.helpPopup(); });
     if (!d.tips.practice) this.tweens.add({ targets: hb, scale: 1.08, duration: 500, yoyo: true, repeat: -1 });
+    // 이번 주 명예의 전당 (원어데이 안에서만)
+    if (hallShown()) {
+      const fb = this.add.container(W / 2 - 18, top - 60);
+      fb.add([this.add.rectangle(0, 0, 330, 72, 0x1E2A52, 0.85).setStrokeStyle(4, 0xFFE14D), txt(this, 0, 0, '🏆 명예의 전당', 34, '#FFE14D')]);
+      fb.setSize(330, 72).setInteractive({ useHandCursor: true }).on('pointerup', () => { audio.play('sfx_click', { volume: 0.5 }); hallPopup(this); });
+      this.hallBtn = fb;
+    }
 
     let y = top + 40;
     // 드라이버
@@ -69,11 +82,17 @@ export class LobbyScene extends Phaser.Scene {
     y += 210;
     // 자동차
     txt(this, 40, y, '자동차', 46, '#1E2A52', { ox: 0, stroke: '#FFFFFF', thick: 8 });
+    // 스킨 (원어데이 안에서만 · 겉모습만)
+    if (skinShown()) {
+      const sk = activeSkin();
+      const sb = button(this, W - 190, y, sk ? `🎨 ${SKINS[sk].name}` : '🎨 스킨', () => this.skinPopup(), { key: 'btn_pink', w: 300, h: 84, size: 30 });
+      this.skinBtn = sb;
+    }
     y += 150;
     M.CAR_ORDER.forEach((id, i) => {
       const x = 190 + i * 350, info = M.CAR_INFO[id], own = d.cars[id], on = d.car === id;
       card(this, x, y, 320, 250, on);
-      const c = fit(this.add.image(x - 80, y, info.key), 210).setAngle(-12);
+      const c = fit(this.add.image(x - 80, y, on ? skinKey(this, info.key) : info.key), 210).setAngle(-12);
       if (!own) c.setTint(0x55607A);
       txt(this, x + 60, y - 50, info.name, 30, '#1E2A52', { stroke: '#FFFFFF', thick: 5 });
       txt(this, x + 60, y + 4, own ? (info.bonus ? `성능 +${info.bonus}단계` : '기본 차') : `🪙 ${fmt(info.cost)}`, 26, own ? '#3B5BDB' : '#C2410C', { stroke: '#FFFFFF', thick: 4 });
@@ -134,6 +153,44 @@ export class LobbyScene extends Phaser.Scene {
       pop.content.add(txt(this, -170, y + 30, t2, 30, '#FFFFFF', { ox: 0, stroke: '#22105A', thick: 6 }));
     });
     pop.content.add(button(this, 0, 650, '연습 다시 하기', () => { const d = load(); d.tips.practice = 0; save(); pop.close(); this.start(); }, { key: 'btn_purple', w: 460, h: 120, size: 40 }));
+  }
+
+  // 스킨 창: 기본 · 오로라 펄(소장자 전용, 무료) · 네온 나이트(🪙 골드 · 한 번 사면 계속)
+  skinPopup() {
+    const pop = popup(this, '자동차 스킨', 1260, { depth: 2000, onClose: () => { if (this.scene.isActive()) this.build(); } });
+    const draw = () => pop.redraw(c => {
+      const d = load(), car = M.CAR_INFO[d.car].key, cur = activeSkin();
+      c.add(txt(this, 0, -470, '겉모습만 바뀌어요 · 모든 차에 어울려요\n네온 나이트는 원어데이 골드로 한 번 사면 계속', 30, '#E8F0FF'));
+      const rows = [['', '기본', '원래 색 그대로'], ...SKIN_ORDER.map(id => [id, SKINS[id].name, SKINS[id].desc])];
+      rows.forEach(([id, name, desc], i) => {
+        const y = -300 + i * 300, on = (cur || '') === id;
+        c.add(this.add.rectangle(0, y, 860, 270, on ? 0xFFE14D : 0xFFFFFF, on ? 0.2 : 0.08).setStrokeStyle(4, on ? 0xFFE14D : 0xFFFFFF, on ? 1 : 0.3));
+        if (id) c.add(this.add.image(-280, y, 'glow').setTint(SKINS[id].glow).setBlendMode('ADD').setScale(2.6, 1.8).setAlpha(0.6));
+        c.add(fit(this.add.image(-280, y, id ? skinKey(this, car, id) : car), 230).setAngle(-12));
+        c.add(txt(this, -120, y - 70, name, 44, '#FFFFFF', { ox: 0, stroke: '#22105A', thick: 8 }));
+        c.add(txt(this, -120, y - 18, desc, 28, '#C8D4F0', { ox: 0, stroke: '#22105A', thick: 6 }));
+        const open = !id || skinOpen(id), bx = 210, byy = y + 70;
+        if (on) c.add(txt(this, bx, byy, '사용 중', 36, '#FFE14D', { stroke: '#22105A', thick: 8 }));
+        else if (open) c.add(button(this, bx, byy, '사용하기', () => { wear(id || null); audio.play('sfx_item', { volume: 0.6 }); draw(); }, { key: 'btn_gold', w: 300, h: 90, size: 34 }));
+        else if (SKINS[id].how === 'owner') {
+          const ob = button(this, bx, byy, '소장자 전용', () => toast(this, '게임을 소장하면 무료로 열려요', '#FFE8A8'), { key: 'btn_purple', w: 300, h: 90, size: 32 });
+          c.add(ob);
+        } else {
+          const gb = button(this, bx, byy, `🪙 ${bm.price('skin')} 골드`, async () => {
+            if (gb.disabled) return; gb.setEnabled(false);
+            const r = await buySkin();
+            if (r.ok) { audio.play('sfx_gold', { volume: 0.7 }); toast(this, `${SKINS.neon.name} 장착!`, '#FFE14D'); draw(); return; }
+            gb.setEnabled(true);
+            const msg = { short: '골드가 조금 모자라요', login: '로그인하면 살 수 있어요', limit: '지금은 살 수 없어요' }[r.reason];
+            if (msg) toast(this, msg, '#FFE8A8');
+          }, { key: 'btn_gold', w: 300, h: 90, size: 36 });
+          if (!bm.price('skin')) gb.setEnabled(false);
+          c.add(gb);
+        }
+      });
+    });
+    draw();
+    window.__skinPop = pop;
   }
 
   start() {

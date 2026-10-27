@@ -1,12 +1,13 @@
-import { W, BASE_H, setH } from './config.js?v=0.74.0';
-import { audio } from './audio.js?v=0.74.0';
-import { BootScene } from './scenes/Boot.js?v=0.74.0';
-import { TitleScene } from './scenes/Title.js?v=0.74.0';
-import { MapScene } from './scenes/Map.js?v=0.74.0';
-import { GameScene } from './scenes/Game.js?v=0.74.0';
-import { WorldClearScene } from './scenes/WorldClear.js?v=0.74.0';
-import { ReefScene } from './scenes/Reef.js?v=0.74.0';
-import { installBack } from './oad.js?v=0.74.0';
+import { W, BASE_H, setH } from './config.js?v=0.75.0';
+import { audio } from './audio.js?v=0.75.0';
+import { BootScene } from './scenes/Boot.js?v=0.75.0';
+import { TitleScene } from './scenes/Title.js?v=0.75.0';
+import { MapScene } from './scenes/Map.js?v=0.75.0';
+import { GameScene } from './scenes/Game.js?v=0.75.0';
+import { WorldClearScene } from './scenes/WorldClear.js?v=0.75.0';
+import { ReefScene } from './scenes/Reef.js?v=0.75.0';
+import { installBack } from './oad.js?v=0.75.0';
+import { initBM } from './bmflow.js?v=0.75.0';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 폰트 실패 시 기본 폰트 */ }
@@ -42,6 +43,7 @@ async function start() {
   screen.orientation?.addEventListener?.('change', refresh);
   window.__game = game; // 디버그용
   installBack(game, { home: 'Map', roots: ['Title'] });   // One a Day 뒤로가기: 한 단계씩
+  initBM(game);   // 원어데이 BM (골드 · 광고) — 밖에서는 ok=false 로 버튼만 숨김
 }
 
 // 홈 화면 추가(앱 설치): 크롬·삼성 인터넷은 설치 창을 띄울 수 있게 이벤트를 보관해 둔다

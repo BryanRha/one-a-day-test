@@ -1,21 +1,25 @@
 // 전투: 주인공(조작·자동) · 몬스터 AI · 타격 판정 · 웨이브 · 보스 · 보상 줍기 · 카메라
 import * as THREE from 'three';
-import { E, shake, hitstop, slowmo, pulse, setVignette } from './engine.js?v=0.74.0';
-import { RIM } from './assets.js?v=0.74.0';
-import { load } from './assets.js?v=0.74.0';
-import { loadProp } from './props.js?v=0.74.0';
-import { Actor } from './actor.js?v=0.74.0';
-import { FX, initFX, clearFX, updateFX, burst, slashMark, dust, ring, flashLight, decal, Trail } from './fx.js?v=0.74.0';
-import { buildWorld, ambient, HALF } from './world.js?v=0.74.0';
-import { COMBO, SKILLS, SKILL_SLOTS, EVADE, MOBS, stageScale } from './data.js?v=0.74.0';
-import { IN, keyAxis, resetInput } from './input.js?v=0.74.0';
-import { buildHud, hideHud, hudPlayer, hudInfo, hudBoss, hudCombo, hudMsg, hudGo, hudAuto, dmgNum, updateNums } from './hud.js?v=0.74.0';
-import { sfx, music } from './audio.js?v=0.74.0';
+import { E, shake, hitstop, slowmo, pulse, setVignette } from './engine.js?v=0.75.0';
+import { RIM } from './assets.js?v=0.75.0';
+import { load } from './assets.js?v=0.75.0';
+import { loadProp } from './props.js?v=0.75.0';
+import { Actor } from './actor.js?v=0.75.0';
+import { FX, initFX, clearFX, updateFX, burst, slashMark, dust, ring, flashLight, decal, Trail } from './fx.js?v=0.75.0';
+import { buildWorld, ambient, HALF } from './world.js?v=0.75.0';
+import { COMBO, SKILLS, SKILL_SLOTS, EVADE, MOBS, stageScale } from './data.js?v=0.75.0';
+import { IN, keyAxis, resetInput } from './input.js?v=0.75.0';
+import { buildHud, hideHud, hudPlayer, hudInfo, hudBoss, hudCombo, hudMsg, hudGo, hudAuto, dmgNum, updateNums } from './hud.js?v=0.75.0';
+import { sfx, music } from './audio.js?v=0.75.0';
+import { applySkin } from './bmx.js?v=0.75.0';
 
 /* 달리기: 발 속도(317/초) × 재생 1.5배 = 이동 480 → 발이 미끄러지지 않음 */
 const RUN = 480, RUN_ANIM = RUN / 317;
 const V3 = THREE.Vector3, PR = 60, rnd = (a, b) => a + Math.random() * (b - a);
 const angTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
+/* 떨어지는 동전 = 은화 (게임 재화 이름) → 은빛 금속으로 한 번만 바꿔 둠 */
+const SILVER = new THREE.MeshStandardMaterial({ color: 0xdfe5ee, metalness: 0.9, roughness: 0.3, emissive: 0x3a4250, emissiveIntensity: 0.6 });
+function silverCoin(sc) { if (sc.userData.silver) return sc; sc.userData.silver = 1; sc.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(() => SILVER) : SILVER; }); return sc; }
 const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 // 범위 안인가: 원/부채꼴 (r · arc 도) 또는 직선 (line 길이 · w 폭)
 function inHit(src, ang, tp, tr, h) {
@@ -28,7 +32,7 @@ class Player {
   constructor(B, st) {
     this.B = B; this.a = new Actor('warrior', { shadow: 95, turn: 18 }); this.pos = this.a.pos; this.st = 'idle'; this.stT = 0; this.combo = 0; this.comboT = 0; this.buf = false; this.cd = {}; this.evCd = 0;
     this.maxHp = st.hp; this.hp = st.hp; this.atk = st.atk; this.def = st.def; this.crit = st.crit; this.cdmg = st.cdmg; this.slv = st.skillLv || {}; this.rage = 0; this.inv = 0; this.sa = false; this.hurtN = 0;
-    this.trail = new Trail(0xffb04a, 0xfff0c8); B.scene.add(this.trail.mesh); this.ta = new V3(); this.tb = new V3(); this.kbV = new V3();
+    this.tc = applySkin(this.a) || [0xffb04a, 0xfff0c8]; this.trail = new Trail(...this.tc); B.scene.add(this.trail.mesh); this.ta = new V3(); this.tb = new V3(); this.kbV = new V3();
     this.a.play('idle', { loop: true });
   }
   busy() { return ['atk', 'skill', 'evade', 'hit', 'down', 'dead', 'intro'].includes(this.st); }
@@ -70,7 +74,7 @@ class Player {
     const c = COMBO[i]; this.st = 'atk'; this.stT = 0; this.combo = i; this.buf = false; const tg = this.nearest(620);
     if (tg) { this.a.faceTo(tg.pos, true); const d = this.pos.distanceTo(tg.pos) - tg.def.r * tg.sc - 150, l = Math.max(0, Math.min(c.lunge * 2.2, d)); if (l > 0) { const a = angTo(this.pos, tg.pos); this.lunge = { dx: Math.sin(a) * l, dz: Math.cos(a) * l, t: 0.14 }; } }
     else { const md = this.moveDir(); if (md) this.a.face(Math.atan2(md[0], md[1]), true); this.lunge = { dx: this.a.dirX() * c.lunge * 0.6, dz: this.a.dirZ() * c.lunge * 0.6, t: 0.14 }; }
-    this.trail.color(0xffb04a, 0xfff0c8);
+    this.trail.color(...this.tc);
     sfx('swing', { vol: 0.5, rate: 0.9 + i * 0.08 });
     this.a.play(c.clip, { from: c.from, to: c.to, fade: i ? 0.06 : 0.1, events: [...c.hits.map(h => ({ t: h.t, fn: () => this.B.playerHit(h, 1, 'atk') })), { t: c.cancel, fn: () => { if (this.buf || IN.atk) this.next(); } }],
       onEnd: () => { this.st = 'idle'; this.stT = 0; this.comboT = 0.45; this.combo = (i + 1) % COMBO.length; this.a.play('idle', { loop: true, fade: 0.25 }); } });
@@ -214,7 +218,7 @@ export class Battle {
     resetInput(); this.tick = (dt, raw) => this.update(dt, raw); E.updaters.add(this.tick);
     music(S.boss ? 'battle' : 'battle'); hudMsg(`<small>${S.chapterName || ''}</small><b>${S.name}</b>`, 'title', 2000);
     this.player.st = 'intro'; this.player.a.play('lobby', { from: 0.4, to: 1.6, fade: 0, onEnd: () => { this.player.st = 'idle'; this.player.a.play('idle', { loop: true, fade: 0.2 }); } });
-    dust(this.player.pos, { n: 10, size: 100 }); this.ended = false; this.coinTmpl = (await loadProp('coin')).scene;
+    dust(this.player.pos, { n: 10, size: 100 }); this.ended = false; this.coinTmpl = silverCoin((await loadProp('coin')).scene);
   }
   attackers() { return this.enemies.filter(e => e.alive && e.st === 'atk').length; }
   spawnWave(k) {
@@ -293,7 +297,7 @@ export class Battle {
     for (let i = this.coins.length - 1; i >= 0; i--) { const c = this.coins[i]; c.t += dt; c.m.rotation.y += dt * 8;
       if (c.t < 0.7) { c.v.y -= 2200 * dt; c.m.position.addScaledVector(c.v, dt); if (c.m.position.y < 20) { c.m.position.y = 20; c.v.y *= -0.4; c.v.x *= 0.6; c.v.z *= 0.6; } }
       else { const to = new V3(P.pos.x, 110, P.pos.z), d = c.m.position.distanceTo(to), sp = 900 + (c.t - 0.7) * 3000; c.m.position.lerp(to, Math.min(1, sp * dt / Math.max(1, d)));
-        if (d < 60) { this.stats.gold += c.g; this.scene.remove(c.m); this.coins.splice(i, 1); sfx('coin', { vol: 0.25, rate: rnd(0.95, 1.15) }); FX.glow.add({ x: to.x, y: to.y, z: to.z, life: 0.2, size: 80, size1: 140, col: 0xffd060, a: 0.8 }); } } }
+        if (d < 60) { this.stats.gold += c.g; this.scene.remove(c.m); this.coins.splice(i, 1); sfx('coin', { vol: 0.25, rate: rnd(0.95, 1.15) }); FX.glow.add({ x: to.x, y: to.y, z: to.z, life: 0.2, size: 80, size1: 140, col: 0xdfe8ff, a: 0.8 }); } } }
     // 콤보 · 화면
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; hudCombo(0); } }
     if (this.perfectT) this.perfectT = Math.max(0, this.perfectT - raw);

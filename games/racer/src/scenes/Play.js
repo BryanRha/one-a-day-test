@@ -1,17 +1,22 @@
 // 레이스 화면: core/race.js 시뮬레이션을 고정 간격으로 돌리고 상태·사건을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.74.0';
-import { Race, LANES, CARS, FEVER_FULL, FEVER_TIME, CHANT, DODGE, laneX, ROAD_X, LANE_W } from '../core/race.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { Race, LANES, CARS, FEVER_FULL, FEVER_TIME, CHANT, DODGE, laneX, ROAD_X, LANE_W } from '../core/race.js?v=0.75.0';
 // 스·트·레·스·차·차·차 — 한 글자씩 도레미파솔라도로 올라가며 커짐
 const CHANT_VO = ['vo_seu', 'vo_teu', 'vo_re', 'vo_seu', 'vo_cha', 'vo_cha', 'vo_cha'];
 const CHANT_ST = [0, 2, 4, 5, 7, 9, 12];
 const CHANT_COL = ['#FF6B6B', '#FF9F43', '#FFD23F', '#6EE7A8', '#4DC3FF', '#7A8BFF', '#FF6FB5'];
-import { decide, blockedSide } from '../core/ai.js?v=0.74.0';
-import { txt, fmt, fit, iconButton, button, popup } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import { carStats, CAR_INFO } from '../meta.js?v=0.74.0';
-import { ZONES } from './Boot.js?v=0.74.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
+import { decide, blockedSide } from '../core/ai.js?v=0.75.0';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import { carStats, CAR_INFO } from '../meta.js?v=0.75.0';
+import { ZONES } from './Boot.js?v=0.75.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { contOffer, COUNTDOWN } from '../core/cont.js?v=0.75.0';
+import { HELP } from '../core/help.js?v=0.75.0';
+import { helpCheck, helpNoteRun, track, adLeft, adUse } from '../bmflow.js?v=0.75.0';
+import { skinKey, activeSkin, SKINS } from '../skin.js?v=0.75.0';
 
 const DT = 1 / 60;
 // 차종 → 그림 (승용차·경차는 색 여러 가지)
@@ -43,6 +48,9 @@ export class PlayScene extends Phaser.Scene {
     this.bot = new URLSearchParams(location.search).has('bot');
     this.slowT = 0; this.guide = (d.totals.dodges || 0) < 6 && !this.bot; this.guideN = 0; this.guideCar = null;
     this.botT = 0;
+    /* 원어데이 BM: 장면은 판마다 재사용되므로 상태를 모두 초기화 */
+    this.oadRevives = 0; this.reviveAt = 0; this.helped = false; this.asking = false; this.contOffers = [];
+    this.runsBefore = d.totals.runs; this.bestDist = d.bestDist; this.bestScore = d.best;
 
     // 도로 (구역이 바뀌면 서서히 전환)
     this.roadA = this.add.tileSprite(W / 2, H / 2, W, H, 'road_0').setDepth(0);
@@ -60,6 +68,7 @@ export class PlayScene extends Phaser.Scene {
     audio.prefetch(this, ['bgm_fever', 'bgm_boss']);
     this.cameras.main.fadeIn(300, 20, 26, 50);
     if (!d.tips.practice && !this.bot) this.time.delayedCall(700, () => this.startPractice());
+    else if (!this.bot && helpCheck()) this.offerHelp();
     window.__play = this;
   }
 
@@ -141,7 +150,10 @@ export class PlayScene extends Phaser.Scene {
     this.exhaust = this.add.particles(0, 0, 'glow', { speedY: { min: 200, max: 360 }, speedX: { min: -40, max: 40 }, lifespan: 500, scale: { start: 0.35, end: 0.9 }, alpha: { start: 0.35, end: 0 }, tint: 0xDDDDDD, frequency: 40 });
     this.flame = this.add.particles(0, 0, 'glow', { speedY: { min: 500, max: 800 }, speedX: { min: -60, max: 60 }, lifespan: 260, scale: { start: 0.7, end: 0 }, alpha: { start: 0.9, end: 0 }, tint: [0xFFE14D, 0xFF8A1F, 0xFF4D2D], blendMode: 'ADD', frequency: 14, emitting: false });
     this.wind = this.add.particles(0, 0, 'glow', { x: { min: -90, max: 90 }, y: { min: -160, max: 60 }, speedY: { min: 900, max: 1300 }, lifespan: 260, scaleX: 0.06, scaleY: { start: 1.4, end: 0.5 }, alpha: { start: 0.6, end: 0 }, frequency: 20, emitting: false, blendMode: 'ADD' });
-    this.car = this.add.image(0, 0, CAR_INFO[d.car].key);
+    /* 스킨(원어데이 · 겉모습만): 다시 칠한 차 + 바닥 빛 · 불꽃 색 */
+    const sk = activeSkin(); this.skin = sk;
+    if (sk) { this.marker.setTint(SKINS[sk].glow); this.flame.setParticleTint(SKINS[sk].flame[1]); }
+    this.car = this.add.image(0, 0, skinKey(this, CAR_INFO[d.car].key, sk));
     this.carScale = 200 / this.car.height;
     this.car.setScale(this.carScale);
     this.L.cars.add([this.marker, this.pShadow, this.boostAura, this.exhaust, this.flame, this.wind, this.car]);
@@ -161,6 +173,8 @@ export class PlayScene extends Phaser.Scene {
     this.add.image(64, 162, 'item_fuel').setDisplaySize(64, 64).setDepth(D);
     this.add.rectangle(110, 162, 480, 40, 0x000000, 0.45).setOrigin(0, 0.5).setStrokeStyle(4, 0xFFFFFF, 0.7).setDepth(D);
     this.fuelBar = this.add.rectangle(114, 162, 472, 32, 0x6EE7C8).setOrigin(0, 0.5).setDepth(D);
+    /* 응원 선물을 받은 판: 연료통이 커졌다는 표시 */
+    this.giftTag = txt(this, 110 + 480 + 16, 162, `응원 +${HELP.fuel}`, 30, '#FFE14D', { ox: 0, stroke: '#101830', thick: 8 }).setDepth(D).setVisible(false);
     // 피버 게이지 (오른쪽 세로)
     this.add.rectangle(W - 34, H * 0.42, 30, 420, 0x000000, 0.4).setStrokeStyle(3, 0xFFFFFF, 0.6).setDepth(D);
     this.feverBar = this.add.rectangle(W - 34, H * 0.42 + 206, 22, 4, 0xFF8A1F).setOrigin(0.5, 1).setDepth(D);
@@ -273,7 +287,7 @@ export class PlayScene extends Phaser.Scene {
       this.race.events.length = 0;
     }
     if (this.acc > DT * 5) this.acc = 0;
-    if (this.over) { this.endT += dt; this.s.speed *= Math.pow(0.25, dt); if (this.endT > 1.6) this.finish(); }
+    if (this.over) { this.endT += dt; this.s.speed *= Math.pow(0.25, dt); if (this.endT > 1.6 && !this.asking) { this.asking = true; this.askRevive(); } }
     this.draw(dt);
     this.updateGuide(real);
     if (!this.feverOn) audio.rate(1 + Math.min(20, this.s.combo) * 0.006);
@@ -530,10 +544,113 @@ export class PlayScene extends Phaser.Scene {
   finish() {
     if (this.finished) return; this.finished = true;
     const s = this.s;
-    const r = { dist: Math.floor(s.dist), score: s.score, coins: Math.floor(s.coins), combo: s.bestCombo, cp: s.checkpoints, ...s.stats };
+    const r = { dist: Math.floor(s.dist), score: s.score, coins: Math.floor(s.coins), combo: s.bestCombo, cp: s.checkpoints, ...s.stats,
+      revived: this.oadRevives, afterRevive: this.oadRevives ? Math.floor(s.dist - this.reviveAt) : 0, helped: this.helped, offers: this.contOffers };
+    if (!this.bot) helpNoteRun({ dist: s.dist, t: s.t, best: this.bestDist, runsBefore: this.runsBefore, quit: false, helped: this.helped });
     audio.stopMusic();
     this.cameras.main.fadeOut(350, 20, 26, 50);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', r));
+    /* 판 끝: 전면 광고는 앱이 조건(그룹 · 간격 · 소장 · 첫날)에 맞을 때만 보여 줌 — 판마다 한 번 알림 */
+    this.cameras.main.once('camerafadeoutcomplete', () => { (this.bot ? Promise.resolve() : bm.interstitial('round_end')).catch(() => {}).finally(() => this.scene.start('Result', r)); });
+  }
+
+  // ── 응원 선물 (다음 판 시작 때 · 노력 인정 먼저 · 거절 가능): 이번 판 연료통 +20 ──
+  offerHelp() {
+    track('help_offer', { gift: 'tank', fuel: HELP.fuel });
+    this.paused = true;
+    const pop = popup(this, '응원 선물', 960, { closable: false, depth: 2000, onBack: () => no() });
+    const b = pop.box;
+    b.add(txt(this, 0, -320, '최근 세 판, 포기하지 않고 달렸네요!', 48, '#FFE14D'));
+    b.add(txt(this, 0, -245, '응원 선물 · 챙겨 드릴게요', 40, '#FFFFFF'));
+    b.add(this.add.rectangle(0, -60, 820, 230, 0xFFFFFF, 0.1).setStrokeStyle(4, 0xFFE14D, 0.8));
+    b.add(fit(this.add.image(-300, -60, 'item_fuel'), 160));
+    b.add(txt(this, -190, -100, `연료통 +${HELP.fuel}`, 54, '#FFFFFF', { ox: 0 }));
+    b.add(txt(this, -190, -26, '이번 판 내내 연료를 더 담아요', 34, '#9AE8FF', { ox: 0 }));
+    const go = () => { pop.close(); this.time.delayedCall(160, () => { this.paused = false; }); };
+    const yes = () => {
+      this.helped = true; track('help_take', { gift: 'tank', fuel: HELP.fuel });
+      const s = this.s; s.fuelMax += HELP.fuel; s.fuel = s.fuelMax;
+      this.giftTag.setVisible(true);
+      audio.play('sfx_fuel', { volume: 0.7 }); this.fx('sheet_ring', s.p.x, s.p.y, 1.4, 0xFFE14D);
+      go(); this.time.delayedCall(250, () => this.banner('응원 연료통 장착!', `이번 판 연료 ${fmt(s.fuelMax)}까지`, 0x2E9E6A));
+    };
+    const no = () => { track('help_decline', { gift: 'tank', fuel: HELP.fuel }); go(); };
+    b.add(button(this, 0, 150, '받을게요', yes, { key: 'btn_gold', w: 600, h: 140, size: 46 }));
+    b.add(button(this, 0, 310, '혼자 해 볼게요', no, { key: 'btn_purple', w: 600, h: 130, size: 40 }));
+    window.__helpPop = pop;
+  }
+
+  // ── 연료 바닥 → 이어하기 창: 희망일 때만 (core/cont.js) · 칭찬 먼저 → 희망 한 줄 → 10초 막대 → 끝나면 조용히 결과 ──
+  //   첫 번째 = [광고 보고 이어하기 | 🪙20] 같은 크기 나란히 (소장자는 '소장 혜택 · 무료') · 두 번째 = 🪙40 만 · 판당 2번
+  //   원어데이 밖이면 예전 그대로 바로 결과
+  askRevive() {
+    const s = this.s, B = s.boss && s.boss.phase === 'fight' ? s.boss : null;
+    const st = { dist: s.dist, score: s.score, t: s.t, best: this.bestScore, bestDist: this.bestDist, runs: this.runsBefore, bossHp: B ? B.hp / B.max : null };
+    const offer = this.bot ? null : contOffer(st, this.oadRevives, bm.info, adLeft('revive'), this.helped);
+    this.contOffers.push({ kind: offer ? offer.kind : null, dist: Math.floor(s.dist) });
+    if (!offer) return this.finish();
+    const h = offer.h, first = offer.kind === 'first';
+    const ph = 900;
+    const pop = popup(this, h.kind === 'record' ? '신기록 질주 중!' : '조금만 더!', ph, { closable: false, depth: 2000, onBack: () => { if (!busy) { close(); this.finish(); } } });
+    const b = pop.box;
+    let y = -ph / 2 + 170;
+    b.add(txt(this, 0, y, h.praise, 58, '#FFE14D')); y += 84;
+    b.add(txt(this, 0, y, h.sub, 38, '#FFFFFF', { wrap: 860 })); y += 96;
+    /* 남은 시간: 조용히 줄어드는 막대 + 작은 숫자 (광고 · 확인 창 동안은 게임 전체가 멈춰 막대도 멈춤) */
+    const barW = 640;
+    b.add(this.add.rectangle(-barW / 2 - 20, y, barW, 20, 0x101830).setOrigin(0, 0.5).setStrokeStyle(3, 0x9AE8FF));
+    const bar = this.add.rectangle(-barW / 2 - 17, y, barW - 6, 14, 0x6EE7C8).setOrigin(0, 0.5); b.add(bar);
+    const cnt = txt(this, barW / 2 + 30, y, `${COUNTDOWN}`, 40, '#9AE8FF'); b.add(cnt);
+    let left = COUNTDOWN, busy = false;
+    const timer = this.time.addEvent({ delay: 1000, repeat: COUNTDOWN - 1, callback: () => {
+      left--; cnt.setText(`${left}`); bar.width = (barW - 6) * left / COUNTDOWN;
+      if (left <= 0 && !busy) { close(); this.finish(); }
+    } });
+    const close = () => { timer.remove(); pop.close(); };
+    y += 150;
+    const go = how => { close(); this.oadRevives++; if (how === 'ad') adUse('revive'); this.doRevive(how); };
+    /* 요청 중엔 버튼을 잠금 · 실패하면 부드러운 안내만 하고 창은 그대로 */
+    const ask = async (fn, btn) => {
+      if (busy) return false; busy = true;
+      const r = await fn();
+      busy = false;
+      if (r && r.ok) return true;
+      if (left <= 0) { close(); this.finish(); return false; }
+      const msg = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요 · 내일 또 만나요', login: '로그인하면 쓸 수 있어요' }[r && r.reason];
+      if (msg) toast(this, msg, '#FFE8A8', H * 0.25);
+      if (r && r.reason === 'limit' && btn) btn.setEnabled(false);
+      return false;
+    };
+    if (first) {
+      /* 광고 | 🪙20 — 같은 크기 나란히 (되는 것 하나면 가운데) */
+      const two = offer.ad && offer.gold, bw = two ? 430 : 600;
+      if (offer.ad) {
+        const ab = button(this, two ? -225 : 0, y, offer.owner ? '소장 혜택 · 무료' : '광고 보고 이어하기', () => ask(() => bm.rewardedAd('revive'), ab).then(ok => ok && go('ad')), { key: 'btn_gold', w: bw, h: 150, size: 38 });
+        b.add(ab);
+      }
+      if (offer.gold) {
+        const gb = button(this, two ? 225 : 0, y, `🪙 ${offer.gold} 이어하기`, () => ask(() => bm.spend('continue'), gb).then(ok => ok && go('gold')), { key: 'btn_gold', w: bw, h: 150, size: 38 });
+        b.add(gb);
+      }
+    } else {
+      const gb = button(this, 0, y, `🪙 ${offer.gold} 한 번 더 이어하기`, () => ask(() => bm.spend('continue2'), gb).then(ok => ok && go('gold')), { key: 'btn_gold', w: 620, h: 150, size: 40 });
+      b.add(gb);
+    }
+    b.add(txt(this, 0, y + 108, '연료 가득 · 잠깐 무적으로 다시 출발', 30, '#C8D4F0'));
+    y += 220;
+    b.add(button(this, 0, y, '결과 보기', () => { if (busy) return; close(); this.finish(); }, { key: 'btn_purple', w: 620, h: 130, size: 40 }));
+    window.__revivePop = pop;
+  }
+
+  doRevive(how) {
+    const s = this.s;
+    this.over = false; this.endT = 0; this.asking = false; this.reviveAt = s.dist; this.revivedHow = how;
+    this.race.revive();
+    this.lastX = s.p.x;
+    audio.play('sfx_fuel', { volume: 0.8 }); audio.play('sfx_honk_4', { volume: 0.6 });
+    audio.music(this.feverOn ? 'bgm_fever' : this.baseMusic(), this);
+    this.fx('sheet_ring', s.p.x, s.p.y, 2.2, 0x6EE7C8);
+    this.flash(0x6EE7C8);
+    this.banner('연료 가득!', '다시 달려요 · 잠깐 무적', 0x2E9E6A);
   }
 
   pause() {

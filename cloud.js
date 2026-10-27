@@ -1,8 +1,8 @@
 // 소장 게임 클라우드 저장: 게임 코드는 그대로, 앱이 게임의 저장 키(catalog SAVES)를 묶어 계정에 올리고 내림
 //   내려받기 = 게임 화면을 띄우기 직전 · 올리기 = 게임을 닫은 뒤 / 앱을 내릴 때 / 소장한 순간
 //   충돌 판정은 서버 판 번호(rev) + 내용 해시 · 두 기기 모두 바뀌었을 때만 물어봄 · 직전본 1개는 서버에 남음(되돌리기)
-import { SAVES } from './catalog.js?v=0.74.0';
-import * as A from './account.js?v=0.74.0';
+import { SAVES, SAVES_ALWAYS } from './catalog.js?v=0.75.0';
+import * as A from './account.js?v=0.75.0';
 
 const META = 'oad_sync';
 const meta = () => { try { return JSON.parse(localStorage.getItem(META) || '{}'); } catch { return {}; } };
@@ -93,3 +93,25 @@ export const canUndo = g => { const sv = serverOf(g); return !!(sv && (sv.rev > 
 export const lastSaved = g => { const sv = serverOf(g); return sv ? new Date(sv.at) : null; };
 export const localSummary = g => summary(pack(g));
 export const hasLocal = g => keysOf(g).length > 0;
+
+// ── 늘 계정에 두는 키 (결제 기록 · 뽑기 천장): 로그인만 하면 소장과 상관없이 · 충돌 땐 계정 쪽을 받고 게임이 합침 ──
+const AKEY = g => g + ':always';
+const alwaysPats = g => SAVES_ALWAYS[g] || [];
+function packAlways(g) { const keys = {}; for (const k of alwaysPats(g)) { const v = localStorage.getItem(k); if (v != null) keys[k] = v; } return keys; }
+export const alwaysOn = g => !!(alwaysPats(g).length && A.current());
+export async function syncAlways(g, phase) {
+  if (!alwaysOn(g)) return;
+  try {
+    if (phase === 'before') await withTimeout(A.refresh(), 1500).catch(() => {});
+    const sv = serverOf(AKEY(g)), m = meta()[AKEY(g)] || {}, keys = packAlways(g), h = Object.keys(keys).length ? await hashOf(keys) : '';
+    if (phase === 'before' && sv && sv.hash !== h && sv.rev !== m.rev) {
+      const r = await withTimeout(A.call({ act: 'pull', game: g, always: true }), 3000);
+      if (r.rev) { const box = JSON.parse(await unzip(r.data, r.z)); for (const [k, v] of Object.entries(box.keys)) if (alwaysPats(g).includes(k) && typeof v === 'string') localStorage.setItem(k, v); setMeta(AKEY(g), { rev: r.rev, hash: r.hash, at: Date.now() }); }
+      return;
+    }
+    if (!h || (sv && sv.hash === h)) return;
+    const { data, z } = await zip(JSON.stringify({ keys }));
+    const r = await A.call({ act: 'push', game: g, always: true, base: (sv && sv.rev) || 0, data, z, hash: h, sum: '', ver: window.OAD_VERSION || '', force: true });
+    setMeta(AKEY(g), { rev: r.rev, hash: h, at: Date.now() });
+  } catch { /* 다음 기회에 */ }
+}

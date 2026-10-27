@@ -1,8 +1,9 @@
 // 로딩: 인물 · 단서 · 서재 썸네일 · 효과음 · 코드 텍스처 (화별 그림은 loadEp)
-import { W, H, TITLE } from '../config.js?v=0.74.0';
-import { SFX, audio } from '../audio.js?v=0.74.0';
-import { makeTextures } from '../ui.js?v=0.74.0';
-import { EPISODES } from '../episodes.js?v=0.74.0';
+import { W, H, TITLE } from '../config.js?v=0.75.0';
+import { SFX, audio } from '../audio.js?v=0.75.0';
+import { makeTextures } from '../ui.js?v=0.75.0';
+import { EPISODES } from '../episodes.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
 // 처음엔 공통(인물 · 단서 · 서재 썸네일)만 · 화별 그림(맵 · 증거 · 웹툰)은 그 화를 열 때 loadEp 로
 const WEBP = ['bg_flower', 'bg_office', 't1_2', 'c_seoyun_smile', 'c_seoyun_doubt', 'c_seoyun_shock', 'c_dohyun_smile', 'c_dohyun_nervous', 'c_dohyun_serious', 'c_jia', 'c_jia_smile', 'c_jia_sad', 'c_mother', 'c_hana', 'c_taejun', 'c_jia_doubt', 'c_jia_shock', 'c_jia_firm', 'c_seojin_smile', 'c_seojin_serious', 'c_father', 'c_oh', 'c_oh_angry', 'c_oh_shock', 't11_2'];
 for (const e of EPISODES) { WEBP.push(e.toon[2].img); for (const it of e.hunt.items) if (it.clue && !WEBP.includes(it.clue)) WEBP.push(it.clue); }
@@ -31,5 +32,5 @@ export class BootScene extends Phaser.Scene {
     for (const n of SFX) this.load.audio(n, [`assets/audio/${n}.m4a`]);
     this.load.on('loaderror', () => {});
   }
-  create() { makeTextures(this); audio.normalize(); this.scene.start('Library'); }
+  create() { makeTextures(this); audio.normalize(); bm.hello().finally(() => this.scene.start('Library')); }   // 원어데이 정보(소장 · 가격 · 광고)를 받은 뒤 서재로
 }

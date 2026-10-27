@@ -166,7 +166,7 @@ export function setGrow(g) { HP_GROW = g; }
 export class Sim {
   // deck: 룬 id 5개, tiers: { 룬id: 영구 등급 1~ } , seed
   // mode: run(생존) · daily · rush(보스만) · mono(한 룬) · arena(웨이브마다 룬 추가) · abyss(웨이브 10부터)
-  constructor({ deck, tiers = {}, seed = 1, startWave = 1, critBonus = 0, mode = 'run' } = {}) {
+  constructor({ deck, tiers = {}, seed = 1, startWave = 1, critBonus = 0, mode = 'run', giftSp = 0 } = {}) {
     this.mode = mode;
     this.critBonus = critBonus;   // 수집 보너스: 영구 치명타 피해 +
     this.R = rng(seed);
@@ -181,6 +181,7 @@ export class Sim {
     this.syn = Object.fromEntries(synergiesOf(this.deck).map(x => [x.id, true]));
     // 심연 광산: 웨이브 10부터 → 그 정도까지 키운 판을 미리 깔아 줌 (눈 2~3 주사위 12개)
     if (mode === 'abyss') { for (let i = 0; i < 12; i++) this.board[i] = this.newDie(this.randType(), 2 + (i % 3 === 0 ? 1 : 0)); this.summons = 12; this.sp = 500; this.maxPips = 3; }
+    this.sp += giftSp;   /* 응원 선물: 시작 SP (보이는 선물 · 난이도는 그대로) */
     this.setupWave();
   }
   ev(type, d = {}) { this.events.push({ type, ...d }); }

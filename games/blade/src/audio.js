@@ -5,9 +5,12 @@ const HAS = new Set(['bgm_lobby', 'bgm_battle', 'bgm_boss', 'sfx_swing1', 'sfx_s
 let ctx = null, master = null, sfxG = null, bgmG = null; const buf = {}, loading = {}; let cur = null, curName = '', want = '';
 export const AUD = { sfx: true, bgm: true };
 function ac() { if (ctx) return ctx; const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); master = ctx.createGain(); master.connect(ctx.destination); sfxG = ctx.createGain(); sfxG.gain.value = AUD.sfx ? 1 : 0; sfxG.connect(master); bgmG = ctx.createGain(); bgmG.gain.value = AUD.bgm ? 0.55 : 0; bgmG.connect(master); return ctx; }
-export function unlock() { const c = ac(); if (c && c.state === 'suspended') c.resume(); if (want && !cur) music(want); }
+export function unlock() { const c = ac(); if (c && c.state === 'suspended' && !held) c.resume(); if (want && !cur) music(want); }
 addEventListener('pointerdown', unlock, { capture: true }); addEventListener('keydown', unlock, { capture: true });
-document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
+let held = false;
+document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden || held) ctx.suspend(); else ctx.resume(); });
+/* 원어데이 광고 · 확인 창 동안 소리 멈춤 (bm.onPause) */
+export function hold(on) { held = !!on; if (!ctx) return; if (held || document.hidden) ctx.suspend(); else ctx.resume(); }
 function get(name) { if (buf[name]) return Promise.resolve(buf[name]); const f = ext => fetch(`assets/audio/${name}.${ext}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject());
   return loading[name] ||= (HAS.has(name) ? f('mp3') : f('m4a')).then(a => new Promise((ok, no) => ac().decodeAudioData(a, ok, no))).then(b => (buf[name] = b)).catch(() => null); }
 export function preloadSfx() { if (!ac()) return; for (const [k, n] of Object.entries(SFX)) for (let i = 1; i <= n; i++) get(`sfx_${k}${n > 1 ? i : ''}`); }

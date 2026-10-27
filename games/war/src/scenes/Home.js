@@ -1,12 +1,15 @@
 // 홈: 계급 · 캠페인 · 오늘의 작전 · 자유 대전 · 지휘관 · 오늘의 미션 · 연속 출석
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.74.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { COS } from '../core/data.js?v=0.74.0';
-import { rankOn } from '../rank.js?v=0.74.0';
-import { rankPopup } from '../rankui.js?v=0.74.0';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.75.0';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { COS } from '../core/data.js?v=0.75.0';
+import { rankOn } from '../rank.js?v=0.75.0';
+import { rankPopup } from '../rankui.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { shopOn } from '../bmwar.js?v=0.75.0';
+import { COLORS, COLOR_ORDER, colorOpen, teamColor, setColor, buyColor, paintKey } from '../color.js?v=0.75.0';
 
 // 계급장: 이병~병장 갈매기 · 부사관 · 장교 다이아 · 장성 별
 export function insignia(scene, x, y, k, s = 1) {
@@ -81,6 +84,10 @@ export class HomeScene extends Phaser.Scene {
     y += 290 + sp;
     this.coY = y; this.sp0 = sp;
     T(this, 50, y - 110, `지휘관 ${Object.keys(COS).filter(k => d.cos[k]).length}/${Object.keys(COS).length}`, 34, C.text, { ox: 0, w: 900 });
+    if (shopOn()) {   // 부대 색 (꾸미기) — 원어데이 안에서만
+      const cb = btn(this, W - 170, y - 112, 250, 68, '부대 색', () => this.colorPop(), { style: 'ghost', size: 26 });
+      cb.add(this.add.circle(-86, -4, 15, COLORS[teamColor()].hex).setStrokeStyle(3, 0xFFFFFF, 0.8)); cb.label.setX(16);
+    }
     Object.keys(COS).forEach((k, i) => {
       const n = Object.keys(COS).length, per = n > 12 ? Math.ceil(n / 2) : n, step = Math.min(124, (W - 80) / per), sz = this.coSz(step, n), x = 40 + step / 2 + (i % per) * step, cy = y - 10 + Math.floor(i / per) * (sz + 50), own = d.cos[k];   // 많으면 두 줄
       const fr = this.add.image(x, cy, `co_${k}`); fr.setScale((sz + 30) / fr.height); if (!own) fr.setTint(0x333333);
@@ -115,7 +122,32 @@ export class HomeScene extends Phaser.Scene {
     p.content.add(T(this, 40, 36, co.sdesc, 22, C.text, { ox: 0, w: 800, wrap: 380 }));
     const st = M.STAGES.find(s => s.unlockCo === k);
     if (!own) p.content.add(T(this, 40, 130, st ? `캠페인 ${st.n}. ${st.name} 승리로 합류` : '', 26, C.sub, { ox: 0, w: 800, wrap: 380 }));
-    else p.content.add(btn(this, 0, 320, 440, 110, d.co === k ? '출전 중' : '이 지휘관으로 출전', () => { d.co = k; import('../save.js?v=0.74.0').then(m => m.save()); p.close(); this.scene.restart(); }, { style: d.co === k ? 'ghost' : 'gold', size: 32 }));
+    else p.content.add(btn(this, 0, 320, 440, 110, d.co === k ? '출전 중' : '이 지휘관으로 출전', () => { d.co = k; import('../save.js?v=0.75.0').then(m => m.save()); p.close(); this.scene.restart(); }, { style: d.co === k ? 'ghost' : 'gold', size: 32 }));
+  }
+  // 부대 색 고르기: 기본 · 골드(🪙 서버 가격) · 소장자 전용 — 겉모습만, 능력치 없음
+  colorPop() {
+    const p = popup(this, '부대 색', 920, 900), cur = teamColor();
+    p.content.add(T(this, 0, -312, '아군 유닛 · 건물의 색만 바뀌어요 (능력치는 그대로)', 24, C.sub, { w: 800 }));
+    COLOR_ORDER.forEach((k, i) => {
+      const c = COLORS[k], y = -180 + i * 220, open = colorOpen(k), on = k === cur;
+      const g = this.add.graphics(); g.fillStyle(0x14160A, on ? 0.75 : 0.45).fillRoundedRect(-410, y - 95, 820, 190, 28).lineStyle(on ? 5 : 2, on ? 0xFFD45A : 0x6E7A40, 1).strokeRoundedRect(-410, y - 95, 820, 190, 28); p.content.add(g);
+      g.fillStyle(c.hex, 1).fillRoundedRect(-410, y - 95, 18, 190, { tl: 9, bl: 9, tr: 0, br: 0 });
+      p.content.add(this.add.ellipse(-310, y + 52, 176, 56, c.hex, 0.95).setStrokeStyle(3, 0xFFFFFF, 0.9));
+      const im = this.add.image(-310, y + 4, paintKey(this, 'u_ltank_b', k)); im.setScale(150 / Math.max(im.width, im.height)); p.content.add(im);
+      p.content.add(T(this, -200, y - 34, c.name, 36, C.text, { ox: 0, w: 900 }));
+      p.content.add(T(this, -200, y + 14, c.desc, 22, C.sub, { ox: 0, w: 800, wrap: 330 }));
+      const bx = 270;
+      if (on) p.content.add(T(this, bx, y, '사용 중', 30, C.gold, { w: 900 }));
+      else if (open) p.content.add(btn(this, bx, y, 220, 90, '사용하기', () => { setColor(k); p.close(); this.scene.restart(); }, { style: 'gold', size: 28 }));
+      else if (c.owner) p.content.add(btn(this, bx, y, 220, 90, '소장 전용', () => toast(this, '원어데이에서 이 게임을 소장하면 바로 열려요', C.sub), { style: 'ghost', size: 26 }));
+      else if (c.sku && bm.price(c.sku)) {
+        const b = btn(this, bx, y, 220, 90, `🪙${bm.price(c.sku)}`, async () => {
+          b.setEnabled(false); const r = await buyColor();
+          if (r.ok) { toast(this, `${c.name} 부대 색이 열렸어요!`, C.gold); p.close(); this.time.delayedCall(700, () => this.scene.restart()); return; }
+          b.setEnabled(true); const msg = { short: '골드가 조금 모자라요', login: '로그인하면 살 수 있어요', limit: '오늘은 더 살 수 없어요', off: '지금은 살 수 없어요' }[r.reason]; if (msg) toast(this, msg, C.sub);
+        }, { style: 'olive', size: 30, ls: 0 }); p.content.add(b);
+      }
+    });
   }
   drawMissions() {
     if (this.mBox) this.mBox.destroy();
@@ -136,7 +168,7 @@ export class HomeScene extends Phaser.Scene {
   settings() {
     const d = load(), pop = popup(this, '설정', 760, 900);
     const row = (y, label, on, fn) => { pop.content.add(T(this, -260, y, label, 40, C.text, { ox: 0 })); const b = btn(this, 200, y, 220, 96, on ? '켜짐' : '꺼짐', () => { fn(); b.setLabel(b.label.text === '켜짐' ? '꺼짐' : '켜짐'); }, { style: on ? 'green' : 'ghost', size: 34 }); pop.content.add(b); };
-    row(-90, '효과음', d.sfx, () => audio.toggleSfx()); row(30, '배경음악', d.music, () => audio.toggleMusic()); row(150, '전투 장면', d.cutscene !== false, () => { d.cutscene = d.cutscene === false; import('../save.js?v=0.74.0').then(m => m.save()); }); row(270, '지휘관 테마곡', d.coTheme !== false, () => { d.coTheme = d.coTheme === false; import('../save.js?v=0.74.0').then(m => m.save()); }); row(390, '전투 대사', d.talk !== false, () => { d.talk = d.talk === false; import('../save.js?v=0.74.0').then(m => m.save()); });
+    row(-90, '효과음', d.sfx, () => audio.toggleSfx()); row(30, '배경음악', d.music, () => audio.toggleMusic()); row(150, '전투 장면', d.cutscene !== false, () => { d.cutscene = d.cutscene === false; import('../save.js?v=0.75.0').then(m => m.save()); }); row(270, '지휘관 테마곡', d.coTheme !== false, () => { d.coTheme = d.coTheme === false; import('../save.js?v=0.75.0').then(m => m.save()); }); row(390, '전투 대사', d.talk !== false, () => { d.talk = d.talk === false; import('../save.js?v=0.75.0').then(m => m.save()); });
   }
   go(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(220, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

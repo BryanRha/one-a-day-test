@@ -1,15 +1,19 @@
 // 시작: 엔진 · 아이콘 · 저장 불러오기 → 타이틀 (시험: ?test=1-1 바로 전투, &auto=1 자동)
-import { initEngine, E } from './engine.js?v=0.74.0';
-import { bindKeys } from './input.js?v=0.74.0';
-import { makeIcons } from './icons.js?v=0.74.0';
-import { load } from './assets.js?v=0.74.0';
-import { STAGES, CHAPTERS } from './data.js?v=0.74.0';
-import { Battle } from './battle.js?v=0.74.0';
-import { preloadSfx } from './audio.js?v=0.74.0';
-import { G, heroStats } from './state.js?v=0.74.0';
-import { startUI } from './ui.js?v=0.74.0';
+import { initEngine, E } from './engine.js?v=0.75.0';
+import { bindKeys } from './input.js?v=0.75.0';
+import { makeIcons } from './icons.js?v=0.75.0';
+import { load } from './assets.js?v=0.75.0';
+import { STAGES, CHAPTERS } from './data.js?v=0.75.0';
+import { Battle } from './battle.js?v=0.75.0';
+import { preloadSfx, hold } from './audio.js?v=0.75.0';
+import { bm } from './oad_bm.js?v=0.75.0';
+import { G, heroStats } from './state.js?v=0.75.0';
+import { startUI } from './ui.js?v=0.75.0';
 
 const q = new URLSearchParams(location.search);
+/* 원어데이 광고 · 확인 창 동안 게임 루프 · 소리 멈춤 (창이 닫히면 원래 멈춤 상태로) */
+let pz = null;
+bm.onPause = on => { if (on) { if (pz === null) pz = E.paused; E.paused = true; hold(true); } else { E.paused = pz ?? false; pz = null; hold(false); } };
 const bar = document.getElementById('bootbar'), boot = document.getElementById('boot');
 const prog = v => { if (bar) bar.style.width = Math.round(v * 100) + '%'; };
 async function main() {
@@ -19,7 +23,7 @@ async function main() {
   if (q.get('test')) {
     const S = STAGES.find(s => s.id === q.get('test')) || STAGES[0]; S.chapterName = CHAPTERS[0].name;
     if (q.get('speed')) E.timeScale = +q.get('speed'); const ps = q.get('ps') ? { ...heroStats(), ...JSON.parse(atob(q.get('ps'))) } : heroStats();
-    const B = new Battle(S, ps, { auto: q.get('auto') === '1', end: (b, r) => { window.result = r; console.log('#result', JSON.stringify(r)); }, died: () => { window.result = { died: 1 }; console.log('#died'); }, pause: () => {} });
+    const B = new Battle(S, ps, { auto: q.get('auto') === '1', end: (b, r) => { window.result = { ...r, rev: b.revN || 0 }; console.log('#result', JSON.stringify(r)); }, died: b => { if (q.get('rev') && !b.revN) { b.revN = 1; b.player.revive(); return; } window.result = { died: 1, boss: b.boss ? b.boss.hp / b.boss.maxHp : 1, wave: b.wave, time: b.t, rev: b.revN || 0 }; console.log('#died'); }, pause: () => {} });
     window.__B = B; await B.start(prog); boot.classList.add('off'); window.done = 1; return;
   }
   await startUI(prog); boot.classList.add('off'); window.done = 1;

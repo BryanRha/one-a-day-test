@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.74.0';
-import * as R from './rules.js?v=0.74.0';
-import * as I from './install.js?v=0.74.0';
-import * as T from './track.js?v=0.74.0';
-import * as P from './pay.js?v=0.74.0';
-import * as A from './account.js?v=0.74.0';
-import * as C from './cloud.js?v=0.74.0';
-import * as BM from './bm.js?v=0.74.0';
+import { PLANNED } from './catalog.js?v=0.75.0';
+import * as R from './rules.js?v=0.75.0';
+import * as I from './install.js?v=0.75.0';
+import * as T from './track.js?v=0.75.0';
+import * as P from './pay.js?v=0.75.0';
+import * as A from './account.js?v=0.75.0';
+import * as C from './cloud.js?v=0.75.0';
+import * as BM from './bm.js?v=0.75.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.74.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.75.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.74.0';
+const VERSION = '0.75.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -442,10 +442,11 @@ const player = $('#player');
 let frame = null, playing = null;
 function play(id, synced) {
   if (!R.canPlay(id)) return detail(id);
+  if (!synced && C.alwaysOn(id) && !C.on(id)) { openSheet(`<div class="intro"><h2>☁ 계정 기록 확인 중…</h2></div>`); C.syncAlways(id, 'before').then(() => play(id, true)); return; }
   if (!synced && C.on(id)) {
     const t0 = Date.now();
     openSheet(`<div class="intro"><h2>☁ 계정 기록 확인 중…</h2><p class="fsub">${G(id).title}</p></div>`);
-    C.beforePlay(id).then(r => {
+    C.syncAlways(id, 'before').then(() => C.beforePlay(id)).then(r => {
       if (r.act === 'ask') return cloudAsk(id, r);
       if (r.act === 'pull') { openSheet(`<div class="intro"><h2>☁ 계정 기록을 불러왔어요</h2><p class="fsub">다른 기기에서 하던 ${G(id).title} 기록이에요${r.sum ? ` · ${r.sum}` : ''}</p><div class="stack"><button class="btn" data-play-synced="${id}">▶ 이어서 하기</button></div></div>`); return; }
       if (Date.now() - t0 > 2500) { openSheet(`<div class="intro"><h2>준비됐어요</h2><div class="stack"><button class="btn" data-play-synced="${id}">▶ 플레이</button></div></div>`); return; }
@@ -491,6 +492,7 @@ function closeGame() {
   document.body.style.overflow = '';
   go(tab);
   // 소장 게임: 닫은 뒤 계정에 올림 · 아니면 (조건 맞을 때) 소장 권유
+  if (was && C.alwaysOn(was)) setTimeout(() => C.syncAlways(was, 'after'), 300);
   if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('☁ 계정에 저장됐어요'); }), 300);
   else if (was && nudgeOwn(was)) return;
   // 첫 게임을 마치고 돌아오면 한 번만 홈 화면 추가를 권함
@@ -534,6 +536,7 @@ addEventListener('message', e => {
 });
 
 // ── 게임 안 BM: 게임(iframe)의 요청 → 확인 · 광고 · 골드 → 결과를 돌려줌 (게임 혼자서는 골드가 빠지지 않음) ──
+try { const k = 'oad_exp_day', t = R.keyOf(new Date()); if (localStorage.getItem(k) !== t) { localStorage.setItem(k, t); setTimeout(() => T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }), 1500); } } catch { /* */ }
 let payCfg = {}; P.config().then(c => { payCfg = c || {}; });
 const reply = (id, result) => { try { frame && frame.contentWindow.postMessage({ type: 'oad:res', id, result }, location.origin); } catch { /* */ } };
 async function gameReq(gid, d) {
@@ -580,6 +583,16 @@ async function gameReq(gid, d) {
     };
     return;
   }
+  if (fn === 'score') {
+    if (!me) return done({ ok: false, reason: 'login' });
+    if (!owned) return done({ ok: false, reason: 'owned' });
+    try { const r = await A.call({ act: 'score', game: gid, score: a[0], assisted: !!(a[1] && a[1].assisted) }); if (r.ok) T.track('hall_post', { game: gid, rank: r.rank }); return done(r); }
+    catch (e) { return done({ ok: false, reason: 'error' }); }
+  }
+  if (fn === 'board') {
+    try { const t = await A.token().catch(() => ''); const r = await fetch('/api/me', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: 'Bearer ' + t } : {}) }, body: JSON.stringify({ act: 'board', game: gid }) }).then(x => x.json()); return done(r && r.ok ? r : { ok: false, reason: 'error' }); }
+    catch { return done({ ok: false, reason: 'error' }); }
+  }
   done({ ok: false, reason: 'unknown' });
 }
 // 테스트 광고 (진짜 광고망은 승인 후): 보상형은 5초 뒤 '보상 받기', 전면은 5초 뒤 '닫기'
@@ -599,8 +612,8 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if (d.helpg) { BM.setHelp(d.helpg); go('settings'); toast(`응원 선물 ${d.helpg === 'on' ? '켜짐' : '꺼짐'}`); }
-  else if (d.bmg) { BM.setGroup(d.bmg); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
+  if (d.helpg) { BM.setHelp(d.helpg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }); go('settings'); toast(`응원 선물 ${d.helpg === 'on' ? '켜짐' : '꺼짐'}`); }
+  else if (d.bmg) { BM.setGroup(d.bmg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
   else if (d.playSynced) play(d.playSynced, true);
   else if (d.cpick) cloudPick(d.gid, d.cpick, t);
   else if ('nudgeOff' in d) { try { const n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); n.off = 1; localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ } closeSheet(); toast('다시 보지 않을게요'); }

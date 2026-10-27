@@ -1,11 +1,13 @@
-import { W, BASE_H, setH, VERSION } from './config.js?v=0.74.0';
-import { audio } from './audio.js?v=0.74.0';
-import { BootScene } from './scenes/Boot.js?v=0.74.0';
-import { TownScene } from './scenes/Town.js?v=0.74.0';
-import { HudScene } from './scenes/Hud.js?v=0.74.0';
-import { MineScene, MiniScene, PeopleScene, EventsScene, IslandScene, CoopScene } from './scenes/Extra.js?v=0.74.0';
-import { installBack } from './oad.js?v=0.74.0';
-import { installNav } from './nav.js?v=0.74.0';
+import { W, BASE_H, setH, VERSION } from './config.js?v=0.75.0';
+import { audio } from './audio.js?v=0.75.0';
+import { BootScene } from './scenes/Boot.js?v=0.75.0';
+import { TownScene } from './scenes/Town.js?v=0.75.0';
+import { HudScene } from './scenes/Hud.js?v=0.75.0';
+import { MineScene, MiniScene, PeopleScene, EventsScene, IslandScene, CoopScene } from './scenes/Extra.js?v=0.75.0';
+import { installBack } from './oad.js?v=0.75.0';
+import { installNav } from './nav.js?v=0.75.0';
+import { initBM } from './store.js?v=0.75.0';
+import { bm } from './oad_bm.js?v=0.75.0';
 
 // 오류 알림: 같은 오류는 한 번만 · 최근 5개는 저장 (thefarm_err)
 const seen = new Set();
@@ -45,6 +47,9 @@ async function start() {
   const refresh = () => [60, 250, 600].forEach(ms => setTimeout(fitMode, ms));
   addEventListener('resize', refresh); addEventListener('orientationchange', refresh);
   window.__game = game;
+  // 원어데이: 시작 때 hello 한 번 (기다리지 않음) → 오면 영구 상품 · 소장자 장식 복원 후 화면 다시 그림 · 광고 · 확인 창 동안 소리 끔
+  bm.onPause = on => { try { game.sound.mute = !!on; } catch { /* */ } };
+  initBM(() => { const hud = game.scene.getScene('Hud'); if (hud && hud.sys.isActive() && hud.refresh) hud.refresh(); });
   installBack(game, { home: 'Town', roots: ['Hud'] });
 }
 start();

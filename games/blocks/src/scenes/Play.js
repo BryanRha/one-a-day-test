@@ -1,18 +1,18 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.74.0';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.74.0';
-import { choose } from '../core/ai.js?v=0.74.0';
-import { makeLevel } from '../core/levels.js?v=0.74.0';
-import { TINT, THEMES } from './Boot.js?v=0.74.0';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.74.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
-import { bm } from '../oad_bm.js?v=0.74.0';
-import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.74.0';
-import { roundOver, afterRound, track, helpOn } from '../bmflow.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.75.0';
+import { choose } from '../core/ai.js?v=0.75.0';
+import { makeLevel } from '../core/levels.js?v=0.75.0';
+import { TINT, THEMES } from './Boot.js?v=0.75.0';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.75.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.75.0';
+import { roundOver, afterRound, track, helpOn } from '../bmflow.js?v=0.75.0';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };
@@ -43,7 +43,7 @@ export class PlayScene extends Phaser.Scene {
       this.theme = d.theme % THEMES.length;
     }
     this.shown = 0; this.busy = false; this.paused = false; this.newBest = false; this.drag = null; this.revived = false;
-    this.conts = 0; this.contGold = false; this.roundStars = 0; this.contPop = null;
+    this.conts = 0; this.contGold = false; this.roundStars = 0; this.contPop = null; this.assisted = false;
     this.BX = (W - BW) / 2; this.BY = Math.round(470 + Math.max(0, (H - 470 - 1420) / 2));
     this.trayY = Math.min(H - 210, this.BY + BW + 250);
 
@@ -580,7 +580,7 @@ export class PlayScene extends Phaser.Scene {
     const done = take => {
       if (closed) return; closed = true; pop.close();
       track(take ? 'help_take' : 'help_decline', g.p);
-      if (take) { this.b.help = g.moves; this.showHelpBadge(); audio.play('sfx_best', { volume: 0.5 }); }
+      if (take) { this.b.help = g.moves; this.assisted = true; this.showHelpBadge(); audio.play('sfx_best', { volume: 0.5 }); }
       this.time.delayedCall(200, () => { this.busy = false; after && after(); });
     };
     c.add(btn(this, 0, 155, 520, 130, '받을게요', () => done(true), { style: 'gold', icon: 'i_star', size: 42 }));
@@ -679,7 +679,7 @@ export class PlayScene extends Phaser.Scene {
     pop.cont = { finish, get left() { return left; }, offer };
   }
   revive() {
-    const again = this.revived;
+    const again = this.revived; this.assisted = true;   /* 명예의 전당: 이어한 판은 도움 받은 판 */
     this.revived = true; this.b.revive();
     for (let r = 2; r < 6; r++) for (let c = 2; c < 6; c++) {
       const s = this.cells[r][c]; if (s) { this.cells[r][c] = null; this.tweens.add({ targets: s, scale: 0, alpha: 0, duration: 260, delay: (r + c) * 30, onComplete: () => s.destroy() }); }
@@ -707,7 +707,7 @@ export class PlayScene extends Phaser.Scene {
     M.track('games'); M.track('score', b.score);
     const st = this.stats;
     roundOver();
-    this.leave('Result', { conts: this.conts, contGold: this.contGold, stars: this.roundStars, score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
+    this.leave('Result', { assisted: this.assisted, conts: this.conts, contGold: this.contGold, stars: this.roundStars, score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
   }
   advWin() {
     audio.play('sfx_best', { volume: 0.8 }); buzz([30, 40, 60]); this.voice('levelclear', 3);

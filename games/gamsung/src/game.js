@@ -1,10 +1,10 @@
 // 카페 놀이: 머신으로 메뉴 내리기 → 바에 진열 → 손님이 앉아 주문 → 사장(나)이 내어 줌 → 치우기 · 원두 볶기 · 꾸미기 · 단골
 //   바닥은 100 단위 칸 — 가구가 놓인 칸은 못 지나감 · 길(문 → 모든 자리 · 바)이 막히는 배치는 안 됨
 import * as THREE from 'three';
-import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND, PULL, ART, POEMS, POEM_PER, LETTERS } from './data.js?v=0.74.0';
-import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.74.0';
-import { M, box, cyl, sph, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, todayFrame, coinPile, letter, ROOM } from './models.js?v=0.74.0';
-import { sfx } from './audio.js?v=0.74.0';
+import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND, PULL, ART, POEMS, POEM_PER, LETTERS } from './data.js?v=0.75.0';
+import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.75.0';
+import { M, box, cyl, sph, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, todayFrame, coinPile, letter, ROOM } from './models.js?v=0.75.0';
+import { sfx } from './audio.js?v=0.75.0';
 
 const V = THREE.Vector3, CELL = 100, N = 14, rnd = (a, b) => a + Math.random() * (b - a);
 export const fmt = n => Math.round(n).toLocaleString('en-US');

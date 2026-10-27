@@ -1,21 +1,26 @@
 // 증거 대조 (Easybrain Differences 식): 위아래 두 사진 · 다른 곳 찾기 · 하트 3 · 시간 제한 없음
 // 찾을 때마다 서윤의 한 줄 추리가 뜸 · 하트를 다 잃으면 부드럽게 다시
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { goPrev } from '../nav.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import { Viewer } from '../viewer.js?v=0.74.0';
-import { EPISODES, epNo } from '../episodes.js?v=0.74.0';
-import { starOnce } from '../cafe/state.js?v=0.74.0';
-import { advance, passed, stepOf, replayResult } from '../replay.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { goPrev } from '../nav.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import { Viewer } from '../viewer.js?v=0.75.0';
+import { EPISODES, epNo } from '../episodes.js?v=0.75.0';
+import { starOnce } from '../cafe/state.js?v=0.75.0';
+import { advance, passed, stepOf, replayResult } from '../replay.js?v=0.75.0';
+import { HINT_COST, oadOn, roundEnd } from '../bm.js?v=0.75.0';
+import { hintOffer, continueOffer, giftOffer } from '../bmui.js?v=0.75.0';
+import { noteEvidence, helpCheck, helpShown } from '../help.js?v=0.75.0';
+import { hero } from '../episodes.js?v=0.75.0';
 
-const HINT_COST = 10;
+// 하트 이어하기는 '아깝다' 순간만: 절반 이상 찾음 · 15초 넘게 · 처음 3판 지난 뒤 · 판당 최대 2번(🪙20 → 🪙40) · 응원 선물 판 X
+const HOPE = { ratio: 0.5, minT: 15, firstRuns: 3, max: 2 };
 export class EvidenceScene extends Phaser.Scene {
   constructor() { super('Evidence'); }
   create(data) {
     const ep = this.ep = EPISODES.find(e => e.id === data.id), ev = this.ev = ep.evidence;
-    Object.assign(this, { hearts: ev.hearts, found: 0, done: new Set(), ended: false, paused: false, hints: 0, replay: passed(ep.id, 'evidence') && stepOf(ep.id) === 'done', t0: Date.now() });
+    Object.assign(this, { hearts: ev.hearts, found: 0, done: new Set(), ended: false, paused: false, hints: 0, gift: false, cont: 0, replay: passed(ep.id, 'evidence') && stepOf(ep.id) === 'done', t0: Date.now() });
     advance(ep.id, 'evidence');
     this.add.rectangle(W / 2, H / 2, W, H, 0x2E1A2A);
     const top = 150, bottom = 260, gap = 70, avail = H - top - bottom - gap * 2, vh = Math.min(avail / 2, W * 0.75);
@@ -31,9 +36,12 @@ export class EvidenceScene extends Phaser.Scene {
     this.capT = T(this, W / 2, by + 50, '', 30, '#FFFFFF', { w: 800, wrap: W - 120 });
     // 힌트 (숨은 물건과 같은 돋보기 · 코인): 못 찾은 곳 하나로 확대 + 반짝임
     iconBtn(this, W - 80, by - 40, 'hint', () => this.hint(), 96); this.hintT = T(this, W - 80, by + 24, `● ${HINT_COST}`, 22, C.gold, { w: 900 });
+    // 연속 실패 응원 선물: 다음 판 시작 때 (다시 하기 판은 제외)
+    const gifting = !this.replay && helpCheck();
+    if (!gifting) this.time.delayedCall(400, () => toast(this, '두 사진에서 다른 곳을 눌러요 · 틀리면 하트가 줄어요', y2 - 60));
+    if (gifting) { this.paused = true; this.time.delayedCall(450, () => giftOffer(this, hero(ep).face, hero(ep).n, () => { helpShown(); this.gift = true; this.paused = false; this.giftSpot(); }, () => { helpShown(); this.paused = false; })); }
     this.coinT = T(this, 80, by + 24, `● ${load().coins}`, 22, C.gold, { w: 900 });
     this.cameras.main.fadeIn(300, 30, 10, 26); window.__ev = this;
-    this.time.delayedCall(400, () => toast(this, '두 사진에서 다른 곳을 눌러요 · 틀리면 하트가 줄어요', y2 - 60));
   }
   tap(ip, p, later) {
     if (this.ended || this.paused) return;
@@ -56,22 +64,50 @@ export class EvidenceScene extends Phaser.Scene {
     this.capT.setText(`"${s.cap}"`).setAlpha(0); this.tweens.add({ targets: this.capT, alpha: 1, duration: 250 });
     if (this.found >= this.ev.spots.length) { this.ended = true; this.time.delayedCall(1300, () => this.win()); }
   }
+  hintUi() { this.coinT.setText(`● ${load().coins}`); }
+  // 응원 선물: 판 시작 때 주인공이 한 곳을 먼저 짚어 줌 (한 곳 미리 찾음 · 힌트 수 · 별에는 안 셈)
+  giftSpot() {
+    const i = this.ev.spots.findIndex((_, j) => !this.done.has(j)); if (i < 0) return; const s = this.ev.spots[i];
+    this.vA.focus(s.x, s.y, 2); audio.play('sfx_hint', { volume: 0.7 });
+    for (const v of [this.vA, this.vB]) { const g = this.add.image(s.x, s.y, 'glow').setTint(0xFFB6CB).setBlendMode('ADD'); g.setScale(s.r * 3 / 128); v.layer.add(g); this.tweens.add({ targets: g, alpha: 0.15, duration: 300, yoyo: true, repeat: 2, onComplete: () => g.destroy() }); }
+    this.time.delayedCall(1000, () => { if (!this.ended && !this.done.has(i)) this.hit(i); });
+  }
+  // 힌트: 응원 선물(무료) → 코인 10 → 코인이 모자라면 광고 힌트 창
   hint() {
     if (this.ended || this.paused) return; const d = load();
-    if (d.coins < HINT_COST) return toast(this, '코인이 부족해요 · 단서를 찾으면 모여요', this.vB.y - 60);
+    if (this.ev.spots.every((_, j) => this.done.has(j))) return;
+    if (d.coins < HINT_COST) { this.paused = true; return hintOffer(this, d.coins, () => { this.paused = false; this.showHint(); }, () => { this.paused = false; }); }
+    d.coins -= HINT_COST; save(); this.showHint();
+  }
+  showHint() {
     const i = this.ev.spots.findIndex((_, j) => !this.done.has(j)); if (i < 0) return; const s = this.ev.spots[i];
-    d.coins -= HINT_COST; save(); this.hints++; this.coinT.setText(`● ${d.coins}`); audio.play('sfx_hint', { volume: 0.7 });
+    this.hints++; this.hintUi(); audio.play('sfx_hint', { volume: 0.7 });
     this.vA.focus(s.x, s.y, 2);
     for (const v of [this.vA, this.vB]) { const g = this.add.image(s.x, s.y, 'glow').setTint(0xFFE27A).setBlendMode('ADD'); g.setScale(s.r * 3 / 128); v.layer.add(g); this.tweens.add({ targets: g, alpha: 0.15, duration: 420, yoyo: true, repeat: 4, onComplete: () => g.destroy() }); }
   }
   lose() {
-    this.ended = true; const p = popup(this, 820, 560, { closable: false, onBack: () => goPrev(this) });
+    this.ended = true; const t = (Date.now() - this.t0) / 1000, d = load(), n = this.ev.spots.length;
+    const hope = oadOn() && !this.replay && !this.gift && this.cont < HOPE.max && this.found >= Math.ceil(n * HOPE.ratio) && t >= HOPE.minT && (d.evRuns || 0) >= HOPE.firstRuns;
+    if (!hope) return this.lost(t);
+    this.time.delayedCall(450, () => continueOffer(this, { found: this.found, total: n, nth: this.cont }, k => this.revive(k), () => this.lost(t)));
+  }
+  // 이어하기: 하트 k 개로 그 자리에서 계속 (찾은 곳은 그대로)
+  revive(k) {
+    this.cont++; this.hearts = k; this.heartT.forEach((h, i) => h.setColor(i < k ? '#FF6A8E' : '#5A3A52')); this.ended = false;
+    audio.play('sfx_clear', { volume: 0.5 }); toast(this, `하트 ${k}개로 다시 찾아요!`, this.vB.y - 60);
+  }
+  // 결과: 기록(연속 실패 · 판 수) 후 부드러운 다시 하기 창
+  lost(t) {
+    if (!this.replay) { const d = load(); d.evRuns = (d.evRuns || 0) + 1; save(); noteEvidence({ win: false, t, helped: this.gift }); }
+    const p = popup(this, 820, 560, { closable: false, onBack: () => goPrev(this) });
     p.content.add(T(this, 0, -180, '조금 더 꼼꼼히 볼까요?', 44, C.ink, { w: 900 }));
     p.content.add(T(this, 0, -110, `${this.found} / ${this.ev.spots.length}곳을 찾았어요`, 30, C.brown, { w: 700 }));
     p.content.add(btn(this, 0, 50, 520, 130, '다시 대조하기', () => this.scene.restart({ id: this.ep.id }), { size: 38 }));
     p.content.add(btn(this, 0, 190, 400, 100, '서재로', () => this.scene.start('Library'), { style: 'cream', size: 30 }));
   }
   win() {
+    roundEnd();
+    if (!this.replay) { const d = load(); d.evRuns = (d.evRuns || 0) + 1; save(); noteEvidence({ win: true, t: (Date.now() - this.t0) / 1000, helped: this.gift }); }
     if (this.replay) return replayResult(this, { id: this.ep.id, kind: 'evidence', n: this.ev.spots.length, sec: (Date.now() - this.t0) / 1000, slip: this.ev.hearts - this.hearts + this.hints, next: 'after' });
     const d = load(); d.coins += 10; advance(this.ep.id, 'after'); const got = starOnce(this.ep.id, 'e', this.hearts >= 3 && !this.hints ? 2 : 1);
     audio.play('sfx_clear', { volume: 0.7 }); this.cameras.main.flash(300, 255, 230, 240);

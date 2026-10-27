@@ -1,16 +1,16 @@
 // 비행 화면: core/run.js 시뮬레이션을 고정 간격으로 돌리고, 상태(s)와 사건(events)을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.74.0';
-import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.74.0';
-import { decideX } from '../core/ai.js?v=0.74.0';
-import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import { wind, tipOf, ELEMENT } from '../fx.js?v=0.74.0';
-import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.74.0';
-import { bm } from '../oad_bm.js?v=0.74.0';
-import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.74.0';
-import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.74.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.75.0';
+import { decideX } from '../core/ai.js?v=0.75.0';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import { wind, tipOf, ELEMENT } from '../fx.js?v=0.75.0';
+import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.75.0';
+import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.75.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.75.0';
 
 const DT = 1 / 60;
 const SHOT_KEY = { star: 'bolt_star', fire: 'bolt_fire', ice: 'bolt_ice', bolt: 'bolt_bolt', furball: 'furball' };
@@ -728,7 +728,7 @@ export class PlayScene extends Phaser.Scene {
     const result = {
       dist: Math.floor(s.dist), score: s.score, coins: Math.floor(s.coins), gems: s.gems, treats: s.treats, crystals: s.crystals, paws: s.paws,
       kills: s.kills, bosses: this.bossKills, sRank: this.sRank, items: this.items, witch: s.witch,
-      revived: s.revived, afterRevive: s.revived ? Math.floor(s.dist - this.reviveAt) : 0, offers: this.reviveOffers,
+      revived: s.revived, helped: this.helped, afterRevive: s.revived ? Math.floor(s.dist - this.reviveAt) : 0, offers: this.reviveOffers,
     };
     if (!this.bot) noteRun({ dist: s.dist, t: s.t, best: this.bestDist, runsBefore: this.runsBefore, quit: this.quit, helped: this.helped });
     audio.stopMusic();

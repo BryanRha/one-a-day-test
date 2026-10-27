@@ -1,13 +1,14 @@
-import { W, BASE_H, setH } from './config.js?v=0.74.0';
-import { audio } from './audio.js?v=0.74.0';
-import { BootScene } from './scenes/Boot.js?v=0.74.0';
-import { HomeScene } from './scenes/Home.js?v=0.74.0';
-import { BriefScene } from './scenes/Brief.js?v=0.74.0';
-import { PlayScene } from './scenes/Play.js?v=0.74.0';
-import { ResultScene } from './scenes/Result.js?v=0.74.0';
-import { StoryScene } from './scenes/Story.js?v=0.74.0';
-import { EditorScene } from './scenes/Editor.js?v=0.74.0';
-import { installBack } from './oad.js?v=0.74.0';
+import { W, BASE_H, setH } from './config.js?v=0.75.0';
+import { audio } from './audio.js?v=0.75.0';
+import { BootScene } from './scenes/Boot.js?v=0.75.0';
+import { HomeScene } from './scenes/Home.js?v=0.75.0';
+import { BriefScene } from './scenes/Brief.js?v=0.75.0';
+import { PlayScene } from './scenes/Play.js?v=0.75.0';
+import { ResultScene } from './scenes/Result.js?v=0.75.0';
+import { StoryScene } from './scenes/Story.js?v=0.75.0';
+import { EditorScene } from './scenes/Editor.js?v=0.75.0';
+import { installBack } from './oad.js?v=0.75.0';
+import { bm } from './oad_bm.js?v=0.75.0';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }
@@ -35,6 +36,8 @@ async function start() {
   addEventListener('resize', refresh); addEventListener('orientationchange', refresh);
   window.__game = game;
   installBack(game, { home: 'Home', roots: [] });   // One a Day 뒤로가기: 한 단계씩
+  // 광고 · 결제 확인 창 동안 배경음 멈춤 (턴제라 게임은 멈출 필요 없음)
+  bm.onPause = on => { const c = audio.current; if (!c) return; try { if (on) c.pause(); else if (!document.hidden) c.play().catch(() => {}); } catch { /* */ } };
 }
 const embedded = window.parent !== window;
 if (!embedded && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

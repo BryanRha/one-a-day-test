@@ -1,6 +1,6 @@
 // 저장 · 규칙: 헛간 · 경험치 · 밭 · 동물 · 공장 줄 · 주문 게시판 · 기차 · 퀘스트 · 월세 · 강아지
-import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.74.0';
-import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.74.0';
+import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.75.0';
+import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.75.0';
 
 const KEY = 'thefarm_v1';
 let d = null;
@@ -35,7 +35,7 @@ export function save() { try { localStorage.setItem(KEY, JSON.stringify(load()))
 export function reset() { d = fresh(); save(); }
 
 // ── 헛간
-export const barnCap = () => BARN.base + load().barnLv * BARN.step + 20 * rl('barn');
+export const barnCap = () => BARN.base + load().barnLv * BARN.step + 20 * rl('barn') + (load().oad && load().oad.storage ? 50 : 0);   /* 원어데이 '창고 넓히기'(영구) +50 — store.js */
 export const barnUsed = () => Object.entries(load().items).reduce((s, [k, n]) => s + n, 0);
 export const has = (k, n = 1) => (load().items[k] || 0) >= n;
 export function add(k, n) { const it = load().items; it[k] = Math.max(0, (it[k] || 0) + n); if (!it[k]) delete it[k]; }
@@ -110,7 +110,7 @@ export function fillOrders() {
   // 브룩의 정기 손님 날 (매달 7·14·21·28일)
   const dd = new Date().getDate(); if ([7, 14, 21, 28].includes(dd) && s.brook !== dayNo()) { s.brook = dayNo(); s.orders[0] = makeOrder(true); }
 }
-export function doOrder(i) { const s = load(), o = s.orders[i]; if (!o || o.at > now() || !take(o.items)) return null; const bonus = Math.round(o.coins * (joyBonus() + (s.spouse === 'ian' ? 0.1 : 0) + 0.04 * rl('order'))); s.coins += o.coins + bonus; o.bonusC = bonus; giveMats(o.tools); if (o.bm) giveBm(o.bm); s.stats.orders++; progress('order', 1); const ups = gainXp(o.xp); s.orders[i] = { ...makeOrder(false), at: now() + 60000 }; return { o, ups }; }
+export function doOrder(i) { const s = load(), o = s.orders[i]; if (!o || o.at > now() || !take(o.items)) return null; const bonus = Math.round(o.coins * (joyBonus() + (s.spouse === 'ian' ? 0.1 : 0) + 0.04 * rl('order'))); const up = s.oBoost ? Math.round(o.coins / 2) : 0, upX = s.oBoost ? Math.round(o.xp / 2) : 0; s.oBoost = false; o.boostC = up; s.coins += o.coins + bonus + up; o.bonusC = bonus; giveMats(o.tools); if (o.bm) giveBm(o.bm); s.stats.orders++; progress('order', 1); const ups = gainXp(o.xp + upX);   /* oBoost = 광고 '다음 주문 보상 +50%' */ s.orders[i] = { ...makeOrder(false), at: now() + 60000 }; return { o, ups }; }
 export function dropOrder(i) { const s = load(); s.orders[i] = { ...makeOrder(false), at: now() + 30000 }; }
 
 // ── 기차: 3칸 · 다 채우면 떠났다가 3분 뒤 새 주문으로 돌아옴
@@ -123,7 +123,9 @@ export const trainCount = () => TRAINS.filter(l => load().lv >= l).length;
 export const carGem = (k, ti = 0) => { const t = trainN(ti), c = t && t.cars[k]; if (!c) return 0; const lack = Math.max(0, c.n - (load().items[c.it] || 0)); return lack ? Math.max(1, Math.ceil(lack * ITEMS[c.it].v / 15)) : 0; };
 export function loadCar(k, ti = 0, gems = false) { const t = trainN(ti); if (!t || t.away) return null; const c = t.cars[k]; if (c.done) return null;
   if (gems) { const g = carGem(k, ti), s0 = load(); if (s0.gems < g) return null; s0.gems -= g; add(c.it, Math.max(0, c.n - (s0.items[c.it] || 0))); }
-  if (!take({ [c.it]: c.n })) return null; c.done = true; const ups = give(c.r); c.bm = giveBm(1); if (t.cars.every(x => x.done)) { t.away = true; t.back = now() + 120000 * (ti + 1); load().stats.trains++; progress('train', 1); } return { r: c.r, ups, left: t.away }; }
+  if (!take({ [c.it]: c.n })) return null; c.done = true; const rw = t.boost ? boostR(c.r) : c.r, ups = give(rw); c.bm = giveBm(1); if (t.cars.every(x => x.done)) { t.away = true; t.back = now() + 120000 * (ti + 1); load().stats.trains++; progress('train', 1); } return { r: rw, ups, left: t.away }; }
+// 광고 '이 기차 보상 +50%': 남은 칸 보상(코인 · 경험치 · 재료)을 1.5배로 (t.boost, 기차가 떠나면 새 기차는 다시 꺼짐)
+export const boostR = r => ({ ...r, coins: r.coins ? Math.round(r.coins * 1.5) : r.coins, xp: r.xp ? Math.round(r.xp * 1.5) : r.xp, tools: r.tools ? Math.ceil(r.tools * 1.5) : r.tools });
 
 // ── 퀘스트 (이야기 1장)
 export const quest = () => QUESTS[load().quest] || null;
@@ -205,6 +207,8 @@ export function marketBuy(i) { const s = load(), c = market().st[i]; if (!c || !
 // ── 보석으로 시간 줄이기: 남은 5분마다 보석 1 (최소 1)
 export const speedCost = sec => Math.max(1, Math.ceil(sec / 300));
 export function speedField(o) { const s = load(); if (!o.crop || cropReady(o)) return null; const c = speedCost((o.at - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; o.at = now(); return null; }
+// 광고 '생산 30분 단축': 밭은 남은 시간에서 · 공장은 줄 전체를 앞으로 당김 (첫 칸 남은 시간까지만)
+export function speedBy(o, ms) { if (o.b === 'field') { if (!o.crop || cropReady(o)) return false; o.at = Math.max(now(), o.at - ms); return true; } tickFactory(o); if (!o.q || !o.q.length) return false; const cut = Math.min(ms, o.q[0].end - now()); for (const x of o.q) x.end -= cut; tickFactory(o); return true; }
 export function speedFactory(o) { const s = load(); tickFactory(o); if (!o.q.length) return null; const j = o.q[0], c = speedCost((j.end - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; const cut = j.end - now(); for (const x of o.q) x.end -= cut; tickFactory(o); return null; }
 
 // ── 연구소: 한 번에 하나 · 단계마다 코인 + 시약·톱니바퀴·설계도 + 시간

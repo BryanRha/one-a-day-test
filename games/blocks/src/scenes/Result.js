@@ -1,12 +1,13 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { bm } from '../oad_bm.js?v=0.74.0';
-import { canDouble } from '../core/cont.js?v=0.74.0';
-import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { canDouble } from '../core/cont.js?v=0.75.0';
+import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.75.0';
+import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.75.0';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -48,6 +49,17 @@ export class ResultScene extends Phaser.Scene {
     btn(this, W / 2 + 90, by, 560, 140, '다시 하기', () => this.go('Play', { mode: 'classic' }), { style: 'gold', icon: 'i_retry', size: 46 });
     iconBtn(this, W / 2 - 300, by - 4, 'i_home', () => this.go('Home'), 130);
     this.cameras.main.fadeIn(260, 8, 10, 24);
+    // 이번 주 명예의 전당 (원어데이 안에서만): 점수 올리기 → 한 줄 안내 + 보기 버튼
+    if (hallShown()) {
+      const hy = by + 130;
+      const line = T(this, W / 2 - 60, hy, '', 28, C.sub, { w: 800 });
+      iconBtn(this, W / 2 + 380, hy, 'i_trophy', () => hallPopup(this), 96);
+      bm.submitScore(r.score, { assisted: !!r.assisted }).then(res => {
+        window.__submit = res;
+        const l = submitLine(res); if (!l || !line.scene) return;
+        line.setText(l.text).setColor(l.color);
+      });
+    }
     window.__result = r;
   }
   go(k, data) { if (this.going) return; this.going = true; afterRound().then(() => this.fade(k, data)); }

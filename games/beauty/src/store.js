@@ -2,9 +2,9 @@
 // 원화 결제(PROVIDER): 지금은 꺼짐(enabled=false) → 원어데이 밖에선 '곧 열려요', 원어데이 안에선 골드 상품으로 대체
 // 원어데이 안(oad_bm hello().ok): 광고 자리 3곳(energy · bubble · dailyBonus) = bm.rewardedAd · 골드 = bm.spend (가격은 서버 SHOP.beauty 만 기준)
 //   소장자는 rewardedAd 가 via:'owner' 로 광고 없이 바로 성공 · 원어데이 밖에선 광고 · 골드 버튼을 숨기고 지금처럼
-import { load, save } from './save.js?v=0.74.0';
-import { bm } from './oad_bm.js?v=0.74.0';
-import { today } from './state.js?v=0.74.0';
+import { load, save } from './save.js?v=0.75.0';
+import { bm } from './oad_bm.js?v=0.75.0';
+import { today } from './state.js?v=0.75.0';
 
 export const PRODUCTS = [
   { id: 'gems_s', n: '보석 한 줌', price: 1200, gems: 80, tag: '' },
@@ -34,7 +34,7 @@ export async function purchase(id) {
   const d = load(); if (p.once && d.purchases.some(r => r.id === id)) throw new Error('owned');
   const receipt = await PROVIDER.buy(p);
   if (receipt && d.purchases.some(r => r.rid === receipt.rid)) return p;
-  grant(p); d.purchases.push({ id, rid: receipt && receipt.rid, at: Date.now() }); save(); return p;
+  grant(p); d.purchases.push({ id, rid: receipt && receipt.rid, at: Date.now() }); save(); saveReceipts(); return p;
 }
 export function grant(p) {
   const d = load();
@@ -46,6 +46,25 @@ export function grant(p) {
   if (p.ent) d.ent[p.ent] = true;
   save();
 }
+// ── 영수증 따로 보관: 'kbeauty_receipts_v1' (원어데이가 로그인한 사람은 소장과 상관없이 계정에 저장 · SAVES_ALWAYS)
+//   본 저장(kbeauty_v1)이 새 기기 · 지운 기록이라도 시작 때 영수증을 합쳐 되살림
+//   중복 지급 방지: 영수증 목록만 합치고, 다시 주는 건 영구 권리(시즌 패스 · 창고 +4 = ent)뿐 — 보석 · 에너지 같은 소모품은 다시 주지 않음
+export const RECEIPT_KEY = 'kbeauty_receipts_v1';
+const rkey = r => r.rid || `${r.id}@${r.at}`;
+function readReceipts() { try { const o = JSON.parse(localStorage.getItem(RECEIPT_KEY) || 'null'); return o && Array.isArray(o.list) ? o.list.filter(r => r && r.id && r.at) : []; } catch { return []; } }
+export function saveReceipts() {
+  const d = load(), seen = new Set(), list = [];
+  for (const r of [...readReceipts(), ...d.purchases]) { const k = rkey(r); if (!seen.has(k)) { seen.add(k); list.push(r); } }
+  list.sort((a, b) => a.at - b.at); try { localStorage.setItem(RECEIPT_KEY, JSON.stringify({ v: 1, list })); } catch { /* */ }
+}
+export function syncReceipts() {
+  const d = load(), have = new Set(d.purchases.map(rkey)); let n = 0;
+  for (const r of readReceipts()) { if (have.has(rkey(r))) continue; d.purchases.push({ ...r }); have.add(rkey(r)); n++;
+    const p = PRODUCTS.find(x => x.id === r.id); if (p && p.ent) d.ent[p.ent] = true; }
+  if (n) { d.purchases.sort((a, b) => a.at - b.at); save(); }
+  saveReceipts(); return n;
+}
+
 // ── 원어데이 연결 (게임 시작 때 initBM 한 번 → 이후 화면은 캐시만 봄)
 let helloP = null;
 export const initBM = () => helloP || (helloP = bm.hello().catch(() => null));
@@ -81,7 +100,7 @@ export async function rewardAd(placement) {
 export async function spendGold(item) {
   if (!oadOn() || !goldPrice(item)) return { ok: false, reason: 'off' };
   const r = await bm.spend(item);
-  if (r && r.ok) { const d = load(); d.purchases.push({ id: `gold_${item}`, gold: goldPrice(item), at: Date.now() }); save(); }
+  if (r && r.ok) { const d = load(); d.purchases.push({ id: `gold_${item}`, rid: r.ref || undefined, gold: goldPrice(item), at: Date.now() }); save(); saveReceipts(); }
   return r || { ok: false, reason: 'error' };
 }
 // 골드 실패 이유 → 부드러운 한마디 (취소는 조용히)

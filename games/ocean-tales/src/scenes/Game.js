@@ -1,14 +1,17 @@
 // 인게임: 엔진(core/engine.js)이 만든 steps 를 순서대로 애니메이션으로 재생한다.
-import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.74.0';
-import { Engine } from '../core/engine.js?v=0.74.0';
-import { LEVELS } from '../core/levels.js?v=0.74.0';
-import { t } from '../i18n.js?v=0.74.0';
-import { audio, WORLD_BGM } from '../audio.js?v=0.74.0';
-import { pickTip } from '../tips.js?v=0.74.0';
-import { track, flush, onMissionDone } from '../missions.js?v=0.74.0';
-import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.74.0';
-import { button, iconButton, popup, toast, starsRow, enableGlow } from '../ui/widgets.js?v=0.74.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
+import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.75.0';
+import { Engine } from '../core/engine.js?v=0.75.0';
+import { LEVELS } from '../core/levels.js?v=0.75.0';
+import { t } from '../i18n.js?v=0.75.0';
+import { audio, WORLD_BGM } from '../audio.js?v=0.75.0';
+import { pickTip } from '../tips.js?v=0.75.0';
+import { track, flush, onMissionDone } from '../missions.js?v=0.75.0';
+import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.75.0';
+import { button, iconButton, popup, toast, starsRow, enableGlow } from '../ui/widgets.js?v=0.75.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.75.0';
+import { goldify, bt, failMsg, adLeft, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.75.0';
 
 const BOARD_TOP = 436;
 // 별 게이지: 별 3개를 같은 간격에 두고, 점수는 별 사이 구간별로 선형 보간 (기준 점수 간격이 달라도 보기 좋게)
@@ -43,6 +46,9 @@ export class GameScene extends Phaser.Scene {
     this.lastScore = 0;
     this.pendingPause = false;
     this.explained = new Set();
+    // 원어데이 BM: 이번 판 이어하기(원어데이) 횟수 · 광고로 받은 횟수 · 응원 선물 · 판 끝 처리 한 번만 · 화면 나가는 중
+    this.contUsed = 0; this.adRound = 0; this.continued = false; this.giftMoves = 0; this.offerPct = 0;
+    this.ended = false; this.leaving = false; this.contBusy = false; this.moves0 = this.level.moves;
   }
   preload() {
     // 이 월드 배경만 메모리에 둔다 (10개 월드 배경을 한꺼번에 올리면 폰 GPU 메모리가 부족)
@@ -88,7 +94,7 @@ export class GameScene extends Phaser.Scene {
     audio.music(`bgm_game_${WORLD_BGM[(this.level.world - 1) % WORLD_BGM.length]}`, this);
     audio.intensity(0);
     this.cameras.main.fadeIn(250, 189, 235, 255);
-    this.levelStartPopup();
+    this.beginRound();
   }
 
   // ═══ 보드 그리기 ═══════════════════════════════════════════
@@ -392,7 +398,8 @@ export class GameScene extends Phaser.Scene {
   buyPopup(k, onBought) {
     const price = BOOSTER_PRICE[k];
     const name = t({ hammer: 'boosterHammer', shuffle: 'boosterShuffle', swap: 'boosterSwap', moves: 'boosterMoves' }[k]);
-    const p = popup(this, { title: name, width: 820, height: 760 });
+    const gold = oadOn() ? bm.price('boosters') : 0;
+    const p = popup(this, { title: name, width: 820, height: gold ? 900 : 760 });
     p.box.add(this.add.image(0, -120, `boost_${k}`).setScale(1.1));
     p.box.add(this.add.text(0, 40, t('buyBooster', name, price), TXT.body).setOrigin(0.5));
     p.box.add(this.add.image(-60, 140, 'ico_coin').setScale(0.4));
@@ -403,6 +410,12 @@ export class GameScene extends Phaser.Scene {
       const d = load(); d.boosters[k] = (d.boosters[k] || 0) + 1; save();
       this.refreshBoosters(); p.close(); onBought && onBought();
     }, { width: 440, height: 140, size: 50 }));
+    /* 원어데이: 🪙 부스터 3종 묶음 */
+    if (gold) p.box.add(goldify(this, button(this, 0, 400, bt('goldBtn', gold, bt('boosterGold')), async () => {
+      const r = await bm.spend('boosters');
+      if (r && r.ok) { ['hammer', 'shuffle', 'swap'].forEach(b => addBooster(b, 1)); audio.play('sfx_coin'); this.refreshBoosters(); p.close(); toast(this, bt('boostersGot')); onBought && onBought(); }
+      else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
+    }, { kind: 'secondary', width: 440, height: 110, size: 34 })));
   }
 
   // ═══ 입력 ══════════════════════════════════════════════════
@@ -1050,6 +1063,7 @@ export class GameScene extends Phaser.Scene {
     const coins = 20 + stars * 10 + (this.level.boss ? 30 : 0) + (first3 ? 30 : 0);
     recordWin(this.levelId, stars, score, LEVELS.length + 1);
     const streakNow = addStreak();
+    this.endRound(true);
     track('win'); track('stars', stars); track('streak', streakNow); flush();
     addCoins(coins);
     // 진행 보상: 5레벨마다 처음 클리어하면 부스터 선물 (막혔을 때의 구제책이 아니라 진행에 대한 보상)
@@ -1165,6 +1179,12 @@ export class GameScene extends Phaser.Scene {
     B.add(button(this, 0, 400, hasNext ? t('next') : t('map'), () => this.goNext(), { width: 500, height: 160, size: 60 }));
     B.add(iconButton(this, -330, 400, 'ico_retry', () => this.restart(), { size: 130 }));
     B.add(iconButton(this, 330, 400, 'ico_map', () => this.toMap(), { size: 130 }));
+    // 이어해서 깼으면 크게 축하
+    if (this.continued) {
+      const cb = this.add.text(300, -545, bt('comeback'), { ...TXT.mid, fontSize: '40px', color: '#FFE14D', stroke: '#C2410C', strokeThickness: 10 }).setOrigin(0.5).setAngle(8);
+      B.add(cb);
+      this.tweens.add({ targets: cb, scale: 1.12, yoyo: true, repeat: -1, duration: 420 });
+    }
     if (streakNow >= 2) {
       const chip = this.add.text(-300, -500, t('streakNow', streakNow), { ...TXT.small, fontSize: '30px', color: '#FFE14D', stroke: '#C2410C', strokeThickness: 8 }).setOrigin(0.5).setAngle(-8);
       B.add(chip);
@@ -1193,7 +1213,83 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(1000, () => { img.destroy(); this.extraMovesPopup(); });
   }
 
+  // 이동을 다 씀: 목표가 꽤 찬 '아까운' 순간이면 원어데이 이어하기 창 (core/cont.js), 아니면 예전 창
   extraMovesPopup() {
+    const s = this.engine.s;
+    const pct = goalProgress(s.goals, s.score, s.stars);
+    const offer = contOffer({ levelId: this.levelId, plays: plays() - 1, progress: pct }, this.contUsed, bm.info, adLeft('moves5'), this.adRound);
+    if (!offer) return this.extraMovesPopupPlain();
+    this.offerPct = offer.h.pct;
+    const d = load();
+    const p = popup(this, { title: bt(offer.h.close ? 'contTitleClose' : 'contTitle'), width: 900, height: 1240, closeButton: false, onBack: () => toResult() });
+    window.__contPop = p;
+    const B = p.box;
+    // ① 칭찬 → 희망 한 줄
+    const ringY = -360;
+    B.add(this.add.image(0, ringY, 'ptc_glow').setDisplaySize(330, 330).setTint(0xFFE9A8).setAlpha(0.5));
+    B.add(this.add.image(0, ringY, 'boost_moves').setScale(1.15));
+    const ring = this.add.graphics(); B.add(ring);
+    const secT = this.add.text(0, ringY + 150, '', { ...TXT.dark, fontSize: '30px' }).setOrigin(0.5); B.add(secT);
+    B.add(this.add.text(0, -150, bt('contPraise', offer.h.pct), { ...TXT.mid, fontSize: '46px', color: '#FFE14D', stroke: '#C2410C', strokeThickness: 10 }).setOrigin(0.5));
+    B.add(this.add.text(0, -85, bt(offer.kind === 'second' ? 'contHope2' : 'contHope'), { ...TXT.body, fontSize: '32px' }).setOrigin(0.5));
+    this.goalSummary(B, -20);
+    // ② 카운트다운 (광고 · 확인 창 동안 멈춤) → 끝나면 조용히 결과로
+    let left = COUNTDOWN, done = false;
+    const draw = () => {
+      ring.clear();
+      ring.lineStyle(16, 0xFFFFFF, 0.35).strokeCircle(0, ringY, 125);
+      ring.lineStyle(16, 0xFFB020, 1).beginPath().arc(0, ringY, 125, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (left / COUNTDOWN), false).strokePath();
+      secT.setText(`${Math.ceil(left)}`);
+    };
+    draw();
+    const timer = this.time.addEvent({ delay: 100, loop: true, callback: () => {
+      if (done || this.contBusy || paused()) return;
+      left = Math.max(0, left - 0.1); draw();
+      if (left <= 0) toResult();
+    } });
+    const finish = () => { done = true; timer.remove(); window.__contPop = null; };
+    const toResult = () => { if (done || this.contBusy) return; finish(); p.close(true); this.failPopup(t('outOfMoves')); };
+    const grant = (bmCont) => {
+      finish();
+      if (bmCont) this.contUsed++;
+      this.continued = true;
+      audio.play('sfx_booster');
+      this.engine.addMoves(5);
+      p.close();
+      this.updateHUD({ moves: this.engine.s.moves });
+      this.engine.ensurePlayable();
+      this.syncAll();
+      this.busy = false; this.scheduleHint();
+    };
+    const run = async (fn) => { if (done || this.contBusy) return; this.contBusy = true; try { await fn(); } finally { this.contBusy = false; } };
+    const viaAd = () => run(async () => {
+      const r = await bm.rewardedAd('moves5');
+      if (r && r.ok) { noteAd('moves5'); this.adRound++; grant(true); } else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
+    });
+    const viaGold = sku => run(async () => {
+      const r = await bm.spend(sku);
+      if (r && r.ok) grant(true); else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
+    });
+    // ③ 버튼: 첫 번째 = 광고 · 🪙20 같은 크기 (소장자는 무료 하나) / 두 번째 = 🪙40 만
+    const Y = 250;
+    if (offer.kind === 'first' && offer.owner) B.add(button(this, 0, Y, bt('freeBtn', bt('plus5')), viaAd, { width: 620, height: 150, size: 46 }));
+    else if (offer.kind === 'first') {
+      const both = offer.ad && offer.gold;
+      if (offer.ad) B.add(button(this, both ? -205 : 0, Y, bt('adBtn', bt('plus5')), viaAd, { width: both ? 390 : 620, height: 150, size: 38 }));
+      if (offer.gold) B.add(goldify(this, button(this, both ? 205 : 0, Y, bt('goldBtn', offer.gold, bt('plus5')), () => viaGold('continue'), { width: both ? 390 : 620, height: 150, size: 38 })));
+    } else B.add(goldify(this, button(this, 0, Y, bt('goldBtn', offer.gold, bt('plus5More')), () => viaGold('continue2'), { width: 620, height: 150, size: 42 })));
+    // ④ 게임 안 길 (보유 +5 이동 · 코인) — 무과금으로도 계속할 수 있게 그대로 둠
+    const owned = d.boosters.moves || 0;
+    B.add(button(this, 0, Y + 155, owned > 0 ? bt('inGame', owned) : bt('inGameCoins', BOOSTER_PRICE.moves), () => {
+      if (done || this.contBusy) return;
+      if (owned > 0) useBooster('moves');
+      else if (!spendCoins(BOOSTER_PRICE.moves)) { toast(this, t('notEnough')); return; }
+      grant(false);
+    }, { kind: 'secondary', width: 620, height: 110, size: 36 }));
+    B.add(button(this, 0, Y + 290, bt('seeResult'), () => toResult(), { kind: 'secondary', width: 380, height: 110, size: 38 }));
+  }
+
+  extraMovesPopupPlain() {
     const d = load();
     const p = popup(this, { title: t('outOfMoves'), width: 900, height: 1000, closeButton: false });
     p.box.add(this.add.image(0, -230, 'boost_moves').setScale(1.4));
@@ -1233,10 +1329,12 @@ export class GameScene extends Phaser.Scene {
     audio.play('jingle_lose');
     const s = this.engine.s;
     const lostStreak = breakStreak();
+    this.endRound(false);
     const p = popup(this, { title: t('failed'), width: 900, height: 1160, closeButton: false });
     const B = p.box;
     B.add(this.add.image(0, -360, 'popup_deco_fail').setScale(0.45));
-    B.add(this.add.text(0, -225, reason, TXT.body).setOrigin(0.5));
+    /* 이어하기를 권했던 판이면 칭찬 먼저 (목표 몇 %까지 왔는지) */
+    B.add(this.add.text(0, -225, this.offerPct ? bt('contPraise', this.offerPct) : reason, this.offerPct ? { ...TXT.body, color: '#0B6E4F' } : TXT.body).setOrigin(0.5));
     B.add(this.add.text(0, -160, t('leftGoals'), { ...TXT.dark, fontSize: '32px' }).setOrigin(0.5));
     this.goalSummary(B, -120);
     // 아깝게 졌으면(남은 목표가 조금) 응원 문구, 아니면 TIP
@@ -1267,7 +1365,7 @@ export class GameScene extends Phaser.Scene {
     row(-250, t('sound'), () => d.sfx, () => audio.toggleSfx(), 'ico_sound_on', 'ico_sound_off');
     row(-90, t('music'), () => d.music, () => audio.toggleMusic(), 'ico_music_on', 'ico_music_off');
     p.box.add(button(this, 0, 90, t('resume'), () => p.close(), { width: 520, height: 150, size: 56 }));
-    const abandon = () => { if (this.engine.s.turn > 0) breakStreak(); };
+    const abandon = () => { if (this.engine.s.turn > 0) breakStreak(); this.endRound(false, true); };
     p.box.add(button(this, -150, 260, t('retry'), () => { abandon(); this.restart(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
     p.box.add(button(this, 150, 260, t('quit'), () => { abandon(); this.toMap(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
   }
@@ -1277,8 +1375,11 @@ export class GameScene extends Phaser.Scene {
   levelStartPopup() {
     const lv = this.level;
     const s = this.engine.s;
-    const p = popup(this, { title: `${t('level')} ${lv.id}`, width: 900, height: 1160, closeButton: false });
-    const B = p.box;
+    const bmRow = !!boosterOffer(bm.info, adLeft('booster')), extra = bmRow ? 150 : 0;
+    const p = popup(this, { title: `${t('level')} ${lv.id}`, width: 900, height: 1160 + extra, closeButton: false });
+    window.__startPop = p;
+    /* 원어데이 부스터 줄이 있으면 창을 늘리고 내용은 위로 · 시작 버튼은 아래로 */
+    const B = this.add.container(0, -extra / 2); p.box.add(B);
     // 월드 이름 (+ 보스 경고)
     B.add(this.add.text(0, -405, `${lv.world}. ${t('worldName')[lv.world - 1]}`, { ...TXT.small, fontSize: '32px', stroke: '#0B3E8A' }).setOrigin(0.5));
     if (lv.boss) {
@@ -1301,6 +1402,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: card, scale: card.fullScale, delay: 250 + i * 140, duration: 320, ease: 'Back.Out', onStart: () => audio.play('sfx_select') });
     });
     B.add(this.add.text(0, -20, `${t('moves')}  ${s.moves}`, TXT.dark).setOrigin(0.5));
+    if (this.giftMoves) B.add(this.add.text(250, -20, bt('giftOn', this.giftMoves), { ...TXT.small, fontSize: '26px', color: '#FFE14D', stroke: '#C2410C', strokeThickness: 6 }).setOrigin(0.5).setAngle(-6));
     B.add(starsRow(this, 0, 70, load().stars[lv.id] || 0, { size: 76, gap: 92, key: 'small' }));
     // 연승 보너스: 연속 클리어 수만큼 특수 블록 칸이 채워짐
     const streak = Math.min(3, load().streak || 0);
@@ -1318,12 +1420,14 @@ export class GameScene extends Phaser.Scene {
     B.add(m);
     this.tweens.add({ targets: m, y: m.y - 8, yoyo: true, repeat: -1, duration: 600, ease: 'Sine.InOut' });
     B.add(this.add.text(50, 330, pickTip(), { ...TXT.body, fontSize: '28px', align: 'left', wordWrap: { width: 600, useAdvancedWrap: true }, lineSpacing: 6 }).setOrigin(0.5));
-    const go = button(this, 0, 475, t('start'), () => { p.close(); this.startPlay(); }, { width: 520, height: 160, size: 60 });
-    B.add(go);
+    if (bmRow) this.boosterRow(p.box, 395);
+    const go = button(this, 0, 475 + extra / 2, t('start'), () => { p.close(); this.startPlay(); }, { width: 520, height: 160, size: 60 });
+    p.box.add(go);
     this.tweens.add({ targets: go, scale: 1.05, yoyo: true, repeat: -1, duration: 600, delay: 900, ease: 'Sine.InOut' });
   }
 
   async startPlay() {
+    notePlay(); this.moves0 = this.engine.s.moves;
     await this.applyStreakBonus();
     const tut = this.level.tutorial;
     const d = load();
@@ -1383,14 +1487,83 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ═══ 화면 이동 ═════════════════════════════════════════════
-  restart() { this.scene.restart({ levelId: this.levelId }); }
+  // 판이 끝난 뒤 다른 화면으로 갈 때 판 끝 전면 광고를 한 번 물어봄 (앱이 그룹 · 간격 · 소장을 보고 정함 · 실패 순간엔 안 부름)
+  async leaveAfter(fn) { if (this.leaving) return; this.leaving = true; await afterRound(); if (this.sys.isActive() || this.sys.isPaused()) fn(); }
+  restart() { this.leaveAfter(() => this.scene.restart({ levelId: this.levelId })); }
   toMap() {
-    if (this.worldCleared) return this.scene.start('WorldClear', { world: this.worldCleared });
-    this.scene.start('Map', { celebrate: true });
+    this.leaveAfter(() => {
+      if (this.worldCleared) return this.scene.start('WorldClear', { world: this.worldCleared });
+      this.scene.start('Map', { celebrate: true });
+    });
   }
   goNext() {
-    if (this.worldCleared) return this.toMap();
-    if (this.levelId < LEVELS.length) this.scene.restart({ levelId: this.levelId + 1 });
-    else this.toMap();
+    this.leaveAfter(() => {
+      if (this.worldCleared) return this.scene.start('WorldClear', { world: this.worldCleared });
+      if (this.levelId < LEVELS.length) this.scene.restart({ levelId: this.levelId + 1 });
+      else this.scene.start('Map', { celebrate: true });
+    });
+  }
+
+  // ═══ 원어데이 BM: 판 끝 · 응원 선물 · 시작 부스터 ═══════════════
+  // 판 끝 처리 (한 번만): 전면 광고 대기 · 연속 실패 기록 (quit = 일시정지에서 그만둠 — 이동을 절반 넘게 썼을 때만 실패로 셈)
+  endRound(won, quit = false) {
+    if (this.ended) return;
+    this.ended = true;
+    if (!quit) roundOver();
+    helpNoteEnd({ levelId: this.levelId, won, quit, turn: this.engine.s.turn, moves0: this.moves0 });
+  }
+  // 레벨 시작: 같은 레벨 3연속 실패면 응원 선물 창을 먼저 (core/help.js · docs/bm-policy.md 6장)
+  beginRound() {
+    const n = helpCheck(this.levelId);
+    if (n) this.giftPopup(n); else this.levelStartPopup();
+  }
+  giftPopup(n) {
+    const tries = helpStreak() + 1;
+    let closed = false;
+    const take = ok => {
+      if (closed) return; closed = true; p.close();
+      oadTrack(ok ? 'help_take' : 'help_decline', { level: this.levelId, moves: n });
+      if (ok) { this.engine.addMoves(n); this.giftMoves = n; this.updateHUD({ moves: this.engine.s.moves }); audio.play('sfx_booster'); }
+      this.levelStartPopup();
+    };
+    const p = popup(this, { title: bt('giftTitle'), width: 900, height: 1080, closeButton: false, onBack: () => take(false) });
+    window.__giftPop = p;
+    const B = p.box;
+    B.add(this.add.image(0, -330, 'ptc_glow').setDisplaySize(380, 380).setTint(0xFFE9A8).setAlpha(0.55));
+    const m = this.add.image(0, -320, 'mascot_happy').setScale(0.2); B.add(m);
+    this.tweens.add({ targets: m, y: m.y - 12, yoyo: true, repeat: -1, duration: 650, ease: 'Sine.InOut' });
+    B.add(this.add.text(0, -120, bt('giftLead', this.levelId, tries), { ...TXT.body, fontSize: '36px', lineSpacing: 8 }).setOrigin(0.5));
+    B.add(this.add.nineslice(0, 50, 'hud_goal_box', null, 720, 150, 40, 40, 40, 40));
+    /* +N 배지 (보유 +5 부스터 그림과 헷갈리지 않게 숫자를 직접 그림) */
+    const badge = this.add.graphics(); badge.fillStyle(0x0E9F6E, 1).fillCircle(-270, 50, 52); badge.lineStyle(6, 0xFFFFFF, 0.9).strokeCircle(-270, 50, 52); B.add(badge);
+    B.add(this.add.text(-270, 46, `+${n}`, { ...TXT.mid, fontSize: '50px', stroke: '#06573C' }).setOrigin(0.5));
+    B.add(this.add.text(40, 50, bt('giftWhat', n), { ...TXT.small, fontSize: '38px' }).setOrigin(0.5));
+    B.add(this.add.text(0, 165, bt('giftNote'), { ...TXT.small, fontSize: '30px', color: '#FFE14D', stroke: '#C2410C', strokeThickness: 7 }).setOrigin(0.5));
+    B.add(button(this, 0, 300, bt('giftTake'), () => take(true), { width: 520, height: 150, size: 54 }));
+    B.add(button(this, 0, 440, bt('giftDecline'), () => take(false), { kind: 'secondary', width: 420, height: 110, size: 38 }));
+  }
+  // 시작 창 아래: 광고 1회 → 삼지창 1 (하루 3 · 소장자는 광고 없이) · 🪙60 → 부스터 3종 1개씩 (같은 크기)
+  boosterRow(parent, y) {
+    const row = this.add.container(0, y); parent.add(row);
+    let busy = false;
+    const render = () => {
+      row.removeAll(true);
+      const o = boosterOffer(bm.info, adLeft('booster'));
+      if (!o) return;
+      const both = o.ad && o.gold, w = both ? 380 : 520, opt = { kind: 'secondary', width: w, height: 110, size: 32 };
+      const after = msg => { this.refreshBoosters(); audio.play('sfx_coin'); toast(this, msg, H * 0.18); render(); };
+      if (o.ad) row.add(button(this, both ? -200 : 0, 0, o.owner ? bt('freeBtn', bt('boosterAd')) : bt('adBtn', bt('boosterAd')), async () => {
+        if (busy) return; busy = true;
+        const r = await bm.rewardedAd('booster'); busy = false;
+        if (r && r.ok) { noteAd('booster'); addBooster('hammer', 1); after(bt('boosterGot')); } else if (!r || r.reason !== 'cancel') toast(this, failMsg(r), H * 0.18);
+      }, opt));
+      if (o.gold) row.add(goldify(this, button(this, both ? 200 : 0, 0, bt('goldBtn', o.gold, bt('boosterGold')), async () => {
+        if (busy) return; busy = true;
+        const r = await bm.spend('boosters'); busy = false;
+        if (r && r.ok) { ['hammer', 'shuffle', 'swap'].forEach(k => addBooster(k, 1)); after(bt('boostersGot')); } else if (!r || r.reason !== 'cancel') toast(this, failMsg(r), H * 0.18);
+      }, opt)));
+    };
+    render();
+    return row;
   }
 }

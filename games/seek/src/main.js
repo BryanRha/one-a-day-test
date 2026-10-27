@@ -1,17 +1,18 @@
-import { W, BASE_H, setH } from './config.js?v=0.74.0';
-import { audio } from './audio.js?v=0.74.0';
-import { BootScene } from './scenes/Boot.js?v=0.74.0';
-import { LibraryScene } from './scenes/Library.js?v=0.74.0';
-import { StoryScene } from './scenes/Story.js?v=0.74.0';
-import { HuntScene } from './scenes/Hunt.js?v=0.74.0';
-import { EvidenceScene } from './scenes/Evidence.js?v=0.74.0';
-import { ToonScene } from './scenes/Toon.js?v=0.74.0';
-import { CafeScene } from './scenes/Cafe.js?v=0.74.0';
-import { CatHuntScene } from './scenes/CatHunt.js?v=0.74.0';
-import { CatDexScene } from './scenes/CatDex.js?v=0.74.0';
-import { CoordScene } from './scenes/Coord.js?v=0.74.0';
-import { installBack } from './oad.js?v=0.74.0';
-import { installNav } from './nav.js?v=0.74.0';
+import { W, BASE_H, setH } from './config.js?v=0.75.0';
+import { audio } from './audio.js?v=0.75.0';
+import { BootScene } from './scenes/Boot.js?v=0.75.0';
+import { LibraryScene } from './scenes/Library.js?v=0.75.0';
+import { StoryScene } from './scenes/Story.js?v=0.75.0';
+import { HuntScene } from './scenes/Hunt.js?v=0.75.0';
+import { EvidenceScene } from './scenes/Evidence.js?v=0.75.0';
+import { ToonScene } from './scenes/Toon.js?v=0.75.0';
+import { CafeScene } from './scenes/Cafe.js?v=0.75.0';
+import { CatHuntScene } from './scenes/CatHunt.js?v=0.75.0';
+import { CatDexScene } from './scenes/CatDex.js?v=0.75.0';
+import { CoordScene } from './scenes/Coord.js?v=0.75.0';
+import { installBack } from './oad.js?v=0.75.0';
+import { installNav } from './nav.js?v=0.75.0';
+import { bm } from './oad_bm.js?v=0.75.0';
 
 async function start() {
   installNav();
@@ -35,6 +36,8 @@ async function start() {
   const refresh = () => [60, 250, 600].forEach(ms => setTimeout(fitMode, ms));
   addEventListener('resize', refresh); addEventListener('orientationchange', refresh);
   window.__game = game;
+  // 광고 · 골드 확인 창 동안 멈춤 (다시 하기 기록 시간 · 소리)
+  bm.onPause = on => { try { if (on) { game.sound.pauseAll(); game.loop.sleep(); } else { game.loop.wake(); game.sound.resumeAll(); } } catch { /* */ } };
   installBack(game, { home: 'Library', roots: [] });
 }
 start();

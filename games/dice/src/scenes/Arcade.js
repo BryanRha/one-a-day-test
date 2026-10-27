@@ -1,11 +1,12 @@
 // 아케이드: 보스 러시 · 랜덤 아레나 · 단일 룬 시련 · 심연 광산 (원작 아케이드 모드를 혼자 하는 버전으로)
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.74.0';
-import { DESC } from './Deck.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import * as BM from '../bmflow.js?v=0.75.0';
+import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.75.0';
+import { DESC } from './Deck.js?v=0.75.0';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const LOOK = { rush: ['boss_serpent', 0xFF5A7A], arena: ['die_echo', 0xB59BFF], mono: ['die_flame', 0xFF8A3D], abyss: ['boss_statue', 0x5EE3FF] };
@@ -34,7 +35,12 @@ export class ArcadeScene extends Phaser.Scene {
       T(this, 330, y + ch / 2 - 46, best ? `최고 ${A.unit} ${best}` : '아직 기록 없음', 28, best ? C.gold : C.dim, { ox: 0, w: 800 });
       const left = k === 'abyss' ? M.abyssLeft() : null;
       const b = btn(this, W - 170, y + 10, 230, 110, '도전', () => this.start(k), { style: k === 'rush' ? 'gold' : 'indigo', size: 38 });
-      if (left != null) { T(this, W - 170, y + 90, `오늘 ${left}/${M.ABYSS_TRIES}번`, 24, left ? C.sub : C.pink, { w: 800 }); if (!left) b.setEnabled(false); }
+      if (left != null) {
+        T(this, W - 170, y + 90, left ? `오늘 ${left}번 남음` : '내일 다시 3번', 24, left ? C.sub : C.pink, { w: 800 });
+        // 다 쓴 날: 원어데이 안이면 '한 번 더'(🪙20 · 무료 길 = 내일 다시) · 밖이면 예전처럼 잠김
+        if (!left && BM.oadOn() && BM.price('abyss')) { b.destroy(); this.abyssBtn = btn(this, W - 170, y + 10, 230, 110, `🪙${BM.price('abyss')} 한 번 더`, () => this.buyAbyss(), { style: 'gold', size: 28, ls: 0 }); }
+        else if (!left) b.setEnabled(false);
+      }
     });
     audio.music('bgm_lobby', this);
     this.cameras.main.fadeIn(220, 5, 6, 26);
@@ -44,6 +50,11 @@ export class ArcadeScene extends Phaser.Scene {
     if (k === 'abyss') { if (!M.useAbyss()) return toast(this, '오늘은 모두 도전했어요 · 내일 다시', C.sub); return this.go('Play', { mode: k }); }
     if (k === 'rush') return this.go('Play', { mode: k });
     this.pick(k);
+  }
+  async buyAbyss() {
+    if (this.busy) return; this.busy = true; const r = await BM.buyAbyss(); this.busy = false;
+    if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
+    audio.play('sfx_awaken', { volume: 0.6 }); this.start('abyss');
   }
   // 시작 룬 고르기 (셋 중 하나 · 아직 없는 룬도 나와요)
   pick(k) {

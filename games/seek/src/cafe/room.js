@@ -1,13 +1,13 @@
 // 냥카페 그림: 불러오기 · 방에 가구/고양이 배치 (화면용 이미지 묶음 · 숨은 고양이용 한 장짜리 캔버스)
-import { SLOTS, CATS, POSES, ROOM } from './data.js?v=0.74.0';
-import { cafeData } from './state.js?v=0.74.0';
-import { coordData } from '../coord/state.js?v=0.74.0';
+import { SLOTS, CATS, POSES, ROOM } from './data.js?v=0.75.0';
+import { cafeData } from './state.js?v=0.75.0';
+import { coordData, wearNow } from '../coord/state.js?v=0.75.0';
 
 export function cafeKeys() {
   const k = [ROOM.key];
   for (const s of SLOTS) for (let t = 1; t <= 3; t++) k.push(`f_${s.id}_${t}`);
   for (const c of CATS) for (const p of POSES) k.push(`n${c.id}_${p}`);
-  const w = coordData().coord.wear; for (const id of [w.o, w.hair, w.bag, w.prop]) if (id) k.push(id);   // 오늘 코디를 입은 서윤
+  const w = wearNow(); for (const id of [w.o, w.hair, w.bag, w.prop]) if (id) k.push(id);   // 오늘 코디를 입은 서윤
   return k;
 }
 export function loadCafe(scene, done) {

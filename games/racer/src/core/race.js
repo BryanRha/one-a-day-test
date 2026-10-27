@@ -201,6 +201,20 @@ export class Race {
     }
   }
 
+  // 연료 충전: 가득(fuelMax)까지만 · 응원 선물로 받은 여분(가득 위)은 줄이지 않음
+  addFuel(n) { const s = this.s; s.fuel = Math.max(s.fuel, Math.min(s.fuelMax, s.fuel + n)); }
+  // 이어하기 (원어데이 골드 · 광고): 연료 가득 + 잠깐 무적 + 바로 옆 차는 치움 · 천천히 다시 출발
+  revive() {
+    const s = this.s, p = s.p;
+    if (s.status !== 'over') return false;
+    s.status = 'play'; s.fuel = s.fuelMax; s.revived = (s.revived || 0) + 1;
+    s.speed = Math.min(s.speed, 300); p.hit = 1.6; p.air = 0; p.z = 0;
+    s.cars = s.cars.filter(c => c.state !== 'drive' || Math.abs(c.y - p.y) > 600);
+    s.oils = s.oils.filter(o => Math.abs(o.y - p.y) > 400);
+    this.ev('revive', {});
+    return true;
+  }
+
   // grade 1 GOOD("차!") · 2 GREAT("차차!") · 3 PERFECT("차차차!")
   dodge(c, grade) {
     const s = this.s;
@@ -257,7 +271,7 @@ export class Race {
     s.stats.items++;
     if (it.kind === 'coin') { s.coins += this.d.coin; s.score += 10; }
     else if (it.kind === 'gold') { s.coins += 10 * this.d.coin; s.score += 100; }
-    else if (it.kind === 'fuel') s.fuel = Math.min(s.fuelMax, s.fuel + 18);
+    else if (it.kind === 'fuel') this.addFuel(18);
     else if (it.kind === 'magnet') s.magnet = 8;
     else if (it.kind === 'booster') { s.booster = 4; this.ev('booster', {}); }
     else if (it.kind === 'jump') s.p.jump = 1;
@@ -302,7 +316,7 @@ export class Race {
     if (b.hp <= 0) {
       b.phase = 'leave'; b.dir = s.p.x < W / 2 ? 1 : -1; b.warn = null;
       const coins = 120 + s.bossN * 30, pts = Math.round(6000 * s.bossN * (s.speed / 700));
-      s.coins += coins * this.d.coin; s.score += pts; s.fuel = Math.min(s.fuelMax, s.fuel + 30); s.stats.bosses = (s.stats.bosses || 0) + 1;
+      s.coins += coins * this.d.coin; s.score += pts; this.addFuel(30); s.stats.bosses = (s.stats.bosses || 0) + 1;
       // 남은 장애물은 날려 버림
       for (const c of s.cars) if (CARS[c.kind].drop && c.state === 'drive') { c.state = 'fly'; c.ft = 1.2; c.rot = 0; c.vx = (this.R() - 0.5) * 1400; c.vy = -500; c.vr = (this.R() - 0.5) * 14; }
       this.ev('bossDown', { x: b.x, y: b.y, coins, pts });
@@ -315,7 +329,7 @@ export class Race {
     if (s.dist >= s.nextCp) {
       s.checkpoints++;
       const add = Math.max(28, 62 - s.checkpoints * 2.4);
-      s.fuel = Math.min(s.fuelMax, s.fuel + add);
+      this.addFuel(add);
       s.score += 500 * s.checkpoints;
       s.nextCp += 500 + s.checkpoints * 40;
       this.ev('checkpoint', { n: s.checkpoints, add });

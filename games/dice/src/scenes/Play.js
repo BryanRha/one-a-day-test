@@ -1,13 +1,14 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.74.0';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.74.0';
-import { DESC } from './Deck.js?v=0.74.0';
-import { act } from '../core/ai.js?v=0.74.0';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.75.0';
+import { DESC } from './Deck.js?v=0.75.0';
+import { act } from '../core/ai.js?v=0.75.0';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.75.0';
+import * as BM from '../bmflow.js?v=0.75.0';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -36,6 +37,7 @@ export class PlayScene extends Phaser.Scene {
     else if (this.mode === 'abyss') this.s = new Sim({ ...base, deck: d.deck, startWave: 10 });
     else this.s = new Sim({ ...base, deck: d.deck });
     this.powers = 0; this.acc = 0; this.paused = false; this.ended = false; this.awakened = false; this.leakedWave = false; this.voT = 0;
+    this.quit = false; this.helped = false; this.helpPop = null;
 
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.35);
@@ -58,6 +60,7 @@ export class PlayScene extends Phaser.Scene {
     audio.music('bgm_game', this);
     this.cameras.main.fadeIn(300, 5, 6, 26);
     if (!d.tips.dice && !this.bot) this.time.delayedCall(500, () => this.tutorial());
+    else if (!this.bot && BM.helpCheck(this.mode)) { this.paused = true; this.time.delayedCall(450, () => this.helpOffer()); }
     else { const sy = synergiesOf(this.s.deck); if (sy.length) this.time.delayedCall(700, () => this.banner('덱 조합 발동', sy.map(x => `${x.name} · ${x.desc}`).join('\n'), '#F5C451')); }
     if (this.bot) this.time.addEvent({ delay: 220, loop: true, callback: () => { if (!this.paused) for (let k = 0; k < 3; k++) if (!act(this.s, 0.8)) break; this.render(); } });
     window.__play = this;
@@ -632,7 +635,37 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.74.0').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.75.0').then(m => m.save()); });
+  }
+
+  // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤
+  helpOffer() {
+    if (this.ended) return;
+    this.paused = true;
+    const pop = popup(this, '', 900, 900, { closable: false, depth: 2000, onBack: () => take(false) }), c = pop.content;
+    window.__helpPop = pop;
+    c.add(this.add.image(0, -270, 'glow').setTint(0xF5C451).setBlendMode('ADD').setScale(2.4).setAlpha(0.6));
+    c.add(this.add.image(0, -270, 'i_star').setDisplaySize(110, 110).setTint(0xF5C451));
+    c.add(T(this, 0, -150, '최근 세 판, 끝까지 제단을 지켰어요!', 40, C.text, { w: 900 }));
+    c.add(T(this, 0, -88, '그 끈기, 충분히 대단해요', 30, C.sub, { w: 800 }));
+    c.add(T(this, 0, 0, '응원 선물 · 챙겨 드릴게요', 44, C.gold, { w: 900 }));
+    c.add(T(this, 0, 66, `이번 판 시작 SP +${BM.GIFT_SP}  (주사위 몇 개 더 일찍)`, 30, C.text, { w: 800 }));
+    BM.track('help_offer', { gift: BM.GIFT_SP });
+    BM.helpUsed();
+    const take = yes => {
+      if (pop.closing) return;
+      BM.track(yes ? 'help_take' : 'help_decline', { gift: BM.GIFT_SP });
+      pop.close();
+      this.time.delayedCall(160, () => {
+        this.paused = false;
+        if (!yes) return;
+        this.helped = true; this.s.sp += BM.GIFT_SP; this.render();
+        audio.play('sfx_awaken', { volume: 0.6 }); this.float(this.hSp.x + 40, this.hSp.y - 50, `+${BM.GIFT_SP} SP`, C.gold, 40);
+        this.banner('응원 선물 도착', `시작 SP +${BM.GIFT_SP} · 힘내요!`, '#F5C451');
+      });
+    };
+    c.add(btn(this, 0, 220, 560, 130, '받을게요', () => take(true), { style: 'gold', icon: 'i_check', size: 42 }));
+    c.add(btn(this, 0, 360, 420, 96, '혼자 해 볼게요', () => take(false), { style: 'ghost', size: 30 }));
   }
 
   gameOver() {
@@ -640,8 +673,9 @@ export class PlayScene extends Phaser.Scene {
     audio.stopMusic(); this.voice('over', 5);
     const s = this.s, r = { wave: s.wave, kills: s.kills, bossKills: s.bossKills, maxPips: s.maxPips, merges: s.merges, powers: this.powers, deck: s.deck.slice() };
     const res = M.finishRun(r, this.mode);
+    if (!this.bot) { BM.helpNote({ mode: this.mode, wave: s.wave, t: s.t, quit: this.quit, helped: this.helped }); BM.roundOver(); }
     this.cameras.main.fadeOut(1400, 5, 6, 26);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', { ...r, ...res, mode: this.mode }));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', { ...r, ...res, mode: this.mode, bot: this.bot, helped: this.helped }));
   }
   // 랜덤 아레나: 셋 중 하나를 골라 덱에 추가 (그동안 멈춤)
   arenaPick() {
@@ -672,6 +706,6 @@ export class PlayScene extends Phaser.Scene {
     const pop = popup(this, '일시정지', 820, 760, { closable: false, depth: 2000, onBack: () => resume() });
     pop.content.add(T(this, 0, 220, '적이 길 끝 [제단]에 닿으면 생명 -1 · 보스 -2\n생명 3개를 모두 잃으면 끝나요', 26, C.sub, { w: 800, lh: 8 }));
     pop.content.add(btn(this, 0, -110, 500, 130, '계속하기', resume, { style: 'gold', icon: 'i_play', size: 42 }));
-    pop.content.add(btn(this, 0, 45, 420, 100, '포기하고 나가기', () => { pop.close(); this.paused = false; this.s.over = true; }, { style: 'ghost', size: 32 }));
+    pop.content.add(btn(this, 0, 45, 420, 100, '포기하고 나가기', () => { pop.close(); this.paused = false; this.quit = true; this.s.over = true; }, { style: 'ghost', size: 32 }));
   }
 }

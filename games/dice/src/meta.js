@@ -1,6 +1,7 @@
 // 진행·재방문: 룬 해금(최고 웨이브) · 수정으로 영구 등급업(확정, 뽑기 없음) · 연속 출석 · 오늘의 미션 · 오늘의 도전
-import { load, save } from './save.js?v=0.74.0';
-import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.74.0';
+import { load, save } from './save.js?v=0.75.0';
+import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.75.0';
+import { fieldOpen } from './bmflow.js?v=0.75.0';
 
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -43,6 +44,7 @@ export function draw(how) {
   const n = how === 'ten' ? 10 : 1, out = [];
   for (let i = 0; i < n; i++) out.push(drawOne(d, 0));
   if (n === 10 && !out.some(o => o.rar >= 2)) { const i = Math.floor(Math.random() * 10); const o = out[i]; if (o.isNew) delete d.unlocked[o.r]; else d.cards[o.r]--; d.pulls--; d.pity--; out[i] = drawOne(d, 2); }
+  d.pitySeq = (d.pitySeq || 0) + 1;   /* 천장 기록 순서 (save.js PITY_KEY · 다른 기기와 비교) */
   save(); track('draw', n);
   return out;
 }
@@ -64,18 +66,21 @@ export const FIELDS = [
   { id: 'lava', name: '용암 대장간', cost: 900, accent: 0xFF8A3D },
   { id: 'sky', name: '천공 정원', cost: 1200, accent: 0xFFB8D8 },
   { id: 'abyss', name: '심해 신전', cost: 1500, accent: 0x40E0D0 },
+  // 원어데이 전용 (원어데이 밖에선 숨김 · 고른 상태여도 고대 제단으로 그림) — 겉모습만, 능력치 없음
+  { id: 'gold', name: '황금 성역', sku: 'arena', accent: 0xFFD27A },     /* 골드 상품 SHOP.dice.arena (item · hello().items 로 복원) */
+  { id: 'star', name: '별빛 성소', owner: true, accent: 0xC9B8FF },      /* 소장자 전용 (무료) */
 ];
-export const field = () => FIELDS.find(f => f.id === load().field) || FIELDS[0];
+export const field = () => { const f = FIELDS.find(x => x.id === load().field); return f && fieldOpen(f) ? f : FIELDS[0]; };
 export const bgKey = () => `bg_${field().id}`;
-export function buyField(id) { const d = load(), f = FIELDS.find(x => x.id === id); if (!f || d.fields[id] || d.crystals < f.cost) return false; d.crystals -= f.cost; d.fields[id] = 1; d.field = id; save(); return true; }
-export function setField(id) { const d = load(); if (!d.fields[id]) return false; d.field = id; save(); return true; }
+export function buyField(id) { const d = load(), f = FIELDS.find(x => x.id === id); if (!f || f.owner || f.sku || d.fields[id] || d.crystals < f.cost) return false; d.crystals -= f.cost; d.fields[id] = 1; d.field = id; save(); return true; }
+export function setField(id) { const d = load(), f = FIELDS.find(x => x.id === id); if (!f || !fieldOpen(f)) return false; d.field = id; save(); return true; }
 
 // ── AI 예측 실력 보정: 내 실제 기록 - AI 예상 (최근 6판 평균) ──
 export function notePred(deck, median) { const d = load(); d.lastPred = { key: deck.slice().sort().join(), median }; save(); }
 export function skillAdj() { const c = load().calib || []; if (!c.length) return 0; const a = c.reduce((x, y) => x + y, 0) / c.length; return Math.max(-6, Math.min(6, Math.round(a * 2) / 2)); }
 
 // 전설 확정권 (보상 길 10단계마다)
-export function drawLegend() { const d = load(); if (d.legendTix < 1) return null; d.legendTix--; const o = drawOne(d, 3); d.pity = Math.max(0, d.pity - 1); save(); return [o]; }
+export function drawLegend() { const d = load(); if (d.legendTix < 1) return null; d.legendTix--; const o = drawOne(d, 3); d.pity = Math.max(0, d.pity - 1); d.pitySeq = (d.pitySeq || 0) + 1; save(); return [o]; }
 
 // ── 수집 보너스: 등급을 올릴수록 모든 주사위의 치명타 피해가 영구히 오름 (원작의 핵심 성장) ──
 export function critBonus() { const d = load(); let b = 0; for (const r of Object.keys(d.unlocked)) b += 0.01 + 0.05 * ((d.tiers[r] || 1) - 1) + 0.03 * ((d.limit || {})[r] || 0); return b; }
@@ -212,7 +217,7 @@ export const ARCADE = {
   abyss: { name: '심연 광산', en: 'ABYSS MINE', desc: '웨이브 10부터 시작 · 하루 3번 · 깊이 갈수록 수정이 많아요', unit: '웨이브' },
 };
 export const ABYSS_TRIES = 3;
-export function abyssLeft() { const d = load(), day = dayKey(); if (d.abyss.date !== day) { d.abyss = { date: day, tries: 0 }; save(); } return ABYSS_TRIES - d.abyss.tries; }
+export function abyssLeft() { const d = load(), day = dayKey(); if (d.abyss.date !== day) { d.abyss = { date: day, tries: 0, extra: 0 }; save(); } return ABYSS_TRIES + (d.abyss.extra || 0) - d.abyss.tries; }   /* extra: 골드로 산 '한 번 더' (그날만) */
 export function useAbyss() { if (abyssLeft() <= 0) return false; const d = load(); d.abyss.tries++; save(); return true; }
 export const isArcade = m => !!ARCADE[m];
 export function pickChoices(n = 3, exclude = []) {   // 아레나·시련 선택지: 모든 룬 중 무작위 (없는 룬도)

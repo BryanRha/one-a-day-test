@@ -1,8 +1,9 @@
 // 로딩: 그림 · 효과 시트 · 효과음, 코드로 그리는 텍스처
-import { W, H, TITLE } from '../config.js?v=0.74.0';
-import { SFX } from '../audio.js?v=0.74.0';
-import { makeTextures } from '../fx.js?v=0.74.0';
-import { makeIcons } from '../pui.js?v=0.74.0';
+import { W, H, TITLE } from '../config.js?v=0.75.0';
+import { SFX } from '../audio.js?v=0.75.0';
+import { makeTextures } from '../fx.js?v=0.75.0';
+import { makeIcons } from '../pui.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -24,6 +25,7 @@ export class BootScene extends Phaser.Scene {
     const m = this.cache.json.get('manifest');
     for (const [n, s] of Object.entries(m.sheets)) this.anims.create({ key: n, frames: this.anims.generateFrameNumbers(n, { start: 0, end: s.frames - 1 }), frameRate: s.fps, repeat: 0 });
     const q = new URLSearchParams(location.search);
-    this.scene.start(q.has('play') ? 'Play' : 'Home', q.has('play') ? { mode: 'free', mapId: q.get('play') || 'm1' } : undefined);
+    // 원어데이 연결(소장 · 골드 · 광고 · 산 꾸미기)을 먼저 알아 둠 — 밖이면 바로 ok:false
+    bm.hello().catch(() => null).then(() => this.scene.start(q.has('play') ? 'Play' : 'Home', q.has('play') ? { mode: 'free', mapId: q.get('play') || 'm1' } : undefined));
   }
 }

@@ -1,8 +1,9 @@
 // 로딩: manifest.json 을 읽고 모든 리소스를 불러오며 진행 막대를 보여준다.
-import { W, H, TXT, setH, asset } from '../config.js?v=0.74.0';
-import { t } from '../i18n.js?v=0.74.0';
-import { pickTip } from '../tips.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
+import { W, H, TXT, setH, asset } from '../config.js?v=0.75.0';
+import { t } from '../i18n.js?v=0.75.0';
+import { pickTip } from '../tips.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { helloOnce } from '../bmflow.js?v=0.75.0';
 
 
 export class BootScene extends Phaser.Scene {
@@ -50,7 +51,8 @@ export class BootScene extends Phaser.Scene {
         this.anims.create({ key: k, frames: this.anims.generateFrameNumbers(k, { start: 0, end: s.frames - 1 }), frameRate: s.fps, hideOnComplete: true });
       }
       pct.setText(t('tap'));
-      this.time.delayedCall(Math.max(0, 1600 - (Date.now() - t0)), () => this.scene.start('Title'));
+      /* 원어데이 hello 를 기다린 뒤 시작 (밖이면 바로 · 최대 0.8초) — 장식 · 버튼이 처음부터 맞게 보이도록 */
+      Promise.all([helloOnce(), new Promise(r => this.time.delayedCall(Math.max(0, 1600 - (Date.now() - t0)), r))]).then(() => this.scene.start('Title'));
     });
     this.load.start();
   }

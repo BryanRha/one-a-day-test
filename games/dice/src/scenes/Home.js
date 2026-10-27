@@ -1,10 +1,11 @@
 // 홈: 생존 원정 · 오늘의 도전 · 덱 · 미션 · 연속 출석
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.74.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { RUNES } from '../core/sim.js?v=0.74.0';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.75.0';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import * as BM from '../bmflow.js?v=0.75.0';
+import { RUNES } from '../core/sim.js?v=0.75.0';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -79,21 +80,30 @@ export class HomeScene extends Phaser.Scene {
       else c.add(T(this, W - 160, y, `◆ ${m.reward}`, 28, '#8FE3FF', { w: 800 }));
     });
   }
-  // 전장 꾸미기: 배경과 길 색 (수정으로 구매 · 영구)
+  // 전장 꾸미기: 배경과 길 색 (수정으로 구매 · 영구) + 원어데이 전용 두 가지(골드 상품 · 소장자 전용 — 원어데이 밖에선 숨김)
   fields() {
-    const d = load(), p = popup(this, '전장 꾸미기', 1020, 860), c = p.content;
-    c.add(T(this, 0, -282, '배경과 길 빛깔이 바뀌어요 · 한 번 사면 영구', 26, C.sub, { w: 800 }));
-    M.FIELDS.forEach((f, i) => {
-      const x = (i - 2) * 190, y = 20, own = d.fields[f.id], on = d.field === f.id;
-      const fr = this.add.graphics(); fr.fillStyle(0x0B1026, 1).fillRoundedRect(x - 86, y - 200, 172, 300, 18).lineStyle(on ? 6 : 3, on ? 0xF5C451 : f.accent, on ? 1 : 0.6).strokeRoundedRect(x - 86, y - 200, 172, 300, 18); c.add(fr);
-      const im = this.add.image(x, y - 50, `bg_${f.id}`); im.setScale(Math.max(160 / im.width, 288 / im.height)); im.setCrop((im.width - 160 / im.scaleX) / 2, (im.height - 288 / im.scaleY) / 2, 160 / im.scaleX, 288 / im.scaleY); c.add(im);
+    const d = load(), list = M.FIELDS.filter(BM.fieldShown), rows = Math.ceil(list.length / 4), ph = 340 + rows * 470;
+    const p = popup(this, '전장 꾸미기', 1020, ph), c = p.content, top = -ph / 2 + 150;
+    c.add(T(this, 0, top, '배경과 길 빛깔이 바뀌어요 · 겉모습만 · 한 번 사면 영구', 26, C.sub, { w: 800 }));
+    list.forEach((f, i) => {
+      const col = i % 4, row = Math.floor(i / 4), n = Math.min(4, list.length - row * 4);
+      const x = (col - (n - 1) / 2) * 232, y = top + 270 + row * 470, own = f.owner || f.sku ? BM.fieldOpen(f) : !!d.fields[f.id], on = M.field().id === f.id;
+      const fr = this.add.graphics(); fr.fillStyle(0x0B1026, 1).fillRoundedRect(x - 98, y - 200, 196, 300, 18).lineStyle(on ? 6 : 3, on ? 0xF5C451 : f.accent, on ? 1 : 0.6).strokeRoundedRect(x - 98, y - 200, 196, 300, 18); c.add(fr);
+      const im = this.add.image(x, y - 50, `bg_${f.id}`); im.setScale(Math.max(184 / im.width, 288 / im.height)); im.setCrop((im.width - 184 / im.scaleX) / 2, (im.height - 288 / im.scaleY) / 2, 184 / im.scaleX, 288 / im.scaleY); c.add(im);
       if (!own) c.add(this.add.image(x, y - 50, 'i_lock').setDisplaySize(44, 44).setAlpha(0.85));
+      if (f.owner || f.sku) c.add(T(this, x, y - 172, f.owner ? '소장자 전용' : '원어데이', 18, f.owner ? '#C9B8FF' : C.gold, { w: 900, ls: 2 }));
       c.add(T(this, x, y + 140, f.name, 26, on ? C.gold : C.text, { w: 900 }));
-      c.add(btn(this, x, y + 210, 170, 80, on ? '사용 중' : own ? '사용' : `◆${f.cost}`, () => {
-        if (on) return;
-        if (own) M.setField(f.id); else if (!M.buyField(f.id)) return toast(this, '수정이 부족해요', C.sub);
+      const label = on ? '사용 중' : own ? '사용' : f.owner ? '소장하면 열려요' : f.sku ? `🪙${BM.price(f.sku)}` : `◆${f.cost}`;
+      c.add(btn(this, x, y + 210, 196, 80, label, async () => {
+        if (on || this.busy) return;
+        if (!own && f.owner) return toast(this, '원어데이에서 이 게임을 소장하면 무료로 열려요', C.sub);
+        if (!own && f.sku) {
+          this.busy = true; const r = await BM.buyItem(f.sku); this.busy = false;
+          if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
+        } else if (!own && !M.buyField(f.id)) return toast(this, '수정이 부족해요', C.sub);
+        M.setField(f.id);
         audio.play(own ? 'sfx_click' : 'sfx_awaken', { volume: 0.6 }); p.close(); this.time.delayedCall(160, () => this.scene.restart());
-      }, { style: on ? 'ghost' : own ? 'indigo' : 'gold', size: own ? 28 : 26 }));
+      }, { style: on ? 'ghost' : own ? 'indigo' : f.owner ? 'ghost' : 'gold', size: f.owner && !own ? 20 : own ? 28 : 26, ls: f.sku ? 0 : 1 }));
     });
   }
   settings() {

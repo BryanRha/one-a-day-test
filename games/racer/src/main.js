@@ -1,11 +1,12 @@
-import { W, BASE_H, setH } from './config.js?v=0.74.0';
-import { audio } from './audio.js?v=0.74.0';
-import { WindFX } from './fx.js?v=0.74.0';
-import { BootScene } from './scenes/Boot.js?v=0.74.0';
-import { LobbyScene } from './scenes/Lobby.js?v=0.74.0';
-import { PlayScene } from './scenes/Play.js?v=0.74.0';
-import { ResultScene } from './scenes/Result.js?v=0.74.0';
-import { installBack } from './oad.js?v=0.74.0';
+import { W, BASE_H, setH } from './config.js?v=0.75.0';
+import { audio } from './audio.js?v=0.75.0';
+import { WindFX } from './fx.js?v=0.75.0';
+import { BootScene } from './scenes/Boot.js?v=0.75.0';
+import { LobbyScene } from './scenes/Lobby.js?v=0.75.0';
+import { PlayScene } from './scenes/Play.js?v=0.75.0';
+import { ResultScene } from './scenes/Result.js?v=0.75.0';
+import { installBack } from './oad.js?v=0.75.0';
+import { initBM } from './bmflow.js?v=0.75.0';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 기본 폰트 */ }
@@ -30,6 +31,8 @@ async function start() {
   const refresh = () => [60, 250, 600].forEach(ms => setTimeout(fitMode, ms));
   addEventListener('resize', refresh); addEventListener('orientationchange', refresh);
   window.__game = game;
+  // 원어데이 BM: hello 한 번 · 광고 · 골드 확인 창 동안 게임 전체를 멈춤 (실시간 레이스 — 루프 · 카운트다운 · 소리까지)
+  initBM(game);
   installBack(game, { home: 'Lobby', roots: [] });   // One a Day 뒤로가기: 한 단계씩
 }
 // One a Day 앱 안(iframe)에서는 앱이 캐시를 관리하므로 자체 서비스 워커는 쓰지 않음

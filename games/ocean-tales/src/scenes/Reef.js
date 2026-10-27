@@ -1,12 +1,14 @@
 // 바다 복원: 모은 별로 오염된 바다를 하나씩 되살린다.
 // 처음엔 탁한 물 + 기름띠 + 버려진 그물 + 회색 실루엣. 과제를 해결할수록 물이 맑아지고 산호·해초·친구들이 돌아온다.
-import { W, H, TXT, WORLD_COUNT, LEVELS_PER_WORLD, asset, themeOf } from '../config.js?v=0.74.0';
-import { t } from '../i18n.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save, availableStars, spendStars, addCoins, addBooster } from '../save.js?v=0.74.0';
-import { RESTORE_TASKS, TASK_COINS, WORLD_COINS, restoreTheme, taskCost } from '../restore.js?v=0.74.0';
-import { track, flush } from '../missions.js?v=0.74.0';
-import { button, iconButton, toast, enableGlow } from '../ui/widgets.js?v=0.74.0';
+import { W, H, TXT, WORLD_COUNT, LEVELS_PER_WORLD, asset, themeOf } from '../config.js?v=0.75.0';
+import { t } from '../i18n.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save, availableStars, spendStars, addCoins, addBooster } from '../save.js?v=0.75.0';
+import { RESTORE_TASKS, TASK_COINS, WORLD_COINS, restoreTheme, taskCost } from '../restore.js?v=0.75.0';
+import { track, flush } from '../missions.js?v=0.75.0';
+import { button, iconButton, toast, enableGlow, popup } from '../ui/widgets.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { goldify, bt, oadOn, decoOpen, decoOnPref, decoShown, setDeco, buyDeco, failMsg } from '../bmflow.js?v=0.75.0';
 
 export class ReefScene extends Phaser.Scene {
   constructor() { super('Reef'); }
@@ -21,6 +23,7 @@ export class ReefScene extends Phaser.Scene {
     let w = data.world;
     if (!w) { w = 1; while (w < max && (d.restore[w] || 0) >= RESTORE_TASKS) w++; }
     this.world = Phaser.Math.Clamp(w, 1, max);
+    this.toastMsg = data.toast || null;
   }
 
   preload() {
@@ -56,6 +59,7 @@ export class ReefScene extends Phaser.Scene {
     // 5 바다 친구들 (복원 후 헤엄침)
     this.parts[5] = th.friends.map((k, i) => this.add.image(W * (0.2 + i * 0.3), H * 0.32 + (i % 2) * 140, k).setScale(k.startsWith('map_') ? 0.7 : 1.0).setDepth(7));
     this.applyState(false);
+    this.drawDecos(floorY);
 
     // ── 위쪽: 뒤로 · 월드 이름 · 별
     this.add.rectangle(W / 2, 0, W, 230, 0x0B4FA8, 0.55).setOrigin(0.5, 0).setDepth(20);
@@ -79,9 +83,87 @@ export class ReefScene extends Phaser.Scene {
     this.barW = this.bar.width;
     this.taskUI = this.add.container(0, 0).setDepth(22);
     this.refreshUI(false);
+    // 원어데이: 꾸미기 (소장자 전용 '달빛 고래' · 🪙 '진주 등불') — 밖에서는 버튼 자체가 없음
+    if (oadOn()) {
+      const db = iconButton(this, W - 90, H - 470, 'ico_gift', () => this.decoPopup(), { size: 112 }).setDepth(21);
+      this.add.text(db.x, db.y + 78, bt('decoBtn'), { ...TXT.small, fontSize: '28px' }).setOrigin(0.5).setDepth(21);
+      this.decoBtn = db;
+    }
 
     audio.music('bgm_map', this);
     this.cameras.main.fadeIn(250, 189, 235, 255);
+    if (this.toastMsg) toast(this, this.toastMsg, H * 0.2);
+  }
+
+  // ═══ 원어데이 꾸미기 (겉모습만) ═══
+  pearlTexture() {
+    if (this.textures.exists('deco_pearl')) return;
+    const g = this.make.graphics({ add: false }), R = 40;
+    for (let i = R; i > 0; i--) { const k = i / R; g.fillStyle(Phaser.Display.Color.GetColor(255, Math.round(236 + 19 * (1 - k)), Math.round(242 + 13 * (1 - k))), 1); g.fillCircle(R, R, i); }
+    g.fillStyle(0xF6C8DA, 0.55); g.fillCircle(R + 10, R + 12, R * 0.62);
+    g.fillStyle(0xFFFFFF, 0.95); g.fillCircle(R - 13, R - 14, 9);
+    g.fillStyle(0xFFFFFF, 0.6); g.fillCircle(R + 12, R - 18, 4);
+    g.generateTexture('deco_pearl', R * 2, R * 2); g.destroy();
+  }
+  drawDecos(floorY) {
+    // 진주 등불: 해초 줄에 매단 진주 다섯 개가 따뜻하게 빛나며 흔들림
+    if (decoShown('pearl')) {
+      this.pearlTexture();
+      const g = this.add.graphics().setDepth(8);
+      [[0.1, 330], [0.3, 430], [0.5, 360], [0.7, 450], [0.9, 340]].forEach(([fx, len], i) => {
+        const x = W * fx, y = 230 + len;
+        g.lineStyle(4, 0x2F8F6A, 0.85).lineBetween(x, 230, x, y - 38);
+        for (let k = 0; k < 3; k++) g.fillStyle(0x3FB37F, 0.9).fillEllipse(x + (k % 2 ? 14 : -14), 290 + k * ((len - 80) / 3), 26, 12);
+        const glow = this.add.image(x, y, 'ptc_glow').setDisplaySize(230, 230).setTint(0xFFD6A0).setAlpha(0.55).setBlendMode(Phaser.BlendModes.ADD).setDepth(8);
+        const pearl = this.add.image(x, y, 'deco_pearl').setScale(1.05).setDepth(9);
+        this.tweens.add({ targets: [pearl, glow], x: x + 10, yoyo: true, repeat: -1, duration: 1800 + i * 230, ease: 'Sine.InOut' });
+        this.tweens.add({ targets: glow, alpha: 0.3, yoyo: true, repeat: -1, duration: 1300 + i * 170, ease: 'Sine.InOut' });
+      });
+    }
+    // 달빛 고래 (소장자 전용): 위쪽에서 은은한 달빛 줄기 + 빛나는 몽이가 천천히 헤엄침
+    if (decoShown('moon')) {
+      const rays = this.add.image(W * 0.75, 120, 'ptc_rays').setScale(2.6).setTint(0xCFE6FF).setAlpha(0.22).setDepth(6);
+      this.tweens.add({ targets: rays, angle: 360, duration: 60000, repeat: -1 });
+      const y = H * 0.24;
+      const glow = this.add.image(W * 0.25, y, 'ptc_glow').setDisplaySize(520, 420).setTint(0xBFE0FF).setAlpha(0.55).setBlendMode(Phaser.BlendModes.ADD).setDepth(7);
+      const whale = this.add.image(W * 0.25, y, 'mascot_happy').setScale(0.3).setTint(0xDDEEFF).setDepth(7);
+      this.tweens.add({ targets: [whale, glow], x: W * 0.72, yoyo: true, repeat: -1, duration: 9000, ease: 'Sine.InOut', onYoyo: () => whale.setFlipX(!whale.flipX), onRepeat: () => whale.setFlipX(!whale.flipX) });
+      this.tweens.add({ targets: [whale, glow], y: y - 30, yoyo: true, repeat: -1, duration: 1700, ease: 'Sine.InOut' });
+      this.time.addEvent({ delay: 380, loop: true, callback: () => {
+        const sp = this.add.image(whale.x + Phaser.Math.Between(-90, 90), whale.y + Phaser.Math.Between(-60, 60), 'ptc_spark').setScale(0.3).setTint(0xE6F2FF).setDepth(7);
+        this.tweens.add({ targets: sp, y: sp.y - 90, alpha: 0, duration: 1200, onComplete: () => sp.destroy() });
+      } });
+    }
+  }
+  decoPopup() {
+    const p = popup(this, { title: bt('decoTitle'), width: 940, height: 880 });
+    window.__decoPop = p;
+    let busy = false;
+    const card = (y, id, icon, name, desc) => {
+      p.box.add(this.add.nineslice(0, y, 'hud_goal_box', null, 840, 300, 40, 40, 40, 40));
+      const ic = icon(); ic.setPosition(-310, y); p.box.add(ic);
+      p.box.add(this.add.text(-190, y - 80, name, { ...TXT.dark, fontSize: '42px', color: '#FFFFFF', stroke: '#0B3E8A', strokeThickness: 8 }).setOrigin(0, 0.5));
+      p.box.add(this.add.text(-190, y - 10, desc, { ...TXT.body, fontSize: '26px', align: 'left', wordWrap: { width: 580, useAdvancedWrap: true } }).setOrigin(0, 0.5));
+      const by = y + 85;
+      if (decoOpen(id)) {
+        const on = decoOnPref(id);
+        p.box.add(button(this, 170, by, `${bt(on ? 'on' : 'off')}`, () => { setDeco(id, !on); p.close(true); this.scene.restart({ world: this.world }); }, { kind: on ? 'primary' : 'secondary', width: 260, height: 100, size: 36 }));
+      } else if (id === 'moon') {
+        p.box.add(this.add.image(-150, by, 'ico_lock').setScale(0.5));
+        p.box.add(this.add.text(-110, by, bt('ownLocked'), { ...TXT.small, fontSize: '30px' }).setOrigin(0, 0.5));
+      } else {
+        const price = bm.price('deco');
+        if (price) p.box.add(goldify(this, button(this, 170, by, `🪙${price}`, async () => {
+          if (busy) return; busy = true;
+          const r = await buyDeco(); busy = false;
+          if (r.ok) { setDeco('pearl', true); audio.play('sfx_coin'); p.close(true); this.scene.restart({ world: this.world, toast: bt('bought') }); }
+          else if (r.reason !== 'cancel') toast(this, failMsg(r));
+        }, { width: 300, height: 100, size: 38 })));
+      }
+    };
+    this.pearlTexture();
+    card(-150, 'moon', () => { const c = this.add.container(0, 0); c.add(this.add.image(0, 0, 'ptc_glow').setDisplaySize(220, 220).setTint(0xBFE0FF).setAlpha(0.6)); c.add(this.add.image(0, 0, 'mascot_happy').setScale(0.13).setTint(0xDDEEFF)); return c; }, bt('moonName'), bt('moonDesc'));
+    card(190, 'pearl', () => { const c = this.add.container(0, 0); c.add(this.add.image(0, 0, 'ptc_glow').setDisplaySize(200, 200).setTint(0xFFD6A0).setAlpha(0.6)); c.add(this.add.image(0, 0, 'deco_pearl').setScale(1.3)); return c; }, bt('pearlName'), bt('pearlDesc'));
   }
 
   // 완료한 과제 수에 맞춰 장면 상태를 맞춤 (animate: 방금 해결한 과제만 연출)

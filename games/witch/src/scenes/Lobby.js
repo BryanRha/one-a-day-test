@@ -1,14 +1,15 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.74.0';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save, reset } from '../save.js?v=0.74.0';
-import { CATS } from '../core/run.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { wind, ELEMENT } from '../fx.js?v=0.74.0';
-import { WITCHES } from '../core/run.js?v=0.74.0';
-import { bm } from '../oad_bm.js?v=0.74.0';
-import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save, reset } from '../save.js?v=0.75.0';
+import { CATS } from '../core/run.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { wind, ELEMENT } from '../fx.js?v=0.75.0';
+import { WITCHES } from '../core/run.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { hofShown, hofPopup } from '../hof.js?v=0.75.0';
+import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.75.0';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -449,7 +450,10 @@ export class LobbyScene extends Phaser.Scene {
     const pop = popup(this, '주간 랭킹', ph);
     const b = pop.box;
     b.add(txt(this, 0, -ph / 2 + 120, '이번 주 최고 점수로 겨뤄요 · 월요일에 새로 시작', 32, '#D8CCFF'));
-    const area = scrollArea(this, b, 0, -ph / 2 + 170, 900, ph - 220);
+    /* 원어데이 안: 아래에 '이번 주 명예의 전당' (진짜 사람들 · 소장자 혜택) */
+    const hof = hofShown();
+    const area = scrollArea(this, b, 0, -ph / 2 + 170, 900, ph - 220 - (hof ? 150 : 0));
+    if (hof) b.add(button(this, 0, ph / 2 - 100, '이번 주 명예의 전당', () => hofPopup(this), { key: 'btn_gold', w: 640, h: 120, size: 40 }));
     M.ranking().forEach((r, i) => {
       const y = i * 110 + 55;
       area.add(this.add.rectangle(0, y, 860, 100, r.me ? 0x6A3AC0 : 0x120830, r.me ? 0.9 : 0.6).setStrokeStyle(3, r.me ? 0xFFD95A : 0x4A3A80));

@@ -1,17 +1,20 @@
 // 숨은 물건 맵 (Find It Out® 식): 고밀도 세로 맵 · 아래 아이콘 5칸(찾으면 다음 물건이 채워짐) · 실패·시간 제한 없음
 // + 이야기 단서: 분홍 테두리 아이콘 · 찾으면 서윤 혼잣말 · 물건마다 코인 · 힌트는 코인
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { goPrev } from '../nav.js?v=0.74.0';
-import { pushBack } from '../oad.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import { Viewer } from '../viewer.js?v=0.74.0';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.74.0';
-import { starOnce } from '../cafe/state.js?v=0.74.0';
-import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { goPrev } from '../nav.js?v=0.75.0';
+import { pushBack } from '../oad.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import { Viewer } from '../viewer.js?v=0.75.0';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.75.0';
+import { starOnce } from '../cafe/state.js?v=0.75.0';
+import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.75.0';
 
-const SLOTS = 5, HINT_COST = 10, SPAM = { n: 3, t: 2, lock: 3 };
+import { HINT_COST, roundEnd } from '../bm.js?v=0.75.0';
+import { hintOffer } from '../bmui.js?v=0.75.0';
+
+const SLOTS = 5, SPAM = { n: 3, t: 2, lock: 3 };
 export class HuntScene extends Phaser.Scene {
   constructor() { super('Hunt'); }
   create(data) {
@@ -107,16 +110,21 @@ export class HuntScene extends Phaser.Scene {
   }
   hint() {
     if (this.ended || this.paused) return; const d = load();
-    if (d.coins < HINT_COST) return toast(this, '코인이 부족해요 · 물건을 찾으면 모여요');
+    if (!this.slots.some(s => s.it)) return;
+    // 코인이 모자라면 광고 힌트 창 (원어데이 안 · 하루 3번) — 밖이면 예전처럼 안내만
+    if (d.coins < HINT_COST) { this.paused = true; return hintOffer(this, d.coins, () => { this.paused = false; this.showHint(); }, () => { this.paused = false; }); }
+    d.coins -= HINT_COST; save(); this.showHint();
+  }
+  showHint() {
     const s = this.slots.find(s => s.it && !s.it.clue) || this.slots.find(s => s.it); if (!s) return;
-    d.coins -= HINT_COST; this.hints++; save(); this.ui(); audio.play('sfx_hint', { volume: 0.7 });
+    this.hints++; this.ui(); audio.play('sfx_hint', { volume: 0.7 });
     this.v.focus(s.it.x, s.it.y, 2.6);
     const g = this.add.image(s.it.x, s.it.y, 'glow').setTint(0xFFE27A).setBlendMode('ADD'); g.setScale(s.it.r * 3.4 / 128); this.v.layer.add(g);
     this.tweens.add({ targets: g, alpha: 0.15, duration: 420, yoyo: true, repeat: 4, onComplete: () => g.destroy() });
     this.tweens.add({ targets: s.c, scale: 1.15, duration: 200, yoyo: true, repeat: 2 });
   }
   win() {
-    if (this.ended) return; this.ended = true;
+    if (this.ended) return; this.ended = true; roundEnd();
     if (this.replay) return this.time.delayedCall(500, () => replayResult(this, { id: this.ep.id, kind: 'hunt', n: this.total, sec: this.t, slip: this.hints, next: 'mid' })); audio.play('sfx_clear', { volume: 0.7 }); this.cameras.main.flash(300, 255, 230, 240);
     const t = T(this, W / 2, H * 0.42, '단서를 모두 찾았어요!', 60, '#FFFFFF', { w: 900, shadow: true }).setDepth(60).setAlpha(0); this.tweens.add({ targets: t, alpha: 1, y: H * 0.4, duration: 400 });
     advance(this.ep.id, 'mid');

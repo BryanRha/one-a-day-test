@@ -1,12 +1,13 @@
 // 결과: 거리·점수(최고 기록) · 주운 재화 · 입양 진행 · 미션 진행 → 다시 날기 / 로비
-import { W, H } from '../config.js?v=0.74.0';
-import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load } from '../save.js?v=0.74.0';
-import { wind } from '../fx.js?v=0.74.0';
-import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.74.0';
-import { bm } from '../oad_bm.js?v=0.74.0';
-import { outfitKey } from '../outfit.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load } from '../save.js?v=0.75.0';
+import { wind } from '../fx.js?v=0.75.0';
+import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.75.0';
+import { bm } from '../oad_bm.js?v=0.75.0';
+import { outfitKey } from '../outfit.js?v=0.75.0';
+import { hofShown, hofPopup, submitRun } from '../hof.js?v=0.75.0';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -81,6 +82,11 @@ export class ResultScene extends Phaser.Scene {
     });
 
     this.coins2x(r, vals[0], top + 1125);
+    /* 명예의 전당 (원어데이 안): 판 점수를 올리고 버튼 · 이어하기 · 응원 선물 판은 assisted */
+    if (hofShown()) {
+      iconButton(this, W / 2 + 400, top + 240, 'ico_trophy', () => hofPopup(this), 120, { label: '명예의 전당' });
+      submitRun(r.score, !!(r.revived || r.helped)).then(msg => { if (msg && this.sys.isActive()) this.time.delayedCall(r.revived ? 2400 : 1200, () => toast(this, msg, '#FFE14D', top + 470)); });
+    }
     const by = Math.min(H - 170, top + 1330);
     button(this, W / 2 + 160, by, '다시 날기', () => this.go('Play'), { key: 'btn_gold', w: 520, h: 160, icon: 'ico_retry' });
     iconButton(this, W / 2 - 300, by, 'ico_home', () => this.go('Lobby'), 160);

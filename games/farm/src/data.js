@@ -643,3 +643,7 @@ export const resTime = l => l * 1800;   // 초
 
 // 계절 한정 장식 (이벤트 → 계절 상점에서만)
 for (const k of ['cherry', 'blossombench', 'eggbasket', 'tulipmodel', 'magnolia', 'icecart', 'lemonade', 'rainbowbed', 'balloonmodel', 'hotspring', 'pumpkinpatch', 'jackolantern', 'crowscare', 'spookycrow', 'goldcow', 'snowman', 'giftpile', 'gingerhouse', 'reindeer', 'xmastree']) if (BUILDS[k]) BUILDS[k].lim = true;
+// 원어데이 장식 2종 (겉모습만 · 매력 0 · 건설 메뉴에서 못 사고 보관함(lim)에서만 놓음) — store.js
+//   goldfountain: 골드 상품 '특별 장식'(deco) · stargazebo: 소장자 전용 (무료)
+BUILDS.goldfountain = { n: '황금 수정 분수', k: 'deco', sz: 1, cost: 0, lv: 1, joy: 0, lim: true, oad: 'gold' };
+BUILDS.stargazebo = { n: '별빛 정자', k: 'deco', sz: 1, cost: 0, lv: 1, joy: 0, lim: true, oad: 'owner' };

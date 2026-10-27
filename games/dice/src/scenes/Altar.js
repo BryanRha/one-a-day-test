@@ -1,16 +1,18 @@
 // 룬 제단 (뽑기): 게임에서 번 수정·열쇠·매일 무료 1회로만 · 확률 공개 · 천장 · 10회 영웅 보장 · 중복은 등급업 카드
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save, syncPity } from '../save.js?v=0.75.0';
+import * as BM from '../bmflow.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.75.0';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 
 export class AltarScene extends Phaser.Scene {
   constructor() { super('Altar'); }
   create() {
+    if (syncPity()) save();   /* 다른 기기에서 쌓은 천장 기록이 더 나중이면 그쪽으로 (save.js) */
     const d = load();
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.55);
@@ -57,7 +59,7 @@ export class AltarScene extends Phaser.Scene {
   pull(how) {
     if (this.busy) return;
     const res = how === 'legend' ? M.drawLegend() : M.draw(how);
-    if (!res) return toast(this, '수정이 부족해요 · 미션과 원정으로 모아요', C.sub);
+    if (!res) return toast(this, BM.oadOn() ? '수정이 부족해요 · 원정 · 미션 · 오늘의 상점에서 모아요' : '수정이 부족해요 · 미션과 원정으로 모아요', C.sub);
     this.busy = true; this.refresh();
     // 제단이 빨려 들어가듯 모였다가 터짐 → 결과
     const best = Math.max(...res.map(o => o.rar));
@@ -101,22 +103,51 @@ export class AltarScene extends Phaser.Scene {
     });
   }
   shop() {
-    const p = popup(this, '오늘의 상점', 900, 1180), c = p.content;
-    c.add(T(this, 0, -436, '매일 자정에 바뀌어요 · 가진 룬의 등급업 카드', 26, C.sub, { w: 800 }));
-    M.shop().forEach((o, i) => {
-      const y = -290 + i * 206;
-      const g = this.add.graphics(); g.fillStyle(0x141A44, 0.9).fillRoundedRect(-400, y - 90, 800, 180, 28).lineStyle(2, o.free ? 0x5BE39A : RARITY_COLOR[RARITY[o.r]], 0.6).strokeRoundedRect(-400, y - 90, 800, 180, 28); c.add(g);
+    // 원어데이 안: 무료 상자(광고 · 하루 1) · 수정 100(🪙100) 두 줄 더 — 뽑기를 광고 · 골드로 직접 주지는 않음
+    const oad = BM.oadOn(), items = M.shop(), extra = oad ? 2 : 0, ph = 1100 + extra * 206;
+    const p = popup(this, '오늘의 상점', 900, ph), c = p.content, top = -ph / 2 + 300;
+    c.add(T(this, 0, top - 146, '매일 자정에 바뀌어요 · 가진 룬의 등급업 카드', 26, C.sub, { w: 800 }));
+    const reopen = () => { p.close(); this.refresh(); this.time.delayedCall(160, () => this.shop()); };
+    const card = (y, line) => { const g = this.add.graphics(); g.fillStyle(0x141A44, 0.9).fillRoundedRect(-400, y - 90, 800, 180, 28).lineStyle(2, line, 0.6).strokeRoundedRect(-400, y - 90, 800, 180, 28); c.add(g); };
+    items.forEach((o, i) => {
+      const y = top + i * 206;
+      card(y, o.free ? 0x5BE39A : RARITY_COLOR[RARITY[o.r]]);
       if (o.free) { c.add(this.add.image(-300, y, 'i_star').setDisplaySize(80, 80).setTint(0x8FE3FF)); c.add(T(this, -220, y - 22, '오늘의 선물', 36, C.text, { ox: 0, w: 900 })); c.add(T(this, -220, y + 26, '수정 20 무료', 26, C.sub, { ox: 0, w: 800 })); }
       else { c.add(this.add.image(-300, y, `die_${o.r}`).setDisplaySize(120, 120)); c.add(this.add.image(-300, y, `rune_${o.r}`).setDisplaySize(68, 68)); c.add(T(this, -220, y - 22, `${RUNES[o.r].name} 카드 ×${o.qty}`, 36, C.text, { ox: 0, w: 900 })); c.add(T(this, -220, y + 26, `${RARITY_NAME[RARITY[o.r]]} · 등급업 재료`, 26, hex(RARITY_COLOR[RARITY[o.r]]), { ox: 0, w: 800 })); }
       if (o.sold) c.add(T(this, 290, y, '구매 완료', 30, C.dim, { w: 800 }));
-      else c.add(btn(this, 290, y, 210, 96, o.free ? '받기' : `◆${o.price}`, () => { const r = M.buy(i); if (!r) return toast(this, '수정이 부족해요', C.sub); audio.play('sfx_power', { volume: 0.6 }); p.close(); this.refresh(); this.time.delayedCall(160, () => this.shop()); toast(this, r.free ? '수정 +20' : `${RUNES[r.r].name} 카드 +${r.qty}`, C.gold); }, { style: o.free ? 'green' : 'indigo', size: 32 }));
+      else c.add(btn(this, 290, y, 210, 96, o.free ? '받기' : `◆${o.price}`, () => { const r = M.buy(i); if (!r) return toast(this, '수정이 부족해요', C.sub); audio.play('sfx_power', { volume: 0.6 }); reopen(); toast(this, r.free ? '수정 +20' : `${RUNES[r.r].name} 카드 +${r.qty}`, C.gold); }, { style: o.free ? 'green' : 'indigo', size: 32 }));
     });
+    if (!oad) return;
+    // 무료 상자 (광고 1회 · 소장자는 바로) — 수정 20 + 가진 룬 카드 1장
+    let y = top + items.length * 206;
+    card(y, 0x5EE3FF);
+    c.add(this.add.image(-300, y, 'i_film').setDisplaySize(80, 80).setTint(0x5EE3FF));
+    c.add(T(this, -220, y - 22, '무료 상자', 36, C.text, { ox: 0, w: 900 }));
+    c.add(T(this, -220, y + 26, `수정 20 + 룬 카드 1 · 하루 ${BM.AD.box}번`, 26, C.sub, { ox: 0, w: 800 }));
+    const own = BM.owned(), boxLeft = BM.boxLeft();
+    if (!boxLeft) c.add(T(this, 290, y, '내일 다시', 30, C.dim, { w: 800 }));
+    else if (!own && !BM.adReady()) c.add(T(this, 290, y, '오늘 광고 끝', 28, C.dim, { w: 800 }));
+    else c.add(btn(this, 290, y, 210, 96, own ? '바로 받기' : '광고 보기', async () => {
+      if (this.busy) return; this.busy = true; const r = await BM.freeBox(); this.busy = false;
+      if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
+      audio.play('sfx_awaken', { volume: 0.6 }); reopen(); toast(this, `수정 +${r.crystals} · ${RUNES[r.rune].name} 카드 +1`, C.gold);
+    }, { style: 'green', size: own ? 28 : 30 }));
+    // 수정 100 = 🪙100 (서버 하루 5번 · 무료 길: 원정 · 미션 · 출석 · 보상 길)
+    y += 206; card(y, 0xF5C451);
+    c.add(this.add.image(-300, y, 'i_star').setDisplaySize(80, 80).setTint(0x8FE3FF));
+    c.add(T(this, -220, y - 22, '수정 100', 36, C.text, { ox: 0, w: 900 }));
+    c.add(T(this, -220, y + 26, '원어데이 골드로 · 뽑기 확률 · 천장은 그대로', 24, C.sub, { ox: 0, w: 800 }));
+    c.add(btn(this, 290, y, 210, 96, `🪙${BM.price('crystal100')}`, async () => {
+      if (this.busy) return; this.busy = true; const r = await BM.buyCrystals(); this.busy = false;
+      if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
+      audio.play('sfx_power', { volume: 0.6 }); this.refresh(); toast(this, '수정 +100', '#8FE3FF');
+    }, { style: 'gold', size: 32, ls: 0 }));
   }
   odds() {
     const p = popup(this, '확률 정보', 900, 1100), c = p.content;
     const d = load();
     [0, 1, 2, 3].forEach(k => { const all = RUNE_ORDER.filter(r => RARITY[r] === k), own = all.filter(r => d.unlocked[r]).length; c.add(T(this, 0, -330 + k * 100, `${RARITY_NAME[k]}  ${Math.round(M.ODDS[k] * 100)}%   ·   ${all.length}종 (보유 ${own})`, 34, hex(RARITY_COLOR[k]), { w: 900 })); });
-    c.add(T(this, 0, 220, `· ${M.PITY}회 안에 전설이 반드시 나와요\n· 10회 뽑기는 영웅 이상 1개 보장\n· 같은 등급 안에서는 아직 없는 룬이 더 잘 나와요\n· 이미 가진 룬은 등급업 카드가 돼요\n· 수정은 게임 안에서만 얻어요 (구매 없음)`, 28, C.sub, { w: 700, lh: 14 }));
+    c.add(T(this, 0, 220, `· ${M.PITY}회 안에 전설이 반드시 나와요\n· 10회 뽑기는 영웅 이상 1개 보장\n· 같은 등급 안에서는 아직 없는 룬이 더 잘 나와요\n· 이미 가진 룬은 등급업 카드가 돼요\n· ${BM.oadOn() ? '수정은 게임에서 얻고, 원어데이 골드로도 살 수 있어요\n  (골드로 바로 뽑지는 않아요)' : '수정은 게임 안에서만 얻어요 (구매 없음)'}`, 28, C.sub, { w: 700, lh: 14 }));
   }
   go(k) { audio.stopMusic(); this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
 }

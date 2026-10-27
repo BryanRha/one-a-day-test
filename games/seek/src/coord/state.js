@@ -1,7 +1,8 @@
 // 오늘의 코디 저장 · 판정 (d.coord)
-import { save } from '../save.js?v=0.74.0';
-import { cafeData, level, epDone, today } from '../cafe/state.js?v=0.74.0';
-import { OUTFITS, ACCS, THEMES, JUDGES } from './data.js?v=0.74.0';
+import { save } from '../save.js?v=0.75.0';
+import { cafeData, level, epDone, today } from '../cafe/state.js?v=0.75.0';
+import { OUTFITS, ACCS, THEMES, JUDGES } from './data.js?v=0.75.0';
+import { oadOn, owner, outfitBought, price } from '../bm.js?v=0.75.0';
 
 export function coordData() {
   const d = cafeData();
@@ -12,9 +13,15 @@ export const item = id => OUTFITS.find(o => o.id === id) || ACCS.find(a => a.id 
 // 가진 옷: 처음부터 · 이야기 화 · 카페 레벨 · 상점에서 산 것
 export function owned(id) {
   const it = item(id), c = coordData().coord; if (!it) return false;
+  if (it.get === 'gold') return outfitBought();     /* 특별 코디 (원어데이 골드 item · hello().items 로 복원) */
+  if (it.get === 'owner') return owner();           /* 소장자 전용 (원어데이 밖이면 잠김) */
   return it.get === 'start' || c.own.includes(id) || (it.get === 'ep' && epDone(it.ep)) || (it.get === 'lv' && level() >= it.lv);
 }
-export const lockText = it => it.get === 'ep' ? `이야기 ${it.ep.slice(2)}화를 보면` : it.get === 'lv' ? `냥카페 Lv.${it.lv}에서` : `● ${it.price}`;
+export const lockText = it => it.get === 'gold' ? `🪙${price('outfit')}` : it.get === 'owner' ? '소장 기념' : it.get === 'ep' ? `이야기 ${it.ep.slice(2)}화를 보면` : it.get === 'lv' ? `냥카페 Lv.${it.lv}에서` : `● ${it.price}`;
+// 옷장 목록: 원어데이 전용은 안에서만 · 맨 앞에
+export const outfitList = () => { const sp = oadOn() ? OUTFITS.filter(o => o.base) : []; return [...sp, ...OUTFITS.filter(o => !o.base)]; };
+// 지금 입은 옷 (원어데이 밖이거나 잠긴 옷이면 기본 옷으로 보여 줌 · 저장은 그대로)
+export function wearNow() { const w = coordData().coord.wear; return owned(w.o) ? w : { ...w, o: 'o27' }; }
 export function buy(id) { const d = coordData(), it = item(id); if (!it || it.get !== 'shop' || owned(id) || d.coins < it.price) return false; d.coins -= it.price; d.coord.own.push(id); save(); return true; }
 // 오늘의 주제: 날짜마다 하나 (30일 순환)
 export function todayTheme() { const t = new Date(), n = Math.floor(new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime() / 864e5); return { i: n % THEMES.length, ...THEMES[n % THEMES.length] }; }

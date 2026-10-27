@@ -1,11 +1,12 @@
 // 홈: 클래식 · 어드벤처 두 모드 + 연속 출석 · 별 조각 · 오늘의 미션 · 컬렉션
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.74.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { load, save } from '../save.js?v=0.74.0';
-import * as M from '../meta.js?v=0.74.0';
-import { makeLevel, SEASON_LEVELS } from '../core/levels.js?v=0.74.0';
-import { pictureView } from '../picture.js?v=0.74.0';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.75.0';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { load, save } from '../save.js?v=0.75.0';
+import * as M from '../meta.js?v=0.75.0';
+import { makeLevel, SEASON_LEVELS } from '../core/levels.js?v=0.75.0';
+import { pictureView } from '../picture.js?v=0.75.0';
+import { hallShown, hallPopup } from '../hall.js?v=0.75.0';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -36,6 +37,7 @@ export class HomeScene extends Phaser.Scene {
     T(this, 160, cy + 50, `최고 ${fmt(d.best)}`, 38, C.gold, { ox: 0, w: 800 });
     const today = d.todayBest.date === M.dayKey() ? d.todayBest.score : 0;
     T(this, 110, cy + 104, `오늘 최고 ${fmt(today)}`, 30, C.sub, { ox: 0, w: 700 });
+    if (hallShown()) iconBtn(this, W - 490, cy + 20, 'i_trophy', () => hallPopup(this), 104);   /* 이번 주 명예의 전당 */
     btn(this, W - 260, cy + 20, 300, 132, '플레이', () => this.go('Play', { mode: 'classic' }), { style: 'gold', icon: 'i_play', size: 44 });
     // ── 어드벤처 카드 ──
     const a = M.adv(), ay = cy + 430 + sp;

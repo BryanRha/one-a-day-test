@@ -1,13 +1,14 @@
 // 오늘의 코디: 매일 이야기 속 상황 하나(Covet · Dress to Impress) → 옷장(한 벌 + 머리 · 가방 · 손 소품, 추천 3벌) → 인생샷 → 하나 · 지아 · 어머니 심사
-import { W, H } from '../config.js?v=0.74.0';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.74.0';
-import { audio } from '../audio.js?v=0.74.0';
-import { goPrev } from '../nav.js?v=0.74.0';
-import { save } from '../save.js?v=0.74.0';
-import { OUTFITS, ACCS, THEMES, SLOT_NAMES } from '../coord/data.js?v=0.74.0';
-import { coordData, item, owned, lockText, buy, todayTheme, doneToday, judge, recommend } from '../coord/state.js?v=0.74.0';
-import { buildLook } from '../coord/look.js?v=0.74.0';
-import { today } from '../cafe/state.js?v=0.74.0';
+import { W, H } from '../config.js?v=0.75.0';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.75.0';
+import { audio } from '../audio.js?v=0.75.0';
+import { goPrev } from '../nav.js?v=0.75.0';
+import { save } from '../save.js?v=0.75.0';
+import { OUTFITS, ACCS, THEMES, SLOT_NAMES } from '../coord/data.js?v=0.75.0';
+import { coordData, item, owned, lockText, buy, todayTheme, doneToday, judge, recommend, outfitList } from '../coord/state.js?v=0.75.0';
+import { buyOutfit, failText, price } from '../bm.js?v=0.75.0';
+import { buildLook } from '../coord/look.js?v=0.75.0';
+import { today } from '../cafe/state.js?v=0.75.0';
 
 const SHEET = 620, PER = 10;
 export class CoordScene extends Phaser.Scene {
@@ -64,7 +65,7 @@ export class CoordScene extends Phaser.Scene {
     recommend(th).forEach((id, i) => {
       const y = 230 + cardH / 2 + i * (cardH + 14), c = this.add.container(920, y).setDepth(5), g = this.add.graphics(); g.fillStyle(0xFFFFFF, 0.95).fillRoundedRect(-95, -cardH / 2, 190, cardH, 20); c.add(g);
       const im = this.add.image(0, 0, id); im.setScale((cardH - 20) / im.height); c.add(im);
-      c.setSize(190, cardH).setInteractive({ useHandCursor: true }).on('pointerup', () => { this.wear('outfit', id); this.tab = 'outfit'; this.page = Math.floor(OUTFITS.findIndex(o => o.id === id) / PER); this.drawSheet(); });
+      c.setSize(190, cardH).setInteractive({ useHandCursor: true }).on('pointerup', () => { this.wear('outfit', id); this.tab = 'outfit'; this.page = Math.floor(outfitList().findIndex(o => o.id === id) / PER); this.drawSheet(); });
     });
     this.drawSheet();
   }
@@ -84,25 +85,29 @@ export class CoordScene extends Phaser.Scene {
       tg.fillStyle(on ? 0xE8628A : 0xF6E3EA, 1).fillRoundedRect(-105, -32, 210, 64, 32); tb.add([tg, T(this, 0, -2, SLOT_NAMES[k], 26, on ? '#FFFFFF' : C.ink, { w: 900 })]);
       tb.setSize(210, 64).setInteractive({ useHandCursor: true }).on('pointerup', () => { this.tab = k; this.page = 0; audio.play('sfx_click', { volume: 0.3 }); this.drawSheet(); }); s.add(tb);
     });
-    const list = this.tab === 'outfit' ? OUTFITS : ACCS.filter(a => a.slot === this.tab), pages = Math.ceil(list.length / PER); this.page = Math.min(this.page, pages - 1);
+    const list = this.tab === 'outfit' ? outfitList() : ACCS.filter(a => a.slot === this.tab), pages = Math.ceil(list.length / PER); this.page = Math.min(this.page, pages - 1);
     const cw = 176, ch = 196;
     list.slice(this.page * PER, this.page * PER + PER).forEach((it, i) => {
       const x = 120 + (i % 5) * (cw + 14), y = y0 + 210 + Math.floor(i / 5) * (ch + 14), have = owned(it.id), on = this.tab === 'outfit' ? this.w.o === it.id : this.w[this.tab] === it.id;
       const c = this.add.container(x, y), cg = this.add.graphics(); cg.fillStyle(0xFFFFFF, 1).fillRoundedRect(-cw / 2, -ch / 2, cw, ch, 20).lineStyle(on ? 6 : 2, on ? 0xE8628A : 0xF0D6DF, 1).strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 20); c.add(cg);
       const im = this.add.image(0, -10, it.id); im.setScale(Math.min((cw - 24) / im.width, (ch - 50) / im.height)); if (!have) im.setAlpha(0.35); c.add(im);
-      if (!have) { const lg = this.add.graphics(); lg.fillStyle(it.get === 'shop' ? 0xF0B65A : 0x9A7A8A, 1).fillRoundedRect(-cw / 2 + 10, ch / 2 - 44, cw - 20, 36, 18); c.add([lg, T(this, 0, ch / 2 - 27, lockText(it), 18, '#FFFFFF', { w: 900 })]); }
+      if (!have) { const lg = this.add.graphics(); lg.fillStyle(it.get === 'gold' ? 0x4E6AC6 : it.get === 'owner' ? 0xE8628A : it.get === 'shop' ? 0xF0B65A : 0x9A7A8A, 1).fillRoundedRect(-cw / 2 + 10, ch / 2 - 44, cw - 20, 36, 18); c.add([lg, T(this, 0, ch / 2 - 27, lockText(it), 18, '#FFFFFF', { w: 900 })]); }
+      else if (it.base) c.add(T(this, 0, ch / 2 - 24, it.get === 'owner' ? '소장 기념' : '특별 코디', 17, it.get === 'owner' ? '#E8628A' : '#4E6AC6', { w: 900 }));
       else if (this.tab !== 'outfit') c.add(T(this, 0, ch / 2 - 24, it.s, 18, '#C25A80', { w: 800 }));
       else c.add(T(this, 0, ch / 2 - 24, it.s.join(' · '), 17, '#C25A80', { w: 800 }));
       c.setSize(cw, ch).setInteractive({ useHandCursor: true }).on('pointerup', () => {
         if (have) { this.wear(this.tab, it.id); return this.drawSheet(); }
+        if (it.get === 'gold') return this.goldShop(it);
+        if (it.get === 'owner') return toast(this, '원어데이에서 이 게임을 소장하면 무료로 열려요', y0 - 80);
         if (it.get !== 'shop') return toast(this, `${it.n} · ${lockText(it)} 얻어요`, y0 - 80);
         this.shop(it);
       });
       s.add(c);
     });
     if (pages > 1) {
-      s.add(T(this, W / 2, y0 + 432, `${this.page + 1} / ${pages}`, 22, C.dim, { w: 800 }));
-      const pv = iconBtn(this, W / 2 - 110, y0 + 432, '‹', () => { this.page = (this.page + pages - 1) % pages; this.drawSheet(); }, 64); const nx = iconBtn(this, W / 2 + 110, y0 + 432, '›', () => { this.page = (this.page + 1) % pages; this.drawSheet(); }, 64); s.add([pv, nx]);
+      /* 쪽 넘기기: 탭 줄 오른쪽 (예전 자리는 둘째 줄 카드와 겹침) · 끝에서 처음으로 돎 */
+      s.add(T(this, 978, y0 + 60, `${this.page + 1}/${pages}`, 22, C.dim, { w: 800 }));
+      const nx = iconBtn(this, 1038, y0 + 60, '›', () => { this.page = (this.page + 1) % pages; this.drawSheet(); }, 60); s.add(nx);
     }
     s.add(btn(this, W / 2, y0 + 540, 560, 110, '이 코디로 촬영하기', () => this.shoot(), { size: 34 }));
   }
@@ -117,6 +122,20 @@ export class CoordScene extends Phaser.Scene {
       if (!buy(it.id)) return toast(this, '코인이 부족해요 · 이야기와 냥카페에서 모여요');
       audio.play('sfx_clear', { volume: 0.5 }); p.close(); this.coinT.setText(`● ${coordData().coins}`); this.wear(it.slot || 'outfit', it.id); this.drawSheet(); toast(this, `${it.n}을(를) 옷장에 넣었어요`, H - SHEET - 80);
     }, { size: 28 }));
+  }
+  // 특별 코디 (원어데이 골드 · 한 번 사면 계속): 겉모습만 · 다른 옷과 같은 급
+  goldShop(it) {
+    const p = popup(this, 800, 820); let busy = false;
+    p.content.add(T(this, 0, -350, '특별 코디', 26, '#4E6AC6', { w: 900 }));
+    p.content.add(T(this, 0, -300, it.n, 38, C.ink, { w: 900 }));
+    const im = this.add.image(0, -60, it.id); im.setScale(Math.min(380 / im.height, 300 / im.width)); p.content.add(im);
+    p.content.add(T(this, 0, 170, `분위기 · ${it.s.join(' · ')} · 원어데이 안에서 입을 수 있어요`, 22, '#C25A80', { w: 800, wrap: 720 }));
+    p.content.add(btn(this, -180, 300, 320, 110, '그만두기', () => p.close(), { style: 'cream', size: 28 }));
+    p.content.add(btn(this, 180, 300, 340, 110, `🪙${price('outfit')} 사기`, async () => {
+      if (busy) return; busy = true; const r = await buyOutfit(); busy = false;
+      if (!r.ok) { const m = failText(r); if (m) toast(this, m); return; }
+      audio.play('sfx_clear', { volume: 0.5 }); p.close(); this.wear('outfit', it.id); this.drawSheet(); toast(this, `${it.n}을(를) 옷장에 넣었어요`, H - SHEET - 80);
+    }, { style: 'gold', size: 30 }));
   }
   // ── 3. 인생샷
   shoot() {

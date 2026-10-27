@@ -1,13 +1,14 @@
 // 로비 장면: 밤의 야영지 · 모닥불 · 주인공이 서 있고 카메라가 천천히 돎 (화면마다 카메라 위치가 바뀜)
 import * as THREE from 'three';
-import { E } from './engine.js?v=0.74.0';
-import { load } from './assets.js?v=0.74.0';
-import { place, loadProp } from './props.js?v=0.74.0';
-import { Actor } from './actor.js?v=0.74.0';
-import { FX, initFX, clearFX, updateFX } from './fx.js?v=0.74.0';
-import { skyTex, discMask } from './fxtex.js?v=0.74.0';
-import { RIM } from './assets.js?v=0.74.0';
-import { setVignette } from './engine.js?v=0.74.0';
+import { E } from './engine.js?v=0.75.0';
+import { load } from './assets.js?v=0.75.0';
+import { place, loadProp } from './props.js?v=0.75.0';
+import { Actor } from './actor.js?v=0.75.0';
+import { FX, initFX, clearFX, updateFX } from './fx.js?v=0.75.0';
+import { skyTex, discMask } from './fxtex.js?v=0.75.0';
+import { RIM } from './assets.js?v=0.75.0';
+import { setVignette } from './engine.js?v=0.75.0';
+import { applySkin } from './bmx.js?v=0.75.0';
 
 export const L = { on: false, hero: null, t: 0, view: 'home', fire: new THREE.Vector3(-170, 40, -60) };
 const VIEWS = { home: { r: 820, h: 330, look: [20, 130, -40], sway: 0.22, a0: 0.12 }, hero: { r: 600, h: 230, look: [100, 40, 40], sway: 0.05, a0: 0.18 }, title: { r: 1050, h: 430, look: [-20, 160, -80], sway: 0.18, a0: -0.05 } };
@@ -26,11 +27,13 @@ export async function buildLobby() {
   sc.add(new THREE.HemisphereLight(0x9ab0e0, 0x3a2418, 1.7)); const moon = new THREE.DirectionalLight(0xb8ccff, 1.9); moon.position.set(600, 900, 300); moon.castShadow = true; Object.assign(moon.shadow.camera, { left: -800, right: 800, top: 800, bottom: -800, near: 100, far: 3000 }); moon.shadow.mapSize.set(1024, 1024); moon.shadow.bias = -0.0008; sc.add(moon);
   g.receiveShadow = true; disc.receiveShadow = true;
   L.fireL = new THREE.PointLight(0xff8a3a, 9, 1500, 1.4); L.fireL.position.set(L.fire.x, 140, L.fire.z); sc.add(L.fireL);
-  L.hero = new Actor('warrior', { shadow: 95 }); L.hero.pos.set(100, 0, 40); L.hero.face(0.25, true); L.hero.play('idle', { loop: true }); sc.add(L.hero.root);
+  L.hero = new Actor('warrior', { shadow: 95 }); L.hero.pos.set(100, 0, 40); L.hero.face(0.25, true); L.hero.play('idle', { loop: true }); applySkin(L.hero); sc.add(L.hero.root);
   L.cam = { a: VIEWS.home.a0, p: new THREE.Vector3(), l: new THREE.Vector3(40, 120, 0) }; L.on = true; L.t = 0;
   if (!L.tick) { L.tick = (dt, raw) => { if (!L.on) return; L.t += raw; lobbyUpdate(raw); }; E.updaters.add(L.tick); }
   setView('home', true);
 }
+/* 무기 외형을 바꾸면 로비 주인공에도 바로 */
+export function lobbySkin(id) { if (L.hero) applySkin(L.hero, id); }
 export function setView(v, now) { L.view = v; if (now) { const V = VIEWS[v]; L.cam.a = V.a0; } }
 export function heroPose(clip, o = {}) { if (L.hero) L.hero.play(clip, { fade: 0.2, ...o, onEnd: () => L.hero.play('idle', { loop: true, fade: 0.3 }) }); }
 function lobbyUpdate(dt) {
