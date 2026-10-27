@@ -1,11 +1,11 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX } from './data.js?v=0.67.3';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.67.3';
-import { cup } from './models.js?v=0.67.3';
-import { fmt, machineCount, storeMult, WALL_SLOTS } from './game.js?v=0.67.3';
-import { sfx, setAudio } from './audio.js?v=0.67.3';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.67.3';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX } from './data.js?v=0.67.4';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.67.4';
+import { cup } from './models.js?v=0.67.4';
+import { fmt, machineCount, storeMult, WALL_SLOTS } from './game.js?v=0.67.4';
+import { sfx, setAudio } from './audio.js?v=0.67.4';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.67.4';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_';
@@ -109,7 +109,7 @@ export class UI {
         <button class="go ${sel ? '' : 'off'}" id="go">${sel ? `${sel.name} ${sel.n}잔 ${oven ? '굽기' : '내리기'} · ${tlabel(sel.t)}` : '메뉴를 골라요'}</button>`, 'sheet');
       md.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { this._cat = b.dataset.c; this._sel = null; draw(); });
       md.querySelectorAll('.mc:not(.lock)').forEach(b => b.onclick = () => { this._sel = b.dataset.k; sfx('tap', { vol: 0.4 }); draw(); });
-      $('#go').onclick = () => { if (!this._sel) return; const e = this.app.game.brew(m, this._sel); if (e) { this.toast(e); if (e.startsWith('원두')) setTimeout(() => this.roastSheet(), 600); return; } if (S.tut < 1) S.tut = 1; this.close(); this.toast(`${MENU[this._sel].name} 내리는 중…`); }; };
+      $('#go').onclick = () => { if (!this._sel) return; const e = this.app.game.brew(m, this._sel); if (e) { this.toast(e); if (e.startsWith('원두')) setTimeout(() => this.roastSheet(), 600); return; } if (S.tut < 1) S.tut = 1; this.close(); this.toast(`${MENU[this._sel].name} ${oven ? '굽는' : '내리는'} 중…`); }; };
     draw();
   }
   brewing(m) { const g = this.app.game, roast = m === g.roaster, info = roast ? g.roastState() : g.progress(m); if (!info) return; const name = roast ? info.R.name : MENU[info.s.menu].name, left = info.left;

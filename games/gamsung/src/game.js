@@ -1,10 +1,10 @@
 // 카페 놀이: 머신으로 메뉴 내리기 → 바에 진열 → 손님이 앉아 주문 → 사장(나)이 내어 줌 → 치우기 · 원두 볶기 · 꾸미기 · 단골
 //   바닥은 100 단위 칸 — 가구가 놓인 칸은 못 지나감 · 길(문 → 모든 자리 · 바)이 막히는 배치는 안 됨
 import * as THREE from 'three';
-import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND } from './data.js?v=0.67.3';
-import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.67.3';
-import { M, box, cyl, sph, person, cup, tray, room, STATION, FURN_MODEL, poemFrame, ROOM } from './models.js?v=0.67.3';
-import { sfx } from './audio.js?v=0.67.3';
+import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND } from './data.js?v=0.67.4';
+import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.67.4';
+import { M, box, cyl, sph, person, cup, tray, room, STATION, FURN_MODEL, poemFrame, ROOM } from './models.js?v=0.67.4';
+import { sfx } from './audio.js?v=0.67.4';
 
 const V = THREE.Vector3, CELL = 100, N = 14, rnd = (a, b) => a + Math.random() * (b - a);
 export const fmt = n => Math.round(n).toLocaleString('en-US');
@@ -14,7 +14,7 @@ const DOOR = [13, 8], BAR_PICK = [8, 3], HOME = [6, 3];   /* 문 칸 · 픽업�
 const FIXED = new Set(['1,4']);   /* 나무 기둥 */
 const NOPLACE = new Set(['13,8', '13,9', '12,8']);   /* 문 앞 */
 export const WALL_SLOTS = [[-683, -60, Math.PI / 2], [-683, 180, Math.PI / 2], [-683, 520, Math.PI / 2], [-250, -683, 0], [600, -683, 0]];
-const ESP_POS = [[-240, -630], [-90, -630], [60, -630]], OVEN_POS = [[230, -630], [380, -630]], ROASTER = [-560, -560];   /* 제작: 뒷벽 작업대 위 */
+const ESP_POS = [[-170, -630], [-40, -630], [90, -630]], OVEN_POS = [[-420, -630], [-295, -630]], ROASTER = [-590, -540];   /* 제작: 뒷벽 작업대 위 · 화면 오른쪽 버튼에 가리지 않게 왼쪽·가운데로 */   /* 제작: 뒷벽 작업대 위 */
 const PICK = { x0: -5, x1: 310, z: -455, y: 117 }, LANE = -543;   /* 받는 곳: 픽업대 · 사장이 오가는 통로 */
 export const machineCount = kind => MACHINES[kind].filter(l => S.lv >= l).length;
 export const storeMult = () => STORES[S.si].mult;

@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.67.3';
+import { BRAND } from './data.js?v=0.67.4';
 
 const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -81,8 +81,8 @@ export function room(sc, theme = {}) {
   /* 제작 공간: 타일 바닥 · 뒷벽 작업대(머신 · 오븐) · 선반 · 메뉴판 */
   const tt = cvTex(128, 128, x => { x.fillStyle = '#E8E2D8'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#CFC6B8'; x.lineWidth = 3; for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32, 128); x.stroke(); x.beginPath(); x.moveTo(0, i * 32); x.lineTo(128, i * 32); x.stroke(); } });
   tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(10, 1.6); mesh(new THREE.BoxGeometry(W - 30, 2, 200), new THREE.MeshToonMaterial({ map: tt, gradientMap: gm }), 15, 1, -D / 2 + 115, sc).castShadow = false;
-  box(840, 95, 90, 0xEFE6D8, 90, 0, -625, sc); box(856, 12, 100, C.wood, 90, 95, -625, sc); box(840, 22, 6, C.woodL, 90, 18, -578, sc);
-  for (const y of [190, 252]) box(560, 8, 44, C.wood, -50, y, -672, sc);
+  box(700, 95, 90, 0xEFE6D8, -130, 0, -625, sc); box(716, 12, 100, C.wood, -130, 95, -625, sc); box(700, 22, 6, C.woodL, -130, 18, -578, sc);
+  for (const y of [190, 252]) box(560, 8, 44, C.wood, -130, y, -672, sc);
   for (let i = 0; i < 8; i++) cyl(10, 10, 26, [0xF2EBE0, 0xE8D8C4, 0xFFFFFF][i % 3], -300 + i * 70, 198, -670, sc, 10);
   for (let i = 0; i < 6; i++) box(34, 40, 30, [0xD8C8B0, 0xB8946A, 0xE8DCCB][i % 3], -280 + i * 90, 260, -670, sc);
   for (let i = 0; i < 3; i++) { box(80, 120, 8, 0x6B4A30, 300 + i * 95, 175, -D / 2 + 20, sc); box(64, 96, 2, 0x3B3028, 300 + i * 95, 187, -D / 2 + 25, sc); for (let k = 0; k < 4; k++) box(44 - k * 4, 3, 1, 0xF4ECDD, 300 + i * 95, 270 - k * 20, -D / 2 + 26.5, sc); }
