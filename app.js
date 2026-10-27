@@ -1,16 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.71.2';
-import * as R from './rules.js?v=0.71.2';
-import * as I from './install.js?v=0.71.2';
-import * as T from './track.js?v=0.71.2';
-import * as P from './pay.js?v=0.71.2';
-import * as A from './account.js?v=0.71.2';
+import { PLANNED } from './catalog.js?v=0.72.0';
+import * as R from './rules.js?v=0.72.0';
+import * as I from './install.js?v=0.72.0';
+import * as T from './track.js?v=0.72.0';
+import * as P from './pay.js?v=0.72.0';
+import * as A from './account.js?v=0.72.0';
+import * as C from './cloud.js?v=0.72.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.71.2').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.72.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.71.2';
+const VERSION = '0.72.0';
+window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -119,6 +121,51 @@ async function goldHistory() {
   openSheet(`<div class="intro"><h2>골드 내역</h2><div class="ghist">${(r.ledger || []).map(l => `<div><span>${W[l.reason] || l.reason}<small>${new Date(l.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${l.kind === 'free' ? ' · 무료 골드' : ''}</small></span><b class="${l.amount > 0 ? 'p' : 'm'}">${l.amount > 0 ? '+' : ''}${gnum(l.amount)}</b></div>`).join('') || '<p class="fsub">아직 내역이 없어요</p>'}</div>
     <div class="stack"><button class="btn ghost" data-shop>상점으로</button></div></div>`);
 }
+// 소장 완료: 지금까지의 기록을 바로 계정으로 → 무엇을 옮겼는지 보여 줌
+function progressLine(id) {
+  const lib = R.state().library[id], sum = C.hasLocal(id) ? C.localSummary(id) : '';
+  if (!lib) return sum;
+  const days = Math.max(1, Math.round((R.now() - new Date(lib.first)) / 864e5) + 1);
+  return [`${fmtKey(lib.first)}부터 ${days}일`, `${lib.plays}판`, sum].filter(Boolean).join(' · ');
+}
+async function ownedDone(id) {
+  const line = progressLine(id);
+  openSheet(`<div class="intro"><h2>🎉 ${G(id).title} 소장 완료</h2><p class="fsub" id="odmsg">${C.hasLocal(id) ? '☁ 지금까지의 기록을 계정으로 옮기는 중…' : '이제 언제든 할 수 있고, 기록은 계정에 저장돼요'}</p>
+    ${line ? `<div class="cloudcard"><b>☁ 내 계정</b><span>${line}</span></div>` : ''}
+    <div class="stack"><button class="btn" data-play="${id}">▶ 플레이</button><button class="btn ghost" data-close>닫기</button></div></div>`);
+  if (!C.hasLocal(id)) return;
+  const r = await C.push(id, { force: true }); const el = $('#odmsg');
+  if (el) el.textContent = r.ok ? '내 기록, 이제 계정에 안전하게 옮겼어요 · 폰을 바꿔도 이어져요' : '기록은 다음에 게임을 닫을 때 계정에 올라가요';
+}
+// 두 기기 모두 바뀌었을 때: 어느 쪽으로 할지 한 번 묻기 (더 최근 쪽이 기본)
+function cloudAsk(id, r) {
+  const t = x => x ? new Date(x).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  const serverNewer = !r.local.at || new Date(r.server.at) > new Date(r.local.at);
+  openSheet(`<div class="intro"><h2>☁ 어느 기록으로 할까요?</h2><p class="fsub">${G(id).title} 기록이 이 기기와 계정(다른 기기)에서 따로 바뀌었어요. 고르지 않은 쪽도 계정에 하나 남아서, 게임 정보 화면에서 되돌릴 수 있어요.</p>
+    <div class="cpick"><button class="cloudcard ${serverNewer ? 'on' : ''}" data-cpick="server" data-gid="${id}"><b>☁ 계정 (다른 기기)</b><span>${r.server.sum || '저장된 기록'}</span><small>${t(r.server.at)}</small></button>
+    <button class="cloudcard ${serverNewer ? '' : 'on'}" data-cpick="local" data-gid="${id}"><b>📱 이 기기</b><span>${r.local.sum || '이 기기 기록'}</span><small>${r.local.at ? t(r.local.at) + ' 이후 바뀜' : ''}</small></button></div>
+    <div class="stack"><button class="btn ghost" data-close>취소</button></div></div>`);
+}
+async function cloudPick(id, side, b) {
+  b.disabled = true;
+  try { if (side === 'server') await C.pull(id); else await C.push(id, { force: true }); }
+  catch { toast('연결이 불안정해요 · 이 기기 기록으로 시작해요'); }
+  play(id, true);
+}
+// 소장 권유 (성장형 게임 · 3판 이상 · 게임당 주 1회 · 앱 하루 1회 · 다시 보지 않기)
+function nudgeOwn(id) {
+  if (!A.ON || !SAVES_OK(id) || R.state().owned[id] || (R.state().library[id] || {}).plays < 3) return false;
+  let n = {}; try { n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); } catch { /* */ }
+  const today = R.keyOf(R.now());
+  if (n.off || n.day === today || (n[id] && Date.now() - n[id] < 7 * 864e5)) return false;
+  n[id] = Date.now(); n.day = today; try { localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ }
+  T.track('own_nudge', { game: id });
+  setTimeout(() => openSheet(`<div class="intro"><h2>☁ 내 기록, 이제 계정에 안전하게</h2><p class="fsub">${G(id).title}에 쌓은 기록은 지금 이 기기에 저장돼 있어요. 소장하면 계정에 저장돼 폰을 바꿔도 그대로 이어지고, 언제든 할 수 있어요.</p>
+    <div class="cloudcard"><b>📱 이 기기</b><span>${progressLine(id)}</span></div>
+    <div class="stack"><button class="btn gold" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장하기</button><button class="btn ghost" data-close>나중에</button><button class="lnk" data-nudge-off style="margin:4px auto 0;border:0;background:none;color:var(--mute);font:13px 'Jua';text-decoration:underline">다시 보지 않기</button></div></div>`), 400);
+  return true;
+}
+const SAVES_OK = id => C.hasLocal(id) || false;
 // 운세를 골드로: 서버가 골드를 빼고 영수증을 줌 → 이 기기에 보관 → 전체 풀이
 async function fortuneGold(b) {
   if (!A.current()) { sdClose(); return needLogin('골드로 열려면 로그인해 주세요'); }
@@ -134,8 +181,9 @@ async function spendGold(what, id, b) {
   try {
     const r = await A.call({ act: 'spend', what, game: id });
     R.syncItems(r.items); T.track('gold_spend', { what, game: id || '' }); closeSheet();
-    if (what === 'set') { toast('모든 게임을 소장했어요! 🎉'); go(tab); return; }
-    toast(what === 'own' ? `${G(id).title} 소장 완료! 이제 언제든 할 수 있어요` : `${G(id).title} 오늘 하루 열림!`); play(id);
+    if (what === 'set') { toast('모든 게임을 소장했어요! 🎉 기록을 계정에 옮기는 중…'); go(tab); let n = 0; for (const g of R.ORDER) if (C.hasLocal(g)) { const x = await C.push(g); if (x.ok) n++; } if (n) toast(`☁ ${n}개 게임 기록을 계정에 안전하게 옮겼어요`); return; }
+    if (what === 'own') return ownedDone(id);
+    toast(`${G(id).title} 오늘 하루 열림!`); play(id);
   } catch (e) {
     if (b) { b.disabled = false; b.textContent = b.dataset.t; }
     if (e.short) return shop(`골드가 ${gnum(e.need - ((e.gold && e.gold.total) || 0))}개 모자라요`);
@@ -346,11 +394,16 @@ $('#sheet .dim').onclick = closeSheet;
 
 function detail(id) {
   const g = G(id), a = R.access(id), lib = R.state().library[id];
+  const own = A.current() && R.state().owned[id], last = C.on(id) && C.lastSaved(id);
+  const when = d => d.toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const where = !A.ON || !lib ? '' : C.on(id)
+    ? `<div class="saveat"><span>☁ 저장 위치 · <b>내 계정</b></span><small>${last ? `마지막 저장 ${when(last)}` : '게임을 닫으면 저장돼요'}${C.canUndo(id) ? ` · <button class="lnk" data-cundo="${id}">직전 저장으로 되돌리기</button>` : ''}</small></div>`
+    : `<div class="saveat"><span>📱 저장 위치 · <b>이 기기</b></span><small>${progressLine(id)}</small></div>`;
   const actions = a !== 'locked'
-    ? `<button class="btn" data-play="${id}">▶ 플레이</button>`
+    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`
     : `<button class="btn alt" data-ad="${id}">📺 광고 보고 ${R.RULES.adUnlock === 'day' ? '오늘 하루' : '한 판'} 플레이</button>
        <button class="btn gold" data-gbuy="day" data-gid="${id}">🪙 10골드로 오늘 하루 열기</button>
-       <button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장하기 · 언제든 무제한</button>
+       <button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 언제든 + 기록을 계정에</button>
        <div class="note">오늘의 게임이 돌아오는 날엔 무료로 할 수 있어요</div>`;
   openSheet(`<div class="cover" role="img" aria-label="${g.title}" style="background-image:url('${g.cover}')"></div>
     ${g.logo ? '' : `<h2>${g.title}</h2><div class="en" style="color:var(--sub);font-size:13px;letter-spacing:1.5px">${g.en.toUpperCase()}</div>`}
@@ -383,8 +436,19 @@ function intro() {
 // 게임 화면(iframe)은 열 때마다 새로 만들고 닫을 때 지움 → 방문 기록이 쌓이지 않고, 소리·메모리도 깨끗이 정리됨
 const player = $('#player');
 let frame = null, playing = null;
-function play(id) {
+function play(id, synced) {
   if (!R.canPlay(id)) return detail(id);
+  if (!synced && C.on(id)) {
+    const t0 = Date.now();
+    openSheet(`<div class="intro"><h2>☁ 계정 기록 확인 중…</h2><p class="fsub">${G(id).title}</p></div>`);
+    C.beforePlay(id).then(r => {
+      if (r.act === 'ask') return cloudAsk(id, r);
+      if (r.act === 'pull') { openSheet(`<div class="intro"><h2>☁ 계정 기록을 불러왔어요</h2><p class="fsub">다른 기기에서 하던 ${G(id).title} 기록이에요${r.sum ? ` · ${r.sum}` : ''}</p><div class="stack"><button class="btn" data-play-synced="${id}">▶ 이어서 하기</button></div></div>`); return; }
+      if (Date.now() - t0 > 2500) { openSheet(`<div class="intro"><h2>준비됐어요</h2><div class="stack"><button class="btn" data-play-synced="${id}">▶ 플레이</button></div></div>`); return; }
+      play(id, true);
+    });
+    return;
+  }
   closeSheet();
   playing = { id, t: Date.now() };
   T.track('game_start', { game: id, how: R.access(id), today: R.gameOn(R.dayIndex()) === id ? 1 : 0 });
@@ -416,11 +480,15 @@ function lockFrame(on) {
 addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });
 window.visualViewport && visualViewport.addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });
 function closeGame() {
+  const was = playing && playing.id;
   if (playing) { T.track('game_end', { game: playing.id, sec: Math.round((Date.now() - playing.t) / 1000) }); playing = null; }
   player.hidden = true; lockFrame(false);
   if (frame) { frame.remove(); frame = null; }
   document.body.style.overflow = '';
   go(tab);
+  // 소장 게임: 닫은 뒤 계정에 올림 · 아니면 (조건 맞을 때) 소장 권유
+  if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('☁ 계정에 저장됐어요'); }), 300);
+  else if (was && nudgeOwn(was)) return;
   // 첫 게임을 마치고 돌아오면 한 번만 홈 화면 추가를 권함
   if (!I.installed() && !localStorage.getItem('oad_nudged')) { localStorage.setItem('oad_nudged', '1'); setTimeout(() => openSheet(I.env.inApp || !I.canPrompt() ? I.guide() : `<div class="intro"><h2>📲 내일도 쉽게 만나요</h2><p style="color:var(--sub)">홈 화면에 추가하면 매일 새 게임을 한 번에 열 수 있어요.</p><div class="stack"><button class="btn" data-install>홈 화면에 추가</button><button class="btn ghost" data-close>나중에</button></div></div>`), 500); }
 }
@@ -461,10 +529,14 @@ addEventListener('message', e => {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if ('shop' in d) shop();
+  if (d.playSynced) play(d.playSynced, true);
+  else if (d.cpick) cloudPick(d.gid, d.cpick, t);
+  else if ('nudgeOff' in d) { try { const n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); n.off = 1; localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ } closeSheet(); toast('다시 보지 않을게요'); }
+  else if (d.cundo) { if (!t.dataset.confirm) { t.dataset.confirm = 1; t.textContent = '한 번 더 누르면 되돌려요'; } else C.undo(d.cundo).then(() => { closeSheet(); toast('☁ 직전 저장으로 되돌렸어요'); }).catch(er => toast(er.message)); }
+  else if ('shop' in d) shop();
   else if (d.pack) buyPack(d.pack);
   else if ('ghist' in d) goldHistory();
   else if (d.gbuy) spendGold(d.gbuy, d.gid, t);
@@ -508,7 +580,7 @@ async function checkUpdate() {
     }
   } catch { /* 오프라인 */ }
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); else if (playing && C.on(playing.id)) C.push(playing.id, { keepalive: true }); });
 setTimeout(checkUpdate, 1500);
 document.addEventListener('oad:installable', () => { if (tab === 'today' || tab === 'settings') go(tab); });
 document.addEventListener('oad:installed', () => { T.track('installed'); toast('홈 화면에 추가됐어요!'); go(tab); });

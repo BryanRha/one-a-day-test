@@ -99,6 +99,14 @@ export const GAMES = {
   },
 };
 // 별빛 궁수(archer)는 2026-10-22 사용자 요청으로 목록에서 내림 (CATALOG 항목·게임 소스는 남겨 둠)
+// 게임 저장 키 (소장하면 계정 클라우드에 저장 · shell/cloud.js) — 끝이 * 면 그 이름으로 시작하는 키 전부
+//   기기 전용 키(그래픽 설정 · 오류 기록)는 넣지 않음 · 새 게임을 올릴 때 꼭 채우기
+export const SAVES = {
+  witch: ['witch_whiskers_v1'], ocean: ['dessertpop_save_v1'], racer: ['honk_rush_v1'], blocks: ['panda_blocks_v1'],
+  dice: ['rune_dice_v1'], war: ['front_tactics_v1', 'front_tactics_maps', 'front_tactics_resume'], seek: ['his_secret_v1'],
+  beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
+  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'],
+};
 export const ORDER = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung'];
 // 여명기사단 키우기(idle)는 2026-10-25 사용자 요청으로 목록에서 내림 — 보류 중 (CATALOG 항목·소스·idle/PROJECT_STATUS.md 남겨 둠)
 // K-다이스 투어(tour)는 2026-10-24 사용자 요청으로 목록에서 내림 — 대전 네트워크(서버)가 붙으면 다시 올림 (CATALOG 항목·소스는 남겨 둠)
