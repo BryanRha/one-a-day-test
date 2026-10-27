@@ -63,7 +63,7 @@ export const XP = [0, 20, 60, 130, 230, 380, 580, 850, 1200, 1650, 2200, 2900, 3
 export const MACHINES = { espresso: [1, 4, 9], oven: [4, 12] };   /* 몇 레벨에 몇 번째 머신이 생기는지 */
 export const STAFF = {
   barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 300, body: 0xE9E2D6, hair: 0x2A1E16, desc: '다 내린 잔을 바로 진열하고, 같은 메뉴를 다시 내려요' },
-  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 900, body: 0xD9CBB5, hair: 0x5A3A22, desc: '손님에게 잔을 내어 주고 테이블을 치워요' },
+  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 900, body: 0xD9CBB5, hair: 0x5A3A22, desc: '손님이 남긴 쟁반을 바로바로 치워요' },
 };
 
 // 매장: 실제 감성커피 매장 (부산에서 시작) · mult = 값 배수
