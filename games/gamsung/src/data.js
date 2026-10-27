@@ -9,18 +9,18 @@ export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short
 // 메뉴: t = 내리는 시간(초) · n = 한 번에 나오는 잔 수 · bean = 잔당 원두 · lv = 열리는 레벨 · photo = 공식 사진
 //   price = 한 잔 값 · xp = 경험치 · look = 3D 잔 모양 (models.js)
 export const MENU = {
-  americano: { name: '아메리카노', cat: 'coffee', t: 15, n: 3, bean: 1, price: 12, xp: 2, lv: 1, look: 'americano' },
-  latte: { name: '카페라떼', cat: 'coffee', t: 25, n: 3, bean: 1, price: 16, xp: 3, lv: 1, look: 'latte' },
-  mygamsung: { name: '마이감성 라떼', cat: 'sig', t: 40, n: 3, bean: 1, price: 24, xp: 4, lv: 2, look: 'mygamsung', photo: 'my-gamsung-latte' },
-  vanilla: { name: '바닐라 라떼', cat: 'coffee', t: 35, n: 3, bean: 1, price: 20, xp: 3, lv: 3, look: 'vanilla' },
-  croffle: { name: '크로플', cat: 'dessert', t: 50, n: 4, bean: 0, price: 22, xp: 4, lv: 4, look: 'croffle', oven: true },
-  dawn: { name: '새벽숲 라떼', cat: 'sig', t: 60, n: 3, bean: 1, price: 32, xp: 6, lv: 5, look: 'dawn', photo: 'dawn-forest-latte' },
-  coldbrew: { name: '콜드브루', cat: 'coffee', t: 75, n: 3, bean: 2, price: 30, xp: 5, lv: 6, look: 'coldbrew' },
-  jeju: { name: '제주 블루솔트 라떼', cat: 'sig', t: 90, n: 3, bean: 1, price: 40, xp: 8, lv: 7, look: 'jeju', photo: 'jeju-blue-salt-latte' },
-  macaron: { name: '마카롱', cat: 'dessert', t: 40, n: 4, bean: 0, price: 18, xp: 3, lv: 8, look: 'macaron', oven: true },
-  berry: { name: '와일드베리 라떼', cat: 'sig', t: 120, n: 3, bean: 1, price: 48, xp: 10, lv: 9, look: 'berry', photo: 'wild-berry-latte' },
-  basque: { name: '바스크 치즈케이크', cat: 'dessert', t: 150, n: 4, bean: 0, price: 44, xp: 9, lv: 11, look: 'basque', oven: true },
-  tea: { name: '애프터눈티 라떼', cat: 'sig', t: 180, n: 3, bean: 0, price: 58, xp: 12, lv: 13, look: 'tea', photo: 'afternoon-tea-latte' },
+  americano: { name: '아메리카노', short: '아메리카노', cat: 'coffee', t: 15, n: 3, bean: 1, price: 12, xp: 2, lv: 1, look: 'americano' },
+  latte: { name: '카페라떼', short: '카페라떼', cat: 'coffee', t: 25, n: 3, bean: 1, price: 16, xp: 3, lv: 1, look: 'latte' },
+  mygamsung: { name: '마이감성 라떼', short: '마이감성', cat: 'sig', t: 40, n: 3, bean: 1, price: 24, xp: 4, lv: 2, look: 'mygamsung', photo: 'my-gamsung-latte' },
+  vanilla: { name: '바닐라 라떼', short: '바닐라', cat: 'coffee', t: 35, n: 3, bean: 1, price: 20, xp: 3, lv: 3, look: 'vanilla' },
+  croffle: { name: '크로플', short: '크로플', cat: 'dessert', t: 50, n: 4, bean: 0, price: 22, xp: 4, lv: 4, look: 'croffle', oven: true },
+  dawn: { name: '새벽숲 라떼', short: '새벽숲', cat: 'sig', t: 60, n: 3, bean: 1, price: 32, xp: 6, lv: 5, look: 'dawn', photo: 'dawn-forest-latte' },
+  coldbrew: { name: '콜드브루', short: '콜드브루', cat: 'coffee', t: 75, n: 3, bean: 2, price: 30, xp: 5, lv: 6, look: 'coldbrew' },
+  jeju: { name: '제주 블루솔트 라떼', short: '블루솔트', cat: 'sig', t: 90, n: 3, bean: 1, price: 40, xp: 8, lv: 7, look: 'jeju', photo: 'jeju-blue-salt-latte' },
+  macaron: { name: '마카롱', short: '마카롱', cat: 'dessert', t: 40, n: 4, bean: 0, price: 18, xp: 3, lv: 8, look: 'macaron', oven: true },
+  berry: { name: '와일드베리 라떼', short: '와일드베리', cat: 'sig', t: 120, n: 3, bean: 1, price: 48, xp: 10, lv: 9, look: 'berry', photo: 'wild-berry-latte' },
+  basque: { name: '바스크 치즈케이크', short: '바스크', cat: 'dessert', t: 150, n: 4, bean: 0, price: 44, xp: 9, lv: 11, look: 'basque', oven: true },
+  tea: { name: '애프터눈티 라떼', short: '애프터눈티', cat: 'sig', t: 180, n: 3, bean: 0, price: 58, xp: 12, lv: 13, look: 'tea', photo: 'afternoon-tea-latte' },
 };
 export const CATS = [['sig', '시그니처'], ['coffee', '커피'], ['dessert', '디저트']];
 

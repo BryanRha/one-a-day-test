@@ -114,3 +114,17 @@ body.decoing .bottom, body.decoing .side, body.decoing .cp, body.decoing .brand 
 .tk { gap: 4px; } .tk > i { font-style: normal; font-size: 10px; color: var(--red); font-weight: 900; } .tk .ti { position: relative; display: inline-flex; } .tk .ti img { width: 28px; height: 28px; border-radius: 8px; object-fit: cover; opacity: .55; }
 .tk .ti.br img { opacity: .85; outline: 2px solid #E8C48A; } .tk .ti.ok img { opacity: 1; outline: 2px solid #87A86E; } .tk .ti em { position: absolute; right: -3px; bottom: -3px; background: var(--ink); color: #fff; font-style: normal; font-size: 9px; border-radius: 6px; padding: 0 3px; }
 .tk small { font-size: 9.5px; color: var(--sub); margin-left: 2px; }
+
+/* 아이콘은 동그라미 그대로 (사진 배경 없이) */
+.bub img, .tk .ti img, .chip.mach img, .upr .th, .choice img { background: none !important; border-radius: 50% !important; object-fit: contain !important; }
+.bub img { width: 34px; height: 34px; } .tk .ti img { width: 32px; height: 32px; } .chip.mach img { width: 26px; height: 26px; }
+.tk .ti.br img { outline: none; box-shadow: 0 0 0 2px #E8C48A; } .tk .ti.ok img { outline: none; box-shadow: 0 0 0 2px #87A86E; } .tk .ti img { opacity: .6; } .tk .ti.br img, .tk .ti.ok img { opacity: 1; }
+
+/* 주문표: 아이콘 + 메뉴 이름 */
+.tk .ti { display: inline-flex; align-items: center; gap: 4px; background: #F6EFE4; border-radius: 10px; padding: 2px 7px 2px 2px; }
+.tk .ti b { font-size: 11.5px; font-weight: 900; color: var(--ink); white-space: nowrap; } .tk .ti small { font-size: 9px; color: var(--sub); margin-left: 2px; }
+.tk .ti.br { background: #FBF0DA; } .tk .ti.ok { background: #E8F3DF; } .tk .ti.ok small { color: #4E7A3A; font-weight: 900; } .tk .ti em { display: none; }
+.tk .ti img { box-shadow: none !important; opacity: 1 !important; }
+.bub b { font-size: 11px; margin-right: 4px; white-space: nowrap; } .chip.mach .mn { font-size: 10.5px; }
+
+.tk span.ti { flex-direction: row; } .tk .tt { display: flex; flex-direction: column; line-height: 1.15; } .tk .tt small { margin-left: 0; } .tk { padding: 4px 6px; }
