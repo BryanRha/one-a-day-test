@@ -1,15 +1,15 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.67.4';
-import * as R from './rules.js?v=0.67.4';
-import * as I from './install.js?v=0.67.4';
-import * as T from './track.js?v=0.67.4';
-import * as P from './pay.js?v=0.67.4';
+import { PLANNED } from './catalog.js?v=0.67.5';
+import * as R from './rules.js?v=0.67.5';
+import * as I from './install.js?v=0.67.5';
+import * as T from './track.js?v=0.67.5';
+import * as P from './pay.js?v=0.67.5';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.67.4').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.67.5').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.67.4';
+const VERSION = '0.67.5';
 let tab = 'today', timer = null;
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -192,8 +192,8 @@ function fortuneForm() {
 // 홈 화면 추가 배너 (설치 전 · 오늘 닫지 않았을 때)
 function installBanner() {
   if (I.installed() || localStorage.getItem('oad_hide_install') === R.keyOf(R.now())) return '';
-  const msg = I.env.inApp ? `${I.env.kakao ? '카카오톡' : '앱'} 브라우저에서는 홈 화면 추가가 안 돼요` : '홈 화면에 추가하면 매일 한 번에 들어와요';
-  const btn = I.env.inApp ? '브라우저로 열기' : I.canPrompt() ? '설치' : '추가하기';
+  const msg = I.env.inApp ? `${I.env.kakao ? '카카오톡' : '앱'} 안에서는 화면이 흔들릴 수 있어요 · ${/iPhone|iPad/.test(navigator.userAgent) ? '사파리로' : '크롬으로'} 열면 더 매끄럽고 홈 화면에도 추가돼요` : '홈 화면에 추가하면 매일 한 번에 들어와요';
+  const btn = I.env.inApp ? (/iPhone|iPad/.test(navigator.userAgent) ? '사파리로 열기' : '크롬으로 열기') : I.canPrompt() ? '설치' : '추가하기';
   return `<div class="install"><div class="ic">📲</div><div class="tx">${msg}</div><button data-${I.env.inApp ? 'ext' : 'install'}>${btn}</button><button class="x" data-hide-install aria-label="닫기">✕</button></div>`;
 }
 async function doInstall() { const html = await I.install(); if (html) openSheet(html); else setTimeout(() => go(tab), 300); }
@@ -321,16 +321,28 @@ function play(id) {
   frame = document.createElement('iframe'); backReady = false;
   frame.id = 'frame'; frame.title = G(id).title; frame.allow = 'autoplay; fullscreen; vibrate';
   frame.src = `${G(id).path}${G(id).path.includes('?') ? '&' : '?'}v=${VERSION}`;
-  player.prepend(frame);
+  player.prepend(frame); lockFrame(true);
   // 게임 안 오류도 함께 기록 (같은 주소라 직접 들을 수 있음)
   frame.addEventListener('load', () => { try { const w = frame && frame.contentWindow; if (!w) return; w.addEventListener('error', e => T.trackError('game:' + id, e.error || e.message)); w.addEventListener('unhandledrejection', e => T.trackError('game:' + id, e.reason)); } catch { /* 다른 주소면 건너뜀 */ } });
   player.hidden = false;
   document.body.style.overflow = 'hidden';
   watch();
 }
+// 게임 창 고정: 앱 속 브라우저(카톡 등)는 주소창이 앱 바깥이라 화면 높이 자체가 바뀜 → 지금까지 본 '가장 작은 높이'를 px 로 고정
+//   커질 때는 그대로(게임은 크기 변화를 모름) · 더 작아질 때만 한 번 줄임 · 폭이 바뀌면(화면 회전) 새로 잼
+let lockW = 0, lockH = 0;
+function lockFrame(on) {
+  document.documentElement.classList.toggle('playing', on); document.body.classList.toggle('playing', on);
+  if (!on) { document.documentElement.style.removeProperty('--ph'); lockW = lockH = 0; return; }
+  const vv = window.visualViewport, h = Math.round(Math.min(innerHeight, vv ? vv.height : innerHeight));
+  if (!lockH || Math.abs(innerWidth - lockW) > 40) { lockW = innerWidth; lockH = h; } else lockH = Math.min(lockH, h);
+  document.documentElement.style.setProperty('--ph', lockH + 'px');
+}
+addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });
+window.visualViewport && visualViewport.addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });
 function closeGame() {
   if (playing) { T.track('game_end', { game: playing.id, sec: Math.round((Date.now() - playing.t) / 1000) }); playing = null; }
-  player.hidden = true;
+  player.hidden = true; lockFrame(false);
   if (frame) { frame.remove(); frame = null; }
   document.body.style.overflow = '';
   go(tab);

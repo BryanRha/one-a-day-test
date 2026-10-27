@@ -102,7 +102,9 @@ h1, h2, h3, .jua { font-family: 'Jua', sans-serif; font-weight: 400; margin: 0; 
 #tabs button.on { color: var(--gold); }
 
 /* 게임 화면 */
-#player { position: fixed; inset: 0; z-index: 50; background: #000; }
+/* 게임 창 높이 고정: 카톡 등 앱 속 브라우저에서 주소창이 들락날락해도 게임이 출렁이지 않게 '가장 작은 화면 높이'로 */
+#player { position: fixed; left: 0; top: 0; width: 100%; height: var(--ph, 100%); z-index: 50; background: #000; overflow: hidden; touch-action: none; overscroll-behavior: none; }
+html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { position: fixed; inset: 0; width: 100%; touch-action: none; }
 #frame { width: 100%; height: 100%; border: 0; display: block; }
 
 /* 시트(팝업) */
