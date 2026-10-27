@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.67.6';
+import { BRAND } from './data.js?v=0.68.0';
 
 const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -55,6 +55,8 @@ export function cup(look) {
   return g;
 }
 
+// 테이블에 남은 닦을 자국 (커피 얼룩 · 빵 부스러기)
+export function spill() { const g = new THREE.Group(); cyl(16, 16, 1, 0xB08A62, -6, 0, 4, g, 12).scale.set(1, 1, 0.7); for (let i = 0; i < 4; i++) sph(2.5, 0xD8A060, 8 + i * 5, 2, -6 + (i % 2) * 6, g, 5, 4); return g; }
 // 쟁반: 나무 쟁반 위 잔 + 냅킨 (셀프 픽업)
 export function tray(look) { const g = new THREE.Group(); box(54, 4, 38, C.woodL, 0, 0, 0, g); box(56, 2, 40, C.wood, 0, 0, 0, g); box(14, 1, 18, 0xFFFFFF, 18, 4, 4, g); const c = cup(look); c.position.set(-6, 4, 0); g.add(c); return g; }
 
@@ -76,8 +78,14 @@ export function room(sc, theme = {}) {
   /* 나무 기둥 (고정) */
   const tree = new THREE.Group(); tree.position.set(-560, 0, -230); sc.add(tree); cyl(34, 42, 330, 0x8E6038, 0, 0, 0, tree, 14);
   for (let i = 0; i < 4; i++) { const b = cyl(9, 22, 170, 0x8E6038, 0, 0, 0, tree, 10); b.position.set(Math.cos(i * 1.57 + 0.4) * 40, 250, Math.sin(i * 1.57 + 0.4) * 40); b.rotation.set(Math.sin(i * 1.57 + 0.4) * 0.9, 0, -Math.cos(i * 1.57 + 0.4) * 0.9); }
+  /* 간판: 뒤쪽 모서리 벽 위, 카메라 정면 (마루미 베이글과 같은 자리 · 놀이 공간을 가리지 않음) */
+  { const hd = new THREE.Group(); hd.position.set(-470, 400, -D / 2 + 40); hd.rotation.y = Math.PI / 4; sc.add(hd);
+    const draw = (x, img) => { x.fillStyle = '#A92E2B'; x.beginPath(); x.roundRect(0, 0, 512, 150, 34); x.fill(); x.fillStyle = '#F6EFE4'; if (img && img.naturalWidth) { x.save(); x.filter = 'brightness(0) invert(1)'; x.drawImage(img, 30, 22, 96, 106); x.restore(); } x.textAlign = 'left'; x.font = '700 64px "Gowun Batang", serif'; x.fillText('감성커피', 150, 92); x.font = '800 20px P, sans-serif'; x.fillText('GAMSUNG COFFEE · 마음이 쉬어가는 곳', 152, 126); };
+    const st = cvTex(512, 150, x => draw(x)); const im = new Image(); im.onload = () => { draw(st.image.getContext('2d'), im); st.needsUpdate = true; }; im.src = 'assets/brand/bi.png';
+    document.fonts && document.fonts.ready.then(() => { draw(st.image.getContext('2d'), im); st.needsUpdate = true; });
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(440, 129), new THREE.MeshBasicMaterial({ map: st, transparent: true })); sg.position.set(0, 80, 6); hd.add(sg); box(456, 140, 10, C.woodD, 0, 10, 0, hd); for (const sx of [-140, 140]) box(12, 40, 12, C.woodD, sx, -30, 0, hd); }
   /* 서예 (고정, 뒷벽): 「이 한잔으로 마음을 달랠 수만 있다면」 */
-  callig(sc, '이한잔으로/마음을/달랠수만/있다면', -620, 285, -D / 2 + 18, 0, 120, 200);
+  callig(sc, '이한잔으로/마음을/달랠수만/있다면', -150, 285, -D / 2 + 18, 0, 120, 200);
   /* 제작 공간: 타일 바닥 · 뒷벽 작업대(머신 · 오븐) · 선반 · 메뉴판 */
   const tt = cvTex(128, 128, x => { x.fillStyle = '#E8E2D8'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#CFC6B8'; x.lineWidth = 3; for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32, 128); x.stroke(); x.beginPath(); x.moveTo(0, i * 32); x.lineTo(128, i * 32); x.stroke(); } });
   tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(10, 1.6); mesh(new THREE.BoxGeometry(W - 30, 2, 200), new THREE.MeshToonMaterial({ map: tt, gradientMap: gm }), 15, 1, -D / 2 + 115, sc).castShadow = false;
@@ -88,7 +96,9 @@ export function room(sc, theme = {}) {
   for (let i = 0; i < 3; i++) { box(80, 120, 8, 0x6B4A30, 300 + i * 95, 175, -D / 2 + 20, sc); box(64, 96, 2, 0x3B3028, 300 + i * 95, 187, -D / 2 + 25, sc); for (let k = 0; k < 4; k++) box(44 - k * 4, 3, 1, 0xF4ECDD, 300 + i * 95, 270 - k * 20, -D / 2 + 26.5, sc); }
   /* 경계: 낮은 나무 칸막이 + 화분 (손님 쪽과 제작 공간을 나눔) */
   for (const [cx0, w] of [[-190, 300], [470, 180]]) { box(w, 88, 30, C.woodD, cx0, 0, -455, sc); box(w + 10, 8, 40, C.wood, cx0, 88, -455, sc); }
-  for (const x of [-300, -190, -80, 430, 520]) { cyl(16, 13, 22, C.pot, x, 96, -455, sc, 10); sph(20, x % 3 ? C.leaf : C.leaf2, x, 128, -455, sc, 10, 8); }
+  /* 반납대 (왼쪽 칸막이 위): 앞면 「반납 RETURN」 */ { const rd = x => { x.fillStyle = '#3B2A20'; x.fillRect(0, 0, 400, 64); x.fillStyle = '#F6EFE4'; x.textAlign = 'center'; x.font = '700 30px "Gowun Batang", serif'; x.fillText('반납', 120, 44); x.font = '900 28px P, sans-serif'; x.fillText('RETURN', 280, 44); };
+    const rt = cvTex(400, 64, rd); const rp = new THREE.Mesh(new THREE.PlaneGeometry(250, 40), new THREE.MeshBasicMaterial({ map: rt })); rp.position.set(-190, 50, -439); sc.add(rp); document.fonts && document.fonts.ready.then(() => { rd(rt.image.getContext('2d')); rt.needsUpdate = true; }); }
+  for (const x of [430, 520]) { cyl(16, 13, 22, C.pot, x, 96, -455, sc, 10); sph(20, x % 3 ? C.leaf : C.leaf2, x, 128, -455, sc, 10, 8); }
   /* 받는 공간: 픽업대 + 「PICK UP」 간판 */
   box(380, 105, 100, 0xEFE6D8, 150, 0, -455, sc); box(396, 12, 112, C.wood, 150, 105, -455, sc); box(380, 14, 6, C.woodD, 150, 18, -403, sc);
   const pk = new THREE.Group(); pk.position.set(150, 0, -455); sc.add(pk);
@@ -113,6 +123,7 @@ export function callig(p, txt, x, y, z, ry, w = 110, h = 180, poem = false) {
 export const STATION = {
   espresso(p) { box(96, 76, 70, 0x3B3B42, 0, 0, 0, p); box(86, 14, 60, 0xC9C9CF, 0, 76, 0, p); box(70, 10, 10, 0xA92E2B, 0, 60, 36, p); cyl(6, 6, 20, 0x999999, -20, 22, 30, p, 8); cyl(6, 6, 20, 0x999999, 20, 22, 30, p, 8); box(60, 4, 34, 0x2A2A30, 0, 4, 34, p); },
   oven(p) { box(110, 90, 80, 0xD8D2C8, 0, 0, 0, p); box(80, 50, 4, 0x2A2420, 0, 22, 41, p); mesh(new THREE.BoxGeometry(70, 40, 2), new THREE.MeshBasicMaterial({ color: 0xFFB24A }), 0, 47, 42, p); box(90, 8, 6, C.woodD, 0, 82, 42, p); },
+  kiosk(p) { box(56, 20, 44, 0x3B3B42, 0, 0, 0, p); box(14, 100, 14, 0x3B3B42, 0, 20, 0, p); const sc2 = box(64, 90, 10, 0x2A2A30, 0, 115, -6, p); sc2.rotation.x = -0.25; mesh(new THREE.PlaneGeometry(52, 74), new THREE.MeshBasicMaterial({ color: 0xF6EFE4 }), 0, 162, 0, p).rotation.x = -0.25; box(60, 14, 4, BRAND.redHex, 0, 190, 2, p).rotation.x = -0.25; },   /* 키오스크 */
   roaster(p) { box(130, 120, 110, C.red, 0, 0, 0, p); cyl(52, 52, 74, 0x3B3B42, 0, 120, 0, p, 18); cyl(34, 20, 56, 0xC9C9CF, 0, 194, 0, p, 14); box(70, 10, 60, 0x2A2A30, 0, 70, 60, p); cyl(46, 46, 6, 0x5A3A22, 0, 60, 80, p, 18); },
 };
 

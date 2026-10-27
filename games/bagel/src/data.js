@@ -47,6 +47,8 @@ const B1 = {
     { id: 'next', type: 'next', x: 330, z: 640, cost: 3500, label: '2호점 열기' },
   ],
 };
+/* 밸런스 (2026-10-27): 뒤로 갈수록 비싸게 — 열리는 순서 i 에 따라 ×1.2 → ×2.8 (1호점 완성 약 1시간 목표) */
+{ const paid = B1.slots.filter(x => x.cost); paid.forEach((x, i) => { x.cost = Math.round(x.cost * (1.2 + 1.6 * i / (paid.length - 1)) / 10) * 10; }); }
 const scale = (b, k, theme, name) => ({ ...b, name, mult: k, theme: { ...b.theme, ...theme }, slots: b.slots.map(s => ({ ...s, cost: s.cost && Math.round(s.cost * k * 1.6 / 10) * 10, label: s.id === 'next' ? s.labelNext || s.label : s.label })) });
 export const BRANCHES = [
   { ...B1, name: '1호점 · 잠실리센츠점', photo: 'store1' },
@@ -70,7 +72,7 @@ export const UPGRADES = [
   { id: 'tip', name: '친절 서비스', desc: '손님이 팁을 줄 때가 있어요', icon: '😊', base: 220 },
 ];
 export const UP_MAX = 10;
-export const upCost = (u, lv, mult) => Math.round(u.base * Math.pow(1.55, lv) * mult / 5) * 5;
+export const upCost = (u, lv, mult) => Math.round(u.base * 1.6 * Math.pow(1.6, lv) * mult / 5) * 5;
 export const FINISHED_RATE = 0.9;   /* 다 연 지점 자동 수익 (초당, × 지점 배수 × (1 + 가격 단계/10)) */
 // 사람 · 직원 · 손님 · 쿠폰
 export const PLAYER = { speed: 430, carry: 6, carryUp: 10, speedUp: 1.3 };
@@ -83,9 +85,9 @@ export const STAFF = {
   driver: { name: '드라이브스루 직원', body: 0xE86A8A, speed: 300, carry: 4, hello: '드라이브스루 주문을 맡아요!', up: '걷기 속도 · 들기', cap: 0xFF6720 },
   cleaner: { name: '청소 직원', body: 0x6AB07A, speed: 320, carry: 4, hello: '청소 직원이 테이블을 치워요!', up: '걷기 속도 · 들기' },
 };
-export const STAFF_UP = { base: 150, max: 10 };   /* 직원 단계 비용 = base × 1.6^단계 × 지점 배수 */
+export const STAFF_UP = { base: 260, max: 10 };   /* 직원 단계 비용 = base × 1.6^단계 × 지점 배수 */
 export const CUST_COLORS = [0x6A9AE8, 0xE86A8A, 0x9ACF6A, 0xF2C14E, 0xC08AE0, 0x5AC0B0, 0xE8A06A, 0x8AA0B8];
-export const COUPON = { goal: 100, text: '크림치즈 1개 무료 (베이글 구매 시) · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };   /* 쿠폰 내용은 트렌차이즈와 정함 */
+export const COUPON = { goal: 150, text: '크림치즈 1개 무료 (베이글 구매 시) · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };   /* 쿠폰 내용은 트렌차이즈와 정함 */
 // ── 아이러브커피에서 가져온 재미 (2026-10-27): 메뉴 숙련 · 손님 기분 · 꾸미기 · 단골
 // 메뉴 숙련: 메뉴 이름별 판매 수 → ★1~5 · 별 하나마다 값 +6%
 export const MASTERY = [0, 60, 250, 700, 1600];
@@ -95,16 +97,16 @@ export const MOOD = { happy: 10, ok: 25, tip: 0.15 };
 // 꾸미기: 지점마다 정해진 자리에 놓는 소품 · score = 「베이글 향」 (손님이 더 자주 + 팁 확률)
 //   pos: 1호점 배치 기준 좌표 (모든 지점이 같은 배치) · r: 부딪힘 반지름 (0 = 바닥/벽이라 안 부딪힘)
 export const DECO = [
-  { id: 'monstera', name: '큰 몬스테라 화분', icon: '🪴', cost: 120, score: 10, pos: [-690, 690], r: 45, desc: '가게 구석이 싱그러워져요' },
-  { id: 'rug', name: '라탄 러그', icon: '🟫', cost: 180, score: 12, pos: [-240, 490], r: 0, desc: '테이블 사이 따뜻한 바닥' },
-  { id: 'bench', name: '창가 쿠션 벤치', icon: '🛋', cost: 260, score: 16, pos: [-700, 500], r: 0, desc: '벽을 따라 놓인 긴 의자' },
-  { id: 'lamp', name: '스탠드 조명', icon: '💡', cost: 300, score: 15, pos: [-700, -460], r: 30, desc: '반죽기 옆을 밝혀요' },
-  { id: 'shelf', name: '베이글 벽 선반', icon: '🥯', cost: 360, score: 18, pos: [300, -735], r: 0, desc: '갓 구운 베이글을 벽에 진열' },
-  { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 420, score: 18, pos: [600, 640], r: 30, desc: '문 앞 손글씨 칠판' },
-  { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 480, score: 20, pos: [-733, -480], r: 0, desc: '요요기 본점의 아침 풍경' },
-  { id: 'vase', name: '테이블 꽃병', icon: '💐', cost: 540, score: 22, pos: null, r: 0, desc: '열린 테이블마다 꽃 한 송이' },
-  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 640, score: 24, pos: [690, 690], r: 45, desc: '입구가 숲처럼' },
-  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 900, score: 30, pos: [-300, 930], r: 0, desc: '가게 앞 바깥 자리' },
+  { id: 'monstera', name: '큰 몬스테라 화분', icon: '🪴', cost: 220, score: 10, pos: [-690, 690], r: 45, desc: '가게 구석이 싱그러워져요' },
+  { id: 'rug', name: '라탄 러그', icon: '🟫', cost: 320, score: 12, pos: [-240, 490], r: 0, desc: '테이블 사이 따뜻한 바닥' },
+  { id: 'bench', name: '창가 쿠션 벤치', icon: '🛋', cost: 470, score: 16, pos: [-700, 500], r: 0, desc: '벽을 따라 놓인 긴 의자' },
+  { id: 'lamp', name: '스탠드 조명', icon: '💡', cost: 540, score: 15, pos: [-700, -460], r: 30, desc: '반죽기 옆을 밝혀요' },
+  { id: 'shelf', name: '베이글 벽 선반', icon: '🥯', cost: 650, score: 18, pos: [300, -735], r: 0, desc: '갓 구운 베이글을 벽에 진열' },
+  { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 760, score: 18, pos: [600, 640], r: 30, desc: '문 앞 손글씨 칠판' },
+  { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 860, score: 20, pos: [-733, -480], r: 0, desc: '요요기 본점의 아침 풍경' },
+  { id: 'vase', name: '테이블 꽃병', icon: '💐', cost: 970, score: 22, pos: null, r: 0, desc: '열린 테이블마다 꽃 한 송이' },
+  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 1150, score: 24, pos: [690, 690], r: 45, desc: '입구가 숲처럼' },
+  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 1620, score: 30, pos: [-300, 930], r: 0, desc: '가게 앞 바깥 자리' },
   { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [-733, 250], r: 0, desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
 ];
 // 단골: 하루 한 번 찾아오는 동네 사람 · fav = 좋아하는 메뉴 칸(bagel 플레인 · cream 특별 · coffee 크림치즈 · drink 커피)

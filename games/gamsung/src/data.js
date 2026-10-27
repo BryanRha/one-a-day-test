@@ -36,34 +36,34 @@ export const BEAN_MAX = 900;
 // 가구: kind table = 자리 있음 · size = 칸 [가로, 세로] (한 칸 100) · score = 감성 지수 · seats = 앉는 자리 [x, z, 바라보는 방향]
 //   wall = 벽에 거는 것 (벽 자리에만) · heart = 마음(♥)으로 사는 것
 export const FURN = {
-  table2: { name: '원목 2인 테이블', cat: 'table', size: [2, 1], cost: 40, score: 6, lv: 1, seats: [[-50, 0, Math.PI / 2], [50, 0, -Math.PI / 2]], desc: '둘이 마주 앉는 작은 자리' },
-  table4: { name: '긴 원목 테이블', cat: 'table', size: [3, 2], cost: 160, score: 12, lv: 4, seats: [[-80, -50, 0], [80, -50, 0], [-80, 50, Math.PI], [80, 50, Math.PI]], desc: '넷이 둘러앉는 넉넉한 자리' },
-  window: { name: '창가 1인석', cat: 'table', size: [1, 1], cost: 60, score: 8, lv: 2, seats: [[0, 10, Math.PI]], desc: '혼자 오래 머무는 자리' },
-  sofa: { name: '리넨 소파 세트', cat: 'table', size: [2, 2], cost: 260, score: 18, lv: 7, seats: [[-40, -30, 0], [40, -30, 0]], desc: '깊이 기대는 쉼' },
-  floor: { name: '좌식 마루 자리', cat: 'table', size: [2, 2], cost: 340, score: 22, lv: 10, seats: [[-45, 0, Math.PI / 2], [45, 0, -Math.PI / 2]], desc: '신발 벗고 앉는 마루' },
-  plant: { name: '올리브 나무 화분', cat: 'green', size: [1, 1], cost: 50, score: 7, lv: 1, desc: '은빛 잎이 바람에 흔들려요' },
-  fern: { name: '고사리 화분', cat: 'green', size: [1, 1], cost: 80, score: 9, lv: 3, desc: '그늘을 좋아하는 초록' },
-  pine: { name: '분재 소나무', cat: 'green', size: [1, 1], cost: 220, score: 16, lv: 8, desc: '단아한 한 그루' },
-  stone: { name: '자연석', cat: 'stone', size: [1, 1], cost: 70, score: 8, lv: 2, desc: '단단함 · 정갈함' },
-  stones: { name: '돌 정원', cat: 'stone', size: [2, 2], cost: 300, score: 20, lv: 9, desc: '모래 위 세 개의 돌' },
-  lamp: { name: '종이 스탠드 조명', cat: 'light', size: [1, 1], cost: 90, score: 10, lv: 3, desc: '한지처럼 퍼지는 빛' },
-  rug: { name: '리넨 러그', cat: 'deco', size: [3, 2], cost: 120, score: 9, lv: 4, flat: true, desc: '발끝이 따뜻해요' },
-  shelf: { name: '원두 선반', cat: 'deco', size: [2, 1], cost: 180, score: 13, lv: 5, desc: '오늘의 원두를 진열' },
-  goods: { name: '굿즈 진열대', cat: 'deco', size: [1, 1], cost: 240, score: 15, lv: 6, desc: '텀블러 · 문구 세트' },
+  table2: { name: '원목 2인 테이블', cat: 'table', size: [2, 1], cost: 70, score: 6, lv: 1, seats: [[-50, 0, Math.PI / 2], [50, 0, -Math.PI / 2]], desc: '둘이 마주 앉는 작은 자리' },
+  table4: { name: '긴 원목 테이블', cat: 'table', size: [3, 2], cost: 290, score: 12, lv: 4, seats: [[-80, -50, 0], [80, -50, 0], [-80, 50, Math.PI], [80, 50, Math.PI]], desc: '넷이 둘러앉는 넉넉한 자리' },
+  window: { name: '창가 1인석', cat: 'table', size: [1, 1], cost: 110, score: 8, lv: 2, seats: [[0, 10, Math.PI]], desc: '혼자 오래 머무는 자리' },
+  sofa: { name: '리넨 소파 세트', cat: 'table', size: [2, 2], cost: 470, score: 18, lv: 7, seats: [[-40, -30, 0], [40, -30, 0]], desc: '깊이 기대는 쉼' },
+  floor: { name: '좌식 마루 자리', cat: 'table', size: [2, 2], cost: 610, score: 22, lv: 10, seats: [[-45, 0, Math.PI / 2], [45, 0, -Math.PI / 2]], desc: '신발 벗고 앉는 마루' },
+  plant: { name: '올리브 나무 화분', cat: 'green', size: [1, 1], cost: 90, score: 7, lv: 1, desc: '은빛 잎이 바람에 흔들려요' },
+  fern: { name: '고사리 화분', cat: 'green', size: [1, 1], cost: 140, score: 9, lv: 3, desc: '그늘을 좋아하는 초록' },
+  pine: { name: '분재 소나무', cat: 'green', size: [1, 1], cost: 400, score: 16, lv: 8, desc: '단아한 한 그루' },
+  stone: { name: '자연석', cat: 'stone', size: [1, 1], cost: 130, score: 8, lv: 2, desc: '단단함 · 정갈함' },
+  stones: { name: '돌 정원', cat: 'stone', size: [2, 2], cost: 540, score: 20, lv: 9, desc: '모래 위 세 개의 돌' },
+  lamp: { name: '종이 스탠드 조명', cat: 'light', size: [1, 1], cost: 160, score: 10, lv: 3, desc: '한지처럼 퍼지는 빛' },
+  rug: { name: '리넨 러그', cat: 'deco', size: [3, 2], cost: 220, score: 9, lv: 4, flat: true, desc: '발끝이 따뜻해요' },
+  shelf: { name: '원두 선반', cat: 'deco', size: [2, 1], cost: 320, score: 13, lv: 5, desc: '오늘의 원두를 진열' },
+  goods: { name: '굿즈 진열대', cat: 'deco', size: [1, 1], cost: 430, score: 15, lv: 6, desc: '텀블러 · 문구 세트' },
   wind: { name: '풍경(바람종)', cat: 'deco', size: [1, 1], cost: 0, heart: 30, score: 14, lv: 5, desc: '바람이 지나가면 맑은 소리' },
   poem: { name: '시 한 줄 액자', cat: 'wall', size: [1, 1], cost: 0, score: 20, lv: 1, wall: true, gift: true, desc: '단골이 남긴 한 줄' },
-  calli: { name: '서예 액자', cat: 'wall', size: [1, 1], cost: 100, score: 10, lv: 2, wall: true, desc: '「바람과 함께 쉬어가세요」' },
-  board: { name: '나무 메뉴판', cat: 'wall', size: [1, 1], cost: 80, score: 8, lv: 1, wall: true, desc: '손글씨 메뉴' },
+  calli: { name: '서예 액자', cat: 'wall', size: [1, 1], cost: 180, score: 10, lv: 2, wall: true, desc: '「바람과 함께 쉬어가세요」' },
+  board: { name: '나무 메뉴판', cat: 'wall', size: [1, 1], cost: 140, score: 8, lv: 1, wall: true, desc: '손글씨 메뉴' },
   photo: { name: '흑백 사진 액자', cat: 'wall', size: [1, 1], cost: 0, heart: 20, score: 12, lv: 4, wall: true, desc: '동네의 오래된 풍경' },
 };
 export const FURN_CATS = [['table', '자리'], ['green', '초록'], ['stone', '돌'], ['light', '빛'], ['deco', '소품'], ['wall', '벽']];
 
 // 레벨: 필요한 경험치 · 레벨이 오르면 메뉴 · 원두 · 가구 · 머신 · 동료가 열림
-export const XP = [0, 20, 60, 130, 230, 380, 580, 850, 1200, 1650, 2200, 2900, 3750, 4800, 6000, 7500, 9300, 11500, 14000, 17000];
+export const XP = [0, 30, 110, 240, 440, 850, 1500, 2500, 3980, 6130, 9080, 13230, 18820, 26350, 35900, 48720, 65340, 87140, 114060, 148510];   /* 밸런스 2026-10-27: 원래 표 × 1.6~3.2 */
 export const MACHINES = { espresso: [1, 4, 9], oven: [4, 12] };   /* 몇 레벨에 몇 번째 머신이 생기는지 */
 export const STAFF = {
-  barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 300, body: 0xE9E2D6, hair: 0x2A1E16, desc: '다 내린 잔을 바로 진열하고, 같은 메뉴를 다시 내려요' },
-  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 900, body: 0xD9CBB5, hair: 0x5A3A22, desc: '손님이 남긴 쟁반을 바로바로 치워요' },
+  barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 700, body: 0xE9E2D6, hair: 0x2A1E16, desc: '다 내린 잔을 바로 진열하고, 같은 메뉴를 다시 내려요' },
+  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '손님이 남긴 쟁반을 바로바로 치워요' },
 };
 
 // 매장: 실제 감성커피 매장 (부산에서 시작) · mult = 값 배수
@@ -75,7 +75,7 @@ export const STORES = [
 
 // 손님 기분: 주문하고 받기까지(초) · 빨리 받으면 마음(♥) + 팁 · 오래 걸려도 벌 없음
 export const MOOD = { happy: 20, ok: 50, tip: 0.2 };
-export const COUPON = { goal: 40, text: '아메리카노 사이즈업 · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };
+export const COUPON = { goal: 60, text: '아메리카노 사이즈업 · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };
 
 // 오늘의 주문서: 하루 3장 (메뉴 · 잔 수 · 보상)
 export const ORDER_POOL = [
