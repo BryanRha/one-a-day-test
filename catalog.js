@@ -11,8 +11,8 @@ export const GAMES = {
     path: 'games/witch/', logo: true, cover: 'covers/witch.png', icon: 'covers/witch_icon.png', time: '1~3분',
   },
   ocean: {
-    title: '바다이야기', en: 'Ocean Tales', genre: '퍼즐', color: '#1E8FE6',
-    tagline: '귀여운 바다 친구들을 맞춰요',
+    title: '웨일 테일', en: 'Whale Tale', genre: '퍼즐', color: '#1E8FE6',
+    tagline: '아기 고래 몽이와 바다 친구들을 맞춰요',
     desc: '같은 바다 친구 3개를 맞춰 터뜨리는 매치3 퍼즐. 500개 스테이지와 특수 블록 조합, 바다 마을 꾸미기까지.',
     path: 'games/ocean-tales/', logo: true, cover: 'covers/ocean.png', icon: 'covers/ocean_icon.png', time: '2~4분',
   },
