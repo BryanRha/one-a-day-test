@@ -1,10 +1,10 @@
 // 시작: 렌더러 · 쿼터뷰 카메라(끌어서 둘러보기 · 두 손가락/휠 확대) · 누르기 · 저장 · 루프
 import * as THREE from 'three';
-import { Game } from './game.js?v=0.68.3';
-import { UI } from './ui.js?v=0.68.3';
-import { S, loadSave, save, addSkew } from './state.js?v=0.68.3';
-import { music, setAudio, preloadSfx } from './audio.js?v=0.68.3';
-import { installBack } from './oad.js?v=0.68.3';
+import { Game, STACK } from './game.js?v=0.69.0';
+import { UI } from './ui.js?v=0.69.0';
+import { S, loadSave, save, addSkew } from './state.js?v=0.69.0';
+import { music, setAudio, preloadSfx } from './audio.js?v=0.69.0';
+import { installBack } from './oad.js?v=0.69.0';
 
 const app = {}; window.__app = app; window.__S = () => S;
 const canvas = document.getElementById('view');
@@ -22,19 +22,22 @@ app.game.build(); fit(); place();
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
 const toRay = (x, y) => { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, cam); return ray.ray; };
 const floorAt = (x, y) => { toRay(x, y); return ray.ray.intersectPlane(floor, hitP) ? hitP.clone() : null; };
-const pts = new Map(); let down = null, pinch = null, dragGhost = false;
+const pts = new Map(); let down = null, pinch = null, dragGhost = false, dragStack = false; const stackPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -STACK.y);
 canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
   if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: view.zoom }; down = null; return; }
   down = { x: e.clientX, y: e.clientY, t: performance.now(), vx: view.x, vz: view.z, moved: false };
-  dragGhost = false; if (app.game.deco?.ghost) { const p = app.game.pick(toRay(e.clientX, e.clientY)); dragGhost = p && p.kind === 'ghost'; } });
+  dragGhost = false; if (app.game.deco?.ghost) { const p = app.game.pick(toRay(e.clientX, e.clientY)); dragGhost = p && p.kind === 'ghost'; }
+  dragStack = false; if (!app.game.deco && app.game.stack.length) { const p = app.game.pick(toRay(e.clientX, e.clientY)); dragStack = p && p.kind === 'stack'; } });   /* 작업대 탑 쟁반 끌기 */
 canvas.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
   if (pinch && pts.size === 2) { const [a, b] = [...pts.values()]; view.zoom = Math.max(0.7, Math.min(2.2, pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d)); fit(); return; }
   if (!down) return; const dx = e.clientX - down.x, dy = e.clientY - down.y; if (Math.hypot(dx, dy) > 8) down.moved = true; if (!down.moved) return;
   if (dragGhost) { const p = floorAt(e.clientX, e.clientY); if (p) app.game.ghostMove(p.x, p.z); return; }
+  if (dragStack) { toRay(e.clientX, e.clientY); if (ray.ray.intersectPlane(stackPlane, hitP)) app.game.stackG.position.set(Math.max(-60, Math.min(340, hitP.x - STACK.x)), 0, Math.max(-60, Math.min(80, hitP.z - STACK.z))); return; }
   /* 화면을 끈 만큼 바닥이 따라오도록: 오른쪽 = (1,0,-1)/√2 · 화면 위쪽 바닥 방향 = (-1,0,-1)/√2 · 세로는 카메라 각도(sin≈0.614)만큼 늘어남 */
   const wpp = (cam.right - cam.left) / innerWidth, h = dx * wpp / 1.414, v = dy * wpp / 0.614 / 1.414;
   view.x = Math.max(-700, Math.min(700, down.vx - h - v)); view.z = Math.max(-500, Math.min(800, down.vz + h - v)); place(); });
-const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!down) return; const d = down; down = null; if (d.moved || performance.now() - d.t > 450) return; app.ui.tap(app.game.pick(toRay(e.clientX, e.clientY)), floorAt(e.clientX, e.clientY)); };
+const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!down) return; const d = down; down = null;
+  if (dragStack) { dragStack = false; app.game.stackG.position.set(0, 0, 0); app.ui.tap({ kind: 'stack' }); return; }   /* 끌어도 눌러도 픽업대로 */ if (d.moved || performance.now() - d.t > 450) return; app.ui.tap(app.game.pick(toRay(e.clientX, e.clientY)), floorAt(e.clientX, e.clientY)); };
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', e => { pts.delete(e.pointerId); down = null; pinch = null; });
 canvas.addEventListener('wheel', e => { view.zoom = Math.max(0.7, Math.min(2.2, view.zoom * (e.deltaY < 0 ? 1.1 : 0.9))); fit(); e.preventDefault(); }, { passive: false });
 app.focus = (x, z) => { view.x = x; view.z = z; place(); };
@@ -48,7 +51,7 @@ setTimeout(() => app.ui.welcome((Date.now() - S.last) / 1000), 900);
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 실행 */ } };
 addEventListener('error', e => report(e.error || e.message)); addEventListener('unhandledrejection', e => report(e.reason));
-const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.68.3').then(m => m.startBot(app));
+const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.69.0').then(m => m.startBot(app));
 if (q.get('fresh')) { localStorage.removeItem('gamsung_v1'); q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
 let last = performance.now();
 const loop = now => { requestAnimationFrame(loop); const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;

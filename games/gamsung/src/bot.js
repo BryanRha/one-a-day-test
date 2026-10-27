@@ -1,16 +1,20 @@
-// 시험용 자동 플레이 (?bot=1&speed=4): 거두기 · 내리기 · 볶기 · 치우기 · 사연 · 가구 사서 놓기 · 동료 · 주문서 · 출석
-import { MENU, ROAST, FURN, STAFF } from './data.js?v=0.68.3';
-import { S, ST, save } from './state.js?v=0.68.3';
-import { storeMult } from './game.js?v=0.68.3';
+// 시험용 자동 플레이 (?bot=1&speed=4): 손 추출(사람 손 속도 · 금빛 랜덤) · 라떼아트 · 쟁반 옮기기 · 볶기 · 찻값/치우기 · 사연 · 가구 · 동료 · 주문서
+import { MENU, ROAST, FURN, STAFF, ART } from './data.js?v=0.69.0';
+import { S, ST, save } from './state.js?v=0.69.0';
+import { storeMult } from './game.js?v=0.69.0';
 
 export function startBot(app) {
-  const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0;
+  const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0, handT = 0, moveT = 0; window.__bot = true; S.fg = 3;
+  const q = new URLSearchParams(location.search), GOLD = +(q.get('gold') ?? 0.7), HAND = +(q.get('hand') ?? 2.6);   /* 금빛 성공률 · 사람 손 한 잔 시간(초) */
   const tick = () => {
-    t += 0.5; document.querySelector('#modal').innerHTML = ''; ui._ub && ui._ub(); ui._ub = null;
+    t += 0.5; handT -= 0.5; moveT -= 0.5; document.querySelector('#modal').innerHTML = ''; ui._ub && ui._ub(); ui._ub = null;
     for (const m of g.machines) { const p = g.progress(m); if (p && p.u >= 1) g.collect(m);
-      if (!g.progress(m)) { const want = Object.keys(MENU).find(k => g.need(k) > 0 && !!MENU[k].oven === (m.kind === 'oven') && S.lv >= MENU[k].lv);
-        const best = Object.entries(MENU).filter(([k, d]) => !!d.oven === (m.kind === 'oven') && S.lv >= d.lv && S.beans >= d.bean * d.n && (ST().bar[k] || 0) < 8).sort((a, b) => b[1].price - a[1].price).map(([k]) => k);
-        const k = want; if (k) g.brew(m, k); } }
+      if (g.progress(m)) continue; const k = Object.keys(MENU).find(k => g.need(k) > 0 && !!MENU[k].oven === (m.kind === 'oven') && S.lv >= MENU[k].lv); if (!k) continue;
+      if (m.kind === 'oven') { g.brew(m, k); continue; }
+      if (g.barista && MENU[k].cat !== 'sig') continue;   /* 커피는 동료가 */
+      if (handT > 0) continue; handT = HAND + (MENU[k].cat === 'sig' ? 1.5 : 0);   /* 손은 하나: 한 번에 한 잔씩 · 시그니처는 라떼아트만큼 더 */
+      const art = MENU[k].cat === 'sig' ? (Math.random() < 0.8 ? Object.keys(ART)[Math.floor(Math.random() * 3)] : 'heart') : null; g.handBrew(m, k, { gold: Math.random() < GOLD, art }); }
+    if (g.stack.length && moveT <= 0) { g.deliverStack(); moveT = 1; }
     const r = g.roastState(); if (r && r.u >= 1) g.collectBeans(); if (!g.roastState() && S.beans < 60) { const R = ROAST.filter(x => S.lv >= x.lv && S.coins >= x.cost * storeMult() && x.t <= 900).pop(); if (R) g.roast(R.id); }
     for (const x of g.seats()) if (x.s.dirty) g.requestClean(x.o, x.k);
     if ((ST().ret || 0) >= 3) g.wash();
@@ -21,7 +25,7 @@ export function startBot(app) {
       const tables = g.seats().length; const k = tables < 10 ? opts.find(x => FURN[x].cat === 'table') || opts[0] : opts[Math.floor(Math.random() * opts.length)];
       if (k) { g.decoStart(); g.ghostNew(k); let ok = false; for (let i = 0; i < 60 && !ok; i++) { g.ghostMove(-650 + Math.random() * 1300, -300 + Math.random() * 1000); if (Math.random() < 0.3) g.ghostRotate(); ok = !g.deco.ghost.err; }
         if (ok) g.ghostConfirm(() => { S.coins -= FURN[k].cost * storeMult(); return true; }); g.decoEnd(); } }
-    logT += 0.5; if (logT >= 30) { logT = 0; console.log('#bot ' + JSON.stringify({ t, lv: S.lv, xp: S.xp, coins: S.coins, hearts: S.hearts, beans: S.beans, sold: S.sold, furn: ST().furn.length, seats: g.seats().length, score: g.score(), staff: Object.keys(S.staff), reg: Object.fromEntries(Object.entries(S.reg).map(([k, v]) => [k, v.ep])), cust: g.cust.length, errs: window.__errs.length })); }
+    logT += 0.5; if (logT >= 30) { logT = 0; console.log('#bot ' + JSON.stringify({ t, lv: S.lv, xp: S.xp, coins: Math.round(S.coins), hearts: S.hearts, beans: S.beans, sold: S.sold, seats: g.seats().length, score: g.score(), staff: Object.keys(S.staff), cust: g.cust.length, tk: g.tickets.length, poem: S.poem.n, poems: S.poems.length, art: S.art, hand: window.__botStat, errs: window.__errs.length })); }
   };
   window.__botTick = tick; setInterval(tick, 500 / (+(new URLSearchParams(location.search).get('speed')) || 1)); save();
 }

@@ -9,8 +9,8 @@ export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short
 // 메뉴: t = 내리는 시간(초) · n = 한 번에 나오는 잔 수 · bean = 잔당 원두 · lv = 열리는 레벨 · photo = 공식 사진
 //   price = 한 잔 값 · xp = 경험치 · look = 3D 잔 모양 (models.js)
 export const MENU = {
-  americano: { name: '아메리카노', short: '아메리카노', cat: 'coffee', t: 15, n: 3, bean: 1, price: 12, xp: 2, lv: 1, look: 'americano' },
-  latte: { name: '카페라떼', short: '카페라떼', cat: 'coffee', t: 25, n: 3, bean: 1, price: 16, xp: 3, lv: 1, look: 'latte' },
+  americano: { name: '아메리카노', short: '아메리카노', cat: 'coffee', t: 8, n: 3, bean: 1, price: 12, xp: 2, lv: 1, look: 'americano' },
+  latte: { name: '카페라떼', short: '카페라떼', cat: 'coffee', t: 18, n: 3, bean: 1, price: 16, xp: 3, lv: 1, look: 'latte' },
   mygamsung: { name: '마이감성 라떼', short: '마이감성', cat: 'sig', t: 40, n: 3, bean: 1, price: 24, xp: 4, lv: 2, look: 'mygamsung', photo: 'my-gamsung-latte' },
   vanilla: { name: '바닐라 라떼', short: '바닐라', cat: 'coffee', t: 35, n: 3, bean: 1, price: 20, xp: 3, lv: 3, look: 'vanilla' },
   croffle: { name: '크로플', short: '크로플', cat: 'dessert', t: 50, n: 4, bean: 0, price: 22, xp: 4, lv: 4, look: 'croffle', oven: true },
@@ -26,10 +26,10 @@ export const CATS = [['sig', '시그니처'], ['coffee', '커피'], ['dessert', 
 
 // 원두 볶기: 볶는 시간(초) → 원두(잔 수) · 길게 볶을수록 많이 · 나가 있어도 계속 볶아짐
 export const ROAST = [
-  { id: 'house', name: '하우스 블렌드', t: 20, beans: 8, cost: 10, lv: 1, desc: '고소하고 부드럽게' },
-  { id: 'single', name: '싱글 오리진', t: 120, beans: 30, cost: 30, lv: 3, desc: '산뜻한 꽃향' },
-  { id: 'special', name: '스페셜티', t: 900, beans: 150, cost: 110, lv: 6, desc: '자고 일어나면 가득' },
-  { id: 'night', name: '밤샘 로스팅', t: 4 * 3600, beans: 600, cost: 380, lv: 10, desc: '하루 장사 넉넉히' },
+  { id: 'house', name: '하우스 블렌드', t: 20, beans: 18, cost: 8, lv: 1, desc: '고소하고 부드럽게' },   /* 2026-10-27 손 추출로 많이 팔게 되어 넉넉히 */
+  { id: 'single', name: '싱글 오리진', t: 90, beans: 70, cost: 25, lv: 3, desc: '산뜻한 꽃향' },
+  { id: 'special', name: '스페셜티', t: 600, beans: 320, cost: 90, lv: 6, desc: '자고 일어나면 가득' },
+  { id: 'night', name: '밤샘 로스팅', t: 4 * 3600, beans: 900, cost: 300, lv: 10, desc: '하루 장사 넉넉히' },
 ];
 export const BEAN_MAX = 900;
 
@@ -50,20 +50,20 @@ export const FURN = {
   rug: { name: '리넨 러그', cat: 'deco', size: [3, 2], cost: 220, score: 9, lv: 4, flat: true, desc: '발끝이 따뜻해요' },
   shelf: { name: '원두 선반', cat: 'deco', size: [2, 1], cost: 320, score: 13, lv: 5, desc: '오늘의 원두를 진열' },
   goods: { name: '굿즈 진열대', cat: 'deco', size: [1, 1], cost: 430, score: 15, lv: 6, desc: '텀블러 · 문구 세트' },
-  wind: { name: '풍경(바람종)', cat: 'deco', size: [1, 1], cost: 0, heart: 30, score: 14, lv: 5, desc: '바람이 지나가면 맑은 소리' },
+  wind: { name: '풍경(바람종)', cat: 'deco', size: [1, 1], cost: 0, heart: 80, score: 14, lv: 5, desc: '바람이 지나가면 맑은 소리' },
   poem: { name: '시 한 줄 액자', cat: 'wall', size: [1, 1], cost: 0, score: 20, lv: 1, wall: true, gift: true, desc: '단골이 남긴 한 줄' },
   calli: { name: '서예 액자', cat: 'wall', size: [1, 1], cost: 180, score: 10, lv: 2, wall: true, desc: '「바람과 함께 쉬어가세요」' },
   board: { name: '나무 메뉴판', cat: 'wall', size: [1, 1], cost: 140, score: 8, lv: 1, wall: true, desc: '손글씨 메뉴' },
-  photo: { name: '흑백 사진 액자', cat: 'wall', size: [1, 1], cost: 0, heart: 20, score: 12, lv: 4, wall: true, desc: '동네의 오래된 풍경' },
+  photo: { name: '흑백 사진 액자', cat: 'wall', size: [1, 1], cost: 0, heart: 60, score: 12, lv: 4, wall: true, desc: '동네의 오래된 풍경' },
 };
 export const FURN_CATS = [['table', '자리'], ['green', '초록'], ['stone', '돌'], ['light', '빛'], ['deco', '소품'], ['wall', '벽']];
 
 // 레벨: 필요한 경험치 · 레벨이 오르면 메뉴 · 원두 · 가구 · 머신 · 동료가 열림
 export const XP = [0, 30, 110, 240, 440, 850, 1500, 2500, 3980, 6130, 9080, 13230, 18820, 26350, 35900, 48720, 65340, 87140, 114060, 148510];   /* 밸런스 2026-10-27: 원래 표 × 1.6~3.2 */
-export const MACHINES = { espresso: [1, 4, 9], oven: [4, 12] };   /* 몇 레벨에 몇 번째 머신이 생기는지 */
+export const MACHINES = { espresso: [1, 1, 5], oven: [4, 12] };   /* 몇 레벨에 몇 번째 머신이 생기는지 · 2026-10-27 처음부터 2대 */
 export const STAFF = {
-  barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 700, body: 0xE9E2D6, hair: 0x2A1E16, desc: '다 내린 잔을 바로 진열하고, 같은 메뉴를 다시 내려요' },
-  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '손님이 남긴 쟁반을 바로바로 치워요' },
+  barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 700, body: 0xE9E2D6, hair: 0x2A1E16, desc: '커피 메뉴는 하린이 알아서 내리고 픽업대로 옮겨요 · 시그니처는 사장님 손으로' },
+  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '테이블을 닦고 찻값을 모아 와요' },
 };
 
 // 매장: 실제 감성커피 매장 (부산에서 시작) · mult = 값 배수
@@ -138,3 +138,19 @@ export const REGULARS = [
     ] },
 ];
 export const FAVOR_MAX = 15;   /* 5화 × 최고 3 */
+
+// 정성 한 잔 (손 추출): 꾹 누르는 동안 잔이 차오름 · 금빛 구간에서 떼면 정성 한 잔 · 빗나가도 그냥 맛있는 한 잔 (벌 없음)
+//   fill = 가득 차는 시간(초) · zone = 금빛 구간 너비 · tip = 정성 한 잔 팁 (잔 값 대비) · combo = 연속마다 팁 +
+export const PULL = { fill: 1.7, zone: 0.17, zoneMin: 0.58, zoneMax: 0.8, tip: 0.3, combo: 0.15, comboMax: 6, auto: 0.6 };
+// 라떼아트 (시그니처 마무리): 한 번 쓱 · 대충 그어도 넉넉히 · 못 그려도 하트로 마무리
+export const ART = {
+  heart: { name: '하트', say: '하트 완성! 손님 마음 +1' },
+  leaf: { name: '나뭇잎', say: '나뭇잎 완성! 손님 마음 +1' },
+  gam: { name: '감', say: '감 완성! 가을 한 알 · 손님 마음 +1' },
+};
+// 오늘의 시: 손님 마음이 맑아질 때마다 한 글자 · 다 차면 벽 액자 (단골 시와는 따로)
+export const POEM_PER = 3;   /* 한 글자 = 마음 3 (맑음 1 · 햇살 2) */
+export const POEMS = ['바람이 잠시 머무는 곳', '오늘도 수고한 당신에게', '한 잔에 담은 한결같은 마음', '창가에 내려앉은 오후', '파도 소리 같은 쉼표 하나', '천천히 식어 가는 온기', '돌담 너머 귤빛 바람', '느리게 걸어도 괜찮아요', '따뜻한 손끝의 정성', '다리 위로 노을이 지면',
+  '비 오는 날의 작은 등불', '말없이 건네는 위로', '여백에 머무는 향기', '오래된 의자의 기억', '새벽 숲을 닮은 한 모금', '그대 웃음이 피는 자리', '돌아오는 길의 쉼터', '마음에도 볕이 들어요', '한결같이 그 자리에', '바다를 건너온 이야기'];
+// 손편지: 손님이 가끔 테이블에 남기는 한 줄
+export const LETTERS = ['오늘 커피 덕분에 하루가 따뜻했어요', '창가 자리, 또 앉으러 올게요', '사장님 손길이 느껴지는 맛이었어요', '조용해서 좋았어요. 고마워요', '라떼 위 그림, 사진 찍어 갔어요', '지친 오후에 쉼표 하나 받아 가요', '바다 냄새랑 커피 냄새, 최고예요', '다음엔 친구랑 같이 올게요', '천천히 마셔도 된다는 게 좋았어요', '덕분에 마음이 맑아졌어요'];

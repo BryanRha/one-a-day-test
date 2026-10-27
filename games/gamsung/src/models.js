@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND, MENU } from './data.js?v=0.68.3';
+import { BRAND, MENU } from './data.js?v=0.69.0';
 
 const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -153,3 +153,11 @@ export const FURN_MODEL = {
   photo(p) { for (let i = 0; i < 2; i++) { box(66, 80, 6, 0x2A2420, -36 + i * 72, 150 + i * 30, 0, p); box(54, 66, 2, [0xC8C2B8, 0x9A948A][i], -36 + i * 72, 157 + i * 30, 4, p); } },
 };
 export function poemFrame(p, txt) { callig(p, txt, 0, 240, 0, 0, 100, 170, true); }
+/* 오늘의 시 액자: 세로 서예 + 아래 붉은 이름표 「오늘의 시」 */
+export function todayFrame(p, txt) { callig(p, txt, 0, 262, 0, 0, 120, 196, true); const t = cvTex(160, 44, x => { x.fillStyle = '#A92E2B'; x.fillRect(0, 0, 160, 44); x.fillStyle = '#F6EFE4'; x.textAlign = 'center'; x.font = '700 24px "Gowun Batang", serif'; x.fillText('오늘의 시', 80, 31); });
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(84, 23), new THREE.MeshBasicMaterial({ map: t })); pl.position.set(0, 44, 5); p.add(pl); box(90, 28, 4, C.woodD, 0, 30, 0, p);
+  document.fonts && document.fonts.ready.then(() => { const x = t.image.getContext('2d'); x.fillStyle = '#A92E2B'; x.fillRect(0, 0, 160, 44); x.fillStyle = '#F6EFE4'; x.textAlign = 'center'; x.font = '700 24px "Gowun Batang", serif'; x.fillText('오늘의 시', 80, 31); t.needsUpdate = true; }); }
+/* 찻값: 테이블 위 동전 더미 (값이 클수록 높게) */
+export function coinPile(v) { const g = new THREE.Group(), n = Math.max(3, Math.min(12, Math.round(v / 6))); for (let i = 0; i < n; i++) { const col = i % 3, k = Math.floor(i / 3); const c = cyl(9, 9, 3.2, i % 2 ? 0xE8B44A : 0xF2C85E, [-10, 9, 0][col], k * 3.4, [4, 2, -10][col], g, 12); c.rotation.z = (i % 4 - 1.5) * 0.04; } return g; }
+/* 손편지: 하얀 봉투 + 붉은 하트 봉인 */
+export function letter() { const g = new THREE.Group(); const e = box(30, 2, 21, 0xFFFDF8, 0, 0, 0, g); e.rotation.y = 0.35; const f = box(30, 0.6, 10, 0xF1E8DA, 0, 2, -4, g); f.rotation.y = 0.35; const h = sph(4.2, BRAND.redHex, 0, 3, 1, g, 8, 6); h.scale.set(1, 0.4, 1); return g; }
