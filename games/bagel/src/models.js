@@ -1,6 +1,6 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (사람 · 베이글 · 커피 · 설비 · 가게)
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.66.0';
+import { BRAND } from './data.js?v=0.66.1';
 
 const gm = (() => { const d = new Uint8Array([95, 190, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -72,7 +72,11 @@ export function shopShell(sc, W, D, theme) {
 // ── 설비 (위치는 group 기준 · 받는 곳/내놓는 곳 좌표는 game.js 에서)
 export const STATION = {
   oven(p) { box(200, 170, 140, 0xC0583A, 0, 0, 0, p); box(210, 16, 150, 0x8A3A26, 0, 170, 0, p); mesh(new THREE.BoxGeometry(120, 60, 4), new THREE.MeshBasicMaterial({ color: 0xFFB24A }), 0, 90, 72, p); box(30, 80, 30, 0x8A3A26, 60, 186, -30, p); box(180, 10, 60, 0x9A643A, 0, 0, 100, p); },
-  counter(p) { box(320, 100, 110, 0xF7F0E6, 0, 0, 0, p); box(330, 14, 120, 0x9A643A, 0, 100, 0, p); box(70, 50, 50, 0x4A4A55, 110, 114, -10, p); },
+  counter(p) { box(320, 100, 110, 0xF7F0E6, 0, 0, 0, p); box(330, 14, 120, 0x9A643A, 0, 100, 0, p); box(70, 50, 50, 0x4A4A55, 110, 114, -10, p);
+    /* 계산대 위 매달린 간판: 카메라 쪽으로 돌려 늘 정면 · 머리 위라 사람에게 안 가림 */ const hs = new THREE.Group(); hs.position.set(-20, 0, 0); p.add(hs);
+    const sign = logoPanel(300, 96); sign.rotation.set(-0.42, Math.PI / 4, 0, 'YXZ'); sign.position.set(0, 300, 0); hs.add(sign);
+    const back = mesh(new THREE.BoxGeometry(312, 108, 6), M(0x5A3A22), 0, 300, 0, hs); back.rotation.set(-0.42, Math.PI / 4, 0, 'YXZ'); back.translateZ(-4);
+    for (const s2 of [-1, 1]) { const r = cyl(2, 2, 120, 0x5A3A22, 0, 0, 0, hs, 6); r.position.set(s2 * 105, 340, -s2 * 105); } },
   ccbar(p) { box(220, 95, 110, 0xFFFFFF, 0, 0, 0, p); box(230, 12, 120, 0x9A643A, 0, 95, 0, p); [0xFFFBF2, 0xF6D6E8, 0xE6F2C8, 0xFFE9B8].forEach((c, i) => cyl(18, 18, 22, c, -75 + i * 50, 107, -20, p)); },
   coffee(p) { box(130, 150, 100, 0xF4F7F8, 0, 0, 0, p); box(140, 12, 110, 0xC8D2D8, 0, 150, 0, p); box(110, 80, 6, 0xBFE3F2, 0, 50, 50, p); for (let i = 0; i < 3; i++) cyl(10, 9, 16, 0xFFFBF2, -30 + i * 30, 70, 46, p, 10); },   /* 크림치즈 냉장고 */
   table(p) { cyl(70, 70, 10, 0xFFFFFF, 0, 78, 0, p, 24); cyl(10, 16, 78, 0x9A643A, 0, 0, 0, p, 10);
@@ -85,6 +89,12 @@ export const STATION = {
   plant(p) { cyl(34, 26, 60, 0xE7B98A, 0, 0, 0, p, 12); sph(55, 0x7FBF6A, 0, 110, 0, p, 12, 10).scale.set(1, 1.2, 1); },
   desk(p) { box(160, 80, 80, 0x9A643A, 0, 0, 0, p); box(170, 10, 90, 0xC08A5A, 0, 80, 0, p); box(40, 30, 6, 0x4A4A55, 0, 90, -20, p); },
 };
+// 브랜드 로고 판: 주황 바탕 + 공식 로고(흰 글씨) · 이미지가 늦게 와도 다시 그림
+const LOGO = (() => { const im = new Image(); im.src = 'assets/brand/logo.png'; return im; })();
+export function logoPanel(w, h) { const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w); const x = c.getContext('2d'), t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const draw = () => { x.clearRect(0, 0, c.width, c.height); x.fillStyle = BRAND.accent; x.beginPath(); x.roundRect(0, 0, c.width, c.height, c.height * 0.22); x.fill(); if (LOGO.complete && LOGO.naturalWidth) { const r = Math.min(c.width * 0.86 / LOGO.naturalWidth, c.height * 0.74 / LOGO.naturalHeight), lw = LOGO.naturalWidth * r, lh = LOGO.naturalHeight * r; x.drawImage(LOGO, (c.width - lw) / 2, (c.height - lh) / 2, lw, lh); } t.needsUpdate = true; };
+  draw(); if (!LOGO.complete) LOGO.addEventListener('load', draw, { once: true });
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true })); }
 // 자동차 (드라이브스루)
 export function car(col) { const g = new THREE.Group(); box(200, 60, 110, col, 0, 20, 0, g); box(120, 50, 100, col, -10, 80, 0, g); box(110, 40, 102, 0xBFE3F2, -10, 84, 0, g).scale.set(1, 1, 1.01);
   for (const [x, z] of [[60, 55], [-60, 55], [60, -55], [-60, -55]]) mesh(geo('wheel', () => new THREE.CylinderGeometry(22, 22, 16, 14).rotateX(Math.PI / 2)), M(0x2A2A30), x, 22, z, g); return g; }
