@@ -1,11 +1,14 @@
 // 이용 기록(익명): 무작위 기기 번호 + 행동만 보냄 · 이름 · 생년월일 · 사주 내용은 절대 보내지 않음
-//   보내는 곳: 같은 주소의 /api/ev (oneaday.kr · test.oneaday.kr · vercel.app 에서만, 깃허브 주소에서는 꺼짐)
+//   보내는 곳: oneaday.kr · test.oneaday.kr · vercel.app → 같은 주소의 /api/ev
+//             깃허브 주소(지인용 · 깃허브 테스트) → 테스트 서버 https://test.oneaday.kr/api/ev (o = friends / test 로 구분)
 //   모아서 5초마다 · 화면을 떠날 때 한 번에 보냄 → 게임 성능에 영향 없음
 
 const HOST = location.hostname;
 const OFF = (() => { try { return localStorage.getItem('oad_track_off') === '1'; } catch { return false; } })();
-const ON = !OFF && (/(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app') || (() => { try { return localStorage.getItem('oad_track') === '1'; } catch { return false; } })());
-const URL_EV = '/api/ev';
+const GH = HOST.endsWith('github.io');
+const ON = !OFF && (/(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app') || GH || (() => { try { return localStorage.getItem('oad_track') === '1'; } catch { return false; } })());
+const URL_EV = GH ? 'https://test.oneaday.kr/api/ev' : '/api/ev';
+const ORIGIN = GH ? (location.pathname.startsWith('/one-a-day-test') ? 'test' : 'friends') : '';   /* 어느 주소에서 온 기록인지 */
 const MAX_Q = 200;
 
 const store = {
@@ -42,7 +45,7 @@ function push(name, p) {
 }
 function flush() {
   if (!ON || !q.length) return;
-  const body = JSON.stringify({ d: device, s: session, v: ver, e: q.splice(0, 50) });
+  const body = JSON.stringify({ d: device, s: session, v: ver, o: ORIGIN, e: q.splice(0, 50) });
   try {
     if (!(navigator.sendBeacon && navigator.sendBeacon(URL_EV, new Blob([body], { type: 'text/plain' })))) fetch(URL_EV, { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {});
   } catch { /* 네트워크 오류는 무시 */ }

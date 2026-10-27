@@ -1,7 +1,7 @@
 // 시험용 자동 플레이 (?bot=1&speed=4): 거두기 · 내리기 · 볶기 · 치우기 · 사연 · 가구 사서 놓기 · 동료 · 주문서 · 출석
-import { MENU, ROAST, FURN, STAFF } from './data.js?v=0.67.1';
-import { S, ST, save } from './state.js?v=0.67.1';
-import { storeMult } from './game.js?v=0.67.1';
+import { MENU, ROAST, FURN, STAFF } from './data.js?v=0.67.2';
+import { S, ST, save } from './state.js?v=0.67.2';
+import { storeMult } from './game.js?v=0.67.2';
 
 export function startBot(app) {
   const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0;
