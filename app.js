@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.73.2';
-import * as R from './rules.js?v=0.73.2';
-import * as I from './install.js?v=0.73.2';
-import * as T from './track.js?v=0.73.2';
-import * as P from './pay.js?v=0.73.2';
-import * as A from './account.js?v=0.73.2';
-import * as C from './cloud.js?v=0.73.2';
-import * as BM from './bm.js?v=0.73.2';
+import { PLANNED } from './catalog.js?v=0.74.0';
+import * as R from './rules.js?v=0.74.0';
+import * as I from './install.js?v=0.74.0';
+import * as T from './track.js?v=0.74.0';
+import * as P from './pay.js?v=0.74.0';
+import * as A from './account.js?v=0.74.0';
+import * as C from './cloud.js?v=0.74.0';
+import * as BM from './bm.js?v=0.74.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.73.2').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.74.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.73.2';
+const VERSION = '0.74.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -376,6 +376,7 @@ function renderSettings() {
       <div><span>테스트: 날짜 이동 <span class="badge">${s.dayOffset >= 0 ? '+' : ''}${s.dayOffset}일</span></span><span><button data-day="-1">‹ 하루 전</button> <button data-day="1">하루 뒤 ›</button></span></div>
       <div><span>테스트: 날짜 되돌리기</span><button data-day="0">오늘로</button></div>
       <div><span>테스트: 게임 안 BM 그룹 <span class="badge">${BM.group()}</span><br><small style="color:var(--mute)">A 지금 그대로 · B 보상형 광고 + 골드 · C B + 약한 전면 광고</small></span><span><button data-bmg="A">A</button> <button data-bmg="B">B</button> <button data-bmg="C">C</button></span></div>
+      <div><span>테스트: 연속 실패 응원 선물 <span class="badge">${BM.helpOn() ? '켜짐' : '꺼짐'}</span></span><span><button data-helpg="on">켜기</button> <button data-helpg="off">끄기</button></span></div>
       <div><span>테스트: 하루 한 게임 규칙<br><small style="color:var(--mute)">켜면 실제처럼 잠기고 광고 · 골드로 열어요</small></span><button data-strict>${R.RULES.openAll ? '켜기' : '끄기'}</button></div>
       <div><span>모든 기록 지우기</span><button class="warn" data-reset>초기화</button></div>
     </div>
@@ -543,7 +544,7 @@ async function gameReq(gid, d) {
     const on = grp !== 'A' && A.ON;
     return done({ ok: true, v: 1, group: grp, login: !!me, owned, noAds: owned, gold: me ? (me.gold && me.gold.total) || 0 : null,
       prices: on ? Object.fromEntries(Object.entries(shopOf()).map(([k, v]) => [k, v.gold])) : {}, items: me ? (me.items || []).filter(x => x.startsWith('item:' + gid + ':')).map(x => x.split(':')[2]) : [],
-      ads: { reward: on && BM.rewardLeft(gid) > 0, rewardLeft: on ? BM.rewardLeft(gid) : 0, inter: grp === 'C' && !owned } });
+      ads: { reward: on && BM.rewardLeft(gid) > 0, rewardLeft: on ? BM.rewardLeft(gid) : 0, inter: grp === 'C' && !owned }, help: BM.helpOn() });
   }
   if (fn === 'rewardedAd') {
     const place = String(a[0] || '').slice(0, 20);
@@ -595,10 +596,11 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if (d.bmg) { BM.setGroup(d.bmg); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
+  if (d.helpg) { BM.setHelp(d.helpg); go('settings'); toast(`응원 선물 ${d.helpg === 'on' ? '켜짐' : '꺼짐'}`); }
+  else if (d.bmg) { BM.setGroup(d.bmg); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
   else if (d.playSynced) play(d.playSynced, true);
   else if (d.cpick) cloudPick(d.gid, d.cpick, t);
   else if ('nudgeOff' in d) { try { const n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); n.off = 1; localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ } closeSheet(); toast('다시 보지 않을게요'); }

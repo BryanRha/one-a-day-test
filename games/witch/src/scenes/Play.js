@@ -1,15 +1,16 @@
 // 비행 화면: core/run.js 시뮬레이션을 고정 간격으로 돌리고, 상태(s)와 사건(events)을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.73.2';
-import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.73.2';
-import { decideX } from '../core/ai.js?v=0.73.2';
-import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.73.2';
-import { audio } from '../audio.js?v=0.73.2';
-import { load, save } from '../save.js?v=0.73.2';
-import { wind, tipOf, ELEMENT } from '../fx.js?v=0.73.2';
-import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.73.2';
-import { bm } from '../oad_bm.js?v=0.73.2';
-import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.73.2';
-import { inOAD, exitToOAD } from '../oad.js?v=0.73.2';
+import { W, H } from '../config.js?v=0.74.0';
+import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.74.0';
+import { decideX } from '../core/ai.js?v=0.74.0';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.74.0';
+import { audio } from '../audio.js?v=0.74.0';
+import { load, save } from '../save.js?v=0.74.0';
+import { wind, tipOf, ELEMENT } from '../fx.js?v=0.74.0';
+import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.74.0';
+import { bm } from '../oad_bm.js?v=0.74.0';
+import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.74.0';
+import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.74.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
 
 const DT = 1 / 60;
 const SHOT_KEY = { star: 'bolt_star', fire: 'bolt_fire', ice: 'bolt_ice', bolt: 'bolt_bolt', furball: 'furball' };
@@ -62,7 +63,7 @@ export class PlayScene extends Phaser.Scene {
     // 장면 객체는 판마다 재사용되므로 상태를 모두 초기화
     this.finished = false; this.bossImg = null; this.bossFlash = 0; this.scoreShown = 0; this.bannerAt = 0; this.drag = null;
     this.acc = 0; this.paused = false; this.over = false; this.slow = 1; this.bossKills = 0; this.sRank = 0; this.items = 0;
-    this.oadRevives = 0; this.reviveAt = 0; this.reviveOffers = []; this.runsBefore = d.totals.runs;
+    this.oadRevives = 0; this.reviveAt = 0; this.reviveOffers = []; this.runsBefore = d.totals.runs; this.helped = false; this.quit = false;
     const q = new URLSearchParams(location.search);
     this.bot = q.has('bot') || this.opts.bot;
     // 테스트용: ?from=1400 → 그 거리에서 시작
@@ -82,6 +83,7 @@ export class PlayScene extends Phaser.Scene {
     this.showBanner(ZONES[this.s.zone % 5], `${this.s.zone + 1} 구역`, 0xB89AFF);
     if (boosters.dash) this.time.delayedCall(200, () => { this.startDash(); this.popText(W / 2, H * 0.45, '출발 대시!', '#FFE14D', 80, 900); });
     if (!d.tutorial && !this.bot) this.tutorial();
+    else if (!this.bot && !boosters.shield && helpCheck()) this.offerHelp(d.bestDist);
     window.__play = this;
   }
 
@@ -451,6 +453,7 @@ export class PlayScene extends Phaser.Scene {
       case 'pick': this.onPick(e); break;
       case 'itemEnd': if (e.item === 'dash') { this.dashFx.setVisible(false).stop(); } break;
       case 'shield': audio.play('sfx_shield', { volume: 0.5 }); this.fx('sheet_ring', s.player.x, s.player.y, 1, 0x9AE8FF); break;
+      case 'giftEnd': this.popText(this.s.player.x, this.s.player.y - 160, '응원 보호막 끝 · 이제 혼자서도 OK!', '#9AE8FF', 40, 1200); break;
       case 'shieldBreak': audio.play('sfx_shield_break'); this.fx('sheet_ring', s.player.x, s.player.y, 1.4, 0x9AE8FF); this.shake(0.01, 200); break;
       case 'meteorWarn': audio.play('sfx_warn', { volume: 0.6 }); this.showTip('meteor', '⚠ 별똥별! 빨갛게 깜빡이는 칸에서 비켜요', true); break;
       case 'meteorFall': audio.play('sfx_meteor', { volume: 0.6, gap: 200 }); break;
@@ -590,6 +593,32 @@ export class PlayScene extends Phaser.Scene {
     this.time.delayedCall(1100, () => this.askRevive());
   }
 
+  // 응원 선물 (다음 판 시작 때 · 노력 인정 먼저 · 거절 가능): 보호막 1회, 첫 Nm 동안만
+  offerHelp(best) {
+    const m = giftMeters(best);
+    helpShown(); track('help_offer', { gift: 'shield', m });
+    this.paused = true;
+    const pop = popup(this, '응원 선물', 900, { closable: false, depth: 2000, onBack: () => no() });
+    const b = pop.box;
+    b.add(txt(this, 0, -300, '최근 세 판, 포기하지 않고 날았네요!', 48, '#FFE14D', { wrap: 860 }));
+    b.add(txt(this, 0, -225, '응원 선물 · 챙겨 드릴게요', 40, '#FFFFFF'));
+    b.add(this.add.nineslice(0, -40, 'card', null, 820, 230, 50, 50, 50, 50).setTint(0xD8F4FF));
+    b.add(this.add.image(-300, -40, 'shield').setDisplaySize(170, 170));
+    b.add(txt(this, -190, -80, '보호막 1회', 50, '#FFFFFF', { ox: 0 }));
+    b.add(txt(this, -190, -10, `첫 ${fmt(m)}m 동안 한 번 막아 줘요`, 34, '#9AE8FF', { ox: 0 }));
+    const go = () => { pop.close(); this.time.delayedCall(160, () => { this.paused = false; }); };
+    const yes = () => {
+      this.helped = true; track('help_take', { gift: 'shield', m });
+      this.s.player.shield = 1; this.s.giftUntil = m;
+      audio.play('sfx_shield'); this.fx('sheet_ring', this.s.player.x, this.s.player.y, 1.4, 0x9AE8FF);
+      go(); this.time.delayedCall(250, () => this.popText(W / 2, H * 0.45, '보호막 장착!', '#9AE8FF', 72, 900));
+    };
+    const no = () => { track('help_decline', { gift: 'shield', m }); go(); };
+    b.add(button(this, 0, 160, '받을게요', yes, { key: 'btn_gold', w: 600, h: 140, size: 44 }));
+    b.add(button(this, 0, 320, '혼자 해 볼게요', no, { key: 'btn_purple', w: 600, h: 140, size: 40 }));
+    window.__helpPop = pop;
+  }
+
   // 이어하기 창: 희망일 때만 권함 (meta.reviveMood) · 칭찬 먼저 · 10초 카운트다운 · 시간이 끝나면 조용히 결과로
   //   원어데이 안: 첫 번째 = 광고 보고(소장자는 광고 없이) | 🪙20 나란히 같은 크기 · 두 번째 = 🪙40 만 · 판당 2번까지
   //   별가루 이어하기(5/10/20)는 예전 그대로 함께 둠 · 원어데이 밖이면 골드 · 광고 버튼 없이 예전처럼
@@ -604,7 +633,7 @@ export class PlayScene extends Phaser.Scene {
     const adOk = info.ok && oadN === 0 && (info.owned || (info.ads && info.ads.reward));
     const goldItem = oadN === 0 ? 'continue' : 'continue2';
     const goldOk = info.ok && oadN < OAD_REVIVE_MAX && bm.price(goldItem) > 0;
-    const offerOad = hope && (adOk || goldOk);
+    const offerOad = hope && !this.helped && (adOk || goldOk);   /* 응원 선물 받은 판엔 골드 · 광고 이어하기를 권하지 않음 */
     const offerGem = gemCost !== undefined && mood !== 'early' && (hope || d.gems >= gemCost);
     this.reviveOffers.push({ mood, oad: offerOad, gem: offerGem, dist: Math.floor(s.dist) });
     if (this.bot || s.revived >= REVIVE_MAX || (!offerOad && !offerGem)) return this.finish();
@@ -701,6 +730,7 @@ export class PlayScene extends Phaser.Scene {
       kills: s.kills, bosses: this.bossKills, sRank: this.sRank, items: this.items, witch: s.witch,
       revived: s.revived, afterRevive: s.revived ? Math.floor(s.dist - this.reviveAt) : 0, offers: this.reviveOffers,
     };
+    if (!this.bot) noteRun({ dist: s.dist, t: s.t, best: this.bestDist, runsBefore: this.runsBefore, quit: this.quit, helped: this.helped });
     audio.stopMusic();
     this.cameras.main.fadeOut(350, 10, 6, 30);
     /* 판 끝: 전면 광고는 앱이 조건(그룹 · 간격 · 소장)에 맞을 때만 보여 줌 — 판마다 한 번 알림 */
@@ -718,7 +748,7 @@ export class PlayScene extends Phaser.Scene {
     const b = pop.box;
     const resume = () => { pop.close(); this.time.delayedCall(160, () => { this.paused = false; (this.frozen || []).forEach(t => t.resume()); this.frozen = null; this.anims.resumeAll(); audio.duck(0.38); }); };
     b.add(button(this, 0, -130, '계속하기', resume, { key: 'btn_gold', w: 520, h: 150 }));
-    b.add(button(this, 0, 40, '로비로', () => { pop.close(); this.paused = false; (this.frozen || []).forEach(t => t.resume()); this.frozen = null; this.anims.resumeAll(); this.s.status = 'dead'; this.finish(); }, { key: 'btn_purple', w: 440, h: 120 }));
+    b.add(button(this, 0, 40, '로비로', () => { pop.close(); this.paused = false; (this.frozen || []).forEach(t => t.resume()); this.frozen = null; this.anims.resumeAll(); this.s.status = 'dead'; this.quit = true; this.finish(); }, { key: 'btn_purple', w: 440, h: 120 }));
     const d = load();
     const sfx = button(this, -130, 200, '', () => { audio.toggleSfx(); sfxIc.setTexture(d.sfx ? 'ico_sound' : 'ico_sound_off'); }, { key: 'btn_icon', w: 150, h: 150 });
     const sfxIc = this.add.image(-130, 194, d.sfx ? 'ico_sound' : 'ico_sound_off').setDisplaySize(96, 96);

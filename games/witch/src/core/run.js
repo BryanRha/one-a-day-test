@@ -38,7 +38,8 @@ export const CATS = {
 function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 export class Run {
-  // opts: { seed, H, witch, witchLevel, cats: [{id, level}], boosters: {dash, shield}, adoptTarget }
+  // opts: { seed, H, witch, witchLevel, cats: [{id, level}], boosters: {dash, shield}, adoptTarget, giftShield }
+  //   giftShield: 응원 선물 보호막 — 이 거리(m)까지만 유지 (못 쓰고 지나가면 조용히 사라짐)
   constructor(opts = {}) {
     this.R = rng(opts.seed ?? 1);
     const H = opts.H || 1920;
@@ -50,10 +51,11 @@ export class Run {
       witch: opts.witch || 'luna', element: witch.element, passive: witch.passive,
       // 공격력: 레벨당 +12%, 발사 간격 0.125s → 레벨 30에서 0.09s
       level: wl, dmg: 1 + 0.12 * (wl - 1), fireGap: Math.max(0.09, 0.125 - 0.0012 * (wl - 1)), fireT: 0, shotCount: 0,
-      player: { x: W / 2, y: H - 470, tx: W / 2, r: 34, shield: (opts.boosters && opts.boosters.shield) ? 1 : 0, inv: 0 },
+      player: { x: W / 2, y: H - 470, tx: W / 2, r: 34, shield: (opts.boosters && opts.boosters.shield) || opts.giftShield ? 1 : 0, inv: 0 },
       items: { twin: 0, magnet: 0, star: 0, dash: (opts.boosters && opts.boosters.dash) ? 4 : 0 },
       cats: (opts.cats || []).filter(Boolean).map((c, i) => ({ ...c, ...CATS[c.id], side: i ? 1 : -1, t: 0, lv: c.level || 1 })),
       bullets: [], enemies: [], drops: [], meteors: [], ebullets: [], marks: [],
+      giftUntil: opts.giftShield || 0,
       boss: null, bossCount: 0, nextBoss: BOSS_EVERY, rowY: -9999, nextRowAt: 0, nextMeteor: 500,
       adoptTarget: opts.adoptTarget || null,
     };
@@ -89,6 +91,8 @@ export class Run {
     if (zone !== s.zone) { s.zone = zone; this.ev('zone', { zone }); }
 
     for (const k2 of ITEMS) if (s.items[k2] > 0) { s.items[k2] -= dt; if (s.items[k2] <= 0) { s.items[k2] = 0; this.ev('itemEnd', { item: k2 }); } }
+    if (s.giftUntil && s.dist >= s.giftUntil) { s.giftUntil = 0; if (p.shield) { p.shield = 0; this.ev('giftEnd', {}); } }
+    if (s.giftUntil && !p.shield) s.giftUntil = 0;   /* 이미 한 번 막았으면 선물 끝 */
     if (p.inv > 0) p.inv -= dt;
 
     this.fire(dt);

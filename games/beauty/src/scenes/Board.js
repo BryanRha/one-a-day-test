@@ -1,16 +1,16 @@
 // 작업대 (원작의 주방 보드): 7×9 머지-2 · 생산기 · 잠긴 상자 · 비눗방울 · 창고 · 주문 3장 · 팔기
-import { W, H } from '../config.js?v=0.73.2';
-import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.73.2';
-import { audio } from '../audio.js?v=0.73.2';
-import { load, save } from '../save.js?v=0.73.2';
-import { goPrev } from '../nav.js?v=0.73.2';
-import { hud } from '../hud.js?v=0.73.2';
-import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.73.2';
-import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.73.2';
-import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY } from '../store.js?v=0.73.2';
-import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.73.2';
-import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.73.2';
-import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.73.2';
+import { W, H } from '../config.js?v=0.74.0';
+import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.74.0';
+import { audio } from '../audio.js?v=0.74.0';
+import { load, save } from '../save.js?v=0.74.0';
+import { goPrev } from '../nav.js?v=0.74.0';
+import { hud } from '../hud.js?v=0.74.0';
+import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.74.0';
+import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.74.0';
+import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track } from '../store.js?v=0.74.0';
+import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.74.0';
+import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.74.0';
+import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.74.0';
 const E_GIFT = 15;   /* 하루 첫 에너지 바닥 응원 선물 */
 
 const COLS = 7, ROWS = 9, CS = 142, X0 = (1080 - COLS * CS) / 2, Y0 = 440;
@@ -272,11 +272,15 @@ export class BoardScene extends Phaser.Scene {
   // ── 에너지 부족
   noEnergy() {
     audio.play('sfx_error', { volume: 0.5 }); const pk = ENERGY.gemPack;
-    // 좌절일 때 선물: 하루 첫 바닥엔 광고 · 골드 없이 작은 응원 선물부터
-    if (this.d.eGift !== today()) { const p = sheet(this, { size: 'S', title: '오늘의 응원 선물', sub: '부지런히 만들었어요! 오늘 첫 바닥엔 선물을 드려요' });
-      const ei = this.add.image(0, 0, 'energy'); ei.setScale(150 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 230, 230, { fill: '#FFF6DA', r: 115 }), ei, R(this, 0, 170, `⚡${E_GIFT} 무료`, TS.h2, C.gold, { w: 900 })]);
-      const take = () => { this.d.eGift = today(); this.d.energy += E_GIFT; save(); p.close(); audio.play('sfx_levelup', { volume: 0.6 }); this.hud.update(); toast(this, `⚡${E_GIFT} 받았어요 · 계속 만들어 봐요!`); };
-      p.foot([{ t: `⚡${E_GIFT} 받기`, fn: take }]); return; }
+    // 응원 선물 (원어데이 공통 규칙 bm-policy 6장 · 성장형 기준 모양): 그날 첫 에너지 바닥 → 광고 · 골드 없이 ⚡15
+    //   소장자 · 비소장자 같음 · 하루 1번(받든 닫든) · 실험 꺼짐 그룹(helpOn false)엔 안 줌 · 기록 help_eligible(두 그룹, on 1/0) → help_offer · help_take · help_decline
+    const first = this.d.eGift !== today();
+    if (first) { this.d.eGift = today(); save(); track('help_eligible', { kind: 'energy', amount: E_GIFT, lv: this.d.lv, on: helpOn() ? 1 : 0 }); }   /* 조건이 맞은 순간 두 그룹 모두 하루 1번 */
+    if (first && helpOn()) { let took = false; const tp = { kind: 'energy', amount: E_GIFT, lv: this.d.lv };
+      const p = sheet(this, { size: 'S', title: '응원 선물', sub: '오늘 정말 부지런히 만들었어요!', onClose: () => { if (!took) track('help_decline', tp); } });
+      const ei = this.add.image(0, 0, 'energy'); ei.setScale(150 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 230, 230, { fill: '#FFF6DA', r: 115 }), ei, T(this, 0, 168, '응원 선물 · 챙겨 드릴게요', TS.body, C.ink, { w: 900 }), R(this, 0, 222, `⚡${E_GIFT} 무료`, TS.h2, C.gold, { w: 900 })]);
+      const take = () => { took = true; track('help_take', tp); this.d.energy += E_GIFT; save(); p.close(); audio.play('sfx_levelup', { volume: 0.6 }); this.hud.update(); toast(this, `⚡${E_GIFT} 받았어요 · 계속 만들어 봐요!`); };
+      p.foot([{ t: `⚡${E_GIFT} 받기`, fn: take }]); track('help_offer', tp); return; }
     const p = sheet(this, { size: adsOpen() || goldPrice('energy') ? 'L' : 'M', title: '에너지가 부족해요', sub: '시간이 지나면 다시 차요 · 레벨이 오르면 가득 차요' });
     const ei = this.add.image(0, 0, 'energy'); ei.setScale(170 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 260, 260, { fill: '#FFF6DA', r: 130 }), ei]);
     const gp = goldPrice('energy'), left = adLeft('energy');

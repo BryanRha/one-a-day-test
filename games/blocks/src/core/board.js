@@ -43,9 +43,10 @@ export const ALL_CLEAR = 1000;   // 판 전체 비우기: 크게 보상 (가장 
 
 export class Board {
   // level(어드벤처): { grid: 8줄 문자열('.'=빈칸, 0~6=색), gems: [[r,c,종류]...], goals: [{type:'gem', g, count} | {type:'score', target}], gemRate }
-  // mercy: 연속으로 금방 진 뒤 '구원 모드' — 줄을 지우기 좋은 조각 위주로 (원작의 God Mode)
-  constructor({ seed = 1, level = null, mercy = false } = {}) {
-    this.mercy = mercy;
+  // help: '응원 선물'을 받은 판 — 처음 help 수까지 줄을 지우기 좋은 조각 위주로 (공개 선물 · 화면에 남은 수 표시)
+  //   (예전 '구원 모드'는 몰래 켜지던 것 → 2026-10-28 공개 선물로 바꿈, docs/bm-policy.md 6장)
+  constructor({ seed = 1, level = null, help = 0 } = {}) {
+    this.help = help;
     this.R = rng(seed);
     this.g = Array.from({ length: N }, () => new Array(N).fill(-1));   // -1 빈칸, 0~6 색
     this.gem = Array.from({ length: N }, () => new Array(N).fill(-1)); // 블록 속 보석 (어드벤처), -1 없음
@@ -102,8 +103,8 @@ export class Board {
   }
   deal() {
     let best = null;
-    // 도움 모드: 구원 모드(연속 패배 뒤)는 처음 40수까지, 그리고 누구나 첫 15수는 너그럽게 (초반 허무한 패배 방지)
-    if ((this.mercy && this.moves < 40) || this.moves < 15) {
+    // 도움: 응원 선물(받은 판만, 처음 help 수까지) · 누구나 첫 15수는 너그럽게 (모두에게 같은 다듬기)
+    if (this.moves < Math.max(15, this.help || 0)) {
       let bv = -1;
       for (let tries = 0; tries < 30; tries++) { const t = [this.pick(), this.pick(), this.pick()]; if (!this.solvable(t)) continue; const v = this.clearPotential(t) + this.R() * 0.5; if (v > bv) { bv = v; best = t; } }
     }

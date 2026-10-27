@@ -2,9 +2,9 @@
 // 원화 결제(PROVIDER): 지금은 꺼짐(enabled=false) → 원어데이 밖에선 '곧 열려요', 원어데이 안에선 골드 상품으로 대체
 // 원어데이 안(oad_bm hello().ok): 광고 자리 3곳(energy · bubble · dailyBonus) = bm.rewardedAd · 골드 = bm.spend (가격은 서버 SHOP.beauty 만 기준)
 //   소장자는 rewardedAd 가 via:'owner' 로 광고 없이 바로 성공 · 원어데이 밖에선 광고 · 골드 버튼을 숨기고 지금처럼
-import { load, save } from './save.js?v=0.73.2';
-import { bm } from './oad_bm.js?v=0.73.2';
-import { today } from './state.js?v=0.73.2';
+import { load, save } from './save.js?v=0.74.0';
+import { bm } from './oad_bm.js?v=0.74.0';
+import { today } from './state.js?v=0.74.0';
 
 export const PRODUCTS = [
   { id: 'gems_s', n: '보석 한 줌', price: 1200, gems: 80, tag: '' },
@@ -53,6 +53,10 @@ export const oadOn = () => !!bm.info.ok;
 export const isOwner = () => !!(bm.info.ok && (bm.info.owned || bm.info.noAds));
 export const goldPrice = item => bm.price(item);            /* 0 이면 그 골드 상품 없음 */
 export const GOLD_GEMS = 100;                               /* gems100 = 보석 100개 */
+// 응원 선물 실험: 원어데이 안에선 hello().help (꺼짐 그룹이면 false) · 원어데이 밖은 늘 켜짐
+export const helpOn = () => bm.helpOn();
+// 기록: 앱이 g_<name> 으로 남김 (원어데이 밖이면 아무 일 없음)
+export function track(name, p) { try { if (window.parent !== window) window.parent.postMessage({ type: 'oad:track', name, p }, location.origin); } catch { /* */ } }
 // 소장자 전용 장식 1종 (겉모습만 · 능력치 없음 · 골드 상품 아님): 원어데이 밖 'hidden' · 소장 'open' · 아니면 'locked'(소장하면 열려요)
 export const OWNER_DECO = { n: '할머니의 황금 동백함', img: 'camellia10', desc: '소장자만 가게에 둘 수 있는 황금 진열대' };
 export const ownerDeco = () => !oadOn() ? 'hidden' : bm.info.owned ? 'open' : 'locked';

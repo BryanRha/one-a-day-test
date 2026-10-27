@@ -1,6 +1,7 @@
 // 진행·재방문 장치: 연속 출석 · 오늘의 미션 · 어드벤처 시즌(주간 96레벨 그림) · 블록 스킨 · 기록
-import { load, save } from './save.js?v=0.73.2';
-import { seasonInfo, SEASON_LEVELS } from './core/levels.js?v=0.73.2';
+import { load, save } from './save.js?v=0.74.0';
+import { seasonInfo, SEASON_LEVELS } from './core/levels.js?v=0.74.0';
+import * as H from './core/help.js?v=0.74.0';
 
 export const PICS = 10;   // 주간 그림 수 (assets season_0~9, 주마다 돌아감)
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -89,10 +90,9 @@ export function adv() {
 export function advWin() { const d = load(); adv(); d.adv.cleared = Math.min(SEASON_LEVELS, d.adv.cleared + 1); d.adv.winStreak++; if (d.adv.cleared >= SEASON_LEVELS && !d.adv.trophy) { d.adv.trophy = true; d.trophies++; } save(); return d.adv; }
 export function advLose() { const d = load(); adv(); d.adv.winStreak = 0; save(); }
 
-// ── 구원 모드: 최근 두 판을 연달아 금방 졌으면 다음 판은 줄 지우기 좋은 조각 위주 ──
-export function noteClassic(score, moves) {
-  const d = load();
-  d.recent = [...(d.recent || []), moves < 25 ? 1 : 0].slice(-2);
-  save();
-}
-export function wantMercy() { const r = load().recent || []; return r.length === 2 && r[0] && r[1]; }
+// ── 응원 선물 (연속 실패 · core/help.js 규칙) — 예전 '구원 모드'(몰래 좋은 조각)는 2026-10-28 공개 선물로 바꿈 ──
+export function helpState() { const d = load(); if (!d.help || !d.help.adv) d.help = H.freshHelp(); return d.help; }
+export function helpNoteClassic(score, moves, prevBest) { const d = load(); H.noteClassic(helpState(), score, moves, prevBest, d.plays); save(); }
+export function helpNoteAdv(n, won, moves) { H.noteAdv(helpState(), n, won, moves); save(); }
+export function helpGiftNow(st) { const g = H.helpGift(helpState(), st, dayKey()); save(); return g; }
+export function helpShown(st) { H.markShown(helpState(), st); save(); }

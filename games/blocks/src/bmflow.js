@@ -2,9 +2,9 @@
 //   · 시작 때 hello 한 번 (결과는 bm.info 로 바로 읽음 · 원어데이 밖이면 ok = false → 골드 · 광고 버튼 숨김)
 //   · 판 끝 전면 광고: 판이 끝나면 roundOver(), 다음 화면으로 넘어갈 때 afterRound() 를 기다림 → 판마다 한 번만 앱에 물어봄
 //   · 광고 · 확인 창 동안 소리 멈춤
-import { bm } from './oad_bm.js?v=0.73.2';
-import { load, save } from './save.js?v=0.73.2';
-import { dayKey, SKINS } from './meta.js?v=0.73.2';
+import { bm } from './oad_bm.js?v=0.74.0';
+import { load, save } from './save.js?v=0.74.0';
+import { dayKey, SKINS } from './meta.js?v=0.74.0';
 
 let hp = null;
 // hello 는 한 번만 (Boot 가 스킨을 그리기 전에 기다림 · 원어데이 밖이면 바로 ok=false)
@@ -52,3 +52,12 @@ export async function afterRound() {
 // 별 조각 2배: 오늘 쓴 횟수
 export function doubleUsed() { const d = load(); return d.dbl && d.dbl.date === dayKey() ? d.dbl.n : 0; }
 export function noteDouble(stars) { const d = load(), n = doubleUsed(); d.dbl = { date: dayKey(), n: n + 1 }; d.stars += stars; save(); }
+
+// 기록 (앱 운영실): help_offer · help_take · help_decline ...
+const inFrame = (() => { try { return window.parent !== window; } catch { return true; } })();
+export function track(name, p = {}) {
+  try { (window.__tracks || (window.__tracks = [])).push({ name, p }); } catch { /* */ }
+  if (inFrame) try { window.parent.postMessage({ type: 'oad:track', name, p }, location.origin); } catch { /* */ }
+}
+// 응원 선물 실험이 켜져 있나 (꺼짐 그룹이면 선물 없음 · 원어데이 밖은 켜짐)
+export const helpOn = () => bm.helpOn();

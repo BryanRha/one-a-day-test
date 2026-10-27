@@ -11,7 +11,7 @@ function fresh() {
     best: 0, bestDist: 0, weekly: { week: '', best: 0 },
     totals: { runs: 0, dist: 0, kills: 0, bosses: 0, coins: 0, sRank: 0, items: 0 },
     missions: { date: '', list: [] }, daily: { last: '', streak: 0 }, ach: {},
-    walk: { cat: null, until: 0 }, ads: { day: '' }, outfit: null,
+    walk: { cat: null, until: 0 }, ads: { day: '' }, outfit: null, help: { day: '', n: 0, streak: 0 },
     sfx: true, music: true, tutorial: false, tips: {}, createdAt: Date.now(),
   };
 }

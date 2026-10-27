@@ -10,6 +10,14 @@ export function group() {
   let h = 0; for (const c of d + 'bm1') h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return 'ABC'[h % 3];
 }
+// 연속 실패 응원 선물 실험: 켜짐(help) / 꺼짐 50:50 — BM 그룹과 따로 (team/dev/tasks/261028-fail-help/summary.md)
+export function helpOn() {
+  try { const o = localStorage.getItem('oad_help_group'); if (o === 'on') return true; if (o === 'off') return false; } catch { /* */ }
+  let d = ''; try { d = localStorage.getItem('oad_did') || ''; } catch { /* */ }
+  let h = 0; for (const c of d + 'help1') h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % 2 === 0;
+}
+export function setHelp(v) { try { if (v) localStorage.setItem('oad_help_group', v); else localStorage.removeItem('oad_help_group'); } catch { /* */ } }
 export function setGroup(g) { try { if (g) localStorage.setItem('oad_bm_group', g); else localStorage.removeItem('oad_bm_group'); } catch { /* */ } }
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };

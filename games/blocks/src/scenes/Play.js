@@ -1,18 +1,18 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.73.2';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.73.2';
-import { choose } from '../core/ai.js?v=0.73.2';
-import { makeLevel } from '../core/levels.js?v=0.73.2';
-import { TINT, THEMES } from './Boot.js?v=0.73.2';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.73.2';
-import { audio } from '../audio.js?v=0.73.2';
-import { load, save } from '../save.js?v=0.73.2';
-import * as M from '../meta.js?v=0.73.2';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.73.2';
-import { inOAD, exitToOAD } from '../oad.js?v=0.73.2';
-import { bm } from '../oad_bm.js?v=0.73.2';
-import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.73.2';
-import { roundOver, afterRound } from '../bmflow.js?v=0.73.2';
+import { W, H } from '../config.js?v=0.74.0';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.74.0';
+import { choose } from '../core/ai.js?v=0.74.0';
+import { makeLevel } from '../core/levels.js?v=0.74.0';
+import { TINT, THEMES } from './Boot.js?v=0.74.0';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.74.0';
+import { audio } from '../audio.js?v=0.74.0';
+import { load, save } from '../save.js?v=0.74.0';
+import * as M from '../meta.js?v=0.74.0';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.74.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.74.0';
+import { bm } from '../oad_bm.js?v=0.74.0';
+import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.74.0';
+import { roundOver, afterRound, track, helpOn } from '../bmflow.js?v=0.74.0';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };
@@ -39,7 +39,7 @@ export class PlayScene extends Phaser.Scene {
       this.b = new Board({ seed, level: this.level });
       this.theme = (this.n + a.season) % THEMES.length;
     } else {
-      this.b = new Board({ seed, mercy: M.wantMercy() });
+      this.b = new Board({ seed });
       this.theme = d.theme % THEMES.length;
     }
     this.shown = 0; this.busy = false; this.paused = false; this.newBest = false; this.drag = null; this.revived = false;
@@ -67,7 +67,11 @@ export class PlayScene extends Phaser.Scene {
     audio.music('bgm_game', this);
     this.cameras.main.fadeIn(260, 8, 10, 24);
     if (!d.tips.drag && !this.bot) this.time.delayedCall(600, () => this.dragHint());
-    if (this.mode === 'adv' && !this.bot) this.time.delayedCall(300, () => this.goalIntro());
+    /* 응원 선물: 다음 판 시작 때 (이어하기를 권하는 '판 끝' 순간과 겹치지 않음) */
+    this.helpBadge = null;
+    const gift = this.bot ? null : this.checkHelp();
+    if (gift) this.time.delayedCall(350, () => this.helpPop(gift, () => { if (this.mode === 'adv') this.goalIntro(); }));
+    else if (this.mode === 'adv' && !this.bot) this.time.delayedCall(300, () => this.goalIntro());
     if (this.bot) this.time.addEvent({ delay: 360, loop: true, callback: () => this.botStep() });
     window.__play = this;
   }
@@ -553,6 +557,49 @@ export class PlayScene extends Phaser.Scene {
     this.placeAt(m.i, m.r, m.c, this.slots[m.i].piece);
   }
 
+  // ── 응원 선물 (연속 실패 · core/help.js) ──
+  //   조건이 맞으면 켜짐/꺼짐 두 그룹 모두 help_eligible(on 1/0) 기록 → 켜짐 그룹만 선물 창 (help_offer → help_take / help_decline)
+  checkHelp() {
+    const st = { mode: this.mode, n: this.n || 0 };
+    const g = M.helpGiftNow(st); if (!g) return null;
+    const on = helpOn(), p = { mode: this.mode, n: st.n, moves: g.moves, big: g.big ? 1 : 0 };
+    track('help_eligible', { ...p, on: on ? 1 : 0 });
+    M.helpShown(st);
+    return on ? { ...g, p } : null;
+  }
+  helpPop(g, after) {
+    track('help_offer', g.p);
+    this.busy = true;
+    const pop = popup(this, '응원 선물', 860, 760, { closable: false, depth: 2000, onBack: () => done(false) });
+    const c = pop.content;
+    c.add(this.add.image(0, -205, 'i_star').setDisplaySize(96, 96).setTint(0xF5C451));
+    c.add(T(this, 0, -120, g.why, 36, C.text, { w: 800 }));
+    c.add(T(this, 0, -70, g.big ? '끝까지 포기하지 않는 모습, 멋져요!' : '그 끈기, 충분히 대단해요!', 30, C.sub, { w: 800 }));
+    c.add(T(this, 0, 12, `챙겨 드릴게요 — 처음 ${g.moves}수 동안\n줄 지우기 좋은 조각이 나와요`, 32, C.gold, { w: 800, lh: 10 }));
+    let closed = false;
+    const done = take => {
+      if (closed) return; closed = true; pop.close();
+      track(take ? 'help_take' : 'help_decline', g.p);
+      if (take) { this.b.help = g.moves; this.showHelpBadge(); audio.play('sfx_best', { volume: 0.5 }); }
+      this.time.delayedCall(200, () => { this.busy = false; after && after(); });
+    };
+    c.add(btn(this, 0, 155, 520, 130, '받을게요', () => done(true), { style: 'gold', icon: 'i_star', size: 42 }));
+    c.add(btn(this, 0, 292, 520, 100, '혼자 해 볼게요', () => done(false), { style: 'ghost', size: 34 }));
+    window.__helpPop = { done, g };
+  }
+  // 받은 선물은 화면에 보이게: '★ 응원 조각 · 남은 N수'
+  showHelpBadge() {
+    const y = this.BY + BW + 46;
+    const t = T(this, W / 2, y, '', 30, C.gold, { w: 800 }).setDepth(40);
+    this.helpBadge = t;
+    const upd = () => {
+      const left = (this.b.help || 0) - this.b.moves;
+      if (left <= 0) { ev.remove(); this.tweens.add({ targets: t, alpha: 0, duration: 400, onComplete: () => t.destroy() }); this.helpBadge = null; return; }
+      t.setText(`★ 응원 조각 · 남은 ${left}수`);
+    };
+    const ev = this.time.addEvent({ delay: 250, loop: true, callback: upd }); upd();
+  }
+
   // ── 더 놓을 곳이 없을 때: 이어하기 (가운데 4×4 비우기) → 끝 ──
   //   원어데이 밖: 지금처럼 한 판에 한 번 무료 · 원어데이 안: 최고 기록 근처에서만 권유 (core/cont.js 규칙)
   //   첫 번째 = 광고 1회 또는 🪙20 (같은 크기) · 소장자는 무료 · 두 번째 = 🪙40 · 판당 최대 2번 · 카운트다운 10초
@@ -651,13 +698,13 @@ export class PlayScene extends Phaser.Scene {
   }
   finishClassic() {
     const b = this.b, d = load(), prev = d.best;
-    d.plays++; d.lines += b.lines; d.bestCombo = Math.max(d.bestCombo, b.bestCombo);
+    d.plays++; M.helpNoteClassic(b.score, b.moves, prev); d.lines += b.lines; d.bestCombo = Math.max(d.bestCombo, b.bestCombo);
     if (b.score > d.best) d.best = b.score;
     if (d.todayBest.date !== M.dayKey()) d.todayBest = { date: M.dayKey(), score: 0 };
     d.todayBest.score = Math.max(d.todayBest.score, b.score);
     const base = roundStars(b.score); d.stars += base; this.roundStars += base;   /* 판 끝 기본 별 조각 (점수 구간) */
     save();
-    M.track('games'); M.track('score', b.score); M.noteClassic(b.score, b.moves);
+    M.track('games'); M.track('score', b.score);
     const st = this.stats;
     roundOver();
     this.leave('Result', { conts: this.conts, contGold: this.contGold, stars: this.roundStars, score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
@@ -666,11 +713,11 @@ export class PlayScene extends Phaser.Scene {
     audio.play('sfx_best', { volume: 0.8 }); buzz([30, 40, 60]); this.voice('levelclear', 3);
     this.bigWord('LEVEL CLEAR', '#7CFFB2', 110, this.BY + BW / 2);
     const d = load(); d.plays++; d.lines += this.b.lines; save();
-    M.advWin(); M.track('adv'); M.track('games'); roundOver();
+    M.advWin(); M.helpNoteAdv(this.n, true, this.b.moves); M.track('adv'); M.track('games'); roundOver();
     this.time.delayedCall(1300, () => afterRound().then(() => this.leave('Adventure', { justWon: true })));
   }
   advFail() {
-    M.advLose(); M.track('games'); roundOver();
+    M.advLose(); M.helpNoteAdv(this.n, false, this.b.moves); M.track('games'); roundOver();
     const pop = popup(this, `레벨 ${this.n} 실패`, 820, 600, { closable: false, depth: 2000 });
     const left = this.b.goals.map(g => g.type === 'score' ? `${fmt(Math.max(0, g.target - this.b.score))}점` : `${Math.max(0, g.count - g.have)}개`).join(' · ');
     pop.content.add(T(this, 0, -90, `남은 목표 ${left}`, 34, C.sub, { w: 700 }));
