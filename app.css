@@ -226,3 +226,9 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .acct.in .who { flex: 1; min-width: 0; } .acct.in .who small { display: block; color: var(--sub); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
 .acct .gold { text-align: right; } .acct .gold span { display: block; font-size: 11px; color: var(--sub); } .acct .gold b { color: var(--gold); }
 .acct .lo { border: 1px solid var(--line); background: none; color: var(--sub); border-radius: 10px; padding: 6px 10px; font: 13px 'Jua'; cursor: pointer; }
+/* 로그인 후 카드: 동그라미 고정 · 한 줄 정리 (로그인 전 규칙이 동그라미를 늘리던 문제) */
+.acct.in { flex-wrap: nowrap; overflow: hidden; }
+.acct.in > div:first-child { flex: none; min-width: 0; }
+.acct.in .av { width: 44px; height: 44px; }
+.acct.in .who b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct.in .gold { flex: none; } .acct.in .gold b { white-space: nowrap; } .acct.in .lo { flex: none; }
