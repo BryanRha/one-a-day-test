@@ -1,17 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.72.0';
-import * as R from './rules.js?v=0.72.0';
-import * as I from './install.js?v=0.72.0';
-import * as T from './track.js?v=0.72.0';
-import * as P from './pay.js?v=0.72.0';
-import * as A from './account.js?v=0.72.0';
-import * as C from './cloud.js?v=0.72.0';
+import { PLANNED } from './catalog.js?v=0.73.0';
+import * as R from './rules.js?v=0.73.0';
+import * as I from './install.js?v=0.73.0';
+import * as T from './track.js?v=0.73.0';
+import * as P from './pay.js?v=0.73.0';
+import * as A from './account.js?v=0.73.0';
+import * as C from './cloud.js?v=0.73.0';
+import * as BM from './bm.js?v=0.73.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.72.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.73.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.72.0';
+const VERSION = '0.73.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -374,6 +375,7 @@ function renderSettings() {
     <div class="group">
       <div><span>테스트: 날짜 이동 <span class="badge">${s.dayOffset >= 0 ? '+' : ''}${s.dayOffset}일</span></span><span><button data-day="-1">‹ 하루 전</button> <button data-day="1">하루 뒤 ›</button></span></div>
       <div><span>테스트: 날짜 되돌리기</span><button data-day="0">오늘로</button></div>
+      <div><span>테스트: 게임 안 BM 그룹 <span class="badge">${BM.group()}</span><br><small style="color:var(--mute)">A 지금 그대로 · B 보상형 광고 + 골드 · C B + 약한 전면 광고</small></span><span><button data-bmg="A">A</button> <button data-bmg="B">B</button> <button data-bmg="C">C</button></span></div>
       <div><span>테스트: 하루 한 게임 규칙<br><small style="color:var(--mute)">켜면 실제처럼 잠기고 광고 · 골드로 열어요</small></span><button data-strict>${R.RULES.openAll ? '켜기' : '끄기'}</button></div>
       <div><span>모든 기록 지우기</span><button class="warn" data-reset>초기화</button></div>
     </div>
@@ -389,7 +391,8 @@ function renderSettings() {
 // ── 시트(상세 · 광고 · 소개) ─────────────────────────
 const sheet = $('#sheet'), panel = $('#sheet .panel');
 function openSheet(html) { panel.classList.remove('sdpanel'); panel.innerHTML = `<div class="grab"></div>${html}`; sheet.hidden = false; }
-function closeSheet() { sheet.hidden = true; }
+let onSheetClose = null;
+function closeSheet() { sheet.hidden = true; const f = onSheetClose; onSheetClose = null; if (f) f(); }
 $('#sheet .dim').onclick = closeSheet;
 
 function detail(id) {
@@ -520,6 +523,8 @@ addEventListener('popstate', () => { if (!player.hidden) askGame(); });
 // 게임 쪽에서 보내는 메시지: { type: 'oad:exit' } → 원어데이로 · { type: 'oad:back-result', handled } → 뒤로가기 처리 결과
 addEventListener('message', e => {
   const d = e.data; if (!d || player.hidden) return;
+  if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;   // 지금 띄운 우리 게임이 보낸 것만
+  if (d.type === 'oad:req' && playing) return gameReq(playing.id, d);
   if (d.type === 'oad:exit') exitGame();
   else if (d.type === 'oad:ready') backReady = !!d.back;
   else if (d.type === 'oad:error' && playing) T.trackError('game:' + playing.id, d.msg);
@@ -527,12 +532,74 @@ addEventListener('message', e => {
   else if (d.type === 'oad:back-result' && backWait) { clearTimeout(backWait); backWait = null; if (d.handled) { watch(); rearm(); } else leaveGame(); }
 });
 
+// ── 게임 안 BM: 게임(iframe)의 요청 → 확인 · 광고 · 골드 → 결과를 돌려줌 (게임 혼자서는 골드가 빠지지 않음) ──
+let payCfg = {}; P.config().then(c => { payCfg = c || {}; });
+const reply = (id, result) => { try { frame && frame.contentWindow.postMessage({ type: 'oad:res', id, result }, location.origin); } catch { /* */ } };
+async function gameReq(gid, d) {
+  const fn = d.fn, a = d.args || [], grp = BM.group(), me = A.current(), owned = !!(me && R.state().owned[gid]);
+  const shopOf = () => ((me && me.shop) || payCfg.shop || {})[gid] || {};
+  const done = r => reply(d.id, r);
+  if (fn === 'hello') {
+    const on = grp !== 'A' && A.ON;
+    return done({ ok: true, v: 1, group: grp, login: !!me, owned, noAds: owned, gold: me ? (me.gold && me.gold.total) || 0 : null,
+      prices: on ? Object.fromEntries(Object.entries(shopOf()).map(([k, v]) => [k, v.gold])) : {}, items: me ? (me.items || []).filter(x => x.startsWith('item:' + gid + ':')).map(x => x.split(':')[2]) : [],
+      ads: { reward: on && BM.rewardLeft(gid) > 0, rewardLeft: on ? BM.rewardLeft(gid) : 0, inter: grp === 'C' && !owned } });
+  }
+  if (fn === 'rewardedAd') {
+    const place = String(a[0] || '').slice(0, 20);
+    if (grp === 'A') return done({ ok: false, reason: 'off' });
+    if (BM.rewardLeft(gid) <= 0) { T.track('bm_limit', { game: gid, placement: place }); return done({ ok: false, reason: 'limit' }); }
+    if (owned) { BM.useReward(gid); T.track('bm_ad', { game: gid, placement: place, via: 'owner' }); toast('소장 혜택 · 광고 없이 받았어요'); return done({ ok: true, via: 'owner' }); }
+    T.track('bm_offer', { game: gid, placement: place, what: 'ad' });
+    return fakeAd('보상형 광고 (테스트)', true).then(ok => { if (ok) { BM.useReward(gid); T.track('bm_ad', { game: gid, placement: place, via: 'test' }); } done(ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }); });
+  }
+  if (fn === 'interstitial') {
+    BM.countPlay(gid);
+    if (!BM.interOk(gid, owned)) return done({ ok: true, shown: false });
+    BM.useInter(gid); T.track('bm_inter', { game: gid, placement: String(a[0] || '').slice(0, 20) });
+    return fakeAd('전면 광고 (테스트)', false).then(() => done({ ok: true, shown: true }));
+  }
+  if (fn === 'spend') {
+    const item = String(a[0] || ''), ref = /^[A-Za-z0-9-]{8,64}$/.test(a[1] || '') ? a[1] : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const x = shopOf()[item];
+    if (grp === 'A' || !A.ON) return done({ ok: false, reason: 'off' });
+    if (!me) { onSheetClose = () => done({ ok: false, reason: 'login' }); needLogin('게임 안에서 골드를 쓰려면 로그인해 주세요 (로그인하면 게임이 처음 화면으로 돌아가요)'); return; }
+    if (!x) return done({ ok: false, reason: 'error' });
+    const gold = (me.gold && me.gold.total) || 0;
+    T.track('bm_offer', { game: gid, item, what: 'gold' });
+    onSheetClose = () => done({ ok: false, reason: 'cancel' });
+    openSheet(`<div class="intro"><h2>🪙 ${x.name}</h2><div class="payrow"><span>내 골드 ${gnum(gold)}</span><b>🪙 ${gnum(x.gold)}</b></div>
+      <div class="stack">${gold >= x.gold ? `<button class="btn" id="bmUse">🪙 ${gnum(x.gold)} 골드 쓰기</button>` : `<button class="btn gold" id="bmShop">골드 충전하기 (${gnum(x.gold - gold)}개 모자라요)</button>`}<button class="btn ghost" id="bmNo">괜찮아요</button></div></div>`);
+    $('#bmNo').onclick = () => closeSheet();
+    const sb = $('#bmShop'); if (sb) sb.onclick = () => { onSheetClose = () => done({ ok: false, reason: 'short' }); shop(); };
+    const ub = $('#bmUse'); if (ub) ub.onclick = async () => {
+      ub.disabled = true; ub.textContent = '쓰는 중…';
+      try { const r = await A.call({ act: 'use', game: gid, item, ref }); onSheetClose = null; closeSheet(); T.track('bm_use', { game: gid, item, gold: x.gold }); done({ ok: true, ref, gold: r.gold && r.gold.total }); }
+      catch (e) { onSheetClose = null; closeSheet(); toast(e.message); done({ ok: false, reason: e.reason || (e.short ? 'short' : 'error') }); }
+    };
+    return;
+  }
+  done({ ok: false, reason: 'unknown' });
+}
+// 테스트 광고 (진짜 광고망은 승인 후): 보상형은 5초 뒤 '보상 받기', 전면은 5초 뒤 '닫기'
+function fakeAd(label, reward) {
+  return new Promise(res => {
+    let left = R.RULES.adSeconds, fin = false; const end = ok => { if (fin) return; fin = true; clearInterval(iv); onSheetClose = null; closeSheet(); res(ok); };
+    openSheet(`<div class="ad"><div class="screen">${label}</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
+      <div class="stack"><button class="btn" id="adok" disabled>${reward ? '보상 받기' : '닫기'}</button>${reward ? '<button class="btn ghost" id="adno">그만 보기 (보상 없음)</button>' : ''}</div></div>`);
+    onSheetClose = () => { if (!fin) { fin = true; clearInterval(iv); res(!reward); } };
+    const iv = setInterval(() => { left--; const c = $('#adc'); if (c) c.textContent = Math.max(0, left); if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => end(true); } } }, 1000);
+    const no = $('#adno'); if (no) no.onclick = () => end(false);
+  });
+}
+
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if (d.playSynced) play(d.playSynced, true);
+  if (d.bmg) { BM.setGroup(d.bmg); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
+  else if (d.playSynced) play(d.playSynced, true);
   else if (d.cpick) cloudPick(d.gid, d.cpick, t);
   else if ('nudgeOff' in d) { try { const n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); n.off = 1; localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ } closeSheet(); toast('다시 보지 않을게요'); }
   else if (d.cundo) { if (!t.dataset.confirm) { t.dataset.confirm = 1; t.textContent = '한 번 더 누르면 되돌려요'; } else C.undo(d.cundo).then(() => { closeSheet(); toast('☁ 직전 저장으로 되돌렸어요'); }).catch(er => toast(er.message)); }
