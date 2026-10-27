@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.68.0';
+import { BRAND, MENU } from './data.js?v=0.68.1';
 
 const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -58,7 +58,8 @@ export function cup(look) {
 // 테이블에 남은 닦을 자국 (커피 얼룩 · 빵 부스러기)
 export function spill() { const g = new THREE.Group(); cyl(16, 16, 1, 0xB08A62, -6, 0, 4, g, 12).scale.set(1, 1, 0.7); for (let i = 0; i < 4; i++) sph(2.5, 0xD8A060, 8 + i * 5, 2, -6 + (i % 2) * 6, g, 5, 4); return g; }
 // 쟁반: 나무 쟁반 위 잔 + 냅킨 (셀프 픽업)
-export function tray(look) { const g = new THREE.Group(); box(54, 4, 38, C.woodL, 0, 0, 0, g); box(56, 2, 40, C.wood, 0, 0, 0, g); box(14, 1, 18, 0xFFFFFF, 18, 4, 4, g); const c = cup(look); c.position.set(-6, 4, 0); g.add(c); return g; }
+export function tray(look, items) { const g = new THREE.Group(); box(54, 4, 38, C.woodL, 0, 0, 0, g); box(56, 2, 40, C.wood, 0, 0, 0, g); box(14, 1, 18, 0xFFFFFF, 18, 4, 4, g);
+  const looks = items ? items.flatMap(it => Array(it.n).fill(MENU[it.k].look)).slice(0, 3) : [look]; looks.forEach((lk, i) => { const c = cup(lk); c.position.set(-14 + i * 16, 4, (i % 2) * 8 - 4); c.scale.setScalar(looks.length > 1 ? 0.8 : 1); g.add(c); }); return g; }
 
 // ── 매장: 나무 바닥 · 베이지 회벽 · 큰 창 · 나무 기둥 · 서예 · 바 카운터
 export const ROOM = { W: 1400, D: 1400 };

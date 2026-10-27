@@ -1,10 +1,10 @@
 // 카페 놀이: 머신으로 메뉴 내리기 → 바에 진열 → 손님이 앉아 주문 → 사장(나)이 내어 줌 → 치우기 · 원두 볶기 · 꾸미기 · 단골
 //   바닥은 100 단위 칸 — 가구가 놓인 칸은 못 지나감 · 길(문 → 모든 자리 · 바)이 막히는 배치는 안 됨
 import * as THREE from 'three';
-import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND } from './data.js?v=0.68.0';
-import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.68.0';
-import { M, box, cyl, sph, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, ROOM } from './models.js?v=0.68.0';
-import { sfx } from './audio.js?v=0.68.0';
+import { MENU, FURN, MACHINES, STAFF, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND } from './data.js?v=0.68.1';
+import { S, ST, save, levelOf, dayTick, today, now } from './state.js?v=0.68.1';
+import { M, box, cyl, sph, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, ROOM } from './models.js?v=0.68.1';
+import { sfx } from './audio.js?v=0.68.1';
 
 const V = THREE.Vector3, CELL = 100, N = 14, rnd = (a, b) => a + Math.random() * (b - a);
 export const fmt = n => Math.round(n).toLocaleString('en-US');
@@ -34,7 +34,7 @@ export class Game {
     const ro = new THREE.Group(); ro.position.set(...[ROASTER[0], 0, ROASTER[1]]); sc.add(ro); STATION.roaster(ro); this.roaster = { g: ro, x: ROASTER[0], z: ROASTER[1], kind: 'roaster' };
     this.machines = []; const add = (kind, pos, i) => { const g = new THREE.Group(); g.position.set(pos[0], 107, pos[1]); sc.add(g); STATION[kind](g); const m = { kind, i, key: kind[0] + i, g, x: pos[0], z: pos[1] }; this.machines.push(m); };
     for (let i = 0; i < machineCount('espresso'); i++) add('espresso', ESP_POS[i], i); for (let i = 0; i < machineCount('oven'); i++) add('oven', OVEN_POS[i], i);
-    this.barG = new THREE.Group(); sc.add(this.barG); this.tickets = []; this.resv = {}; this.refreshBar();
+    this.barG = new THREE.Group(); sc.add(this.barG); this.tickets = []; this.resv = {}; ST().bar = {}; this.refreshBar();   /* 주문 없이 남은 진열은 비움 (주문 들어와야 만듦) */
     this.retG = new THREE.Group(); sc.add(this.retG); ST().ret = ST().ret || 0; this.refreshRet();
     { const k = new THREE.Group(); k.position.set(KIOSK[0], 0, KIOSK[1]); sc.add(k); STATION.kiosk(k); }
     this.furn = []; for (const f of ST().furn) this.addFurn(f); this.walls = []; this.refreshWalls(); this.rebuildGrid();
@@ -85,8 +85,9 @@ export class Game {
   // ── 머신 · 로스터 (시간은 실제 시각 기준 → 나가 있어도 계속)
   mstate(m) { return ST().mach[m.key] || null; }
   progress(m) { const s = this.mstate(m); if (!s) return null; const T = MENU[s.menu].t * 1000, u = (now() - s.start) / T; return { s, u: Math.min(1, u), left: Math.max(0, Math.ceil((T - (now() - s.start)) / 1000)) }; }
-  brew(m, k) { const d = MENU[k]; if (this.mstate(m)) return '이미 내리는 중이에요'; if (S.lv < d.lv) return `Lv.${d.lv}에 열려요`; if (!!d.oven !== (m.kind === 'oven')) return d.oven ? '오븐에서 구워요' : '머신에서 내려요';
-    this.owner.tx = m.x; const need = d.bean * d.n; if (S.beans < need) return `원두가 모자라요 (${need}잔분 필요)`; S.beans -= need; ST().mach[m.key] = { menu: k, start: now(), n: d.n }; ST().last = ST().last || {}; ST().last[m.key] = k; sfx('build', { vol: 0.5 }); save(); this.steam(m.x, 220, m.z); return null; }
+  brew(m, k, want) { const d = MENU[k]; if (this.mstate(m)) return '이미 내리는 중이에요'; if (S.lv < d.lv) return `Lv.${d.lv}에 열려요`; if (!!d.oven !== (m.kind === 'oven')) return d.oven ? '오븐에서 구워요' : '머신에서 내려요';
+    const n = Math.max(1, Math.min(d.n, want || this.need(k) || 1));   /* 주문된 만큼, 최대 한 번에 d.n(3) */
+    this.owner.tx = m.x; const need = d.bean * n; if (S.beans < need) return `원두가 모자라요 (${need}잔분 필요)`; S.beans -= need; ST().mach[m.key] = { menu: k, start: now(), n }; ST().last = ST().last || {}; ST().last[m.key] = k; sfx('build', { vol: 0.5 }); save(); this.steam(m.x, 220, m.z); return null; }
   collect(m) { const p = this.progress(m); if (!p || p.u < 1) return false; const st = ST(), k = p.s.menu, room = Math.max(0, 12 - (st.bar[k] || 0)); if (!room) { this.ui.toast('바에 자리가 없어요 · 손님이 가져가면 다시 놓아요'); return false; }
     this.owner.tx = PICK.x0 - 40; const n = Math.min(room, p.s.n); st.bar[k] = (st.bar[k] || 0) + n; p.s.n -= n; if (p.s.n <= 0) delete st.mach[m.key];
     { const t = tray(MENU[k].look), from = new V(m.x, 140, m.z), to = new V(PICK.x0 + 40, PICK.y + 10, PICK.z); this.sc.add(t); this.fx.push({ t: 0, d: 0.45, f: u => { t.position.lerpVectors(from, to, u); t.position.y += Math.sin(u * Math.PI) * 60; if (u >= 1) { this.sc.remove(t); this.refreshBar(); } } }); }   /* 작업대 → 픽업대로 옮김 */ sfx('pick', { vol: 0.5 }); this.ui.float(`${MENU[k].name} +${n}`, new V(m.x, 260, m.z), 'pay'); save(); this.ui.progress(); return true; }
@@ -99,15 +100,25 @@ export class Game {
   freeSeats() { return this.seats().filter(x => !x.s.who && !x.s.dirty && x.s.cell); }
   menuPool() { return Object.entries(MENU).filter(([, d]) => S.lv >= d.lv && (!d.oven || machineCount('oven'))).map(([k]) => k); }
   spawn(reg) {   /* 입장 → 키오스크 줄 → 주문 → 자리 · 자리는 들어올 때 미리 정해 둠 */
-    const free = this.freeSeats(), qn = this.cust.filter(c => ['in', 'queue', 'kiosk', 'story'].includes(c.state)).length; if (!free.length || qn >= KQ.length) return false; const seat = free[Math.floor(Math.random() * free.length)];
+    const free = this.freeSeats(), qn = this.cust.filter(c => ['in', 'queue', 'kiosk', 'story'].includes(c.state)).length, open = this.tickets.length + qn, cap = 2 + this.machines.length * 2;   /* 밀린 주문이 머신 수에 비해 많으면 손님이 덜 옴 */
+    if (!free.length || qn >= KQ.length || (!reg && open >= cap)) return false; const seat = free[Math.floor(Math.random() * free.length)];
     const P = person(reg ? { body: reg.body, hair: reg.hair, bun: reg.bun, pants: 0x4A3A30 } : { body: [0x8FA6C2, 0xE3B9A8, 0xC9B27A, 0x9DBF9A, 0xD9D2C8, 0xB8A0C8, 0xE8C8A0, 0x7A8A9A][Math.floor(Math.random() * 8)], hair: [0x2A1E16, 0x6A4A32, 0x1E1612, 0x8A5A3A, 0x4A3A2A][Math.floor(Math.random() * 5)], pants: [0x4A4A55, 0x7A6A5A, 0x3B3B42, 0x5A4A3A][Math.floor(Math.random() * 4)], bun: Math.random() < 0.3, glasses: Math.random() < 0.25 });
     P.g.position.set(cx(DOOR[0]) + 160, 0, cz(DOOR[1]) + rnd(-40, 40)); this.sc.add(P.g);
-    const pool = this.menuPool(), stocked = pool.filter(k => this.avail(k) > 0), from = stocked.length && Math.random() < 0.6 ? stocked : pool; const k = from[Math.floor(Math.random() * from.length)] || 'americano';
-    const c = { P, pos: P.g.position, seat, state: 'in', menu: pool.includes(k) ? k : 'americano', w: 0, reg, story: !!reg, tag: this.ui.bubble() }; seat.s.who = c;
+    const items = this.pickItems();
+    const c = { P, pos: P.g.position, seat, state: 'in', items, menu: items[0].k, w: 0, reg, story: !!reg, tag: this.ui.bubble() }; seat.s.who = c;
     this.cust.push(c); this.reQ(); return true;
   }
   /* 키오스크 줄: 앞사람부터 KQ[0] · 뒤로 한 칸씩 */
+  pickItems(first) {   /* 1개 70% · 2개 24% · 3개 6% · 같은 메뉴 2잔도 있음 · 레벨이 낮으면 대부분 1개 */
+    const pool = this.menuPool(), pick = () => pool[Math.floor(Math.random() * pool.length)] || 'americano', r = Math.random(), lvK = Math.min(1, S.lv / 5);
+    const total = r < 1 - 0.3 * lvK ? 1 : r < 1 - 0.06 * lvK ? 2 : 3, items = [];
+    for (let i = 0; i < total; i++) { const k = i === 0 && first ? first : pick(), it = items.find(x => x.k === k); if (it) it.n++; else items.push({ k, n: 1 }); }
+    return items;
+  }
   reQ() { let i = 0; for (const c of this.cust) if (['in', 'queue', 'kiosk', 'story'].includes(c.state)) { const q = KQ[Math.min(i, KQ.length - 1)]; if (!c.qc || c.qc.join() !== q.join()) { c.qc = q; c.route = this.path(this.cellOf(c).join() === '13,8' || c.state === 'in' ? [DOOR[0], DOOR[1]] : this.cellOf(c), q); if (c.state === 'in') c.route && c.route.unshift(null); if (c.state !== 'in') c.state = 'queue'; } c.qi = i++; } }
+  /* 주문 묶음: c.items = [{ k, n }] (한 손님 최대 3잔/개) · need(k) = 주문됐는데 아직 픽업대에도 머신에도 없는 수 */
+  need(k) { let want = 0; for (const t of this.tickets) for (const it of t.items) if (it.k === k) want += it.n; for (const m of this.machines) { const p = this.progress(m); if (p && p.s.menu === k) want -= p.s.n; } return Math.max(0, want - (ST().bar[k] || 0)); }
+  ready(c) { return c.items.every(it => this.avail(it.k) >= it.n); }
   avail(k) { return (ST().bar[k] || 0) - (this.resv[k] || 0); }   /* 픽업대에 놓였고 아직 누가 맡지 않은 쟁반 */
   /* 픽업대 앞 칸 (쟁반을 집는 곳) */
   freeSpot() { const used = new Set(this.cust.filter(c => c.spot).map(c => c.spot.join())); const opts = []; for (let i = 6; i <= 10; i++) if (!used.has(i + ',3') && this.walkable(i, 3)) opts.push([i, 3]); return opts.length ? opts[Math.floor(Math.random() * opts.length)] : [8, 3]; }
@@ -125,13 +136,12 @@ export class Game {
     else if (c.state === 'toSeat' || c.state === 'back') { if (this.walk(c, dt, 220)) c.state = c.state === 'toSeat' ? 'sitting' : 'sitting2'; }
     else if (c.state === 'sitting' || c.state === 'sitting2') { if (this.stepTo(c, c.seat.s.x, c.seat.s.z, dt)) { c.P.sit = true; c.P.g.rotation.y = c.seat.s.ry; if (c.state === 'sitting') { c.state = 'seated'; } else { c.state = 'drink'; c.t = rnd(9, 14); } } }
     else if (c.state === 'seated') { c.P.anim(dt, false); c.w += dt;   /* 주문한 메뉴가 픽업대에 나오면 진동벨 → 가지러 감 */
-      if (this.avail(c.menu) > 0) { this.resv[c.menu] = (this.resv[c.menu] || 0) + 1; c.reserved = true; this.ui.float('🔔', c.pos.clone().setY(230), 'heart'); sfx('blip', { vol: 0.5, rate: 1.4 }); c.P.sit = false; c.spot = this.freeSpot(); c.state = 'toPick'; c.route = this.path(c.seat.s.cell, c.spot); return; }
-      if (c.w > 120 && !c.swapped) { const alt = this.menuPool().find(k => this.avail(k) > 0); if (alt) { c.ticket && (c.ticket.menu = alt); c.menu = alt; c.swapped = true; this.ui.float('그럼 이걸로 바꿀게요', c.pos.clone().setY(260), 'say'); } }
-      if (c.w > 200) { this.ui.float('다음에 올게요', c.pos.clone().setY(260), 'say'); this.dropTicket(c); c.P.sit = false; c.seat.s.who = null; c.state = 'out'; c.route = this.path(c.seat.s.cell, DOOR); c.route && c.route.push([DOOR[0] + 2, DOOR[1]]); } }
+      if (this.ready(c)) { for (const it of c.items) this.resv[it.k] = (this.resv[it.k] || 0) + it.n; c.reserved = true; this.ui.float('🔔', c.pos.clone().setY(230), 'heart'); sfx('blip', { vol: 0.5, rate: 1.4 }); c.P.sit = false; c.spot = this.freeSpot(); c.state = 'toPick'; c.route = this.path(c.seat.s.cell, c.spot); return; }
+      if (c.w > 240) { this.ui.float('다음에 올게요', c.pos.clone().setY(260), 'say'); this.dropTicket(c); c.P.sit = false; c.seat.s.who = null; c.state = 'out'; c.route = this.path(c.seat.s.cell, DOOR); c.route && c.route.push([DOOR[0] + 2, DOOR[1]]); } }
     else if (c.state === 'toPick') { c.pt = (c.pt || 0) + dt; if (c.pt > 25 && c.route) { c.route = null; c.pos.set(cx(c.spot[0]), 0, cz(c.spot[1])); }   /* 길이 막혀도 25초면 도착 처리 */
       if (this.walk(c, dt, 240)) { c.P.g.rotation.y = Math.PI;   /* 자기 쟁반을 집어 듦 */
-        const fromX = (this.trayX && this.trayX[c.menu]) ?? c.pos.x; ST().bar[c.menu]--; this.resv[c.menu]--; this.refreshBar();
-        const t = tray(MENU[c.menu].look); t.scale.setScalar(0.85); this.sc.add(t); const from = new V(fromX, 125, PICK.z); this.fx.push({ t: 0, d: 0.35, f: u => { t.position.lerpVectors(from, c.pos.clone().setY(80), u); t.position.y += Math.sin(u * Math.PI) * 40; if (u >= 1) { this.sc.remove(t); t.position.set(0, -6, 0); c.P.hand.add(t); } } });
+        const fromX = (this.trayX && this.trayX[c.menu]) ?? c.pos.x; for (const it of c.items) { ST().bar[it.k] -= it.n; this.resv[it.k] -= it.n; } this.refreshBar();
+        const t = tray(MENU[c.menu].look, c.items); t.scale.setScalar(0.85); this.sc.add(t); const from = new V(fromX, 125, PICK.z); this.fx.push({ t: 0, d: 0.35, f: u => { t.position.lerpVectors(from, c.pos.clone().setY(80), u); t.position.y += Math.sin(u * Math.PI) * 40; if (u >= 1) { this.sc.remove(t); t.position.set(0, -6, 0); c.P.hand.add(t); } } });
         this.dropTicket(c); this.served(c); c.state = 'back'; c.route = this.path(c.spot, c.seat.s.cell); c.spot = null; } }
     else if (c.state === 'drink') { c.P.anim(dt, false); c.t -= dt; if (c.t <= 0) { c.P.sit = false; this.makeDirty(c.seat.o, c.seat.k, false, ST().ret >= RET_MAX); c.seat.s.who = null;   /* 테이블에는 닦을 자국 · 반납대가 꽉 차면 쟁반째 두고 감 */
         if (ST().ret >= RET_MAX) { c.P.hand.clear(); c.state = 'out'; c.route = this.path(c.seat.s.cell, DOOR); } else { c.state = 'toReturn'; c.route = this.path(c.seat.s.cell, RET_SPOT); } c.route && c.state === 'out' && c.route.push([DOOR[0] + 2, DOOR[1]]); } }
@@ -140,7 +150,7 @@ export class Game {
     if (Q.includes(c.state) === false && c.qc) { c.qc = null; this.reQ(); }
   }
   /* 키오스크 주문 → 주문표 (화면 아래 주문 레일) */
-  order(c) { this.ticketNo = (this.ticketNo || 0) + 1; c.ticket = { no: this.ticketNo, menu: c.menu, c, at: now() }; this.tickets.push(c.ticket); c.w = 0; sfx('order', { vol: 0.4 }); this.ui.float(`주문 #${c.ticket.no}`, c.pos.clone().setY(240), 'pay');
+  order(c) { this.ticketNo = (this.ticketNo || 0) + 1; c.ticket = { no: this.ticketNo, menu: c.menu, items: c.items, c, at: now() }; this.tickets.push(c.ticket); c.w = 0; sfx('order', { vol: 0.4 }); this.ui.float(`주문 #${c.ticket.no}`, c.pos.clone().setY(240), 'pay');
     c.state = 'toSeat'; c.qc = null; c.route = this.path(this.cellOf(c), c.seat.s.cell); this.reQ(); this.ui.progress(); }
   dropTicket(c) { if (!c.ticket) return; this.tickets = this.tickets.filter(t => t !== c.ticket); c.ticket = null; }
   refreshRet() { this.retG.clear(); const n = ST().ret || 0; for (let i = 0; i < n; i++) { const t = tray('latte'); t.scale.setScalar(0.9); t.position.set(RET.x - 90 + (i % 4) * 60, RET.y + Math.floor(i / 4) * 14, RET.z); this.retG.add(t); } }
@@ -149,12 +159,12 @@ export class Game {
     if (!silent) { const d = (ST().dirty[o.f.uid] ||= []); if (!d.includes(k)) d.push(k); save(); } }
   clean(o, k, w) { const s = o.seats[k]; if (!s.dirty) return; this.sc.remove(s.dirty); s.dirty = null; const d = ST().dirty[o.f.uid] || []; ST().dirty[o.f.uid] = d.filter(x => x !== k); if (!ST().dirty[o.f.uid].length) delete ST().dirty[o.f.uid];
     const v = Math.round(3 * storeMult()); S.coins += v; this.gainXp(1); this.ui.float('반짝 +' + v, new V(s.x, 160, s.z), 'pay'); sfx('drop', { vol: 0.4 }); save(); }
-  serveValue(c) { const d = MENU[c.menu]; let v = d.price * storeMult(); const happy = c.w <= MOOD.happy; c.mood = happy ? 2 : c.w <= MOOD.ok ? 1 : 0; let tip = happy ? Math.round(v * MOOD.tip) : 0; tip += Math.random() < this.score() / 1500 ? Math.round(v * 0.5) : 0; return { v: Math.round(v), tip }; }
+  serveValue(c) { let v = c.items.reduce((a, it) => a + MENU[it.k].price * it.n, 0) * storeMult(); const happy = c.w <= MOOD.happy; c.mood = happy ? 2 : c.w <= MOOD.ok ? 1 : 0; let tip = happy ? Math.round(v * MOOD.tip) : 0; tip += Math.random() < this.score() / 1500 ? Math.round(v * 0.5) : 0; return { v: Math.round(v), tip }; }
   served(c) {
-    const { v, tip } = this.serveValue(c); S.coins += v + tip; dayTick(); S.sold++; S.soldBy[c.menu] = (S.soldBy[c.menu] || 0) + 1; S.menuSold[c.menu] = (S.menuSold[c.menu] || 0) + 1;
-    if (c.mood === 2) S.hearts += 1; this.gainXp(MENU[c.menu].xp); this.ui.float(`+${fmt(v + tip)}${tip ? ' 팁!' : ''}`, c.pos.clone().setY(200), 'pay'); this.ui.float(c.mood === 2 ? '♥' : c.mood ? '🙂' : '😌', c.pos.clone().setY(250), 'heart');
+    const { v, tip } = this.serveValue(c); S.coins += v + tip; dayTick(); for (const it of c.items) { S.sold += it.n; S.soldBy[it.k] = (S.soldBy[it.k] || 0) + it.n; S.menuSold[it.k] = (S.menuSold[it.k] || 0) + it.n; }
+    if (c.mood === 2) S.hearts += 1; this.gainXp(c.items.reduce((a, it) => a + MENU[it.k].xp * it.n, 0)); this.ui.float(`+${fmt(v + tip)}${tip ? ' 팁!' : ''}`, c.pos.clone().setY(200), 'pay'); this.ui.float(c.mood === 2 ? '♥' : c.mood ? '🙂' : '😌', c.pos.clone().setY(250), 'heart');
     sfx('coin', { vol: 0.5 }); c.tag && (c.tag.style.display = 'none');
-    for (const o of S.orders) if (!o.done && o.menu === c.menu && (S.soldBy[c.menu] || 0) >= o.n) this.ui.orderReady && this.ui.orderReady(o);
+    for (const o of S.orders) if (!o.done && c.items.some(it => it.k === o.menu) && (S.soldBy[o.menu] || 0) >= o.n) this.ui.orderReady && this.ui.orderReady(o);
     save(); this.ui.progress();
   }
   // ── 사장 · 동료: 잔 내어 주기 · 치우기
@@ -179,7 +189,7 @@ export class Game {
   hireHall(silent) { const d = STAFF.hall, P = person({ body: d.body, apron: 0x6B4A30, hair: d.hair, pants: 0x3B3B42 }); P.g.position.set(cx(9), 0, cz(3)); this.sc.add(P.g); const w = { P, pos: P.g.position, task: null, q: [], sp: 280, auto: true, home: [9, 3] }; this.workers.push(w); if (!silent) { S.staff.hall = 1; save(); this.ui.toast('도윤: 서빙이랑 정리는 저한테 맡기세요!'); } }
   baristaAI(dt) { const b = this.barista; if (!b) return; b.t -= dt; b.P.anim(dt, false); if (b.t > 0) return; b.t = 1.2;
     if ((ST().ret || 0) >= 4) { this.wash(); b.pos.x = RET.x; b.pos.z = LANE; return; }
-    for (const m of this.machines) { const p = this.progress(m); if (p && p.u >= 1) { if (this.collect(m)) { b.pos.x = m.x; b.pos.z = LANE; return; } } else if (!p && ST().last && ST().last[m.key]) { const k = ST().last[m.key]; if ((ST().bar[k] || 0) < 6 && !this.brew(m, k)) { b.pos.x = m.x; b.pos.z = LANE; return; } } } }
+    for (const m of this.machines) { const p = this.progress(m); if (p && p.u >= 1) { if (this.collect(m)) { b.pos.x = m.x; b.pos.z = LANE; return; } } else if (!p) { const k = Object.keys(MENU).find(x => this.need(x) > 0 && !!MENU[x].oven === (m.kind === 'oven') && S.lv >= MENU[x].lv); if (k && !this.brew(m, k)) { b.pos.x = m.x; b.pos.z = LANE; return; } } } }
   // ── 경험치 · 레벨
   gainXp(n) { const before = S.lv; S.xp += n; S.lv = levelOf(S.xp); if (S.lv > before) { sfx('levelup'); this.ui.levelUp(S.lv); const need = machineCount('espresso') + machineCount('oven'); if (need !== this.machines.length) this.rebuildMachines(); } }
   rebuildMachines() { for (const m of this.machines) this.sc.remove(m.g); this.machines = []; const add = (kind, pos, i) => { const g = new THREE.Group(); g.position.set(pos[0], 107, pos[1]); this.sc.add(g); STATION[kind](g); this.machines.push({ kind, i, key: kind[0] + i, g, x: pos[0], z: pos[1] }); this.confetti(pos[0], 200, pos[1]); };
@@ -197,13 +207,13 @@ export class Game {
     for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; f.t += dt / f.d; f.f(Math.min(1, f.t)); if (f.t >= 1) this.fx.splice(i, 1); }
     for (const m of this.machines) { const p = this.progress(m); if (p && p.u < 1 && Math.random() < dt * 2) this.steam(m.x, 220, m.z); }
     const r = this.roastState(); if (r && r.u < 1 && Math.random() < dt * 1.5) this.steam(this.roaster.x, 330, this.roaster.z);
-    const gd = this.ui.guide && this.ui.guide(); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], gd[2] + Math.sin(this.t * 6) * 12, gd[1]); this.arrow.rotation.y += dt * 2; }
+    const gd = this.ui.guide && this.ui.guide(); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], gd[2] + Math.sin(this.t * 3) * 6, gd[1]); this.arrow.rotation.y += dt * 0.8;   /* 안내 화살표: 천천히 */ }
     this.ui.frame(this);
   }
   nextRegular() { const d = today(); return REGULARS.find(R => S.lv >= R.lv && (S.reg[R.id]?.day !== d) && (S.reg[R.id]?.ep || 0) < R.eps.length && !this.cust.some(c => c.reg === R)) || null; }
   storyDone(c, choice) {   /* 사연에서 고른 것: 메뉴면 그 메뉴를 주문 · 아니면 늘 마시는 카페라떼 */
     const R = c.reg, r = (S.reg[R.id] ||= { ep: 0, f: 0, day: '' }), ep = R.eps[r.ep]; r.f += choice[2]; r.ep++; r.day = today(); c.story = false; c.state = 'kiosk'; c.t = 0.8; c.w = 0;
-    c.menu = choice[1] && this.menuPool().includes(choice[1]) ? choice[1] : this.menuPool().includes('latte') ? 'latte' : 'americano';
+    const first = choice[1] && this.menuPool().includes(choice[1]) ? choice[1] : this.menuPool().includes('latte') ? 'latte' : 'americano'; c.items = [{ k: first, n: 1 }]; c.menu = first;
     if (r.ep >= R.eps.length) { S.inv['poem:' + R.id] = 1; this.ui.toast(`${R.name}의 「시 한 줄」 액자를 받았어요 · 꾸미기에서 벽에 걸어요`); sfx('reward'); }
     this.gainXp(5); save(); this.ui.progress(); return ep;
   }

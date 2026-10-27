@@ -1,16 +1,16 @@
 // 시험용 자동 플레이 (?bot=1&speed=4): 거두기 · 내리기 · 볶기 · 치우기 · 사연 · 가구 사서 놓기 · 동료 · 주문서 · 출석
-import { MENU, ROAST, FURN, STAFF } from './data.js?v=0.68.0';
-import { S, ST, save } from './state.js?v=0.68.0';
-import { storeMult } from './game.js?v=0.68.0';
+import { MENU, ROAST, FURN, STAFF } from './data.js?v=0.68.1';
+import { S, ST, save } from './state.js?v=0.68.1';
+import { storeMult } from './game.js?v=0.68.1';
 
 export function startBot(app) {
   const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0;
   const tick = () => {
     t += 0.5; document.querySelector('#modal').innerHTML = ''; ui._ub && ui._ub(); ui._ub = null;
     for (const m of g.machines) { const p = g.progress(m); if (p && p.u >= 1) g.collect(m);
-      if (!g.progress(m)) { const want = g.tickets.map(t => t.menu).find(k => g.avail(k) <= 0 && !g.machines.some(x => g.progress(x)?.s.menu === k) && !!MENU[k].oven === (m.kind === 'oven') && S.lv >= MENU[k].lv);
+      if (!g.progress(m)) { const want = Object.keys(MENU).find(k => g.need(k) > 0 && !!MENU[k].oven === (m.kind === 'oven') && S.lv >= MENU[k].lv);
         const best = Object.entries(MENU).filter(([k, d]) => !!d.oven === (m.kind === 'oven') && S.lv >= d.lv && S.beans >= d.bean * d.n && (ST().bar[k] || 0) < 8).sort((a, b) => b[1].price - a[1].price).map(([k]) => k);
-        const k = want || best[Math.floor(Math.random() * Math.min(3, best.length))]; if (k) g.brew(m, k); } }
+        const k = want; if (k) g.brew(m, k); } }
     const r = g.roastState(); if (r && r.u >= 1) g.collectBeans(); if (!g.roastState() && S.beans < 60) { const R = ROAST.filter(x => S.lv >= x.lv && S.coins >= x.cost * storeMult() && x.t <= 900).pop(); if (R) g.roast(R.id); }
     for (const x of g.seats()) if (x.s.dirty) g.requestClean(x.o, x.k);
     if ((ST().ret || 0) >= 3) g.wash();
