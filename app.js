@@ -39,7 +39,7 @@ document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => go(b.da
 function header() {
   const s = R.state();
   const streak = s.streak.count && (s.streak.last === R.keyOf(R.now()) || isYesterday(s.streak.last)) ? s.streak.count : 0;
-  return `<div class="top"><div class="brand">🌙 <b>One a Day</b></div><span class="chip hot">${streak ? `🔥 ${streak}일 연속` : '✨ 오늘 시작!'}</span>${A.current() ? `<button class="chip goldchip" data-shop>🪙 ${gnum(goldOf())}</button>` : ''}</div>`;
+  return `<div class="top"><div class="brand">🌙 <b>One a Day</b></div><span class="tchips"><span class="chip hot">${streak ? `🔥 ${streak}일 연속` : '✨ 오늘 시작!'}</span>${A.current() ? `<button class="chip goldchip" data-shop>🪙 ${gnum(goldOf())}</button>` : ''}</span></div>`;
 }
 function isYesterday(k) { const y = R.now(); y.setDate(y.getDate() - 1); return k === R.keyOf(y); }
 
@@ -514,7 +514,7 @@ document.addEventListener('oad:installable', () => { if (tab === 'today' || tab 
 document.addEventListener('oad:installed', () => { T.track('installed'); toast('홈 화면에 추가됐어요!'); go(tab); });
 T.start(VERSION);
 // 계정: 로그인돼 있으면 불러오기 · 구글에서 막 돌아왔으면 환영
-A.onChange(m => { if (m) R.syncItems(m.items); if (sheet.hidden) go(tab); });
+A.onChange(m => { if (m) R.syncItems(m.items); go(tab); });
 A.init().then(m => { if (new URLSearchParams(location.search).has('login')) { history.replaceState(null, '', location.pathname); if (m) { T.track('login', { new: m.isNew ? 1 : 0 }); toast(m.isNew ? `${m.name || ''}님, 원어데이에 오신 걸 환영해요!` : `${m.name || ''}님, 다시 오셨네요`); go('settings'); } } });
 // 토스 결제창에서 돌아온 경우
 P.resume().then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) { toast('결제 완료! 전체 풀이가 열렸어요'); cheatingPage(); } else toast(r.msg); });
