@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.75.2';
-import * as R from './rules.js?v=0.75.2';
-import * as I from './install.js?v=0.75.2';
-import * as T from './track.js?v=0.75.2';
-import * as P from './pay.js?v=0.75.2';
-import * as A from './account.js?v=0.75.2';
-import * as C from './cloud.js?v=0.75.2';
-import * as BM from './bm.js?v=0.75.2';
+import { PLANNED } from './catalog.js?v=0.76.0';
+import * as R from './rules.js?v=0.76.0';
+import * as I from './install.js?v=0.76.0';
+import * as T from './track.js?v=0.76.0';
+import * as P from './pay.js?v=0.76.0';
+import * as A from './account.js?v=0.76.0';
+import * as C from './cloud.js?v=0.76.0';
+import * as BM from './bm.js?v=0.76.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.75.2').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.76.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.75.2';
+const VERSION = '0.76.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -72,7 +72,7 @@ function renderToday() {
       <div class="box"><div class="k">다음 게임 공개까지</div><div class="v" id="cd">--:--:--</div></div>
       <div class="box mystery"><div class="qmark"><span>?</span></div><div><div class="k">내일의 게임</div><div class="jua" style="font-size:17px">두근두근…</div></div></div>
     </div>
-    ${R.RULES.openAll ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : hasY ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : ''}
+    ${R.RULES.openAll ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : (hasY ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : '') + `<div class="section"><h3>브랜드 콜라보</h3><span class="more">언제든 열려 있어요</span></div><div class="list">${R.BRAND.map(itemCard).join('')}</div>`}
     <div class="section"><h3>이용 방법</h3><span class="more" data-intro>자세히 ›</span></div>
     <div class="box" style="color:#DDD5FA">매일 자정, 모든 플레이어에게 <b class="jua" style="color:var(--gold)">같은 게임 하나</b>가 열려요. 플레이한 게임은 라이브러리에 모이고, 다른 날 다시 하려면 광고로 열 수 있어요.</div>
   </div>`;
@@ -315,38 +315,41 @@ async function doInstall() { const html = await I.install(); if (html) openSheet
 function tick() { const el = $('#cd'); if (el) el.textContent = hms(R.msToTomorrow()); if (R.msToTomorrow() < 1000) setTimeout(() => go('today'), 1200); }
 
 function itemCard(id) {
-  const g = G(id), a = R.access(id), lib = R.state().library[id], [cls, label] = STATE_BADGE[a];
-  const sub = lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : `${g.genre} · 아직 안 해 봤어요`;
+  const g = G(id), lib = R.state().library[id];
+  if (!R.listed(id)) return `<div class="item rest" data-rest="${id}"><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : '소장한 게임'}</div></div><span class="state badge">잠시 쉬는 중</span></div>`;
+  const a = R.access(id), [cls, label] = R.isBrand(id) && a === 'free' ? ['open', '콜라보'] : STATE_BADGE[a];
+  const sub = lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : a === 'owned' ? `${g.genre} · 소장 · 아직 안 해 봤어요` : `${g.genre} · 아직 안 해 봤어요`;
   return `<div class="item" data-open="${id}"><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${sub}</div></div><span class="state badge ${cls}">${label}</span></div>`;
 }
 
 // ── 라이브러리 ─────────────────────────────────────
 function renderLibrary() {
-  const lib = R.state().library;
-  const ids = Object.keys(lib).sort((a, b) => (lib[b].last > lib[a].last ? 1 : -1));
+  const st = R.state(), lib = st.library, ids = R.myGames();
+  const last = id => (lib[id] && lib[id].last) || '';
+  const own = ids.filter(id => st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
+  const rest = ids.filter(id => !st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
   return `<div>${header()}
     <h1 style="font-size:28px">라이브러리</h1>
-    <div class="date">내가 만난 게임 ${ids.length}개</div>
-    ${ids.length ? `<div class="list">${ids.map(itemCard).join('')}</div>`
+    <div class="date">내 게임 ${ids.length}개${own.length ? ` · 소장 ${own.length}개` : ''}</div>
+    ${ids.length ? `${own.length ? `<div class="section"><h3>소장</h3></div><div class="list">${own.map(itemCard).join('')}</div>` : ''}${rest.length ? `${own.length ? '<div class="section"><h3>만난 게임</h3></div>' : ''}<div class="list">${rest.map(itemCard).join('')}</div>` : ''}`
       : `<div class="empty"><div class="big">📚</div><p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button></div>`}
   </div>`;
 }
 
 // ── 컬렉션 ─────────────────────────────────────────
 function renderCollection() {
-  const rel = R.released(), lib = R.state().library, total = Math.max(PLANNED, R.ORDER.length);
+  const rel = R.released(), st = R.state(), lib = st.library, total = Math.max(PLANNED, R.DAILY.length);
   const met = rel.filter(id => lib[id]).length;
-  const tiles = [];
-  R.ORDER.forEach((id, i) => {
-    if (rel.includes(id)) tiles.push(`<div class="tile" data-open="${id}"><img src="${G(id).icon}" alt=""><span class="n">#${i + 1}</span>${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`);
-    else tiles.push(`<div class="tile unk">?</div>`);
-  });
-  for (let i = R.ORDER.length; i < total; i++) tiles.push(`<div class="tile unk" style="font-size:16px">곧 공개</div>`);
+  const tile = (id, n) => `<div class="tile" data-open="${id}"><img src="${G(id).icon}" alt="">${n ? `<span class="n">#${n}</span>` : ''}${st.owned[id] ? '<span class="own">소장</span>' : ''}${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`;
+  const tiles = R.DAILY.map((id, i) => rel.includes(id) ? tile(id, i + 1) : `<div class="tile unk">?</div>`), soon = [];
+  for (let i = R.DAILY.length; i < total; i++) soon.push(`<div class="tile unk" style="font-size:16px">곧 공개</div>`);
   return `<div>${header()}
     <h1 style="font-size:28px">컬렉션</h1>
     <div class="date">만난 게임 ${met} / 공개 ${rel.length} / 전체 ${total}</div>
     <div class="progress"><i style="width:${(met / total) * 100}%"></i></div>
     <div class="grid">${tiles.join('')}</div>
+    ${R.BRAND.length ? `<div class="section"><h3>브랜드 콜라보</h3><span class="more">언제든 열려 있어요</span></div><div class="grid">${R.BRAND.map(id => tile(id, 0)).join('')}</div>` : ''}
+    ${soon.length ? `<div class="section"><h3>다가올 게임</h3><span class="more">하루 하나씩 공개돼요</span></div><div class="grid">${soon.join('')}</div>` : ''}
   </div>`;
 }
 
@@ -609,10 +612,11 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
-  if (d.helpg) { BM.setHelp(d.helpg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }); go('settings'); toast(`응원 선물 ${d.helpg === 'on' ? '켜짐' : '꺼짐'}`); }
+  if (d.rest) { toast(`${G(d.rest).title}은(는) 잠시 쉬는 중이에요 · 다시 열리면 소장한 그대로 할 수 있어요`); }
+  else if (d.helpg) { BM.setHelp(d.helpg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }); go('settings'); toast(`응원 선물 ${d.helpg === 'on' ? '켜짐' : '꺼짐'}`); }
   else if (d.bmg) { BM.setGroup(d.bmg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
   else if (d.playSynced) play(d.playSynced, true);
   else if (d.cpick) cloudPick(d.gid, d.cpick, t);

@@ -109,6 +109,12 @@ export const SAVES = {
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
-export const ORDER = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung'];
+// 라이브러리 · 컬렉션 노출 기준 (2026-10-28 대표 승인)
+//   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개되는 일반 게임 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음)
+//   BRAND = 브랜드 콜라보 게임: 오늘의 게임 순서에서 빼고 늘 열림 · 컬렉션에 따로 한 줄
+//   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade'];
+export const BRAND = ['bagel', 'gamsung'];
+export const ORDER = [...DAILY, ...BRAND];
 // 여명기사단 키우기(idle)는 2026-10-25 사용자 요청으로 목록에서 내림 — 보류 중 (CATALOG 항목·소스·idle/PROJECT_STATUS.md 남겨 둠)
 // K-다이스 투어(tour)는 2026-10-24 사용자 요청으로 목록에서 내림 — 대전 네트워크(서버)가 붙으면 다시 올림 (CATALOG 항목·소스는 남겨 둠)

@@ -265,3 +265,5 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .cpick { display: flex; flex-direction: column; gap: 8px; } .cpick .cloudcard { cursor: pointer; background: rgba(255, 255, 255, .05); border-color: var(--line); }
 .cpick .cloudcard.on { border-color: var(--mint); background: rgba(110, 231, 200, .1); box-shadow: 0 0 0 2px rgba(110, 231, 200, .25); }
 .saveat .lnk { border: 0; background: none; padding: 0; color: var(--sub); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.tile .own { position: absolute; right: 6px; bottom: 6px; font: 11px 'Jua'; color: #3a2400; background: linear-gradient(135deg, var(--gold), var(--gold2)); border-radius: 6px; padding: 1px 6px; }
+.item.rest { opacity: .6; }
