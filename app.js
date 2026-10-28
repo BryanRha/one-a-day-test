@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.81.0';
-import * as R from './rules.js?v=0.81.0';
-import * as I from './install.js?v=0.81.0';
-import * as T from './track.js?v=0.81.0';
-import * as P from './pay.js?v=0.81.0';
-import * as A from './account.js?v=0.81.0';
-import * as C from './cloud.js?v=0.81.0';
-import * as BM from './bm.js?v=0.81.0';
+import { PLANNED } from './catalog.js?v=0.81.1';
+import * as R from './rules.js?v=0.81.1';
+import * as I from './install.js?v=0.81.1';
+import * as T from './track.js?v=0.81.1';
+import * as P from './pay.js?v=0.81.1';
+import * as A from './account.js?v=0.81.1';
+import * as C from './cloud.js?v=0.81.1';
+import * as BM from './bm.js?v=0.81.1';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.1').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.0'), import('./fortune/types.js?v=0.81.0'), import('./fortune/chat.js?v=0.81.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.1'), import('./fortune/types.js?v=0.81.1'), import('./fortune/chat.js?v=0.81.1')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.81.0';
+const VERSION = '0.81.1';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -969,6 +969,8 @@ A.init().then(m => { if (new URLSearchParams(location.search).has('login')) { hi
 /* 신년 패키지 영수증 여러 장 → 상품별 '두 사람'(solo 는 나 · 달 상품은 그 달 · 궁합은 상대)으로 보관 */
 const keepMany = rcs => { const m = FT, me = m && m.loadMe(); if (!me) return; for (const r of rcs) { const pt = m.pairOf(r.product, me); if (pt) P.keepReceipt(r, m.toInput(me), m.toInput(pt)); } };
 P.setPackKeeper(keepMany);
+/* 테스트 서버 시험용: /?ai=1 이면 이 기기를 AI 상담 실험군으로 (?ai=0 해제) — 실서버는 상담 자체가 꺼져 있음 */
+{ const a = new URLSearchParams(location.search).get('ai'); if (a === '1' || a === '0') { try { a === '1' ? localStorage.setItem('oad_ai', '1') : localStorage.removeItem('oad_ai'); } catch { /* */ } history.replaceState(null, '', location.pathname); toast(a === '1' ? 'AI 상담 시험 모드를 켰어요' : 'AI 상담 시험 모드를 껐어요'); } }
 /* 사주 유형 공유 링크로 들어온 사람: /?type=<유형> */
 { const tp = new URLSearchParams(location.search).get('type'); if (tp) { history.replaceState(null, '', location.pathname); ex().then(E => setTimeout(() => E.types.landing(XC(), tp), 600)); } }
 ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) payDone(r.product, r); else toast(r.msg); });

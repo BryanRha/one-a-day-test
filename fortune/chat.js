@@ -8,6 +8,7 @@ export const FREE = 3, MIN_AGE = 19, PCT = 10, SALT = 'aichat1';
 const fnv = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const did = () => { try { return localStorage.getItem('oad_did') || ''; } catch { return ''; } };
 /* 실험군 (서버 inGroup 과 같은 식) · 테스트용 강제: localStorage oad_ai = '1' 실험군 / '0' 대조군 */
+const forced = () => { try { return localStorage.getItem('oad_ai') === '1'; } catch { return false; } };
 export function group() { let o = null; try { o = localStorage.getItem('oad_ai'); } catch { /* */ } if (o === '1' || o === '0') return o === '1' ? 'ai' : 'ctrl'; const d = did(); return d && fnv(d + SALT) % 100 < PCT ? 'ai' : 'ctrl'; }
 /* 만 나이 (한국 날짜) — 음력 생일은 양력 날짜로 바꾼 값 */
 export function fullAge(me, chart, now = new Date()) {
@@ -84,7 +85,7 @@ export async function open(X) {
     X.T.track('chat_send', { ch: f.ch, n: FREE - s.left + 1 });
     const hist = s.msgs.slice(0, -2).filter(x => !x.s).map(x => ({ r: x.r, t: x.t }));
     let j = {}, code = 0;
-    try { const r = await fetch('/api/fortune/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'chat', d: did(), age: fullAge(me, f.chart), ch: f.ch, sum: summary(f), hist, q }) }); code = r.status; j = await r.json().catch(() => ({})); }
+    try { const r = await fetch('/api/fortune/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'chat', d: did(), qa: forced() ? 1 : 0, age: fullAge(me, f.chart), ch: f.ch, sum: summary(f), hist, q }) }); code = r.status; j = await r.json().catch(() => ({})); }
     catch { j = { error: '연결에 실패했어요' }; }
     s.msgs.pop(); busy = false;
     if (j.off) { off = true; try { sessionStorage.setItem('oad_ai_off', '1'); } catch { /* */ } s.msgs.pop(); save(s); X.closeSheet(); return X.toast('AI 상담은 아직 준비 중이에요'); }
