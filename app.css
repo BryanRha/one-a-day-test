@@ -268,3 +268,11 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .tile .own { position: absolute; right: 6px; bottom: 6px; font: 11px 'Jua'; color: #3a2400; background: linear-gradient(135deg, var(--gold), var(--gold2)); border-radius: 6px; padding: 1px 6px; }
 .item.rest { opacity: .6; }
 .tile .collab { position: absolute; left: 6px; top: 6px; font: 11px "Jua"; color: #fff; background: rgba(0,0,0,.55); border-radius: 6px; padding: 1px 6px; }
+
+/* 라이브러리: 일반관 · 브랜드관 */
+.hall { border: 1px solid var(--line); border-radius: 20px; padding: 14px 14px 6px; margin: 14px 0; background: rgba(255,255,255,.03); }
+.hall .hh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.hall .hh b { font: 20px 'Jua'; } .hall .hh span { color: var(--sub); font-size: 12.5px; }
+.hall .sub { color: var(--sub); font: 14px 'Jua'; margin: 10px 2px 6px; }
+.hall.bhall { border-color: rgba(255, 170, 120, .45); background: linear-gradient(180deg, rgba(255, 150, 90, .10), rgba(255, 150, 90, .03)); }
+.hall.bhall .hh b { color: #FFB98A; }

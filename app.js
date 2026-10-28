@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.76.1';
-import * as R from './rules.js?v=0.76.1';
-import * as I from './install.js?v=0.76.1';
-import * as T from './track.js?v=0.76.1';
-import * as P from './pay.js?v=0.76.1';
-import * as A from './account.js?v=0.76.1';
-import * as C from './cloud.js?v=0.76.1';
-import * as BM from './bm.js?v=0.76.1';
+import { PLANNED } from './catalog.js?v=0.76.2';
+import * as R from './rules.js?v=0.76.2';
+import * as I from './install.js?v=0.76.2';
+import * as T from './track.js?v=0.76.2';
+import * as P from './pay.js?v=0.76.2';
+import * as A from './account.js?v=0.76.2';
+import * as C from './cloud.js?v=0.76.2';
+import * as BM from './bm.js?v=0.76.2';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.76.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.76.2').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.76.1';
+const VERSION = '0.76.2';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -328,12 +328,13 @@ function renderLibrary() {
   const last = id => (lib[id] && lib[id].last) || '';
   const own = ids.filter(id => st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
   const rest = ids.filter(id => !st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
+  const general = ids.length
+    ? `${own.length ? `<div class="sub">소장 ${own.length}</div><div class="list">${own.map(itemCard).join('')}</div>` : ''}${rest.length ? `<div class="sub">만난 게임 ${rest.length}</div><div class="list">${rest.map(itemCard).join('')}</div>` : ''}`
+    : `<div class="empty"><div class="big">📚</div><p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button></div>`;
   return `<div>${header()}
     <h1 style="font-size:28px">라이브러리</h1>
-    <div class="date">내 게임 ${ids.length}개${own.length ? ` · 소장 ${own.length}개` : ''}</div>
-    ${R.BRAND.length ? `<div class="section"><h3>🤝 브랜드관</h3><span class="more">브랜드와 함께 만든 게임</span></div><div class="list brandhall">${R.BRAND.map(itemCard).join('')}</div>` : ''}
-    ${ids.length ? `${own.length ? `<div class="section"><h3>소장</h3></div><div class="list">${own.map(itemCard).join('')}</div>` : ''}${rest.length ? `${own.length ? '<div class="section"><h3>만난 게임</h3></div>' : ''}<div class="list">${rest.map(itemCard).join('')}</div>` : ''}`
-      : `<div class="empty"><div class="big">📚</div><p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button></div>`}
+    <div class="hall"><div class="hh"><b>🎮 일반관</b><span>내 게임 ${ids.length}개${own.length ? ` · 소장 ${own.length}개` : ''}</span></div>${general}</div>
+    ${R.BRAND.length ? `<div class="hall bhall"><div class="hh"><b>🤝 브랜드관</b><span>브랜드와 함께 만든 게임</span></div><div class="list brandhall">${R.BRAND.map(itemCard).join('')}</div></div>` : ''}
   </div>`;
 }
 
