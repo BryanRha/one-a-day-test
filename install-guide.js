@@ -3,8 +3,8 @@
 //   openGuide(how)  환경별 단계 안내      openOffer(kind)  권유 시트(첫 게임 끝 · 2일째 · 3일 연속)
 //   openInstalled()  설치 앱 첫 실행 화면  openHelp() · openDiag()  '설치가 안 돼요' · 설정 진단
 //   열 때만 불러옴(install.js ui()) · 모양은 install-guide.css · 기록은 track.js
-import * as I from './install.js?v=0.86.0';
-import { track } from './track.js?v=0.86.0';
+import * as I from './install.js?v=0.87.0';
+import { track } from './track.js?v=0.87.0';
 
 /* ── 모양 불러오기 ── */
 let cssP = null;
@@ -283,10 +283,11 @@ export async function openOffer(kind = 'first', opts = {}) {
       <div class="tip"><i class="ico"></i><div>${n === 2 ? `<b class="jua" style="font-size:16px;font-weight:400">내일은 홈 화면에서 한 번에</b><br>${reward ? '설치하고 열면 50골드 <i class="coin"></i>' : '아이콘 하나로 바로 들어와요'}` : `<b class="jua" style="font-size:16px;font-weight:400">🔥 연속 출석, 놓치지 않게</b><br>${opts.keeper ? '앱으로 3일 들어오면 연속 지킴이 1장' : reward ? '설치하고 열면 50골드 <i class="coin"></i>' : '홈 화면에서 한 번에 들어와요'}`}</div></div>
       <div class="stack"><button class="btn" data-ig="ok">${inApp ? '🌐 ' + I.extLabel() : okBtn}</button><button class="later" data-ig="later">나중에</button></div></div>`;
   }
-  T('install_view', { where: opts.where || 'nudge', how: I.how() });
+  const nth = opts.nth ? { nth: opts.nth } : {};
+  T('install_view', { where: opts.where || 'nudge', how: I.how(), ...nth });
   return new Promise(resolve => {
     mount(`<div class="dim" data-ig="later"></div>${body}`);
-    const fin = r => { T('install_click', { where: opts.where || 'nudge', how: I.how(), what: r === 'accept' ? (inApp ? 'ext' : 'install') : 'later' }); close(); resolve(r); };
+    const fin = r => { T('install_click', { where: opts.where || 'nudge', how: I.how(), what: r === 'accept' ? (inApp ? 'ext' : 'install') : 'later', ...nth }); close(); resolve(r); };
     root.addEventListener('click', e => { const t = e.target.closest('[data-ig]'); if (!t) return; fin(t.dataset.ig === 'ok' ? 'accept' : 'later'); });
     keys({ Escape: () => fin('later') });
   });
@@ -371,7 +372,7 @@ async function doAct(a, d) {
 }
 async function send(d) {
   T('install_diag', { what: 'send', how: d.verdict.code, msg: `${d.summary} | ${d.ua}`.slice(0, 200) });
-  try { const m = await import('./track.js?v=0.86.0'); m.flush && m.flush(); } catch { /* */ }
+  try { const m = await import('./track.js?v=0.87.0'); m.flush && m.flush(); } catch { /* */ }
   toast('보냈어요. 고마워요! 빨리 살펴볼게요');
 }
 /* 자주 막히는 3가지 (환경마다 다름) */

@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.86.0';
-import * as R from './rules.js?v=0.86.0';
-import * as I from './install.js?v=0.86.0';
-import * as T from './track.js?v=0.86.0';
-import * as P from './pay.js?v=0.86.0';
-import * as A from './account.js?v=0.86.0';
-import * as C from './cloud.js?v=0.86.0';
-import * as BM from './bm.js?v=0.86.0';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.87.0';
+import * as R from './rules.js?v=0.87.0';
+import * as I from './install.js?v=0.87.0';
+import * as T from './track.js?v=0.87.0';
+import * as P from './pay.js?v=0.87.0';
+import * as A from './account.js?v=0.87.0';
+import * as C from './cloud.js?v=0.87.0';
+import * as BM from './bm.js?v=0.87.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.86.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.87.0').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.86.0'), import('./fortune/types.js?v=0.86.0'), import('./fortune/chat.js?v=0.86.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.87.0'), import('./fortune/types.js?v=0.87.0'), import('./fortune/chat.js?v=0.87.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.86.0';
+const VERSION = '0.87.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -52,7 +52,7 @@ function go(t, via) {
   view.innerHTML = RENDER[t]();
   view.firstElementChild?.classList.add('fadein');
   window.scrollTo(0, 0);
-  if (t === 'today') { tick(); timer = setInterval(tick, 1000); homeEnter(via || 're', re); }
+  if (t === 'today') { tick(); timer = setInterval(tick, 1000); homeEnter(via || 're', re); if (via !== 'game') setTimeout(maybeOffer, 900); }
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => go(b.dataset.tab, 'tab'));
 
@@ -101,7 +101,7 @@ function tomorrowBox() {
       <div class="k">${fresh ? '🆕 내일 처음 만나는 게임' : '내일의 게임'}</div>
       <div class="tmrwq">${TEASE[tid] || '두근두근…'}</div>
       <div class="tmrwm"><span class="chip">🎮 ${t.genre}</span><span class="chip">⏱ ${t.time}</span></div>
-      <div class="tmrwf"><span>⏰ <b id="cd">--:--:--</b> 뒤 공개 · 🔥 ${next}일 연속</span>${I.installed() ? '' : `<button data-install>${isPC() ? '설치해 두기' : '홈 화면에 추가'}</button>`}</div>
+      <div class="tmrwf"><span>⏰ <b id="cd">--:--:--</b> 뒤 공개 · 🔥 ${next}일 연속</span>${I.installed() ? '' : `<button data-install data-where="tmrw">${isPC() ? '설치해 두기' : '홈 화면에 추가'}</button>`}</div>
     </div></div>`;
 }
 // ── 오늘 · 새 메인 B '이번 주 달력 허브' (2026-10-28 대표 승인 · team/dev/tasks/261028-home-ux) ──
@@ -116,6 +116,7 @@ function renderTodayB() {
   const me = (() => { try { return !!localStorage.getItem('oad_fortune_me'); } catch { return false; } })();
   return `<div class="today hb">
     ${header()}
+    ${installBanner()}
     <div class="wkhead"><h1>이번 주 원어데이</h1><span>다음 게임까지 <b data-cd>--:--:--</b></span></div>
     ${weekStrip()}${fill}
     <div class="hbgrid"><div class="hbmain">
@@ -129,7 +130,6 @@ function renderTodayB() {
         </div></div></div>
     </div><div class="hbside">
       <div class="tfort" data-blk="fort"><div id="fortuneCard">${fortuneBandStatic()}</div></div>
-      ${installBanner()}
       ${tomorrowBox()}
       ${collLine()}
     </div></div>
@@ -224,8 +224,8 @@ function homeEnter(via, re) {
   }
   homeScroll();
   /* 설치 노출: 메인에 보인 설치 버튼(배너 · 내일 칸)마다 한 번 */
-  const how = isPC() ? 'pc' : I.env.inApp ? 'inapp' : I.canPrompt() ? 'prompt' : I.env.ios ? 'ios' : 'guide';
-  new Set([...view.querySelectorAll('[data-install],[data-ext]')].map(b => { const k = b.closest('[data-blk]'); return k ? k.dataset.blk : 'home'; }).map(b => b === 'install' ? 'banner' : b)).forEach(where => T.track('install_view', { where, how }));
+  const how = I.how();
+  new Set([...view.querySelectorAll('[data-install],[data-ext]')].map(b => { const k = b.closest('[data-blk]'); return k ? k.dataset.blk : 'home'; }).map(b => b === 'install' ? 'banner' : b)).forEach(where => T.track('install_view', { where, how, br: I.env.br, osv: I.env.osv }));
   if (!HM.perf) { HM.perf = true; homePerf(); }
 }
 function homeScroll() { if (!HM.live) return; const de = document.documentElement, p = Math.min(1, (scrollY + innerHeight) / Math.max(1, de.scrollHeight)); if (p > HM.dep) HM.dep = p; }
@@ -521,7 +521,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.86.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.87.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -664,16 +664,82 @@ function fortuneForm() {
     try { const m = await ft(); m.myChart(v); m.saveMe(v); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('fortune_form', { hour: v.h == null ? 0 : 1 }); closeSheet(); go('today'); FFROM = 'form'; setTimeout(fortuneDetail, 200); };
   $('#sheet .panel').classList.add('sdpanel'); }
 
-// 홈 화면 추가 배너 (설치 전 · 오늘 닫지 않았을 때)
+// ── 홈 화면에 추가 (2026-10-28 설치 안내 · team/dev/tasks/261028-install-guide) ──
+//   배너(시안 b) · 권유 사다리(첫 게임 끝 → 다음 날 재방문 → 3일 연속, 평생 3번 · '나중에'면 3일 쉼) · 그림 안내(install-guide.js) · 설치 앱 첫 실행 선물
+const INSTALL_REWARD = true;   /* 설치 선물 50골드 문구 · 지급 (biz 3 · 켬/끔 실험은 운영 결정 뒤 bm.js 로) */
+const todayKey = () => R.keyOf(R.now());
+const visitAgain = () => { const f = localStorage.getItem('oad_first'); return !!f && f < new Date().toISOString().slice(0, 10); };   /* 처음 온 날이 아님 */
+const offerState = () => { try { return JSON.parse(localStorage.getItem('oad_install_offer') || '{}') || {}; } catch { return {}; } };
+const offerSave = o => { try { localStorage.setItem('oad_install_offer', JSON.stringify(o)); } catch { /* */ } };
+const plusDays = (k, n) => { const d = new Date(k + 'T12:00:00'); d.setDate(d.getDate() + n); return R.keyOf(d); };
+const coverOf = () => { const g = G(R.todayId()); return g ? { cover: webp(g.cover, 600), title: g.title } : {}; };
+/* 배너: 설치 전 · 오늘 닫지 않음 · 처음 온 날이 아님(카톡 안은 첫날부터) · 오늘 권유 시트를 띄운 날은 숨김 · PC 는 설치 창을 띄울 수 있을 때만 */
 function installBanner() {
-  if (I.installed() || localStorage.getItem('oad_hide_install') === R.keyOf(R.now())) return '';
-  /* PC: 폰 문구 대신 'PC에 설치' · 브라우저가 설치 창을 못 띄우면(사파리 · 파이어폭스) 배너를 숨김 */
-  if (isPC()) return I.canPrompt() ? `<div class="install" data-blk="install"><div class="ic">💻</div><div class="tx">PC에 앱으로 설치하면 바탕화면 · 작업 표시줄에서 매일 한 번에 들어와요</div><button data-install>설치</button><button class="x" data-hide-install aria-label="닫기">✕</button></div>` : '';
-  const msg = I.env.inApp ? `${I.env.kakao ? '카카오톡' : '앱'} 안에서는 화면이 흔들릴 수 있어요 · ${/iPhone|iPad/.test(navigator.userAgent) ? '사파리로' : '크롬으로'} 열면 더 매끄럽고 홈 화면에도 추가돼요` : '홈 화면에 추가하면 매일 한 번에 들어와요';
-  const btn = I.env.inApp ? (/iPhone|iPad/.test(navigator.userAgent) ? '사파리로 열기' : '크롬으로 열기') : I.canPrompt() ? '설치' : '추가하기';
-  return `<div class="install" data-blk="install"><div class="ic">📲</div><div class="tx">${msg}</div><button data-${I.env.inApp ? 'ext' : 'install'}>${btn}</button><button class="x" data-hide-install aria-label="닫기">✕</button></div>`;
+  if (I.installed() || localStorage.getItem('oad_hide_install') === todayKey()) return '';
+  if (isPC() ? !I.canPrompt() : !I.env.inApp && !visitAgain()) return '';
+  if (offerState().last === todayKey()) return '';
+  return `<div class="ibwrap" data-blk="install">${I.bannerHTML({ reward: INSTALL_REWARD })}</div>`;
 }
-async function doInstall() { const html = await I.install(); if (html) openSheet(html); else setTimeout(() => go(tab), 300); }
+let promptedAt = 0;
+/* 설치: 설치 창이 있으면 바로 · 없으면 환경별 그림 안내 · 그림이 없는 환경(PC 등)은 글 안내 */
+async function doInstall(where = '') {
+  const h = I.how();
+  if (h === 'prompt' || h === 'pc_prompt') {
+    promptedAt = Date.now(); const r = await I.prompt();
+    T.track('install_prompt', { where, ok: r === 'accepted' ? 1 : r === 'error' ? -1 : 0 });
+    if (r === 'accepted') setTimeout(() => go(tab), 300);
+    if (r !== 'error') return;
+  }
+  try {
+    const UI = await I.ui();
+    if (UI.hasGuide(I.how())) { const r = await UI.openGuide(I.how(), { where, ...coverOf() }); if (r === 'yes' || r === 'accepted') go(tab); return; }
+  } catch (e) { T.trackError('install_ui', e); }
+  T.track('install_guide', { where, how: I.how() }); openSheet(I.guide());
+}
+async function extOpen() {
+  const r = await I.openExt();
+  if (r === 'copied') toast(`주소를 복사했어요 · ${browserName()}에 붙여 넣어 주세요`);
+  else if (r === 'failed') toast('오른쪽 위 메뉴에서 ‘다른 브라우저로 열기’를 눌러 주세요');
+}
+/* 권유 사다리 (biz 4-1): 각 차례 한 번씩 · 평생 3번 · 하루 1번 · '나중에'면 3일 쉼 · 시트 · 운세 상세 · 게임 · 안내가 열려 있으면 안 띄움
+   첫 게임 끝인데 안드로이드 크롬 설치 창이 아직이면 미룸(차례를 쓰지 않음, ops A4) */
+async function offerInstall(kind) {
+  if (I.installed() || (isPC() && !I.canPrompt())) return false;
+  const o = offerState(), k = todayKey();
+  if ((o.n || 0) >= 3 || (o.done || []).includes(kind) || (o.next && k < o.next) || o.last === k) return false;
+  if (!sheet.hidden || !player.hidden || $('#sd') || document.querySelector('.ig')) return false;
+  if (kind === 'first' && I.shouldWaitPrompt()) return false;
+  const UI = await I.ui().catch(() => null); if (!UI) return false;
+  if (!sheet.hidden || !player.hidden || document.querySelector('.ig')) return false;
+  o.n = (o.n || 0) + 1; o.last = k; o.done = [...(o.done || []), kind]; offerSave(o);
+  const r = await UI.openOffer(kind, { where: 'nudge', nth: o.n, reward: INSTALL_REWARD });
+  if (r === 'accept') { if (I.env.inApp) extOpen(); else doInstall('nudge'); }
+  else { o.next = plusDays(k, 3); offerSave(o); }
+  if (tab === 'today') go('today');   /* 배너는 시트를 띄운 날 숨김 */
+  return true;
+}
+function maybeOffer() {
+  if (tab !== 'today' || I.installed()) return;
+  const st = R.state().streak, k = todayKey();
+  if (st && st.last === k && st.count >= 3) offerInstall('day3');
+  else if (visitAgain()) offerInstall('day2');
+}
+/* 설치 앱 첫 실행: 기록(install_open · ref 로 원래 기기와 이어 붙임) + 설치 완료 화면 · 선물은 로그인한 계정에 한 번 (서버 me act install) */
+const GIFT = 'oad_install_gift';
+{ const fo = I.firstOpen(); if (fo) { T.track('install_open', { first: 1, how: fo.ih, ref: fo.ref }); if (INSTALL_REWARD) localStorage.setItem(GIFT, 'pending'); else localStorage.setItem(GIFT, 'none'); } }
+async function showInstalled() {
+  const UI = await I.ui().catch(() => null); if (!UI) return;
+  const m = A.current();
+  const r = await UI.openInstalled({ loggedIn: !!m, reward: INSTALL_REWARD && localStorage.getItem(GIFT) !== 'done',
+    claim: async () => {
+      try { await A.call({ act: 'install', app: 1 }); localStorage.setItem(GIFT, 'done'); T.track('install_open', { what: 'gift', ok: 1 }); go(tab); return { ok: true }; }
+      catch (e) { if (e.used) { localStorage.setItem(GIFT, 'done'); go(tab); return { used: true }; } T.track('install_open', { what: 'gift', ok: 0, reason: String(e.message || '').slice(0, 40) }); return { ok: false, error: e.message }; }
+    },
+    login: () => { localStorage.setItem(GIFT, 'pending'); if (I.env.inApp) needLogin(); else A.login().catch(er => toast(er.message)); } });
+  if (r === 'skip' && localStorage.getItem(GIFT) === 'pending') localStorage.setItem(GIFT, 'later');
+  if (r === 'skip' && !INSTALL_REWARD) localStorage.setItem(GIFT, 'none');
+}
+const giftOpen = () => I.standalone() && INSTALL_REWARD && ['pending', 'later'].includes(localStorage.getItem(GIFT) || '');
 
 function tick() { const v = hms(R.msToTomorrow()); document.querySelectorAll('#cd,[data-cd]').forEach(el => { el.textContent = v; }); if (R.msToTomorrow() < 1000) setTimeout(() => go('today', 'midnight'), 1200); }
 
@@ -776,7 +842,9 @@ function renderSettings() {
     <h1 style="font-size:28px;margin-bottom:14px">설정</h1>
     ${A.ON ? accountCard() : ''}
     <div class="group">
-      <div><span>${isPC() ? 'PC에 앱으로 설치' : '홈 화면에 추가'}</span>${I.installed() ? '<span class="badge open">추가됨</span>' : `<button data-install>${isPC() ? '설치' : '추가하기'}</button>`}</div>
+      <div><span>${isPC() ? 'PC에 앱으로 설치' : '홈 화면에 추가'}</span>${I.standalone() ? '<span class="badge open">설치 앱으로 열림</span>' : I.installed() ? '<span><span class="badge open">추가됨</span> <button data-install data-where="settings">다시 추가</button></span>' : `<button data-install data-where="settings">${isPC() ? '설치' : '추가하기'}</button>`}</div>
+      ${giftOpen() ? '<div><span>🎁 설치 선물 50골드</span><button data-igift>받기</button></div>' : ''}
+      <div><span>설치가 안 돼요<br><small style="color:var(--mute)">내 폰 · 브라우저를 살펴보고 알려 드려요</small></span><button data-idiag>진단</button></div>
       <div><span>이용 방법 다시 보기</span><button data-intro>보기</button></div>
       <div><span>버전</span><span class="badge">v${VERSION}</span></div>
     </div>
@@ -930,8 +998,9 @@ function closeGame() {
   if (was && C.alwaysOn(was)) setTimeout(() => C.syncAlways(was, 'after'), 300);
   if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('☁ 계정에 저장됐어요'); }), 300);
   else if (was && nudgeOwn(was)) return;
-  // 첫 게임을 마치고 돌아오면 한 번만 홈 화면 추가를 권함
-  if (!I.installed() && !localStorage.getItem('oad_nudged') && (!isPC() || I.canPrompt())) { localStorage.setItem('oad_nudged', '1'); setTimeout(() => openSheet(I.env.inApp || !I.canPrompt() ? I.guide() : `<div class="intro"><h2>📲 내일도 쉽게 만나요</h2><p style="color:var(--sub)">${isPC() ? 'PC에 앱으로 설치하면 바탕화면에서' : '홈 화면에 추가하면'} 매일 새 게임을 한 번에 열 수 있어요.</p><div class="stack"><button class="btn" data-install>${isPC() ? 'PC에 설치' : '홈 화면에 추가'}</button><button class="btn ghost" data-close>나중에</button></div></div>`), 500); }
+  // 첫 게임을 마치고 돌아오면 홈 화면 추가 권유 (사다리 1차 · 예전 한 번 권유를 이미 본 사람은 1차를 쓴 것으로)
+  if (localStorage.getItem('oad_nudged')) { const o = offerState(); if (!(o.done || []).includes('first')) { o.done = [...(o.done || []), 'first']; o.n = (o.n || 0) + 1; offerSave(o); } }
+  else setTimeout(() => offerInstall('first'), 500);
 }
 // 뒤로가기: 먼저 게임에게 물어봄 (팝업 닫기 · 이전 화면 · 일시정지) → 게임이 처리하면 다시 막아 두고, 게임 첫 화면이면 원어데이로
 let backWait = null, backReady = false;   // backReady: 게임이 뒤로가기를 직접 처리한다고 알려 옴
@@ -1047,7 +1116,7 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-wk],[data-homeg]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg]');
   if (!t) return;
   const d = t.dataset;
   /* 메인 기록: 어느 칸에서 무엇을 눌렀나 + 게임 · 운세로 넘어갈 때 붙일 from */
@@ -1055,7 +1124,8 @@ document.addEventListener('click', e => {
   if (home) T.track('blk_click', { blk: bk.dataset.blk, what: whatOf(t), pos: +bk.dataset.pos || 0, lay: LAY });
   if (d.play) PFROM = d.from || (sdOpen ? 'fort_lucky' : !sheet.hidden ? 'detail' : home ? 'home_' + bk.dataset.blk : tab === 'today' ? 'home' : tab);
   if ('fortune' in d || d.paid) FFROM = home ? (HM.via === 'game' ? 'after_game' : d.paid ? 'home_hook' : 'home_card') : sdOpen ? 'detail' : !sheet.hidden ? 'sheet' : tab === 'today' ? 'home' : tab;
-  if ('install' in d || 'ext' in d || 'hideInstall' in d) T.track('install_click', { where: home ? (bk.dataset.blk === 'install' ? 'banner' : bk.dataset.blk) : !sheet.hidden ? 'sheet' : tab, what: 'install' in d ? 'install' : 'ext' in d ? 'ext' : 'hide' });
+  const iwhere = d.where || (home ? (bk.dataset.blk === 'install' ? 'banner' : bk.dataset.blk) : !sheet.hidden ? 'sheet' : tab);
+  if ('install' in d || 'ext' in d || 'hideInstall' in d) T.track('install_click', { where: iwhere, how: I.how(), what: 'install' in d ? 'install' : 'ext' in d ? 'ext' : 'hide' });
   if (d.mypaid) { closeSheet(); paidPage(d.mypaid); }
   else if ('mybuy' in d) myBuys();
   else if ('restoreCode' in d) restoreForm();
@@ -1101,10 +1171,12 @@ document.addEventListener('click', e => {
   else if ('close' in d) closeSheet();
   else if ('exit' in d) { closeSheet(); if (!player.hidden) exitGame(); else history.back(); }
   else if ('intro' in d) intro();
-  else if ('install' in d) { closeSheet(); doInstall(); }
-  else if ('ext' in d) { const r = I.openExternal(); if (r) r.then(ok => toast(ok ? `주소를 복사했어요 · ${browserName()}에 붙여 넣어 주세요` : '오른쪽 위 메뉴에서 ‘다른 브라우저로 열기’를 눌러 주세요')); }
+  else if ('install' in d) { closeSheet(); doInstall(iwhere); }
+  else if ('idiag' in d) I.ui().then(UI => UI.openDiag()).catch(() => toast('잠시 뒤 다시 해 주세요'));
+  else if ('igift' in d) showInstalled();
+  else if ('ext' in d) extOpen();
   else if ('copy' in d) I.copyLink().then(ok => toast(ok ? '주소를 복사했어요. 브라우저에 붙여 넣어 주세요' : '주소: ' + location.href));
-  else if ('hideInstall' in d) { localStorage.setItem('oad_hide_install', R.keyOf(R.now())); go(tab); }
+  else if ('hideInstall' in d) { localStorage.setItem('oad_hide_install', todayKey()); go(tab); }
   else if (d.tabGo) go(d.tabGo, 'tab');
   else if (d.wk) { const g = G(d.wk), off = Number(d.off) || 0; toast(off === 1 ? `내일 0시 공개 · ${TEASE[d.wk] || g.genre}` : `${off}일 뒤 공개 · ${g.genre} · 두근두근`); }
   else if (d.homeg && !R.PROD) { BM.setHome(d.homeg); LAY = BM.homeGroup(); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0, home: LAY }); go('settings'); toast(`메인 화면 ${LAY === 'b' ? '새(B) 이번 주 달력' : '예전(A)'}`); }
@@ -1143,11 +1215,11 @@ async function checkUpdate() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); else if (playing && C.on(playing.id)) C.push(playing.id, { keepalive: true }); });
 setTimeout(checkUpdate, 1500);
 document.addEventListener('oad:installable', () => { if (tab === 'today' || tab === 'settings') go(tab); });
-document.addEventListener('oad:installed', () => { T.track('installed'); toast('홈 화면에 추가됐어요!'); go(tab); });
-T.start(VERSION);
+document.addEventListener('oad:installed', () => { T.track('installed', { via: Date.now() - promptedAt < 6e4 ? 'prompt' : 'menu' }); toast('홈 화면에 추가됐어요! 아이콘으로 열면 골드 50'); go(tab); });
+T.start(VERSION, { br: I.env.br, osv: I.env.osv });
 // 계정: 로그인돼 있으면 불러오기 · 구글에서 막 돌아왔으면 환영
 A.onChange(m => { if (m) R.syncItems(m.items); go(tab); });
-A.init().then(m => { if (new URLSearchParams(location.search).has('login')) { history.replaceState(null, '', location.pathname); if (m) { T.track('login', { new: m.isNew ? 1 : 0 }); toast(m.isNew ? `${m.name || ''}님, 원어데이에 오신 걸 환영해요!` : `${m.name || ''}님, 다시 오셨네요`); go('settings'); } } });
+A.init().then(m => { if (I.standalone() && localStorage.getItem(GIFT) === 'pending') setTimeout(showInstalled, new URLSearchParams(location.search).has('login') ? 1200 : 300); if (new URLSearchParams(location.search).has('login')) { history.replaceState(null, '', location.pathname); if (m) { T.track('login', { new: m.isNew ? 1 : 0 }); toast(m.isNew ? `${m.name || ''}님, 원어데이에 오신 걸 환영해요!` : `${m.name || ''}님, 다시 오셨네요`); go('settings'); } } });
 // 토스 결제창에서 돌아온 경우
 /* 신년 패키지 영수증 여러 장 → 상품별 '두 사람'(solo 는 나 · 달 상품은 그 달 · 궁합은 상대)으로 보관 */
 const keepMany = rcs => { const m = FT, me = m && m.loadMe(); if (!me) return; for (const r of rcs) { const pt = m.pairOf(r.product, me); if (pt) P.keepReceipt(r, m.toInput(me), m.toInput(pt)); } };

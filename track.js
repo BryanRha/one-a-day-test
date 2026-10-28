@@ -63,7 +63,7 @@ export function trackError(where, e) {
   track('err', { where, msg });
 }
 
-export function start(version) {
+export function start(version, extra) {   /* extra: 판별 결과 등 open 에 덧붙일 값 (br · osv — 2026-10-28 설치 안내) */
   ver = version;
   if (!ON) return;
   const src = source();
@@ -75,6 +75,7 @@ export function start(version) {
     mob: /Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? 1 : 0,
     os: /iPhone|iPad|Mac/.test(navigator.userAgent) ? 'ios' : /Android/.test(navigator.userAgent) ? 'android' : /Windows/.test(navigator.userAgent) ? 'win' : 'etc',
     w: innerWidth,
+    ...(extra && typeof extra === 'object' ? extra : {}),
   });
   addEventListener('error', e => trackError('app', e.error || e.message));
   addEventListener('unhandledrejection', e => trackError('app', e.reason));

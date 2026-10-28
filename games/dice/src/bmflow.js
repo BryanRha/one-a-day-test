@@ -3,9 +3,9 @@
 //   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로 뽑기를 주지 않음
 //   광고 보상: 판 보상 2배(하루 3) · 무료 상자(하루 1, 수정 + 등급업 카드) — 소장자는 광고 없이 바로(횟수 같음)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 전장 전부 숨김, 게임은 그대로
-import { bm } from './oad_bm.js?v=0.86.0';
-import { load, save } from './save.js?v=0.86.0';
-import { HELP, roll, note, eligible, used } from './core/help.js?v=0.86.0';
+import { bm } from './oad_bm.js?v=0.87.0';
+import { load, save } from './save.js?v=0.87.0';
+import { HELP, roll, note, eligible, used } from './core/help.js?v=0.87.0';
 
 export { bm };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
