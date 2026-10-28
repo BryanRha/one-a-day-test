@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.87.1';
-import * as R from './rules.js?v=0.87.1';
-import * as I from './install.js?v=0.87.1';
-import * as T from './track.js?v=0.87.1';
-import * as P from './pay.js?v=0.87.1';
-import * as A from './account.js?v=0.87.1';
-import * as C from './cloud.js?v=0.87.1';
-import * as BM from './bm.js?v=0.87.1';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.87.2';
+import * as R from './rules.js?v=0.87.2';
+import * as I from './install.js?v=0.87.2';
+import * as T from './track.js?v=0.87.2';
+import * as P from './pay.js?v=0.87.2';
+import * as A from './account.js?v=0.87.2';
+import * as C from './cloud.js?v=0.87.2';
+import * as BM from './bm.js?v=0.87.2';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.87.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.87.2').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.87.1'), import('./fortune/types.js?v=0.87.1'), import('./fortune/chat.js?v=0.87.1')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.87.2'), import('./fortune/types.js?v=0.87.2'), import('./fortune/chat.js?v=0.87.2')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.87.1';
+const VERSION = '0.87.2';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -424,7 +424,7 @@ async function fortuneCalendar(ym) {
 }
 let sdOpen = false;
 function sdClose() { const el = $('#sd'); if (el) el.remove(); sdOpen = false; document.body.style.overflow = ''; }
-addEventListener('popstate', () => { if (skipPop) { skipPop = false; return; } if (!sheet.hidden) { closeSheet(true); return; } if (sdOpen) sdClose(); });
+addEventListener('popstate', () => { if (!sheet.hidden) { closeSheet(true); return; } if (sdOpen) { spare = false; sdClose(); return; } if (spare && $('#player').hidden) spare = false; });
 async function fortuneDetail(dayKey) {
   await ex(); const m = FT, me = m.loadMe(); if (!me) return fortuneForm();
   const date = dayKey ? new Date(...dayKey.split('-').map((v, i) => Number(v) - (i === 1 ? 1 : 0))) : R.now(), past = !!dayKey && dayKey !== R.keyOf(R.now());
@@ -521,7 +521,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.87.1')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.87.2')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -880,10 +880,12 @@ const sheet = $('#sheet'), panel = $('#sheet .panel');
 function openSheet(html) { panel.classList.remove('sdpanel'); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
   panel.innerHTML = `<div class="grab"></div>${html}`;
   /* 폰 '뒤로'가 앱을 나가지 않고 이 창만 닫게: 게임 밖에서 처음 열 때 기록 한 칸 (2026-10-29 대표 — 상담 창에서 뒤로 누르면 나가 버림) */
-  if (sheet.hidden && !sheetPushed && $('#player').hidden) { sheetPushed = true; history.pushState({ sheet: 1 }, ''); }
+  if (sheet.hidden && !sheetPushed && $('#player').hidden) { if (spare) { spare = false; sheetPushed = true; } else { sheetPushed = true; history.pushState({ sheet: 1 }, ''); } }
   sheet.hidden = false; }
-let onSheetClose = null, sheetPushed = false, skipPop = false;
-function closeSheet(fromPop) { sheet.hidden = true; if (sheetPushed && fromPop !== true) { sheetPushed = false; skipPop = true; history.back(); } else if (fromPop === true) sheetPushed = false; const f = onSheetClose; onSheetClose = null; if (f) f(); }
+let onSheetClose = null, sheetPushed = false, spare = false;
+/* 버튼으로 닫을 때는 history.back() 을 부르지 않음 — 닫자마자 게임 · 상세를 여는 흐름(광고 보고 열기 → play 등)에서
+   늦게 도착한 '뒤로'가 막 연 화면을 닫아 버림(0.87.1 버그 · 2026-10-29). 남은 기록 한 칸은 다음 '뒤로' 한 번이 조용히 먹음 */
+function closeSheet(fromPop) { sheet.hidden = true; if (sheetPushed) { sheetPushed = false; if (fromPop !== true) spare = true; } const f = onSheetClose; onSheetClose = null; if (f) f(); }
 $('#sheet .dim').onclick = closeSheet;
 
 function detail(id) {
