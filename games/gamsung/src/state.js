@@ -1,5 +1,5 @@
 // 저장 (localStorage 'gamsung_v1'): 돈 · 마음 · 경험치 · 원두 · 매장별 가구/머신/진열 · 동료 · 단골 · 오늘(판매·주문서·출석·쿠폰)
-import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.75.1';
+import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.75.2';
 const KEY = 'gamsung_v1';
 /* 시계: 시험용 배속(?speed)일 때 머신·로스터 시간도 같이 빨라지게 */
 let skew = 0; export const now = () => Date.now() + skew; export const addSkew = ms => { skew += ms; };
@@ -12,12 +12,12 @@ export const START_FURN = () => [
 export const newStore = () => ({ furn: START_FURN(), wall: { 1: 'board' }, mach: {}, roast: null, bar: {}, dirty: {}, uid: 10, coinsAt: {} });   /* coinsAt: 테이블에 남은 찻값 (가구 uid_자리) */
 const fresh = () => ({ v: 1, coins: 150, hearts: 5, xp: 0, lv: 1, beans: 40, si: 0, stores: { 0: newStore() }, inv: {}, staff: {}, reg: {}, menuSold: {},
   day: '', sold: 0, soldBy: {}, orders: [], att: { last: '', streak: 0 }, coupon: null, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), tut: 0,
-  fg: 0, art: {}, poem: { i: 0, n: 0 }, poems: [], jeong: 0, best: 0 });   /* 2026-10-27 추가: fg 손가락 안내 단계 · art 라떼아트 도감 · poem 오늘의 시 진행 · poems 완성한 시 · jeong 정성 한 잔 수 · best 최고 연속 */
+  fg: 0, art: {}, poem: { i: 0, n: 0 }, poems: [], jeong: 0, best: 0, cheer: { day: '', n: 0 }, owe: 0 });   /* 2026-10-28: cheer 응원 원두(하루 횟수) · owe 외상 원두값 */   /* 2026-10-27 추가: fg 손가락 안내 단계 · art 라떼아트 도감 · poem 오늘의 시 진행 · poems 완성한 시 · jeong 정성 한 잔 수 · best 최고 연속 */
 export let S = fresh();
 export function loadSave() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === 1) { S = Object.assign(fresh(), s); if (s.fg == null && (s.xp || 0) > 0) S.fg = 3; } } catch { /* 깨진 저장은 새로 · 예전 저장(손가락 안내 없던 때)은 안내를 건너뜀 */ }
-  for (const k of ['stores', 'inv', 'staff', 'reg', 'menuSold', 'soldBy', 'att', 'art', 'poem']) if (!S[k] || typeof S[k] !== 'object') S[k] = fresh()[k];
-  if (!Array.isArray(S.poems)) S.poems = []; for (const k of ['fg', 'jeong', 'best']) if (!Number.isFinite(S[k])) S[k] = 0; if (!Number.isFinite(S.poem.i)) S.poem.i = 0; if (!Number.isFinite(S.poem.n)) S.poem.n = 0; if (!Number.isFinite(S.poem.p)) S.poem.p = 0;
+  for (const k of ['stores', 'inv', 'staff', 'reg', 'menuSold', 'soldBy', 'att', 'art', 'poem', 'cheer']) if (!S[k] || typeof S[k] !== 'object') S[k] = fresh()[k];
+  if (!Array.isArray(S.poems)) S.poems = []; for (const k of ['fg', 'jeong', 'best', 'owe']) if (!Number.isFinite(S[k])) S[k] = 0; if (!Number.isFinite(S.poem.i)) S.poem.i = 0; if (!Number.isFinite(S.poem.n)) S.poem.n = 0; if (!Number.isFinite(S.poem.p)) S.poem.p = 0;
   for (const st of Object.values(S.stores)) { const n = newStore(); for (const k of Object.keys(n)) if (st[k] == null || typeof st[k] !== typeof n[k]) st[k] = n[k]; st.furn = st.furn.filter(f => f && FURN[f.id] && Number.isFinite(f.x + f.z)); }
   if (!S.stores[S.si]) S.si = 0; for (const k of ['coins', 'hearts', 'xp', 'beans']) if (!Number.isFinite(S[k])) S[k] = 0;
   S.lv = levelOf(S.xp); dayTick(); return S;

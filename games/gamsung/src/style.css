@@ -188,3 +188,10 @@ body.decoing .poemp { display: none; }
 .chip.dirty .c { font-size: 15px; }
 .hint { bottom: calc(var(--sb) + 184px); }   /* 오늘의 시 줄 위로 */
 .poemp span { font-size: 12.5px; }
+
+/* 2026-10-28 어수선함 줄이기: 쿠폰은 한 줄 · 손편지 카드는 작게 아래쪽 (가운데 놀이 화면을 가리지 않게) */
+.cp { width: auto; padding: 5px 10px 6px; border-radius: 12px; } .cp span { margin: 0 0 3px; font-size: 11px; font-weight: 800; color: var(--ink); } .cp .pb { width: 92px; height: 4px; }
+.letterc { top: auto; bottom: calc(var(--sb) + 250px); left: 12px; transform: translate(0, 8px); width: min(290px, 78vw); padding: 8px 12px; } .letterc.on { transform: none; } .letterc > i { font-size: 22px; } .letterc p { font-size: 13px; }
+.chip.mach .idle { font-size: 12px; } .chip.mach.empty { padding: 2px 6px; opacity: .85; }
+.cheer { padding: 6px 4px 2px; } .cheer > i { display: block; font-style: normal; font-size: 40px; } .cheer small { display: block; font-size: 11px; color: var(--red); font-weight: 800; letter-spacing: 1px; } .cheer b { display: block; font-family: var(--serif); font-size: 20px; margin: 4px 0 6px; } .cheer p { font-size: 13px; color: var(--sub); }
+.upr.cheerr { background: #FFF6E2; }

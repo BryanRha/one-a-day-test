@@ -1,14 +1,16 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER } from './data.js?v=0.75.1';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.75.1';
-import { cup } from './models.js?v=0.75.1';
-import { fmt, machineCount, storeMult, WALL_SLOTS, STACK, poemLen } from './game.js?v=0.75.1';
-import { sfx, setAudio } from './audio.js?v=0.75.1';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.75.1';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.75.2';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.75.2';
+import { cup } from './models.js?v=0.75.2';
+import { fmt, machineCount, storeMult, WALL_SLOTS, STACK, poemLen } from './game.js?v=0.75.2';
+import { sfx, setAudio } from './audio.js?v=0.75.2';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.75.2';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_';
+/* 조사: 마지막 글자 받침으로 고름 · josa('서윤', '이', '가') → 서윤이 · josa('지호', '을', '를') → 지호를 (한글이 아니면 뒤엣것) */
+export const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return w + (c >= 0 && c < 11172 && c % 28 ? a : b); };
 const mmss = s => s >= 3600 ? `${Math.floor(s / 3600)}시간 ${Math.floor(s % 3600 / 60)}분` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}초`;
 const tlabel = s => s >= 3600 ? `${Math.round(s / 360) / 10}시간` : s >= 60 ? `${Math.round(s / 6) / 10}분` : `${s}초`;
 
@@ -48,7 +50,7 @@ export class UI {
     h.innerHTML = `<div class="top"><div class="pill coin"><i></i><b id="cn">0</b></div><div class="pill heart"><i>♥</i><b id="hn">0</b></div><div class="pill bean" id="beanP"><i>🫘</i><b id="bn">0</b></div></div>
       <div class="lvl" id="lvl"><b id="lvt"></b><em id="sco"></em><div class="pb"><s id="lvp"></s></div></div>
       <div class="side"><button class="sb" id="bOrd"><span>📜</span>주문서<i class="dot" id="ordDot"></i></button><button class="sb" id="bAtt"><span>🎁</span>출석<i class="dot" id="attDot"></i></button><button class="sb ad" id="bAd"><span>▶</span><em id="adT">손님×2</em></button>${inOAD ? '<button class="sb" id="bExit"><span>↩</span>원어데이</button>' : ''}</div>
-      <div class="cp" id="cp"><b>🎟 매장 쿠폰까지</b><div class="pb"><s id="cpb"></s></div><span id="cpt"></span></div>
+      <div class="cp" id="cp"><span id="cpt"></span><div class="pb"><s id="cpb"></s></div></div>
       <div class="hint" id="hint"></div><div class="rail" id="rail"></div>
       <div class="bottom" id="bottom">${[['☕', '메뉴', 'menu'], ['🪑', '꾸미기', 'deco'], ['💌', '단골', 'reg'], ['🗺️', '가게', 'shop'], ['⚙️', '설정', 'set']].map(([i, t, k]) => `<button class="bb" data-b="${k}"><i class="dot" id="dot_${k}"></i><span>${i}</span>${t}</button>`).join('')}</div>
       <div class="decobar" id="decobar"></div>
@@ -74,12 +76,12 @@ export class UI {
     const cam = this.app.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3(), at = (x, y, z) => { v.set(x, y, z).project(cam); return `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px)`; };
     $('#cn').textContent = fmt(S.coins); $('#hn').textContent = fmt(S.hearts); $('#bn').textContent = fmt(S.beans); $('#beanP').classList.toggle('low', S.beans < 6);
     for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.4; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; d.style.opacity = Math.max(0, 1 - d._t / 1.3); if (d._t > 1.3) d.remove(); }
-    for (const c of g.cust) { if (!c.tag) continue; const show = (['story', 'kiosk'].includes(c.state) || (c.state === 'seated' && (g.ready(c) || c.w > 90))) && !g.deco;   /* 앉아 기다리는 손님은 주문 레일로 보고, 머리 위엔 오래 기다릴 때만 */ c.tag.style.display = show ? '' : 'none'; if (!show) continue;
+    for (const c of g.cust) { if (!c.tag) continue; const sst = c.state === 'story' || (c.story && c.state === 'seated'), show = (c.state === 'story' || (c.state === 'seated' && (c.story || g.ready(c) || c.w > 90))) && !g.deco;   /* 자리에서 사연을 기다리는 단골도 💌 */   /* 앉아 기다리는 손님은 주문 레일로 보고, 머리 위엔 오래 기다릴 때만 */ c.tag.style.display = show ? '' : 'none'; if (!show) continue;
       c.tag.style.transform = at(c.pos.x, 230, c.pos.z) + ' translate(-50%,-100%)';
-      const html = c.state === 'story' ? `<i class="lt">💌</i><b>${c.reg.name}</b><small>눌러서 이야기 듣기</small>` : c.state === 'kiosk' ? '<b>📱 주문 중…</b>' : `<i class="no">#${c.ticket ? c.ticket.no : ''}</i>${c.items.map(it => `<img src="${pic(it.k)}"><b>${MENU[it.k].short}${it.n > 1 ? `×${it.n}` : ''}</b>`).join('')}${c.w > 90 ? '<em>😌</em>' : ''}`;
-      if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('story', c.state === 'story'); c.tag.classList.toggle('reg', !!c.reg); c.tag.classList.toggle('has', g.ready(c)); }
+      const html = sst ? `<i class="lt">💌</i><b>${c.reg.name}</b><small>눌러서 이야기 듣기</small>` : c.state === 'kiosk' ? '<b>📱 주문 중…</b>' : `<i class="no">#${c.ticket ? c.ticket.no : ''}</i>${c.items.map(it => `<img src="${pic(it.k)}"><b>${MENU[it.k].short}${it.n > 1 ? `×${it.n}` : ''}</b>`).join('')}${c.w > 90 ? '<em>😌</em>' : ''}`;
+      if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('story', sst); c.tag.classList.toggle('reg', !!c.reg); c.tag.classList.toggle('has', g.ready(c)); }
     const lab = g.cust.filter(c => c.state === 'seated' && !(g.ready(c) || c.w > 90)).sort((a, b) => b.w - a.w)[0];
-    for (const c of g.cust) { const el = c.cloud; if (!el) continue; const sv = c.clearT != null, age = sv ? g.t - c.clearT : 0, show = !g.deco && (c.state !== 'out' || age < 3.2) && !(c.state === 'in' && c.pos.x > 1250); el.style.display = show ? '' : 'none'; if (!show) continue;
+    for (const c of g.cust) { const el = c.cloud; if (!el) continue; const sv = c.clearT != null, age = sv ? g.t - c.clearT : 0, show = !g.deco && (sv ? age < 3.2 : ['seated', 'toPick'].includes(c.state));   /* 줄 선 손님 · 받은 뒤엔 구름을 안 띄움 (어수선함 줄이기) */ el.style.display = show ? '' : 'none'; if (!show) continue;
       const wait = !sv && c === lab;   /* 마음 구름: 흐림 → 맑음 · 정성 한 잔이면 햇살 · 글자는 가장 오래 기다린 한 명만 */
       const html = !sv ? `<i>☁️</i>${wait ? '<b>마음 흐림</b>' : ''}` : age < 3.2 ? `<i>${c.sun ? '🌞' : '☀️'}</i><b>${c.sun ? '햇살 가득' : '맑아졌어요'}${c.gain ? ` <em>♥+${c.gain}</em>` : ''}</b>` : `<i>${c.sun ? '🌞' : '🌤️'}</i>`;
       if (el._h !== html) { el.innerHTML = html; el._h = html; el.className = 'cloud ' + (!sv ? 'dim' : age < 3.2 ? 'sun pop' + (c.sun ? ' gold' : '') : 'ok'); }
@@ -88,12 +90,12 @@ export class UI {
     for (const d of this.chips.values()) d._seen = false;
     if (!g.deco) {
       for (const m of g.machines) { const p = g.progress(m), d = this.chip('m' + m.key, 'mach', () => ({ kind: 'machine', m })); d.style.transform = at(m.x, 250, m.z) + ' translate(-50%,-100%)';
-        const html = !p ? `<span class="idle">${m.kind === 'oven' ? '🍰' : '☕'} 비었어요</span>` : p.u >= 1 ? `<img src="${pic(p.s.menu)}"><b>${MENU[p.s.menu].short} ×${p.s.n} 완성</b>` : `<img src="${pic(p.s.menu)}"><b class="mn">${MENU[p.s.menu].short}</b><s><i style="width:${p.u * 100}%"></i></s><em>${mmss(p.left)}</em>`;
+        const html = !p ? `<span class="idle">${m.kind === 'oven' ? '🍰' : '☕'}</span>` : p.u >= 1 ? `<img src="${pic(p.s.menu)}"><b>${MENU[p.s.menu].short} ×${p.s.n} 완성</b>` : `<img src="${pic(p.s.menu)}"><b class="mn">${MENU[p.s.menu].short}</b><s><i style="width:${p.u * 100}%"></i></s><em>${mmss(p.left)}</em>`;
         if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!p && p.u >= 1); d.classList.toggle('empty', !p); }
-      { const r = g.roastState(), d = this.chip('roast', 'mach', () => ({ kind: 'roaster' })); d.style.transform = at(g.roaster.x, 250, g.roaster.z) + ' translate(-12%,-100%)'; const html = !r ? `<span class="idle">🫘 원두 볶기</span>` : r.u >= 1 ? `<b>🫘 원두 +${r.R.beans}</b>` : `<span>🫘</span><s><i style="width:${r.u * 100}%"></i></s><em>${mmss(r.left)}</em>`; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!r && r.u >= 1); d.classList.toggle('empty', !r); }
+      { const r = g.roastState(), d = this.chip('roast', 'mach', () => ({ kind: 'roaster' })); d.style.transform = at(g.roaster.x, 250, g.roaster.z) + ' translate(-12%,-100%)'; const html = !r ? `<span class="idle">🫘${S.beans < 30 ? ' 원두 볶기' : ''}</span>` : r.u >= 1 ? `<b>🫘 원두 +${r.R.beans}</b>` : `<span>🫘</span><s><i style="width:${r.u * 100}%"></i></s><em>${mmss(r.left)}</em>`; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!r && r.u >= 1); d.classList.toggle('empty', !r); }
       for (const o of g.furn) o.seats.forEach((s, k) => { if (!s.dirty) return; const d = this.chip('d' + o.f.uid + '_' + k, 'dirty', () => ({ kind: 'dirty', o, k })); d.style.transform = at(s.dirty.position.x, 150, s.dirty.position.z) + ' translate(-50%,-100%)'; const html = s.coins && s.coins.l >= 0 ? '💌' : s.coins && s.coins.v ? '<i class="c"></i>' : '✨'; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('coin', !!(s.coins && (s.coins.v || s.coins.l >= 0))); });
       { const n = g.stackTotal(); if (n) { const d = this.chip('stack', 'stackc', () => ({ kind: 'stack' })); d.style.transform = at(STACK.x, STACK.y + 30 + Math.min(4, Math.ceil(n / 3)) * 52, STACK.z) + ' translate(-50%,-100%)'; const html = `<i class="n">${n}</i>`; if (d._h !== html) { d.innerHTML = html; d._h = html; }
-        if (S.fg >= 3) { const q = this.chip('stackp', 'stackc', () => ({ kind: 'stack' })); q.style.transform = at(STACK.x, STACK.y + 20, STACK.z) + ' translate(calc(-100% - 34px),-50%)'; if (!q._h) { q.innerHTML = '<b>쟁반을 끌어 픽업대로 ➜</b>'; q._h = 1; } } } }   /* 안내 중엔 손가락이 대신 */   /* 작업대 탑(개수) · 아래에 「끌어 픽업대로」 */
+        if (S.fg >= 3) { const q = this.chip('stackp', 'stackc', () => ({ kind: 'stack' })); q.style.transform = at(STACK.x, STACK.y + 20, STACK.z) + ' translate(calc(-100% - 34px),-50%)'; if (!q._h) { q.innerHTML = '<b>눌러서 픽업대로 ➜</b>'; q._h = 1; } } } }   /* 안내 중엔 손가락이 대신 */   /* 작업대 탑(개수) · 아래에 「끌어 픽업대로」 */
     }
     for (const [k, d] of this.chips) if (!d._seen) { d.remove(); this.chips.delete(k); }
     const b = g.boostUntil - now(); $('#adT').textContent = b > 0 ? mmss(Math.ceil(b / 1000)) : '손님×2'; $('#bAd').classList.toggle('on', b > 0);
@@ -106,7 +108,7 @@ export class UI {
     const put = (x, y, t, cls = '') => { el.className = 'finger on ' + cls; const ic = el.querySelector('i'), e2 = cls === 'up' ? '👇' : '👆'; if (ic.textContent !== e2) ic.textContent = e2; el.style.left = Math.max(10, Math.min(W - 10, x)) + 'px'; el.style.top = y + 'px'; if (sp._t !== t) { sp.innerHTML = t; sp._t = t; } };
     if ($('#pull')) return hide();   /* 추출 창은 창 안에서 손가락이 안내 */
     if ($('#modal').firstChild) return hide();
-    if (g.stackTotal()) { const r = this.chips.get('stack')?.getBoundingClientRect(); if (r) return put(r.left + r.width / 2, r.bottom + 6, '<em>3/3</em> 쟁반을 끌어 픽업대로', 'drag'); }
+    if (g.stackTotal()) { const r = this.chips.get('stack')?.getBoundingClientRect(); if (r) return put(r.left + r.width / 2, r.bottom + 6, '<em>3/3</em> 쟁반을 눌러 픽업대로', 'up'); }
     const done = g.machines.find(m => { const p = g.progress(m); return p && p.u >= 1; }); if (done) { const r = this.chips.get('m' + done.key)?.getBoundingClientRect(); if (r) return put(r.left + r.width / 2, r.bottom + 4, '다 내렸어요 · 눌러서 작업대로'); }
     const tk = $('#rail .tk'); if (tk && g.tickets.length) { const r = tk.getBoundingClientRect(); return put(r.left + Math.min(r.width / 2, 60), r.top - 4, '<em>1/3</em> 주문표를 눌러요', 'up'); }
     const c = g.cust.find(c => ['kiosk', 'queue', 'in'].includes(c.state)); if (c) { const m = at(c.pos.x, 260, c.pos.z).match(/translate\(([-\d.]+)px,([-\d.]+)px\)/); if (m) return put(+m[1], +m[2] - 30, '첫 손님이 주문하고 있어요', 'say'); }
@@ -121,26 +123,38 @@ export class UI {
     $('#ordDot').style.display = S.orders.some(o => !o.done && (S.soldBy[o.menu] || 0) >= o.n) ? 'block' : 'none'; $('#attDot').style.display = S.att.last !== today() ? 'block' : 'none';
     $('#dot_reg').style.display = REGULARS.some(R => S.lv >= R.lv && !S.reg[R.id]) ? 'block' : 'none'; $('#dot_shop').style.display = Object.entries(STAFF).some(([k, d]) => !S.staff[k] && S.lv >= d.lv) || STORES.some((s, i) => S.lv >= s.lv && !S.stores[i]) ? 'block' : 'none';
     $('#dot_deco').style.display = 'none';
-    const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '오늘 쿠폰 받았어요' : couponReady() ? '쿠폰 받기!' : `오늘 ${S.sold} / ${COUPON.goal}잔`; $('#cp').classList.toggle('ready', couponReady());
+    const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '🎟 쿠폰 받음' : couponReady() ? '🎟 쿠폰 받기!' : `🎟 쿠폰 ${S.sold}/${COUPON.goal}`; $('#cp').classList.toggle('ready', couponReady());
     document.body.classList.toggle('decoing', !!g.deco);
     { const line = POEMS[S.poem.i % POEMS.length], html = `<span><b>🖋</b>${this.poemChars(line, S.poem.n)}</span><div class="pb"><s style="width:${(S.poem.n + (S.poem.p || 0) / POEM_PER) / poemLen(line) * 100}%"></s></div>`; const el = $('#poemP'); if (el._h !== html) { el.innerHTML = html; el._h = html; } }
   }
   poemChars(line, n) { let i = 0; return [...line].map(ch => ch === ' ' ? '<u> </u>' : `<i class="${i++ < n ? 'on' : ''}">${ch}</i>`).join(''); }
-  // ── 처음 안내 (Lv.4 전까지): 지금 할 일 하나를 화살표로
+  // ── 안내: 지금 할 일 하나를 화살표로 · Lv.5 전에는 늘, Lv.5부터는 막혔을 때만 (2026-10-28)
+  //   원칙: 가리키는 행동은 지금 눌렀을 때 실제로 되는 것만 (볶을 돈 · 원두 · 빈 머신을 먼저 확인) · 화면 밖이면 그쪽으로 화면을 옮겨 줌
   guide() {
-    const g = this.app.game, h = $('#hint'); if (g.deco || S.lv >= 5) { h.classList.remove('on'); return null; }
-    if (S.fg < 3) { h.classList.remove('on'); return null; }   /* 첫 안내는 손가락이 */
-    const say = (t, x, z, y) => { if (h.textContent !== t) h.textContent = t; h.classList.add('on'); return [x, z, y]; };
-    if (g.stackTotal()) return say('쟁반을 끌어(또는 눌러) 픽업대로 옮겨요', STACK.x, STACK.z, 300);
-    const done = g.machines.find(m => { const p = g.progress(m); return p && p.u >= 1; }); if (done) return say('다 내렸어요! 눌러서 작업대 탑으로', done.x, done.z, 330);
-    const r = g.roastState(); if (r && r.u >= 1) return say('원두가 다 볶아졌어요! 눌러서 담아요', g.roaster.x, g.roaster.z, 380);
-    if (S.beans < 3 && !r) return say('원두가 떨어졌어요 · 로스터를 눌러 볶아요', g.roaster.x, g.roaster.z, 380);
-    const tk = g.tickets.find(t => t.items.some(it => g.need(it.k) > 0)); if (tk) { const it = tk.items.find(x => g.need(x.k) > 0), m = g.machines.find(x => !g.progress(x) && (x.kind === 'oven') === !!MENU[it.k].oven); if (m) return say(`주문 #${tk.no} ${MENU[it.k].short} · 주문표를 누르면 손으로 바로 내려요`, m.x, m.z, 300); }
-    if ((ST().ret || 0) >= 5) return say('반납대에 쟁반이 쌓였어요 · 눌러서 설거지', -190, -455, 220);
-    const dirty = g.seats().find(x => x.s.dirty); if (dirty) return say('테이블을 눌러 닦아요 · 다음 손님이 앉을 수 있어요', dirty.s.dirty.position.x, dirty.s.dirty.position.z, 200);
-    if (S.lv >= 2 && g.score() < 40) { h.textContent = '꾸미기로 가게를 채우면 손님이 더 자주 와요'; h.classList.add('on'); return null; }
-    h.classList.remove('on'); return null;
+    const g = this.app.game, h = $('#hint'), off = () => { h.classList.remove('on'); return null; }; if (g.deco || S.fg < 3) return off();   /* 첫 안내는 손가락이 */
+    const basic = S.lv < 5, text = t => { if (h.textContent !== t) h.textContent = t; h.classList.add('on'); return null; };
+    const scr = (x, z) => { const cam = this.app.cam; cam.updateMatrixWorld(); const v = new THREE.Vector3(x, 120, z).project(cam); return Math.abs(v.x) <= 0.95 && v.y <= 0.75 && v.y >= -0.6; };   /* 화면 안(위 HUD · 아래 레일 빼고)에 보이는지 */
+    const say = (t, x, z, y) => { const s2 = scr(x, z) ? t : `${t} · 화면을 끌어서 찾아요`; if (h.textContent !== s2) h.textContent = s2; h.classList.add('on'); return [x, z, y]; };   /* 화면을 마음대로 옮기지 않음 (어지러움) */
+    const r = g.roastState(), roastHere = (t) => !g.roastWhy('house') ? say(g.broke() ? '원두가 바닥났어요 · 로스터에서 외상으로 볶을 수 있어요' : t, g.roaster.x, g.roaster.z, 380) : r ? text('원두를 볶는 중이에요 · 곧 다 돼요') : null;
+    const tk = g.tickets.slice(0, 6).find(t => t.items.some(it => g.need(it.k) > 0)), it = tk   /* 화면 주문 레일에 보이는 6장 안에서만 */ && tk.items.find(x => g.need(x.k) > 0), m = it && g.machines.find(x => !g.progress(x) && (x.kind === 'oven') === !!MENU[it.k].oven), beanShort = it && S.beans < MENU[it.k].bean;
+    const front = g.cust.find(c => c.state === 'story'), seatedStory = g.cust.find(c => c.story && c.state === 'seated'), dirty = g.seats().filter(x => x.s.dirty).sort((a, b) => scr(b.s.x, b.s.z) - scr(a.s.x, a.s.z))[0], noSeat = !g.freeSeats().length;
+    if (basic && g.stackTotal()) return say('쟁반을 눌러 픽업대로 옮겨요', STACK.x, STACK.z, 300);
+    const done = g.machines.find(m => { const p = g.progress(m); return p && p.u >= 1; }); if (basic && done) return say('다 내렸어요! 눌러서 작업대 탑으로', done.x, done.z, 330);
+    if (r && r.u >= 1 && (basic || S.beans < CHEER.low || beanShort)) return say('원두가 다 볶아졌어요! 눌러서 담아요', g.roaster.x, g.roaster.z, 380);
+    if (S.beans < CHEER.low || beanShort) { const q = roastHere(beanShort ? `원두가 모자라요 · 로스터를 눌러 볶아요` : '원두가 떨어졌어요 · 로스터를 눌러 볶아요'); if (q !== null || r) return q; }
+    if (basic && tk && m && !beanShort) return say(`주문 #${tk.no} ${MENU[it.k].short} · 주문표를 누르면 손으로 바로 내려요`, m.x, m.z, 300);
+    if ((ST().ret || 0) >= (basic ? 5 : 8)) return say('반납대에 쟁반이 쌓였어요 · 눌러서 설거지', -190, -455, 220);
+    if (dirty && (basic || noSeat)) return say(noSeat ? '빈자리가 없어요 · 테이블을 눌러 닦아요' : '테이블을 눌러 닦아요 · 다음 손님이 앉을 수 있어요', dirty.s.dirty.position.x, dirty.s.dirty.position.z, 200);
+    if (front && (basic || g.cust.some(c => c.state === 'queue'))) return say(`단골 ${josa(front.reg.name, '이', '가')} 이야기를 들려주고 싶어 해요 · 눌러 보세요`, front.pos.x, front.pos.z, 260);
+    if (basic && seatedStory) return say(`💌 ${josa(seatedStory.reg.name, '이', '가')} 자리에서 기다려요 · 눌러서 이야기 듣기`, seatedStory.pos.x, seatedStory.pos.z, 230);
+    return off();
   }
+  /* 응원 선물 (docs/bm-policy.md 6장): 원두가 바닥나고 볶을 돈도 없을 때 한 번 · 노력 인정 먼저 · 거절 가능 · 하루 CHEER.perDay 번 */
+  cheer() { const g = this.app.game; if ($('#modal').firstChild || $('#pull') || g.deco) return false; const left = g.cheerLeft(); if (left <= 0) return false; sfx('reward', { vol: 0.35 });
+    this.modal(`<div class="cheer"><i>🫘</i><small>응원 선물 · 오늘 ${CHEER.perDay - left + 1}/${CHEER.perDay}</small><b>오늘도 정성껏 내리셨어요</b><p>원두가 바닥났는데 볶을 돈이 조금 모자라요.<br>하우스 블렌드 한 봉지 챙겨 드릴게요.</p></div>
+      <button class="btn" id="chOk">응원 받기 · 원두 +${CHEER.beans}잔분</button><button class="btn ghost" id="chNo">혼자 해 볼게요</button>`);
+    $('#chOk').onclick = () => { this.close(); if (g.cheerGive()) this.toast('응원 원두를 담았어요 · 주문표를 눌러 이어서 내려요 ☕'); else this.toast('이미 원두가 있어요'); };
+    $('#chNo').onclick = () => { this.close(); this.toast('로스터에서 외상으로 볶을 수도 있어요 · 다음 매출에서 갚아요'); }; return true; }
   // ── 누르기
   tap(p, fp) {
     const g = this.app.game;
@@ -169,6 +183,7 @@ export class UI {
         <div class="tabs">${cats.map(([k, t]) => `<button data-c="${k}" class="${k === this._cat ? 'on' : ''}">${t}</button>`).join('')}</div><div class="menus">${cards}</div>
         <button class="go ${sel ? '' : 'off'}" id="go" ${oven ? '' : 'hidden'}>${sel ? `${sel.name} ${selN}${oven ? '개 굽기' : '잔 내리기'} · ${tlabel(sel.t)}${this.app.game.need(this._sel) ? '' : ' · 주문 없음'}` : '주문표의 메뉴를 골라요'}</button>`, 'sheet');
       md.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { this._cat = b.dataset.c; this._sel = null; draw(); });
+      md.querySelectorAll('.mc.lock').forEach(b => b.onclick = () => this.toast(`Lv.${MENU[b.dataset.k].lv}에 열려요`));   /* 말없이 거절하지 않기 */
       md.querySelectorAll('.mc:not(.lock)').forEach(b => b.onclick = () => { sfx('tap', { vol: 0.4 }); if (!oven) return this.pullSheet(m, b.dataset.k); this._sel = b.dataset.k; draw(); });
       $('#go').onclick = () => { if (!this._sel) return; const e = this.app.game.brew(m, this._sel); if (e) { this.toast(e); if (e.startsWith('원두')) setTimeout(() => this.roastSheet(), 600); return; } if (S.tut < 1) S.tut = 1; this.close(); this.toast(`${MENU[this._sel].name} ${oven ? '굽는' : '내리는'} 중…`); }; };
     draw();
@@ -206,12 +221,12 @@ export class UI {
     this._ub = pushBack(() => { auto(); return true; });
     this._pull = { press: () => ring.onpointerdown({ preventDefault() {}, stopPropagation() {}, pointerId: 0 }), release, auto };   /* 시험 도구용 */
   }
-  finishPull(m, k, res, early) { const g = this.app.game; this.close(); const r = g.handBrew(m, k, res); if (typeof r === 'string') return this.toast(r); if (S.fg < 1) S.fg = 1; this.praise(r, early); if (res.art) this.artCard(res.art, res.artOk, r.artNew); }
+  finishPull(m, k, res, early) { const g = this.app.game; this.close(); const r = g.handBrew(m, k, res); if (typeof r === 'string') return this.toast(r); if (S.fg < 1) S.fg = 1; this.praise(r, early); if (res.art && r.artNew) setTimeout(() => this.artCard(res.art, res.artOk, true), 900); }   /* 라떼아트 카드는 도감에 새로 들 때만 (칭찬이 사라진 뒤) */
   /* 칭찬: 정성 한 잔은 금빛 · 빗나가도 따뜻하게 (벌 없음) */
   praise(r, early) { const el = $('#praise');
     el.innerHTML = r.gold ? `<b>✨ 정성 한 잔! <em>♥+1</em></b><small>향 보너스 · 팁 +${fmt(r.tip)}${r.combo > 1 ? ` · 연속 ${r.combo}잔` : ''}</small>`
       : `<b>${['맛있게 내렸어요!', '좋은 한 잔이에요 ☕', '향이 참 좋아요!'][Math.floor(Math.random() * 3)]}</b><small>${early ? '조금만 더 채우면 금빛 · 정성 한 잔' : '금빛에서 살짝 일찍 떼면 정성 한 잔'}</small>`;
-    el.className = 'praise on ' + (r.gold ? 'gold' : 'soft'); clearTimeout(this._prt); this._prt = setTimeout(() => el.classList.remove('on'), 1700); }
+    el.className = 'praise on ' + (r.gold ? 'gold' : 'soft'); clearTimeout(this._prt); this._prt = setTimeout(() => el.classList.remove('on'), r.gold ? 1600 : 1100); }
   /* 라떼아트: 시그니처 마무리 · 모양 하나를 한 번 쓱 · 넉넉히 판정, 못 그려도 하트 */
   artStage(m, k, gold, early) {
     const shapes = Object.keys(ART), shape = shapes[Math.floor(Math.random() * shapes.length)], A = ART[shape], el = $('#pull'); if (!el) return this.finishPull(m, k, { gold }, early);
@@ -234,8 +249,9 @@ export class UI {
     el.classList.add('on'); clearTimeout(this._act); this._act = setTimeout(() => el.classList.remove('on'), 2600); }
   delivered(by) { if (by === 'barista' || S.fg >= 3) return; S.fg = 3; save(); setTimeout(() => this.toast('잘했어요! 손님이 진동벨을 듣고 가지러 와요 ♥'), 300); }
   /* 손편지 · 오늘의 시 */
-  letter(line, byStaff) { if (byStaff) return this.toast(`💌 도윤이 손편지를 가져왔어요 · “${line}”`); const el = $('#letterC'); el.innerHTML = `<i>💌</i><div><small>${byStaff ? '도윤이 테이블에서 가져온 ' : ''}손님의 손편지 · ♥+1</small><p>“${line}”</p></div>`; el.classList.add('on'); clearTimeout(this._lt); this._lt = setTimeout(() => el.classList.remove('on'), 3200); sfx('reward', { vol: 0.35 }); }
-  poemTick(ch) { const L = poemLen(POEMS[S.poem.i % POEMS.length]), n = S.poem.n; this.progress(); const p = $('#poemP'); p.classList.remove('tick'); void p.offsetWidth; p.classList.add('tick'); if (ch && (n === 1 || n === L - 1 || n % 3 === 0)) this.poemCard(); }   /* 글자가 찰 때 가끔 큰 카드 */
+  bigBusy() { return ['#praise', '#poemCard', '#artCard', '#letterC'].some(q => $(q).classList.contains('on')) || !!$('#modal').firstChild; }   /* 큰 카드는 한 번에 하나만 */
+  letter(line, byStaff) { if (byStaff || this.bigBusy()) return this.float(`💌 손편지 ♥+1`, this.app.game.owner.pos.clone().setY(260), 'heart'); const el = $('#letterC'); el.innerHTML = `<i>💌</i><div><small>${byStaff ? '도윤이 테이블에서 가져온 ' : ''}손님의 손편지 · ♥+1</small><p>“${line}”</p></div>`; el.classList.add('on'); clearTimeout(this._lt); this._lt = setTimeout(() => el.classList.remove('on'), 2400); sfx('reward', { vol: 0.35 }); }
+  poemTick(ch) { const L = poemLen(POEMS[S.poem.i % POEMS.length]), n = S.poem.n; this.progress(); const p = $('#poemP'); p.classList.remove('tick'); void p.offsetWidth; p.classList.add('tick'); }   /* 글자가 찰 때는 아래 시 한 줄만 반짝 (큰 카드는 다 찼을 때 · 눌렀을 때만) */
   poemCard(force, doneLine, bonus) { const el = $('#poemCard'), line = doneLine || POEMS[S.poem.i % POEMS.length], n = doneLine ? poemLen(line) : S.poem.n, L = poemLen(line);
     el.innerHTML = `<small>${doneLine ? '오늘의 시 완성 · 벽에 걸었어요' : '오늘의 시 한 줄 · 손님 마음이 맑아질 때마다 한 글자'}</small><p>${this.poemChars(line, n)}</p><div class="pb"><s style="width:${(n + (doneLine ? 0 : (S.poem.p || 0) / POEM_PER)) / L * 100}%"></s></div>${doneLine ? `<em>♥+3 · +${fmt(bonus)} · 모은 시 ${S.poems.length}편</em>` : `<em>${L - n}글자 남았어요${S.poems.length ? ` · 모은 시 ${S.poems.length}편` : ''}</em>`}`;
     el.className = 'poemcard on' + (doneLine ? ' done' : ''); clearTimeout(this._pct); this._pct = setTimeout(() => el.classList.remove('on'), doneLine ? 3800 : force ? 3000 : 2200); }
@@ -243,9 +259,11 @@ export class UI {
   // ── 로스터
   roastSheet() {
     const g = this.app.game, r = g.roastState(); if (r) return r.u >= 1 ? g.collectBeans() : this.brewing(g.roaster);
-    const md = this.modal(`<h2>원두 볶기</h2><div class="sub">지금 원두 ${fmt(S.beans)} / ${BEAN_MAX}잔분 · 볶는 동안 나가 있어도 계속 볶아져요</div>
-      <div class="uplist">${ROAST.map(R => { const lock = S.lv < R.lv, c = R.cost * storeMult(); return `<div class="upr ${lock ? 'lock' : ''}"><i>🫘</i><div><b>${R.name} <em>+${R.beans}잔분</em></b><span>${R.desc} · ⏱ ${tlabel(R.t)}</span></div><button class="btn sm ${lock || S.coins < c ? 'off' : ''}" data-r="${R.id}">${lock ? `Lv.${R.lv}` : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('')}</div><button class="btn ghost" id="mOk">닫기</button>`);
-    $('#mOk').onclick = () => this.close(); md.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const e = g.roast(b.dataset.r); if (e) return this.toast(e); this.close(); this.toast('원두를 볶기 시작했어요'); });
+    const broke = g.broke(), left = g.cheerLeft();   /* 바닥이면 하우스 블렌드는 외상 · 응원 선물이 남았으면 맨 위에 */
+    const md = this.modal(`<h2>원두 볶기</h2><div class="sub">지금 원두 ${fmt(S.beans)} / ${BEAN_MAX}잔분 · 볶는 동안 나가 있어도 계속 볶아져요${broke ? '<br>원두가 바닥났어요 · 하우스 블렌드는 외상으로 볶고 다음 매출에서 갚아요' : ''}${S.owe ? `<br>갚을 외상 ${fmt(S.owe)}` : ''}</div>
+      <div class="uplist">${broke && left ? `<div class="upr cheerr"><i>🎁</i><div><b>응원 선물 <em>+${CHEER.beans}잔분</em></b><span>오늘 ${left}번 남았어요 · 바로 담아 드려요</span></div><button class="btn sm" id="chR">받기</button></div>` : ''}${ROAST.map(R => { const lock = S.lv < R.lv, c = R.cost * storeMult(), owe = !lock && R.id === ROAST[0].id && broke; return `<div class="upr ${lock ? 'lock' : ''}"><i>🫘</i><div><b>${R.name} <em>+${R.beans}잔분</em></b><span>${R.desc} · ⏱ ${tlabel(R.t)}</span></div><button class="btn sm ${lock || (!owe && S.coins < c) ? 'off' : ''}" data-r="${R.id}">${lock ? `Lv.${R.lv}` : owe ? '외상으로' : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('')}</div><button class="btn ghost" id="mOk">닫기</button>`);
+    $('#mOk').onclick = () => this.close(); if ($('#chR')) $('#chR').onclick = () => { this.close(); if (g.cheerGive()) this.toast('응원 원두를 담았어요 · 주문표를 눌러 이어서 내려요 ☕'); };
+    md.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const e = g.roast(b.dataset.r); if (e) return this.toast(e); this.close(); if (!S.owe || b.dataset.r !== ROAST[0].id) this.toast('원두를 볶기 시작했어요'); });
   }
   // ── 메뉴 (바 진열 · 판매)
   menuBook() {
@@ -266,7 +284,7 @@ export class UI {
     const m = this.modal(`<div class="story"><div class="hd"><i class="av big" style="background:#${R.body.toString(16).padStart(6, '0')}">${R.name[0]}</i><span class="ep">단골 사연 · ${r.ep + 1}화</span><div class="who"><small>${R.who}</small><b>${R.name}</b></div></div>
       <div class="bd"><p>“${ep.say}”</p><div class="q">${ep.ask}</div><div class="choice">${ep.ch.map((ch, i) => `<button data-i="${i}">${ch[0]}${ch[1] ? `<img src="${pic(ch[1])}">` : ''}</button>`).join('')}</div></div></div>`, 'storym');
     m.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const ch = ep.ch[+b.dataset.i]; this.app.game.storyDone(c, ch); this.close(); sfx(ch[2] >= 3 ? 'reward' : 'blip');
-      this.toast(ch[2] >= 3 ? `${R.name}의 마음에 닿았어요 ♥♥♥` : ch[2] >= 2 ? `${R.name}이(가) 미소 지어요 ♥♥` : ch[2] ? `${R.name}이(가) 고개를 끄덕여요 ♥` : `${R.name}이(가) 조용히 창밖을 봐요`); });
+      this.toast(ch[2] >= 3 ? `${R.name}의 마음에 닿았어요 ♥♥♥` : ch[2] >= 2 ? `${josa(R.name, '이', '가')} 미소 지어요 ♥♥` : ch[2] ? `${josa(R.name, '이', '가')} 고개를 끄덕여요 ♥` : `${josa(R.name, '이', '가')} 조용히 창밖을 봐요`); });
   }
   // ── 꾸미기 모드
   decoEnter() { const g = this.app.game; if (g.deco) return; g.decoStart(); this._fc = this._fc || 'table'; this.decoBar(null); this._decoUb = pushBack(() => { this.decoExit(); return true; }); this.toast('가구를 고르거나, 놓인 가구를 눌러 옮겨요'); }
@@ -274,7 +292,7 @@ export class UI {
   decoBar(gh) {
     const g = this.app.game, bar = $('#decobar'); if (!g.deco) { bar.innerHTML = ''; return; }
     if (gh) { const d = FURN[gh.id], price = gh.moving ? '옮기는 중' : S.inv[gh.id] ? '보관함에서' : d.heart ? `♥ ${d.heart}` : `<i class="c"></i>${fmt(d.cost * storeMult())}`;
-      bar.innerHTML = `<div class="gh"><b>${d.name}</b><span>${gh.err ? `<em class="err">${gh.err}</em>` : `감성 +${d.score} · ${price}`}</span></div><div class="ghb"><button id="gRot">↻ 돌리기</button>${gh.moving ? '<button id="gSto">보관</button>' : ''}<button id="gCan">취소</button><button id="gOk" class="ok ${gh.err ? 'off' : ''}">놓기</button></div><p class="tip">반투명 가구를 끌어서 옮겨요</p>`;
+      bar.innerHTML = `<div class="gh"><b>${d.name}</b><span>${gh.err ? `<em class="err">${gh.err}</em>` : `감성 +${d.score} · ${price}`}</span></div><div class="ghb"><button id="gRot">↻ 돌리기</button>${gh.moving ? '<button id="gSto">보관</button>' : ''}<button id="gCan">취소</button><button id="gOk" class="ok ${gh.err ? 'off' : ''}">놓기</button></div><p class="tip">바닥을 누르거나 가구를 끌어서 옮겨요</p>`;
       $('#gRot').onclick = () => g.ghostRotate(); $('#gCan').onclick = () => g.ghostCancel(); if ($('#gSto')) $('#gSto').onclick = () => { g.storeFurn(); this.toast('보관함에 넣었어요'); };
       $('#gOk').onclick = () => { const e = g.ghostConfirm(() => this.payFurn(gh.id)); if (e) this.toast(e); }; return; }
     const items = Object.entries(FURN).filter(([k, d]) => d.cat === this._fc && !d.gift);
@@ -297,7 +315,7 @@ export class UI {
     dayTick(); const html = S.orders.map((o, i) => { const n = Math.min(o.n, S.soldBy[o.menu] || 0), ok = n >= o.n, rw = Math.round(MENU[o.menu].price * o.n * 1.5 * storeMult());
       return `<div class="upr ${o.done ? 'own' : ''}"><img class="th" src="${pic(o.menu)}"><div><b>${o.who}</b><span>${MENU[o.menu].name} ${o.n}잔 · 오늘 ${n}/${o.n}</span><div class="pb"><s style="width:${n / o.n * 100}%"></s></div></div><button class="btn sm ${ok && !o.done ? '' : 'off'}" data-o="${i}">${o.done ? '완료' : `<i class="c"></i>${fmt(rw)} ♥3`}</button></div>`; }).join('');
     const m = this.modal(`<h2>📜 오늘의 주문서</h2><div class="sub">오늘 팔면 채워져요 · 내일 새 주문서</div><div class="uplist">${html}</div><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
-    m.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { const o = S.orders[+b.dataset.o]; if (o.done || (S.soldBy[o.menu] || 0) < o.n) return; o.done = true; const rw = Math.round(MENU[o.menu].price * o.n * 1.5 * storeMult()); S.coins += rw; S.hearts += 3; this.app.game.gainXp(10); save(); sfx('reward'); this.toast(`${o.who} 주문 완료! +${fmt(rw)} ♥3`); this.orders(); });
+    m.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { const o = S.orders[+b.dataset.o]; if (o.done) return this.toast('이미 받은 주문서예요'); if ((S.soldBy[o.menu] || 0) < o.n) return this.toast(`${MENU[o.menu].name} ${o.n - (S.soldBy[o.menu] || 0)}잔 더 팔면 받아요`); o.done = true; const rw = Math.round(MENU[o.menu].price * o.n * 1.5 * storeMult()); S.coins += rw; S.hearts += 3; this.app.game.gainXp(10); save(); sfx('reward'); this.toast(`${o.who} 주문 완료! +${fmt(rw)} ♥3`); this.orders(); });
   }
   orderReady(o) { if (o._told) return; o._told = 1; this.toast(`📜 ${o.who} 주문을 채웠어요! 주문서에서 받기`); }
   attendance() {
@@ -305,7 +323,7 @@ export class UI {
     const streak = got ? S.att.streak : (S.att.last === yk ? S.att.streak : 0), day = got ? streak : streak + 1, RW = [[60, 1], [80, 2], [100, 2], [140, 3], [180, 3], [240, 4], [400, 8]];
     const html = RW.map(([c, h], i) => `<div class="att ${i < (got ? streak : streak) % 7 || (got && i === (streak - 1) % 7) ? 'got' : ''} ${!got && i === (day - 1) % 7 ? 'now' : ''}"><small>${i + 1}일</small><b>${i === 6 ? '🎁' : '☕'}</b><span>${fmt(c * storeMult())}<br>♥${h}</span></div>`).join('');
     const m = this.modal(`<h2>🎁 출석</h2><div class="sub">매일 들르면 선물 · 7일째는 크게 · ${got ? `오늘 받았어요 (연속 ${streak}일)` : `오늘 ${day}일째`}</div><div class="atts">${html}</div><button class="btn ${got ? 'off' : ''}" id="aGo">${got ? '내일 또 만나요' : '받기'}</button><button class="btn ghost" id="mOk">닫기</button>`);
-    $('#mOk').onclick = () => this.close(); $('#aGo').onclick = () => { if (got) return; const [c, h] = RW[(day - 1) % 7]; S.coins += c * storeMult(); S.hearts += h; S.att = { last: t, streak: day }; save(); sfx('reward'); this.toast(`출석 ${day}일째! +${fmt(c * storeMult())} ♥${h}`); this.progress(); this.attendance(); };
+    $('#mOk').onclick = () => this.close(); $('#aGo').onclick = () => { if (got) return this.toast('오늘 선물은 받았어요 · 내일 또 만나요'); const [c, h] = RW[(day - 1) % 7]; S.coins += c * storeMult(); S.hearts += h; S.att = { last: t, streak: day }; save(); sfx('reward'); this.toast(`출석 ${day}일째! +${fmt(c * storeMult())} ♥${h}`); this.progress(); this.attendance(); };
   }
   coupon() { if (S.coupon) return this.showCoupon(S.coupon); if (!couponReady()) return this.modal(`<h2>🎟 매장 쿠폰</h2><p>오늘 <b>${COUPON.goal}잔</b>을 내어 주면<br>실제 감성커피 매장에서 쓸 수 있는 쿠폰을 드려요.</p><div class="cpbig">${S.sold} / ${COUPON.goal}</div><p class="sm">${COUPON.text}</p><button class="btn" id="mOk">계속하기</button>`), $('#mOk').onclick = () => this.close();
     const c = claimCoupon(); sfx('reward'); this.showCoupon(c); this.progress(); }
@@ -318,7 +336,7 @@ export class UI {
     const m = this.modal(`<h2>🗺️ 가게</h2><div class="tabs"><button data-t="store" class="${tab === 'store' ? 'on' : ''}">감성커피 매장</button><button data-t="staff" class="${tab === 'staff' ? 'on' : ''}">동료</button></div>
       <div class="uplist">${tab === 'store' ? stores : staff}</div><p class="sm">${tab === 'store' ? '게임 속 매장은 실제 감성커피 매장이에요 · 레벨과 원두는 함께, 가구와 진열은 매장마다' : '처음엔 혼자 시작해요 · 레벨이 오르면 함께할 동료가 생겨요'}</p><button class="btn ghost" id="mOk">닫기</button>`);
     $('#mOk').onclick = () => this.close(); m.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._st = b.dataset.t; this.shop(); });
-    m.querySelectorAll('[data-h]').forEach(b => b.onclick = () => { const k = b.dataset.h, d = STAFF[k]; if (S.staff[k] || S.lv < d.lv || S.coins < d.cost) return; S.coins -= d.cost; k === 'barista' ? g.hireBarista() : g.hireHall(); sfx('reward'); this.shop(); this.progress(); });
+    m.querySelectorAll('[data-h]').forEach(b => b.onclick = () => { const k = b.dataset.h, d = STAFF[k]; if (S.staff[k]) return this.toast(`${d.name.split('· ')[1] || d.name}${S.staff[k] ? '와 함께하고 있어요' : ''}`); if (S.lv < d.lv) return this.toast(`Lv.${d.lv}부터 함께할 수 있어요`); if (S.coins < d.cost) return this.toast(`돈이 모자라요 (${fmt(d.cost)} 필요)`); S.coins -= d.cost; k === 'barista' ? g.hireBarista() : g.hireHall(); sfx('reward'); this.shop(); this.progress(); });
     m.querySelectorAll('.store:not(.lock)').forEach(b => b.onclick = () => { const i = +b.dataset.s; if (i === S.si) return; if (!S.stores[i]) S.stores[i] = newStore(); S.si = i; save(true); this.close(); g.build(); this.toast(`${STORES[i].name}에 왔어요`); sfx('levelup'); });
   }
   // ── 레벨 오름

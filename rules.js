@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER } from './catalog.js?v=0.75.1';
+import { LAUNCH, GAMES, ORDER } from './catalog.js?v=0.75.2';
 
 export const RULES = {
   openAll: (() => { try { return localStorage.getItem('oad_strict') !== '1'; } catch { return true; } })(),   // 테스트 기간: 모든 게임 자유 플레이 · 설정의 '테스트: 하루 한 게임 규칙'을 켜면 실제 규칙

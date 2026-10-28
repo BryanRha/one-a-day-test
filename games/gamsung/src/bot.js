@@ -1,7 +1,7 @@
 // 시험용 자동 플레이 (?bot=1&speed=4): 손 추출(사람 손 속도 · 금빛 랜덤) · 라떼아트 · 쟁반 옮기기 · 볶기 · 찻값/치우기 · 사연 · 가구 · 동료 · 주문서
-import { MENU, ROAST, FURN, STAFF, ART } from './data.js?v=0.75.1';
-import { S, ST, save } from './state.js?v=0.75.1';
-import { storeMult } from './game.js?v=0.75.1';
+import { MENU, ROAST, FURN, STAFF, ART } from './data.js?v=0.75.2';
+import { S, ST, save } from './state.js?v=0.75.2';
+import { storeMult } from './game.js?v=0.75.2';
 
 export function startBot(app) {
   const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0, handT = 0, moveT = 0; window.__bot = true; S.fg = 3;
@@ -15,7 +15,7 @@ export function startBot(app) {
       if (handT > 0) continue; handT = HAND + (MENU[k].cat === 'sig' ? 1.5 : 0);   /* 손은 하나: 한 번에 한 잔씩 · 시그니처는 라떼아트만큼 더 */
       const art = MENU[k].cat === 'sig' ? (Math.random() < 0.8 ? Object.keys(ART)[Math.floor(Math.random() * 3)] : 'heart') : null; g.handBrew(m, k, { gold: Math.random() < GOLD, art }); }
     if (g.stack.length && moveT <= 0) { g.deliverStack(); moveT = 1; }
-    const r = g.roastState(); if (r && r.u >= 1) g.collectBeans(); if (!g.roastState() && S.beans < 60) { const R = ROAST.filter(x => S.lv >= x.lv && S.coins >= x.cost * storeMult() && x.t <= 900).pop(); if (R) g.roast(R.id); }
+    const r = g.roastState(); if (r && r.u >= 1) g.collectBeans(); if (!g.roastState() && S.beans < 60) { const R = ROAST.filter(x => S.lv >= x.lv && S.coins >= x.cost * storeMult() && x.t <= (S.beans < 20 ? 120 : 900)).pop();   /* 원두가 거의 없으면 빨리 볶이는 것 (10분짜리를 기다리며 멈추지 않게) */ if (R) g.roast(R.id); }
     for (const x of g.seats()) if (x.s.dirty) g.requestClean(x.o, x.k);
     if ((ST().ret || 0) >= 3) g.wash();
     for (const c of g.cust) if (c.state === 'story') { const ep = c.reg.eps[(S.reg[c.reg.id]?.ep) || 0]; if (ep) { const ch = ep.ch.slice().sort((a, b) => b[2] - a[2])[0]; g.storyDone(c, ch); } }

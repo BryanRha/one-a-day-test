@@ -32,6 +32,11 @@ export const ROAST = [
   { id: 'night', name: '밤샘 로스팅', t: 4 * 3600, beans: 900, cost: 300, lv: 10, desc: '하루 장사 넉넉히' },
 ];
 export const BEAN_MAX = 900;
+// 바닥 안전망 (2026-10-28 막힘 수정): 원두가 바닥(3잔분 아래)이고 하우스 블렌드 볶을 돈도 없으면
+//   · 응원 선물: 하루 perDay 번, 하우스 블렌드 한 봉지(beans 잔분)를 바로 · 「혼자 해 볼게요」로 거절 가능 (docs/bm-policy.md 6장)
+//   · 외상 볶기: 응원을 거절했거나 다 썼으면 하우스 블렌드를 외상으로 볶고 다음 매출에서 저절로 갚음 → 어떤 경우에도 출구가 있음
+export const CHEER = { perDay: 3, beans: 18, low: 3 };
+export const STORY_WAIT = 25;   /* 단골 사연 손님이 키오스크 맨 앞에서 기다리는 최대 시간(초) → 주문하고 자리에서 이야기를 기다림 (줄을 막지 않게) */
 
 // 가구: kind table = 자리 있음 · size = 칸 [가로, 세로] (한 칸 100) · score = 감성 지수 · seats = 앉는 자리 [x, z, 바라보는 방향]
 //   wall = 벽에 거는 것 (벽 자리에만) · heart = 마음(♥)으로 사는 것

@@ -1,10 +1,10 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR } from './data.js?v=0.75.1';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa } from './data.js?v=0.75.2';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL } from './models.js?v=0.75.1';
-import { S, save, addSold, mission, today } from './state.js?v=0.75.1';
-import { sfx } from './audio.js?v=0.75.1';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL } from './models.js?v=0.75.2';
+import { S, save, addSold, mission, today } from './state.js?v=0.75.2';
+import { sfx } from './audio.js?v=0.75.2';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -125,7 +125,7 @@ export class Game {
     for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; f.t += dt / f.d; f.f(Math.min(1, f.t)); if (f.t >= 1) this.fx.splice(i, 1); }
     for (const Z of this.zones) { const on = this.in(pl, Z); if (Z.ring) { Z.inner.material.opacity = on ? 1 : 0.6; continue; } Z.inner.material.color.copy(on ? Z.col : WHITE); Z.inner.material.opacity = on ? 0.85 : 0.55; }
     // 안내: 다음에 할 일 (설비 3개 열 때까지)
-    const gd = this.guide(); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], 150 + Math.sin(this.t * 6) * 14, gd[1]); this.arrow.rotation.y += dt * 2; } this.ui.hint(gd && gd[2]);
+    const gd = this.guide(dt); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], 150 + Math.sin(this.t * 6) * 14, gd[1]); this.arrow.rotation.y += dt * 2; } this.ui.hint(gd && gd[2]);
     // 카메라 · 그림자 따라감
     this.camT.lerp(pl.pos, Math.min(1, dt * 5)); this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
     this.sun.position.set(this.camT.x - 500, 1200, this.camT.z + 700); this.sun.target.position.copy(this.camT);
@@ -143,8 +143,25 @@ export class Game {
   put(arr, m, x, y, z, kind) { m.position.set(x, y, z); this.sc.add(m); arr.push({ m, kind }); }
   take(from, w) { const it = from.pop(); if (!it) return false; w.kind = it.kind; const m = it.m, start = m.position.clone(); this.sc.remove(m); w.P.hand.add(m); m.position.set(0, w.stack.length * ITEM_H[it.kind] + 6, 0);
     w.stack.push(it); w.P.hand.updateWorldMatrix(true, true); return true; }
-  give(w, arr, pos, cb) { const it = w.stack.pop(); if (!it) return null; if (!w.stack.length) w.kind = null; const m = it.m, wp = new V(); m.getWorldPosition(wp); w.P.hand.remove(m); this.sc.add(m); m.position.copy(wp);
-    const target = new V(...pos); this.fly.push({ m, from: wp, to: target, t: 0, d: 0.18, done: () => cb && cb(it) }); arr.push(it); return it; }
+  give(w, arr, pos, cb, d = 0.18) { const it = w.stack.pop(); if (!it) return null; if (!w.stack.length) w.kind = null; const m = it.m, wp = new V(); m.getWorldPosition(wp); w.P.hand.remove(m); this.sc.add(m); m.position.copy(wp);
+    const target = new V(...pos); this.fly.push({ m, from: wp, to: target, t: 0, d, done: () => cb && cb(it) }); arr.push(it); return it; }
+  // ── 손 바꾸기: 손에 든 것을 나온 곳(제자리)으로 돌려보냄 · 잃는 것 없음
+  //   주인공: 다른 재료 칸에 서면 / 쓰레기통 칸에 서면 · 직원: 3초 동안 내려놓지 못하면 · 쓰레기만 쓰레기통으로 (치운 것으로 셈)
+  home(kind) { const ov = this.st.oven, cc = this.st.cc, cf = this.st.coffee, es = this.st.espresso, mx = this.st.mixer;
+    if (kind === 'bagel' && ov) return { arr: ov.stack, name: '오븐', pos: n => [ov.x - 60 + (n % 5) * 30, 12 + Math.floor(n / 5) * 16, ov.z + 100] };
+    if (kind === 'cream' && cc) return { arr: cc.stack, name: BRANCH_MENU[this.bi]?.cream.bar || '토핑 바', pos: n => [cc.x + 40 + (n % 2) * 36, 107 + Math.floor(n / 2) * 18, cc.z + 30] };
+    if (kind === 'coffee' && cf) return { arr: cf.stack, name: '냉장고', pos: n => [cf.x - 30 + (n % 3) * 30, 164 + Math.floor(n / 3) * 30, cf.z + 10] };
+    if (kind === 'drink' && es) return { arr: es.stack, name: '커피 머신', pos: n => [es.x - 40 + (n % 3) * 30, 107 + Math.floor(n / 3) * 30, es.z + 25] };
+    if (kind === 'dough' && mx) return { arr: mx.stack, name: '반죽기', pos: n => [mx.x - 40 + (n % 3) * 30, 6 + Math.floor(n / 3) * 14, mx.z + 80] };   /* 데친 반죽도 표시(userData.b)를 그대로 갖고 돌아감 */
+    return null; }
+  sendHome(w) { if (!w.stack.length) return null; const kind = w.kind, H = this.home(kind);
+    if (!H) { const n = w.stack.length; for (const it of w.stack) w.P.hand.remove(it.m); w.stack = []; w.kind = null; if (kind === 'trash') mission('clean', n); return kind === 'trash' ? '쓰레기통' : null; }   /* 쓰레기 (또는 설비가 없어진 물건) */
+    while (w.stack.length) this.give(w, H.arr, H.pos(H.arr.length), null, 0.35);
+    return H.name; }
+  say(t, key, pos) { this.sayT ||= {}; if ((this.sayT[key] || 0) > this.t) return; this.sayT[key] = this.t + 2.5; this.ui.float(t, (pos || this.pl.pos).clone().setY(330), 'say'); }
+  /* 재료 칸: 주인공이 서 있는 칸과 그 칸에서 집는 것 */
+  srcAt(w) { const L0 = [['mixer', 'out', 'dough'], ['oven', 'out', 'bagel'], ['cc', 'io', 'cream'], ['coffee', 'out', 'coffee'], ['espresso', 'out', 'drink']];
+    for (const [id, z, kind] of L0) { const o = this.st[id]; if (o && this.in(w, o.Z[z])) return { o, kind }; } return null; }
   interact(w, dt) {
     w.tick -= dt; if (w.tick > 0) return; const step = () => { w.tick = 0.07; };
     const full = w.stack.length >= w.cap;
@@ -156,6 +173,10 @@ export class Game {
     const kt = this.st.kettle; if (kt && w.kind === 'dough' && this.in(w, kt.Z.io)) {   /* 솥 칸을 지나가면 손에 든 반죽이 하나씩 데쳐짐 */
       const it = w.stack.find(x => !x.m.userData.b); if (it) { const i = w.stack.indexOf(it), pos = it.m.position.clone(); w.P.hand.remove(it.m); const m = item('boiled'); m.userData.b = true; m.position.copy(pos); w.P.hand.add(m); it.m = m;
         this.steam(kt.x, 130, kt.z); sfx('blip', { vol: 0.2, rate: 0.7 + i * 0.05 }); w.tick = 0.15 / (1 + L('kettle') * 0.12); return; } }
+    if (w.isPlayer && w.kind) { const sa = this.srcAt(w);   /* 다른 재료 칸에 서면 손에 든 것은 제자리로 → 다음 순간 새 것을 집음 */
+      if (sa && sa.o.stack.length && sa.kind !== w.kind && !(w.kind === 'dough' && sa.kind === 'bagel') && !(w.kind === 'bagel' && sa.kind === 'cream' && sa.o.inStack.length < 8)) {
+        const nm = NAMES2[w.kind] ? NAMES2[w.kind]() : '', to = this.sendHome(w); if (to) this.say(`${nm ? josa(nm, '은/는') + ' ' : ''}${josa(to, '으로/로')} 돌려놨어요`, 'swap'); sfx('drop', { vol: 0.25, rate: 1.2 }); return step(); }
+      if (sa && sa.kind === w.kind && full && sa.o.stack.length) this.say('손이 가득 찼어요', 'full-hand'); }
     if (!full && (!w.kind || w.kind === 'bagel') && this.in(w, ov.Z.out) && ov.stack.length) { this.take(ov.stack, w); sfx('pick', { vol: 0.25, rate: 1 + w.stack.length * 0.05 }); return step(); }
     const cc = this.st.cc; if (cc && this.in(w, cc.Z.io)) {
       if (w.kind === 'bagel' && cc.inStack.length < 8) { const i = cc.inStack.length; this.give(w, cc.inStack, [cc.x - 70 + (i % 2) * 34, 107 + Math.floor(i / 2) * 16, cc.z + 30]); sfx('drop', { vol: 0.2 }); return step(); }
@@ -163,12 +184,14 @@ export class Game {
     const cf = this.st.coffee; if (cf && !full && (!w.kind || w.kind === 'coffee') && this.in(w, cf.Z.out) && cf.stack.length) { this.take(cf.stack, w); sfx('pick', { vol: 0.25 }); return step(); }
     // 내려놓기: 계산대 진열
     const c = this.st.counter; if (w.kind && SHELF[w.kind] != null && this.in(w, c.Z.shelf)) { const sh = c.shelf[w.kind]; if (sh.length < 12) { const i = sh.length;
-      this.give(w, sh, [c.x + SHELF[w.kind] + (i % 2) * 26 - 13, 114 + Math.floor(i / 2) * ITEM_H[w.kind], c.z + 18]); sfx('drop', { vol: 0.2, rate: 1 + i * 0.03 }); return step(); } }
+      this.give(w, sh, [c.x + SHELF[w.kind] + (i % 2) * 26 - 13, 114 + Math.floor(i / 2) * ITEM_H[w.kind], c.z + 18]); sfx('drop', { vol: 0.2, rate: 1 + i * 0.03 }); return step(); }
+      if (w.isPlayer) this.say(`${NAMES2[w.kind]()} 진열대가 가득 찼어요`, 'shelf'); }   /* 말없이 거절하지 않음 */
     // 드라이브스루 진열
     const dv = this.st.drive; if (dv && w.kind && dv.lane[w.kind] && this.in(w, dv.Z.all) && dv.lane[w.kind].length < 9) { const L2 = dv.lane[w.kind], i = L2.length; this.give(w, L2, [dv.x + 40 + (i % 3) * 26, 104 + Math.floor(i / 3) * ITEM_H[w.kind], dv.z + LANE[w.kind]]); sfx('drop', { vol: 0.2 }); return step(); }   /* 드라이브스루: 메뉴별 줄에 반듯하게 */
     // 쓰레기: 테이블에서 줍기 → 통에 버리기
     if (!full && (!w.kind || w.kind === 'trash')) for (const t of Object.values(this.st)) if (t.type === 'table' && t.trash.length && this.in(w, t.Z.trash)) { this.take(t.trash, w); sfx('pick', { vol: 0.2 }); return step(); }
-    const bin = this.st.bin; if (w.kind && this.in(w, bin.Z.drop) && (w.kind === 'trash' || w.isPlayer)) {   /* 쓰레기통: 쓰레기 버리기 · 주인공은 손에 든 것 비우기 */ const it = w.stack.pop(); w.P.hand.remove(it.m); if (!w.stack.length) w.kind = null; sfx('drop', { vol: 0.2 }); if (it.kind === 'trash') mission('clean'); return step(); }
+    const bin = this.st.bin; if (w.kind && w.kind !== 'trash' && w.isPlayer && this.in(w, bin.Z.drop)) { const nm = NAMES2[w.kind]?.() || '', to = this.sendHome(w); if (to) this.say(`${nm ? josa(nm, '은/는') + ' ' : ''}${josa(to, '으로/로')} 돌려놨어요`, 'swap'); return step(); }   /* 쓰레기통: 물건은 버리지 않고 제자리로 (잃는 것 없음) */
+    if (w.kind === 'trash' && this.in(w, bin.Z.drop)) {   /* 쓰레기 버리기 */ const it = w.stack.pop(); w.P.hand.remove(it.m); if (!w.stack.length) w.kind = null; sfx('drop', { vol: 0.2 }); if (it.kind === 'trash') mission('clean'); return step(); }
     if (!w.isPlayer) return;
     // 돈 줍기
     for (const p of this.piles) if (p.v > 0 && this.near(w, p.x, p.z + 20, 110)) { const v = Math.round(p.v); S.coins += v; S.earned += v; mission('coins', v); p.v = 0; const ms = p.meshes; p.meshes = [];
@@ -238,30 +261,42 @@ export class Game {
     /* 나르는 직원: 역할마다 (가져올 곳 → 놓을 곳) · 직원 단계: 속도 +10% · 들기 +1 */
     const RL = this.roleRoute(w); if (RL) { const sp = (STAFF[w.k].speed || 300) * (1 + this.sl(w.k) * 0.1);
       if (!w.stack.length) { const src = RL.src(); if (!src) { const h = RL.home; mv(h[0], h[1], sp * 0.6); this.collide(w.pos, 30); return; } if (mv(src.x, src.z, sp)) { this.interact(w, dt); if (w.stack.length >= w.cap || (w.stack.length && src.empty())) w.go = 1; } }
-      else { const d = RL.dst(w.kind); if (mv(d.x, d.z, sp)) { const n = w.stack.length; this.interact(w, dt); if (w.stack.length === n && w.tick <= 0) { w.idle = (w.idle || 0) + dt; if (w.idle > 3) { w.stack.forEach(it => w.P.hand.remove(it.m)); w.stack = []; w.kind = null; w.idle = 0; } } else w.idle = 0; } }
+      else { const d = RL.dst(w.kind); if (mv(d.x, d.z, sp)) { const n = w.stack.length; this.interact(w, dt); if (w.stack.length === n && w.tick <= 0) { w.idle = (w.idle || 0) + dt; if (w.idle > 3) { this.sendHome(w); w.idle = 0; }   /* 못 내려놓으면 제자리로 (전엔 없앴음) */ } else w.idle = 0; } }
       this.collide(w.pos, 30); return; }
     if (w.k === 'cleaner') { const sp = STAFF.cleaner.speed * (1 + this.sl('cleaner') * 0.1); w.cap = 4 + this.sl('cleaner'); if (w.kind === 'trash' && (w.stack.length >= w.cap || !Object.values(this.st).some(t => t.type === 'table' && t.trash.length))) { const b = this.st.bin; if (mv(b.Z.drop.x, b.Z.drop.z, sp)) this.interact(w, dt); }
       else { const t = Object.values(this.st).find(t => t.type === 'table' && t.trash.length); if (t) { const sd = w.pos.z < t.z ? -125 : 125; if (mv(t.x, t.z + sd, sp)) this.interact(w, dt); } else mv(-300, 100, sp * 0.5); } this.collide(w.pos, 30); }
   }
-  guide() {
-    const pl = this.pl, c = this.st.counter, ov = this.st.oven, pile = this.piles.find(p => p.v > 0), pad = this.pads[0];
-    /* 맨 앞 손님이 없는 메뉴를 기다리면 그 메뉴 만드는 곳을 가리킴 */ const f = this.cust.find(x => x.state === 'queue' && x.qi === 0), need = f && f.order.find(o => o.got < o.n);
-    if (need && !c.shelf[need.k].length) { this.blockT = (this.blockT || 0) + 1 / 60; if (this.blockT > 2.5) { const nm = MENU[need.k].name;
-      if (pl.kind === need.k) return [c.Z[need.k].x, c.Z[need.k].z, `${nm}을(를) 계산대 뒤 주황 칸에 진열해요`];
-      if (need.k === 'cream') { const bar = BRANCH_MENU[this.bi]?.cream.bar || '토핑 바'; return pl.kind === 'bagel' ? [this.st.cc.Z.io.x, this.st.cc.Z.io.z, `${bar}에 플레인 베이글을 넣어요`] : this.st.cc.stack.length ? [this.st.cc.Z.io.x, this.st.cc.Z.io.z, `${nm}을(를) 집어요`] : [ov.Z.out.x, ov.Z.out.z, `손님이 ${nm}을(를) 기다려요 · 먼저 플레인을 집어요`]; }
-      if (need.k === 'drink') return [this.st.espresso.Z.out.x, this.st.espresso.Z.out.z, '손님이 아메리카노를 기다려요 · 커피 머신에서 집어요'];
-      if (need.k === 'coffee') return [this.st.coffee.Z.out.x, this.st.coffee.Z.out.z, `손님이 ${nm}을(를) 기다려요 · 냉장고에서 집어요`];
-      return ov.stack.length ? [ov.Z.out.x, ov.Z.out.z, '손님이 베이글을 기다려요 · 오븐에서 집어요'] : [this.st.mixer.Z.out.x, this.st.mixer.Z.out.z, '손님이 베이글을 기다려요 · 반죽부터!']; } } else this.blockT = 0;
+  /* 안내: 손에 든 것과 실제 상태를 보고 「지금 가면 되는 곳」만 가리킴
+     · 다른 재료 칸에 가면 손에 든 것은 제자리로 돌아가므로 손에 무엇을 들었든 재료 칸 안내는 성공함 */
+  guide(dt = 1 / 60) {
+    const pl = this.pl, c = this.st.counter, ov = this.st.oven, mx = this.st.mixer, pile = this.piles.find(p => p.v > 0), pad = this.pads[0];
+    const at = (Z, t) => [Z.x, Z.z, t], hk = pl.kind, swapTo = k => hk && hk !== k && hk !== 'trash' ? ` · ${josa(NAMES2[hk](), '은/는')} 제자리로` : '';
+    const bagelRoute = (pre = '') => ov.stack.length ? at(ov.Z.out, `${pre}오븐에서 플레인을 집어요${hk === 'dough' ? '' : swapTo('bagel')}`)
+      : hk === 'dough' ? (this.st.kettle && pl.stack.some(x => !x.m.userData.b) ? at(this.st.kettle.Z.io, '솥 칸을 지나 오븐에 넣어요 (쫄깃!)') : at(ov.Z.out, `${pre}반죽을 오븐에 넣어요`))
+      : ov.feed.length ? at(ov.Z.out, `${pre}굽는 중… 오븐 앞에서 잠깐 기다려요`) : at(mx.Z.out, `${pre}반죽기에서 반죽을 집어요${swapTo('dough')}`);
+    /* 맨 앞 손님이 진열대에 없는 메뉴를 기다리면 그 메뉴로 가는 길 */ const f = this.cust.find(x => x.state === 'queue' && x.qi === 0), need = f && f.order.find(o => o.got < o.n);
+    if (need && !c.shelf[need.k].length) { this.blockT = (this.blockT || 0) + dt; if (this.blockT > 2.5) { const k = need.k, nm = MENU[k].name, wait = `손님이 ${josa(nm, '을/를')} 기다려요 · `;
+      if (hk === k) return at(c.Z[k], `${josa(nm, '을/를')} 계산대 뒤 주황 칸에 진열해요`);
+      if (k === 'cream') { const cc = this.st.cc, bar = BRANCH_MENU[this.bi]?.cream.bar || '토핑 바';
+        if (cc.stack.length) return at(cc.Z.io, `${wait}${bar}에서 집어요${hk === 'bagel' && cc.inStack.length < 8 ? '' : swapTo('cream')}`);
+        if (hk === 'bagel' && cc.inStack.length < 8) return at(cc.Z.io, `${bar}에 플레인 베이글을 넣어요`);
+        if (cc.inStack.length) return at(cc.Z.io, `${bar}에서 만드는 중… 잠깐 기다려요`);
+        return bagelRoute(`${wait}먼저 `); }
+      if (k === 'drink') { const es = this.st.espresso; return at(es.Z.out, es.stack.length ? `${wait}커피 머신에서 집어요${swapTo('drink')}` : '커피를 내리는 중… 커피 머신 앞에서 잠깐 기다려요'); }
+      if (k === 'coffee') { const cf = this.st.coffee; return at(cf.Z.out, cf.stack.length ? `${wait}냉장고에서 집어요${swapTo('coffee')}` : '냉장고가 채우는 중… 잠깐 기다려요'); }
+      return bagelRoute(wait); } } else this.blockT = 0;
+    if (hk === 'trash') return at(this.st.bin.Z.drop, '쓰레기는 쓰레기통에 버려요');
+    const room = hk && SHELF[hk] != null && c.shelf[hk].length < 12;
     if (this.unl.size > 10) return null;
     if (pad && S.coins >= pad.s.cost - pad.paid) return [pad.s.x, pad.s.z, '돈을 들고 바닥 칸에 서 있으면 열려요'];
     if (pile && pile.v >= 10 && !pl.stack.length) return [pile.x, pile.z, '돈을 주워요'];
-    if (pl.kind === 'bagel') return [c.Z.bagel.x, c.Z.bagel.z, '계산대 뒤 주황 칸에 서면 진열돼요'];
-    if (pl.kind && SHELF[pl.kind] != null) return [c.Z[pl.kind].x, c.Z[pl.kind].z, '계산대 뒤 주황 칸에 서면 진열돼요'];
-    if (c.shelf.bagel.length >= 2 && this.cust.some(x => x.state === 'queue') && !this.staff.some(w => w.k === 'cashier')) return [c.Z.cash.x, c.Z.cash.z, '초록 칸에 서 있으면 손님을 받아요'];
-    if (pl.kind === 'dough') return this.st.kettle && pl.stack.some(x => !x.m.userData.b) ? [this.st.kettle.Z.io.x, this.st.kettle.Z.io.z, '솥 칸을 지나가면 반죽이 데쳐져요 (쫄깃!)'] : [ov.Z.out.x, ov.Z.out.z, '오븐 칸에 서면 반죽이 들어가요'];
-    if (ov.stack.length) return [ov.Z.out.x, ov.Z.out.z, '구워진 베이글을 집어요'];
-    if (ov.feed && ov.feed.length) return [ov.Z.out.x, ov.Z.out.z, '굽는 중… 잠깐 기다려요'];
-    return [this.st.mixer.Z.out.x, this.st.mixer.Z.out.z, '반죽기 앞 칸에서 반죽을 집어요'];
+    if (room) return at(c.Z[hk], '계산대 뒤 주황 칸에 서면 진열돼요');
+    if (hk && SHELF[hk] != null) return f && !this.staff.some(w => w.k === 'cashier') ? at(c.Z.cash, `${NAMES2[hk]()} 진열대가 가득 찼어요 · 초록 칸에서 손님을 받아요`) : null;   /* 진열대가 가득: 손님이 사 가야 자리가 남 */
+    if (c.shelf.bagel.length >= 2 && this.cust.some(x => x.state === 'queue') && !this.staff.some(w => w.k === 'cashier')) return at(c.Z.cash, '초록 칸에 서 있으면 손님을 받아요');
+    if (hk === 'dough') return bagelRoute();
+    if (ov.stack.length) return at(ov.Z.out, '구워진 베이글을 집어요');
+    if (ov.feed && ov.feed.length) return at(ov.Z.out, '굽는 중… 잠깐 기다려요');
+    return at(mx.Z.out, '반죽기 앞 칸에서 반죽을 집어요');
   }
   // 장애물 피하기 (테이블·계산대·설비): 가는 방향 d 를 옆으로 꺾음
   steer(pos, d, gx, gz) { for (const o of Object.values(this.st)) { const sz = SIZE[o.type]; if (!sz) continue; const R0 = Math.max(sz[0], sz[1] || sz[0]) + 50; if (Math.hypot(o.x - gx, o.z - gz) < R0 + 90) continue;   /* 목적지 설비는 피하지 않음 */
@@ -338,5 +373,6 @@ const ZONES = {
 const WHITE = new THREE.Color(0xFFFFFF), STEAM_G = new THREE.SphereGeometry(10, 8, 6);
 const PAD = 160, LANE = { bagel: -105, cream: -35, coffee: 35, drink: 105 };   /* 열기 칸 크기 */
 const SIZE = { espresso: [72, 58], mixer: [60, 50], kettle: [68, 58], oven: [105, 80], counter: [168, 62], ccbar: [118, 62], coffee: [72, 58], table: [128, 72], bin: [40], plant: [40], drive: [20, 160] };   /* 테이블: 의자 포함 직사각형 */
+const NAMES2 = { bagel: () => '플레인', cream: () => MENU.cream.short, coffee: () => MENU.coffee.short, drink: () => '아메리카노', dough: () => '반죽', trash: () => '쓰레기' };   /* 손에 든 것 이름 (지점마다 바뀜) */
 const NAMES = { espresso: '커피 머신', mixer: '반죽기', kettle: '데치기 솥', table: '테이블', ccbar: '토핑 바', coffee: '크림치즈 냉장고', drive: '드라이브스루' };
 export const fmt = n => Math.round(n).toLocaleString('en-US');
