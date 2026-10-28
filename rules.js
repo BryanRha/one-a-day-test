@@ -1,12 +1,12 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.83.0';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.84.0';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
 export const PROD = ENV === 'prod';
 // 실서버에서 '모든 게임 무료(테스트 기간)'를 켤지 — 대표 결정 전이라 지금 그대로(true) · 결정되면 이 값 하나만 바꿈
 //   테스트 · 개발에서는 설정의 '테스트: 하루 한 게임 규칙' 버튼으로 바꿔 볼 수 있음 (실서버에서는 버튼이 없음)
-export const PROD_OPEN_ALL = true;
+export const PROD_OPEN_ALL = false;   /* 2026-10-28 대표: 하루 한 게임 무료로 서비스 */
 // 실서버 노출: 등급분류 받은 게임(catalog.js RATING)만 · 테스트 · 개발은 전부
 export const shown = id => !PROD || !!RATING[id];
 export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND = BRAND0.filter(shown);
@@ -14,7 +14,7 @@ export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND =
 export const FLAGS = { env: ENV, coupon: !PROD || BRAND_COUPON_PROD };
 
 export const RULES = {
-  openAll: PROD ? PROD_OPEN_ALL : (() => { try { return localStorage.getItem('oad_strict') !== '1'; } catch { return true; } })(),   // 테스트 기간: 모든 게임 자유 플레이 · 설정의 '테스트: 하루 한 게임 규칙'을 켜면 실제 규칙
+  openAll: PROD ? PROD_OPEN_ALL : (() => { try { return localStorage.getItem('oad_strict') === '0'; } catch { return false; } })(),   // 2026-10-28 대표: 테스트도 서비스 상태(하루 한 게임)가 기본 · 설정의 '테스트: 하루 한 게임 규칙'을 끄면 모든 게임 자유 플레이
   todayFree: true,          // 오늘의 게임은 하루 종일 무료
   adUnlock: 'day',          // 광고로 연 게임: 'day' = 그날 하루 동안 / 'once' = 한 판
   adSeconds: 5,             // 테스트용 가짜 광고 길이
