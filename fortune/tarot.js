@@ -66,5 +66,5 @@ export async function open(X, flipped) {
 /* 오늘 카드 줄 (운세 카드 안) */
 export function line(m, me, f, X) {
   const key = X.R.keyOf(X.R.now()), tc = (m.days()[key] || {}).tc;
-  return `<div class="mchip" data-tarot><b>🃏 오늘의 타로</b><small>${tc != null ? `${CARDS[tc][0]} · 다시 보기` : '한 장 무료로 뒤집기'}</small></div>`;
+  return `<div class="mchip" data-tarot><b>🃏 오늘의 타로</b><small>${tc != null ? `${CARDS[tc][0]} · 다시 보기` : '무료 한 장'}</small></div>`;
 }

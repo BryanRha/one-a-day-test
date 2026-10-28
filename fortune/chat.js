@@ -70,7 +70,7 @@ export function entry(m, me, f, X) {
 export function line(m, me, f, X) {
   if (!eligible(me, f.chart)) return '';
   const C = m.CHARS[f.ch], s = load(X.R.keyOf(X.R.now())), left = s ? s.left : FREE;
-  return `<div class="mchip" data-chat><b>💬 ${C.name}에게 묻기</b><small>${left > 0 ? `오늘 무료 ${left}번` : '내일 다시 무료'}</small></div>`;
+  return `<div class="mchip" data-chat><b>💬 ${C.name}</b><small>${left > 0 ? `물어보기 · 무료 ${left}` : '내일 다시'}</small></div>`;
 }
 
 export async function open(X) {
