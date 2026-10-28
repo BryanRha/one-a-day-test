@@ -2,10 +2,10 @@
 //   · 시작 때 hello 한 번 (결과는 bm.info 로 바로 읽음 · 원어데이 밖이면 ok = false → 골드 · 광고 · 스킨 · 명예의 전당 숨김)
 //   · 광고 · 확인 창 동안 게임 전체를 멈춤 (실시간 레이스 — 루프 · 타이머 · 카운트다운 · 소리까지)
 //   · 광고 자리별 하루 횟수 (이어하기 5 · 코인 2배 3) · 응원 선물 상태 · 앱 기록(oad:track)
-import { bm } from './oad_bm.js?v=0.79.2';
-import { load, save, todayKey } from './save.js?v=0.79.2';
-import { AD_DAY } from './core/cont.js?v=0.79.2';
-import { helpDay, noteRun, eligible, markShown } from './core/help.js?v=0.79.2';
+import { bm } from './oad_bm.js?v=0.79.3';
+import { load, save, todayKey } from './save.js?v=0.79.3';
+import { AD_DAY } from './core/cont.js?v=0.79.3';
+import { helpDay, noteRun, eligible, markShown } from './core/help.js?v=0.79.3';
 
 let hp = null;
 export function helloOnce() {

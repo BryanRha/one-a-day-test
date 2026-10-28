@@ -1,9 +1,9 @@
 // BM 화면 조각: 힌트 광고 창 · 하트 이어하기 창 · 다음 화 바로 보기 창 · 응원 선물 창
 //   감정 원칙: 칭찬 먼저 → 희망 한 줄 → 카운트다운 8초+ → 끝나면 조용히 결과로 · 광고 버튼 옆엔 같은 크기로 가격
-import { W, H } from './config.js?v=0.79.2';
-import { T, C, btn, popup, toast } from './ui.js?v=0.79.2';
-import { audio } from './audio.js?v=0.79.2';
-import { bm, oadOn, owner, price, adLeft, adLabel, watchAd, failText, waitLeft, fmtWait, buyNext, track, HINT_COST } from './bm.js?v=0.79.2';
+import { W, H } from './config.js?v=0.79.3';
+import { T, C, btn, popup, toast } from './ui.js?v=0.79.3';
+import { audio } from './audio.js?v=0.79.3';
+import { bm, oadOn, owner, price, adLeft, adLabel, watchAd, failText, waitLeft, fmtWait, buyNext, track, HINT_COST } from './bm.js?v=0.79.3';
 
 // 코인이 모자랄 때 힌트: [광고 보고 힌트] [● 10 코인] (원어데이 밖 · 광고 다 씀이면 예전처럼 안내만)
 export function hintOffer(sc, coins, onGet, onClose) {
