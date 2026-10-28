@@ -6,8 +6,8 @@
 //     ('하트 1개 남았을 때 쓰는 무료 힌트'는 실력 좋은 쪽에서 0.69배까지 올라 버림)
 //   한도: 하루 1번 (= 광고 힌트 1회 보상 이하) · bm.helpOn() 이 false(실험 꺼짐 그룹)면 주지 않음(help_eligible 기록만)
 //   소장자 · 비소장자 똑같이 · 난이도는 몰래 바꾸지 않음 — 보이는 선물만 · 선물 판엔 하트 이어하기 권유 없음
-import { load, save } from './save.js?v=0.81.3';
-import { bm, track, today } from './bm.js?v=0.81.3';
+import { load, save } from './save.js?v=0.81.4';
+import { bm, track, today } from './bm.js?v=0.81.4';
 
 export const HELP = { streak: 2, minT: 20, perDay: 1 };
 
