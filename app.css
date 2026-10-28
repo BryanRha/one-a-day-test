@@ -467,3 +467,24 @@ body.playing #app { visibility: hidden; }
 .sdmini { grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 0; max-width: 100%; }
 .sdmini .mchip { padding: 9px 8px; text-align: center; } .sdmini .mchip b { font-size: 12.5px; } .sdmini .mchip small { font-size: 11px; }
 .sdmini .mchip.go { border-color: rgba(244,236,220,.35); }
+
+/* 홈 운세 카드 3차 (2026-10-28 대표 의견): 타로 · 상담 칸은 색 + 움직임으로 눌러 보고 싶게 · 전부 보기는 엿보기 버튼과 같은 폭으로 '전체 운세는 여기' */
+.sdmini { grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 0; max-width: 100%; }
+.sdmini .mchip { position: relative; overflow: hidden; padding: 11px 12px; text-align: left; border-radius: 14px; }
+.sdmini .mchip b { font-size: 13.5px; } .sdmini .mchip small { font-size: 11.5px; }
+.mchip.tarot { background: linear-gradient(135deg, #3B1E6E, #1B1030); border: 1.5px solid #A98BFF; box-shadow: 0 0 16px rgba(169,139,255,.35); }
+.mchip.tarot small { color: #D9CCFF; }
+.mchip.chat { background: linear-gradient(135deg, #5A3A08, #22160A); border: 1.5px solid #F2C14E; box-shadow: 0 0 16px rgba(242,193,78,.35); }
+.mchip.chat small { color: #FFE2A0; }
+.mchip.tarot::after, .mchip.chat::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent); transform: skewX(-20deg); animation: chipshine 3.2s ease-in-out infinite; pointer-events: none; }
+.mchip.chat::after { animation-delay: 1.6s; }
+.mchip.tarot b::before { content: ''; } .mchip.tarot:not(.done) b { animation: chipbob 2.4s ease-in-out infinite; display: inline-block; }
+.mchip .live { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #5BE38A; box-shadow: 0 0 0 0 rgba(91,227,138,.7); animation: livedot 1.6s infinite; vertical-align: 1px; }
+.mchip.done { filter: saturate(.55); box-shadow: none; } .mchip.done::after { display: none; }
+@keyframes chipshine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+@keyframes chipbob { 50% { transform: translateY(-2px); } }
+@keyframes livedot { 70% { box-shadow: 0 0 0 7px rgba(91,227,138,0); } 100% { box-shadow: 0 0 0 0 rgba(91,227,138,0); } }
+.sdall { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; margin: 10px 0 0; padding: 14px 16px; border-radius: 14px; background: rgba(244,236,220,.1); border: 1.5px solid rgba(244,236,220,.55); color: var(--paper); font-weight: 800; font-size: 15px; cursor: pointer; }
+.sdall i { font-style: normal; font-size: 18px; color: var(--sgold); }
+@media (hover: hover) { .sdall:hover { background: rgba(244,236,220,.18); } }
+@media (prefers-reduced-motion: reduce) { .mchip::after, .mchip b, .mchip .live { animation: none !important; } }

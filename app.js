@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.82.1';
-import * as R from './rules.js?v=0.82.1';
-import * as I from './install.js?v=0.82.1';
-import * as T from './track.js?v=0.82.1';
-import * as P from './pay.js?v=0.82.1';
-import * as A from './account.js?v=0.82.1';
-import * as C from './cloud.js?v=0.82.1';
-import * as BM from './bm.js?v=0.82.1';
+import { PLANNED } from './catalog.js?v=0.82.2';
+import * as R from './rules.js?v=0.82.2';
+import * as I from './install.js?v=0.82.2';
+import * as T from './track.js?v=0.82.2';
+import * as P from './pay.js?v=0.82.2';
+import * as A from './account.js?v=0.82.2';
+import * as C from './cloud.js?v=0.82.2';
+import * as BM from './bm.js?v=0.82.2';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.82.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.82.2').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.82.1'), import('./fortune/types.js?v=0.82.1'), import('./fortune/chat.js?v=0.82.1')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.82.2'), import('./fortune/types.js?v=0.82.2'), import('./fortune/chat.js?v=0.82.2')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.82.1';
+const VERSION = '0.82.2';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -226,7 +226,7 @@ function fortuneCard(me, f, m) {
   return `<div class="sdcard" data-fortune ${KB}>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
     <div class="sdscore"><b>${f.total}</b><small>점</small></div><h2>“${f.say}”</h2><p class="sdwarn">⚠ ${f.warn}</p>
     ${h ? `<div class="sdhook buy" data-paid="${h.id}" ${KB}><small>오늘 이 부분이 신경 쓰여요 · ${m.paidOf(h.id).title}</small><p>${h.text}</p><span class="hbtn"><span>🔮 살짝 엿보기</span><i>무료 →</i></span></div>` : ''}${recap}${gift}
-    <div class="sdmini">${EX ? EX.tarot.line(m, me, f, XC()) + EX.chat.line(m, me, f, XC()) : ''}<div class="mchip go"><b>📜 오늘 전부</b><small>${me.name}의 풀이 →</small></div></div></div><span class="seal">${c.seal}</span></div>`;
+    <div class="sdmini">${EX ? EX.tarot.line(m, me, f, XC()) + EX.chat.line(m, me, f, XC()) : ''}</div><div class="sdall">📜 ${me.name}의 오늘 운세 전부 보기 <i>→</i></div></div><span class="seal">${c.seal}</span></div>`;
 }
 /* 저녁 회고: 1탭 (메모 없음 · 기기에만) */
 async function recapAnswer(ans) {
@@ -357,7 +357,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.82.1')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.82.2')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
