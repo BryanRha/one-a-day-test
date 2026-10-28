@@ -1,10 +1,10 @@
-// 그날의 점쟁이 AI 상담 — 무료 실험판 (테스트 서버 · 만 19세+ · 기기 10% · 하루 3마디)
+// 그날의 점쟁이 AI 상담 — 무료 실험판 (테스트 서버 · 만 19세+ · 전원(2026-10-28 대표: 항상 보이게) · 하루 3마디)
 //   서버로 보내는 것: 기기 번호 · 만 나이(숫자) · 점쟁이 id · '해석 요약'(오행 강약 · 십성 경향 · 오늘 일진 관계 · 점수) · 오늘 대화
 //   보내지 않는 것: 생년월일 · 태어난 시 · 이름 · 상대 정보 — 대화 기록은 이 기기에만(오늘 것만 · 7일 지나면 지움)
 //   3마디를 다 쓰면 '더 묻기'는 솔직하게 '곧 열려요 · 출시 알림 받기' (가짜 결제창 X) — 유료 구조는 서버 _lib/chat.js CHAT_SHOP (꺼 둠)
 import { STEM_ELEMENT, ELEMENT_KO } from './saju.min.js';
 
-export const FREE = 3, MIN_AGE = 19, PCT = 10, SALT = 'aichat1';
+export const FREE = 3, MIN_AGE = 19, PCT = 100, SALT = 'aichat1';
 const fnv = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const did = () => { try { return localStorage.getItem('oad_did') || ''; } catch { return ''; } };
 /* 실험군 (서버 inGroup 과 같은 식) · 테스트용 강제: localStorage oad_ai = '1' 실험군 / '0' 대조군 */
@@ -61,7 +61,6 @@ export async function open(X) {
   if (!eligible(me, f.chart)) return X.toast('AI 상담은 지금 일부 이용자(만 19세 이상)에게만 열려 있어요');
   let s = load(day); if (!s || s.ch !== f.ch) s = { day, ch: f.ch, left: s ? s.left : FREE, msgs: [{ r: 'a', t: greet(f, C) }], stop: false };
   save(s); X.T.track('chat_open', { ch: f.ch, n: FREE - s.left });
-  X.sdClose();
   const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   const render = () => {
     const done = s.left <= 0 || s.stop;

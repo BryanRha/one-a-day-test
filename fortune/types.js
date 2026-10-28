@@ -39,7 +39,6 @@ const card = (id, title) => { const t = TYPES[id], [bg, fg] = COLOR[t[7]];
 export async function open(X) {
   const m = await X.ft(), me = m.loadMe(); if (!me) return X.fortuneForm();
   const id = typeOf(me), t = TYPES[id], best = COMBINE[id];
-  X.sdClose();
   X.openSheet(`<div class="intro tyw">${card(id, '나의 사주 유형')}
     <section><p><b>성격</b> ${t[4]}</p><p><b>일</b> ${t[5]}</p><p><b>연애</b> ${t[6]}</p><p><b>찰떡 유형</b> ${TYPES[best][0]}${({ wood: '목', fire: '화', earth: '토', metal: '금', water: '수' })[TYPES[best][7]]} · ${TYPES[best][2]} (천간합)</p></section>
     <p class="fsub">태어난 날의 천간(일간) 하나로 정한 유형이에요. 생년월일은 이 폰에서만 계산했고, 공유 카드에는 유형만 들어가요.</p>

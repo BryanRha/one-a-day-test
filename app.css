@@ -110,6 +110,7 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 /* 시트(팝업) */
 #sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }
 #sheet[hidden] { display: none; }
+#sheet.over { z-index: 95; }
 #sheet .dim { position: absolute; inset: 0; background: rgba(5,3,15,.7); animation: fade .2s; }
 #sheet .panel { position: relative; width: 100%; max-width: 480px; max-height: 92vh; overflow: auto; background: linear-gradient(180deg, var(--card2), var(--card)); border-radius: 28px 28px 0 0; padding: 22px 20px calc(22px + var(--safe-b)); animation: up .26s cubic-bezier(.2,.9,.3,1.2); border-top: 1px solid rgba(255,255,255,.15); }
 #sheet .panel .grab { width: 44px; height: 5px; border-radius: 9px; background: rgba(255,255,255,.25); margin: -8px auto 14px; }

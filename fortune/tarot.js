@@ -53,7 +53,6 @@ export async function open(X, flipped) {
   const m = await X.ft(), me = m.loadMe(); if (!me) return X.fortuneForm();
   const now = X.R.now(), key = X.R.keyOf(now), f = m.fortune(me, now), i = cardOf(me, now), r = reading(i, f, m.CHARS), done = (m.days()[key] || {}).tc != null;
   const P = m.paidOf(r.prod);
-  X.sdClose();
   X.openSheet(`<div class="intro tarot${done || flipped ? ' open' : ''}" id="tarotBox"><h2>🃏 오늘의 타로 한 장</h2><p class="fsub">${jo(r.who, '이', '가')} 오늘 뽑아 둔 카드예요 · 하루 한 장 · 무료</p>
     <div class="tcard" data-tflip><div class="tback"><b>${m.HAN[m.CHARS[f.ch].el]}</b><small>눌러서 뒤집기</small></div><img class="tfront" src="${cardImg(i)}" alt="${r.name}"></div>
     <div class="tread"><h3>${i}. ${r.name} <small>· ${r.kw}</small></h3><p class="tl">“${r.line}”</p><p>${r.link}</p><p class="ta">오늘의 행동 — ${r.act}</p>
