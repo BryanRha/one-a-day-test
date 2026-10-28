@@ -19,6 +19,7 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .sb { position: relative; width: 58px; height: 58px; border-radius: 18px; background: #fff; box-shadow: 0 4px 0 var(--sh); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: var(--br); }
 .sb b { font-size: 21px; line-height: 1.05; } .sb.ad { background: linear-gradient(#FFB85C, #F28C28); color: #fff; box-shadow: 0 4px 0 #C86A12; } .sb.up { background: linear-gradient(#FFE27A, #F2B533); color: #5A3A22; box-shadow: 0 4px 0 #C88A12; }
 .sb.ad.on { background: linear-gradient(#7AD87A, #3AAA4A); box-shadow: 0 4px 0 #2A7A3A; }
+.sb[hidden] { display: none; } .sb.ad.spent { filter: grayscale(.7); opacity: .65; }   /* 원어데이 그룹 A = 광고 버튼 없음 · 오늘 광고를 다 봄 = 흐리게 */
 .sb:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--sh); } .dot { display: none; position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #FF4A3A; border: 2px solid #fff; }
 .joy { position: absolute; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; background: #ffffff55; border: 3px solid #ffffffaa; opacity: 0; pointer-events: none; transition: opacity .12s; } .joy.on { opacity: 1; }
 .joy i { position: absolute; left: 29px; top: 29px; width: 46px; height: 46px; border-radius: 50%; background: #fff; box-shadow: 0 4px 0 var(--sh); }

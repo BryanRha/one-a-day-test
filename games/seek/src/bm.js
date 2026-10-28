@@ -1,14 +1,15 @@
 // 원어데이 게임 안 BM (docs/bm-policy.md) — 가격은 서버 표(gold.js SHOP.seek)만 기준 · 요청은 oad_bm.js 로만
 //   hearts  하트 채우기 🪙20 · hearts2 한 번 더 🪙40 : 증거 대조에서 하트를 다 잃은 '아깝다' 순간 (절반 이상 찾았을 때) — 첫째는 광고(같은 보상 ♥ 가득 · 하루 2)도
 //   hint    광고 보고 힌트 1개 (하루 3) : 코인이 모자랄 때 (골드 상품 아님 · 옆에 코인 가격)
-//   next    다음 화 바로 보기 🪙50 : 앞 화를 끝내고 WAIT 시간 뒤면 무료 · 소장자는 기다림 없음 · 원어데이 밖도 기다림 없음
+//   instN   다음 화 바로 보기 = 🪙50 × 남은 비율(올림 · 최소 1 · 등급으로 내림) — bm-policy 2-1 '즉시 완성' (2026-10-29, 예전 next 50 고정은 사용 중단)
+//           앞 화를 끝내고 WAIT 시간 뒤면 무료 · 10초 미만 남으면 버튼 숨김 · 소장자는 기다림 없음 · 원어데이 밖도 기다림 없음
 //   outfit  특별 코디 🪙200 (item) : 오늘의 코디 옷장 · hello().items 로 복원
 //   choiceN 특별 선택지 🪙30 (item, 화별) : special.js — 첫 1회 맛보기 무료
 //   선택지는 광고로 열지 않음 (이야기 가치 보호)
-import { bm } from './oad_bm.js?v=0.87.2';
-import { inOAD } from './oad.js?v=0.87.2';
-import { load, save } from './save.js?v=0.87.2';
-import { EPISODES } from './episodes.js?v=0.87.2';
+import { bm } from './oad_bm.js?v=0.88.0';
+import { inOAD } from './oad.js?v=0.88.0';
+import { load, save } from './save.js?v=0.88.0';
+import { EPISODES } from './episodes.js?v=0.88.0';
 
 export { bm };
 export const HINT_COST = 10;                   // 힌트 = 게임 코인 10 (골드 상품 아님)
@@ -51,9 +52,15 @@ export function waitLeft(ep, now = Date.now()) {
 }
 export const epOpen = ep => waitLeft(ep) === 0;
 export const fmtWait = ms => { const m = Math.ceil(ms / 60000), h = Math.floor(m / 60); return h ? `${h}시간 ${m % 60}분` : `${m}분`; };
+// 다음 화 바로 보기 값: 기다림 전체(3시간) = 🪙50 · 남은 만큼만 (서버 SHOP.seek instN 등급 · 화면 값 = 실제 차감)
+export const NEXT_GOLD = 50, INST_MIN = 10e3;
+export const INST = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50];
+export function nextGold(ms) { if (!(ms >= INST_MIN) || ms === Infinity) return 0; const g = Math.max(1, Math.ceil(NEXT_GOLD * Math.min(1, ms / (GATE.waitH * 3600e3)))); return INST.reduce((a, v) => (v <= g ? v : a), INST[0]); }
+export const nextPrice = ms => { const g = nextGold(ms); return g && price(`inst${g}`) === g ? g : 0; };
 export async function buyNext(ep) {
-  const r = await bm.spend('next');
-  if (r.ok) { const d = load(); (d.gate ||= {})[ep.id] = Date.now(); save(); track('next_buy', { ep: ep.id }); }
+  const g = nextPrice(waitLeft(ep)); if (!g) return { ok: false, reason: waitLeft(ep) ? 'off' : 'open' };
+  const r = await bm.spend(`inst${g}`);
+  if (r.ok) { const d = load(); (d.gate ||= {})[ep.id] = Date.now(); save(); track('next_buy', { ep: ep.id, gold: g }); }
   return r;
 }
 

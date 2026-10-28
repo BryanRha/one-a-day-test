@@ -2,9 +2,10 @@
 // 원화 결제(PROVIDER): 지금은 꺼짐(enabled=false) → 원어데이 밖에선 '곧 열려요', 원어데이 안에선 골드 상품으로 대체
 // 원어데이 안(oad_bm hello().ok): 광고 자리 3곳(energy · bubble · dailyBonus) = bm.rewardedAd · 골드 = bm.spend (가격은 서버 SHOP.beauty 만 기준)
 //   소장자는 rewardedAd 가 via:'owner' 로 광고 없이 바로 성공 · 원어데이 밖에선 광고 · 골드 버튼을 숨기고 지금처럼
-import { load, save } from './save.js?v=0.87.2';
-import { bm } from './oad_bm.js?v=0.87.2';
-import { today } from './state.js?v=0.87.2';
+import { load, save } from './save.js?v=0.88.0';
+import { bm } from './oad_bm.js?v=0.88.0';
+import { today, tickEnergy } from './state.js?v=0.88.0';
+import { ENERGY } from './data.js?v=0.88.0';
 
 export const PRODUCTS = [
   { id: 'gems_s', n: '보석 한 줌', price: 1200, gems: 80, tag: '' },
@@ -83,7 +84,16 @@ export const ownerDeco = () => !oadOn() ? 'hidden' : bm.info.owned ? 'open' : 'l
 export const AD_LIMIT = { energy: 3, bubble: 3, dailyBonus: 1 };
 export const AD_ENERGY = 20;
 function adDay() { const d = load(); if (!d.adUse || d.adUse.day !== today()) { d.adUse = { day: today(), energy: 0, bubble: 0, dailyBonus: 0 }; } return d.adUse; }
-export const adLeft = placement => !oadOn() ? 0 : Math.max(0, (AD_LIMIT[placement] || 0) - (adDay()[placement] || 0));
+/* '남은 N번' = 자리 상한과 앱의 게임당 남은 횟수(hello().ads.rewardLeft, 앱 shell/bm.js 게임당 5) 중 작은 값 = 실제로 볼 수 있는 횟수 */
+const appLeft = () => { const a = bm.info.ads || {}; return Number.isFinite(a.rewardLeft) ? a.rewardLeft : 99; };
+export const adLeft = placement => !oadOn() ? 0 : Math.max(0, Math.min((AD_LIMIT[placement] || 0) - (adDay()[placement] || 0), appLeft()));
+// ── 에너지 채우기 (docs/bm-policy.md 2-1 · 2026-10-29): 가득까지 채울 양에 비례 — 5마다 1골드(◆10 = ⚡50 보석 경로와 같은 값) · 등급으로 내림 · 채울 양 0 이면 끔
+//   서버 SHOP.beauty fillN(N골드) 이 같은 값일 때만 → 버튼 값 = 실제 차감 · 예전 energy(25 고정)는 사용 중단
+export const FILL = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
+export const fillNeed = () => { tickEnergy(); return Math.max(0, ENERGY.max - load().energy); };
+export const fillGold = need => (need > 0 ? FILL.reduce((a, v) => (v <= Math.ceil(need / 5) ? v : a), FILL[0]) : 0);
+export const fillPrice = g => (g && goldPrice(`fill${g}`) === g ? g : 0);
+export async function buyFill() { const need = fillNeed(), g = fillGold(need); if (!fillPrice(g)) return { ok: false, reason: need ? 'off' : 'full' }; const r = await spendGold(`fill${g}`); if (r && r.ok) { const d = load(); d.energy = Math.max(d.energy, ENERGY.max); d.eAt = Date.now(); save(); } return r; }
 // 이 자리 광고 버튼을 보여 줄지: 원어데이 안 + (소장자이거나 앱이 보상형 허용)
 export const adsOpen = () => oadOn() && (isOwner() || !!(bm.info.ads && bm.info.ads.reward)) || PROVIDER.adsEnabled;
 export const canAd = placement => adsOpen() && adLeft(placement) > 0;

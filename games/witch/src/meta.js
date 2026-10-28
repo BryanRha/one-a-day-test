@@ -1,6 +1,6 @@
 // 게임 밖 성장: 마녀 강화 · 고양이 입양/성장 · 미션 · 출석 · 업적 · 산책 · 상점 · 주간 랭킹
 // 확률형 뽑기 없음 — 고양이는 비행 중 모은 발바닥 도장으로 "정해 둔 고양이"를 입양한다.
-import { load, save, todayKey, weekKey } from './save.js?v=0.87.2';
+import { load, save, todayKey, weekKey } from './save.js?v=0.88.0';
 
 export const WITCH_INFO = {
   luna: { name: '루나', title: '별빛 마녀', desc: '별빛 마법탄 · 코인 +10%', unlock: null, color: 0xB89AFF },
@@ -113,11 +113,15 @@ export function walkReward(id) {
 }
 export function startWalk(id) { const d = load(); if (d.walk.cat || !d.cats[id] || d.equip.includes(id)) return false; d.walk = { cat: id, until: Date.now() + WALK_MIN * 60000 }; save(); return true; }
 export function walkLeft() { const d = load(); return d.walk.cat ? Math.max(0, d.walk.until - Date.now()) : 0; }
-// skip: true = 별가루 5로 바로 · 'free' = 원어데이(광고 · 골드)로 이미 값을 치름
+// 바로 받기 값 (docs/bm-policy.md 2-1 '즉시 완성', 2026-10-29): 30분 산책 = 5 × 남은 비율 → 올림 · 최소 1 · 10초 미만이면 0(버튼 숨김)
+//   골드는 서버 SHOP.witch instN(N골드) 등급 · 별가루도 같은 값 (예전: 1분 남아도 5 고정)
+export const WALK_FULL = 5, WALK_MIN_MS = 10e3;
+export const walkCost = (left = walkLeft()) => (left >= WALK_MIN_MS ? Math.max(1, Math.min(WALK_FULL, Math.ceil(WALK_FULL * left / (WALK_MIN * 60000)))) : 0);
+// skip: true = 별가루(walkCost)로 바로 · 'free' = 원어데이(광고 · 골드)로 이미 값을 치름
 export function finishWalk(skipWithGems = false) {
   const d = load();
   if (!d.walk.cat) return null;
-  if (walkLeft() > 0 && skipWithGems !== 'free') { if (!skipWithGems || !pay({ gems: 5 })) return null; }
+  if (walkLeft() > 0 && skipWithGems !== 'free') { const c = Math.max(1, walkCost()); if (!skipWithGems || !pay({ gems: c })) return null; }
   const r = walkReward(d.walk.cat);
   d.coins += r.coins; d.treats += r.treats; d.walk = { cat: null, until: 0 };
   save(); return r;

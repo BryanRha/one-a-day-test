@@ -1,18 +1,18 @@
 // 증거 대조 (Easybrain Differences 식): 위아래 두 사진 · 다른 곳 찾기 · 하트 3 · 시간 제한 없음
 // 찾을 때마다 서윤의 한 줄 추리가 뜸 · 하트를 다 잃으면 부드럽게 다시
-import { W, H } from '../config.js?v=0.87.2';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.87.2';
-import { audio } from '../audio.js?v=0.87.2';
-import { goPrev } from '../nav.js?v=0.87.2';
-import { load, save } from '../save.js?v=0.87.2';
-import { Viewer } from '../viewer.js?v=0.87.2';
-import { EPISODES, epNo } from '../episodes.js?v=0.87.2';
-import { starOnce } from '../cafe/state.js?v=0.87.2';
-import { advance, passed, stepOf, replayResult } from '../replay.js?v=0.87.2';
-import { HINT_COST, oadOn, roundEnd } from '../bm.js?v=0.87.2';
-import { hintOffer, continueOffer, giftOffer } from '../bmui.js?v=0.87.2';
-import { noteEvidence, helpCheck, helpShown } from '../help.js?v=0.87.2';
-import { hero } from '../episodes.js?v=0.87.2';
+import { W, H } from '../config.js?v=0.88.0';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.88.0';
+import { audio } from '../audio.js?v=0.88.0';
+import { goPrev } from '../nav.js?v=0.88.0';
+import { load, save } from '../save.js?v=0.88.0';
+import { Viewer } from '../viewer.js?v=0.88.0';
+import { EPISODES, epNo } from '../episodes.js?v=0.88.0';
+import { starOnce } from '../cafe/state.js?v=0.88.0';
+import { advance, passed, stepOf, replayResult } from '../replay.js?v=0.88.0';
+import { HINT_COST, oadOn, roundEnd } from '../bm.js?v=0.88.0';
+import { hintOffer, continueOffer, giftOffer } from '../bmui.js?v=0.88.0';
+import { noteEvidence, helpCheck, helpShown } from '../help.js?v=0.88.0';
+import { hero } from '../episodes.js?v=0.88.0';
 
 // 하트 이어하기는 '아깝다' 순간만: 절반 이상 찾음 · 15초 넘게 · 처음 3판 지난 뒤 · 판당 최대 2번(🪙20 → 🪙40) · 응원 선물 판 X
 const HOPE = { ratio: 0.5, minT: 15, firstRuns: 3, max: 2 };

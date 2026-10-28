@@ -1,15 +1,17 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.87.2';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.87.2';
-import { cup } from './models.js?v=0.87.2';
-import { fmt, machineCount, storeMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.87.2';
-import { bm } from './oad_bm.js?v=0.87.2';
-import { sfx, setAudio } from './audio.js?v=0.87.2';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.87.2';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.88.0';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.88.0';
+import { cup } from './models.js?v=0.88.0';
+import { fmt, machineCount, storeMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.88.0';
+import { bm } from './oad_bm.js?v=0.88.0';
+import { sfx, setAudio } from './audio.js?v=0.88.0';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.88.0';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_';
+/* 광고 보상: 원어데이 쪽 자리 이름 (bm.rewardedAd) · 게임 쪽 하루 상한(합 5 = 앱 shell/bm.js 게임당 5) · 바로 완성 최소 남은 시간 */
+const PLACE = { boost: 'boost2x', finish: 'finish', offline: 'offline2x' }, AD_DAY = { finish: 2, boost: 2, offline: 1 }, AD_MIN = 60, INST_MIN = 10;
 /* 조사: 마지막 글자 받침으로 고름 · josa('서윤', '이', '가') → 서윤이 · josa('지호', '을', '를') → 지호를 (한글이 아니면 뒤엣것) */
 export const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return w + (c >= 0 && c < 11172 && c % 28 ? a : b); };
 const mmss = s => s >= 3600 ? `${Math.floor(s / 3600)}시간 ${Math.floor(s % 3600 / 60)}분` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}초`;
@@ -190,12 +192,16 @@ export class UI {
       $('#go').onclick = () => { if (!this._sel) return; const e = this.app.game.brew(m, this._sel); if (e) { this.toast(e); if (e.startsWith('원두')) setTimeout(() => this.roastSheet(), 600); return; } if (S.tut < 1) S.tut = 1; this.close(); this.toast(`${MENU[this._sel].name} ${oven ? '굽는' : '내리는'} 중…`); }; };
     draw();
   }
+  // 바로 완성 (docs/bm-policy.md 2-1): 시간을 팔지 않고 '이 잔 바로' · ♥ = 남은 2분마다 1(최소 1) · 광고 = 1회 1개
+  //   광고는 광고 길이보다 짧게 남은 것엔 안 띄움(AD_MIN 60초 — 메뉴 8~50초는 사실상 ♥만) · ♥도 10초 미만이면 숨김 · 하루 한도 = 게임 자리 상한과 앱 남은 횟수 중 작은 값
   brewing(m) { const g = this.app.game, roast = m === g.roaster, info = roast ? g.roastState() : g.progress(m); if (!info) return; const name = roast ? info.R.name : MENU[info.s.menu].name, left = info.left;
-    const hc = Math.max(1, Math.ceil(left / 120));
-    const md = this.modal(`<h2>${name}</h2><div class="sub">${roast ? '볶는 중' : '내리는 중'} · 남은 시간 ${mmss(left)}</div><div class="pbig"><s style="width:${info.u * 100}%"></s></div>
-      <div class="btns"><button class="btn ghost" id="fAd">📺 광고 보고 바로 완성</button><button class="btn" id="fH">♥ ${hc}로 바로 완성</button></div><button class="btn ghost" id="mOk">닫기</button>`);
-    $('#mOk').onclick = () => this.close(); $('#fAd').onclick = () => this.ad('finish', () => { g.finishNow(roast ? { kind: 'roaster' } : m); });
-    $('#fH').onclick = () => { if (S.hearts < hc) return this.toast('마음(♥)이 모자라요 · 손님을 빨리 받으면 모여요'); S.hearts -= hc; g.finishNow(roast ? { kind: 'roaster' } : m); save(); this.close(); sfx('reward'); }; }
+    const hc = Math.max(1, Math.ceil(left / 120)), job = roast ? info.r : info.s, same = () => (roast ? ST().roast === job : g.mstate(m) === job);   /* 광고 · 확인 사이에 다 되어 새로 시작한 잔을 공짜로 끝내지 않게 */
+    const adOk = left >= AD_MIN && this.adLeft('finish') > 0 && (!inOAD || bm.info.ok), heartOk = left >= INST_MIN;
+    this.modal(`<h2>${name}</h2><div class="sub">${roast ? '볶는 중' : '내리는 중'} · 남은 시간 ${mmss(left)}</div><div class="pbig"><s style="width:${info.u * 100}%"></s></div>
+      ${adOk || heartOk ? `<div class="btns">${adOk ? '<button class="btn ghost" id="fAd">📺 광고로 바로 완성</button>' : ''}${heartOk ? `<button class="btn" id="fH">♥ ${hc}로 바로 완성</button>` : ''}</div>` : '<div class="sub">거의 다 됐어요 · 조금만 기다려요</div>'}${adOk ? `<div class="sub" style="margin-top:12px">광고는 오늘 ${this.adLeft('finish')}번 남음</div>` : ''}<button class="btn ghost" id="mOk">닫기</button>`);
+    $('#mOk').onclick = () => this.close();
+    if (adOk) $('#fAd').onclick = () => this.ad('finish', () => { if (same()) g.finishNow(roast ? { kind: 'roaster' } : m); });
+    if (heartOk) $('#fH').onclick = () => { if (!same()) return this.close(); if (S.hearts < hc) return this.toast('마음(♥)이 모자라요 · 손님을 빨리 받으면 모여요'); S.hearts -= hc; g.finishNow(roast ? { kind: 'roaster' } : m); save(); this.close(); sfx('reward'); }; }
   // ── 정성 한 잔: 꾹 누르는 동안 잔이 차오름 · 금빛에서 떼면 정성 한 잔 · 닫으면 예전처럼 자동 추출
   pullSheet(m, k) {
     const g = this.app.game, d = MENU[k]; if (m.kind === 'oven') return this.brewSheet(m, k);
@@ -364,14 +370,49 @@ export class UI {
     this.modal(`<div class="away"><i>☕</i><small>쉬는 동안 · ${mmss(Math.round(Math.min(away, OFFLINE.cap)))}</small><b>${josa(names, '이', '가')} 가게를 지켰어요</b><p>오늘도 문을 열어 둔 덕분에 손님이 쉬어 갔어요</p><em><i class="c"></i>+${fmt(v)}</em></div>
       <button class="btn" id="awAd" hidden>📺 광고 보고 한 번 더 +${fmt(v)}</button><button class="btn ghost" id="awOk">좋아요</button>`);
     $('#awOk').onclick = () => this.close();
-    bm.hello().then(h => { const b = $('#awAd'); if (b && h.ok && h.ads && h.ads.reward) b.hidden = false; });   /* 원어데이 밖 · 광고 다 씀 = 버튼 없음 */
-    $('#awAd').onclick = async () => { const b = $('#awAd'); b.disabled = true; const r = await bm.rewardedAd('offline2x');
-      if (r && r.ok) { S.coins += v; save(); this.progress(); sfx('reward'); this.close(); this.toast(`2배로 받았어요 · 모두 +${fmt(v * 2)}`); } else { b.disabled = false; if (r && r.reason !== 'cancel') { b.hidden = true; this.toast('지금은 광고를 볼 수 없어요 · 받은 돈은 그대로예요'); } } }; }
-  ad(kind, done) { const what = kind === 'boost' ? '3분 동안 손님 2배' : '바로 완성';
-    if (kind === 'boost' && this.app.game.boostUntil > now()) return this.toast('손님 2배가 이미 켜져 있어요');
-    this.modal(`<h2>📺 광고 보고 받기</h2><p><b>${what}</b></p><div class="adbox"><span>광고 (시험용)</span><em id="adc">3</em></div><button class="btn ghost" id="adNo">그만두기</button>`);
-    let n = 3; const tm = setInterval(() => { n--; const e = $('#adc'); if (e) e.textContent = n; if (n <= 0) { clearInterval(tm); this.close(); sfx('reward'); if (kind === 'boost') { this.app.game.boostUntil = now() + 180000; this.toast('3분 동안 손님 2배!'); } done && done(); } }, 1000);
-    $('#adNo').onclick = () => { clearInterval(tm); this.close(); }; }
+    bm.hello().then(h => { const b = $('#awAd'); if (b && h.ok && h.ads && h.ads.reward && this.adLeft('offline') > 0) b.hidden = false; });   /* 원어데이 밖 · 광고 다 씀 = 버튼 없음 */
+    $('#awAd').onclick = async () => { if (this._adBusy) return; const b = $('#awAd'); b.disabled = true; const ok = await this.ad('offline');
+      if (ok) { S.coins += v; save(); this.progress(); this.close(); this.toast(`2배로 받았어요 · 모두 +${fmt(v * 2)}`); } else if (b.isConnected) b.disabled = false; }; }
+  // ── 광고 보상 (2026-10-29 · 마루미와 같은 방식)
+  //    원어데이 안 = 원어데이 광고(bm.rewardedAd — 광고 창 · 그룹 · 앱 한도는 앱이) · 밖(단독 · 개발 서버) = 시험용 3초 창
+  //    보상은 한 번만(_adBusy) · 남은 시간은 Date.now 기준(백그라운드 다녀와도 그대로) · 그만두기 · 바깥 · 뒤로 · 다른 창이 덮으면 취소 · 돌려주는 값: 보상을 줬으면 true
+  adLeft(kind) { const a = this.adDay(), cap = Math.max(0, (AD_DAY[kind] || 0) - (a[kind] || 0)); if (!inOAD) return cap; const i = bm.info; if (!i.ok) return 0; const L = i.ads && Number.isFinite(i.ads.rewardLeft) ? i.ads.rewardLeft : cap; return Math.min(cap, L); }
+  adDay() { if (!S.adUse || S.adUse.day !== today()) S.adUse = { day: today() }; return S.adUse; }
+  async ad(kind, done) {
+    if (this._adBusy) return false;
+    if (kind === 'boost' && this.app.game.boostUntil > now()) { this.toast('손님 2배가 이미 켜져 있어요'); return false; }
+    if (this.adLeft(kind) <= 0) { this.toast('오늘 볼 수 있는 광고를 다 봤어요 · 내일 또 만나요'); return false; }
+    this._adBusy = true;
+    try {
+      const h = await bm.hello();
+      const ok = h.ok ? await this.oadAd(kind) : inOAD ? false : await this.testAd(kind);
+      if (!ok) return false;
+      this.adDay()[kind] = (this.adDay()[kind] || 0) + 1; save(true); sfx('reward');
+      if (kind === 'boost') { this.app.game.boostUntil = now() + 180000; this.toast('3분 동안 손님 2배!'); }
+      try { done && done(); } catch (e) { console.error(e); }
+      return true;
+    } finally { this._adBusy = false; }
+  }
+  async oadAd(kind) {
+    const r = await bm.rewardedAd(PLACE[kind]); if (r.ok) { if (kind === 'finish') this.close(); return true; }
+    if (r.reason === 'limit') this.toast('오늘 볼 수 있는 광고를 다 봤어요 · 내일 또 만나요');
+    else if (r.reason === 'off') this.toast('지금은 광고 보상이 없어요');
+    else if (r.reason !== 'cancel') this.toast('광고를 불러오지 못했어요 · 잠시 뒤 다시 해 주세요');
+    return false;
+  }
+  testAd(kind) {
+    const what = kind === 'boost' ? '3분 동안 손님 2배' : kind === 'offline' ? '쉬는 동안 번 돈 한 번 더' : '바로 완성';
+    return new Promise(res => {
+      const end = Date.now() + 3000; let fin = false, tm = 0;
+      const stop = ok => { if (fin) return; fin = true; clearInterval(tm); removeEventListener('visibilitychange', tick); res(ok); };
+      const tick = () => { if (fin) return; if (!$('#adbox')) return stop(false);   /* 바깥 · 뒤로 · 다른 창이 덮음 = 취소 (덮은 창은 그대로) */
+        const n = Math.max(0, Math.ceil((end - Date.now()) / 1000)), e = $('#adc'); if (e) e.textContent = n;
+        if (n <= 0) { this.close(); stop(true); } };
+      this.modal(`<h2>📺 광고 보고 받기</h2><p><b>${what}</b></p><div class="adbox" id="adbox"><span>광고 (시험용)</span><em id="adc">3</em></div><button class="btn ghost" id="adNo">그만두기</button>`);
+      $('#adNo').onclick = () => this.close();
+      tm = setInterval(tick, 250); addEventListener('visibilitychange', tick);
+    });
+  }
   settings() {
     const slot = n => { try { const v = JSON.parse(localStorage.getItem(SLOT + n) || 'null'); if (!v) return ''; const d = JSON.parse(v.d), t = new Date(v.at); return `Lv.${levelOf(d.xp || 0)} · ${fmt(d.coins || 0)} · ${t.getMonth() + 1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`; } catch { return ''; } };
     const m = this.modal(`<h2>⚙️ 설정</h2><div class="tg"><button data-k="sfx" class="${S.set.sfx ? 'on' : ''}">효과음</button><button data-k="bgm" class="${S.set.bgm ? 'on' : ''}">배경음</button></div>

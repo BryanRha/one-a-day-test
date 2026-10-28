@@ -1,15 +1,15 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.87.2';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.87.2';
-import { audio } from '../audio.js?v=0.87.2';
-import { load, save, reset } from '../save.js?v=0.87.2';
-import { CATS } from '../core/run.js?v=0.87.2';
-import * as M from '../meta.js?v=0.87.2';
-import { wind, ELEMENT } from '../fx.js?v=0.87.2';
-import { WITCHES } from '../core/run.js?v=0.87.2';
-import { bm } from '../oad_bm.js?v=0.87.2';
-import { hofShown, hofPopup } from '../hof.js?v=0.87.2';
-import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.87.2';
+import { W, H } from '../config.js?v=0.88.0';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.88.0';
+import { audio } from '../audio.js?v=0.88.0';
+import { load, save, reset } from '../save.js?v=0.88.0';
+import { CATS } from '../core/run.js?v=0.88.0';
+import * as M from '../meta.js?v=0.88.0';
+import { wind, ELEMENT } from '../fx.js?v=0.88.0';
+import { WITCHES } from '../core/run.js?v=0.88.0';
+import { bm } from '../oad_bm.js?v=0.88.0';
+import { hofShown, hofPopup } from '../hof.js?v=0.88.0';
+import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.88.0';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -248,14 +248,16 @@ export class LobbyScene extends Phaser.Scene {
         b.add(fit(this.add.image(-360, wy, `cat_${d.walk.cat}`), 80));
         b.add(txt(this, -280, wy - 20, `${M.CAT_INFO[d.walk.cat].name} 산책 중`, 38, '#FFFFFF', { ox: 0 }));
         b.add(txt(this, -280, wy + 26, left ? `${Math.ceil(left / 60000)}분 남음` : '돌아왔어요!', 32, '#FFE8A8', { ox: 0 }));
-        b.add(button(this, 270, wy, left ? '바로 받기 5' : '보상 받기', () => {
+        const wc = M.walkCost(left);   /* 남은 비율 (10초 미만이면 0 → 곧 돌아와요) */
+        if (left && !wc) b.add(txt(this, 270, wy, '곧 돌아와요', 34, '#FFE8A8'));
+        else b.add(button(this, 270, wy, left ? `바로 받기 ${wc}` : '보상 받기', () => {
           const r = M.finishWalk(true);
           if (r) { audio.play('sfx_meow'); toast(this, rewardText(r), '#FFE14D'); this.bar.refresh(); redraw(); }
           else toast(this, '별가루가 부족해요');
         }, { key: left ? 'btn_purple' : 'btn_gold', w: 330, h: 110, size: 36, icon: left ? 'cur_gem' : null }));
       } else b.add(txt(this, 0, wy, '장착하지 않은 고양이를 산책 보내면 30분 뒤 코인·간식을 가져와요', 32, '#D8CCFF', { wrap: 820 }));
       /* 원어데이 안: 산책 바로 끝내기 — 광고 1회 또는 🪙5 (원어데이 밖이면 이 줄 없음) */
-      const extra = d.walk.cat && M.walkLeft() > 0 ? this.walkOad(b, wy + 125, redraw) : 0;
+      const extra = d.walk.cat && M.walkCost() > 0 ? this.walkOad(b, wy + 125, redraw) : 0;
       const area = scrollArea(this, pop.box, 0, -ph / 2 + 240 + extra, 900, ph - 290 - extra, b);
       const cw = 290, chh = 420;
       M.CAT_ORDER.forEach((id, i) => {
@@ -282,6 +284,8 @@ export class LobbyScene extends Phaser.Scene {
     // 스크롤 위치를 유지한 채 다시 그림
     const redraw = () => { scrollY = pop.area ? pop.area.y : null; draw(); this.refresh(); };
     draw();
+    /* 산책 중: 바로 받기 값이 내려가면(남은 비율) · 10초 아래로 내려가면 다시 그림 → 화면 값 = 실제 차감 */
+    let wc = !load().walk.cat ? -1 : M.walkLeft() > 0 ? M.walkCost() : -2; const tk = this.time.addEvent({ delay: 2000, loop: true, callback: () => { if (!pop.active || pop.closing) return tk.remove(); const c = !load().walk.cat ? -1 : M.walkLeft() > 0 ? M.walkCost() : -2; if (c !== wc) { wc = c; redraw(); } } });
   }
 
   // 무대 위 의상 장식 (후광 · 가루) — 의상이 바뀔 때만 다시 만듦
@@ -328,25 +332,27 @@ export class LobbyScene extends Phaser.Scene {
     window.__outfitPop = pop;
   }
 
-  // 산책 바로 끝내기 (원어데이): 광고 보고 | 🪙5 — 같은 크기 나란히 · 쓸 수 있는 게 없으면 줄을 만들지 않음 (반환: 차지한 높이)
+  // 산책 바로 끝내기 (원어데이): 광고 보고 | 🪙N — N = 5 × 남은 비율(서버 instN 등급) · 같은 크기 나란히 · 쓸 수 있는 게 없으면 줄을 만들지 않음 (반환: 차지한 높이)
+  //   광고는 앱 한도(hello().ads)도 남았을 때만 · 누를 때 값을 다시 셈(창을 오래 열어 둬도 화면 값 이하)
   walkOad(b, y, redraw) {
     const info = bm.info;
-    const adOk = info.ok && (info.owned || (info.ads && info.ads.reward)) && M.adLeft('walk') > 0;
-    const price = bm.price('walk');
+    const appOk = info.ads && info.ads.reward && !(Number.isFinite(info.ads.rewardLeft) && info.ads.rewardLeft <= 0);
+    const adOk = info.ok && (info.owned || appOk) && M.adLeft('walk') > 0;
+    const g0 = M.walkCost(), price = g0 && bm.price(`inst${g0}`) === g0 ? g0 : 0;
     if (!adOk && !price) return 0;
     const two = adOk && price, bw = two ? 400 : 560;
     let busy = false;
     const done = r => { if (!r) return; audio.play('sfx_meow'); toast(this, rewardText(r), '#FFE14D'); this.bar.refresh(); redraw(); };
-    const tell = reason => { const m = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요', login: '로그인하면 쓸 수 있어요' }[reason]; if (m) toast(this, m); };
+    const tell = reason => { const m = { short: '골드가 조금 모자라요', limit: '오늘은 여기까지예요', login: '로그인하면 쓸 수 있어요', soon: '곧 돌아와요 · 조금만 기다려요' }[reason]; if (m) toast(this, m); };
     if (adOk) b.add(button(this, two ? -210 : 0, y, info.owned ? '소장 혜택 · 바로' : '광고 보고 바로', async () => {
-      if (busy) return; busy = true;
+      if (busy) return; if (!M.walkCost()) { tell('soon'); return redraw(); } busy = true;
       const a = await bm.rewardedAd('walk'); busy = false;
       if (a.ok) { M.adUse('walk'); done(M.finishWalk('free')); } else tell(a.reason);
     }, { key: 'btn_gold', w: bw, h: 110, size: 34 }));
     if (price) b.add(button(this, two ? 210 : 0, y, `🪙 ${price} 바로 받기`, async () => {
-      if (busy) return; busy = true;
-      const g = await bm.spend('walk'); busy = false;
-      if (g.ok) done(M.finishWalk('free')); else tell(g.reason);
+      if (busy) return; const g = M.walkCost(); if (!g || bm.price(`inst${g}`) !== g) { tell('soon'); return redraw(); } busy = true;
+      const r = await bm.spend(`inst${g}`); busy = false;
+      if (r.ok) done(M.finishWalk('free')); else tell(r.reason);
     }, { key: 'btn_gold', w: bw, h: 110, size: 34 }));
     return 130;
   }

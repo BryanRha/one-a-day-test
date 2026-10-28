@@ -1,6 +1,7 @@
 // 저장 · 규칙: 헛간 · 경험치 · 밭 · 동물 · 공장 줄 · 주문 게시판 · 기차 · 퀘스트 · 월세 · 강아지
-import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.87.2';
-import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.87.2';
+import { speedCost } from './inst.js?v=0.88.0';
+import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.88.0';
+import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.88.0';
 
 const KEY = 'thefarm_v1';
 let d = null;
@@ -83,7 +84,7 @@ export const cropReady = o => o.crop && now() >= o.at;
 export const cropTime = k => CROPS[k].t * (load().spouse === 'sam' ? 0.9 : 1) * (1 - 0.05 * rl('crop'));
 // ── 공장 줄: 차례로 · 끝난 것은 done 에 (헛간에 넣을 때까지 대기)
 export function tickFactory(o) { o.q = o.q || []; o.done = o.done || []; let ch = false; while (o.q.length && o.q[0].end <= now()) { o.done.push(o.q.shift().it); ch = true; } return ch; }
-export function queueJob(o, it) { const R = RECIPES[it], B = BUILDS[o.b]; tickFactory(o); if (o.q.length + o.done.length >= (B.slots + (o.extra || 0))) return o.done.length ? '다 된 물건을 먼저 거둬요 (초록 칸을 눌러요)' : '생산 칸이 꽉 찼어요'; if (!take(R.in)) return '재료가 모자라요'; const last = o.q.length ? o.q[o.q.length - 1].end : now(); o.q.push({ it, end: Math.max(last, now()) + R.t * 1000 * FUP.k(o.up || 0) * (1 - 0.04 * rl('fac')) }); return null; }
+export function queueJob(o, it) { const R = RECIPES[it], B = BUILDS[o.b]; tickFactory(o); if (o.q.length + o.done.length >= (B.slots + (o.extra || 0))) return o.done.length ? '다 된 물건을 먼저 거둬요 (초록 칸을 눌러요)' : '생산 칸이 꽉 찼어요'; if (!take(R.in)) return '재료가 모자라요'; const last = o.q.length ? o.q[o.q.length - 1].end : now(); const d = R.t * 1000 * FUP.k(o.up || 0) * (1 - 0.04 * rl('fac')); o.q.push({ it, d, end: Math.max(last, now()) + d }); return null; }   /* d = 이 칸이 걸리는 시간(ms) — 즉시 완성 값 계산 */
 // ── 동물 우리: 3칸 동시
 export function tickAnimal(o) { o.s = o.s || [0, 0, 0]; o.ready = o.ready || 0; let ch = false; o.s.forEach((e, i) => { if (e && e <= now()) { o.s[i] = 0; o.ready++; ch = true; } }); return ch; }
 export const productOf = b => Object.keys(RECIPES).find(k => RECIPES[k].b === b);
@@ -205,18 +206,24 @@ export function relicClaim(i) { const r = relic(), S = RELICS[i]; if (r.done.inc
 export function market() { const s = load(); if (!s.market || s.market.day !== dayNo()) { const g = unlockedGoods().filter(k => !ITEMS[k].rare), st = []; for (let k = 0; k < 8 && g.length; k++) { const it = g.splice(Math.floor(Math.random() * g.length), 1)[0]; st.push({ it, n: 5, price: Math.max(3, Math.round(ITEMS[it].v * 2.2)) }); } s.market = { day: dayNo(), st }; } return s.market; }
 export function marketBuy(i) { const s = load(), c = market().st[i]; if (!c || !c.n) return '다 팔렸어요'; if (s.coins < c.price) return '코인이 모자라요'; if (!canFit(1)) return '헛간이 꽉 찼어요'; s.coins -= c.price; c.n--; add(c.it, 1); return null; }
 // ── 보석으로 시간 줄이기: 남은 5분마다 보석 1 (최소 1)
-export const speedCost = sec => Math.max(1, Math.ceil(sec / 300));
+export { speedCost };
 export function speedField(o) { const s = load(); if (!o.crop || cropReady(o)) return null; const c = speedCost((o.at - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; o.at = now(); return null; }
-// 광고 '생산 30분 단축': 밭은 남은 시간에서 · 공장은 줄 전체를 앞으로 당김 (첫 칸 남은 시간까지만)
-export function speedBy(o, ms) { if (o.b === 'field') { if (!o.crop || cropReady(o)) return false; o.at = Math.max(now(), o.at - ms); return true; } tickFactory(o); if (!o.q || !o.q.length) return false; const cut = Math.min(ms, o.q[0].end - now()); for (const x of o.q) x.end -= cut; tickFactory(o); return true; }
-export function speedFactory(o) { const s = load(); tickFactory(o); if (!o.q.length) return null; const j = o.q[0], c = speedCost((j.end - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; const cut = j.end - now(); for (const x of o.q) x.end -= cut; tickFactory(o); return null; }
+// 공장 칸 i 의 남은 시간(ms): 만드는 중인 첫 칸은 끝날 때까지 · 기다리는 칸은 자기 몫(걸리는 시간)만 — 앞 칸 시간을 함께 사지 않게
+export function jobLeft(o, i) { const j = o.q && o.q[i]; if (!j) return 0; const st = Math.max(now(), i ? o.q[i - 1].end : now()); return Math.max(0, j.end - st); }
+export const jobDur = (o, i) => { const j = o.q[i]; return j.d || (i ? j.end - o.q[i - 1].end : RECIPES[j.it].t * 1000 * FUP.k(o.up || 0)); };
+// 즉시 완성 (공장 칸 하나): 그 칸을 다 된 것으로 옮기고, 뒤 칸들은 그 칸 몫만큼 앞당김 → 버려지는 시간 0
+export function finishJob(o, i) { tickFactory(o); const j = o.q[i]; if (!j) return false; const cut = jobLeft(o, i); o.q.splice(i, 1); o.done.push(j.it); for (let k = i; k < o.q.length; k++) o.q[k].end -= cut; tickFactory(o); return true; }
+export function finishField(o) { if (!o.crop || cropReady(o)) return false; o.at = now(); return true; }
+export function finishLab() { const L = lab(); if (!L.cur) return false; L.cur.end = now(); lab(); return true; }
+// 보석 즉시 완성 (공장은 고른 칸 i)
+export function speedFactory(o, i = 0) { const s = load(); tickFactory(o); if (!o.q[i]) return null; const c = speedCost(jobLeft(o, i) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; finishJob(o, i); return null; }
 
 // ── 연구소: 한 번에 하나 · 단계마다 코인 + 시약·톱니바퀴·설계도 + 시간
 export const lab = () => { const s = load(); if (!s.lab) s.lab = { lv: {}, cur: null }; const L = s.lab; if (L.cur && L.cur.end <= now()) { L.lv[L.cur.k] = (L.lv[L.cur.k] || 0) + 1; L.done = L.cur.k; L.cur = null; } return L; };
 export function rl(k) { const s = load(); return s.lab ? s.lab.lv[k] || 0 : 0; }
 export function labStart(k) { const L = lab(), s = load(), lv = (L.lv[k] || 0) + 1; if (L.cur) return '이미 연구 중이에요'; if (lv > RES_MAX) return '최고 단계예요'; if (!countOf('lab')) return '연구소를 지어야 해요'; const c = resCost(lv); if (s.coins < c.coins) return '코인이 모자라요'; if (!hasAll(c.items)) return '연구 재료가 모자라요 · 연구소에서 만들어요';
   s.coins -= c.coins; take(c.items); L.cur = { k, end: now() + resTime(lv) * 1000 }; return null; }
-export function labSpeed() { const L = lab(), s = load(); if (!L.cur) return null; const c = speedCost((L.cur.end - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; L.cur.end = now(); lab(); return null; }
+export function labSpeed() { const L = lab(), s = load(); if (!L.cur) return null; const c = speedCost((L.cur.end - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; finishLab(); return null; }
 // 수확 덤 (풍년의 비결)
 export const bonusCrop = () => Math.random() < 0.05 * rl('harvest');
 

@@ -1,10 +1,13 @@
 // 원어데이 연결 하나 — 골드 상품 · 보상형 광고 · 소장자 혜택 · 응원 선물 (공통 규칙 docs/bm-policy.md)
 //   가격은 서버 SHOP.farm 만 기준 (gems100 보석 100 · storage 창고 넓히기(영구) · deco 특별 장식(영구)) · 게임은 bm.spend 로 요청만
-//   광고 자리 2곳: speed(생산 30분 단축, 하루 5) · boost(주문/기차 보상 +50%, 하루 3) = bm.rewardedAd · 소장자는 via:'owner' 로 광고 없이 바로
+//   광고 자리 2곳: speed(즉시 완성 — 고른 칸 1개, 하루 5) · boost(주문/기차 보상 +50%, 하루 3) = bm.rewardedAd · 소장자는 via:'owner' 로 광고 없이 바로
+//   '남은 N번'은 자리 상한과 앱의 게임당 남은 횟수(hello().ads.rewardLeft, 앱 shell/bm.js 게임당 5) 중 작은 값 = 실제로 볼 수 있는 횟수
+//   즉시 완성 (docs/bm-policy.md 2-1, 2026-10-29): 시간을 팔지 않고 '고른 칸 하나 바로 끝내기' · 골드는 생산품 기본값 × 남은 비율 → 등급 SKU instN
 //   원어데이 밖(hello().ok=false): 골드 · 광고 · 소장자 장식을 숨기고 지금처럼 (이미 산 창고 · 장식은 저장에 남음)
 //   골드 표시는 '100골드' 글자로 (🪙 기호는 이 게임에서 배추 코인 그림으로 바뀜)
-import { bm } from './oad_bm.js?v=0.87.2';
-import { load, save, dayNo, add } from './state.js?v=0.87.2';
+import { bm } from './oad_bm.js?v=0.88.0';
+import { load, save, dayNo, add } from './state.js?v=0.88.0';
+import { instSku } from './inst.js?v=0.88.0';
 
 let helloP = null;
 // 시작 때 한 번 (기다리지 않음) → 응답이 오면 영구 상품 · 소장자 장식을 되살리고 화면을 다시 그림
@@ -47,9 +50,13 @@ export const goldMsg = r => !r || r.reason === 'cancel' ? '' : r.reason === 'sho
 
 // ── 보상형 광고 (자리별 하루 횟수 = 게임 쪽 상한 · 앱의 게임당 한도와 둘 다 지킴)
 export const AD_LIMIT = { speed: 5, boost: 3 };
-export const SPEED_MS = 30 * 60e3;                         /* 생산 30분 단축 */
+// ── 즉시 완성 (값 계산은 inst.js) · 서버 SHOP.farm instN 이 같은 값(N골드)일 때만 골드 버튼을 띄움 → 화면 값 = 실제 차감
+export { INST_MIN, INST, instBase, instGold, instSku } from './inst.js?v=0.88.0';
+export const instPrice = g => (g && goldPrice(instSku(g)) === g ? g : 0);      /* 서버에 그 등급이 같은 값으로 있을 때만 */
+export async function buyInst(g) { if (!instPrice(g)) return { ok: false, reason: 'off' }; const r = await bm.spend(instSku(g)); if (r && r.ok) { const d = load(); (d.goldLog = d.goldLog || []).push({ item: instSku(g), gold: g, at: Date.now() }); if (d.goldLog.length > 30) d.goldLog.shift(); save(); } return r || { ok: false, reason: 'error' }; }
 function adDay() { const d = load(); if (!d.adUse || d.adUse.day !== dayNo()) d.adUse = { day: dayNo(), speed: 0, boost: 0 }; return d.adUse; }
-export const adLeft = pl => !oadOn() ? 0 : Math.max(0, (AD_LIMIT[pl] || 0) - (adDay()[pl] || 0));
+const appLeft = () => { const a = bm.info.ads || {}; return Number.isFinite(a.rewardLeft) ? a.rewardLeft : 99; };
+export const adLeft = pl => !oadOn() ? 0 : Math.max(0, Math.min((AD_LIMIT[pl] || 0) - (adDay()[pl] || 0), appLeft()));
 export const adsOpen = () => oadOn() && (isOwner() || !!(bm.info.ads && bm.info.ads.reward));
 export const canAd = pl => adsOpen() && adLeft(pl) > 0;
 export const adLabel = what => isOwner() ? `바로 ${what}` : `▶ 광고 보고 ${what}`;
@@ -63,7 +70,7 @@ export async function rewardAd(pl) {
 export const roundEnd = () => { try { bm.interstitial('round_end'); } catch { /* */ } };
 
 // ── 연속 실패 응원 선물 (성장·경영형: 그날 처음 '건축 재료가 모자라 막힌' 순간)
-//   크기: 모자란 재료 1개 (보석으로 치면 💎4 < 광고 1회 30분 단축 💎6) · 하루 1번 · 레벨 4부터(재료를 모으기 시작한 뒤)
+//   크기: 모자란 재료 1개 (보석으로 치면 💎4 ≤ 광고 1회 즉시 완성 — 공장 조리법 대부분 💎1~8) · 하루 1번 · 레벨 4부터(재료를 모으기 시작한 뒤)
 //   켜짐 · 꺼짐 두 그룹 모두 help_eligible(on 1/0) 한 번 → 켜짐만 help_offer → help_take / help_decline
 export const HELP_LV = 4, HELP_N = 1;
 export const helpOn = () => bm.helpOn();

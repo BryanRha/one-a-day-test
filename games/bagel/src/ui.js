@@ -1,19 +1,22 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa } from './data.js?v=0.87.2';
-import { starOf, favLv } from './game.js?v=0.87.2';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.87.2';
-import { sfx, setAudio } from './audio.js?v=0.87.2';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.87.2';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa } from './data.js?v=0.88.0';
+import { starOf, favLv } from './game.js?v=0.88.0';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.88.0';
+import { sfx, setAudio } from './audio.js?v=0.88.0';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.88.0';
+import { bm } from './oad_bm.js?v=0.88.0';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
 const SLOT = 'marumi_slot_';
+/* 광고 보상: 원어데이 쪽 자리 이름 (bm.rewardedAd) · 수익 2배 길이 */
+const PLACE = { boost: 'boost2x', offline: 'offline2x' }, BOOST_MS = 180000;
 const slotInfo = n => { try { const v = JSON.parse(localStorage.getItem(SLOT + n) || 'null'); if (!v) return ''; const d = JSON.parse(v.d), t = new Date(v.at); return `${['1호점', '2호점', '3호점', '4호점'][d.bi || 0]} · 돈 ${fmt(d.coins || 0)} · ${t.getMonth() + 1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`; } catch { return ''; } };
 const ICON = { bagel: '🥯', cream: '🥯', coffee: '🥣', drink: '☕' }, SHORT = new Proxy({}, { get: (_, k) => MENU[k]?.short || '' });
 export class UI {
   constructor(app) {
-    this.app = app; this.boostUntil = 0; const h = $('#hud');
+    this.app = app; this._adBusy = false; const h = $('#hud');
     h.innerHTML = `<div class="top"><div class="coin"><i class="c"></i><b id="cn">0</b></div><div class="scent" id="scent" title="베이글 향">🌿<b id="scv">0</b></div><div class="lvl"><b id="bn"></b><em id="bl"></em><div class="pb"><s id="bp"></s></div></div></div>
       <div class="cp" id="cp"><b>🎟 매장 쿠폰까지</b><div class="pb"><s id="cpb"></s></div><span id="cpt"></span></div>
       <div class="lside"><button class="sb deco" id="bDeco"><b>🪴</b>꾸미기<i class="dot" id="decoDot"></i></button><button class="sb" id="bReg"><b>💌</b>단골<i class="dot" id="regDot"></i></button><button class="sb" id="bMenu"><b>📖</b>메뉴</button></div>
@@ -24,6 +27,7 @@ export class UI {
     $('#bAd').onclick = () => this.ad('boost'); $('#bUp').onclick = () => this.upgrades(); $('#bMs').onclick = () => this.missions(); $('#bMap').onclick = () => this.map(); $('#bSet').onclick = () => this.settings(); $('#cp').onclick = () => this.coupon();
     if ($('#bExit')) $('#bExit').onclick = () => exitToOAD();
     this.joy(); this.progress();
+    bm.hello().then(() => this.adUi());   /* 원어데이 그룹 A(광고 꺼짐)면 광고 버튼을 숨김 */
   }
   joy() {
     const area = $('#app'), base = $('#joy'), knob = $('#knob'); let id = null, cx = 0, cy = 0; const R = 50;
@@ -38,7 +42,12 @@ export class UI {
   bubble() { const d = document.createElement('div'); d.className = 'bub'; this.tags.append(d); return d; }
   tag() { const d = document.createElement('div'); d.className = 'tag lock'; this.tags.append(d); return d; }
   float(t, pos, cls) { const d = document.createElement('div'); d.className = 'float ' + cls; d.textContent = t; d._p = pos.clone(); d._t = 0; this.floats.append(d); }
+  /* 수익 2배 끝나는 시각은 저장에 (S.boostUntil · 다시 열어도 남은 시간 그대로) · 시계를 뒤로 돌려 너무 길어지면 3분으로 */
+  get boostUntil() { const n = Date.now(), u = +S.boostUntil || 0; if (u > n + BOOST_MS) S.boostUntil = n + BOOST_MS; return +S.boostUntil || 0; }
   boost() { return Date.now() < this.boostUntil; }
+  /* 광고를 쓸 수 있나: 단독 실행(원어데이 밖)은 시험 창 · 원어데이 안은 그룹 A 가 아니고 남은 횟수가 있을 때 */
+  adOn() { const h = bm.info; return !h.ok || (h.group !== 'A' && !!(h.ads && h.ads.reward)); }
+  adUi() { const b = $('#bAd'); if (!b) return; const h = bm.info; b.hidden = !!(h.ok && h.group === 'A'); b.classList.toggle('spent', !this.adOn() && !this.boost()); }
   hint(t) { const h = $('#hint'); if (t) { h.textContent = t; h.classList.remove('off'); } else if (h.textContent !== '어디든 끌어서 움직여요') h.classList.add('off'); }
   frame(g) {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
@@ -53,7 +62,7 @@ export class UI {
     if (pl.stack.length) { const k = pl.kind, nb = pl.stack.filter(x => x.m.userData.b).length, nm = k === 'trash' ? '쓰레기' : k === 'dough' ? (nb === pl.stack.length ? '데친 반죽' : '반죽') : k === 'bagel' && pl.stack.some(x => x.m.userData.prem) ? '쫄깃 베이글' : MENU[k]?.short || k;
       const ic = k === 'trash' ? '🗑' : k === 'dough' ? '⚪' : ICON[k] || ''; const full = pl.stack.length >= pl.cap; const html = `${ic} ${nm} <em>${full ? 'MAX' : pl.stack.length}</em>`; if (hl._h !== html) { hl.innerHTML = html; hl._h = html; hl.classList.toggle('trash', k === 'trash'); hl.classList.toggle('max', full); }
       v.set(pl.pos.x, 230 + pl.stack.length * 15, pl.pos.z).project(cam); hl.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; hl.style.display = ''; } else hl.style.display = 'none';
-    const b = this.boostUntil - Date.now(); $('#adT').textContent = b > 0 ? `${Math.floor(b / 60000)}:${String(Math.floor(b / 1000) % 60).padStart(2, '0')}` : '광고 보고'; $('#bAd').classList.toggle('on', b > 0);
+    const b = this.boostUntil - Date.now(); $('#adT').textContent = b > 0 ? `${Math.floor(b / 60000)}:${String(Math.floor(b / 1000) % 60).padStart(2, '0')}` : '광고 보고'; $('#bAd').classList.toggle('on', b > 0); if (b <= 0 && this._wasB) this.adUi(); this._wasB = b > 0;
   }
   progress() {
     const g = this.app.game; if (!g || !g.unl) return; const B = BRANCHES[S.bi], all = B.slots.filter(s => !s.free).length, done = B.slots.filter(s => !s.free && g.unl.has(s.id)).length;
@@ -62,7 +71,7 @@ export class UI {
     $('#cp').classList.toggle('ready', couponReady()); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
   }
   toast(t) { let el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 1800); }
-  modal(html, onClose) { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.innerHTML = html; this._oc = onClose; return m; }   /* 이미 열린 창은 내용만 바꿈 (깜빡임 없음) */
+  modal(html, onClose) { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.innerHTML = html; const f = this._oc; this._oc = onClose; if (f && f !== onClose) f(); return m; }   /* 덮인 창의 닫힘 처리도 불러 줌 (광고 취소 · 쉬는 동안 1배 받기) */   /* 이미 열린 창은 내용만 바꿈 (깜빡임 없음) */
     m.innerHTML = `<div class="mback"><div class="modal">${html}</div></div>`; m.firstChild.onclick = e => { if (e.target === m.firstChild) this.close(); }; this._oc = onClose; this._ub = pushBack(() => { this.close(); return true; }); sfx('tap', { vol: 0.4 }); return m; }
   close() { $('#modal').innerHTML = ''; this._ub && this._ub(); this._ub = null; const f = this._oc; this._oc = null; f && f(); }
   // ── 쿠폰
@@ -72,13 +81,43 @@ export class UI {
     const c = claimCoupon(); sfx('reward'); this.showCoupon(c); this.progress();
   }
   showCoupon(c) { this.modal(`<div class="ticket"><small>${BRAND.name}</small><b>${COUPON.text}</b><div class="code">${c.code}</div><span>매장 직원에게 이 화면을 보여 주세요 · ${COUPON.valid}</span></div><button class="btn" id="mOk">확인</button>`); $('#mOk').onclick = () => this.close(); }
-  // ── 광고 (지금은 시험용 화면 · 앱으로 낼 때 실제 광고로 바꿈)
-  ad(kind, done) {
-    if (kind === 'boost' && this.boost()) return this.toast('수익 2배가 이미 켜져 있어요');
+  // ── 광고 보상 (2026-10-29 · 대표 제보 뒤 정리)
+  //    원어데이 안 = 원어데이 광고(bm.rewardedAd — 광고 창 · 횟수 · 그룹은 앱이 맡음) · 밖(단독 실행 · 개발 서버) = 시험용 3초 창
+  //    보상은 한 번만 · 남은 시간은 Date.now 기준(폰에서 홈으로 나갔다 와도 그대로) · 그만두기 · 바깥 누르기 · 뒤로 · 다른 창이 덮으면 취소
+  //    돌려주는 값: 보상을 줬으면 true
+  async ad(kind, done) {
+    if (this._adBusy) return false;
+    if (kind === 'boost' && this.boost()) { this.toast('수익 2배가 이미 켜져 있어요'); return false; }
+    this._adBusy = true;
+    try {
+      const h = await bm.hello();
+      const ok = h.ok ? await this.oadAd(kind) : await this.testAd(kind);
+      if (!ok) return false;
+      sfx('reward');
+      if (kind === 'boost') { S.boostUntil = Date.now() + BOOST_MS; save(true); this.toast('3분 동안 수익 2배!'); }
+      try { done && done(); } catch (e) { console.error(e); }
+      return true;
+    } finally { this._adBusy = false; this.adUi(); }
+  }
+  async oadAd(kind) {
+    const r = await bm.rewardedAd(PLACE[kind]); if (r.ok) return true;
+    if (r.reason === 'limit') this.toast('오늘 볼 수 있는 광고를 다 봤어요 · 내일 또 만나요');
+    else if (r.reason === 'off') this.toast('지금은 광고 보상이 없어요');
+    else if (r.reason !== 'cancel') this.toast('광고를 불러오지 못했어요 · 잠시 뒤 다시 해 주세요');
+    return false;
+  }
+  testAd(kind) {
     const what = kind === 'boost' ? '3분 동안 수익 2배' : kind === 'offline' ? '쉬는 동안 번 돈 2배' : '보상';
-    this.modal(`<h3>📺 광고 보고 받기</h3><p><b>${what}</b></p><div class="adbox" id="adbox"><span>광고 (시험용)</span><em id="adc">3</em></div><button class="btn ghost" id="adNo">그만두기</button>`);
-    let n = 3; const tm = setInterval(() => { n--; const e = $('#adc'); if (e) e.textContent = n; if (n <= 0) { clearInterval(tm); this.close(); sfx('reward'); if (kind === 'boost') { this.boostUntil = Date.now() + 180000; this.toast('3분 동안 수익 2배!'); } done && done(); } }, 1000);
-    $('#adNo').onclick = () => { clearInterval(tm); this.close(); };
+    return new Promise(res => {
+      const end = Date.now() + 3000; let fin = false, tm = 0;
+      const stop = ok => { if (fin) return; fin = true; clearInterval(tm); removeEventListener('visibilitychange', tick); res(ok); };
+      const tick = () => { if (fin) return; if (!$('#adbox')) return stop(false);   /* 다른 창이 덮음 = 취소 (그 창은 그대로 둠) */
+        const left = Math.max(0, Math.ceil((end - Date.now()) / 1000)), e = $('#adc'); if (e) e.textContent = left;
+        if (left <= 0) { this._oc = null; this.close(); stop(true); } };
+      this.modal(`<h3>📺 광고 보고 받기</h3><p><b>${what}</b></p><div class="adbox" id="adbox"><span>광고 (시험용)</span><em id="adc">3</em></div><button class="btn ghost" id="adNo">그만두기</button>`, () => stop(false));
+      $('#adNo').onclick = () => this.close();
+      tm = setInterval(tick, 250); addEventListener('visibilitychange', tick);
+    });
   }
   missions() {
     const html = MISSIONS.map(m => { const v = Math.min(m.goal, S.miss[m.id] || 0), d = S.missDone[m.id], ok = v >= m.goal; return `<div class="ms ${d ? 'done' : ''}"><div><b>${m.name}</b><div class="pb"><s style="width:${v / m.goal * 100}%"></s></div><em>${fmt(v)} / ${fmt(m.goal)}</em></div><button class="btn sm ${ok && !d ? '' : 'off'}" data-m="${m.id}">${d ? '완료' : `<i class="c"></i>${fmt(m.coins * mult())}`}</button></div>`; }).join('');
@@ -147,8 +186,12 @@ export class UI {
     m.querySelectorAll('.br:not(.lock)').forEach(b => b.onclick = () => { const i = +b.dataset.i; if (i !== S.bi) { this.close(); this.app.goBranch(i); } });
   }
   nextBranch(i) { S.maxBi = Math.max(S.maxBi || 0, i); save(true); sfx('levelup'); this.modal(`<h3>🎉 ${BRANCHES[i - 1].name} 완성!</h3><p>모든 설비를 열었어요.<br><b>${BRANCHES[i].name}</b>${josa(BRANCHES[i].name, '이/가').slice(BRANCHES[i].name.length)} 문을 열어요.</p><button class="btn" id="mOk">새 지점으로</button>`); $('#mOk').onclick = () => { this.close(); this.app.goBranch(i); }; }
-  offline(v) { this.modal(`<h3>☕ 쉬는 동안</h3><p>직원들이 돈을 벌어 놨어요! <b>+${fmt(v)}</b></p><div class="btns"><button class="btn ghost" id="o1">받기</button><button class="btn" id="o2">📺 2배 받기</button></div>`);
-    $('#o1').onclick = () => { S.coins += v; save(); this.close(); sfx('coin'); }; $('#o2').onclick = () => { this.close(); this.ad('offline', () => { S.coins += v * 2; save(); this.toast(`+${fmt(v * 2)}`); }); }; }
+  /* 쉬는 동안 번 돈: 창을 그냥 닫아도(바깥 · 뒤로) 1배는 받음 · 2배 광고를 그만두거나 못 보면 이 창으로 돌아옴 */
+  offline(v) { let got = false; const take = () => { if (got) return; got = true; S.coins += v; save(); sfx('coin'); };
+    this.modal(`<h3>☕ 쉬는 동안</h3><p>직원들이 돈을 벌어 놨어요! <b>+${fmt(v)}</b></p><div class="btns"><button class="btn ghost" id="o1">받기</button>${this.adOn() ? '<button class="btn" id="o2">📺 2배 받기</button>' : ''}</div>`, take);
+    $('#o1').onclick = () => this.close();
+    const o2 = $('#o2'); if (o2) o2.onclick = async () => { if (this._adBusy) return; got = true; this.close();
+      const ok = await this.ad('offline', () => { S.coins += v * 2; save(); this.toast(`+${fmt(v * 2)}`); }); if (!ok) this.offline(v); }; }
   settings() { const m = this.modal(`<h3>⚙ 설정</h3><div class="tg"><button data-k="sfx" class="${S.set.sfx ? 'on' : ''}">효과음</button><button data-k="bgm" class="${S.set.bgm ? 'on' : ''}">배경음</button></div><p class="sm">${GAME.title} · ${BRAND.name} 공식 게임<br>“${BRAND.slogan}”<br>메뉴·매장·사진 ${BRAND.name} 제공</p><a class="btn ghost" href="${BRAND.insta}" target="_blank" rel="noopener">📷 인스타그램 보기</a>
       <div class="dev"><b>🧪 테스트 도구 (출시 전에만)</b>${[1, 2, 3].map(n => { const v = slotInfo(n); return `<div class="slot"><span>슬롯 ${n}<small>${v || '비어 있음'}</small></span><button class="btn sm" data-sv="${n}">저장</button><button class="btn sm ${v ? '' : 'off'}" data-ld="${n}">불러오기</button></div>`; }).join('')}
       <div class="btns"><button class="btn sm" id="dvMoney">돈 +10,000</button><button class="btn sm danger" id="dvReset">처음부터</button></div></div><button class="btn ghost" id="mOk">닫기</button>`);

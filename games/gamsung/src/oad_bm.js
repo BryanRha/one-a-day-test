@@ -5,7 +5,7 @@
 //
 //   const h = await bm.hello();              // { ok, group, login, owned, noAds, gold, prices: { continue: 20, ... }, items: [...], ads: { reward, rewardLeft, inter }, help }
 //   help: 연속 실패 응원 선물 실험 켜짐 여부 (원어데이 밖에서는 게임 기본값 — 공통 규칙 docs/bm-policy.md)
-//   const r = await bm.rewardedAd('revive'); // { ok: true, via: 'ad'|'owner'|'test' } | { ok: false, reason: 'cancel'|'limit'|'off'|'standalone' }
+//   const r = await bm.rewardedAd('revive'); // { ok: true, via: 'ad'|'owner'|'test' } | { ok: false, reason: 'cancel'|'limit'|'off'|'standalone'|'timeout' }
 //   const s = await bm.spend('continue');    // { ok: true, gold } | { ok: false, reason: 'cancel'|'short'|'login'|'limit'|'off'|'standalone' }
 //   await bm.interstitial('round_end');      // 판이 끝날 때 불러 두면 앱이 조건(그룹 · 간격 · 소장)에 맞을 때만 보여 줌
 //   명예의 전당(아케이드 · 소장자 혜택): await bm.submitScore(점수, { assisted })  → { ok, best, rank } | { ok:false, reason:'owned'|'login'|'assisted'|'standalone' }
@@ -23,14 +23,19 @@ if (inFrame) addEventListener('message', e => {
   if (e.source !== window.parent || !e.data || e.data.type !== 'oad:res') return;
   const f = wait.get(e.data.id); if (f) { wait.delete(e.data.id); f(e.data.result); }
 });
-function ask(fn, args, ms) {
+/* 기다리는 시간: hello 처럼 짧은 물음은 그냥 ms · 광고 · 확인 창처럼 사람이 보는 물음(vis)은 '화면이 보이는 동안'만 셈
+   (폰에서 광고 중 홈으로 나갔다 오면 타이머가 한꺼번에 밀려 끝나 버려 보상이 사라지던 것 막음 · 2026-10-29 마루미) */
+function ask(fn, args, ms, vis) {
   if (TEST) return Promise.resolve(fake(fn, args));
   if (!inFrame) return Promise.resolve({ ok: false, reason: 'standalone' });
   const id = 'r' + (++seq) + Date.now().toString(36);
   return new Promise(res => {
-    const t = setTimeout(() => { wait.delete(id); res({ ok: false, reason: 'standalone' }); }, ms);
-    wait.set(id, r => { clearTimeout(t); res(r || { ok: false, reason: 'error' }); });
-    try { window.parent.postMessage({ type: 'oad:req', id, fn, args }, location.origin); } catch { clearTimeout(t); wait.delete(id); res({ ok: false, reason: 'standalone' }); }
+    let t = null, used = 0, t0 = Date.now();
+    const stop = () => { clearTimeout(t); clearInterval(t); };
+    if (vis) t = setInterval(() => { const n = Date.now(); if (document.visibilityState !== 'hidden') used += Math.min(n - t0, 2000); t0 = n; if (used >= ms) { stop(); wait.delete(id); res({ ok: false, reason: 'timeout' }); } }, 1000);
+    else t = setTimeout(() => { wait.delete(id); res({ ok: false, reason: 'standalone' }); }, ms);
+    wait.set(id, r => { stop(); res(r || { ok: false, reason: 'error' }); });
+    try { window.parent.postMessage({ type: 'oad:req', id, fn, args }, location.origin); } catch { stop(); wait.delete(id); res({ ok: false, reason: 'standalone' }); }
   });
 }
 let wallet = 999;
@@ -55,11 +60,11 @@ export const bm = {
   async hello() { if (!cache) { cache = await ask('hello', [], 800); if (!cache.ok) cache = { ok: false, prices: {}, items: [], ads: {} }; } return cache; },
   get info() { return cache || { ok: false, prices: {}, items: [], ads: {} }; },
   price: item => (cache && cache.ok && cache.prices[item]) || 0,
-  async spend(item) { await bm.hello(); if (!bm.price(item)) return { ok: false, reason: 'off' }; const r = await paused(ask('spend', [item, rid()], 180000)); if (r.ok && cache && r.gold != null) cache.gold = r.gold; return r; },
-  async rewardedAd(placement) { await bm.hello(); if (!cache.ok || !cache.ads.reward) return { ok: false, reason: cache.ok ? 'limit' : 'standalone' }; const r = await paused(ask('rewardedAd', [placement], 180000)); if (r.ok && cache.ads) { cache.ads.rewardLeft = Math.max(0, (cache.ads.rewardLeft || 1) - 1); cache.ads.reward = cache.ads.rewardLeft > 0; } return r; },
+  async spend(item) { await bm.hello(); if (!bm.price(item)) return { ok: false, reason: 'off' }; const r = await paused(ask('spend', [item, rid()], 180000, true)); if (r.ok && cache && r.gold != null) cache.gold = r.gold; return r; },
+  async rewardedAd(placement) { await bm.hello(); if (!cache.ok || !cache.ads.reward) return { ok: false, reason: !cache.ok ? 'standalone' : cache.group === 'A' ? 'off' : 'limit' }; const r = await paused(ask('rewardedAd', [placement], 180000, true)); if (r.ok && cache.ads) { cache.ads.rewardLeft = Math.max(0, (cache.ads.rewardLeft || 1) - 1); cache.ads.reward = cache.ads.rewardLeft > 0; } return r; },
   async couponOn() { await bm.hello(); return cache.ok ? cache.coupon !== false : window.OAD_ENV !== 'prod'; },
   helpOn() { return cache && cache.ok ? cache.help !== false : true; },
   async submitScore(score, opt = {}) { await bm.hello(); if (!cache.ok) return { ok: false, reason: 'standalone' }; return ask('score', [Math.floor(Number(score) || 0), { assisted: !!opt.assisted }], 8000); },
   async board() { await bm.hello(); if (!cache.ok) return { ok: false, reason: 'standalone' }; return ask('board', [], 8000); },
-  async interstitial(placement) { await bm.hello(); if (!cache.ok || !cache.ads.inter) return { ok: true, shown: false }; return paused(ask('interstitial', [placement], 180000)); },
+  async interstitial(placement) { await bm.hello(); if (!cache.ok || !cache.ads.inter) return { ok: true, shown: false }; return paused(ask('interstitial', [placement], 180000, true)); },
 };

@@ -1,9 +1,9 @@
 // BM 화면 조각: 힌트 광고 창 · 하트 이어하기 창 · 다음 화 바로 보기 창 · 응원 선물 창
 //   감정 원칙: 칭찬 먼저 → 희망 한 줄 → 카운트다운 8초+ → 끝나면 조용히 결과로 · 광고 버튼 옆엔 같은 크기로 가격
-import { W, H } from './config.js?v=0.87.2';
-import { T, C, btn, popup, toast } from './ui.js?v=0.87.2';
-import { audio } from './audio.js?v=0.87.2';
-import { bm, oadOn, owner, price, adLeft, adLabel, watchAd, failText, waitLeft, fmtWait, buyNext, track, HINT_COST } from './bm.js?v=0.87.2';
+import { W, H } from './config.js?v=0.88.0';
+import { T, C, btn, popup, toast } from './ui.js?v=0.88.0';
+import { audio } from './audio.js?v=0.88.0';
+import { bm, oadOn, owner, price, adLeft, adLabel, watchAd, failText, waitLeft, fmtWait, buyNext, nextPrice, track, HINT_COST } from './bm.js?v=0.88.0';
 
 // 코인이 모자랄 때 힌트: [광고 보고 힌트] [● 10 코인] (원어데이 밖 · 광고 다 씀이면 예전처럼 안내만)
 export function hintOffer(sc, coins, onGet, onClose) {
@@ -71,13 +71,16 @@ export function nextOffer(sc, ep, epNoText, onOpen) {
   const tt = T(sc, 0, -10, `${fmtWait(ms)} 뒤 무료로 열려요`, 34, C.brown, { w: 900 }); p.content.add(tt);
   p.content.add(T(sc, 0, 40, '기다리면 언제나 무료 · 기다리기 싫다면 바로 볼 수도 있어요', 22, C.dim, { w: 800, wrap: 760 }));
   let busy = false;
-  p.content.add(btn(sc, -200, 180, 360, 120, '기다릴게요', () => p.close(), { style: 'cream', size: 30 }));
-  p.content.add(btn(sc, 200, 180, 360, 120, `🪙${price('next')} 바로 보기`, async () => {
+  /* 바로 보기 = 남은 시간 비례 (🪙50 × 남은 비율) · 값은 1초마다 따라 내려감 · 10초 미만이면 버튼 없이 '곧 열려요' */
+  const g0 = nextPrice(ms), two = !!g0;
+  p.content.add(btn(sc, two ? -200 : 0, 180, 360, 120, '기다릴게요', () => p.close(), { style: 'cream', size: 30 }));
+  const nb = two ? btn(sc, 200, 180, 360, 120, `🪙${g0} 바로 보기`, async () => {
     if (busy) return; busy = true; const r = await buyNext(ep); busy = false;
-    if (!r.ok) { const m = failText(r); if (m) toast(sc, m); return; }
+    if (!r.ok) { if (r.reason === 'open') { p.close(); return onOpen(); } const m = failText(r); if (m) toast(sc, m); return; }
     audio.play('sfx_clear', { volume: 0.5 }); p.close(); onOpen();
-  }, { style: 'gold', size: 30 }));
-  const tick = sc.time.addEvent({ delay: 1000, loop: true, callback: () => { if (!tt.scene) return tick.remove(); const m = waitLeft(ep); if (m <= 0) { tick.remove(); p.close(); toast(sc, '다음 화가 열렸어요!'); onOpen(); } else tt.setText(`${fmtWait(m)} 뒤 무료로 열려요`); } });
+  }, { style: 'gold', size: 30 }) : null;
+  if (nb) p.content.add(nb);
+  const tick = sc.time.addEvent({ delay: 1000, loop: true, callback: () => { if (!tt.scene) return tick.remove(); const m = waitLeft(ep); if (m <= 0) { tick.remove(); p.close(); toast(sc, '다음 화가 열렸어요!'); onOpen(); } else { tt.setText(`${fmtWait(m)} 뒤 무료로 열려요`); if (nb && nb.scene && !busy) { const g = nextPrice(m); if (g) nb.setLabel(`🪙${g} 바로 보기`); else nb.setVisible(false); } } } });
   return p;
 }
 
