@@ -1,10 +1,11 @@
 // 시작: 렌더러 · 쿼터뷰 카메라(끌어서 둘러보기 · 두 손가락/휠 확대) · 누르기 · 저장 · 루프
 import * as THREE from 'three';
-import { Game, STACK } from './game.js?v=0.82.3';
-import { UI } from './ui.js?v=0.82.3';
-import { S, loadSave, save, addSkew } from './state.js?v=0.82.3';
-import { music, setAudio, preloadSfx } from './audio.js?v=0.82.3';
-import { installBack, runBack, inOAD } from './oad.js?v=0.82.3';
+import { Game, STACK } from './game.js?v=0.82.4';
+import { UI } from './ui.js?v=0.82.4';
+import { S, loadSave, save, addSkew } from './state.js?v=0.82.4';
+import { music, setAudio, preloadSfx } from './audio.js?v=0.82.4';
+import { installBack, runBack, inOAD } from './oad.js?v=0.82.4';
+import { bm } from './oad_bm.js?v=0.82.4';
 
 const app = {}; window.__app = app; window.__S = () => S;
 const canvas = document.getElementById('view');
@@ -25,7 +26,7 @@ const fit = () => { const w = innerWidth, h = innerHeight, k = Math.max(1, Math.
   cam.left = fx - S * w / h; cam.right = fx + S * w / h; cam.top = fy + S; cam.bottom = fy - S; cam.updateProjectionMatrix(); };
 const place = () => { cam.position.set(view.x + 1500, 1650, view.z + 1500); cam.lookAt(view.x, 0, view.z); };
 addEventListener('resize', fit);
-loadSave(); setAudio(S.set); preloadSfx();
+loadSave(); setAudio(S.set); preloadSfx(); const away0 = Math.max(0, (Date.now() - S.last) / 1000);   /* 비운 시간은 불러온 바로 그때 (곧 저장이 S.last 를 바꿈) */
 app.game = new Game(sc, cam, null); app.ui = new UI(app); app.game.ui = app.ui; app.game.view = view; app.cam = cam;
 app.game.build(); fit(); place();
 
@@ -56,17 +57,19 @@ app.focus = (x, z) => { view.x = x; view.z = z; place(); };
 installBack({ back: () => { if (document.querySelector('#modal').firstChild) { app.ui.close(); return true; } if (app.game.deco) { app.ui.decoExit(); return true; } return false; } });
 if (!(inOAD && 'CloseWatcher' in window)) addEventListener('keydown', e => { if (e.key === 'Escape') { try { runBack(); } catch { /* */ } } });   /* PC: Esc = 뒤로 (원어데이 안에서 CloseWatcher 가 Esc 를 받으면 그쪽이 처리) */
 music('cafe');
+bm.onPause = on => { app.paused = !!on; };
 // 자리를 비운 사이: 머신·로스터는 실제 시각으로 계속 → 다 된 것 알림
-setTimeout(() => app.ui.welcome((Date.now() - S.last) / 1000), 900);
+setTimeout(() => { if (!window.__bot) app.ui.welcome(away0); }, 900);   /* 동료 2명이면 쉬는 동안 번 돈 (ui.awayCard) */
 
 /* 한 프레임의 오류가 화면 전체를 멈추지 않게 */
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 실행 */ } };
 addEventListener('error', e => report(e.error || e.message)); addEventListener('unhandledrejection', e => report(e.reason));
-const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.82.3').then(m => m.startBot(app));
+const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.82.4').then(m => m.startBot(app));
 if (q.get('fresh')) { localStorage.removeItem('gamsung_v1'); q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
 let last = performance.now();
 const loop = now => { requestAnimationFrame(loop); const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  if (app.paused) { last = now; try { r.render(sc, cam); } catch (e) { report(e); } return; }   /* 광고 · 확인 창 동안 멈춤 (oad_bm onPause) */
   try { for (let i = 0; i < SPEED; i++) app.game.update(dt); if (SPEED > 1) addSkew((SPEED - 1) * dt * 1000); } catch (e) { report(e); }
   try { r.render(sc, cam); } catch (e) { report(e); } };
 canvas.addEventListener('webglcontextlost', e => e.preventDefault()); canvas.addEventListener('webglcontextrestored', () => app.game.build());

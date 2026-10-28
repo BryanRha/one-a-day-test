@@ -208,3 +208,9 @@ body.wide .hint { left: auto; right: 12px; transform: none; bottom: calc(var(--s
 body.wide .poemp, body.wide .poemcard { bottom: auto; top: calc(var(--st) + 150px); }
 body.wide .letterc, body.wide .artcard { bottom: auto; top: calc(var(--st) + 200px); }
 body.wide .decobar { left: 50%; right: auto; width: 600px; transform: translateX(-50%); }
+/* 동료 (2026-10-28 · 261028-gamsung-staff): 정성 머신 = 금빛 테 · 동료가 맡은 설비 = 작은 점 하나 (글 없이) */
+.chip.mach.jeong { box-shadow: 0 0 0 2px #E8C46A; } .chip.mach.jeong.empty { background: #FFF6DE; }
+.chip.mach.auto { position: absolute; } .chip.mach.auto::after { content: ''; position: absolute; right: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #87A86E; box-shadow: 0 0 0 2px #FFFDF8; }
+.upr.staff > div > span.now { color: var(--ink, #3B2A20); font-weight: 700; margin-top: 3px; }
+.pips { display: flex; gap: 3px; margin-top: 4px; } .pips s { display: block; width: 14px; height: 5px; border-radius: 3px; background: #E2D6C6; } .pips s.on { background: var(--red); }
+.away { padding: 6px 4px 2px; } .away > i { display: block; font-style: normal; font-size: 40px; } .away small { display: block; font-size: 11px; color: var(--red); font-weight: 800; letter-spacing: 1px; } .away b { display: block; font-family: var(--serif); font-size: 19px; margin: 4px 0 6px; } .away p { font-size: 13px; color: var(--sub); } .away em { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-size: 22px; font-weight: 900; margin-top: 8px; }

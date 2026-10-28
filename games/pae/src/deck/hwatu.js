@@ -1,6 +1,5 @@
 // 덱 정의: 열두 달 꽃패 48장 (원어데이 새 그림 · 그림 속 글자 없음)
 //   엔진(규칙 · 진행 · 장터 · 도감)은 이 파일의 '데이터'만 읽는다 — 덱을 바꾸려면 같은 모양의 파일을 하나 더 만들고 decks.js 에 등록
-//   달 tab: 패 왼쪽 위 꼬리표 색 (시안 v2 — 달마다 다른 색으로 같은 달을 빨리 찾게)
 //   카드 속성(엔진이 아는 말): month(1~12) · kind(gwang | yeol | tti | pi) · ribbon(띠 색 id) · tags(['bird', 'rain' ...]) · pi(피 값: 쌍피 2) · art(그림 키) · flip(같은 그림을 뒤집어 다르게)
 //   족보(yaku)도 이 파일의 데이터: rule 은 엔진의 일반 규칙(kind · ribbon · tag · month 묶음 · season · run · high)만 씀
 
@@ -30,18 +29,18 @@ export const DECK = {
     { id: 'winter', name: '겨울', months: [10, 11, 12], color: '#9DB8D9', bg: 'bg_winter' },
   ],
   months: [
-    { n: 1, name: '송학', flower: '소나무', color: '#2F6B4F', tab: '#2E7D4F' },
-    { n: 2, name: '매조', flower: '매화', color: '#C8282E', tab: '#C8282E' },
-    { n: 3, name: '벚꽃', flower: '벚꽃', color: '#E79AB3', tab: '#E0708E' },
-    { n: 4, name: '등꽃', flower: '등나무', color: '#7B5EA7', tab: '#7B5EA7' },
-    { n: 5, name: '붓꽃', flower: '붓꽃', color: '#2E3E8C', tab: '#2E4FA8' },
-    { n: 6, name: '모란', flower: '모란', color: '#B3203A', tab: '#9E1238' },
-    { n: 7, name: '싸리', flower: '싸리', color: '#B4366E', tab: '#C2408A' },
-    { n: 8, name: '달밤', flower: '억새', color: '#C9A64A', tab: '#B8892A' },
-    { n: 9, name: '국화', flower: '국화', color: '#D6A21E', tab: '#D99A00' },
-    { n: 10, name: '단풍', flower: '단풍', color: '#D2502A', tab: '#D2501E' },
-    { n: 11, name: '오동', flower: '오동', color: '#5C4A7A', tab: '#6E5A3A' },
-    { n: 12, name: '버들비', flower: '버들', color: '#4F6F6A', tab: '#3E6F8A' },
+    { n: 1, name: '송학', flower: '소나무', color: '#2F6B4F' },
+    { n: 2, name: '매조', flower: '매화', color: '#C8282E' },
+    { n: 3, name: '벚꽃', flower: '벚꽃', color: '#E79AB3' },
+    { n: 4, name: '등꽃', flower: '등나무', color: '#7B5EA7' },
+    { n: 5, name: '붓꽃', flower: '붓꽃', color: '#2E3E8C' },
+    { n: 6, name: '모란', flower: '모란', color: '#B3203A' },
+    { n: 7, name: '싸리', flower: '싸리', color: '#B4366E' },
+    { n: 8, name: '달밤', flower: '억새', color: '#C9A64A' },
+    { n: 9, name: '국화', flower: '국화', color: '#D6A21E' },
+    { n: 10, name: '단풍', flower: '단풍', color: '#D2502A' },
+    { n: 11, name: '오동', flower: '오동', color: '#5C4A7A' },
+    { n: 12, name: '버들비', flower: '버들', color: '#4F6F6A' },
   ],
   // 48장: [달, 종류, 그림, 추가 속성]
   cards: [],

@@ -1,5 +1,5 @@
 // 저장 (localStorage 'gamsung_v1'): 돈 · 마음 · 경험치 · 원두 · 매장별 가구/머신/진열 · 동료 · 단골 · 오늘(판매·주문서·출석·쿠폰)
-import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.82.3';
+import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.82.4';
 const KEY = 'gamsung_v1';
 /* 시계: 시험용 배속(?speed)일 때 머신·로스터 시간도 같이 빨라지게 */
 let skew = 0; export const now = () => Date.now() + skew; export const addSkew = ms => { skew += ms; };
@@ -19,6 +19,7 @@ export function loadSave() {
   for (const k of ['stores', 'inv', 'staff', 'reg', 'menuSold', 'soldBy', 'att', 'art', 'poem', 'cheer']) if (!S[k] || typeof S[k] !== 'object') S[k] = fresh()[k];
   if (!Array.isArray(S.poems)) S.poems = []; for (const k of ['fg', 'jeong', 'best', 'owe']) if (!Number.isFinite(S[k])) S[k] = 0; if (!Number.isFinite(S.poem.i)) S.poem.i = 0; if (!Number.isFinite(S.poem.n)) S.poem.n = 0; if (!Number.isFinite(S.poem.p)) S.poem.p = 0;
   for (const st of Object.values(S.stores)) { const n = newStore(); for (const k of Object.keys(n)) if (st[k] == null || typeof st[k] !== typeof n[k]) st[k] = n[k]; st.furn = st.furn.filter(f => f && FURN[f.id] && Number.isFinite(f.x + f.z)); }
+  for (const [k, v] of Object.entries(S.staff)) { const l = Math.round(Number(v)); if (!v) delete S.staff[k]; else S.staff[k] = Number.isFinite(l) ? Math.max(1, Math.min(5, l)) : 1; }   /* 2026-10-28: staff 값 = 단계(1~5) · 예전 저장의 1 = 1단계 */
   if (!S.stores[S.si]) S.si = 0; for (const k of ['coins', 'hearts', 'xp', 'beans']) if (!Number.isFinite(S[k])) S[k] = 0;
   S.lv = levelOf(S.xp); dayTick(); return S;
 }

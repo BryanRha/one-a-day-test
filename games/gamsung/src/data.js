@@ -66,10 +66,24 @@ export const FURN_CATS = [['table', '자리'], ['green', '초록'], ['stone', '�
 // 레벨: 필요한 경험치 · 레벨이 오르면 메뉴 · 원두 · 가구 · 머신 · 동료가 열림
 export const XP = [0, 30, 110, 240, 440, 850, 1500, 2500, 3980, 6130, 9080, 13230, 18820, 26350, 35900, 48720, 65340, 87140, 114060, 148510];   /* 밸런스 2026-10-27: 원래 표 × 1.6~3.2 */
 export const MACHINES = { espresso: [1, 1, 5], oven: [4, 12] };   /* 몇 레벨에 몇 번째 머신이 생기는지 · 2026-10-27 처음부터 2대 */
+/* 동료 (2026-10-28 대표 승인 · team/dev/tasks/261028-gamsung-staff): 잡일은 동료가, 정성은 사장이
+     · 한 번 고용하면 끝(급여 없음) · 모든 매장 공통 · 고용 = 1단계 → STAFF_UP 로 5단계까지 · 저장은 S.staff[k] = 단계
+     · lvx(단계) = 그 단계의 효과 (game.js 가 읽음) · up(단계) = 가게 창에 쓰는 한 줄 */
 export const STAFF = {
-  barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 700, body: 0xE9E2D6, hair: 0x2A1E16, desc: '커피 메뉴는 하린이 알아서 내리고 픽업대로 옮겨요 · 시그니처는 사장님 손으로' },
-  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '테이블을 닦고 찻값을 모아 와요' },
+  barista: { name: '바리스타 동료 · 하린', lv: 3, cost: 700, body: 0xE9E2D6, hair: 0x2A1E16, desc: '자동 머신에서 커피 · 디저트를 내리고 쟁반을 픽업대로 · 정성 머신과 시그니처는 사장님 손으로',
+    lvx: l => ({ hand: 4 - (l - 1) * 0.5, tick: 1.2 - (l - 1) * 0.1, wash: Math.max(2, 5 - l) }), up: l => { const x = STAFF.barista.lvx(l); return `한 잔 ${x.hand}초 · 반납 ${x.wash}개면 설거지`; } },
+  roaster: { name: '로스터 견습생 · 무진', lv: 5, cost: 1200, body: 0xC9B79C, hair: 0x1E1A16, desc: '원두가 줄면 하우스 · 싱글 오리진을 알아서 볶고 담아요 · 스페셜티 · 밤샘 로스팅은 사장님이 골라요',
+    lvx: l => ({ low: 30 + (l - 1) * 15, bonus: (l - 1) * 0.05 }), up: l => { const x = STAFF.roaster.lvx(l); return `원두 ${x.low}잔분 아래면 볶기${x.bonus ? ` · 원두 +${Math.round(x.bonus * 100)}%` : ''}`; } },
+  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '테이블을 닦고 찻값을 모아 와요',
+    lvx: l => ({ sp: 280 * (1 + (l - 1) * 0.15), bonus: (l - 1) * 0.05 }), up: l => { const x = STAFF.hall.lvx(l); return x.bonus ? `걸음 +${Math.round((x.sp / 280 - 1) * 100)}% · 찻값 +${Math.round(x.bonus * 100)}%` : '테이블 닦고 찻값 모으기'; } },
 };
+/* 무진의 손 로스팅(수망): 사장님이 고른 긴 로스팅(스페셜티 · 밤샘)이 로스터를 쓰는 동안 원두가 low 아래로 떨어지면
+     작은 망으로 t초에 beans잔분씩 볶아 줌 · 값은 하우스 블렌드 한 봉지(다 볶은 뒤에 냄 → 중간에 나가도 잃는 것 없음) · 원두 0 구간을 없애는 장치 (10-28 봇: 스페셜티 기다리며 8분 원두 0) */
+export const HAND_ROAST = { t: 15, beans: 12, low: 6 };
+export const STAFF_UP = { max: 5, cost: [0, 600, 1000, 1700, 2900] };   /* cost[l] = l단계 → l+1단계 · 매장 배수 없음(동료는 모든 매장 공통) */
+/* 쉬는 동안 번 돈: 동료가 need 명 이상이면 · min 초 넘게 비웠을 때 · 최대 cap 초 · 1분에 perMin × 매장 배수 × (1 + 1단계를 넘는 단계 합 × step)
+     · 손으로 하는 장사가 늘 훨씬 낫게 (실제 장사의 몇 분의 1) · 경험치는 없음 · 광고 보면 2배 (원어데이 안에서만 · oad_bm.js) */
+export const OFFLINE = { need: 2, min: 120, cap: 7200, perMin: 20, step: 0.1 };
 
 // 매장: 실제 감성커피 매장 (부산에서 시작) · mult = 값 배수
 export const STORES = [
