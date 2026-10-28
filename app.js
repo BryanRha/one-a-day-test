@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.78.1';
-import * as R from './rules.js?v=0.78.1';
-import * as I from './install.js?v=0.78.1';
-import * as T from './track.js?v=0.78.1';
-import * as P from './pay.js?v=0.78.1';
-import * as A from './account.js?v=0.78.1';
-import * as C from './cloud.js?v=0.78.1';
-import * as BM from './bm.js?v=0.78.1';
+import { PLANNED } from './catalog.js?v=0.79.0';
+import * as R from './rules.js?v=0.79.0';
+import * as I from './install.js?v=0.79.0';
+import * as T from './track.js?v=0.79.0';
+import * as P from './pay.js?v=0.79.0';
+import * as A from './account.js?v=0.79.0';
+import * as C from './cloud.js?v=0.79.0';
+import * as BM from './bm.js?v=0.79.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.78.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.79.0').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.78.1';
+const VERSION = '0.79.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -21,6 +21,9 @@ const fmtDate = d => `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEK[d.getDay()
 const fmtKey = k => { const [, m, d] = k.split('-').map(Number); return `${m}월 ${d}일`; };
 const hms = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [s / 3600, (s % 3600) / 60, s % 60].map(v => String(Math.floor(v)).padStart(2, '0')).join(':'); };
 const G = id => R.GAMES[id];
+/* PC 판별: 마우스(정밀 포인터)이고 폰 · 앱 속 브라우저가 아님 (화면 배치 · 설치 문구 · 게임 창 높이에 씀) */
+const isPC = () => !I.env.inApp && !I.env.ios && !I.env.android && (matchMedia('(pointer:fine)').matches || innerWidth >= 1200);
+const KB = 'tabindex="0" role="button"';   /* div 로 만든 눌리는 것: Tab 으로 가고 Enter · Space 로 누름 */
 const STATE_BADGE = { today: ['today', '오늘의 게임'], free: ['open', '자유 플레이'], owned: ['open', '소장'], unlocked: ['open', '오늘 열림'], locked: ['lock', '🔒 잠김'] };
 
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
@@ -29,7 +32,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 const RENDER = { today: renderToday, library: renderLibrary, collection: renderCollection, settings: renderSettings };
 function go(t) {
   if (tab !== t) T.track('tab', { tab: t });
-  tab = t;
+  tab = t; document.body.dataset.tab = t;   /* PC 넓은 화면은 '오늘'만 두 칸으로 넓힘 (app.css) */
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   clearInterval(timer);
   view.innerHTML = RENDER[t]();
@@ -53,12 +56,13 @@ function renderToday() {
   const playedToday = lib && lib.last === R.keyOf(R.now());
   const day = R.dayIndex() + 1;
   const yId = R.gameOn(R.dayIndex() - 1), hasY = R.dayIndex() > 0;
-  return `<div>
+  /* 칸 묶음: .tfort(운세) · .tgame(오늘의 게임) · .tmore(나머지) — 폰은 이 순서대로 한 줄, PC 넓은 화면은 왼쪽 게임 · 오른쪽 운세 두 칸 (app.css) */
+  return `<div class="today">
     ${header()}
     <div class="date">${fmtDate(R.now())} · ${day}일째</div>
     ${installBanner()}
-    <div id="fortuneCard">${fortuneCardStatic()}</div>${R.fillable() ? `<div class="stampfill" data-stampfill>👣 어제 도장을 놓쳤어요 · 광고 1번 보고 🔥 연속 이어 가기</div>` : ''}
-    <div class="hero">
+    <div class="tfort"><div id="fortuneCard">${fortuneCardStatic()}</div>${R.fillable() ? `<div class="stampfill" data-stampfill ${KB}>👣 어제 도장을 놓쳤어요 · 광고 1번 보고 🔥 연속 이어 가기</div>` : ''}</div>
+    <div class="tgame"><div class="hero">
       <div class="ribbon">오늘의 게임</div>
       <div class="cover" role="img" aria-label="${g.title}" style="background-image:url('${g.cover}')"></div>
       <div class="body">
@@ -72,10 +76,10 @@ function renderToday() {
     <div class="row">
       <div class="box"><div class="k">다음 게임 공개까지</div><div class="v" id="cd">--:--:--</div></div>
       <div class="box mystery"><div class="qmark"><span>?</span></div><div><div class="k">내일의 게임</div><div class="jua" style="font-size:17px">두근두근…</div></div></div>
-    </div>
-    ${R.RULES.openAll ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : (hasY ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : '')}
-    <div class="section"><h3>이용 방법</h3><span class="more" data-intro>자세히 ›</span></div>
-    <div class="box" style="color:#DDD5FA">매일 자정, 모든 플레이어에게 <b class="jua" style="color:var(--gold)">같은 게임 하나</b>가 열려요. 플레이한 게임은 라이브러리에 모이고, 다른 날 다시 하려면 광고로 열 수 있어요.</div>
+    </div></div>
+    <div class="tmore">${R.RULES.openAll ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : (hasY ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : '')}
+    <div class="section"><h3>이용 방법</h3><span class="more" data-intro ${KB}>자세히 ›</span></div>
+    <div class="box" style="color:#DDD5FA">매일 자정, 모든 플레이어에게 <b class="jua" style="color:var(--gold)">같은 게임 하나</b>가 열려요. 플레이한 게임은 라이브러리에 모이고, 다른 날 다시 하려면 광고로 열 수 있어요.</div></div>
   </div>`;
 }
 // ── 오늘의 운세 ─────────────────────────────────────
@@ -121,7 +125,7 @@ async function goldHistory() {
   let r; try { r = await A.call({ act: 'history' }); } catch (e) { return toast(e.message); }
   const W = { buy: '충전', grant: '선물', own: '게임 소장', day: '하루 열기', set: '전체 소장', fortune: '운세', refund: '환불' };
   openSheet(`<div class="intro"><h2>골드 내역</h2><div class="ghist">${(r.ledger || []).map(l => `<div><span>${W[l.reason] || l.reason}<small>${new Date(l.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${l.kind === 'free' ? ' · 무료 골드' : ''}</small></span><b class="${l.amount > 0 ? 'p' : 'm'}">${l.amount > 0 ? '+' : ''}${gnum(l.amount)}</b></div>`).join('') || '<p class="fsub">아직 내역이 없어요</p>'}</div>
-    <div class="stack"><button class="btn ghost" data-shop>상점으로</button></div></div>`);
+    <div class="stack"><button class="btn ghost" data-shop>상점으로</button><button class="btn ghost" data-close>닫기</button></div></div>`);
 }
 // 소장 완료: 지금까지의 기록을 바로 계정으로 → 무엇을 옮겼는지 보여 줌
 function progressLine(id) {
@@ -198,7 +202,7 @@ function face(m, ch, cls = '') { const c = m.CHARS[ch]; return c.art ? `<img src
 const FACE0 = '<img src="fortune/char/heukryeon.webp" alt="">';
 function fortuneCardStatic() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ }
-  if (!me) return `<div class="sdcard" data-fortune-edit>${FACE0}<div class="sdin"><div class="sdtag">오늘의 신점 · 매일 무료</div><h2>오늘 너를 읽어 줄<br><em>점쟁이</em>가 기다린다</h2><p>생년월일과 태어난 시를 넣으면, 그날의 기운에 따라 다른 점쟁이가 나와 오늘을 읽어 준다.</p><span class="sdgo">내 사주 넣고 오늘 운세 보기 →</span></div><span class="seal">獨說</span></div>`;
+  if (!me) return `<div class="sdcard" data-fortune-edit ${KB}>${FACE0}<div class="sdin"><div class="sdtag">오늘의 신점 · 매일 무료</div><h2>오늘 너를 읽어 줄<br><em>점쟁이</em>가 기다린다</h2><p>생년월일과 태어난 시를 넣으면, 그날의 기운에 따라 다른 점쟁이가 나와 오늘을 읽어 준다.</p><span class="sdgo">내 사주 넣고 오늘 운세 보기 →</span></div><span class="seal">獨說</span></div>`;
   ft().then(m => { const el = $('#fortuneCard'); if (!el) return; const f = m.fortune(me, R.now()); m.markDay(R.keyOf(R.now()), { v: 1 }); el.innerHTML = fortuneCard(me, f, m); });
   return `<div class="sdcard"><div class="sdin"><div class="sdtag">오늘의 신점</div><h2>${me.name}, 잠깐 앉아 봐</h2><p>읽는 중…</p></div></div>`;
 }
@@ -207,12 +211,12 @@ const boughtFn = (m, me) => id => { const pt = m.pairOf(id, me); return !!(P.ON 
 function fortuneCard(me, f, m) {
   const c = m.CHARS[f.ch], key = R.keyOf(R.now()), h = m.hookOf(f, key, boughtFn(m, me)), day = m.days()[key] || {};
   const eve = R.now().getHours() >= 18;
-  const gift = freebieOk() ? `<div class="sdgift" data-freebie>🔥 ${R.state().streak.count}일 연속 출석 선물 · 입문 운세(3,900원) 1회 무료로 열기 →</div>` : '';
+  const gift = freebieOk() ? `<div class="sdgift" data-freebie ${KB}>🔥 ${R.state().streak.count}일 연속 출석 선물 · 입문 운세(3,900원) 1회 무료로 열기 →</div>` : '';
   const recap = !eve ? '' : day.r ? `<div class="recap done">오늘의 회고 ${({ y: '⭕ 맞았다', h: '🔺 반반', n: '✖ 아니던데' })[day.r]} · <button class="lnk" data-fcal>운세 달력 보기</button></div>`
     : `<div class="recap"><b>오늘, 맞았나요?</b><span><button data-recap="y">맞았다</button><button data-recap="h">반반</button><button data-recap="n">아니던데</button></span></div>`;
-  return `<div class="sdcard" data-fortune>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
+  return `<div class="sdcard" data-fortune ${KB}>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
     <div class="sdscore"><b>${f.total}</b><small>점</small></div><h2>“${f.say}”</h2><p class="sdwarn">⚠ ${f.warn}</p><p class="sdwhy">${f.why}</p>
-    ${h ? `<div class="sdhook" data-paid="${h.id}"><small>오늘 이 부분이 신경 쓰여요</small>${h.text} <em>→ ${m.paidOf(h.id).title} 미리보기 · 전체 ${won(m.paidOf(h.id).price)}</em></div>` : ''}${recap}${gift}
+    ${h ? `<div class="sdhook" data-paid="${h.id}" ${KB}><small>오늘 이 부분이 신경 쓰여요</small>${h.text} <em>→ ${m.paidOf(h.id).title} 미리보기 · 전체 ${won(m.paidOf(h.id).price)}</em></div>` : ''}${recap}${gift}
     <span class="sdgo">${me.name}의 오늘 전부 보기 →</span></div><span class="seal">${c.seal}</span></div>`;
 }
 /* 저녁 회고: 1탭 (메모 없음 · 기기에만) */
@@ -235,7 +239,7 @@ async function fortuneCalendar(ym) {
     const f = m.fortune(me, dt), L = log[k] || {}, col = f.total >= 80 ? 'hi' : f.total >= 65 ? 'md' : 'lo';
     const st = (L.v ? '👣' : '') + (L.f ? '🔮' : '') + (hist[k] ? '🎮' : '') + (L.r ? ({ y: '⭕', h: '🔺', n: '✖' })[L.r] : '');
     if (L.v) stamps++; if (L.r === 'y') yes++;
-    cells.push(`<i class="c-${col}${k === todayK ? ' now' : ''}" data-fday="${k}"><small>${d}</small><b>${f.total}</b><em>${f.key}</em><s>${st}</s></i>`);
+    cells.push(`<i class="c-${col}${k === todayK ? ' now' : ''}" data-fday="${k}" ${KB}><small>${d}</small><b>${f.total}</b><em>${f.key}</em><s>${st}</s></i>`);
   }
   const pm = new Date(y, mo - 2, 1), nm = new Date(y, mo, 1), ymOf = x => `${x.getFullYear()}-${x.getMonth() + 1}`, canNext = nm <= t;
   sdClose(); openSheet(`<div class="intro fcalw"><h2>📅 ${y}년 ${mo}월 운세 달력</h2><p class="fsub">이번 달 도장 ${stamps}개 · 내가 '맞았다' 누른 날 ${yes}일 · 지난 날을 누르면 그날 운세를 다시 볼 수 있어요</p>
@@ -258,8 +262,8 @@ async function fortuneDetail(dayKey) {
   const lg = m.luckyGame(f, R.openGames()), lucky = lg && G(lg);
   const bar = (k, v) => `<div class="sbar"><span>${k}</span><div><s style="width:${v}%"></s></div><b>${v}</b></div>`;
   const PK = m.PACK, single = [PK.base, ...PK.picks].map(id => m.paidOf(id).price), maxSum = single[0] + single.slice(1).sort((a, b) => b - a).slice(0, 2).reduce((a, b) => a + b, 0), minSum = single[0] + single.slice(1).sort((a, b) => a - b).slice(0, 2).reduce((a, b) => a + b, 0);
-  const packCard = `<div class="sdp pk" data-fpack>${face(m, 'wolryeong', 'sm')}<div class="sdpi"><small>월령선생 · 묶음</small><b>${PK.title} · ${won(PK.price)}</b><p>“신년운세 + 원하는 풀이 2개”</p><ul><li>재물·횡재 · 우리 궁합 · 이번 달 · 합격운 중 2개</li><li>낱개로 사면 ${won(minSum)}~${won(maxSum)}</li></ul><em>구성 고르기 → ${won(PK.price)} (충전 골드 ${gnum(PK.price / 10)})</em></div><span class="seal sm">月令</span></div>`;
-  const paid = packCard + m.PAID.map(p => `<div class="sdp" data-paid="${p.id}">${face(m, p.ch, 'sm')}<div class="sdpi"><small>${m.CHARS[p.ch].name}${p.entry ? ' · 입문' : ''}</small><b>${p.title} · ${won(p.price)}</b><p>“${p.hook}”</p><ul>${p.tease.map(t => `<li>${t}</li>`).join('')}</ul><em>무료 미리보기 → 전체 ${won(p.price)}${p.entry ? ' · 보너스 골드 OK' : ''}</em></div><span class="seal sm">${m.CHARS[p.ch].seal}</span></div>`).join('');
+  const packCard = `<div class="sdp pk" data-fpack ${KB}>${face(m, 'wolryeong', 'sm')}<div class="sdpi"><small>월령선생 · 묶음</small><b>${PK.title} · ${won(PK.price)}</b><p>“신년운세 + 원하는 풀이 2개”</p><ul><li>재물·횡재 · 우리 궁합 · 이번 달 · 합격운 중 2개</li><li>낱개로 사면 ${won(minSum)}~${won(maxSum)}</li></ul><em>구성 고르기 → ${won(PK.price)} (충전 골드 ${gnum(PK.price / 10)})</em></div><span class="seal sm">月令</span></div>`;
+  const paid = packCard + m.PAID.map(p => `<div class="sdp" data-paid="${p.id}" ${KB}>${face(m, p.ch, 'sm')}<div class="sdpi"><small>${m.CHARS[p.ch].name}${p.entry ? ' · 입문' : ''}</small><b>${p.title} · ${won(p.price)}</b><p>“${p.hook}”</p><ul>${p.tease.map(t => `<li>${t}</li>`).join('')}</ul><em>무료 미리보기 → 전체 ${won(p.price)}${p.entry ? ' · 보너스 골드 OK' : ''}</em></div><span class="seal sm">${m.CHARS[p.ch].seal}</span></div>`).join('');
   const el = document.createElement('div'); el.id = 'sd'; el.innerHTML = `<div class="sdpage">
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
     <div class="sdhero">${face(m, f.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${c.name} · ${fmtDate(date)} · ${f.today.ko}일</div><h1>${me.name},<br>${past ? '그날은' : '오늘은'} <em>${f.key}</em>의 날${past ? '이었다' : '이다'}</h1><div class="sdscore big"><b>${f.total}</b><small>/100</small></div></div><span class="seal lg">${c.seal}</span></div>
@@ -268,7 +272,7 @@ async function fortuneDetail(dayKey) {
     <section class="sdlove"><h3>${f.tone >= 7 ? '💔 연애 독설' : '💗 연애 한마디'}</h3><p class="big">${f.dokLove}</p><p>${f.love}</p></section>
     <section><h3>돈 · 일</h3><p><b>돈</b> ${f.money}</p><p><b>일</b> ${f.work}</p>${f.notes.length ? `<p class="sdnote">${f.notes.join(' ')}</p>` : ''}</section>
     <section><h3>행운</h3><div class="sluck"><div><small>색</small><b><i style="background:${f.color.hex}"></i>${f.color.name}</b></div><div><small>숫자 · 재미로</small><b>${f.numbers.join(' · ')}</b></div><div><small>방향</small><b>${f.dir}</b></div></div>
-      ${!past && lucky ? `<div class="sdgame" data-play="${lg}"><img src="${lucky.icon}" alt=""><div><small>오늘 어울리는 게임 · 지금 바로 할 수 있어요</small><b>${lucky.title}</b></div><span>플레이 →</span></div>` : ''}
+      ${!past && lucky ? `<div class="sdgame" data-play="${lg}" ${KB}><img src="${lucky.icon}" alt=""><div><small>오늘 어울리는 게임 · 지금 바로 할 수 있어요</small><b>${lucky.title}</b></div><span>플레이 →</span></div>` : ''}
       <button class="sdbtn ghost" data-fcal style="margin-top:10px">📅 운세 달력 · 지난 날 다시 보기</button></section>
     <section><h3>${me.name}의 사주 여덟 글자</h3><div class="pils">${pil(S.hour, '시')}${pil(S.day, '일')}${pil(S.month, '월')}${pil(S.year, '년')}</div>
       <div class="fel">${EL.map(e => `<div><b class="e-${e}">${EN[e]}</b><s style="height:${S.elementCount[e] * 14 + 4}px" class="b-${e}"></s><small>${S.elementCount[e]}</small></div>`).join('')}</div></section>
@@ -317,6 +321,7 @@ async function paidPage(id = 'cheating') {
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
     <div class="sdhero">${face(m, PR.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${C.name}의 ${PR.title} · ${paid ? '전체 풀이 · 결제 완료' : `무료 미리보기 · 전체 ${won(PR.price)} (${gold}골드)`}</div><h1>${q}</h1>
       <div class="gauge"><div class="gv" style="--p:${rp.score};--c:${lvlCol}"><b>${rp.score}</b><small>${rp.gauge || '바람기 지수'}</small></div><div class="gl" style="color:${lvlCol}">${rp.grade.label}</div></div></div><span class="seal lg">${C.seal}</span></div>
+    ${paid ? '' : `<div class="pcbuy"><div><b>전체 풀이 ${won(PR.price)}</b><small>${gold}골드 · 남은 ${locked}개 풀이 · 아래 무료 미리보기를 먼저 읽어 보세요</small></div><button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button></div>`}
     <section><blockquote>“${rp.grade.summary}”</blockquote>${rp.factors.length ? `<div class="factors">${rp.factors.map(f => `<span${f.points < 0 ? ' style="opacity:.6"' : ''}>${f.points < 0 ? '−' : ''}${f.label}</span>`).join('')}</div>` : ''}</section>
     ${teas}${rp.share ? `<div class="shbtn"><button class="sdbtn ghost" data-share="${id}">💌 궁합 결과 카드 공유하기 (점수 · 한 줄만)</button></div>` : ''}
     ${rp.sections.filter(s => s.free).map(sec).join('')}
@@ -441,6 +446,8 @@ function fortuneForm() {
 // 홈 화면 추가 배너 (설치 전 · 오늘 닫지 않았을 때)
 function installBanner() {
   if (I.installed() || localStorage.getItem('oad_hide_install') === R.keyOf(R.now())) return '';
+  /* PC: 폰 문구 대신 'PC에 설치' · 브라우저가 설치 창을 못 띄우면(사파리 · 파이어폭스) 배너를 숨김 */
+  if (isPC()) return I.canPrompt() ? `<div class="install"><div class="ic">💻</div><div class="tx">PC에 앱으로 설치하면 바탕화면 · 작업 표시줄에서 매일 한 번에 들어와요</div><button data-install>설치</button><button class="x" data-hide-install aria-label="닫기">✕</button></div>` : '';
   const msg = I.env.inApp ? `${I.env.kakao ? '카카오톡' : '앱'} 안에서는 화면이 흔들릴 수 있어요 · ${/iPhone|iPad/.test(navigator.userAgent) ? '사파리로' : '크롬으로'} 열면 더 매끄럽고 홈 화면에도 추가돼요` : '홈 화면에 추가하면 매일 한 번에 들어와요';
   const btn = I.env.inApp ? (/iPhone|iPad/.test(navigator.userAgent) ? '사파리로 열기' : '크롬으로 열기') : I.canPrompt() ? '설치' : '추가하기';
   return `<div class="install"><div class="ic">📲</div><div class="tx">${msg}</div><button data-${I.env.inApp ? 'ext' : 'install'}>${btn}</button><button class="x" data-hide-install aria-label="닫기">✕</button></div>`;
@@ -451,10 +458,10 @@ function tick() { const el = $('#cd'); if (el) el.textContent = hms(R.msToTomorr
 
 function itemCard(id) {
   const g = G(id), lib = R.state().library[id];
-  if (!R.listed(id)) return `<div class="item rest" data-rest="${id}"><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : '소장한 게임'}</div></div><span class="state badge">잠시 쉬는 중</span></div>`;
+  if (!R.listed(id)) return `<div class="item rest" data-rest="${id}" ${KB}><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : '소장한 게임'}</div></div><span class="state badge">잠시 쉬는 중</span></div>`;
   const a = R.access(id), [cls, label] = STATE_BADGE[a];
   const sub = lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : a === 'owned' ? `${g.genre} · 소장 · 아직 안 해 봤어요` : `${g.genre} · 아직 안 해 봤어요`;
-  return `<div class="item" data-open="${id}"><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${sub}</div></div><span class="state badge ${cls}">${label}</span></div>`;
+  return `<div class="item" data-open="${id}" ${KB}><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${sub}</div></div><span class="state badge ${cls}">${label}</span></div>`;
 }
 
 // ── 라이브러리 ─────────────────────────────────────
@@ -477,7 +484,7 @@ function renderLibrary() {
 function renderCollection() {
   const rel = R.released(), st = R.state(), lib = st.library, total = Math.max(PLANNED, R.DAILY.length);
   const met = rel.filter(id => lib[id]).length;
-  const tile = (id, n) => `<div class="tile" data-open="${id}"><img src="${G(id).icon}" alt="">${n ? `<span class="n">#${n}</span>` : ''}${st.owned[id] ? '<span class="own">소장</span>' : ''}${R.isBrand(id) ? '<span class="collab">콜라보</span>' : ''}${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`;
+  const tile = (id, n) => `<div class="tile" data-open="${id}" ${KB}><img src="${G(id).icon}" alt="">${n ? `<span class="n">#${n}</span>` : ''}${st.owned[id] ? '<span class="own">소장</span>' : ''}${R.isBrand(id) ? '<span class="collab">콜라보</span>' : ''}${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`;
   const tiles = R.DAILY.map((id, i) => rel.includes(id) ? tile(id, i + 1) : `<div class="tile unk">?</div>`), soon = [];
   for (let i = R.DAILY.length; i < total; i++) soon.push(`<div class="tile unk" style="font-size:16px">곧 공개</div>`);
   return `<div>${header()}
@@ -502,7 +509,7 @@ function renderSettings() {
     <h1 style="font-size:28px;margin-bottom:14px">설정</h1>
     ${A.ON ? accountCard() : ''}
     <div class="group">
-      <div><span>홈 화면에 추가</span>${I.installed() ? '<span class="badge open">추가됨</span>' : '<button data-install>추가하기</button>'}</div>
+      <div><span>${isPC() ? 'PC에 앱으로 설치' : '홈 화면에 추가'}</span>${I.installed() ? '<span class="badge open">추가됨</span>' : `<button data-install>${isPC() ? '설치' : '추가하기'}</button>`}</div>
       <div><span>이용 방법 다시 보기</span><button data-intro>보기</button></div>
       <div><span>버전</span><span class="badge">v${VERSION}</span></div>
     </div>
@@ -624,12 +631,14 @@ function play(id, synced) {
 }
 // 게임 창 고정: 앱 속 브라우저(카톡 등)는 주소창이 앱 바깥이라 화면 높이 자체가 바뀜 → 지금까지 본 '가장 작은 높이'를 px 로 고정
 //   커질 때는 그대로(게임은 크기 변화를 모름) · 더 작아질 때만 한 번 줄임 · 폭이 바뀌면(화면 회전) 새로 잼
+//   PC(마우스 · 앱 속 브라우저 아님)는 주소창이 출렁이지 않으므로 창 높이를 늘 그대로 따름 (줄였다 늘린 창에서 게임이 작게 멈추던 문제)
 let lockW = 0, lockH = 0;
 function lockFrame(on) {
   document.documentElement.classList.toggle('playing', on); document.body.classList.toggle('playing', on);
   if (!on) { document.documentElement.style.removeProperty('--ph'); lockW = lockH = 0; return; }
   const vv = window.visualViewport, h = Math.round(Math.min(innerHeight, vv ? vv.height : innerHeight));
-  if (!lockH || Math.abs(innerWidth - lockW) > 40) { lockW = innerWidth; lockH = h; } else lockH = Math.min(lockH, h);
+  if (isPC()) { lockW = innerWidth; lockH = innerHeight; }
+  else if (!lockH || Math.abs(innerWidth - lockW) > 40) { lockW = innerWidth; lockH = h; } else lockH = Math.min(lockH, h);
   document.documentElement.style.setProperty('--ph', lockH + 'px');
 }
 addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });
@@ -646,7 +655,7 @@ function closeGame() {
   if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('☁ 계정에 저장됐어요'); }), 300);
   else if (was && nudgeOwn(was)) return;
   // 첫 게임을 마치고 돌아오면 한 번만 홈 화면 추가를 권함
-  if (!I.installed() && !localStorage.getItem('oad_nudged')) { localStorage.setItem('oad_nudged', '1'); setTimeout(() => openSheet(I.env.inApp || !I.canPrompt() ? I.guide() : `<div class="intro"><h2>📲 내일도 쉽게 만나요</h2><p style="color:var(--sub)">홈 화면에 추가하면 매일 새 게임을 한 번에 열 수 있어요.</p><div class="stack"><button class="btn" data-install>홈 화면에 추가</button><button class="btn ghost" data-close>나중에</button></div></div>`), 500); }
+  if (!I.installed() && !localStorage.getItem('oad_nudged') && (!isPC() || I.canPrompt())) { localStorage.setItem('oad_nudged', '1'); setTimeout(() => openSheet(I.env.inApp || !I.canPrompt() ? I.guide() : `<div class="intro"><h2>📲 내일도 쉽게 만나요</h2><p style="color:var(--sub)">${isPC() ? 'PC에 앱으로 설치하면 바탕화면에서' : '홈 화면에 추가하면'} 매일 새 게임을 한 번에 열 수 있어요.</p><div class="stack"><button class="btn" data-install>${isPC() ? 'PC에 설치' : '홈 화면에 추가'}</button><button class="btn ghost" data-close>나중에</button></div></div>`), 500); }
 }
 // 뒤로가기: 먼저 게임에게 물어봄 (팝업 닫기 · 이전 화면 · 일시정지) → 게임이 처리하면 다시 막아 두고, 게임 첫 화면이면 원어데이로
 let backWait = null, backReady = false;   // backReady: 게임이 뒤로가기를 직접 처리한다고 알려 옴
@@ -806,6 +815,20 @@ document.addEventListener('click', e => {
   else if (d.tabGo) go(d.tabGo);
   else if (d.day !== undefined) { const s = R.state(); s.dayOffset = d.day === '0' ? 0 : s.dayOffset + Number(d.day); R.save(); go('settings'); toast(`${fmtDate(R.now())}로 이동`); }
   else if ('reset' in d) { if (t.dataset.confirm) { R.resetAll(); go('today'); toast('초기화했어요'); } else { t.dataset.confirm = 1; t.textContent = '한 번 더'; } }
+});
+
+// ── 키보드 (PC) ───────────────────────────────────
+//   Esc: 열린 시트 → 운세 전체 화면(#sd) 순서로 닫음 · 게임 중에는 건드리지 않음(CloseWatcher · askGame 흐름 그대로)
+//   Enter · Space: role="button" 인 div(게임 카드 · 타일 · 운세 카드)를 누름
+document.addEventListener('keydown', e => {
+  if (e.defaultPrevented || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'Escape') {
+    if (!player.hidden) return;
+    if (!sheet.hidden) { e.preventDefault(); closeSheet(); return; }
+    if ($('#sd')) { e.preventDefault(); if (sdOpen) history.back(); else sdClose(); }
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role="button"]:not(button)')) { e.preventDefault(); e.target.click(); }
 });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});

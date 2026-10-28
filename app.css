@@ -308,3 +308,79 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .pkrow { display: flex; align-items: center; gap: 10px; margin: 6px 0; padding: 11px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--sline); cursor: pointer; }
 .pkrow b { flex: 1; font-size: 14px; } .pkrow span { font-size: 12px; color: var(--sub); } .pkrow input { width: 18px; height: 18px; accent-color: #F2C14E; }
 .pkrow.on { border-color: #F2C14E; } .pkrow.on span { color: #F2C14E; } .pkrow.off, .pkrow.dim { opacity: .45; }
+
+/* ── PC 브라우저 (2026-10-28 · team/dev/tasks/261028-pc-layout) — 손가락(폰) 화면은 그대로, 마우스 · 넓은 창에서만 달라짐 ── */
+/* 게임 중에는 아래 앱 화면을 숨겨 눌리지 않게 (게임 창보다 창이 커진 순간에도 다른 게임 · 탭이 눌리던 문제) */
+body.playing #app { visibility: hidden; }
+/* 눌리는 것은 손가락 커서 */
+.sdx, .recap button, .seg label, .fform select, .more[data-intro], .sdhook, .sdgift, [role="button"] { cursor: pointer; }
+/* 키보드 포커스 표시 (마우스 · 손가락으로 누를 때는 안 보임) */
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#sd :focus-visible, .sdpanel :focus-visible, .sdcard:focus-visible { outline-color: var(--sgold); }
+.fcal i:focus-visible { outline-offset: -2px; }
+/* 마우스를 올리면 반응 (hover 가 있는 기기만) */
+@media (hover: hover) {
+  .btn, .sdbtn, .item, .tile, .pack, .sdp, .sdgame, .sdcard, .seg label, .recap button, .group button, .btnlink, .install button, .fcal i { transition: transform .12s, filter .12s, background-color .12s, border-color .12s, color .12s; }
+  .btn:hover, .sdbtn:hover, .install button:hover, .acct .gbtn:hover { filter: brightness(1.1); }
+  .btn.ghost:hover { background: rgba(255,255,255,.13); color: var(--text); filter: none; }
+  .btn.gold.ghost:hover { background: rgba(255,190,60,.2); color: var(--gold); }
+  .sdbtn.ghost:hover { color: var(--paper); filter: brightness(1.25); }
+  .item:hover, .tile[data-open]:hover, .pack:hover { transform: translateY(-2px); border-color: rgba(255,201,60,.5); }
+  .item.rest:hover { transform: none; }
+  .sdcard:hover { border-color: var(--blood2); box-shadow: 0 0 48px -8px rgba(224,36,64,.6); }
+  .sdp:hover, .sdgame:hover { border-color: var(--blood2); transform: translateY(-1px); }
+  .sdhook:hover, .sdgift:hover, .stampfill:hover { filter: brightness(1.2); }
+  .recap button:hover { background: rgba(201,164,92,.2); }
+  .seg label:hover { background: rgba(255,255,255,.13); }
+  .sdx:hover { border-color: var(--sgold); }
+  #tabs button:hover { color: var(--sub); } #tabs button.on:hover { color: var(--gold); }
+  .group button:hover, .btnlink:hover, .acct .lo:hover { background: rgba(255,255,255,.18); }
+  .chip.goldchip:hover { background: rgba(255,190,60,.24); }
+  .more[data-intro]:hover, .lnk:hover, .install button.x:hover { color: var(--text); }
+  .fcal i[data-fday]:hover { background: rgba(255,255,255,.12); }
+  .cpick .cloudcard:hover, .pkrow:not(.off):hover { border-color: var(--sgold); }
+}
+/* 유료 풀이: PC 에서만 원화 아래 '가격 + 결제' 요약 (폰은 숨김 · 아래 paywall 과 같은 상품 · 같은 가격) */
+.pcbuy { display: none; align-items: center; gap: 12px; margin: 0 16px 14px; padding: 14px 16px; border-radius: 18px; background: linear-gradient(160deg, #3a0d16, #1a0b0e); border: 1px solid var(--blood2); }
+.pcbuy > div { flex: 1; min-width: 0; } .pcbuy b { display: block; font: 900 19px serif; color: var(--paper); } .pcbuy small { display: block; margin-top: 3px; font-size: 12px; color: var(--paper2); line-height: 1.45; }
+.pcbuy .sdbtn { flex: none; width: auto; padding: 13px 16px; }
+
+@media (pointer: fine) {
+  /* 오늘의 게임 표지: 낮은 창에서는 위아래를 조금 잘라 '▶ 지금 플레이'까지 첫 화면에 */
+  .today .hero .cover { width: 100%; max-height: max(150px, calc(100vh - 400px)); }
+  /* 시트: 버튼 묶음을 시트 바닥에 붙여 늘 보이게 (위로 흐려지는 띠 = 더 내릴 수 있다는 단서) */
+  #sheet .panel .stack:last-child { position: sticky; bottom: calc(-22px - var(--safe-b)); z-index: 3; margin: 16px -20px calc(-22px - var(--safe-b)); padding: 20px 20px calc(18px + var(--safe-b)); background: linear-gradient(180deg, rgba(42,33,88,0), var(--card) 18px); }
+  #sheet .panel.sdpanel .stack:last-child { background: linear-gradient(180deg, rgba(13,11,12,0), #0d0b0c 18px); }
+  /* 운세 전체 화면: 원화 높이 제한 (첫 화면에 본문이 보이게) · 글자는 원화 위에 그대로 */
+  .sdhero { aspect-ratio: auto; min-height: min(45vh, 600px); display: flex; flex-direction: column; justify-content: flex-end; }
+  .sdhero > img { position: absolute; inset: 0; }
+  .sdheroin { position: relative; padding-top: calc(64px + var(--safe-t)); }
+  .pcbuy { display: flex; }
+  /* 작은 글자 최소 11px (운세 달력 · 월별 그래프) */
+  .fcal i { min-height: 76px; } .fcal i small, .fcal i em, .fcal i s { font-size: 11px; } .fcal i s { letter-spacing: 0; }
+  .ych b, .ych small { font-size: 11px; }
+}
+/* 낮은 PC 창(노트북 · 125% 확대): 시트 표지 · 버튼을 줄여 버튼이 덜 가리게 */
+@media (pointer: fine) and (max-height: 760px) {
+  #sheet .cover { max-height: 22vh; }
+  #sheet h2 { font-size: 24px; }
+  #sheet .btn { padding: 12px; font-size: 19px; } #sheet .btn.ghost, #sheet .btn.gold { font-size: 16px; }
+  #sheet .panel .stack { gap: 8px; }
+  .sdpage h1 { font-size: 30px; }
+}
+/* 오늘: 넓은 PC 창은 두 칸 — 왼쪽 오늘의 게임(따라 내려옴) · 오른쪽 운세와 나머지 */
+@media (pointer: fine) and (min-width: 960px) {
+  body[data-tab="today"] #app { max-width: 1060px; }
+  .today { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); column-gap: 26px; grid-auto-flow: row dense; align-items: start; }
+  .today > .top, .today > .date, .today > .install { grid-column: 1 / -1; }
+  .today > .tfort { grid-column: 2; }
+  .today > .tgame { grid-column: 1; grid-row: span 2; position: sticky; top: 18px; }
+  .today > .tmore { grid-column: 2; }
+  .today > .tmore > .section:first-child { margin-top: 10px; }
+}
+/* 좁은 PC 창(한 줄): 오늘의 게임을 운세보다 위로 */
+@media (pointer: fine) and (max-width: 959.98px) {
+  .today { display: flex; flex-direction: column; }
+  .today > .top, .today > .date, .today > .install { order: -2; }
+  .today > .tgame { order: -1; margin-bottom: 18px; }
+}

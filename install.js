@@ -64,6 +64,13 @@ export function guide() {
       <div class="stack"><button class="btn" data-close>알겠어요</button></div>
       ${env.iosChrome ? '' : '<div class="ios-arrow">⬇</div>'}</div>`;
   }
+  /* PC(마우스 · 폰 아님): 브라우저 주소창 · 메뉴의 '설치' 안내 */
+  if (!env.android && matchMedia('(pointer:fine)').matches) {
+    return `<div class="intro"><h2>💻 PC에 앱으로 설치하기</h2>
+      <p style="color:var(--sub);margin:6px 0 4px">설치하면 바탕화면 · 작업 표시줄에서 매일 한 번에 열 수 있어요</p>
+      ${steps([['크롬 · 엣지', `주소창 오른쪽의 설치 아이콘을 누르거나, 메뉴 ${DOTS} → ‘One a Day 설치’(앱 설치)`], ['맥 사파리', '메뉴 막대의 ‘파일’ → ‘Dock에 추가’'], ['그 밖의 브라우저', '설치를 지원하지 않으면 즐겨찾기(북마크)에 추가해 두세요']])}
+      <div class="stack"><button class="btn" data-close>알겠어요</button></div></div>`;
+  }
   const menu = env.samsung ? '아래쪽 메뉴(☰)' : `오른쪽 위 메뉴 ${DOTS}`;
   return `<div class="intro"><h2>📲 홈 화면에 추가하기</h2>
     <p style="color:var(--sub);margin:6px 0 4px">브라우저 메뉴에서 한 번만 누르면 돼요</p>
