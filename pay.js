@@ -29,12 +29,15 @@ export async function orderGold(product, token) {
 }
 export const confirmGold = (o, paymentKey, amount) => post('/api/pay/confirm', { orderId: o.orderId, product: o.product, pair: o.pair, d: o.d, sig: o.sig, paymentKey, amount });
 export const keepReceipt = keep;
-export function order(product, me, pt) { const d = localStorage.getItem('oad_did') || ''; return post('/api/pay/order', { product, me, partner: pt, d }).then(o => ({ ...o, product, d })); }
+export function order(product, me, pt, extra) { const d = localStorage.getItem('oad_did') || ''; return post('/api/pay/order', { ...(extra || {}), product, me, partner: pt, d }).then(o => ({ ...o, product, d })); }
+/* 신년 패키지처럼 영수증이 여러 장 오면 앱이 상품별 '두 사람'으로 나눠 보관 (setPackKeeper 로 등록) */
+let packKeeper = null;
+export const setPackKeeper = f => { packKeeper = f; };
 
 // 결제 승인 → 영수증 보관
 export async function confirm(o, paymentKey, amount, me, pt) {
   const r = await post('/api/pay/confirm', { orderId: o.orderId, product: o.product, pair: o.pair, d: o.d, sig: o.sig, paymentKey, amount });
-  keep(r, me, pt);
+  if (r.receipts && packKeeper) packKeeper(r.receipts); else keep(r, me, pt);
   return r;
 }
 

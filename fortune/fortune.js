@@ -2,7 +2,7 @@
 //   계산(8글자)은 엔진이 정확히 하고, 풀이는 명리학 규칙(십성 · 합충 · 도화 · 오행 균형) 기반 문장
 //   엔진 원본: ~/004. SN/001. saju/src/lib/saju (테스트 25개) → oneaday/tools/fortune_entry.ts 로 묶음
 export { buildCheatingReport, CHEATING_TOC, buildLoveReport, LOVE_TOC, buildLifeReport, LIFE_TOC } from './saju.min.js';
-import { calculateSaju, tenGod, isClash, isCombine, isPeachBlossom, STEM_ELEMENT, BRANCH_ELEMENT, ELEMENT_KO, BRANCH_MAIN_STEM, STEM_KO, BRANCH_KO } from './saju.min.js';
+import { calculateSaju, tenGod, isClash, isCombine, isPeachBlossom, STEM_ELEMENT, BRANCH_ELEMENT, ELEMENT_KO, BRANCH_MAIN_STEM, STEM_KO, BRANCH_KO, ymKey } from './saju.min.js';
 
 const KEY = 'oad_fortune_me';
 export const loadMe = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } };
@@ -49,7 +49,7 @@ const DOK = {
   편인: { say: ['생각이 너무 많다. 촉은 맞으니 의심은 거기까지만.', '혼자 있어야 답이 나온다. 단톡방 끄고 쉬어.'], warn: '혼자 상상한 걸 사실처럼 따지지 마라.', love: '그 사람 속을 넘겨짚지 마. 물어봐, 차라리.' },
   정인: { say: ['도와주는 손이 들어온다. 자존심 세우지 말고 잡아.', '오늘은 기대도 되는 날이다.'], warn: '받은 도움, 고맙다는 말 한마디는 꼭 해라.', love: '다정한 말 한마디에 넘어간다. 너도, 상대도.' },
 };
-/* 점쟁이 진열대: 독설신당 5명(원화 있음) + 새 5명(원화 없이 오행 아이콘 · art 없음) — 이용자에게 '순한맛/매운맛' 구분은 보이지 않음
+/* 점쟁이 진열대: 10명 모두 원화(새 5명은 2026-10-28 Figma 생성 · 같은 화풍) — 이용자에게 '순한맛/매운맛' 구분은 보이지 않음
    tone 1 다정 ~ 10 매서움: 그날 일진 × 내 원국 관계로 그날의 점쟁이가 정해짐 (pickTeller) · 말투도 tone 따라 (다정 = 해요체, 매서움 = 독설) */
 export const CHARS = {
   haesol: { name: '해솔선녀', seal: '溫情', el: 'wood', tone: 1, art: 1 },
@@ -104,8 +104,13 @@ export const PAID = [
   /* 범용 3종 (solo = 내 사주만) — 다정한 점쟁이들에게 배정 */
   { id: 'newyear', ch: 'wolryeong', title: '2027 정미년 신년운세', hook: '열두 달 중 내 달은 언제일까요', price: 14900, solo: true, tease: ['2027 총운 점수', '가장 좋은 달 ██월', '열두 달 월운 · 분야별 운'],
     q: '{me}님의<br><em>2027년</em>', lock: '열두 달 월운 · 재물 · 일 · 연애 · 건강 · 좋은 달과 조심할 달', cols: ['#8FB8E8', '#6A9AFF', '#4A7AF0', '#2A5AD8'] },
+  /* 입문 3,900 (보너스 골드 OK · 그 달에 묶임 — 21일부터는 다음 달) */
+  { id: 'monthly', ch: 'hwaryeon', title: '이번 달 내 운세', hook: '네 주의 흐름, 좋은 날과 조심할 날', price: 3900, solo: true, monthly: true, entry: true, tease: ['이번 달 운 점수', '가장 좋은 날 ██일', '1~4주차 흐름'],
+    q: '{me}님의<br><em>{m}월 운세</em>', lock: '1~4주차 흐름 · 좋은 날 다섯 · 조심할 날 셋 · 분야별 좋은 날', cols: ['#C9A08A', '#F0A070', '#FF8A50', '#FF6A30'], cal: '이번 달 좋은 날' },
+  { id: 'exam', ch: 'cheongun', title: '합격운 · 집중 달력', hook: '집중이 잘 되는 날, 쉬어 갈 날', price: 3900, solo: true, monthly: true, entry: true, tease: ['나의 공부 체질', '집중 잘 되는 날 ██일', '두 달 집중 달력'],
+    q: '{me}님의<br><em>합격운 · 집중 달력</em>', lock: '두 달 집중 달력 · 시험 · 문서운 좋은 날 · 쉬어 갈 날 · 공부법', cols: ['#A0A8B8', '#B8C0D0', '#D0D8E8', '#F0F0FA'], cal: '두 달 집중 달력' },
   { id: 'wealth', ch: 'bokdeong', title: '재물 · 횡재수 달력', hook: '돈이 들어오는 달, 횡재 기운 높은 날', price: 9900, solo: true, tease: ['나의 재물 타입', '재물 기운 가장 강한 달 ██월', '횡재 기운 높은 날 달력'],
-    q: '{me}님의<br><em>돈 흐름 · 횡재 달력</em>', lock: '12개월 돈 흐름 · 앞으로 90일 횡재 기운 높은 날 · 돈이 새는 때 · 재물 행운 색 · 방향', cols: ['#C9B48A', '#E8C060', '#F2B030', '#FF9A1A'] },
+    q: '{me}님의<br><em>돈 흐름 · 횡재 달력</em>', lock: '12개월 돈 흐름 · 앞으로 90일 횡재 기운 높은 날 · 돈이 새는 때 · 재물 행운 색 · 방향', cols: ['#C9B48A', '#E8C060', '#F2B030', '#FF9A1A'], cal: '횡재 기운 달력 · 앞으로 90일' },
   { id: 'compat', ch: 'haesol', title: '우리 궁합', hook: '두 사람, 얼마나 잘 맞을까요', price: 14900, tease: ['궁합 점수', '부딪히는 지점', '올해 고비 달 ██월'],
     q: '{me}님과 {p}님의<br><em>궁합</em>', form: ['그 사람의 생년월일', '연인 · 썸 · 부부 누구든 좋아요. 시간까지 알면 더 정확해요. 이 기기에만 저장돼요.', '그 사람'],
     lock: '부딪히는 지점 · 대화법 · 역할 나누기 · 함께하기 좋은 해 · 올해 고비 달', cols: ['#E8A0B8', '#F08AB0', '#FF6FA0', '#FF4D8D'] },
@@ -126,6 +131,8 @@ export const PAID = [
     lock: '그 사람이 숨기는 것 · 너를 어떻게 보는가 · 연락해도 되는 달 · 먼저 연락할 때 첫마디', cols: ['#6FA8DC', '#C9A0DC', '#FF8A3C', '#E02440'] },
 ];
 export const paidOf = id => PAID.find(p => p.id === id) || PAID[0];
+/* 신년 패키지 24,900: 신년운세 + 아래에서 2개 (가격은 서버 gold.js FORTUNE.pack) */
+export const PACK = { id: 'pack', price: 24900, base: 'newyear', picks: ['wealth', 'compat', 'monthly', 'exam'], title: '2027 신년 패키지' };
 const COLORS = { wood: ['초록', '#4CB86A'], fire: ['빨강', '#E8503A'], earth: ['노랑', '#E8B04A'], metal: ['흰색', '#E8E8F0'], water: ['남색', '#3A5AB8'] };
 const NUMS = { wood: [3, 8], fire: [2, 7], earth: [5, 10], metal: [4, 9], water: [1, 6] };
 const DIRS = { wood: '동쪽', fire: '남쪽', earth: '가운데', metal: '서쪽', water: '북쪽' };
@@ -168,7 +175,7 @@ export const ELEMENT_NAME = ELEMENT_KO;
 const pkey = id => !id || id === 'cheating' ? 'oad_fortune_partner' : 'oad_fortune_partner_' + id;
 export const loadPartner = id => { try { return JSON.parse(localStorage.getItem(pkey(id)) || 'null'); } catch { return null; } };
 export const savePartner = (p, id) => localStorage.setItem(pkey(id), JSON.stringify(p));
-export const toInput = p => ({ name: p.name, gender: p.sex === 'm' ? 'male' : 'female', year: p.y, month: p.m, day: p.d, hour: p.h ?? undefined, minute: p.mi ?? 0, calendar: p.cal || 'solar', isLeapMonth: !!p.leap, longitude: p.lon || undefined });
+export const toInput = p => ({ ...(p.ym ? { ym: p.ym } : {}), name: p.name, gender: p.sex === 'm' ? 'male' : 'female', year: p.y, month: p.m, day: p.d, hour: p.h ?? undefined, minute: p.mi ?? 0, calendar: p.cal || 'solar', isLeapMonth: !!p.leap, longitude: p.lon || undefined });
 /* 무료 미리보기: 점수 · 근거 · 무료 섹션 2개만 (잠긴 섹션 본문은 이 코드에 없음 — 결제 후 서버가 만듦) */
 export async function paidPreview(id, me, partner) {
   const S = await import('./saju.min.js'), PR = paidOf(id);
@@ -176,7 +183,8 @@ export async function paidPreview(id, me, partner) {
   return id === 'cheating' ? S.buildCheatingReport(toInput(me), toInput(partner), false) : S.buildLoveReport(id, toInput(me), toInput(partner), false);
 }
 /* 결제 · 영수증의 '두 사람': solo 상품은 나 자신 (서버도 같은 규칙 — order · me · report) */
-export const pairOf = (id, me) => paidOf(id).solo ? me : loadPartner(id);
+export const pairOf = (id, me) => paidOf(id).monthly ? { ...me, ym: ymKey(new Date()) } : paidOf(id).solo ? me : loadPartner(id);
+export const curYm = () => ymKey(new Date());
 
 /* 오늘 이 부분이 신경 쓰여요: 오늘 점수 · 십성으로 고른 훅 하루 1개 (실제 계산 결과) · 이미 산 상품 빼기 · 같은 훅 3일 연속 금지 */
 const HKEY = 'oad_hook';
@@ -187,8 +195,9 @@ export function hookOf(f, dateKey, bought = () => false) {
   const cand = [
     ['금전', 'wealth', Math.abs(sc.금전 - 70) + (G.includes('재성') || f.tenGod.includes('겁재') ? 8 : 0)],
     ['연애', 'compat', Math.abs(sc.연애 - 70) + (f.notes.some(n => /합|도화/.test(n)) ? 8 : 0)],
-    ['일·공부', 'newyear', Math.abs(sc['일·공부'] - 70) + (G.includes('관성') || G.includes('인성') ? 6 : 0)],
-    ['총운', 'newyear', Math.abs(sc.총운 - 70) + (f.notes.some(n => /충/.test(n)) ? 6 : 0)],
+    ['일·공부', G.includes('관성') || G.includes('인성') ? 'exam' : 'newyear', Math.abs(sc['일·공부'] - 70) + (G.includes('관성') || G.includes('인성') ? 6 : 0)],
+    ['총운', 'monthly', Math.abs(sc.총운 - 70) + (f.notes.some(n => /충/.test(n)) ? 6 : 0)],
+    ['총운', 'newyear', 0],
   ].sort((a, b) => b[2] - a[2]);
   const idOf = v => (v || '').split('|')[1] || '', days = Object.keys(log).filter(k => k < dateKey).sort().slice(-2);
   const last2 = days.length === 2 && idOf(log[days[0]]) && idOf(log[days[0]]) === idOf(log[days[1]]) ? idOf(log[days[0]]) : null;
@@ -202,8 +211,10 @@ function makeHook(f, val) {
   const T = {
     금전: hi ? `오늘 금전 ${n}점 — 재물 기운이 들어오는 날이에요. 앞으로 90일 중 횡재 기운 높은 날은 언제일까요?` : `오늘 금전 ${n}점 — 돈이 새기 쉬운 날이에요. 앞으로 1년 돈 흐름은 어떨까요?`,
     연애: hi ? `오늘 연애 ${n}점 — 인연 기운이 강한 날이에요. 그 사람과의 궁합은?` : `오늘 연애 ${n}점 — 마음이 엇갈리기 쉬운 날이에요. 두 사람이 부딪히는 지점은?`,
-    '일·공부': hi ? `오늘 일·공부 ${n}점 — 인정받는 기운이 있는 날. 2027년엔 언제 가장 빛날까요?` : `오늘 일·공부 ${n}점 — 버거운 날이에요. 2027년 열두 달 중 힘을 줄 달은?`,
-    총운: hi ? `오늘 총운 ${n}점 — 흐름이 좋은 날. 2027년 가장 좋은 달은 언제일까요?` : `오늘 총운 ${n}점 — 쉬어 가는 날이에요. 2027년엔 어떤 달이 기다릴까요?`,
+    '일·공부': id === 'exam' ? (hi ? `오늘 일·공부 ${n}점 — 배움의 기운이 들어온 날. 집중이 잘 되는 날은 또 언제일까요?` : `오늘 일·공부 ${n}점 — 집중이 흩어지는 날. 쉬어 갈 날과 몰아칠 날을 나눠 볼까요?`)
+      : hi ? `오늘 일·공부 ${n}점 — 인정받는 기운이 있는 날. 2027년엔 언제 가장 빛날까요?` : `오늘 일·공부 ${n}점 — 버거운 날이에요. 2027년 열두 달 중 힘을 줄 달은?`,
+    총운: id === 'monthly' ? (hi ? `오늘 총운 ${n}점 — 흐름이 좋은 날. 이번 달 가장 좋은 날은 언제일까요?` : `오늘 총운 ${n}점 — 쉬어 가는 날이에요. 이번 달 조심할 날은 또 언제일까요?`)
+      : hi ? `오늘 총운 ${n}점 — 흐름이 좋은 날. 2027년 가장 좋은 달은 언제일까요?` : `오늘 총운 ${n}점 — 쉬어 가는 날이에요. 2027년엔 어떤 달이 기다릴까요?`,
   };
   return { id, field, text: T[field] };
 }
