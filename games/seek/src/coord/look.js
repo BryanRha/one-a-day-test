@@ -1,6 +1,6 @@
 // 코디 합성 규칙 (화면 · 미리보기 공용): 한 벌 그림 + 머리 장식 · 가방 · 손 소품을 머리/손 위치에 맞춰 얹음
-import { ANCHORS as A0 } from './anchors.js?v=0.85.0';
-import { OUTFITS } from './data.js?v=0.85.0';
+import { ANCHORS as A0 } from './anchors.js?v=0.85.1';
+import { OUTFITS } from './data.js?v=0.85.1';
 // 다시 칠한 옷(o_sp 등)은 바탕 옷의 머리 · 손 위치를 그대로 씀
 const ANCHORS = new Proxy(A0, { get: (t, k) => t[k] || t[(OUTFITS.find(o => o.id === k) || {}).base] });
 // 소품 종류별 놓는 자리 (머리 폭 hw 기준 크기) — 반환: 그림 픽셀 좌표 { x, y, w, ox, oy, rot }

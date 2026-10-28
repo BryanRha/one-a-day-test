@@ -1,7 +1,7 @@
 // 족보 표 한 줄: 이름 · 예시 패(작게) · 설명 · 점수×배수 — 놀이 중 표 · 도감이 같이 씀
-import { C } from './config.js?v=0.85.0';
-import { txt } from './ui.js?v=0.85.0';
-import { yakuExample } from './meta.js?v=0.85.0';
+import { C } from './config.js?v=0.85.1';
+import { txt } from './ui.js?v=0.85.1';
+import { yakuExample } from './meta.js?v=0.85.1';
 
 export function yakuRow(scene, parent, x0, y, yk, got, w = 1000) {
   const L = x0 - w / 2, R = x0 + w / 2;
