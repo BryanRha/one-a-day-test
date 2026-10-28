@@ -1,16 +1,17 @@
 // 판 화면: 관문 소개 → 손패 고르기(점수 미리보기) → 내기(점수 연출) / 바람 → 통과 · 장터 → 다음 달 … → 판 끝
 //   규칙은 전부 core/run.js(엔진) — 이 파일은 보여 주기와 입력만
-import { W, H, C, N } from '../config.js?v=0.82.4';
-import { load, save } from '../save.js?v=0.82.4';
-import { audio } from '../audio.js?v=0.82.4';
-import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.82.4';
-import { CardView, CW, CH } from '../cards.js?v=0.82.4';
-import { ambient, burst } from '../fx.js?v=0.82.4';
-import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today } from '../meta.js?v=0.82.4';
-import { Run, TOOL, TUNE } from '../core/run.js?v=0.82.4';
-import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.82.4';
-import { GOD } from '../core/gods.js?v=0.82.4';
-import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.82.4';
+import { W, H, C, N } from '../config.js?v=0.83.0';
+import { load, save } from '../save.js?v=0.83.0';
+import { audio } from '../audio.js?v=0.83.0';
+import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.83.0';
+import { CardView, CW, CH } from '../cards.js?v=0.83.0';
+import { ambient, burst } from '../fx.js?v=0.83.0';
+import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.83.0';
+import { yakuRow } from '../yakuview.js?v=0.83.0';
+import { Run, TOOL, TUNE } from '../core/run.js?v=0.83.0';
+import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.83.0';
+import { GOD } from '../core/gods.js?v=0.83.0';
+import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.83.0';
 
 const S_HAND = 0.52, S_STAGE = 0.42;
 const wait = (sc, ms) => new Promise(r => sc.time.delayedCall(Math.max(0, ms / (sc.speed || 1)), r));
@@ -39,7 +40,7 @@ export class PlayScene extends Phaser.Scene {
     else if (run.phase === 'fail') this.onFail();
     else this.finish();
   }
-  saveRun() { const d = load(); d.run = this.run.toJSON(); save(); }
+  saveRun() { const d = load(); d.run = this.run.toJSON(); d.runOpen = true; save(); }
   onBack() { if (this.busy) return true; this.menu(); return true; }
 
   // ── 배경 · 머리판 ──
@@ -55,7 +56,7 @@ export class PlayScene extends Phaser.Scene {
     // 위 줄: 메뉴 · 판 이름 · 엽전
     roundButton(this, 66, 64, 40, '☰', () => this.menu(), { size: 34 }).setDepth(50);
     roundButton(this, 166, 64, 40, '?', () => this.yakuTable(), { size: 36 }).setDepth(50);
-    this.modeT = txt(this, W / 2, 64, run.mode === 'daily' ? '오늘의 판' : '자유 판', 28, C.dim, { thick: 3, weight: '700' }).setDepth(50);
+    this.modeT = txt(this, W / 2, 64, run.mode === 'daily' ? '오늘의 판' : run.mode === 'first' ? '첫 판 · 연습 · 순위 밖' : '자유 판', 28, C.dim, { thick: 3, weight: '700' }).setDepth(50);
     const coin = this.add.container(W - 150, 64).setDepth(50);
     coin.add(this.add.image(0, 0, boxTex(this, 'dark', 220, 76, 38, 3)));
     coin.add(this.coinIcon = this.add.circle(-66, 0, 22, N('#B08D57')).setStrokeStyle(4, N('#6E5530')));
@@ -110,7 +111,7 @@ export class PlayScene extends Phaser.Scene {
   scoreBox(x, y, fill, ink, label) {
     const c = this.add.container(x, y);
     c.add(this.add.image(0, 0, boxTex(this, fill === '#C8343A' ? 'red' : 'ivory', 260, 112, 22, 3)));
-    c.add(txt(this, 0, -76, label, 22, C.dim, { thick: 2, weight: '700' }));
+    c.lab = txt(this, 0, -76, label, 22, C.dim, { thick: 2, weight: '700' }); c.add(c.lab);
     const v = txt(this, 0, 0, '0', 56, ink, { thick: 0, stroke: null, weight: '900' }); c.add(v); c.v = v;
     this.stage.add(c); return c;
   }
@@ -122,7 +123,7 @@ export class PlayScene extends Phaser.Scene {
     const m = run.months[run.gate - 1], god = run.god;
     this.gateT.setText(`${m.n}월 · ${m.name}`);
     this.seasonT.setText(`${run.season.name} ${run.pos + 1}/${run.season.months.length}`).setColor(run.season.color);
-    this.subT.setText(god ? `${god.name} — ${god.rule}` : `이달의 꽃 ${m.flower} · 끗 ×2 · 배수 +1`).setColor(god ? '#FF9A8A' : C.pink);
+    this.subT.setText(god ? `${god.name} — ${god.rule}` : this.first ? `이달의 꽃 ${m.flower} · 점수 2배` : `이달의 꽃 ${m.flower} · 패 점수 ×2 · 배수 +1`).setColor(god ? '#FF9A8A' : C.pink);
     this.targetT.setText(fmt(run.target || run.gateTarget()));
     if (!this.barTw || !this.barTw.isPlaying()) this.setBar(run.score);
     this.handsChip.v.setText(String(run.hands)); this.windsChip.v.setText(String(run.winds));
@@ -161,7 +162,7 @@ export class PlayScene extends Phaser.Scene {
       const x = 130 + i * 205, ch = run.charms[i];
       const slot = this.add.container(x, 0); row.add(slot);
       slot.add(this.add.image(0, 0, boxTex(this, 'dark', 186, 186, 22, 2)).setAlpha(ch ? 1 : 0.45));
-      if (!ch) { slot.add(txt(this, 0, 0, '빈 칸', 24, '#6B6052', { stroke: null, weight: '700' })); continue; }
+      if (!ch) { slot.add(txt(this, 0, 0, '부적 자리', 22, '#6B6052', { stroke: null, weight: '700' })); continue; }
       const d = CHARM[ch.id];
       slot.add(this.add.image(0, -8, 'talisman').setScale(150 / this.textures.get('talisman').getSourceImage().height * 1.05).setAngle(i % 2 ? 3 : -3));
       slot.add(txt(this, 0, -2, d.glyph, 58, '#B01E1E', { stroke: '#F6D88A', thick: 2, weight: '900' }));
@@ -232,7 +233,7 @@ export class PlayScene extends Phaser.Scene {
     const tags = [K.name + (c.kind === 'pi' && c.pi > 1 ? ' (쌍피)' : ''), c.ribbon ? DECK.ribbons[c.ribbon].name : null, ...c.tags.map(t => DECK.tags[t] + ' 그림')].filter(Boolean).join(' · ');
     md.add(txt(this, 0, 300, `${c.month}월 ${m.name} · ${m.flower}`, 42, C.gold, { thick: 4 }));
     md.add(txt(this, 0, 360, tags, 32, C.ivory, { weight: '700', thick: 3 }));
-    md.add(txt(this, 0, 420, `끗 ${rules.pts(c)}${c.month === this.run.month ? ' → 이달의 꽃이라 ×2' : ''}${c.gold ? ' · 금박 배수 +2' : ''}${c.pearl ? ' · 자개 점수 +20' : ''}`, 30, C.pink, { weight: '700', thick: 3 }));
+    md.add(txt(this, 0, 420, `패 점수 ${rules.pts(c)}${c.month === this.run.month ? ' → 이달의 꽃이라 ×2' : ''}${c.gold ? ' · 금박 배수 +2' : ''}${c.pearl ? ' · 자개 점수 +20' : ''}`, 30, C.pink, { weight: '700', thick: 3 }));
     md.add(txt(this, 0, 540, '바깥을 누르면 닫혀요', 24, C.dim, { thick: 2, weight: '700' }));
   }
 
@@ -244,21 +245,26 @@ export class PlayScene extends Phaser.Scene {
     const can = run.canPlay(this.sel), canW = run.canWind(this.sel);
     this.playB.setEnabled(!can, can); this.windB.setEnabled(!canW, canW);
     this.windB.setLabel(`바람 ${run.winds}`);
-    if (run.gate >= run.gates) this.windB.subT.setText('마지막 달 · 그냥 흩어져요'); else this.windB.subT.setText('다음 달 첫 손으로');
+    this.windB.subT.setText(run.gate >= run.gates ? '패 바꾸기 · 마지막 달' : this.first && run.gate === 1 ? '패 바꾸기' : '패 바꾸기 · 다음 달로');
+    const simple = this.first;
+    this.chipBox.lab.setVisible(!simple); this.multBox.lab.setVisible(!simple);
     if (!this.sel.length) {
       this.yakuT.setText(''); this.chipBox.v.setText('0'); this.multBox.v.setText('0'); this.totT.setText('');
-      this.chipBox.setAlpha(0.35); this.multBox.setAlpha(0.35); this.xT.setAlpha(0.35);
+      this.chipBox.setAlpha(simple ? 0 : 0.35); this.multBox.setAlpha(simple ? 0 : 0.35); this.xT.setAlpha(simple ? 0 : 0.35);
       this.hintT.setText(run.hand.length ? '패를 눌러 골라 보세요 · 길게 누르면 크게 보여요' : '').setColor(C.dim);
       return;
     }
     const r = run.preview(this.sel);
-    this.chipBox.setAlpha(1); this.multBox.setAlpha(1); this.xT.setAlpha(1);
+    this.chipBox.setAlpha(simple ? 0 : 1); this.multBox.setAlpha(simple ? 0 : 1); this.xT.setAlpha(simple ? 0 : 1);
     const ex = r.extras.length ? ` + ${r.extras.map(e => e.name).join(' + ')}` : '';
     this.yakuT.setText(r.yaku.name + ex);
     this.chipBox.v.setText(fmt(r.chips)); this.multBox.v.setText(r.x !== 1 ? `${fmt(r.mult)}×${+r.x.toFixed(2)}` : fmt(r.mult));
-    this.totT.setText(`= ${fmt(r.total)}`);
+    this.totT.setText(simple ? `꽃 점수 ${fmt(r.total)}` : `= ${fmt(r.total)}`).setFontSize(simple ? 64 : 46).setY(simple ? this.L.stTop + 170 : this.L.stTop + 262);
+    /* 첫 판: 족보가 바뀌면 꽃 점수가 톡 튀어 커짐 (계단을 눈으로) */
+    if (simple && this.lastPrevY !== r.yaku.id) { this.lastPrevY = r.yaku.id; this.tweens.add({ targets: [this.totT, this.yakuT], scale: { from: 1.25, to: 1 }, duration: 260, ease: 'Back.out' }); audio.play('sfx_chip_' + Math.min(7, this.sel.length * 2), { volume: 0.5 }); }
     const need = run.target - run.score, unused = this.sel.length - r.scoring.length;
     if (r.total >= need) this.hintT.setText('이 손이면 이번 달 통과!').setColor('#FFD88A');
+    else if (simple) this.hintT.setText(`목표까지 ${fmt(need)}`).setColor(C.dim);
     else if (unused > 0 && r.yaku.id !== 'high') this.hintT.setText(`점수에 안 드는 패 ${unused}장 — 빼고 내거나 바람에 실어도 돼요`).setColor(C.dim);
     else this.hintT.setText(`남은 목표 ${fmt(need)}`).setColor(C.dim);
     for (const [u, v] of this.views) if (run.hand.includes(u)) v.img.setAlpha(this.sel.includes(u) && !r.scoring.includes(u) ? 0.72 : 1);
@@ -283,6 +289,7 @@ export class PlayScene extends Phaser.Scene {
       ov.add(txt(this, W / 2, cy + 440, `“${god.line}”`, 30, C.ivory, { thick: 3, weight: '700' }).setAlpha(0.85));
       const rb = this.add.image(W / 2, cy + 540, boxTex(this, 'red', 900, 100, 50, 3)); ov.add(rb);
       ov.add(txt(this, W / 2, cy + 540, god.rule, 32, C.ivory, { thick: 3, wrap: 840 }));
+      if (this.first) ov.add(txt(this, W / 2, cy + 600, '계절신이 나오는 달은 규칙 하나가 바뀌어요 (이번 달만)', 28, '#FFB0A0', { thick: 3, weight: '700' }));
     } else {
       audio.music('bgm_main', this);
       const c = DECK.cards.find(x => x.month === m.n && (x.kind === 'gwang' || x.kind === 'yeol')) || DECK.cards.find(x => x.month === m.n);
@@ -291,18 +298,20 @@ export class PlayScene extends Phaser.Scene {
       cv.setAngle(-6).setScale(0.7).setAlpha(0); this.tweens.add({ targets: cv, angle: 0, scale: 1.05, alpha: 1, duration: 600, ease: 'Back.out' });
       ov.add(txt(this, W / 2, cy + 330, `${run.season.name} · ${run.pos + 1}번째 달`, 30, run.season.color, { thick: 3, ls: 4 }));
       ov.add(txt(this, W / 2, cy + 400, `${m.n}월 · ${m.name}`, 84, C.gold, { thick: 6, shadow: true, weight: '900' }));
-      ov.add(txt(this, W / 2, cy + 480, `이달의 꽃 「${m.flower}」 — 끗 ×2 · 배수 +1`, 32, C.pink, { thick: 3 }));
+      ov.add(txt(this, W / 2, cy + 480, this.first ? `이달의 꽃 「${m.flower}」 — 점수 2배` : `이달의 꽃 「${m.flower}」 — 패 점수 ×2 · 배수 +1`, 32, C.pink, { thick: 3 }));
     }
-    ov.add(txt(this, W / 2, cy + (god ? 650 : 620), `목표 꽃 점수 ${fmt(run.gateTarget())}`, 44, C.ivory, { thick: 4 }));
+    ov.add(txt(this, W / 2, cy + (god ? 680 : 620), `목표 꽃 점수 ${fmt(run.gateTarget())}`, 44, C.ivory, { thick: 4 }));
     if (run.windNext.length) ov.add(txt(this, W / 2, cy + 690, `바람에 실은 패 ${run.windNext.length}장이 첫 손에 돌아와요`, 30, C.jade, { thick: 3, weight: '700' }));
     const go = button(this, W / 2, H - 200, 600, 140, god ? '맞서기' : '시작', () => {
       if (this.introGo) return; this.introGo = true;
       this.tweens.add({ targets: ov, alpha: 0, duration: 250, onComplete: () => { ov.destroy(); this.overlay = null; this.introGo = false; } });
+      const back = run.windNext.slice();
       run.startGate(); this.saveRun();
+      if (this.first && run.gate === 2) this.tstep(6);
       this.sel = []; for (const v of this.views.values()) v.destroy(); this.views.clear();
       this.refresh(); this.setButtons(true);
       this.layoutHand(false, run.hand.slice());
-      this.time.delayedCall(700, () => this.tutStart());
+      this.time.delayedCall(800, () => { this.tutStart(); this.tutDeal(back); });
     }, { style: 'red' });
     ov.add(go);
   }
@@ -313,7 +322,7 @@ export class PlayScene extends Phaser.Scene {
     const run = this.run;
     if (this.busy) return;
     const why = run.canPlay(this.sel); if (why) { toast(this, why); return; }
-    this.busy = true; this.speed = 1; this.tutHide();
+    this.busy = true; this.speed = 1; this.tutHide(); this.tstep(2); this.lastPrevY = null;
     const uids = this.sel.slice(); this.sel = [];
     const before = run.score;
     const { res, drawn, gust } = run.play(uids);
@@ -321,6 +330,7 @@ export class PlayScene extends Phaser.Scene {
     this.stage.setVisible(true);
     this.yakuT.setText(''); this.totT.setText(''); this.hintT.setText('');
     this.chipBox.setAlpha(1); this.multBox.setAlpha(1); this.xT.setAlpha(1);
+    this.totT.setFontSize(46).setY(this.L.stTop + 262);
     this.playB.setEnabled(false); this.windB.setEnabled(false);
     // 1) 낸 패가 무대로
     audio.play('sfx_play'); audio.buzz(12);
@@ -411,7 +421,7 @@ export class PlayScene extends Phaser.Scene {
     const run = this.run;
     if (this.busy) return;
     const why = run.canWind(this.sel); if (why) { toast(this, why); return; }
-    this.busy = true; this.tutHide();
+    this.busy = true; this.tutHide(); this.tstep(3);
     const uids = this.sel.slice(); this.sel = [];
     const { drawn } = run.wind(uids); this.saveRun();
     const last = run.gate >= run.gates;
@@ -434,6 +444,7 @@ export class PlayScene extends Phaser.Scene {
     for (const v of this.views.values()) this.tweens.add({ targets: v, y: H + 300, duration: 400, onComplete: () => v.destroy() });
     this.views.clear();
     const d = load(); if (run.gate === 1 && !d.tut.first) { d.tut.first = true; save(); }
+    if (!resume) { track('gate_end', { gate: run.gate, ok: 1, hands: run.playedN || 0, winds: (run.windsMax || 3) - run.winds, first: this.first ? 1 : 0, mode: run.mode }); if (run.gate === 1) this.tstep(4); }
     const ov = this.add.container(0, 0).setDepth(3000); this.overlay = ov;
     ov.add(this.add.rectangle(W / 2, H / 2, W, H, 0x050304, 0.7).setInteractive());
     const cy = H * 0.4;
@@ -482,8 +493,9 @@ export class PlayScene extends Phaser.Scene {
     ov.add(txt(this, W / 2, top + 112, '엽전으로 부적과 패 손질을 사요 · 위의 부적을 누르면 팔 수 있어요', 24, C.dim, { thick: 2, weight: '700' }));
     // 부적 3
     const s = run.shop, cy = top + 360;
+    this.shopCards = [];
     s.charms.forEach((o, i) => {
-      const x = W / 2 + (i - 1) * 335, d = CHARM[o.id], c = this.add.container(x, cy); ov.add(c);
+      const x = W / 2 + (i - 1) * 335, d = CHARM[o.id], c = this.add.container(x, cy); ov.add(c); this.shopCards[i] = c;
       c.add(this.add.image(0, 0, boxTex(this, 'dark', 318, 440, 26, 2)).setAlpha(o.sold ? 0.4 : 1));
       if (o.sold) { c.add(txt(this, 0, 0, '샀어요', 34, C.dim, { thick: 3 })); return; }
       c.add(this.add.image(0, -118, 'talisman').setScale(0.24).setAngle(i % 2 ? 3 : -3));
@@ -493,7 +505,7 @@ export class PlayScene extends Phaser.Scene {
       c.add(txt(this, 0, 112, d.desc, 23, C.ivory, { wrap: 290, thick: 2, weight: '700' }));
       const b = button(this, 0, 196, 230, 70, `엽전 ${o.cost}`, () => {
         const r = run.buyCharm(i); if (r.error) { toast(this, r.error); return; }
-        audio.play('sfx_buy'); audio.buzz(12); this.saveRun(); this.refresh(); this.showShop();
+        audio.play('sfx_buy'); audio.buzz(12); this.tutHide(); this.tstep(5); this.saveRun(); this.refresh(); this.showShop();
         const slot = this.charmRow.list[run.charms.length - 1]; if (slot) { slot.setScale(0.3); this.tweens.add({ targets: slot, scale: 1, duration: 300, ease: 'Back.out' }); }
       }, { style: 'gold', size: 28 });
       const why = run.canBuyCharm(i); if (why) b.setEnabled(false, why);
@@ -517,8 +529,15 @@ export class PlayScene extends Phaser.Scene {
     const rwhy = run.canReroll(); if (rwhy) rb.setEnabled(false, rwhy);
     ov.add(rb);
     const next = run.months[run.gate] || run.months[run.gate - 1];
-    ov.add(button(this, 760, bot - 110, 500, 120, '다음 달로', () => { run.leaveShop(); this.saveRun(); ov.destroy(); this.overlay = null; if (run.season.bg !== this.bg.texture.key) this.drawBg(); this.showIntro(); }, { style: 'red', sub: `${next.n}월 · ${next.name}` }));
-    if (!load().tut.shop) { load().tut.shop = true; save(); this.time.delayedCall(400, () => this.say('장터예요. 엽전으로 부적을 사면 점수가 크게 불어나요.\n부적은 위 다섯 칸에 들어가요', W / 2, top + 86, { ms: 6000 })); }
+    ov.add(button(this, 760, bot - 110, 500, 120, '다음 달로', () => { this.tutHide(); if (this.first && run.gate === 1 && this.once('done')) track('tut_done', { sec: this.sec() }); run.leaveShop(); this.saveRun(); ov.destroy(); this.overlay = null; if (run.season.bg !== this.bg.texture.key) this.drawBg(); this.showIntro(); }, { style: 'red', sub: `${next.n}월 · ${next.name}` }));
+    if (this.first && run.charms.length < 2 && this.once('shop')) {
+      /* 첫 장터: 지금 살 수 있는 부적 하나만 빛나게 (안내는 늘 성공하는 행동만) */
+      const k = s.charms.findIndex((o, i) => !run.canBuyCharm(i));
+      this.time.delayedCall(400, () => {
+        this.say(k >= 0 ? '엽전으로 부적 하나 사 볼까요?\n점수를 키워 줘요 · 위 부적 자리에 들어가요' : '엽전이 모이면 부적을 살 수 있어요', W / 2, top + 86, { ms: 7000 });
+        if (k >= 0 && this.shopCards && this.shopCards[k]) this.tutGlow = [this.tweens.add({ targets: this.shopCards[k], scale: { from: 1, to: 1.05 }, duration: 450, yoyo: true, repeat: -1 })];
+      });
+    }
   }
   pickCard(i) {
     const run = this.run, o = run.shop.tools[i], t = TOOL[o.id];
@@ -575,6 +594,7 @@ export class PlayScene extends Phaser.Scene {
     const run = this.run, d = load();
     if (this.finished) return; this.finished = true;
     if (run.phase !== 'won') { run.phase = 'over'; audio.play('sfx_fail', { volume: 0.6 }); }
+    if (run.phase !== 'won') track('gate_end', { gate: run.gate, ok: 0, hands: run.playedN || 0, winds: (run.windsMax || 3) - run.winds, first: this.first ? 1 : 0, mode: run.mode });
     const isNewBook = recordBook(run);
     noteRunEnd(run);
     const petals = run.petals();
@@ -582,8 +602,9 @@ export class PlayScene extends Phaser.Scene {
     d.best = Math.max(d.best, run.total); d.bestMonth = Math.max(d.bestMonth, run.phase === 'won' ? 12 : run.cleared);
     if (run.mode === 'daily') { const t = today(); if (d.daily.date !== t) d.daily = { date: t, plays: 0, best: 0, won: false }; d.daily.plays++; d.daily.best = Math.max(d.daily.best, run.total); d.daily.won = d.daily.won || run.phase === 'won'; }
     const summary = { mode: run.mode, won: run.phase === 'won', cleared: run.cleared, gate: run.gate, total: run.total, best: run.best, petals, newBook: isNewBook, beaten: run.beaten.slice(), assisted: run.assisted, seed: run.seed, endGod: run.isBoss ? run.bosses[run.seasonI] : null, found: run.found.length };
-    d.run = null; save();
-    track('run_end', { mode: run.mode, cleared: run.cleared, won: run.phase === 'won' ? 1 : 0, total: run.total, conts: run.conts });
+    if (this.first && !d.firstDone) { d.firstDone = true; d.newMenus = true; }
+    d.run = null; d.runOpen = false; save();
+    track('run_end', { mode: run.mode, cleared: run.cleared, gates: run.cleared, won: run.phase === 'won' ? 1 : 0, total: run.total, conts: run.conts, first: this.first ? 1 : 0 });
     roundOver();
     const fin = { ...summary, line: null };
     this.time.delayedCall(run.phase === 'won' ? 200 : 700, () => this.scene.start('Result', { s: fin, run: run.toJSON() }));
@@ -595,20 +616,17 @@ export class PlayScene extends Phaser.Scene {
     m.add(button(this, 0, -200, 560, 120, '계속하기', () => m.close(), { style: 'red' }));
     m.add(button(this, 0, -50, 560, 110, '족보 표', () => { m.close(); this.yakuTable(); }, { style: 'dark' }));
     const sb = button(this, 0, 90, 560, 110, load().sfx ? '소리 끄기' : '소리 켜기', () => { audio.toggleSfx(); audio.toggleMusic(); sb.setLabel(load().sfx ? '소리 끄기' : '소리 켜기'); }, { style: 'dark' }); m.add(sb);
-    m.add(button(this, 0, 230, 560, 110, '처음 화면으로', () => { m.close(); this.saveRun(); this.scene.start('Home'); }, { style: 'dark' }));
+    m.add(button(this, 0, 230, 560, 110, '처음 화면으로', () => { m.close(); this.saveRun(); track('run_quit', { gate: this.run.gate, phase: this.run.phase, sec: this.sec(), first: this.first ? 1 : 0, how: 'menu' }); const d = load(); d.runOpen = false; save(); this.scene.start('Home'); }, { style: 'dark' }));
     m.add(txt(this, 0, 340, '판은 저장돼요 · 처음 화면에서 「이어서 하기」', 26, C.dim, { thick: 2, weight: '700' }));
   }
   yakuTable() {
-    const m = modal(this, 1000, Math.min(H - 100, 1760), { title: '족보 표', depth: 4300 });
-    const ys = DECK.yaku, top = -Math.min(H - 100, 1760) / 2 + 150;
+    track('yaku_open', { from: 'play', first: this.first ? 1 : 0 });
+    const hh = Math.min(H - 100, 1820), m = modal(this, 1040, hh, { title: '족보 표', depth: 4300 });
+    const ys = yakuOrder(), top = -hh / 2 + 150, gap = Math.min(78, (hh - 330) / ys.length);
     const found = load().book.yaku;
-    ys.forEach((y, i) => {
-      const yy = top + i * 76;
-      m.add(txt(this, -440, yy, y.name, 32, found.includes(y.id) ? C.gold : C.ivory, { ox: 0, thick: 3 }));
-      m.add(txt(this, -230, yy, y.desc, 22, C.dim, { ox: 0, thick: 2, weight: '700', wrap: 470, align: 'left' }));
-      m.add(txt(this, 440, yy, `${y.chips} × ${y.mult}`, 30, C.goldHi, { ox: 1, thick: 3 }));
-    });
-    m.add(txt(this, 0, top + ys.length * 76 + 10, '점수 = (족보 점수 + 든 패의 끗) × (배수) · 끗: 광 20 · 열 12 · 띠 8 · 피 4', 22, C.pink, { thick: 2, weight: '700', wrap: 900 }));
+    m.add(txt(this, 0, top - 40, '같은 달이 많을수록 세요 · 위에서 아래로 갈수록 큰 족보', 24, C.pink, { thick: 2, weight: '700' }));
+    ys.forEach((y, i) => yakuRow(this, m.box, 0, top + 20 + i * gap, y, found.includes(y.id), 980));
+    m.add(txt(this, 0, top + 20 + ys.length * gap + 10, '꽃 점수 = (족보 점수 + 든 패의 패 점수) × 배수 · 패 점수: 광 20 · 열끗 12 · 띠 8 · 피 4', 22, C.dim, { thick: 2, weight: '700', wrap: 960 }));
   }
   deckView() {
     const run = this.run, m = modal(this, 1040, Math.min(H - 80, 1500), { title: `이번 판 덱 ${run.cards.length}장`, titleSize: 40 });
@@ -638,30 +656,67 @@ export class PlayScene extends Phaser.Scene {
     if (o.ms) this.time.delayedCall(o.ms, () => { if (this.bubble === c) this.tutHide(); });
     return c;
   }
-  tutHide() { if (this.bubble) { this.bubble.destroy(); this.bubble = null; } if (this.tutGlow) { this.tutGlow.forEach(t => t.remove()); this.tutGlow = null; } }
+  tutHide() {
+    if (this.bubble) { this.bubble.destroy(); this.bubble = null; }
+    if (this.tutGlow) { this.tutGlow.forEach(t => t.remove()); this.tutGlow = null; for (const v of this.views.values()) v.glow.setAlpha(v.selected ? 1 : 0); this.playB.setScale(1); }
+  }
+  get first() { return this.run.mode === 'first'; }
+  tY() { return this.L.stTop + 400; }   /* 안내 말풍선 자리: 미리보기 아래 · 손패 위 */
+  // 첫 판 단계 공개: 한 번 보인 안내는 판 저장(run.seenTut)에 남아 이어서 해도 다시 안 나옴
+  once(k) { const s = this.run.seenTut || (this.run.seenTut = {}); if (s[k]) return false; s[k] = 1; this.saveRun(); return true; }
+  tstep(step) { if (!this.first) return; const s = this.run.seenTut || (this.run.seenTut = {}); if (s['st' + step]) return; s['st' + step] = 1; track('tut_step', { step, sec: this.sec() }); }
+  sec() { return Math.round((Date.now() - (this.run.t0 || Date.now())) / 1000); }
+  // 1월 첫 손: 빛나는 1월 세 장을 한 장씩 → 낱장 → 한 쌍 → 세 장 (계단)
   tutStart() {
-    const run = this.run, d = load();
-    if (d.tut.first || run.gate !== 1 || run.playedN) return;
-    this.tutStep = 1;
-    const ms = run.hand.filter(u => run.card(u).month === run.month).slice(0, 2);
+    const run = this.run;
+    if (!run.tutorial || run.gate !== 1 || run.playedN) return;
+    const ms = run.hand.filter(u => run.card(u).month === run.month).slice(0, 3);
     if (ms.length < 2) return;
-    this.tutPair = ms;
-    this.say('같은 달 패 두 장을 눌러 보세요.\n빛나는 1월 소나무 패 두 장이에요', W / 2, this.L.stY - 40);
-    this.tutGlow = ms.map(u => { const v = this.views.get(u); return this.tweens.add({ targets: v.glow, alpha: { from: 0.2, to: 0.9 }, duration: 500, yoyo: true, repeat: -1 }); });
+    this.tutStep = 1; this.tutPair = ms;
+    this.say(`${run.month}월 패 ${ms.length}장이 빛나요.\n한 장씩 눌러 보세요`, W / 2, this.tY());
+    this.tutGlow = ms.filter(u => this.views.get(u)).map(u => { const v = this.views.get(u); return this.tweens.add({ targets: v.glow, alpha: { from: 0.2, to: 0.9 }, duration: 500, yoyo: true, repeat: -1 }); });
   }
   tutCheck() {
-    if (this.tutStep !== 1) return;
-    if (this.tutPair && this.tutPair.every(u => this.sel.includes(u))) {
-      this.tutHide(); this.tutStep = 2;
+    if (this.tutStep !== 1 || !this.tutPair) return;
+    /* 안내한 패가 바람 등으로 손을 떠나면 안내를 접음 (없는 패를 가리키지 않음) */
+    if (this.tutPair.some(u => !this.run.hand.includes(u) || !this.views.get(u))) { this.tutHide(); this.tutStep = 3; return; }
+    const n = this.tutPair.filter(u => this.sel.includes(u)).length, all = this.tutPair.length;
+    const glowRest = () => { if (this.tutGlow) this.tutGlow.forEach(t => t.remove()); this.tutGlow = this.tutPair.filter(u => !this.sel.includes(u)).map(u => this.tweens.add({ targets: this.views.get(u).glow, alpha: { from: 0.2, to: 0.9 }, duration: 500, yoyo: true, repeat: -1 })); };
+    if (n === all) {
+      this.tutHide(); this.tutStep = 2; this.tstep(1);
       for (const u of this.sel) this.viewOf(u).setSelected(true);
-      this.say('족보와 점수가 미리 나와요. 「내기」를 눌러요!', W / 2, this.L.stTop - 40);
+      this.say(`${this.run.preview(this.sel).yaku.name}!! 같은 달이 많을수록 점수가 커져요.\n「내기」를 눌러요`, W / 2, this.L.stTop - 40);
       this.tutGlow = [this.tweens.add({ targets: this.playB, scale: { from: 1, to: 1.06 }, duration: 450, yoyo: true, repeat: -1 })];
+    } else if (n > 0 && this.bubble) {
+      const y = this.run.preview(this.sel).yaku.name;
+      this.say(n === 1 ? `${y} — 한 장 더 눌러 보세요` : `${y}! 점수가 커졌죠? 한 장 더`, W / 2, this.tY());
+      glowRest();
     }
   }
   tutAfterPlay() {
-    if (this.tutStep !== 2) return;
-    this.tutStep = 3; this.playB.setScale(1);
-    if (this.run.phase !== 'play') return;
-    this.say('잘했어요! 필요 없는 패는 「바람」에 실어 보내요.\n다음 달(2월 매화) 패를 보내 두면 다음 달 첫 손에 제철로 와요', W / 2, this.L.stY - 20, { ms: 6500 });
+    const run = this.run;
+    if (this.tutStep === 2) { this.tutStep = 3; this.playB.setScale(1); }
+    if (!this.first || run.phase !== 'play') return;
+    // 1월: 짝 맞는 패가 없을 때만 '바꾸기' 한 줄 (다음 달 이야기는 아직 안 함)
+    const best = run.hand.length ? this.bestYaku() : 'high';
+    if (run.gate === 1 && best === 'high' && run.winds > 0 && this.once('wind1')) {
+      this.say('맞는 짝이 없으면 「바람」으로 패를 바꿔요\n(바꿀 패를 골라 「바람」)', W / 2, this.tY(), { ms: 6000 });
+    } else if (run.gate === 2 && this.once('wind2')) {
+      this.say('다음 달(3월) 꽃을 「바람」에 실어 두면,\n다음 달 첫 손에 돌아와요', W / 2, this.tY(), { ms: 6000 });
+    }
+  }
+  // 지금 손패에서 가장 센 족보 (같은 달 짝이 있나) — 엔진 미리보기만 씀
+  bestYaku() {
+    const run = this.run, h = run.hand, byM = {};
+    for (const u of h) { const m = run.card(u).month; (byM[m] = byM[m] || []).push(u); }
+    const grp = Object.values(byM).filter(g => g.length >= 2);
+    return grp.length ? run.preview(grp[0]).yaku.id : 'high';
+  }
+  // 새 달 첫 손 안내: 2월 이달의 꽃 · 바람 패가 돌아옴
+  tutDeal(back) {
+    const run = this.run;
+    if (!this.first) return;
+    if (back && back.length && this.once('back')) { this.say(`지난달 「바람」에 실은 패 ${back.length}장이 돌아왔어요!`, W / 2, this.tY(), { ms: 4500 }); return; }
+    if (run.gate === 2 && this.once('season2')) this.say('2월 꽃(매화)은 점수 2배!\n손에 있으면 같이 내 보세요', W / 2, this.tY(), { ms: 5000 });
   }
 }

@@ -1,9 +1,9 @@
 // 판 밖 이야기: 덱 등록 · 오늘의 패(화투점) · 칭찬 · 판 끝 독설 한 줄 · 도감 기록 · 응원 부적 조건
-import { DECK as HWATU } from './deck/hwatu.js?v=0.82.4';
-import { makeRules } from './core/rules.js?v=0.82.4';
-import { hash, kstDay, Rng } from './core/rng.js?v=0.82.4';
-import { DAILY_POOL } from './core/charms.js?v=0.82.4';
-import { load, save } from './save.js?v=0.82.4';
+import { DECK as HWATU } from './deck/hwatu.js?v=0.83.0';
+import { makeRules } from './core/rules.js?v=0.83.0';
+import { hash, kstDay, Rng } from './core/rng.js?v=0.83.0';
+import { DAILY_POOL } from './core/charms.js?v=0.83.0';
+import { load, save } from './save.js?v=0.83.0';
 
 // 덱 등록: 다른 꽃패(원어데이 고유 덱 등)를 만들면 여기에 한 줄 추가 — 엔진 코드는 그대로
 export const DECKS_DEF = { hwatu: HWATU };
@@ -86,3 +86,23 @@ export function helpDue() {
   return h.fails.n >= 3 && h.given < HELP_DAILY;
 }
 export function helpGiven() { const h = load().help; h.given++; h.fails = {}; save(); }
+
+// 족보 표 순서: '장수 계단'(같은 달) 먼저 → 그림 족보(띠 · 새 · 광) → 다섯 장 족보 — 덱 데이터의 갈래(fam)와 점수로만 정함
+const FAM_ORDER = ['high', 'month', 'dan', 'bird', 'gwang', 'kind5', 'season', 'run'];
+export function yakuOrder(deck = DECK) { return deck.yaku.slice().sort((a, b) => (FAM_ORDER.indexOf(a.fam) - FAM_ORDER.indexOf(b.fam)) || (a.chips - b.chips) || (a.mult - b.mult)); }
+// 족보 예시 패 (표에 작게 보여 줄 것) — 덱 데이터의 일반 규칙만 읽음
+export function yakuExample(y, deck = DECK) {
+  const r = y.rule, cs = deck.cards, ms = deck.months.map(m => m.n);
+  const ofMonth = m => cs.filter(c => c.month === m);
+  if (r.high) return [cs.find(c => c.kind === 'gwang')];
+  if (r.month) return r.month.flatMap((n, i) => ofMonth(ms[i * 2]).slice(0, n));
+  if (r.kind || r.ribbon || r.tag) {
+    let f = cs.filter(c => (!r.kind || c.kind === r.kind) && (!r.ribbon || c.ribbon === r.ribbon) && (!r.tag || c.tags.includes(r.tag)));
+    if (r.without) f = f.filter(c => !c.tags.includes(r.without));
+    else if (r.kind === 'gwang' && y.id !== 'ogwang' && y.id !== 'sagwang') { const w = cs.find(c => c.kind === 'gwang' && c.tags.length); if (w) f = [...f.filter(c => c !== w).slice(0, r.count - 1), w]; }
+    return f.slice(0, r.count);
+  }
+  if (r.season) { const s = deck.seasons[0].months; return s.flatMap(m => ofMonth(m)).filter((c, i, a) => a.findIndex(x => x.month === c.month && x.kind === c.kind) === i).slice(0, r.season); }
+  if (r.run) return ms.slice(2, 2 + r.run).map(m => ofMonth(m)[0]);
+  return [];
+}

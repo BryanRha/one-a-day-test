@@ -1,13 +1,13 @@
 // 판 끝: 이번 판에 얻은 것부터(꽃잎 · 도감) → 기록 → 독설 한 줄 → 꽃잎 2배(광고/골드) → 다시
-import { W, H, C } from '../config.js?v=0.82.4';
-import { load, save } from '../save.js?v=0.82.4';
-import { audio } from '../audio.js?v=0.82.4';
-import { txt, button, toast, boxTex, fmt } from '../ui.js?v=0.82.4';
-import { burst } from '../fx.js?v=0.82.4';
-import { endLine, tipLine, rules } from '../meta.js?v=0.82.4';
-import { Run } from '../core/run.js?v=0.82.4';
-import { GOD } from '../core/gods.js?v=0.82.4';
-import { bm, bmOn, owned, price, adLeft, dblUsed, noteDbl, afterRound, track } from '../bmflow.js?v=0.82.4';
+import { W, H, C } from '../config.js?v=0.83.0';
+import { load, save } from '../save.js?v=0.83.0';
+import { audio } from '../audio.js?v=0.83.0';
+import { txt, button, toast, boxTex, fmt } from '../ui.js?v=0.83.0';
+import { burst } from '../fx.js?v=0.83.0';
+import { endLine, tipLine, rules } from '../meta.js?v=0.83.0';
+import { Run } from '../core/run.js?v=0.83.0';
+import { GOD } from '../core/gods.js?v=0.83.0';
+import { bm, bmOn, owned, price, adLeft, dblUsed, noteDbl, afterRound, track } from '../bmflow.js?v=0.83.0';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -50,7 +50,7 @@ export class ResultScene extends Phaser.Scene {
     }
     // 5) 꽃잎 2배 (3달 이상 간 판 · 하루 5번 · 광고 1회 또는 20골드)
     const by = H - 420;
-    if (bmOn() && s.cleared >= 3 && s.petals > 0 && dblUsed() < 5) {
+    if (bmOn() && s.mode !== 'first' && s.cleared >= 3 && s.petals > 0 && dblUsed() < 5) {
       const ad = adLeft(), g = price('petal2');
       if (ad || g) {
         const dbl = button(this, W / 2, by, 760, 120, `꽃잎 2배 (+${s.petals})`, async () => {
@@ -64,14 +64,24 @@ export class ResultScene extends Phaser.Scene {
         dbl.setDepth(5);
       }
     }
-    button(this, W / 2 - 200, H - 240, 360, 130, '처음으로', () => this.leave('Home'), { style: 'dark' });
-    button(this, W / 2 + 200, H - 240, 360, 130, '한 판 더', () => this.leave('Home', true), { style: 'red', sub: '자유 판' });
+    if (s.mode === 'first') {
+      /* 첫 판 끝: 새로 열린 것 알림 → 오늘의 판으로 */
+      const ny = H - 420;
+      this.add.image(W / 2, ny, boxTex(this, 'ivory', 960, 150, 26, 3));
+      txt(this, W / 2, ny - 30, '새로 열렸어요', 30, '#8A2A1A', { stroke: null, weight: '900' });
+      txt(this, W / 2, ny + 22, '오늘의 판 · 자유 판 · 도감 · 꽃 덱 · 꾸미기', 28, '#2A1C10', { stroke: null, weight: '800' });
+      button(this, W / 2 - 200, H - 240, 360, 130, '처음으로', () => this.leave('Home'), { style: 'dark' });
+      button(this, W / 2 + 200, H - 240, 360, 130, '오늘의 판', () => this.leave('Home', 'daily'), { style: 'red', sub: '오늘 모두 같은 패로 도전' });
+    } else {
+      button(this, W / 2 - 200, H - 240, 360, 130, '처음으로', () => this.leave('Home'), { style: 'dark' });
+      button(this, W / 2 + 200, H - 240, 360, 130, '한 판 더', () => this.leave('Home', 'free'), { style: 'red', sub: '자유 판' });
+    }
     save();
   }
   onBack() { this.leave('Home'); return true; }
-  async leave(to, again = false) {
+  async leave(to, go = null) {
     if (this.busy) return; this.busy = true;
     await afterRound();
-    this.scene.start(to, again ? { again: true } : {});
+    this.scene.start(to, go ? { go } : {});
   }
 }

@@ -1,19 +1,19 @@
 // 첫 화면: 오늘의 패(화투점) 한 장 뒤집기 · 오늘의 판 / 자유 판 / 이어서 · 도감 · 꽃 덱 · 꾸미기 · 소리
-import { W, H, C, TITLE, VERSION } from '../config.js?v=0.82.4';
-import { load, save } from '../save.js?v=0.82.4';
-import { audio } from '../audio.js?v=0.82.4';
-import { txt, button, roundButton, modal, toast, boxTex, fmt } from '../ui.js?v=0.82.4';
-import { CardView } from '../cards.js?v=0.82.4';
-import { DECK, rules, fortuneCard, dailySeed, todayCharm, today, helpDue, helpGiven } from '../meta.js?v=0.82.4';
-import { DECKS, Run } from '../core/run.js?v=0.82.4';
-import { CHARM, CHEER } from '../core/charms.js?v=0.82.4';
-import { GOD } from '../core/gods.js?v=0.82.4';
-import { bmOn, owned, BACKS, backShown, backOpen, buyBack, effBack, price, fortuneSeed, helpOn, track } from '../bmflow.js?v=0.82.4';
-import { inOAD, exitToOAD } from '../oad.js?v=0.82.4';
+import { W, H, C, TITLE, VERSION } from '../config.js?v=0.83.0';
+import { load, save } from '../save.js?v=0.83.0';
+import { audio } from '../audio.js?v=0.83.0';
+import { txt, button, roundButton, modal, toast, boxTex, fmt } from '../ui.js?v=0.83.0';
+import { CardView } from '../cards.js?v=0.83.0';
+import { DECK, rules, fortuneCard, dailySeed, todayCharm, today, helpDue, helpGiven } from '../meta.js?v=0.83.0';
+import { DECKS, Run } from '../core/run.js?v=0.83.0';
+import { CHARM, CHEER } from '../core/charms.js?v=0.83.0';
+import { GOD } from '../core/gods.js?v=0.83.0';
+import { bmOn, owned, BACKS, backShown, backOpen, buyBack, effBack, price, fortuneSeed, helpOn, track } from '../bmflow.js?v=0.83.0';
+import { inOAD, exitToOAD } from '../oad.js?v=0.83.0';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
-  init(data) { this.again = !!(data && data.again); }
+  init(data) { this.go = data && (data.again ? 'free' : data.go) || null; }
   create() {
     const d = load();
     this.busy = false;
@@ -63,26 +63,39 @@ export class HomeScene extends Phaser.Scene {
     });
     label.setDepth(2);
 
-    // 버튼
+    // 버튼 — 첫 방문은 「첫 판」 하나만 크게, 나머지는 흐리게(누르면 이유)
     const by = H - 560;
     const seed = dailySeed(fortuneSeed()), tc = CHARM[todayCharm(seed)];
     const saved = d.run && d.run.phase !== 'won' && d.run.phase !== 'over' ? d.run : null;
+    const firstDone = !!(d.firstDone || d.plays > 0), lock = '첫 판을 마치면 열려요';
+    if (!d.homeFirst) { d.homeFirst = true; save(); track('home_first', { fortune: fortuneSeed() ? 1 : 0 }); }
+    const seenNew = d.seenNew || (d.seenNew = {});
+    const dot = (c, key, w) => { if (!d.newMenus || seenNew[key]) return; const t = txt(this, w / 2 - 20, -c.height / 2 + 6, '새로', 22, '#FFFFFF', { stroke: null }).setBackgroundColor('#D9406A').setPadding(10, 4).setOrigin(1, 0.5); c.add(t); c.once('pointerup', () => { seenNew[key] = 1; save(); }); };
     let y = by;
     if (saved) {
-      button(this, W / 2, y, 760, 132, '이어서 하기', () => this.resume(), { style: 'gold', sub: `${saved.gate}월 · ${saved.mode === 'daily' ? '오늘의 판' : '자유 판'}` });
+      const nm = saved.mode === 'daily' ? '오늘의 판' : saved.mode === 'first' ? '첫 판' : '자유 판';
+      button(this, W / 2, y, 760, 132, '이어서 하기', () => this.resume(), { style: 'gold', sub: `${saved.gate}월 · ${nm}` });
       y += 150;
     }
-    button(this, W / 2, y, 760, 132, '오늘의 판', () => this.start('daily'), { style: 'red', sub: `오늘 모두 같은 패 · 오늘의 부적 「${tc.name}」` });
-    button(this, W / 2, y + 150, 760, 112, '자유 판', () => this.start('free'), { style: 'dark', sub: '매번 새 패 · 응원 선물 있음' });
+    if (!firstDone) {
+      if (!saved) txt(this, W / 2, y - 110, '같은 달 꽃패를 모아 내면 점수!\n목표를 넘기면 다음 달로 · 12월까지', 32, C.ivory, { thick: 4, weight: '800' });
+      if (!saved) button(this, W / 2, y, 760, 140, '첫 판 시작', () => this.start('first'), { style: 'red', sub: '1월부터 · 연습 · 순위 밖' });
+      y += saved ? 0 : 160;
+      const b1 = button(this, W / 2 - 195, y, 370, 100, '오늘의 판', () => {}, { style: 'dark', size: 32 }); b1.setEnabled(false, lock);
+      const b2 = button(this, W / 2 + 195, y, 370, 100, '자유 판', () => {}, { style: 'dark', size: 32 }); b2.setEnabled(false, lock);
+    } else {
+      const b1 = button(this, W / 2, y, 760, 132, '오늘의 판', () => this.start('daily'), { style: 'red', sub: `오늘 모두 같은 패 · 오늘의 부적 「${tc.name}」` }); dot(b1, 'daily', 760);
+      const b2 = button(this, W / 2, y + 150, 760, 112, '자유 판', () => this.start('free'), { style: 'dark', sub: '매번 새 패 · 응원 선물 있음' }); dot(b2, 'free', 760);
+    }
     // 아래 줄
     const ry = H - 130, gap = 190;
-    roundButton(this, W / 2 - gap * 1.5, ry, 54, '書', () => this.scene.start('Book'), { label: '도감', size: 44 });
-    roundButton(this, W / 2 - gap * 0.5, ry, 54, '牌', () => this.decks(), { label: '꽃 덱', size: 44 });
-    roundButton(this, W / 2 + gap * 0.5, ry, 54, '飾', () => this.looks(), { label: '꾸미기', size: 44 });
+    const r1 = roundButton(this, W / 2 - gap * 1.5, ry, 54, '書', () => this.scene.start('Book'), { label: '도감', size: 44 });
+    const r2 = roundButton(this, W / 2 - gap * 0.5, ry, 54, '牌', () => this.decks(), { label: '꽃 덱', size: 44 });
+    const r3 = roundButton(this, W / 2 + gap * 0.5, ry, 54, '飾', () => this.looks(), { label: '꾸미기', size: 44 });
     roundButton(this, W / 2 + gap * 1.5, ry, 54, '?', () => this.howto(), { label: '놀이법', size: 46 });
+    [[r1, 'book'], [r2, 'deck'], [r3, 'look']].forEach(([r, k]) => { if (!firstDone) r.setEnabled(false, lock); else dot(r, k, 108); });
     txt(this, W - 20, H - 18, `v${VERSION}`, 20, '#6B6052', { ox: 1, oy: 1, thick: 0, stroke: null, weight: '700' });
-    if (this.again) { this.again = false; this.time.delayedCall(60, () => this.start('free')); }
-    else if (!d.tut.first) this.time.delayedCall(600, () => toast(this, '처음이신가요? 「오늘의 판」을 누르면 한 손씩 알려 드려요', { y: H * 0.6, ms: 2600 }));
+    if (this.go) { const g = this.go; this.go = null; this.time.delayedCall(60, () => this.start(g)); }
   }
   onBack() { return false; }
 
@@ -96,7 +109,7 @@ export class HomeScene extends Phaser.Scene {
     const d = load();
     const go = (cheer = null) => {
       const seed = mode === 'daily' ? dailySeed(fortuneSeed()) : (Math.random() * 2 ** 32) >>> 0;
-      const run = new Run(rules, { seed, mode, variant: d.variant, today: todayCharm(mode === 'daily' ? seed : dailySeed(fortuneSeed())), cheer, tutorial: !d.tut.first });
+      const run = new Run(rules, { seed, mode, variant: mode === 'first' ? 'moon' : d.variant, today: todayCharm(mode === 'daily' ? seed : dailySeed(fortuneSeed())), cheer, tutorial: mode === 'first' });
       d.run = run.toJSON(); save();
       this.scene.start('Play', { run, fresh: true });
     };
@@ -186,17 +199,44 @@ export class HomeScene extends Phaser.Scene {
     m.add(txt(this, 0, 340, `오늘의 패 v${VERSION} · 혼자 하는 점수 퍼즐 (판돈 · 대결 없음)`, 22, C.dim, { weight: '700', thick: 2 }));
   }
   howto() {
-    const m = modal(this, 960, 1500, { title: '놀이법' });
+    const d = load(); track('howto_open', { from: 'home', first: d.firstDone ? 0 : 1 });
+    const hh = 1240, m = modal(this, 980, hh, { title: '놀이법' });
+    const top = -hh / 2 + 150, P = (y, h) => m.add(this.add.image(0, y, boxTex(this, 'dark', 900, h, 26, 2)));
+    // ① 같은 달 계단
+    P(top + 200, 380);
+    m.add(txt(this, -420, top + 50, '① 같은 달을 모을수록 점수가 커져요', 32, C.gold, { ox: 0 }));
+    const m1 = DECK.cards.filter(c => c.month === 1).slice(0, 3);
+    [1, 2, 3].forEach((n, k) => {
+      const cs = m1.slice(0, n).map((c, i) => ({ ...c, uid: i + 1 })), r = rules.evaluate(cs, { month: 1 });
+      const x = -280 + k * 280;
+      cs.forEach((c, i) => m.add(this.add.image(x + (i - (n - 1) / 2) * 44, top + 190, 'card_' + c.id).setScale(0.3).setAngle((i - (n - 1) / 2) * 6)));
+      m.add(txt(this, x, top + 310, `${r.yaku.name}  ${fmt(r.total)}`, 30, k === 2 ? C.goldHi : C.ivory, { thick: 3 }));
+      if (k < 2) m.add(txt(this, x + 140, top + 190, '→', 44, C.pink, { stroke: null }));
+    });
+    // ② 목표 · 열두 달
+    P(top + 520, 220);
+    m.add(txt(this, -420, top + 450, '② 한 달에 4번 내요. 목표를 넘기면 다음 달로', 30, C.gold, { ox: 0 }));
+    for (let i = 0; i < 12; i++) { const x = -385 + i * 70; m.add(this.add.circle(x, top + 545, 26, i < 3 ? 0xB3262B : 0x3A302A).setStrokeStyle(2, 0xE8C27A)); m.add(txt(this, x, top + 545, String(i + 1), 24, C.ivory, { stroke: null })); }
+    m.add(txt(this, 0, top + 600, '1월부터 12월까지 · 3 · 6 · 9 · 12월엔 계절신이 규칙 하나를 바꿔요', 22, C.dim, { thick: 2, weight: '700' }));
+    // ③ 바람
+    P(top + 790, 260);
+    m.add(txt(this, -420, top + 700, '③ 짝이 없으면 「바람」으로 패 바꾸기', 30, C.gold, { ox: 0 }));
+    m.add(txt(this, -420, top + 790, '바꾼 패는 사라지지 않고 다음 달 첫 손에 돌아와요.\n다음 달 꽃을 미리 보내 두면 그 달에 점수 2배!', 26, C.ivory, { ox: 0, thick: 2, weight: '700', align: 'left', wrap: 820 }));
+    const by = Math.min(top + 990, hh / 2 - 90);
+    m.add(button(this, -230, by, 420, 104, '더 알아보기', () => { m.close(); this.howtoMore(); }, { style: 'dark', size: 32 }));
+    m.add(button(this, 230, by, 420, 104, '족보 표 보기', () => { m.close(); this.scene.start('Book', { tab: 'yaku' }); }, { style: 'gold', size: 32 }));
+  }
+  howtoMore() {
+    const m = modal(this, 960, 1560, { title: '더 알아보기' });
     const lines = [
-      ['열두 달', '1월부터 12월까지 한 달이 한 관문. 목표 꽃 점수를 넘기면 다음 달로'],
-      ['내기', '손패 8장 중 최대 5장을 골라 내요. 족보(같은 달 짝 · 광 · 띠 · 새)에 따라 점수 × 배수'],
-      ['이달의 꽃', '그 달의 꽃 패는 끗 ×2 · 배수 +1 (제철 보너스)'],
-      ['바람', '필요 없는 패를 바람에 실어 보내요. 다음 달 첫 손에 돌아와요 — 다음 달 꽃을 미리 보내 두면 제철로!'],
-      ['부적', '다섯 칸. 첫 칸은 오늘의 부적. 장터에서 엽전으로 더 사요'],
-      ['계절신', '3 · 6 · 9 · 12월은 계절신이 규칙 하나를 비틀어요'],
-      ['장터', '관문 사이에 열려요. 엽전은 판 안에서만 쓰고 판이 끝나면 사라져요'],
+      ['꽃 점수', '(족보 점수 + 든 패의 패 점수) × 배수. 패 점수: 광 20 · 열끗 12 · 띠 8 · 피 4'],
+      ['이달의 꽃', '그 달의 꽃 패는 패 점수 2배 · 배수 +1'],
+      ['겹 족보', '다른 갈래 족보가 함께 들면 배수를 더해요 (예: 홍단 + 한 쌍)'],
+      ['부적', '부적 자리 다섯 칸 · 첫 칸은 오늘의 부적. 장터에서 엽전으로 사요'],
+      ['장터 · 엽전', '달을 넘길 때마다 열려요. 엽전은 판 안에서만 쓰고 판이 끝나면 사라져요'],
+      ['계절신', '3 · 6 · 9 · 12월 · 그 달만 규칙 하나가 바뀌어요'],
+      ['비슷한 놀이', '포커의 원페어 · 트리플과 비슷해요 — 같은 달이 많을수록 세요'],
     ];
-    lines.forEach(([h, t], i) => { const y = -560 + i * 165; m.add(txt(this, -400, y, h, 38, C.gold, { ox: 0 })); m.add(txt(this, -400, y + 58, t, 28, C.ivory, { ox: 0, weight: '700', wrap: 800, align: 'left' })); });
-    m.add(button(this, 0, 640, 520, 100, '족보 표 보기', () => { m.close(); this.scene.start('Book', { tab: 'yaku' }); }, { style: 'gold', size: 34 }));
+    lines.forEach(([h, t], i) => { const y = -580 + i * 165; m.add(txt(this, -400, y, h, 36, C.gold, { ox: 0 })); m.add(txt(this, -400, y + 56, t, 27, C.ivory, { ox: 0, weight: '700', wrap: 800, align: 'left' })); });
   }
 }

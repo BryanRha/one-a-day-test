@@ -1,8 +1,8 @@
 // 한 판(열두 달) 진행 엔진: 관문 · 손 · 바람 · 장터 · 이어하기 — 화면과 분리된 순수 로직 (봇 · 저장 · 화면이 같은 걸 씀)
 //   상태는 전부 JSON 으로 저장됨 (앱이 게임을 닫아도 이어서)
-import { Rng } from './rng.js?v=0.82.4';
-import { CHARMS, CHARM, COST, RARITY_P } from './charms.js?v=0.82.4';
-import { GODS, GOD } from './gods.js?v=0.82.4';
+import { Rng } from './rng.js?v=0.83.0';
+import { CHARMS, CHARM, COST, RARITY_P } from './charms.js?v=0.83.0';
+import { GODS, GOD } from './gods.js?v=0.83.0';
 
 export const TUNE = {
   target: [260, 490, 880, 1580],   /* 계절마다 첫 관문 목표 (tools/bot.js 로 맞춤) */
@@ -28,7 +28,7 @@ export const DECKS = [
 export const DECK_OPT = Object.fromEntries(DECKS.map(d => [d.id, d]));
 
 export class Run {
-  // opt: { seed, mode('daily'|'free'), variant(꽃 덱 id), today(오늘의 부적 id), cheer(응원 부적), tutorial }
+  // opt: { seed, mode('daily'|'free'|'first' — 첫 판: 연습 · 순위 밖), variant(꽃 덱 id), today(오늘의 부적 id), cheer(응원 부적), tutorial }
   constructor(rules, opt) {
     this.rules = rules;
     if (!opt) return;
@@ -40,7 +40,7 @@ export class Run {
       cards: deck.cards.map((c, i) => ({ uid: i + 1, id: c.id, gold: false, pearl: false })), nextUid: deck.cards.length + 1,
       charms: opt.today ? [{ id: opt.today, today: true, st: {} }] : [],
       windNext: [], hand: [], pile: [], score: 0, target: 0, hands: 0, winds: 0, handSize: 8, maxPlay: 5, used: [],
-      conts: 0, assisted: opt.cheer != null && opt.cheer !== false, total: 0, best: 0, cleared: 0, beaten: [], found: [], seen: [], shop: null, last: null, rng: 0,
+      conts: 0, assisted: opt.cheer != null && opt.cheer !== false, t0: Date.now(), seenTut: {}, total: 0, best: 0, cleared: 0, beaten: [], found: [], seen: [], shop: null, last: null, rng: 0,
     });
     // 계절마다 계절신 하나 (같은 시드 = 같은 계절신)
     this.bosses = deck.seasons.map(s => { const pool = GODS.filter(g => s.months.includes(g.month)); return (pool.length ? rng.pick(pool) : rng.pick(GODS)).id; });
@@ -68,7 +68,7 @@ export class Run {
     const g = boss ? GOD[this.bosses[si]] : null;
     let t = TUNE.target[Math.min(si, TUNE.target.length - 1)] * TUNE.step[Math.min(pos, 2)] * ((g && g.mod.target) || 1);
     if (boss && this.cheerOn(si)) t *= 0.9;
-    if (this.tutorial && gate === 1) t = 300;   /* 첫 판 첫 달: 같은 달 짝 두 번이면 넘는 크기 (안내가 바람까지 닿게) */
+    if (this.tutorial && gate === 1) t = 300;   /* 첫 판 첫 달(연습 달): 첫 손 1월 세 장이면 한 손에 넘는 크기 — 모든 첫 판에 같음 */
     return Math.round(t / 10) * 10;
   }
 
@@ -81,16 +81,21 @@ export class Run {
     this.target = this.gateTarget();
     this.hands = Math.max(1, TUNE.hands + (dv.hands || 0) + (mod.hands || 0));
     this.winds = TUNE.winds + (dv.winds || 0); if (mod.winds != null) this.winds = Math.min(this.winds, mod.winds);
+    this.windsMax = this.winds;
     this.handSize = TUNE.handSize + (dv.handSize || 0) + (mod.handSize || 0);
     this.maxPlay = mod.maxPlay || TUNE.maxPlay;
     this.score = 0; this.used = []; this.last = null; this.playedN = 0;
     const back = this.windNext.filter(u => this.cards.some(c => c.uid === u));
     const rest = r.shuffle(this.cards.map(c => c.uid).filter(u => !back.includes(u)));
     if (this.tutorial && this.gate === 1) {
-      /* 첫 판 첫 손: 이달(1월)의 꽃 두 장이 꼭 들어오게 → '같은 달 두 장' 안내가 늘 성공 */
-      const m1 = rest.filter(u => this.card(u).month === this.month).slice(0, 2);
-      for (const u of m1) rest.splice(rest.indexOf(u), 1);
-      rest.splice(3, 0, ...m1);
+      /* 첫 판 첫 손: 이달(1월)의 꽃 세 장(종류가 다른 것부터) + 서로 짝이 없는 다섯 장 → '같은 달이 많을수록 세다' 계단을 손으로 느끼게 (안내가 늘 성공) */
+      const kO = { gwang: 0, tti: 1, yeol: 2, pi: 3 };
+      const m1 = rest.filter(u => this.card(u).month === this.month).sort((a, b) => kO[this.card(a).kind] - kO[this.card(b).kind]).slice(0, 3);
+      const used = new Set([this.month]), others = [];
+      for (const u of rest) { if (others.length >= Math.max(0, this.handSize - m1.length)) break; const m = this.card(u).month; if (m1.includes(u) || used.has(m)) continue; used.add(m); others.push(u); }
+      const first = [...m1, ...others];
+      for (const u of first) rest.splice(rest.indexOf(u), 1);
+      rest.unshift(...first);
     }
     this.pile = [...back, ...rest]; this.windNext = []; this.hand = [];
     this.draw(); this.keep(r);

@@ -1,10 +1,11 @@
 // 도감: 족보 · 계절신 12 · 부적(장터 등장 확률 공개) · 패 48장 — 판마다 조금씩 채워짐
-import { W, H, C } from '../config.js?v=0.82.4';
-import { load } from '../save.js?v=0.82.4';
-import { txt, button, roundButton, boxTex } from '../ui.js?v=0.82.4';
-import { DECK } from '../meta.js?v=0.82.4';
-import { GODS } from '../core/gods.js?v=0.82.4';
-import { CHARMS, RARITY_P, RARITY_NAME, COST } from '../core/charms.js?v=0.82.4';
+import { W, H, C } from '../config.js?v=0.83.0';
+import { load } from '../save.js?v=0.83.0';
+import { txt, button, roundButton, boxTex } from '../ui.js?v=0.83.0';
+import { DECK, yakuOrder } from '../meta.js?v=0.83.0';
+import { yakuRow } from '../yakuview.js?v=0.83.0';
+import { GODS } from '../core/gods.js?v=0.83.0';
+import { CHARMS, RARITY_P, RARITY_NAME, COST } from '../core/charms.js?v=0.83.0';
 
 const TABS = [['yaku', '족보'], ['gods', '계절신'], ['charms', '부적'], ['cards', '패']];
 
@@ -24,14 +25,13 @@ export class BookScene extends Phaser.Scene {
   }
   onBack() { this.scene.start('Home'); return true; }
   yaku(b) {
-    DECK.yaku.forEach((y, i) => {
-      const yy = 40 + i * 80, got = b.yaku.includes(y.id);
-      this.body.add(this.add.image(W / 2, yy, boxTex(this, got ? 'dark' : 'panel', 1000, 70, 18, 2)).setAlpha(got ? 1 : 0.6));
-      this.body.add(txt(this, 70, yy, got ? y.name : `${y.name}`, 30, got ? C.gold : C.dim, { ox: 0, thick: 3 }));
-      this.body.add(txt(this, 300, yy, y.desc, 22, got ? C.ivory : '#7A6F60', { ox: 0, thick: 2, weight: '700', wrap: 540, align: 'left' }));
-      this.body.add(txt(this, 1010, yy, `${y.chips} × ${y.mult}`, 28, got ? C.goldHi : '#7A6F60', { ox: 1, thick: 3 }));
+    const ys = yakuOrder(), gap = Math.min(80, (H - 420) / ys.length);
+    ys.forEach((y, i) => {
+      const yy = 40 + i * gap, got = b.yaku.includes(y.id);
+      this.body.add(this.add.image(W / 2, yy, boxTex(this, got ? 'dark' : 'panel', 1020, Math.round(gap - 8), 16, 2)).setAlpha(got ? 1 : 0.6));
+      yakuRow(this, this.body, W / 2, yy, y, got, 1000);
     });
-    this.body.add(txt(this, W / 2, 40 + DECK.yaku.length * 80 + 10, '금빛 이름 = 낸 적 있는 족보', 24, C.dim, { thick: 2, weight: '700' }));
+    this.body.add(txt(this, W / 2, 40 + ys.length * gap + 4, '금빛 이름 = 낸 적 있는 족보 · 패 점수: 광 20 · 열끗 12 · 띠 8 · 피 4', 22, C.dim, { thick: 2, weight: '700' }));
   }
   gods(b) {
     GODS.forEach((g, i) => {

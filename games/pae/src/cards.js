@@ -1,11 +1,13 @@
 // 패 그림 합성 (부팅 때 한 번): 원화 + 테두리(종류 색) + 달 표시 + 종류 도장 + 띠 리본 → 'card_<id>' 텍스처
 //   그림 속엔 글자가 없고, 판정에 쓰는 정보(달 · 종류 · 띠 색)는 전부 여기서 코드로 그림 (그림=판정)
 //   덱 데이터(kinds · ribbons · months)만 읽으므로 덱을 바꿔도 그대로
-import { FONT, C } from './config.js?v=0.82.4';
-import { rr } from './ui.js?v=0.82.4';
-import { audio } from './audio.js?v=0.82.4';
+import { FONT, C } from './config.js?v=0.83.0';
+import { rr } from './ui.js?v=0.83.0';
+import { audio } from './audio.js?v=0.83.0';
 
 export const CW = 330, CH = 495;   /* 텍스처 크기 (화면에선 줄여 씀) */
+// 표시 방식: 2 = 왼쪽 위 달 색 꼬리표(기본 — 대표 결정 2026-10-28: 부채꼴로 겹쳐도 달 · 종류가 크게 보임) · 1 = 예전 작은 원(?cardv=1)
+export const CARD_OPT = { marks: /[?&]cardv=1/.test(typeof location !== 'undefined' ? location.search : '') ? 1 : 2 };
 
 function face(scene, deck, c) {
   const key = 'card_' + c.id;
@@ -36,7 +38,7 @@ function face(scene, deck, c) {
   // 띠 리본: 세로로 늘어진 비단 띠
   if (R) {
     g.save();
-    const x0 = CW * 0.42, w = 62, y0 = 46, y1 = CH * 0.68;
+    const x0 = CARD_OPT.marks === 2 ? CW * 0.5 : CW * 0.42, w = 62, y0 = 46, y1 = CH * 0.68;
     g.translate(x0, y0); g.rotate(-0.06);
     g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 10; g.shadowOffsetX = 4;
     g.beginPath(); g.moveTo(0, 0); g.lineTo(w, 0); g.lineTo(w, y1 - y0); g.lineTo(w / 2, y1 - y0 - 26); g.lineTo(0, y1 - y0); g.closePath();
@@ -51,6 +53,7 @@ function face(scene, deck, c) {
   }
   // 안쪽 금선
   rr(g, bw - 2, bw - 2, CW - (bw - 2) * 2, CH - (bw - 2) * 2, r - 5); g.lineWidth = 2.5; g.strokeStyle = c.kind === 'gwang' ? '#FFF4D0' : 'rgba(232,194,122,0.85)'; g.stroke();
+  if (CARD_OPT.marks === 2) { marksV2(g, deck, c, K, R, M); tex.refresh(); return key; }
   // 달 표시 (왼쪽 위): 옻칠 원 + 금 숫자
   const mx = 50, my = 52;
   g.beginPath(); g.arc(mx, my, 34, 0, Math.PI * 2); g.fillStyle = 'rgba(14,10,10,0.88)'; g.fill(); g.lineWidth = 3; g.strokeStyle = M ? M.color : C.gold; g.stroke();
@@ -67,6 +70,23 @@ function face(scene, deck, c) {
   tg.forEach((t, i) => { const tx = mx, ty = sy2 + 66 + i * 58; g.beginPath(); g.arc(tx, ty, 25, 0, Math.PI * 2); g.fillStyle = 'rgba(14,10,10,0.85)'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#E8C27A'; g.stroke(); g.fillStyle = '#F6E3B0'; g.font = `900 25px ${FONT}`; g.fillText(deck.tags[t], tx, ty + 1); });
   tex.refresh();
   return key;
+}
+// 시안 v2 표시: 왼쪽 위 꼬리표(달마다 다른 색) — 큰 달 숫자 + 종류 글자 + 새/비 · 손패에서 보이는 왼쪽 70px 안에 전부
+function marksV2(g, deck, c, K, R, M) {
+  const tw = 84, col = (M && (M.tab || M.color)) || '#333';
+  const lab = c.kind === 'pi' && c.pi > 1 ? '쌍피' : K.label, tg = c.tags.filter(t => deck.tags[t]);
+  const th = 196 + tg.length * 44;
+  g.save(); g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 8; g.shadowOffsetX = 3;
+  rr(g, 6, 6, tw, th, 18); g.fillStyle = col; g.fill(); g.restore();
+  rr(g, 6, 6, tw, th, 18); g.lineWidth = 3; g.strokeStyle = '#F6E3B0'; g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#FFFFFF'; g.font = `900 ${c.month >= 10 ? 50 : 64}px ${FONT}`; g.fillText(String(c.month), 6 + tw / 2, 62);
+  /* 종류: 흰 원 안에 종류 색 글자 (광은 금) */
+  const ky = 140, kc = c.kind === 'gwang' ? '#B07A12' : c.kind === 'yeol' ? '#B3262B' : c.kind === 'tti' ? (R ? R.color : K.color) : '#2A2420';
+  g.beginPath(); g.arc(6 + tw / 2, ky, 32, 0, Math.PI * 2); g.fillStyle = c.kind === 'gwang' ? '#FFE9A8' : '#FFFFFF'; g.fill(); g.lineWidth = 3; g.strokeStyle = kc; g.stroke();
+  g.fillStyle = kc; g.font = `900 ${lab.length > 1 ? 24 : 38}px ${FONT}`; g.fillText(lab, 6 + tw / 2, ky + 2);
+  tg.forEach((t, i) => { const ty = 196 + i * 44; g.fillStyle = '#FFFFFF'; g.font = `900 30px ${FONT}`; g.fillText(deck.tags[t], 6 + tw / 2, ty); });
+  if (c.kind === 'gwang') { rr(g, 3, 3, CW - 6, CH - 6, 24); g.lineWidth = 6; g.strokeStyle = '#FFE29A'; g.stroke(); }
 }
 function shade(hex, k) { const n = parseInt(hex.slice(1), 16); const f = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; }
 

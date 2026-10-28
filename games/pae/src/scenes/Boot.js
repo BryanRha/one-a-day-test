@@ -1,12 +1,13 @@
 // 로딩: 원화(manifest) · 효과음 → 패 48장 합성 · 효과 텍스처 → 첫 화면
-import { W, H, C } from '../config.js?v=0.82.4';
-import { SFX } from '../audio.js?v=0.82.4';
-import { DECK } from '../meta.js?v=0.82.4';
-import { makeCardTextures, makeCardFx, backTex } from '../cards.js?v=0.82.4';
-import { makeFxTextures } from '../fx.js?v=0.82.4';
-import { txt } from '../ui.js?v=0.82.4';
-import { helloOnce, BACKS } from '../bmflow.js?v=0.82.4';
-import { GODS } from '../core/gods.js?v=0.82.4';
+import { W, H, C } from '../config.js?v=0.83.0';
+import { SFX } from '../audio.js?v=0.83.0';
+import { DECK } from '../meta.js?v=0.83.0';
+import { makeCardTextures, makeCardFx, backTex } from '../cards.js?v=0.83.0';
+import { makeFxTextures } from '../fx.js?v=0.83.0';
+import { txt } from '../ui.js?v=0.83.0';
+import { helloOnce, BACKS, track } from '../bmflow.js?v=0.83.0';
+import { load, save } from '../save.js?v=0.83.0';
+import { GODS } from '../core/gods.js?v=0.83.0';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -38,6 +39,9 @@ export class BootScene extends Phaser.Scene {
       b.fillStyle = rg; b.fillRect(0, 0, S, S); c2.refresh();
     }
     await Promise.race([helloOnce(), new Promise(r => setTimeout(r, 900))]);
+    /* 판 도중 앱이 닫혔던 흔적 → 중도 이탈 기록 (판은 '이어서 하기'로 남음) */
+    const d = load();
+    if (d.run && d.runOpen) { track('run_quit', { gate: d.run.gate, phase: d.run.phase, sec: Math.round((Date.now() - (d.run.t0 || Date.now())) / 1000), first: d.run.mode === 'first' ? 1 : 0, how: 'closed' }); d.runOpen = false; save(); }
     this.scene.start('Home');
   }
 }
