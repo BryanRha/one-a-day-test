@@ -1,8 +1,8 @@
 // 오늘의 운세: 내 사주(만세력 엔진 saju.min.js) × 오늘의 일진 → 분야별 점수 · 풀이 · 행운 아이템
 //   계산(8글자)은 엔진이 정확히 하고, 풀이는 명리학 규칙(십성 · 합충 · 도화 · 오행 균형) 기반 문장
 //   엔진 원본: ~/004. SN/001. saju/src/lib/saju (테스트 25개) → oneaday/tools/fortune_entry.ts 로 묶음
-export { buildCheatingReport, CHEATING_TOC } from './saju.min.js';
-import { calculateSaju, tenGod, isClash, isCombine, isPeachBlossom, STEM_ELEMENT, BRANCH_ELEMENT, ELEMENT_KO, BRANCH_MAIN_STEM } from './saju.min.js';
+export { buildCheatingReport, CHEATING_TOC, buildLoveReport, LOVE_TOC, buildLifeReport, LIFE_TOC } from './saju.min.js';
+import { calculateSaju, tenGod, isClash, isCombine, isPeachBlossom, STEM_ELEMENT, BRANCH_ELEMENT, ELEMENT_KO, BRANCH_MAIN_STEM, STEM_KO, BRANCH_KO } from './saju.min.js';
 
 const KEY = 'oad_fortune_me';
 export const loadMe = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } };
@@ -11,7 +11,7 @@ export const clearMe = () => localStorage.removeItem(KEY);
 
 // 결정적 난수 (같은 날 · 같은 사람 = 같은 운세)
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
-const pick = (arr, seed) => arr[seed % arr.length];
+const pick = (arr, seed) => arr[(seed >>> 0) % arr.length];   /* 음수 seed(r >> 4)에서 undefined 나던 것 막음 */
 
 // 십성별 오늘의 기운: 분야 가감 [총운, 금전, 연애, 일·공부, 건강] · 한 줄 · 분야별 문장
 const TG = {
@@ -49,14 +49,83 @@ const DOK = {
   편인: { say: ['생각이 너무 많다. 촉은 맞으니 의심은 거기까지만.', '혼자 있어야 답이 나온다. 단톡방 끄고 쉬어.'], warn: '혼자 상상한 걸 사실처럼 따지지 마라.', love: '그 사람 속을 넘겨짚지 마. 물어봐, 차라리.' },
   정인: { say: ['도와주는 손이 들어온다. 자존심 세우지 말고 잡아.', '오늘은 기대도 되는 날이다.'], warn: '받은 도움, 고맙다는 말 한마디는 꼭 해라.', love: '다정한 말 한마디에 넘어간다. 너도, 상대도.' },
 };
-export const CHARS = { heukryeon: { name: '흑련낭자', seal: '黑蓮' }, geumdan: { name: '금단도령', seal: '禁斷' }, danjoe: { name: '단죄보살', seal: '斷罪' }, hoegwi: { name: '회귀낭자', seal: '回歸' }, tusim: { name: '투심도령', seal: '透心' } };
+/* 점쟁이 진열대: 독설신당 5명(원화 있음) + 새 5명(원화 없이 오행 아이콘 · art 없음) — 이용자에게 '순한맛/매운맛' 구분은 보이지 않음
+   tone 1 다정 ~ 10 매서움: 그날 일진 × 내 원국 관계로 그날의 점쟁이가 정해짐 (pickTeller) · 말투도 tone 따라 (다정 = 해요체, 매서움 = 독설) */
+export const CHARS = {
+  haesol: { name: '해솔선녀', seal: '溫情', el: 'wood', tone: 1 },
+  wolryeong: { name: '월령선생', seal: '月令', el: 'water', tone: 2 },
+  bokdeong: { name: '복덩도사', seal: '福德', el: 'earth', tone: 3 },
+  hoegwi: { name: '회귀낭자', seal: '回歸', el: 'water', tone: 4, art: 1 },
+  hwaryeon: { name: '화련아씨', seal: '花蓮', el: 'fire', tone: 5 },
+  cheongun: { name: '청운거사', seal: '靑雲', el: 'metal', tone: 6 },
+  tusim: { name: '투심도령', seal: '透心', el: 'wood', tone: 7, art: 1 },
+  geumdan: { name: '금단도령', seal: '禁斷', el: 'fire', tone: 8, art: 1 },
+  danjoe: { name: '단죄보살', seal: '斷罪', el: 'metal', tone: 9, art: 1 },
+  heukryeon: { name: '흑련낭자', seal: '黑蓮', el: 'water', tone: 10, art: 1 },
+};
+export const HAN = { wood: '木', fire: '火', earth: '土', metal: '金', water: '水' };
+const GROUP = { 비견: '비겁', 겁재: '비겁', 식신: '식상', 상관: '식상', 편재: '재성', 정재: '재성', 편관: '관성', 정관: '관성', 편인: '인성', 정인: '인성' };
+const jo = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return w + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? a : b); };
+const EL = st => `${ELEMENT_KO[STEM_ELEMENT[st]]}(${HAN[STEM_ELEMENT[st]]})`;
+/* 그날의 점쟁이: 오늘 천간이 내 일간에게 어떤 십성인가(생 · 극 · 같음) + 오늘 지지와 내 일지의 합 · 충
+   인성(나를 생함) 다정 · 식상(내가 생함) 흥 · 비겁(같음) 맞섬 · 재성(내가 극함) 셈 · 관성(나를 극함) 매서움 · 일지 충이면 흑련낭자 · 합이면 두 칸 부드럽게 */
+const SLOT = { 인성: ['haesol', 'wolryeong'], 식상: ['bokdeong', 'hoegwi'], 비겁: ['hwaryeon', 'cheongun'], 재성: ['cheongun', 'tusim'], 관성: ['geumdan', 'danjoe'] };
+const TELL = Object.keys(CHARS).sort((a, b) => CHARS[a].tone - CHARS[b].tone);
+export function pickTeller(S, T, seed) {
+  const dm = S.dayMaster.stem, g = GROUP[tenGod(dm, T.stem)];
+  let ch = SLOT[g][seed & 1], why;
+  const day = `오늘 일진 ${T.ko}`, ELo = st => EL(st) + (['wood', 'metal'].includes(STEM_ELEMENT[st]) ? '을' : '를');
+  if (isClash(T.branch, S.day.branch)) {
+    ch = 'heukryeon'; why = `${day}의 ${BRANCH_KO[T.branch]}(${T.branch})가 내 일지 ${BRANCH_KO[S.day.branch]}(${S.day.branch})와 정면으로 충(沖)해서 흑련낭자가 직접 나섰다`;
+  } else {
+    const comb = isCombine(T.branch, S.day.branch);
+    if (comb) ch = TELL[Math.max(0, TELL.indexOf(ch) - 2)];
+    const n = jo(CHARS[ch].name, '이', '가');
+    why = g === '인성' ? `${day}의 ${EL(T.stem)} 기운이 내 일간 ${ELo(dm)} 생(生)해 주는 날이라 ${n} 나섰다`
+      : g === '식상' ? `내 일간 ${EL(dm)} 기운이 오늘 일진 쪽으로 흘러 나가는 날(식상)이라 ${n} 나섰다`
+      : g === '비겁' ? `${jo(day, '이', '가')} 나와 같은 ${EL(dm)} 기운(비겁)이라 ${n} 나섰다`
+      : g === '재성' ? `내 일간이 ${day}의 ${EL(T.stem)} 기운을 다스리는(극하는) 날(재성)이라 ${n} 나섰다`
+      : `${day}의 ${EL(T.stem)} 기운이 내 일간 ${ELo(dm)} 누르는(극하는) 날(관성)이라 ${n} 나섰다`;
+    if (comb) why += ' · 오늘 지지가 내 일지와 합(合)을 이뤄 한결 부드럽게';
+  }
+  return { ch, why };
+}
+/* 다정한 점쟁이의 '오늘 조심할 것' (해요체) */
+const SOFT_WARN = {
+  비견: '고집이 세지기 쉬운 날이에요. 한 번은 남의 말도 들어 보세요.', 겁재: '돈 빌려주기 · 충동구매는 오늘만 참아 주세요.',
+  식신: '즐거운 날이지만 과식 · 과음만 조심해요.', 상관: '하고 싶은 말은 한 번 걸러서 부드럽게 해요.',
+  편재: '들뜬 기분에 큰 지출만 하지 않으면 좋아요.', 정재: '너무 아끼다 사람을 놓치지 않게 마음도 써 주세요.',
+  편관: '무리하면 몸이 먼저 알아요. 쉬는 시간을 꼭 넣어요.', 정관: '규칙을 지키되 너무 완벽하려고 애쓰지 않아도 돼요.',
+  편인: '생각이 많아지는 날이에요. 결정은 하루 미뤄도 괜찮아요.', 정인: '도움받은 일엔 고맙다는 말 한마디 잊지 말아요.',
+};
+/* 유료 풀이 5종 — 가격 표시용(실제 가격은 서버 gold.js FORTUNE) · 골드 = 원화 ÷ 10
+   q: 결과 화면 제목({p} 그 사람 · {me} 나) · form: 상대 입력 화면 [제목, 설명, 이름 칸, 버튼] · lock: 결제 유도 문구 · cols: 등급 0~3 색 */
 export const PAID = [
-  { id: 'cheating', ch: 'heukryeon', title: '바람기 사주', hook: '그 사람, 바람피울 사주인가?', price: 19900, tease: ['바람기 지수 ██%', '지금 다른 사람이 있을 가능성', '가장 위험한 시기 ███월'] },
-  { id: 'forbidden', ch: 'geumdan', title: '금지된 사랑 사주', hook: '이 관계의 끝, 누가 먼저 무너지는가', price: 19900, tease: ['이 인연의 끝', '먼저 대가를 치르는 쪽'] },
-  { id: 'after', ch: 'danjoe', title: '외도 후 선택 사주', hook: '용서할까, 끝낼까', price: 24900, tease: ['참고 가는 길', '끝내는 길'] },
-  { id: 'reunion', ch: 'hoegwi', title: '재회 사주', hook: '그 사람, 돌아오는가', price: 14900, tease: ['다시 닿는 시기 ██월', '불씨가 남았는가'] },
-  { id: 'inner', ch: 'tusim', title: '속마음 사주', hook: '연락 없는 그 사람, 진짜 속마음', price: 14900, tease: ['숨기는 것', '진짜 마음'] },
+  /* 범용 3종 (solo = 내 사주만) — 다정한 점쟁이들에게 배정 */
+  { id: 'newyear', ch: 'wolryeong', title: '2027 정미년 신년운세', hook: '열두 달 중 내 달은 언제일까요', price: 14900, solo: true, tease: ['2027 총운 점수', '가장 좋은 달 ██월', '열두 달 월운 · 분야별 운'],
+    q: '{me}님의<br><em>2027년</em>', lock: '열두 달 월운 · 재물 · 일 · 연애 · 건강 · 좋은 달과 조심할 달', cols: ['#8FB8E8', '#6A9AFF', '#4A7AF0', '#2A5AD8'] },
+  { id: 'wealth', ch: 'bokdeong', title: '재물 · 횡재수 달력', hook: '돈이 들어오는 달, 횡재 기운 높은 날', price: 9900, solo: true, tease: ['나의 재물 타입', '재물 기운 가장 강한 달 ██월', '횡재 기운 높은 날 달력'],
+    q: '{me}님의<br><em>돈 흐름 · 횡재 달력</em>', lock: '12개월 돈 흐름 · 앞으로 90일 횡재 기운 높은 날 · 돈이 새는 때 · 재물 행운 색 · 방향', cols: ['#C9B48A', '#E8C060', '#F2B030', '#FF9A1A'] },
+  { id: 'compat', ch: 'haesol', title: '우리 궁합', hook: '두 사람, 얼마나 잘 맞을까요', price: 14900, tease: ['궁합 점수', '부딪히는 지점', '올해 고비 달 ██월'],
+    q: '{me}님과 {p}님의<br><em>궁합</em>', form: ['그 사람의 생년월일', '연인 · 썸 · 부부 누구든 좋아요. 시간까지 알면 더 정확해요. 이 기기에만 저장돼요.', '그 사람'],
+    lock: '부딪히는 지점 · 대화법 · 역할 나누기 · 함께하기 좋은 해 · 올해 고비 달', cols: ['#E8A0B8', '#F08AB0', '#FF6FA0', '#FF4D8D'] },
+  { id: 'cheating', ch: 'heukryeon', title: '바람기 사주', hook: '그 사람, 바람피울 사주인가?', price: 19900, tease: ['바람기 지수 ██%', '지금 다른 사람이 있을 가능성', '가장 위험한 시기 ███월'],
+    q: '{p},<br><em>바람피울 사주</em>인가?', form: ['그 사람의 사주를 내놔라', '애인·배우자·썸 상대의 생년월일. 시간까지 알면 더 정확하다. 이 기기에만 저장돼요.', '그 사람'],
+    lock: '지금 다른 사람이 있을 가능성 · 가장 위험한 시기 · 거짓말할 때 드러나는 신호 · 관계를 지키는 현실 전략', cols: ['#6EDC8A', '#F2C14E', '#FF8A3C', '#E02440'] },
+  { id: 'forbidden', ch: 'geumdan', title: '금지된 사랑 사주', hook: '이 관계의 끝, 누가 먼저 무너지는가', price: 19900, tease: ['끌림 지수 ██점', '먼저 무너지는 쪽', '드러나기 쉬운 달 ██월'],
+    q: '이 관계의 끝,<br><em>누가 먼저 무너지는가</em>', form: ['말할 수 없는 그 사람', '괜찮아, 여기선 아무도 너를 탓하지 않아. 그 사람 생년월일만 알려 줘. 이 기기에만 저장돼요.', '그 사람'],
+    lock: '그 사람이 이 관계에서 원하는 것 · 누가 먼저 무너지는가 · 드러나기 쉬운 달 · 이 인연의 끝', cols: ['#8A8FA8', '#C9A0DC', '#B05CE0', '#7A1FD0'] },
+  { id: 'after', ch: 'danjoe', title: '외도 후 선택 사주', hook: '용서할까, 끝낼까', price: 24900, tease: ['회복 지수 ██점', '참고 가는 길', '끝내는 길'],
+    q: '용서할까,<br><em>끝낼까</em>', form: ['그 사람의 사주를 가져오너라', '울지 말고 앉거라. 외도한 배우자·애인의 생년월일을 넣거라. 시간까지 알면 더 정확하다. 이 기기에만 저장돼요.', '배우자·애인'],
+    lock: '같은 일이 되풀이될 구조인가 · 참고 가는 길과 끝내는 길 · 결정하기 좋은 달 · 마주 앉을 때 할 말', cols: ['#E02440', '#FF8A3C', '#F2C14E', '#6EDC8A'] },
+  { id: 'reunion', ch: 'hoegwi', title: '재회 사주', hook: '그 사람, 돌아오는가', price: 14900, tease: ['재회 지수 ██점', '다시 닿는 시기 ██월', '누가 먼저 연락하는가'],
+    q: '{p},<br><em>돌아오는가</em>', form: ['헤어진 그 사람의 사주', '끝난 인연인지, 남은 불씨인지 같이 봐요. 그 사람 생년월일을 알려 주세요. 이 기기에만 저장돼요.', '헤어진 그 사람'],
+    lock: '그 사람 마음에 남은 당신 · 다시 닿는 달 · 누가 먼저 연락하는가 · 다시 다가가는 법', cols: ['#8A8FA8', '#C9A0DC', '#FF8AB0', '#FF4D8D'] },
+  { id: 'inner', ch: 'tusim', title: '속마음 사주', hook: '연락 없는 그 사람, 진짜 속마음', price: 14900, tease: ['마음 온도 ██도', '숨기는 것', '연락해도 되는 달'],
+    q: '{p}의<br><em>진짜 속마음</em>', form: ['연락 없는 그 사람', '그 사람 생년월일만 줘. 속은 내가 읽어 줄게. 이 기기에만 저장돼요.', '그 사람'],
+    lock: '그 사람이 숨기는 것 · 너를 어떻게 보는가 · 연락해도 되는 달 · 먼저 연락할 때 첫마디', cols: ['#6FA8DC', '#C9A0DC', '#FF8A3C', '#E02440'] },
 ];
+export const paidOf = id => PAID.find(p => p.id === id) || PAID[0];
 const COLORS = { wood: ['초록', '#4CB86A'], fire: ['빨강', '#E8503A'], earth: ['노랑', '#E8B04A'], metal: ['흰색', '#E8E8F0'], water: ['남색', '#3A5AB8'] };
 const NUMS = { wood: [3, 8], fire: [2, 7], earth: [5, 10], metal: [4, 9], water: [1, 6] };
 const DIRS = { wood: '동쪽', fire: '남쪽', earth: '가운데', metal: '서쪽', water: '북쪽' };
@@ -86,14 +155,78 @@ export function fortune(me, date) {
     chart: S, today: T, tenGod: [g1, g2], key: a.key, total, scores: { 총운: sc[0], 금전: sc[1], 연애: sc[2], '일·공부': sc[3], 건강: sc[4] },
     line: pick(a.line, r), notes, money: a.money, love: sc[2] >= 78 ? b.love : a.love, work: a.work,
     color: { name: cName, hex: cHex }, numbers: NUMS[lucky], dir: DIRS[lucky], weak, seed: r,
-    say: pick(DOK[g1].say, r >> 4), warn: DOK[g2].warn, dokLove: sc[2] >= 80 ? DOK[g2].love : DOK[g1].love, ch: Object.keys(CHARS)[r % 5],
+    ...(() => { const t = pickTeller(S, T, r), tone = CHARS[t.ch].tone;
+      /* 말투: 다정(1~3) 해요체 · 중간(4~6) 다정한 한마디 + 독설 경고 · 매서움(7~) 독설 */
+      return { ch: t.ch, why: t.why, tone,
+        say: tone <= 6 ? pick(a.line, r >> 4) : pick(DOK[g1].say, r >> 4), warn: tone <= 3 ? SOFT_WARN[g2] : DOK[g2].warn,
+        dokLove: tone <= 3 ? (sc[2] >= 78 ? b.love : a.love) : sc[2] >= 80 ? DOK[g2].love : DOK[g1].love }; })(),
   };
 }
 export const ELEMENT_NAME = ELEMENT_KO;
 
-// 상대 정보 (바람기 · 궁합 등) — 기기에만 저장
-const PKEY = 'oad_fortune_partner';
-export const loadPartner = () => { try { return JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch { return null; } };
-export const savePartner = p => localStorage.setItem(PKEY, JSON.stringify(p));
+// 상대 정보 (상품마다 따로 · 바람기는 예전 키 그대로) — 기기에만 저장
+const pkey = id => !id || id === 'cheating' ? 'oad_fortune_partner' : 'oad_fortune_partner_' + id;
+export const loadPartner = id => { try { return JSON.parse(localStorage.getItem(pkey(id)) || 'null'); } catch { return null; } };
+export const savePartner = (p, id) => localStorage.setItem(pkey(id), JSON.stringify(p));
 export const toInput = p => ({ name: p.name, gender: p.sex === 'm' ? 'male' : 'female', year: p.y, month: p.m, day: p.d, hour: p.h ?? undefined, minute: p.mi ?? 0, calendar: p.cal || 'solar', isLeapMonth: !!p.leap, longitude: p.lon || undefined });
-export async function cheatingPreview(me, partner) { const { buildCheatingReport } = await import('./saju.min.js'); return buildCheatingReport(toInput(me), toInput(partner), false); }
+/* 무료 미리보기: 점수 · 근거 · 무료 섹션 2개만 (잠긴 섹션 본문은 이 코드에 없음 — 결제 후 서버가 만듦) */
+export async function paidPreview(id, me, partner) {
+  const S = await import('./saju.min.js'), PR = paidOf(id);
+  if (S.LIFE_PRODUCTS.includes(id)) return S.buildLifeReport(id, toInput(me), PR.solo ? null : toInput(partner), false);
+  return id === 'cheating' ? S.buildCheatingReport(toInput(me), toInput(partner), false) : S.buildLoveReport(id, toInput(me), toInput(partner), false);
+}
+/* 결제 · 영수증의 '두 사람': solo 상품은 나 자신 (서버도 같은 규칙 — order · me · report) */
+export const pairOf = (id, me) => paidOf(id).solo ? me : loadPartner(id);
+
+/* 오늘 이 부분이 신경 쓰여요: 오늘 점수 · 십성으로 고른 훅 하루 1개 (실제 계산 결과) · 이미 산 상품 빼기 · 같은 훅 3일 연속 금지 */
+const HKEY = 'oad_hook';
+export function hookOf(f, dateKey, bought = () => false) {
+  let log = {}; try { log = JSON.parse(localStorage.getItem(HKEY) || '{}'); } catch { /* */ }
+  if (log[dateKey] !== undefined) return log[dateKey] && makeHook(f, log[dateKey]);
+  const sc = f.scores, G = f.tenGod.map(g => GROUP[g]);
+  const cand = [
+    ['금전', 'wealth', Math.abs(sc.금전 - 70) + (G.includes('재성') || f.tenGod.includes('겁재') ? 8 : 0)],
+    ['연애', 'compat', Math.abs(sc.연애 - 70) + (f.notes.some(n => /합|도화/.test(n)) ? 8 : 0)],
+    ['일·공부', 'newyear', Math.abs(sc['일·공부'] - 70) + (G.includes('관성') || G.includes('인성') ? 6 : 0)],
+    ['총운', 'newyear', Math.abs(sc.총운 - 70) + (f.notes.some(n => /충/.test(n)) ? 6 : 0)],
+  ].sort((a, b) => b[2] - a[2]);
+  const idOf = v => (v || '').split('|')[1] || '', days = Object.keys(log).filter(k => k < dateKey).sort().slice(-2);
+  const last2 = days.length === 2 && idOf(log[days[0]]) && idOf(log[days[0]]) === idOf(log[days[1]]) ? idOf(log[days[0]]) : null;
+  const pickd = cand.find(([, id]) => !bought(id) && id !== last2);
+  const val = pickd ? `${pickd[0]}|${pickd[1]}` : '';
+  log[dateKey] = val; const keep = Object.keys(log).sort().slice(-10); try { localStorage.setItem(HKEY, JSON.stringify(Object.fromEntries(keep.map(k => [k, log[k]])))); } catch { /* */ }
+  return val && makeHook(f, val);
+}
+function makeHook(f, val) {
+  const [field, id] = val.split('|'), n = f.scores[field], hi = n >= 70;
+  const T = {
+    금전: hi ? `오늘 금전 ${n}점 — 재물 기운이 들어오는 날이에요. 앞으로 90일 중 횡재 기운 높은 날은 언제일까요?` : `오늘 금전 ${n}점 — 돈이 새기 쉬운 날이에요. 앞으로 1년 돈 흐름은 어떨까요?`,
+    연애: hi ? `오늘 연애 ${n}점 — 인연 기운이 강한 날이에요. 그 사람과의 궁합은?` : `오늘 연애 ${n}점 — 마음이 엇갈리기 쉬운 날이에요. 두 사람이 부딪히는 지점은?`,
+    '일·공부': hi ? `오늘 일·공부 ${n}점 — 인정받는 기운이 있는 날. 2027년엔 언제 가장 빛날까요?` : `오늘 일·공부 ${n}점 — 버거운 날이에요. 2027년 열두 달 중 힘을 줄 달은?`,
+    총운: hi ? `오늘 총운 ${n}점 — 흐름이 좋은 날. 2027년 가장 좋은 달은 언제일까요?` : `오늘 총운 ${n}점 — 쉬어 가는 날이에요. 2027년엔 어떤 달이 기다릴까요?`,
+  };
+  return { id, field, text: T[field] };
+}
+
+/* 오늘 어울리는 게임: 지금 바로 할 수 있는(잠기지 않은) 게임 중에서만 · 운이 점수 · 난이도 · 골드에 영향 없음 */
+export const luckyGame = (f, open) => open.length ? open[f.seed % open.length] : null;
+
+/* 하루 기록(기기에만): v 들어옴 · f 운세 봄 · r 회고(y 맞았다 · h 반반 · n 아니던데) · t 태그 — 지난 운세는 저장 없이 다시 계산 */
+const DKEY = 'oad_days';
+export const days = () => { try { return JSON.parse(localStorage.getItem(DKEY) || '{}'); } catch { return {}; } };
+export function markDay(key, patch) {
+  const all = days(); all[key] = { ...(all[key] || {}), ...patch };
+  const keep = Object.keys(all).sort().slice(-400); try { localStorage.setItem(DKEY, JSON.stringify(Object.fromEntries(keep.map(k => [k, all[k]])))); } catch { /* */ }
+  return all[key];
+}
+/* 저녁 회고 반응: 점쟁이 말투(tone) 따라 */
+export function recapLine(f, ans) {
+  const soft = f.tone <= 3, mid = f.tone <= 6;
+  const L = {
+    y: soft ? '역시 그랬군요. 내일도 같이 볼까요?' : mid ? '거봐, 내가 뭐랬어. 내일도 와.' : '당연하지. 내 눈은 안 틀려. 내일 또 와라.',
+    h: soft ? '반쯤은 맞았네요. 나머지 반은 내일 채워 봐요.' : mid ? '반은 맞혔네. 나머지 반은 네가 피해 간 거야.' : '반반? 나머지 반은 네가 운을 비켜 간 거다.',
+    n: soft ? '그런 날도 있죠. 내일 기운은 더 좋아요.' : mid ? '오늘은 빗나갔네. 내일 다시 겨뤄 보자.' : '내가 틀렸다고? 내일 다시 와서 따져라.',
+  };
+  return L[ans];
+}
+export const cheatingPreview = (me, partner) => paidPreview('cheating', me, partner);

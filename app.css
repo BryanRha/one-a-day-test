@@ -268,7 +268,6 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .tile .own { position: absolute; right: 6px; bottom: 6px; font: 11px 'Jua'; color: #3a2400; background: linear-gradient(135deg, var(--gold), var(--gold2)); border-radius: 6px; padding: 1px 6px; }
 .item.rest { opacity: .6; }
 .tile .collab { position: absolute; left: 6px; top: 6px; font: 11px "Jua"; color: #fff; background: rgba(0,0,0,.55); border-radius: 6px; padding: 1px 6px; }
-
 /* 라이브러리: 일반관 · 브랜드관 */
 .hall { border: 1px solid var(--line); border-radius: 20px; padding: 14px 14px 6px; margin: 14px 0; background: rgba(255,255,255,.03); }
 .hall .hh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
@@ -276,3 +275,30 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .hall .sub { color: var(--sub); font: 14px 'Jua'; margin: 10px 2px 6px; }
 .hall.bhall { border-color: rgba(255, 170, 120, .45); background: linear-gradient(180deg, rgba(255, 150, 90, .10), rgba(255, 150, 90, .03)); }
 .hall.bhall .hh b { color: #FFB98A; }
+
+/* ── 점쟁이 진열대 · 그날의 점쟁이 · 운세 달력 · 회고 · 범용 운세 (2026-10-28) ── */
+.ohg { display: grid; place-content: center; text-align: center; color: var(--paper); background: radial-gradient(circle at 50% 40%, var(--oc, #444) 0%, transparent 62%), var(--ink2); }
+.ohg b { font: 900 96px/1 serif; text-shadow: 0 0 30px var(--oc); } .ohg small { display: block; margin-top: 8px; font: 700 13px serif; letter-spacing: 4px; color: var(--sgold); }
+.ohg-wood { --oc: #3E9A5A; } .ohg-fire { --oc: #C8402E; } .ohg-earth { --oc: #C8962E; } .ohg-metal { --oc: #9A9AB0; } .ohg-water { --oc: #2E4E9A; }
+.sdcard .ohg { position: absolute; right: 0; top: 0; height: 100%; width: 40%; opacity: .55; align-content: start; padding-top: 86px; mask-image: linear-gradient(90deg, transparent, #000 35%); -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%); }
+.sdcard .ohg small { display: none; } .sdcard .ohg b { font-size: 72px; }
+.sdhero .ohg { position: absolute; inset: 0; align-content: start; padding-top: calc(70px + var(--safe-t, 0px)); } .sdhero .ohg b { font-size: 170px; } .sdhero .ohg small { display: none; }
+.sdp .ohg { width: 84px; height: 108px; border-radius: 10px; flex: none; } .sdp .ohg b { font-size: 44px; } .sdp .ohg small { font-size: 9px; letter-spacing: 1px; }
+.sdwhy { margin-top: 6px !important; font-size: 11.5px !important; color: var(--sgold) !important; opacity: .9; }
+.sdhook { position: relative; z-index: 3; margin: 10px 0 2px; padding: 9px 11px; border-radius: 12px; background: rgba(13,11,12,.78); border: 1px solid var(--sline); font-size: 12.5px; line-height: 1.45; max-width: 92%; }
+.sdhook small { display: block; color: var(--sgold); font-size: 10.5px; letter-spacing: 2px; margin-bottom: 2px; } .sdhook em { font-style: normal; color: var(--blood2); font-weight: 800; white-space: nowrap; }
+.recap { position: relative; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 8px 0 2px; padding: 8px 10px; border-radius: 12px; background: rgba(13,11,12,.78); font-size: 13px; max-width: 92%; }
+.recap span { display: flex; gap: 6px; } .recap button { padding: 6px 10px; border-radius: 99px; border: 1px solid var(--sgold); background: none; color: var(--paper); font: 700 12px inherit; }
+.recap.done { color: var(--paper2); } .recap .lnk { border: 0; padding: 0; text-decoration: underline; color: var(--sgold); }
+.stampfill { margin: -6px 0 14px; padding: 10px 12px; border-radius: 14px; background: var(--ink3, #1c1716); border: 1px dashed var(--sgold, #E8C98A); color: var(--sgold, #E8C98A); font-size: 13px; cursor: pointer; text-align: center; }
+.fcal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 10px 0; } .fcal u { text-decoration: none; text-align: center; font-size: 11px; color: var(--sub); }
+.fcal i { min-height: 62px; padding: 3px 2px; border-radius: 8px; background: rgba(255,255,255,.04); font-style: normal; text-align: center; overflow: hidden; cursor: pointer; }
+.fcal i small { display: block; font-size: 10px; color: var(--sub); } .fcal i b { display: block; font-size: 15px; } .fcal i em { display: block; font-style: normal; font-size: 9px; color: var(--sub); white-space: nowrap; overflow: hidden; } .fcal i s { display: block; text-decoration: none; font-size: 9px; letter-spacing: -1px; }
+.fcal i.c-hi b { color: #FF8A3C; } .fcal i.c-md b { color: #F2C14E; } .fcal i.c-lo b { color: #8FB8E8; } .fcal i.now { outline: 2px solid var(--sgold, #E8C98A); } .fcal i.fut { opacity: .3; cursor: default; }
+.fcalnav { display: flex; justify-content: space-between; gap: 8px; }
+.tzs { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 0 16px 14px; } .tz { padding: 10px; border-radius: 12px; background: var(--ink3); border: 1px solid var(--sline); text-align: center; }
+.tz small { display: block; font-size: 11px; color: var(--sgold); } .tz b { display: block; margin-top: 4px; font: 800 15px serif; color: var(--paper); }
+.shbtn { margin: 0 16px 14px; }
+.ych { display: flex; align-items: flex-end; gap: 3px; height: 110px; } .ych div { flex: 1; text-align: center; } .ych s { display: block; text-decoration: none; background: linear-gradient(0deg, #2E4E9A, #6A9AFF); border-radius: 4px 4px 0 0; }
+.ych b { display: block; font-size: 9px; } .ych small { display: block; font-size: 9px; color: var(--sub); }
+.wcal { display: flex; flex-wrap: wrap; gap: 6px; } .wcal span { padding: 6px 8px; border-radius: 10px; background: var(--ink3); font-size: 12px; color: #F2C14E; } .wcal span b { color: var(--paper); margin-right: 4px; } .wcal .lv3 { border: 1px solid #F2C14E; }
