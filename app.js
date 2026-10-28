@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.81.2';
-import * as R from './rules.js?v=0.81.2';
-import * as I from './install.js?v=0.81.2';
-import * as T from './track.js?v=0.81.2';
-import * as P from './pay.js?v=0.81.2';
-import * as A from './account.js?v=0.81.2';
-import * as C from './cloud.js?v=0.81.2';
-import * as BM from './bm.js?v=0.81.2';
+import { PLANNED } from './catalog.js?v=0.81.3';
+import * as R from './rules.js?v=0.81.3';
+import * as I from './install.js?v=0.81.3';
+import * as T from './track.js?v=0.81.3';
+import * as P from './pay.js?v=0.81.3';
+import * as A from './account.js?v=0.81.3';
+import * as C from './cloud.js?v=0.81.3';
+import * as BM from './bm.js?v=0.81.3';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.2').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.3').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.2'), import('./fortune/types.js?v=0.81.2'), import('./fortune/chat.js?v=0.81.2')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.3'), import('./fortune/types.js?v=0.81.3'), import('./fortune/chat.js?v=0.81.3')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.81.2';
+const VERSION = '0.81.3';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -226,7 +226,7 @@ function fortuneCard(me, f, m) {
   return `<div class="sdcard" data-fortune ${KB}>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
     <div class="sdscore"><b>${f.total}</b><small>점</small></div><h2>“${f.say}”</h2><p class="sdwarn">⚠ ${f.warn}</p><p class="sdwhy">${f.why}</p>
     ${h ? `<div class="sdhook" data-paid="${h.id}" ${KB}><small>오늘 이 부분이 신경 쓰여요</small>${h.text} <em>→ ${m.paidOf(h.id).title} 미리보기 · 전체 ${won(m.paidOf(h.id).price)}</em></div>` : ''}${recap}${gift}
-    ${EX ? EX.tarot.line(m, me, f, XC()) : ''}<span class="sdgo">${me.name}의 오늘 전부 보기 →</span></div><span class="seal">${c.seal}</span></div>`;
+    ${EX ? EX.tarot.line(m, me, f, XC()) + EX.chat.line(m, me, f, XC()) : ''}<span class="sdgo">${me.name}의 오늘 전부 보기 →</span></div><span class="seal">${c.seal}</span></div>`;
 }
 /* 저녁 회고: 1탭 (메모 없음 · 기기에만) */
 async function recapAnswer(ans) {
@@ -279,7 +279,8 @@ async function fortuneDetail(dayKey) {
   const el = document.createElement('div'); el.id = 'sd'; el.innerHTML = `<div class="sdpage">
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
     <div class="sdhero">${face(m, f.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${c.name} · ${fmtDate(date)} · ${f.today.ko}일</div><h1>${me.name},<br>${past ? '그날은' : '오늘은'} <em>${f.key}</em>의 날${past ? '이었다' : '이다'}</h1><div class="sdscore big"><b>${f.total}</b><small>/100</small></div></div><span class="seal lg">${c.seal}</span></div>
-    <section><h3>${past ? '그날의' : '오늘의'} 한마디</h3><blockquote>“${f.say}”</blockquote><p class="sdwarn">⚠ ${past ? '그날' : '오늘'} 조심할 것 — ${f.warn}</p><p class="sdwhy">왜 ${c.name}? ${f.why}</p>${!past ? `<button class="sdbtn ghost" data-tarot style="margin-top:10px">🃏 오늘의 타로 한 장</button>` : ''}</section>${!past && EX ? EX.chat.entry(m, me, f, XC()) : ''}
+    ${!past && EX ? EX.chat.entry(m, me, f, XC()) : ''}
+    <section><h3>${past ? '그날의' : '오늘의'} 한마디</h3><blockquote>“${f.say}”</blockquote><p class="sdwarn">⚠ ${past ? '그날' : '오늘'} 조심할 것 — ${f.warn}</p><p class="sdwhy">왜 ${c.name}? ${f.why}</p>${!past ? `<button class="sdbtn ghost" data-tarot style="margin-top:10px">🃏 오늘의 타로 한 장</button>` : ''}</section>
     <section><h3>분야별 운</h3>${Object.entries(f.scores).map(([k, v]) => bar(k, v)).join('')}</section>
     <section class="sdlove"><h3>${f.tone >= 7 ? '💔 연애 독설' : '💗 연애 한마디'}</h3><p class="big">${f.dokLove}</p><p>${f.love}</p></section>
     <section><h3>돈 · 일</h3><p><b>돈</b> ${f.money}</p><p><b>일</b> ${f.work}</p>${f.notes.length ? `<p class="sdnote">${f.notes.join(' ')}</p>` : ''}</section>

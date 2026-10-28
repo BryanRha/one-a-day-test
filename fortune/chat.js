@@ -47,12 +47,19 @@ const KEY = 'oad_chat';
 const load = day => { try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); return j && j.day === day ? j : null; } catch { return null; } };
 const save = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* */ } };
 
-/* 입구 (운세 상세 안 한 칸) */
+/* 입구 (운세 상세 · 점수 바로 아래) — 점쟁이 얼굴 + 첫 말 말풍선 + 큰 버튼으로 눈에 띄게 (2026-10-28 대표) */
 export function entry(m, me, f, X) {
   if (!eligible(me, f.chart)) return '';
-  const C = m.CHARS[f.ch], s = load(X.R.keyOf(X.R.now())), left = s ? s.left : FREE;
+  const C = m.CHARS[f.ch], s = load(X.R.keyOf(X.R.now())), left = s ? s.left : FREE, esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   X.T.track('chat_entry_view', { ch: f.ch });
-  return `<section class="aient" data-chat><div><small>AI 점쟁이 · 실험 중</small><b>💬 ${C.name}에게 물어보기</b><p>오늘 무료 ${left}마디 남음 · 실제 명리 계산 결과로 AI가 대화해요</p></div><span>→</span></section>`;
+  return `<section class="aient" data-chat><div class="aitop">${X.face(m, f.ch, 'sm')}<div class="aibub"><small>${C.name} · AI 상담</small><p>${esc(greet(f, C))}</p></div></div>
+    <button class="aibtn" type="button">💬 ${C.name}에게 직접 물어보기 <em>${left > 0 ? `오늘 무료 ${left}번` : '내일 다시'}</em></button></section>`;
+}
+/* 오늘 카드 줄 (홈 운세 카드 안 · 타로 줄 아래) */
+export function line(m, me, f, X) {
+  if (!eligible(me, f.chart)) return '';
+  const C = m.CHARS[f.ch], s = load(X.R.keyOf(X.R.now())), left = s ? s.left : FREE;
+  return `<div class="tline ai" data-chat>💬 ${C.name}에게 직접 물어보기 · ${left > 0 ? `<b>무료 ${left}번</b>` : '내일 다시'}</div>`;
 }
 
 export async function open(X) {

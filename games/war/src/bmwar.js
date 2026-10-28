@@ -5,9 +5,9 @@
 //   응원 선물(6장 · 단계형): 같은 캠페인 작전 3연속 패배 → 다음 도전 시작 때 지원 부대 · 6번째부터 조금 더
 //     3번째 패배부터는 응원 선물이 광고 보급 보너스 자리를 대신 (선물을 줄 수 없을 때만 — 꺼짐 그룹 · 하루 한도 — 광고가 다시 보임)
 //   전면 광고: 작전 사이(결과 → 다음 작전)에서만 bm.interstitial('round_end')
-import { bm } from './oad_bm.js?v=0.81.2';
-import { inOAD } from './oad.js?v=0.81.2';
-import { load, save } from './save.js?v=0.81.2';
+import { bm } from './oad_bm.js?v=0.81.3';
+import { inOAD } from './oad.js?v=0.81.3';
+import { load, save } from './save.js?v=0.81.3';
 
 export const BMW = { ownerUndo: 3, supplyPerDay: 2, helpPerDay: 2, streak: 3, streak2: 6, minDay: 3, firstBattles: 3 };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
