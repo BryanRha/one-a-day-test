@@ -195,3 +195,15 @@ body.decoing .poemp { display: none; }
 .chip.mach .idle { font-size: 12px; } .chip.mach.empty { padding: 2px 6px; opacity: .85; }
 .cheer { padding: 6px 4px 2px; } .cheer > i { display: block; font-style: normal; font-size: 40px; } .cheer small { display: block; font-size: 11px; color: var(--red); font-weight: 800; letter-spacing: 1px; } .cheer b { display: block; font-family: var(--serif); font-size: 20px; margin: 4px 0 6px; } .cheer p { font-size: 13px; color: var(--sub); }
 .upr.cheerr { background: #FFF6E2; }
+
+/* 2026-10-28 PC · 태블릿 화면 맞춤: HUD · 창은 --k 배(min(가로, 세로) 기준, main.js fit) · 넓은 화면(body.wide)은 HUD 를 가장자리로 모아 매장을 가리지 않게 */
+#hud, #modal { position: absolute; left: 0; top: 0; right: auto; bottom: auto; width: calc(100% / var(--k, 1)); height: calc(100% / var(--k, 1)); transform: scale(var(--k, 1)); transform-origin: 0 0; }
+#modal { pointer-events: none; z-index: 40; } #modal > * { pointer-events: auto; }
+#toast { scale: var(--k, 1); transform-origin: 0 0; } .bub, .chip { transform-origin: 50% 100%; } .cloud { transform-origin: 100% 50%; }   /* 말풍선 · 표시의 크기는 ui.frame 이 transform 끝에 scale(k) */
+body.wide .lvl { right: auto; width: 360px; }
+body.wide .bottom { left: 50%; right: auto; width: 540px; transform: translateX(-50%); }
+body.wide .rail { right: auto; max-width: calc(50% - 290px); flex-wrap: wrap; overflow: visible; bottom: calc(var(--sb) + 14px); align-content: flex-end; }
+body.wide .hint { left: auto; right: 12px; transform: none; bottom: calc(var(--sb) + 14px); max-width: calc(50% - 290px); white-space: normal; text-align: left; }
+body.wide .poemp, body.wide .poemcard { bottom: auto; top: calc(var(--st) + 150px); }
+body.wide .letterc, body.wide .artcard { bottom: auto; top: calc(var(--st) + 200px); }
+body.wide .decobar { left: 50%; right: auto; width: 600px; transform: translateX(-50%); }

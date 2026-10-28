@@ -77,3 +77,6 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .upr.own { opacity: .7; } .stars { color: #F2A23A !important; letter-spacing: 1px; }
 #toast { white-space: normal; width: max-content; max-width: min(340px, 88vw); text-align: center; line-height: 1.35; }
 .stars i { font-style: normal; color: #EADCC8; }
+/* 넓은 화면(PC · 태블릿): HUD · 창 · 알림을 짧은 변 기준으로 키움 (--z: 폰 1 · 최대 1.5, main.js fit) */
+#hud > .top, #hud > .cp, #hud > .lside, #hud > .side, #hud > .hint, .mback > .modal, #toast, .regcard { zoom: var(--z, 1); }
+.mback > .modal { max-height: calc(88vh / var(--z, 1)); } .mback .uplist { max-height: calc(56vh / var(--z, 1)); }   /* 키운 창도 화면 높이 안에 (낮은 PC 화면) */

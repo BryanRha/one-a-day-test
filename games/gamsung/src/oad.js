@@ -3,11 +3,13 @@
 // · 원어데이로 버튼: exitToOAD()
 export const inOAD = (() => { try { return window.parent !== window; } catch { return true; } })();
 export const exitToOAD = () => { try { window.parent.postMessage({ type: 'oad:exit' }, '*'); } catch { /* */ } };
-const stack = [];
+const stack = []; let runner = null;
+export const runBack = () => (runner ? runner() : false);   /* PC: Esc 키 = 뒤로 (열린 창 닫기 → 꾸미기 끝내기) */
 export function pushBack(back) { const e = { back }; stack.push(e); return () => { const i = stack.indexOf(e); if (i >= 0) stack.splice(i, 1); }; }
 export function installBack({ back }) {
   try { window.parent.postMessage({ type: 'oad:ready', back: true }, '*'); } catch { /* */ }
   const run = () => { while (stack.length) { const t = stack[stack.length - 1]; if (t.back() !== false) return true; stack.pop(); } return back(); };
+  runner = run;
   window.addEventListener('message', e => { if (!e.data || e.data.type !== 'oad:back') return; let h = false; try { h = run(); } catch (err) { console.warn(err); } try { window.parent.postMessage({ type: 'oad:back-result', handled: h }, '*'); } catch { /* */ } });
   if (inOAD && 'CloseWatcher' in window) { let w = null; const arm = () => { if (w) return; try { w = new CloseWatcher(); w.onclose = () => { w = null; let h = false; try { h = run(); } catch { h = false; } if (h) arm(); else exitToOAD(); }; } catch { w = null; } };
     arm(); addEventListener('pointerdown', arm, true); }

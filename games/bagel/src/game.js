@@ -1,10 +1,10 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa } from './data.js?v=0.78.0';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa } from './data.js?v=0.78.1';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL } from './models.js?v=0.78.0';
-import { S, save, addSold, mission, today } from './state.js?v=0.78.0';
-import { sfx } from './audio.js?v=0.78.0';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL } from './models.js?v=0.78.1';
+import { S, save, addSold, mission, today } from './state.js?v=0.78.1';
+import { sfx } from './audio.js?v=0.78.1';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -33,6 +33,7 @@ export class Game {
     this.decoObjs = []; for (const id of S.deco[bi] || []) this.placeDeco(id, false);
     this.regT = 20;   /* 첫 단골은 금방 찾아옴 */
     this.spawnT = 1; this.carT = 4; this.camT = this.pl.pos.clone();
+    this.fitView();
     /* 안내 화살표 (처음 몇 단계) */ this.arrow = new THREE.Group(); const cone = new THREE.Mesh(new THREE.ConeGeometry(26, 50, 4), M(0xFF6A3A)); cone.rotation.x = Math.PI; this.arrow.add(cone); sc.add(this.arrow);
   }
   // ── 설비 놓기
@@ -81,6 +82,7 @@ export class Game {
   unlock(p) {
     const s = p.s; if (this.unl.has(s.id)) return; (window.unlockLog ||= []).push([s.id, Math.round(this.t), this.bi]); console.log('#unlock', s.id, Math.round(this.t)); this.unl.add(s.id); const br = (S.branch[this.bi] ||= { unl: [], staff: [], paid: {} }); br.unl = [...this.unl]; delete br.paid[s.id];
     sfx('unlock', { vol: 0.8 }); mission('unlock');
+    if (s.type === 'drive') setTimeout(() => this.fitView(), 0);   /* 드라이브스루가 생기면 화면에 담을 범위가 넓어짐 */
     if (s.type === 'hire') this.hire(s.staff); else if (s.type === 'up') { S.up[s.up] = 1; if (s.up === 'carry') this.pl.cap = PLAYER.carryUp; this.ui.toast(s.up === 'carry' ? '한 번에 10개까지 들 수 있어요!' : '더 빨리 걸어요!'); this.confetti(s.x, 80, s.z); }
     else if (s.type === 'next') { /* 한 번만: 칸을 지우고 다음 지점 창 */ for (const q of this.pads) { this.sc.remove(q.g); q.tag.remove(); } this.pads = []; this.nexting = true; save(true); this.ui.nextBranch(this.bi + 1); return; }
     else { this.place(s, true); if (s.type === 'mixer') this.ui.toast('반죽을 오븐에 넣으면 베이글 2개가 바로 구워져요!'); if (s.type === 'kettle') this.ui.toast('반죽을 들고 솥 칸을 지나가면 데쳐져요 → 오븐에서 쫄깃 베이글(값 1.5배)!'); }
@@ -127,10 +129,27 @@ export class Game {
     // 안내: 다음에 할 일 (설비 3개 열 때까지)
     const gd = this.guide(dt); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], 150 + Math.sin(this.t * 6) * 14, gd[1]); this.arrow.rotation.y += dt * 2; } this.ui.hint(gd && gd[2]);
     // 카메라 · 그림자 따라감
-    this.camT.lerp(pl.pos, Math.min(1, dt * 5)); this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
+    if (this.fitT) this.camT.copy(this.fitT); else this.camT.lerp(pl.pos, Math.min(1, dt * 5));   /* 넓은 화면: 매장 전체 고정 · 폰: 주인공 따라감 */ this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
     this.sun.position.set(this.camT.x - 500, 1200, this.camT.z + 700); this.sun.target.position.copy(this.camT);
     this.ui.frame(this);
   }
+  // ── 화면 맞춤: 넓은 화면(PC · 태블릿 가로)은 매장 전체(간판 ~ 계산대 · 줄 · 드라이브스루)를 HUD 를 피한 영역에 담아 고정
+  //   폰(세로)이나 너무 작아지는 화면은 지금처럼 주인공을 따라감 · 창 크기가 바뀌면 다시 (main.js fit)
+  fitView() { const cam = this.cam, w = innerWidth, h = innerHeight, z = this.hudZ || 1; if (!this.B) return;
+    const follow = () => { const S2 = w / h < 0.8 ? 900 : 560; cam.left = -S2 * w / h; cam.right = S2 * w / h; cam.top = S2; cam.bottom = -S2; cam.updateProjectionMatrix(); this.fitT = null; };
+    if (w / h < 0.8 && Math.min(w, h) < 700) return follow();   /* 폰 세로: 그대로 */
+    const W = this.B.W / 2, D = this.B.D / 2, P = [];
+    for (const [x, zz] of [[-W, -D], [W, -D], [-W, D], [W, D]]) P.push([x, 0, zz]); for (const [x, zz] of [[-W, -D], [W, -D], [-W, D]]) P.push([x, 260, zz]);
+    const sx = -W + 60, sz = -D + 60; for (const d of [-250, 250]) P.push([sx + d * Math.SQRT1_2, 425, sz + d * Math.SQRT1_2]);   /* 간판 (벽 위 · 45도) */
+    P.push([320, 230, 930], [440, 230, 930], [260, 260, 820]);   /* 문 앞 · 줄 끝 손님과 말풍선 */
+    if (this.st.drive) { const dv = this.st.drive; P.push([dv.x + 250, 130, dv.z - 120], [dv.x + 410, 130, dv.z - 120], [dv.x + 410, 130, dv.z + 640]); }   /* 드라이브스루 차 줄 */
+    const c0 = new THREE.OrthographicCamera(); c0.position.set(900, 1150, 900); c0.lookAt(0, 0, 0); c0.updateMatrixWorld(); const v = new V(); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const p of P) { v.set(...p).applyMatrix4(c0.matrixWorldInverse); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+    const L = 86 * z, R0 = 86 * z, T = 64 * z, Bt = 86 * z, k = Math.max((x1 - x0) / (w - L - R0), (y1 - y0) / (h - T - Bt));   /* 화면 1px 당 세계 크기 */
+    if (!(k > 0) || k > 4.2) return follow();   /* 너무 작게 보이면 따라가기 (폰 가로 등) */
+    cam.left = -w / 2 * k; cam.right = w / 2 * k; cam.top = h / 2 * k; cam.bottom = -h / 2 * k; cam.updateProjectionMatrix();
+    const ox = (x0 + x1) / 2 - (L - R0) / 2 * k, oy = (y0 + y1) / 2 - (Bt - T) / 2 * k, rt = new V().setFromMatrixColumn(c0.matrixWorld, 0), up = new V().setFromMatrixColumn(c0.matrixWorld, 1);
+    this.fitT = new V().addScaledVector(rt, ox).addScaledVector(up, oy); this.camT && this.camT.copy(this.fitT); }
   collide(p, r) {
     const B = this.B; p.x = Math.max(-B.W / 2 + 40 + r, Math.min(B.W / 2 - 20 - r, p.x)); p.z = Math.max(-B.D / 2 + 40 + r, Math.min(B.D / 2 - 20, p.z));
     for (const o of this.decoObjs || []) if (o.r) { const d = Math.hypot(p.x - o.x, p.z - o.z), m = o.r + r; if (d < m && d > 0.1) { p.x = o.x + (p.x - o.x) / d * m; p.z = o.z + (p.z - o.z) / d * m; } }

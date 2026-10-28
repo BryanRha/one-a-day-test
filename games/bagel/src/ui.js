@@ -1,10 +1,10 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa } from './data.js?v=0.78.0';
-import { starOf, favLv } from './game.js?v=0.78.0';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.78.0';
-import { sfx, setAudio } from './audio.js?v=0.78.0';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.78.0';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa } from './data.js?v=0.78.1';
+import { starOf, favLv } from './game.js?v=0.78.1';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.78.1';
+import { sfx, setAudio } from './audio.js?v=0.78.1';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.78.1';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -32,7 +32,7 @@ export class UI {
     const up = e => { if (id === null) return; if (e.changedTouches && ![...e.changedTouches].some(q => q.identifier === id)) return; id = null; IN.x = IN.y = 0; base.classList.remove('on'); knob.style.transform = ''; };
     area.addEventListener('touchstart', down, { passive: true }); area.addEventListener('touchmove', move, { passive: false }); area.addEventListener('touchend', up); area.addEventListener('touchcancel', up);
     area.addEventListener('mousedown', down); addEventListener('mousemove', move); addEventListener('mouseup', up);
-    const keys = new Set(); addEventListener('keydown', e => { keys.add(e.code); kb(); }); addEventListener('keyup', e => { keys.delete(e.code); kb(); });
+    const keys = new Set(); addEventListener('keydown', e => { if (e.code === 'Escape') { const b = document.querySelector('#modal .mback'); b && b.click(); return; } keys.add(e.code); kb(); });   /* Esc: 창 닫기 (바깥 누르기와 같음) */ addEventListener('keyup', e => { keys.delete(e.code); kb(); });
     const kb = () => { if (id !== null) return; let x = 0, y = 0; if (keys.has('KeyA') || keys.has('ArrowLeft')) x--; if (keys.has('KeyD') || keys.has('ArrowRight')) x++; if (keys.has('KeyW') || keys.has('ArrowUp')) y--; if (keys.has('KeyS') || keys.has('ArrowDown')) y++; const l = Math.hypot(x, y) || 1; IN.x = x / l; IN.y = y / l; };
   }
   bubble() { const d = document.createElement('div'); d.className = 'bub'; this.tags.append(d); return d; }

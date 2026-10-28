@@ -1,11 +1,11 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.78.0';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.78.0';
-import { cup } from './models.js?v=0.78.0';
-import { fmt, machineCount, storeMult, WALL_SLOTS, STACK, poemLen } from './game.js?v=0.78.0';
-import { sfx, setAudio } from './audio.js?v=0.78.0';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.78.0';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.78.1';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.78.1';
+import { cup } from './models.js?v=0.78.1';
+import { fmt, machineCount, storeMult, WALL_SLOTS, STACK, poemLen } from './game.js?v=0.78.1';
+import { sfx, setAudio } from './audio.js?v=0.78.1';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.78.1';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_';
@@ -73,11 +73,11 @@ export class UI {
   // ── 화면 위 표시: 말풍선 · 머신 시간 · 치울 잔
   chip(key, cls, act) { let d = this.chips.get(key); if (!d) { d = document.createElement('div'); d.className = 'chip ' + cls; this.tags.append(d); this.chips.set(key, d); if (act) { d.classList.add('tap'); d.addEventListener('click', e => { e.stopPropagation(); this.tap(act()); }); } } d._seen = true; return d; }   /* 머리 위 표시도 누르면 그 설비를 누른 것과 같음 */
   frame(g) {
-    const cam = this.app.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3(), at = (x, y, z) => { v.set(x, y, z).project(cam); return `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px)`; };
+    const cam = this.app.cam, W = innerWidth, H = innerHeight, q = W / H < 0.6 ? 1 : Math.max(0.9, Math.min(1.5, H / (cam.top - cam.bottom) / 0.358)), sk = Math.abs(q - 1) > 0.02 ? ` scale(${q.toFixed(3)})` : '', v = new THREE.Vector3(),   /* 화면 위 표시는 매장이 그려지는 크기에 맞춤(폰 세로 = 1) · 기준점은 그대로 */ at = (x, y, z) => { v.set(x, y, z).project(cam); return `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px)`; };
     $('#cn').textContent = fmt(S.coins); $('#hn').textContent = fmt(S.hearts); $('#bn').textContent = fmt(S.beans); $('#beanP').classList.toggle('low', S.beans < 6);
-    for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.4; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; d.style.opacity = Math.max(0, 1 - d._t / 1.3); if (d._t > 1.3) d.remove(); }
+    for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.4; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)` + sk; d.style.opacity = Math.max(0, 1 - d._t / 1.3); if (d._t > 1.3) d.remove(); }
     for (const c of g.cust) { if (!c.tag) continue; const sst = c.state === 'story' || (c.story && c.state === 'seated'), show = (c.state === 'story' || (c.state === 'seated' && (c.story || g.ready(c) || c.w > 90))) && !g.deco;   /* 자리에서 사연을 기다리는 단골도 💌 */   /* 앉아 기다리는 손님은 주문 레일로 보고, 머리 위엔 오래 기다릴 때만 */ c.tag.style.display = show ? '' : 'none'; if (!show) continue;
-      c.tag.style.transform = at(c.pos.x, 230, c.pos.z) + ' translate(-50%,-100%)';
+      c.tag.style.transform = at(c.pos.x, 230, c.pos.z) + ' translate(-50%,-100%)' + sk;
       const html = sst ? `<i class="lt">💌</i><b>${c.reg.name}</b><small>눌러서 이야기 듣기</small>` : c.state === 'kiosk' ? '<b>📱 주문 중…</b>' : `<i class="no">#${c.ticket ? c.ticket.no : ''}</i>${c.items.map(it => `<img src="${pic(it.k)}"><b>${MENU[it.k].short}${it.n > 1 ? `×${it.n}` : ''}</b>`).join('')}${c.w > 90 ? '<em>😌</em>' : ''}`;
       if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('story', sst); c.tag.classList.toggle('reg', !!c.reg); c.tag.classList.toggle('has', g.ready(c)); }
     const lab = g.cust.filter(c => c.state === 'seated' && !(g.ready(c) || c.w > 90)).sort((a, b) => b.w - a.w)[0];
@@ -85,17 +85,17 @@ export class UI {
       const wait = !sv && c === lab;   /* 마음 구름: 흐림 → 맑음 · 정성 한 잔이면 햇살 · 글자는 가장 오래 기다린 한 명만 */
       const html = !sv ? `<i>☁️</i>${wait ? '<b>마음 흐림</b>' : ''}` : age < 3.2 ? `<i>${c.sun ? '🌞' : '☀️'}</i><b>${c.sun ? '햇살 가득' : '맑아졌어요'}${c.gain ? ` <em>♥+${c.gain}</em>` : ''}</b>` : `<i>${c.sun ? '🌞' : '🌤️'}</i>`;
       if (el._h !== html) { el.innerHTML = html; el._h = html; el.className = 'cloud ' + (!sv ? 'dim' : age < 3.2 ? 'sun pop' + (c.sun ? ' gold' : '') : 'ok'); }
-      el.style.transform = at(c.pos.x, c.P.sit ? 120 : 150, c.pos.z) + ' translate(calc(-100% - 16px),-50%)'; }
+      el.style.transform = at(c.pos.x, c.P.sit ? 120 : 150, c.pos.z) + ' translate(calc(-100% - 16px),-50%)' + sk; }
     this.rail(g);
     for (const d of this.chips.values()) d._seen = false;
     if (!g.deco) {
-      for (const m of g.machines) { const p = g.progress(m), d = this.chip('m' + m.key, 'mach', () => ({ kind: 'machine', m })); d.style.transform = at(m.x, 250, m.z) + ' translate(-50%,-100%)';
+      for (const m of g.machines) { const p = g.progress(m), d = this.chip('m' + m.key, 'mach', () => ({ kind: 'machine', m })); d.style.transform = at(m.x, 250, m.z) + ' translate(-50%,-100%)' + sk;
         const html = !p ? `<span class="idle">${m.kind === 'oven' ? '🍰' : '☕'}</span>` : p.u >= 1 ? `<img src="${pic(p.s.menu)}"><b>${MENU[p.s.menu].short} ×${p.s.n} 완성</b>` : `<img src="${pic(p.s.menu)}"><b class="mn">${MENU[p.s.menu].short}</b><s><i style="width:${p.u * 100}%"></i></s><em>${mmss(p.left)}</em>`;
         if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!p && p.u >= 1); d.classList.toggle('empty', !p); }
-      { const r = g.roastState(), d = this.chip('roast', 'mach', () => ({ kind: 'roaster' })); d.style.transform = at(g.roaster.x, 250, g.roaster.z) + ' translate(-12%,-100%)'; const html = !r ? `<span class="idle">🫘${S.beans < 30 ? ' 원두 볶기' : ''}</span>` : r.u >= 1 ? `<b>🫘 원두 +${r.R.beans}</b>` : `<span>🫘</span><s><i style="width:${r.u * 100}%"></i></s><em>${mmss(r.left)}</em>`; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!r && r.u >= 1); d.classList.toggle('empty', !r); }
-      for (const o of g.furn) o.seats.forEach((s, k) => { if (!s.dirty) return; const d = this.chip('d' + o.f.uid + '_' + k, 'dirty', () => ({ kind: 'dirty', o, k })); d.style.transform = at(s.dirty.position.x, 150, s.dirty.position.z) + ' translate(-50%,-100%)'; const html = s.coins && s.coins.l >= 0 ? '💌' : s.coins && s.coins.v ? '<i class="c"></i>' : '✨'; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('coin', !!(s.coins && (s.coins.v || s.coins.l >= 0))); });
-      { const n = g.stackTotal(); if (n) { const d = this.chip('stack', 'stackc', () => ({ kind: 'stack' })); d.style.transform = at(STACK.x, STACK.y + 30 + Math.min(4, Math.ceil(n / 3)) * 52, STACK.z) + ' translate(-50%,-100%)'; const html = `<i class="n">${n}</i>`; if (d._h !== html) { d.innerHTML = html; d._h = html; }
-        if (S.fg >= 3) { const q = this.chip('stackp', 'stackc', () => ({ kind: 'stack' })); q.style.transform = at(STACK.x, STACK.y + 20, STACK.z) + ' translate(calc(-100% - 34px),-50%)'; if (!q._h) { q.innerHTML = '<b>눌러서 픽업대로 ➜</b>'; q._h = 1; } } } }   /* 안내 중엔 손가락이 대신 */   /* 작업대 탑(개수) · 아래에 「끌어 픽업대로」 */
+      { const r = g.roastState(), d = this.chip('roast', 'mach', () => ({ kind: 'roaster' })); d.style.transform = at(g.roaster.x, 250, g.roaster.z) + ' translate(-12%,-100%)' + sk; const html = !r ? `<span class="idle">🫘${S.beans < 30 ? ' 원두 볶기' : ''}</span>` : r.u >= 1 ? `<b>🫘 원두 +${r.R.beans}</b>` : `<span>🫘</span><s><i style="width:${r.u * 100}%"></i></s><em>${mmss(r.left)}</em>`; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('done', !!r && r.u >= 1); d.classList.toggle('empty', !r); }
+      for (const o of g.furn) o.seats.forEach((s, k) => { if (!s.dirty) return; const d = this.chip('d' + o.f.uid + '_' + k, 'dirty', () => ({ kind: 'dirty', o, k })); d.style.transform = at(s.dirty.position.x, 150, s.dirty.position.z) + ' translate(-50%,-100%)' + sk; const html = s.coins && s.coins.l >= 0 ? '💌' : s.coins && s.coins.v ? '<i class="c"></i>' : '✨'; if (d._h !== html) { d.innerHTML = html; d._h = html; } d.classList.toggle('coin', !!(s.coins && (s.coins.v || s.coins.l >= 0))); });
+      { const n = g.stackTotal(); if (n) { const d = this.chip('stack', 'stackc', () => ({ kind: 'stack' })); d.style.transform = at(STACK.x, STACK.y + 30 + Math.min(4, Math.ceil(n / 3)) * 52, STACK.z) + ' translate(-50%,-100%)' + sk; const html = `<i class="n">${n}</i>`; if (d._h !== html) { d.innerHTML = html; d._h = html; }
+        if (S.fg >= 3) { const q = this.chip('stackp', 'stackc', () => ({ kind: 'stack' })); q.style.transform = at(STACK.x, STACK.y + 20, STACK.z) + ' translate(calc(-100% - 34px),-50%)' + sk; if (!q._h) { q.innerHTML = '<b>눌러서 픽업대로 ➜</b>'; q._h = 1; } } } }   /* 안내 중엔 손가락이 대신 */   /* 작업대 탑(개수) · 아래에 「끌어 픽업대로」 */
     }
     for (const [k, d] of this.chips) if (!d._seen) { d.remove(); this.chips.delete(k); }
     const b = g.boostUntil - now(); $('#adT').textContent = b > 0 ? mmss(Math.ceil(b / 1000)) : '손님×2'; $('#bAd').classList.toggle('on', b > 0);
@@ -104,8 +104,8 @@ export class UI {
   }
   /* 첫 안내: 글 대신 실제 화면을 가리키는 손가락 3단계 (① 주문표 → ② 꾹 눌러 추출 → ③ 쟁반을 픽업대로) */
   finger(g, at) { const el = $('#finger'), sp = el.querySelector('span'); const hide = () => el.classList.remove('on');
-    if (S.fg >= 3 || g.deco || window.__bot) return hide(); const W = innerWidth;
-    const put = (x, y, t, cls = '') => { el.className = 'finger on ' + cls; const ic = el.querySelector('i'), e2 = cls === 'up' ? '👇' : '👆'; if (ic.textContent !== e2) ic.textContent = e2; el.style.left = Math.max(10, Math.min(W - 10, x)) + 'px'; el.style.top = y + 'px'; if (sp._t !== t) { sp.innerHTML = t; sp._t = t; } };
+    if (S.fg >= 3 || g.deco || window.__bot) return hide(); const k = window.__k || 1, W = innerWidth;   /* 손가락은 HUD(크기 k 배) 안에 → 화면 좌표 ÷ k */
+    const put = (x, y, t, cls = '') => { el.className = 'finger on ' + cls; const ic = el.querySelector('i'), e2 = cls === 'up' ? '👇' : '👆'; if (ic.textContent !== e2) ic.textContent = e2; el.style.left = Math.max(10, Math.min(W - 10, x)) / k + 'px'; el.style.top = y / k + 'px'; if (sp._t !== t) { sp.innerHTML = t; sp._t = t; } };
     if ($('#pull')) return hide();   /* 추출 창은 창 안에서 손가락이 안내 */
     if ($('#modal').firstChild) return hide();
     if (g.stackTotal()) { const r = this.chips.get('stack')?.getBoundingClientRect(); if (r) return put(r.left + r.width / 2, r.bottom + 6, '<em>3/3</em> 쟁반을 눌러 픽업대로', 'up'); }
@@ -205,7 +205,7 @@ export class UI {
       <div class="ring" id="ring" style="--z0:${z0};--z1:${z1};--f:0"><div class="rz"></div><div class="rf"></div><div class="rc"><div class="cupv"><s id="liq"></s></div><b id="rcT">추출</b></div>${help ? '<i class="fing">👆</i>' : ''}</div>
       <div class="pl" id="pl">${S.fg < 3 ? '<em>2/3</em> ' : ''}꾹 누르고 · 금빛에서 떼요</div><button class="auto" id="pAuto">그냥 자동으로 · ⏱ ${tlabel(d.t)}</button></div></div>`;
     const v = new THREE.Vector3(m.x, 200, m.z).project(this.app.cam), px = (v.x + 1) / 2 * W, py = (1 - v.y) / 2 * H, el = $('#pull');
-    el.style.left = Math.max(8, Math.min(W - 258, px - 125)) + 'px'; el.style.top = Math.max(150, Math.min(H - 470, py - 40)) + 'px';
+    const kz = window.__k || 1, Wk = W / kz, Hk = H / kz; el.style.left = Math.max(8, Math.min(Wk - 258, px / kz - 125)) + 'px'; el.style.top = Math.max(150, Math.min(Hk - 470, py / kz - 40)) + 'px';   /* 창(#modal)은 크기 k 배 */
     const ring = $('#ring'), liq = $('#liq'), t0 = performance.now(); let f = 0, hold = false, done = false, raf = 0, st = 0;
     const set = x => { ring.style.setProperty('--f', x); liq.style.height = Math.min(100, x * 108) + '%'; ring.classList.toggle('in', x >= z0 && x <= z1); };
     const auto = () => { if (done) return; done = true; this.close(); const e = g.brew(m, k); if (e) return this.toast(e); this.toast(`${d.name} 자동으로 내리는 중 · ⏱ ${tlabel(d.t)}`); };
