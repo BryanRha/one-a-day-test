@@ -2,12 +2,21 @@
   "name": "One a Day · 하루 한 게임",
   "short_name": "One a Day",
   "id": "./", "start_url": "./", "scope": "./", "lang": "ko",
-  "description": "매일 새로운 게임 하나",
+  "description": "매일 0시, 모두에게 같은 새 게임 하나. 홈 화면에 두면 내일 게임을 한 번에 열 수 있어요.",
   "display": "standalone", "orientation": "portrait",
   "background_color": "#14102E", "theme_color": "#14102E",
   "icons": [
-    { "src": "icons/icon_192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon_512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon_512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    { "src": "icons/icon_192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon_512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable_192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable_512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "icons/shot_today.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "오늘의 게임 — 매일 0시에 새 게임" },
+    { "src": "icons/shot_library.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "라이브러리 — 만난 게임 모아 보기" },
+    { "src": "icons/shot_collection.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "컬렉션" },
+    { "src": "icons/shot_pc.webp", "sizes": "1280x800", "type": "image/webp", "form_factor": "wide", "label": "PC에서도 한 번에" }
+  ],
+  "related_applications": [{ "platform": "webapp", "url": "https://oneaday.kr/manifest.webmanifest" }],
+  "prefer_related_applications": false
 }

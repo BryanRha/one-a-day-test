@@ -19,6 +19,8 @@ async function safeSession(c) {
     return null;
   }
 }
+/* 서버 공개 설정 (anon 키 · 메인 원격 스위치 home 등) — 한 번만 받음 · 실패하면 null */
+export async function remote() { if (!ON) return null; cfg = cfg || await fetch('/api/admin/config').then(r => r.json()).catch(() => null); return cfg; }
 async function client() {
   if (sb || !ON) return sb;
   cfg = cfg || await fetch('/api/admin/config').then(r => r.json()).catch(() => null);

@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.85.1';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.86.0';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -68,6 +68,11 @@ export function syncItems(skus) {
 export const canPlay = id => { const a = access(id); return a !== 'locked' && a !== 'hidden'; };
 /* 지금 바로 할 수 있는 게임 (잠김 아님 · 목록에 있는 것) — 운세의 '오늘 어울리는 게임'은 여기서만 고름 */
 export const openGames = () => ORDER.filter(id => GAMES[id] && canPlay(id));
+
+/* 그 게임이 다시 '오늘의 게임'이 되는 날까지 남은 날 (오늘 = 0 · 목록에 없으면 -1) — 메인 진열장 'D-n 무료' */
+export function daysUntil(id, from = dayIndex()) { const n = DAILY.length; for (let k = 0; k < n; k++) if (gameOn(from + k) === id) return k; return -1; }
+/* 지금까지 한 번이라도 오늘의 게임이었나 (아직 공개 전이면 제목을 가림) */
+export function isReleased(id) { return released().includes(id); }
 
 export function unlockByAd(id) { const s = state(); s.unlocks[id] = keyOf(now()); save(); }
 
