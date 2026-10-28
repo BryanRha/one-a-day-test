@@ -1,7 +1,7 @@
 // 게임 안 BM 규칙: 실험 그룹 · 광고 하루 한도 · 전면 광고 조건 (team/dev/tasks/261027-ingame-bm/summary.md)
 //   A = 지금 그대로(대조) · B = 보상형 광고 + 골드 · C = B + 약한 전면 광고
 //   소장자: 전면 없음 · 보상형 혜택은 광고 없이 바로 (하루 횟수는 같음)
-import { PROD } from './rules.js?v=0.82.2';
+import { PROD } from './rules.js?v=0.82.3';
 const KEY = 'oad_bm';
 /* 실서버: 그룹은 기기 번호로 정한 무작위 그대로 고정 (설정의 '테스트:' 바꾸기 버튼 없음 · 테스트에서 바꿔 둔 값도 무시) */
 export const LIMIT = { rewardGame: 5, rewardApp: 15, interGame: 4, interApp: 8, interEvery: 3, interGapMs: 3 * 60e3, interFromPlay: 3 };
