@@ -119,12 +119,12 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
 //   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드로 열기/소장은 의뢰사 계약 확인 전까지 X(광고로만)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
-export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung', 'pae'];
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae'];   /* 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
 // 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:
 //   이미 결제(소장)한 사람 = 라이브러리에 그대로 보이고 플레이 가능 · 신규 = 안 보임 — 빌드(tools/build.mjs GAMES)에서는 절대 빼지 말 것
-export const RETIRED = [];
+export const RETIRED = ['blade'];
 // 실서버 노출 (게임물 등급분류 — team/dev/tasks/261028-service-check/biz.md ①): 여기 있는 게임만 실서버(oneaday.kr)에 보임 · 테스트 · 개발은 전부
 //   { 게임: { grade: 'all' | '12' | '15' | '19', no: '등급분류번호' } } — 받으면 한 줄씩 추가 (등급 아이콘도 이 값으로 표시)
 //   서버 server/api/_lib/gold.js RATED 와 같아야 함 (다르면 build.mjs 가 멈춤) · 목록은 대표 결정 전이라 비워 둠
@@ -134,3 +134,20 @@ export const RATING = {};
 export const BRAND_COUPON_PROD = false;
 // 여명기사단 키우기(idle)는 2026-10-25 사용자 요청으로 목록에서 내림 — 보류 중 (CATALOG 항목·소스·idle/PROJECT_STATUS.md 남겨 둠)
 // K-다이스 투어(tour)는 2026-10-24 사용자 요청으로 목록에서 내림 — 대전 네트워크(서버)가 붙으면 다시 올림 (CATALOG 항목·소스는 남겨 둠)
+
+// 내일의 게임 예고 한 줄 (오늘 화면 '내일의 게임' 칸 · 제목은 가리고 분위기만) — 새 게임을 올리면 한 줄 추가
+export const TEASE = {
+  witch: '고양이 한 마리와 마녀 하나, 밤하늘을 가르는 탄막',
+  ocean: '오늘 밤, 바다 깊은 곳의 보물 상자가 열려요',
+  racer: '빵빵! 비키세요, 골목길 최고 속도 갑니다',
+  blocks: '딱 한 줄만 더… 지워지는 소리가 기분 좋아요',
+  dice: '주사위 다섯 개로 세우는 나만의 룬 성벽',
+  war: '허스키 부대, 작전 개시까지 하루 남았습니다',
+  seek: '그 남자가 숨긴 물건, 내일은 찾을 수 있을까요',
+  beauty: '섞고 합쳐 완성하는 나만의 K뷰티 레시피',
+  farm: '씨앗이 자라고 마을이 커지는, 느긋한 하루',
+  blade: '재의 칼날이 다시 깨어납니다',
+  bagel: '갓 구운 베이글 냄새에 손님이 줄을 서요',
+  gamsung: '원두 볶는 소리, 마음이 쉬어 가는 카페',
+  pae: '열두 달 꽃패, 오늘의 패로 넘길 수 있을까요',
+};

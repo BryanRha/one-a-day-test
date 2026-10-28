@@ -488,3 +488,14 @@ body.playing #app { visibility: hidden; }
 .sdall i { font-style: normal; font-size: 18px; color: var(--sgold); }
 @media (hover: hover) { .sdall:hover { background: rgba(244,236,220,.18); } }
 @media (prefers-reduced-motion: reduce) { .mchip::after, .mchip b, .mchip .live { animation: none !important; } }
+
+/* 내일의 게임 예고 (2026-10-28): 흐린 표지 위에 떡밥 한 줄 · 남은 시간 · 홈 화면 추가 */
+.tmrw { position: relative; overflow: hidden; margin-top: 14px; border-radius: 20px; border: 1px solid rgba(176,122,255,.45); box-shadow: 0 0 26px -8px rgba(176,122,255,.6); }
+.tmrwbg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(14px) saturate(1.2) brightness(.55); transform: scale(1.1); }
+.tmrwin { position: relative; padding: 16px 16px 14px; }
+.tmrw .k { color: #E9DCFF; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+.tmrwq { margin: 6px 0 10px; font: 19px/1.4 'Jua', sans-serif; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.6); word-break: keep-all; }
+.tmrwm { display: flex; gap: 6px; flex-wrap: wrap; } .tmrwm .chip { background: rgba(0,0,0,.35); }
+.tmrwf { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 13px; color: #EDE6FF; flex-wrap: wrap; }
+.tmrwf b { font-variant-numeric: tabular-nums; color: var(--gold); }
+.tmrwf button { padding: 8px 12px; border-radius: 99px; border: 0; background: linear-gradient(135deg, #B07AFF, #7A9BFF); color: #fff; font-weight: 800; font-size: 12.5px; cursor: pointer; white-space: nowrap; }

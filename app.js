@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.84.1';
-import * as R from './rules.js?v=0.84.1';
-import * as I from './install.js?v=0.84.1';
-import * as T from './track.js?v=0.84.1';
-import * as P from './pay.js?v=0.84.1';
-import * as A from './account.js?v=0.84.1';
-import * as C from './cloud.js?v=0.84.1';
-import * as BM from './bm.js?v=0.84.1';
+import { PLANNED, TEASE } from './catalog.js?v=0.85.0';
+import * as R from './rules.js?v=0.85.0';
+import * as I from './install.js?v=0.85.0';
+import * as T from './track.js?v=0.85.0';
+import * as P from './pay.js?v=0.85.0';
+import * as A from './account.js?v=0.85.0';
+import * as C from './cloud.js?v=0.85.0';
+import * as BM from './bm.js?v=0.85.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.84.1').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.85.0').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.84.1'), import('./fortune/types.js?v=0.84.1'), import('./fortune/chat.js?v=0.84.1')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.85.0'), import('./fortune/types.js?v=0.85.0'), import('./fortune/chat.js?v=0.85.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.84.1';
+const VERSION = '0.85.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -76,14 +76,22 @@ function renderToday() {
         ${playedToday ? `<div class="played">✓ 오늘 ${lib.plays}판 플레이 · 라이브러리에 저장됨</div>` : ''}
       </div>
     </div>
-    <div class="row">
-      <div class="box"><div class="k">다음 게임 공개까지</div><div class="v" id="cd">--:--:--</div></div>
-      <div class="box mystery"><div class="qmark"><span>?</span></div><div><div class="k">내일의 게임</div><div class="jua" style="font-size:17px">두근두근…</div></div></div>
-    </div></div>`}
+    ${tomorrowBox()}</div>`}
     <div class="tmore">${R.RULES.openAll && R.ORDER.some(g => g !== id) ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : (hasY && yId ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : '')}
     <div class="section"><h3>이용 방법</h3><span class="more" data-intro ${KB}>자세히 ›</span></div>
     <div class="box" style="color:#DDD5FA">매일 자정, 모든 플레이어에게 <b class="jua" style="color:var(--gold)">같은 게임 하나</b>가 열려요. 플레이한 게임은 라이브러리에 모이고, 다른 날 다시 하려면 광고로 열 수 있어요.</div></div>
   </div>`;
+}
+/* 내일의 게임 예고 (2026-10-28 대표): 흐린 표지 + 장르 · 시간 + 한 줄 떡밥 + 남은 시간 + 홈 화면 추가 · 처음 만나는 게임이면 '처음 만나는 게임' */
+function tomorrowBox() {
+  const tid = R.gameOn(R.dayIndex() + 1), t = tid && G(tid); if (!t) return `<div class="row"><div class="box"><div class="k">다음 게임 공개까지</div><div class="v" id="cd">--:--:--</div></div></div>`;
+  const fresh = !R.state().library[tid], st = R.state().streak, next = (st.last === R.keyOf(R.now()) ? st.count : 0) + 1;
+  return `<div class="tmrw"><div class="tmrwbg" style="background-image:url('${t.cover}')"></div><div class="tmrwin">
+      <div class="k">${fresh ? '🆕 내일 처음 만나는 게임' : '내일의 게임'}</div>
+      <div class="tmrwq">${TEASE[tid] || '두근두근…'}</div>
+      <div class="tmrwm"><span class="chip">🎮 ${t.genre}</span><span class="chip">⏱ ${t.time}</span></div>
+      <div class="tmrwf"><span>⏰ <b id="cd">--:--:--</b> 뒤 공개 · 🔥 ${next}일 연속</span>${I.installed() ? '' : `<button data-install>${isPC() ? '설치해 두기' : '홈 화면에 추가'}</button>`}</div>
+    </div></div>`;
 }
 // ── 오늘의 운세 ─────────────────────────────────────
 const CITIES = [['서울', 126.98], ['인천', 126.7], ['경기', 127.0], ['강원', 128.2], ['대전·충청', 127.4], ['대구·경북', 128.6], ['부산·울산·경남', 129.1], ['광주·전라', 126.9], ['제주', 126.5], ['해외·모름', 0]];
@@ -357,7 +365,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.84.1')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.85.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */

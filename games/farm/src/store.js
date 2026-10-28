@@ -3,8 +3,8 @@
 //   광고 자리 2곳: speed(생산 30분 단축, 하루 5) · boost(주문/기차 보상 +50%, 하루 3) = bm.rewardedAd · 소장자는 via:'owner' 로 광고 없이 바로
 //   원어데이 밖(hello().ok=false): 골드 · 광고 · 소장자 장식을 숨기고 지금처럼 (이미 산 창고 · 장식은 저장에 남음)
 //   골드 표시는 '100골드' 글자로 (🪙 기호는 이 게임에서 배추 코인 그림으로 바뀜)
-import { bm } from './oad_bm.js?v=0.84.1';
-import { load, save, dayNo, add } from './state.js?v=0.84.1';
+import { bm } from './oad_bm.js?v=0.85.0';
+import { load, save, dayNo, add } from './state.js?v=0.85.0';
 
 let helloP = null;
 // 시작 때 한 번 (기다리지 않음) → 응답이 오면 영구 상품 · 소장자 장식을 되살리고 화면을 다시 그림
