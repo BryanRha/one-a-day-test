@@ -1,18 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.80.0';
-import * as R from './rules.js?v=0.80.0';
-import * as I from './install.js?v=0.80.0';
-import * as T from './track.js?v=0.80.0';
-import * as P from './pay.js?v=0.80.0';
-import * as A from './account.js?v=0.80.0';
-import * as C from './cloud.js?v=0.80.0';
-import * as BM from './bm.js?v=0.80.0';
+import { PLANNED } from './catalog.js?v=0.81.0';
+import * as R from './rules.js?v=0.81.0';
+import * as I from './install.js?v=0.81.0';
+import * as T from './track.js?v=0.81.0';
+import * as P from './pay.js?v=0.81.0';
+import * as A from './account.js?v=0.81.0';
+import * as C from './cloud.js?v=0.81.0';
+import * as BM from './bm.js?v=0.81.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.80.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.0').then(m => (FT = m));
+/* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.0'), import('./fortune/types.js?v=0.81.0'), import('./fortune/chat.js?v=0.81.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.80.0';
+const VERSION = '0.81.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -209,7 +212,7 @@ const FACE0 = '<img src="fortune/char/heukryeon.webp" alt="">';
 function fortuneCardStatic() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ }
   if (!me) return `<div class="sdcard" data-fortune-edit ${KB}>${FACE0}<div class="sdin"><div class="sdtag">오늘의 신점 · 매일 무료</div><h2>오늘 너를 읽어 줄<br><em>점쟁이</em>가 기다린다</h2><p>생년월일과 태어난 시를 넣으면, 그날의 기운에 따라 다른 점쟁이가 나와 오늘을 읽어 준다.</p><span class="sdgo">내 사주 넣고 오늘 운세 보기 →</span></div><span class="seal">獨說</span></div>`;
-  ft().then(m => { const el = $('#fortuneCard'); if (!el) return; const f = m.fortune(me, R.now()); m.markDay(R.keyOf(R.now()), { v: 1 }); el.innerHTML = fortuneCard(me, f, m); });
+  ex().then(E => { const m = FT, el = $('#fortuneCard'); if (!el) return; const f = m.fortune(me, R.now()); m.markDay(R.keyOf(R.now()), { v: 1 }); E.chat.markGroup(XC()); el.innerHTML = fortuneCard(me, f, m); });
   return `<div class="sdcard"><div class="sdin"><div class="sdtag">오늘의 신점</div><h2>${me.name}, 잠깐 앉아 봐</h2><p>읽는 중…</p></div></div>`;
 }
 /* 이 상품을 이 두 사람(solo 는 나)으로 이미 샀는지 — 훅에서 빼려고 */
@@ -223,7 +226,7 @@ function fortuneCard(me, f, m) {
   return `<div class="sdcard" data-fortune ${KB}>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
     <div class="sdscore"><b>${f.total}</b><small>점</small></div><h2>“${f.say}”</h2><p class="sdwarn">⚠ ${f.warn}</p><p class="sdwhy">${f.why}</p>
     ${h ? `<div class="sdhook" data-paid="${h.id}" ${KB}><small>오늘 이 부분이 신경 쓰여요</small>${h.text} <em>→ ${m.paidOf(h.id).title} 미리보기 · 전체 ${won(m.paidOf(h.id).price)}</em></div>` : ''}${recap}${gift}
-    <span class="sdgo">${me.name}의 오늘 전부 보기 →</span></div><span class="seal">${c.seal}</span></div>`;
+    ${EX ? EX.tarot.line(m, me, f, XC()) : ''}<span class="sdgo">${me.name}의 오늘 전부 보기 →</span></div><span class="seal">${c.seal}</span></div>`;
 }
 /* 저녁 회고: 1탭 (메모 없음 · 기기에만) */
 async function recapAnswer(ans) {
@@ -243,7 +246,7 @@ async function fortuneCalendar(ym) {
     const dt = new Date(y, mo - 1, d), k = R.keyOf(dt);
     if (k > todayK) { cells.push(`<i class="fut"><small>${d}</small></i>`); continue; }
     const f = m.fortune(me, dt), L = log[k] || {}, col = f.total >= 80 ? 'hi' : f.total >= 65 ? 'md' : 'lo';
-    const st = (L.v ? '👣' : '') + (L.f ? '🔮' : '') + (hist[k] ? '🎮' : '') + (L.r ? ({ y: '⭕', h: '🔺', n: '✖' })[L.r] : '');
+    const st = (L.v ? '👣' : '') + (L.f ? '🔮' : '') + (L.tc != null ? '🃏' : '') + (L.c ? '💬' : '') + (hist[k] ? '🎮' : '') + (L.r ? ({ y: '⭕', h: '🔺', n: '✖' })[L.r] : '');
     if (L.v) stamps++; if (L.r === 'y') yes++;
     cells.push(`<i class="c-${col}${k === todayK ? ' now' : ''}" data-fday="${k}" ${KB}><small>${d}</small><b>${f.total}</b><em>${f.key}</em><s>${st}</s></i>`);
   }
@@ -251,7 +254,7 @@ async function fortuneCalendar(ym) {
   sdClose(); openSheet(`<div class="intro fcalw"><h2>📅 ${y}년 ${mo}월 운세 달력</h2><p class="fsub">이번 달 도장 ${stamps}개 · 내가 '맞았다' 누른 날 ${yes}일 · 지난 날을 누르면 그날 운세를 다시 볼 수 있어요</p>
     <div class="fcalnav"><button class="btn ghost small" data-fcal="${ymOf(pm)}">◀ 지난달</button>${canNext ? `<button class="btn ghost small" data-fcal="${ymOf(nm)}">다음 달 ▶</button>` : ''}</div>
     <div class="fcal"><u>일</u><u>월</u><u>화</u><u>수</u><u>목</u><u>금</u><u>토</u>${cells.join('')}</div>
-    <p class="fsub">👣 들어온 날 · 🔮 운세 본 날 · 🎮 오늘의 게임 · ⭕🔺✖ 저녁 회고 — 기록은 이 기기에만 있어요</p>
+    <p class="fsub">👣 들어온 날 · 🔮 운세 본 날 · 🃏 타로 · 💬 AI 상담 · 🎮 오늘의 게임 · ⭕🔺✖ 저녁 회고 — 기록은 이 기기에만 있어요</p>
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
   T.track('fortune_calendar', { ym: `${y}-${mo}` });
 }
@@ -259,7 +262,7 @@ let sdOpen = false;
 function sdClose() { const el = $('#sd'); if (el) el.remove(); sdOpen = false; document.body.style.overflow = ''; }
 addEventListener('popstate', () => { if (sdOpen) sdClose(); });
 async function fortuneDetail(dayKey) {
-  const m = await ft(), me = m.loadMe(); if (!me) return fortuneForm();
+  await ex(); const m = FT, me = m.loadMe(); if (!me) return fortuneForm();
   const date = dayKey ? new Date(...dayKey.split('-').map((v, i) => Number(v) - (i === 1 ? 1 : 0))) : R.now(), past = !!dayKey && dayKey !== R.keyOf(R.now());
   const f = m.fortune(me, date), S = f.chart, c = m.CHARS[f.ch];
   if (!past) m.markDay(R.keyOf(R.now()), { v: 1, f: 1 });
@@ -276,17 +279,17 @@ async function fortuneDetail(dayKey) {
   const el = document.createElement('div'); el.id = 'sd'; el.innerHTML = `<div class="sdpage">
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
     <div class="sdhero">${face(m, f.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${c.name} · ${fmtDate(date)} · ${f.today.ko}일</div><h1>${me.name},<br>${past ? '그날은' : '오늘은'} <em>${f.key}</em>의 날${past ? '이었다' : '이다'}</h1><div class="sdscore big"><b>${f.total}</b><small>/100</small></div></div><span class="seal lg">${c.seal}</span></div>
-    <section><h3>${past ? '그날의' : '오늘의'} 한마디</h3><blockquote>“${f.say}”</blockquote><p class="sdwarn">⚠ ${past ? '그날' : '오늘'} 조심할 것 — ${f.warn}</p><p class="sdwhy">왜 ${c.name}? ${f.why}</p></section>
+    <section><h3>${past ? '그날의' : '오늘의'} 한마디</h3><blockquote>“${f.say}”</blockquote><p class="sdwarn">⚠ ${past ? '그날' : '오늘'} 조심할 것 — ${f.warn}</p><p class="sdwhy">왜 ${c.name}? ${f.why}</p>${!past ? `<button class="sdbtn ghost" data-tarot style="margin-top:10px">🃏 오늘의 타로 한 장</button>` : ''}</section>${!past && EX ? EX.chat.entry(m, me, f, XC()) : ''}
     <section><h3>분야별 운</h3>${Object.entries(f.scores).map(([k, v]) => bar(k, v)).join('')}</section>
     <section class="sdlove"><h3>${f.tone >= 7 ? '💔 연애 독설' : '💗 연애 한마디'}</h3><p class="big">${f.dokLove}</p><p>${f.love}</p></section>
     <section><h3>돈 · 일</h3><p><b>돈</b> ${f.money}</p><p><b>일</b> ${f.work}</p>${f.notes.length ? `<p class="sdnote">${f.notes.join(' ')}</p>` : ''}</section>
     <section><h3>행운</h3><div class="sluck"><div><small>색</small><b><i style="background:${f.color.hex}"></i>${f.color.name}</b></div><div><small>숫자 · 재미로</small><b>${f.numbers.join(' · ')}</b></div><div><small>방향</small><b>${f.dir}</b></div></div>
       ${!past && lucky ? `<div class="sdgame" data-play="${lg}" ${KB}><img src="${lucky.icon}" alt=""><div><small>오늘 어울리는 게임 · 지금 바로 할 수 있어요</small><b>${lucky.title}</b></div><span>플레이 →</span></div>` : ''}
       <button class="sdbtn ghost" data-fcal style="margin-top:10px">📅 운세 달력 · 지난 날 다시 보기</button></section>
-    <section><h3>${me.name}의 사주 여덟 글자</h3><div class="pils">${pil(S.hour, '시')}${pil(S.day, '일')}${pil(S.month, '월')}${pil(S.year, '년')}</div>
+    <section><h3>${me.name}의 사주 여덟 글자</h3><button class="sdbtn ghost" data-type style="margin:0 0 10px">🧩 내 사주 유형 카드 · 친구와 궁합</button><div class="pils">${pil(S.hour, '시')}${pil(S.day, '일')}${pil(S.month, '월')}${pil(S.year, '년')}</div>
       <div class="fel">${EL.map(e => `<div><b class="e-${e}">${EN[e]}</b><s style="height:${S.elementCount[e] * 14 + 4}px" class="b-${e}"></s><small>${S.elementCount[e]}</small></div>`).join('')}</div></section>
     <section><h3>점쟁이들의 <em>깊은 풀이</em></h3><p class="sdsub">무료 미리보기를 먼저 보고, 마음에 들면 열어 보세요. 가격은 처음부터 다 보여 드려요.</p>${paid}</section>
-    <p class="sdfoot">명리학(사주팔자) 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요. 행운 숫자는 복권 당첨을 예측하지 않아요. 특정인을 단정하지 않아요. 입력 정보는 이 기기에만 저장돼요.</p>
+    <p class="sdfoot">명리학(사주팔자) 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요. 행운 숫자는 복권 당첨을 예측하지 않아요. 특정인을 단정하지 않아요. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>
     <div class="sdbtns"><button class="sdbtn ghost" data-fortune-edit>내 정보 고치기</button><button class="sdbtn" data-sd-close>닫기</button></div></div>`;
   document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
   T.track('fortune_view', { ch: f.ch, score: f.total, past: past ? 1 : 0 });
@@ -376,7 +379,7 @@ async function paidPage(id = 'cheating') {
     ${chart}${cal}
     ${rp.sections.filter(s => !s.free).map(sec).join('')}
     ${paid ? '' : `<div class="paywall"><button class="sdbtn" data-buy="${id}">🔓 ${won(PR.price)}에 전부 열기</button></div>`}
-    <p class="sdfoot">${life ? `명리학 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요.${id === 'wealth' ? ' 복권 번호를 알려 주지 않고, 복권 · 투자 결과를 예측하거나 보장하지 않아요.' : ''}${id === 'newyear' ? ' 건강 · 시험 결과를 단정하지 않아요.' : ''} 입력 정보는 이 기기에만 저장돼요.` : `사주 원국의 경향을 풀이한 것으로 특정인의 실제 행동이나 마음을 단정하지 않아요. 재미로 참고해 주세요.${id === 'after' ? ' 법률 · 상담이 필요한 일은 전문가와 상의해 주세요.' : ''} 두 사람 정보는 이 기기에만 저장돼요.`}${m.isAdultFortune(id) ? (paid ? ' 사주는 사실 확인이 아니에요. 궁금한 건 대화로 확인하세요.' : ' 만 19세 이상 · 연애 · 외도 등 성인 주제를 다뤄요. 사주는 재미로 보는 참고용이에요.') : ''}</p>
+    <p class="sdfoot">${life ? `명리학 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요.${id === 'wealth' ? ' 복권 번호를 알려 주지 않고, 복권 · 투자 결과를 예측하거나 보장하지 않아요.' : ''}${id === 'newyear' ? ' 건강 · 시험 결과를 단정하지 않아요.' : ''} 생년월일 원본은 내 폰에만 저장돼요.` : `사주 원국의 경향을 풀이한 것으로 특정인의 실제 행동이나 마음을 단정하지 않아요. 재미로 참고해 주세요.${id === 'after' ? ' 법률 · 상담이 필요한 일은 전문가와 상의해 주세요.' : ''} 두 사람 정보는 이 기기에만 저장돼요.`}${m.isAdultFortune(id) ? (paid ? ' 사주는 사실 확인이 아니에요. 궁금한 건 대화로 확인하세요.' : ' 만 19세 이상 · 연애 · 외도 등 성인 주제를 다뤄요. 사주는 재미로 보는 참고용이에요.') : ''}</p>
     <div class="sdbtns">${PR.solo ? '<button class="sdbtn ghost" data-fortune-edit>내 정보 고치기</button>' : `<button class="sdbtn ghost" data-paid-edit="${id}">그 사람 정보 고치기</button>`}<button class="sdbtn" data-sd-close>닫기</button></div></div>`;
   document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
   T.track(paid ? 'report_view' : 'paywall_view', { product: id, score: rp.score, level: rp.grade.level });
@@ -480,7 +483,7 @@ async function buy(product) {
 function fortuneForm() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ } me ||= { name: '', y: 1995, m: 1, d: 1, cal: 'solar', sex: 'f', h: null, mi: 0, lon: 126.98 };
   const opt = (a, b, v) => Array.from({ length: b - a + 1 }, (_, i) => a + i).map(n => `<option ${n === v ? 'selected' : ''}>${n}</option>`).join('');
-  sdClose(); openSheet(`<form class="fform sdform" id="fForm"><h2>사주를 내놔라</h2><p class="fsub">태어난 시까지 넣어야 제대로 읽는다. 정보는 이 기기에만 저장돼요.</p>
+  sdClose(); openSheet(`<form class="fform sdform" id="fForm"><h2>사주를 내놔라</h2><p class="fsub">태어난 시까지 넣어야 제대로 읽는다. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>
     <label>이름<input name="name" maxlength="10" placeholder="이름 또는 별명" value="${me.name}" required></label>
     <div class="seg"><label><input type="radio" name="cal" value="solar" ${me.cal !== 'lunar' ? 'checked' : ''}>양력</label><label><input type="radio" name="cal" value="lunar" ${me.cal === 'lunar' ? 'checked' : ''}>음력</label><label class="lp"><input type="checkbox" name="leap" ${me.leap ? 'checked' : ''}>윤달</label></div>
     <div class="row3"><label>년<select name="y">${opt(1930, R.now().getFullYear(), me.y)}</select></label><label>월<select name="m">${opt(1, 12, me.m)}</select></label><label>일<select name="d">${opt(1, 31, me.d)}</select></label></div>
@@ -869,7 +872,7 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install]');
   if (!t) return;
   const d = t.dataset;
   if (d.mypaid) { closeSheet(); paidPage(d.mypaid); }
@@ -880,6 +883,10 @@ document.addEventListener('click', e => {
   else if ('fpack' in d) fortunePack();
   else if ('freebie' in d) freebieOpen();
   else if (d.fbclaim) freebieClaim(d.fbclaim, t);
+  else if ('tarot' in d) ex().then(E => E.tarot.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
+  else if ('type' in d) ex().then(E => E.types.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
+  else if (d.tyshare) ex().then(E => E.types.share(XC(), d.tyshare)).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
+  else if ('chat' in d) ex().then(E => E.chat.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
   else if (d.recap) recapAnswer(d.recap);
   else if ('fcal' in d) fortuneCalendar(d.fcal || '');
   else if (d.fday) { closeSheet(); fortuneDetail(d.fday); }
@@ -962,6 +969,8 @@ A.init().then(m => { if (new URLSearchParams(location.search).has('login')) { hi
 /* 신년 패키지 영수증 여러 장 → 상품별 '두 사람'(solo 는 나 · 달 상품은 그 달 · 궁합은 상대)으로 보관 */
 const keepMany = rcs => { const m = FT, me = m && m.loadMe(); if (!me) return; for (const r of rcs) { const pt = m.pairOf(r.product, me); if (pt) P.keepReceipt(r, m.toInput(me), m.toInput(pt)); } };
 P.setPackKeeper(keepMany);
+/* 사주 유형 공유 링크로 들어온 사람: /?type=<유형> */
+{ const tp = new URLSearchParams(location.search).get('type'); if (tp) { history.replaceState(null, '', location.pathname); ex().then(E => setTimeout(() => E.types.landing(XC(), tp), 600)); } }
 ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) payDone(r.product, r); else toast(r.msg); });
 go('today');
 if (!R.state().intro) setTimeout(intro, 400);
