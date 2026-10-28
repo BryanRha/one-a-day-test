@@ -1,7 +1,7 @@
 // 저장 · 규칙: 헛간 · 경험치 · 밭 · 동물 · 공장 줄 · 주문 게시판 · 기차 · 퀘스트 · 월세 · 강아지
-import { speedCost } from './inst.js?v=0.88.0';
-import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.88.0';
-import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.88.0';
+import { speedCost } from './inst.js?v=0.88.1';
+import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.88.1';
+import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.88.1';
 
 const KEY = 'thefarm_v1';
 let d = null;
@@ -207,7 +207,6 @@ export function market() { const s = load(); if (!s.market || s.market.day !== d
 export function marketBuy(i) { const s = load(), c = market().st[i]; if (!c || !c.n) return '다 팔렸어요'; if (s.coins < c.price) return '코인이 모자라요'; if (!canFit(1)) return '헛간이 꽉 찼어요'; s.coins -= c.price; c.n--; add(c.it, 1); return null; }
 // ── 보석으로 시간 줄이기: 남은 5분마다 보석 1 (최소 1)
 export { speedCost };
-export function speedField(o) { const s = load(); if (!o.crop || cropReady(o)) return null; const c = speedCost((o.at - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; o.at = now(); return null; }
 // 공장 칸 i 의 남은 시간(ms): 만드는 중인 첫 칸은 끝날 때까지 · 기다리는 칸은 자기 몫(걸리는 시간)만 — 앞 칸 시간을 함께 사지 않게
 export function jobLeft(o, i) { const j = o.q && o.q[i]; if (!j) return 0; const st = Math.max(now(), i ? o.q[i - 1].end : now()); return Math.max(0, j.end - st); }
 export const jobDur = (o, i) => { const j = o.q[i]; return j.d || (i ? j.end - o.q[i - 1].end : RECIPES[j.it].t * 1000 * FUP.k(o.up || 0)); };
@@ -215,15 +214,12 @@ export const jobDur = (o, i) => { const j = o.q[i]; return j.d || (i ? j.end - o
 export function finishJob(o, i) { tickFactory(o); const j = o.q[i]; if (!j) return false; const cut = jobLeft(o, i); o.q.splice(i, 1); o.done.push(j.it); for (let k = i; k < o.q.length; k++) o.q[k].end -= cut; tickFactory(o); return true; }
 export function finishField(o) { if (!o.crop || cropReady(o)) return false; o.at = now(); return true; }
 export function finishLab() { const L = lab(); if (!L.cur) return false; L.cur.end = now(); lab(); return true; }
-// 보석 즉시 완성 (공장은 고른 칸 i)
-export function speedFactory(o, i = 0) { const s = load(); tickFactory(o); if (!o.q[i]) return null; const c = speedCost(jobLeft(o, i) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; finishJob(o, i); return null; }
 
 // ── 연구소: 한 번에 하나 · 단계마다 코인 + 시약·톱니바퀴·설계도 + 시간
 export const lab = () => { const s = load(); if (!s.lab) s.lab = { lv: {}, cur: null }; const L = s.lab; if (L.cur && L.cur.end <= now()) { L.lv[L.cur.k] = (L.lv[L.cur.k] || 0) + 1; L.done = L.cur.k; L.cur = null; } return L; };
 export function rl(k) { const s = load(); return s.lab ? s.lab.lv[k] || 0 : 0; }
 export function labStart(k) { const L = lab(), s = load(), lv = (L.lv[k] || 0) + 1; if (L.cur) return '이미 연구 중이에요'; if (lv > RES_MAX) return '최고 단계예요'; if (!countOf('lab')) return '연구소를 지어야 해요'; const c = resCost(lv); if (s.coins < c.coins) return '코인이 모자라요'; if (!hasAll(c.items)) return '연구 재료가 모자라요 · 연구소에서 만들어요';
   s.coins -= c.coins; take(c.items); L.cur = { k, end: now() + resTime(lv) * 1000 }; return null; }
-export function labSpeed() { const L = lab(), s = load(); if (!L.cur) return null; const c = speedCost((L.cur.end - now()) / 1000); if (s.gems < c) return '보석이 모자라요'; s.gems -= c; finishLab(); return null; }
 // 수확 덤 (풍년의 비결)
 export const bonusCrop = () => Math.random() < 0.05 * rl('harvest');
 

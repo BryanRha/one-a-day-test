@@ -1,16 +1,16 @@
 // 작업대 (원작의 주방 보드): 7×9 머지-2 · 생산기 · 잠긴 상자 · 비눗방울 · 창고 · 주문 3장 · 팔기
-import { W, H } from '../config.js?v=0.88.0';
-import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.88.0';
-import { audio } from '../audio.js?v=0.88.0';
-import { load, save } from '../save.js?v=0.88.0';
-import { goPrev } from '../nav.js?v=0.88.0';
-import { hud } from '../hud.js?v=0.88.0';
-import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.88.0';
-import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.88.0';
-import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.88.0';
-import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.88.0';
-import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.88.0';
-import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.88.0';
+import { W, H } from '../config.js?v=0.88.1';
+import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.88.1';
+import { audio } from '../audio.js?v=0.88.1';
+import { load, save } from '../save.js?v=0.88.1';
+import { goPrev } from '../nav.js?v=0.88.1';
+import { hud } from '../hud.js?v=0.88.1';
+import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.88.1';
+import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.88.1';
+import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.88.1';
+import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.88.1';
+import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.88.1';
+import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.88.1';
 const E_GIFT = 15;   /* 하루 첫 에너지 바닥 응원 선물 */
 
 const COLS = 7, ROWS = 9, CS = 142, X0 = (1080 - COLS * CS) / 2, Y0 = 440;
@@ -271,7 +271,7 @@ export class BoardScene extends Phaser.Scene {
   }
   // ── 에너지 부족
   noEnergy() {
-    audio.play('sfx_error', { volume: 0.5 }); const pk = ENERGY.gemPack;
+    audio.play('sfx_error', { volume: 0.5 });
     // 응원 선물 (원어데이 공통 규칙 bm-policy 6장 · 성장형 기준 모양): 그날 첫 에너지 바닥 → 광고 · 골드 없이 ⚡15
     //   소장자 · 비소장자 같음 · 하루 1번(받든 닫든) · 실험 꺼짐 그룹(helpOn false)엔 안 줌 · 기록 help_eligible(두 그룹, on 1/0) → help_offer · help_take · help_decline
     const first = this.d.eGift !== today();
@@ -281,21 +281,22 @@ export class BoardScene extends Phaser.Scene {
       const ei = this.add.image(0, 0, 'energy'); ei.setScale(150 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 230, 230, { fill: '#FFF6DA', r: 115 }), ei, T(this, 0, 168, '응원 선물 · 챙겨 드릴게요', TS.body, C.ink, { w: 900 }), R(this, 0, 222, `⚡${E_GIFT} 무료`, TS.h2, C.gold, { w: 900 })]);
       const take = () => { took = true; track('help_take', tp); this.d.energy += E_GIFT; save(); p.close(); audio.play('sfx_levelup', { volume: 0.6 }); this.hud.update(); toast(this, `⚡${E_GIFT} 받았어요 · 계속 만들어 봐요!`); };
       p.foot([{ t: `⚡${E_GIFT} 받기`, fn: take }]); track('help_offer', tp); return; }
-    const fg = fillPrice(fillGold(fillNeed())), p = sheet(this, { size: adsOpen() || fg ? 'L' : 'M', title: '에너지가 부족해요', sub: '시간이 지나면 다시 차요 · 레벨이 오르면 가득 차요' });
+    /* 에너지 채우기 한 버튼 (docs/bm-policy.md 1장 · 2026-10-29 버튼 2개): N = 가득까지 채울 양 5마다 1 (◆10 = ⚡50 과 같은 값) · 보석이 N 이상이면 ◆N(바로) · 모자라면 같은 버튼이 원어데이 골드 🪙N(앱 확인 창) · 원어데이 밖이면 ◆만 */
+    const need = fillNeed(), n = fillGold(need), gem = this.d.gems >= n || !fillPrice(n), p = sheet(this, { size: adsOpen() ? 'L' : 'M', title: '에너지가 부족해요', sub: '시간이 지나면 다시 차요 · 레벨이 오르면 가득 차요' });
     const ei = this.add.image(0, 0, 'energy'); ei.setScale(170 / Math.max(ei.width, ei.height)); p.content.add([rbox(this, 0, 0, 260, 260, { fill: '#FFF6DA', r: 130 }), ei]);
-    const gp = fg, left = adLeft('energy');
-    p.content.add(R(this, 0, 180, `◆${pk.gems} 로 ⚡${pk.amount} 충전할 수 있어요`, TS.body, C.ink, { w: 900 }));
+    const left = adLeft('energy');
+    p.content.add(R(this, 0, 180, gem ? `⚡+${need} 가득 채우기 · ◆${n} (◆1 = ⚡5)` : `◆ 가 모자라 원어데이 골드 🪙${n} 로 채워요`, TS.body, C.ink, { w: 900 }));
     if (adsOpen()) p.content.add(T(this, 0, 232, isOwner() ? `소장 혜택 · 오늘 ${left}번 바로 받기` : `광고 보상 오늘 ${left}번 남음`, TS.min, C.dim, { w: 800 }));
     const done = (msg) => { save(); this.hud.update(); p.close(); audio.play('sfx_levelup', { volume: 0.6 }); toast(this, msg); };
-    const charge = () => { if (this.d.gems < pk.gems) return toast(this, '보석이 부족해요'); this.d.gems -= pk.gems; this.d.energy += pk.amount; save(); this.hud.update(); p.close(); };
+    const fill = async () => { const k = fillNeed(), m = fillGold(k); if (!k) return done('에너지 가득!');
+      if (this.d.gems >= m || !fillPrice(m)) { if (this.d.gems < m) return toast(this, '보석이 부족해요'); this.d.gems -= m; this.d.energy = Math.max(this.d.energy, ENERGY.max); this.d.eAt = Date.now(); return done('에너지 가득!'); }
+      const r = await buyFill(); if (!r.ok) { const ms = r.reason === 'full' ? '이미 가득 찼어요' : goldMsg(r); if (ms) toast(this, ms); return; } done('에너지 가득!'); };
     const ad = async () => { p.close(); if (!(await rewardAd('energy'))) return toast(this, '지금은 광고를 볼 수 없어요'); this.d.energy += AD_ENERGY; done(`⚡${AD_ENERGY} 받았어요!`); };
-    const gold = async () => { const r = await buyFill(); if (!r.ok) { const m = r.reason === 'full' ? '이미 가득 찼어요' : goldMsg(r); if (m) toast(this, m); return; } done('에너지 가득!'); };   /* 채울 양 비례 (store.buyFill) */
-    // 원어데이 안: 광고(남았으면) · 골드 가격을 같은 크기로 나란히 · 광고를 다 쓰면 그 자리도 골드 가격 · 원어데이 밖: 지금처럼
+    // 버튼 2개: [광고 ⚡20](남았으면) [⚡+N 채우기 · ◆N / 🪙N] · 그리고 기다릴게요
     const list = [];
     if (canAd('energy')) list.push({ t: adLabel(`⚡${AD_ENERGY}`, true), fn: ad });
-    if (gp) list.push({ t: `🪙${gp} ⚡+${fillNeed()} 채우기`, fn: gold, style: 'gold' });
-    list.push({ t: `◆${pk.gems} 로 충전`, fn: charge, style: list.length ? 'cream' : 'rose' });
-    if (list.length < 3) list.push({ t: '기다릴게요', style: 'cream' });
+    list.push({ t: gem ? `◆${n} ⚡+${need} 채우기` : `🪙${n} ⚡+${need} 채우기`, fn: fill, style: gem ? 'rose' : 'gold' });
+    list.push({ t: '기다릴게요', style: 'cream' });
     p.foot(list);
   }
   // ── 창고 (원작의 인벤토리)
