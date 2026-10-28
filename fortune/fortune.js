@@ -134,7 +134,7 @@ export const paidOf = id => PAID.find(p => p.id === id) || PAID[0];
 /* 연애 독설 운세 5종 = 만 19세 이상 (team/dev/tasks/261028-service-check/age-copy.md) — 숨김 · 결제 확인 · 배지가 모두 이 함수들만 씀
    나이 셈법은 AGE_RULE 한 곳: 'year' = 연 나이(올해 − 태어난 해, 청소년보호법 셈법 · 대표 확정 전 기본값) · 'full' = 만 나이
    서버(server/api/_lib/gold.js ADULT · AGE_RULE)도 같은 값이어야 함 — build.mjs 가 대조 */
-export const ADULT = ['cheating', 'forbidden', 'after', 'reunion', 'inner'];
+export const ADULT = [];   /* 2026-10-28 대표: 운세 나이 필터 적용 안 함 (예전: cheating · forbidden · after · reunion · inner) — 앱 · 서버 같은 값 */
 export const ADULT_AGE = 19, AGE_RULE = 'year';
 export const isAdultFortune = id => ADULT.includes(id);
 export function ageOf(me, now = new Date()) {
