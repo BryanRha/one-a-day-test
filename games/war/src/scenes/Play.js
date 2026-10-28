@@ -1,20 +1,20 @@
 // 전투 화면: 지도 · 유닛 선택 → 이동(파란 칸) → 행동(공격 · 점령 · 하차 · 대기) · 기지 생산 · 지휘관 필살기 · 상대 AI 턴
-import { W, H } from '../config.js?v=0.79.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.79.0';
-import { audio } from '../audio.js?v=0.79.0';
-import { load, save } from '../save.js?v=0.79.0';
-import * as M from '../meta.js?v=0.79.0';
-import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.79.0';
-import { Sim, dist, hpOf } from '../core/sim.js?v=0.79.0';
-import { AI, apply } from '../core/ai.js?v=0.79.0';
-import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.79.0';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.79.0';
-import { STORY } from '../story.js?v=0.79.0';
-import { TALK, RADIO } from '../talk.js?v=0.79.0';
-import { withSupport, SUPPORT } from '../core/support.js?v=0.79.0';
-import { COLORS, teamColor, paintKey } from '../color.js?v=0.79.0';
-import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.79.0';
-import { bm } from '../oad_bm.js?v=0.79.0';
+import { W, H } from '../config.js?v=0.79.1';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.79.1';
+import { audio } from '../audio.js?v=0.79.1';
+import { load, save } from '../save.js?v=0.79.1';
+import * as M from '../meta.js?v=0.79.1';
+import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.79.1';
+import { Sim, dist, hpOf } from '../core/sim.js?v=0.79.1';
+import { AI, apply } from '../core/ai.js?v=0.79.1';
+import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.79.1';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.79.1';
+import { STORY } from '../story.js?v=0.79.1';
+import { TALK, RADIO } from '../talk.js?v=0.79.1';
+import { withSupport, SUPPORT } from '../core/support.js?v=0.79.1';
+import { COLORS, teamColor, paintKey } from '../color.js?v=0.79.1';
+import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.79.1';
+import { bm } from '../oad_bm.js?v=0.79.1';
 
 const TOP = 196, BOTTOM = 360;
 const TEAM = { 1: 0x3E7FD8, 2: 0xD9472E }, TEAMS = { 1: 'b', 2: 'r' };
@@ -71,6 +71,7 @@ export class PlayScene extends Phaser.Scene {
     this.input.on('pointerup', p => { if (this.holdFast) { this.holdFast = false; if (this.s.turn === 2 && this.speed < 14) this.speed = 2; } this.tap(p); });
     this.input.on('pointerdown', p => { if (this.s.turn === 2 && this.busy && this.speed < 14) { this.holdFast = true; this.speed = 5; } this.dragFrom = this.maxScroll && p.y > TOP && p.y < H - BOTTOM ? { y: p.y, s: this.cameras.main.scrollY } : null; this.dragged = false; });
     this.input.on('pointermove', p => { if (!this.dragFrom || !p.isDown) return; const dy = p.y - this.dragFrom.y; if (Math.abs(dy) > 14) this.dragged = true; if (this.dragged) this.cameras.main.scrollY = Phaser.Math.Clamp(this.dragFrom.s - dy, 0, this.maxScroll); });
+    this.input.on('wheel', (p, o, dx, dy) => { if (this.maxScroll) this.cameras.main.scrollY = Phaser.Math.Clamp(this.cameras.main.scrollY + dy, 0, this.maxScroll); });   /* PC 마우스 휠로 지도 위아래 */
     audio.music('bgm_battle', this);
     this.cameras.main.fadeIn(300, 20, 22, 10);
     window.__play = this;

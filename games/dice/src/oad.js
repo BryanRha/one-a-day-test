@@ -24,6 +24,14 @@ export function installBack(game, { home, roots = [] }) {
     let w = null;
     const arm = () => { if (w) return; try { w = new CloseWatcher(); w.onclose = () => { w = null; let h = false; try { h = goBack(game, home, roots); } catch { h = false; } if (h) arm(); else exitToOAD(); }; } catch { w = null; } };
     arm(); addEventListener('pointerdown', arm, true);   // 터치할 때마다 빠진 받침을 채움
+  } else {
+    // PC Esc = 뒤로 (단독 링크 · 사파리 · 파이어폭스 — CloseWatcher 가 Esc 를 받는 원어데이 안 크롬·엣지는 위에서 처리)
+    //   처리할 게 없으면(첫 화면) 원어데이 안에선 원어데이로, 단독 링크에선 그대로
+    addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || e.repeat || e.isComposing) return;
+      e.preventDefault(); let h = false; try { h = goBack(game, home, roots); } catch { h = false; }
+      if (!h && inOAD) exitToOAD();
+    });
   }
 }
 export function goBack(game, home, roots) {

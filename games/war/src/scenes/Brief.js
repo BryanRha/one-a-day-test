@@ -1,19 +1,19 @@
 // 작전 준비: 세로로 넘기는 작전 카드 목록 (다음 작전은 펼쳐서 · 잠긴 작전은 어둡게) → [출격] → 아래에서 올라오는 출격 준비(지휘관·난이도)
-import { W, H } from '../config.js?v=0.79.0';
-import { T, C, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.79.0';
-import { audio } from '../audio.js?v=0.79.0';
-import { load, save } from '../save.js?v=0.79.0';
-import { pushBack } from '../oad.js?v=0.79.0';
-import * as M from '../meta.js?v=0.79.0';
-import { COS, WEATHER } from '../core/data.js?v=0.79.0';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.79.0';
-import { STORY } from '../story.js?v=0.79.0';
-import { rankOn } from '../rank.js?v=0.79.0';
-import { rankPopup } from '../rankui.js?v=0.79.0';
-import { Sim } from '../core/sim.js?v=0.79.0';
-import { SUPPORT } from '../core/support.js?v=0.79.0';
-import { helpCheck, fails, track } from '../bmwar.js?v=0.79.0';
-import { paintKey } from '../color.js?v=0.79.0';
+import { W, H } from '../config.js?v=0.79.1';
+import { T, C, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.79.1';
+import { audio } from '../audio.js?v=0.79.1';
+import { load, save } from '../save.js?v=0.79.1';
+import { pushBack } from '../oad.js?v=0.79.1';
+import * as M from '../meta.js?v=0.79.1';
+import { COS, WEATHER } from '../core/data.js?v=0.79.1';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.79.1';
+import { STORY } from '../story.js?v=0.79.1';
+import { rankOn } from '../rank.js?v=0.79.1';
+import { rankPopup } from '../rankui.js?v=0.79.1';
+import { Sim } from '../core/sim.js?v=0.79.1';
+import { SUPPORT } from '../core/support.js?v=0.79.1';
+import { helpCheck, fails, track } from '../bmwar.js?v=0.79.1';
+import { paintKey } from '../color.js?v=0.79.1';
 
 const LV = { easy: '쉬움', normal: '보통', hard: '어려움' };
 const TCOL = { pipe: 0x8A8F96, seam: 0xC8A040, silo: 0x5A5048, silo_e: 0x6A6A5A, plain: 0x8DB05A, farm: 0x9BB45A, wheat: 0xD8B85A, forest: 0x3E7A34, mountain: 0x9A8C78, road: 0xC8A878, bridge: 0xB0A090, river: 0x4A9AD8, beach: 0xE8D8A0, sea: 0x2A6AB0, reef: 0x3A7A90, trench: 0x8A7A50 };
@@ -42,6 +42,7 @@ export class BriefScene extends Phaser.Scene {
     this.input.on('pointerdown', p => { if (this.sheet) return; this.dragFrom = { y: p.y, s: this.cameras.main.scrollY }; this.dragged = false; this.vy = 0; });
     this.input.on('pointermove', p => { if (!this.dragFrom || !p.isDown) return; const dy = p.y - this.dragFrom.y; if (Math.abs(dy) > 14) this.dragged = true; if (this.dragged) { const cam = this.cameras.main, ny = Phaser.Math.Clamp(this.dragFrom.s - dy, 0, this.maxScroll); this.vy = cam.scrollY - ny; cam.scrollY = ny; } });
     this.input.on('pointerup', () => { this.dragFrom = null; this.time.delayedCall(30, () => { this.dragged = false; }); });
+    this.input.on('wheel', (p, o, dx, dy) => { if (this.sheet) return; const cam = this.cameras.main; this.vy = 0; cam.scrollY = Phaser.Math.Clamp(cam.scrollY + dy, 0, this.maxScroll); });   /* PC 마우스 휠 */
     this.cameras.main.fadeIn(200, 20, 22, 10);
     audio.music(this.mode === 'war' ? 'bgm_warroom' : 'bgm_lobby', this);
     window.__brief = this;

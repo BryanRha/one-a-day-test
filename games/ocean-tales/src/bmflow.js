@@ -4,12 +4,12 @@
 //   · 광고 · 확인 창 동안 소리 멈춤 + 이어하기 카운트다운 멈춤 (paused())
 //   · 상품: SHOP.ocean — continue(+5수 🪙20) · continue2(+5수 한 번 더 🪙40) · boosters(부스터 3종 🪙60) · deco(바다 장식 🪙100, item)
 //   · 소장자: 보상형 혜택은 광고 없이 바로 · 전용 장식 '달빛 고래' (겉모습만, 무료)
-import { bm } from './oad_bm.js?v=0.79.0';
-import { load, save } from './save.js?v=0.79.0';
-import { today } from './missions.js?v=0.79.0';
-import { AD_PER_DAY } from './core/cont.js?v=0.79.0';
-import { roll, noteEnd, eligible, giftMoves, consume } from './core/help.js?v=0.79.0';
-import { LANG } from './i18n.js?v=0.79.0';
+import { bm } from './oad_bm.js?v=0.79.1';
+import { load, save } from './save.js?v=0.79.1';
+import { today } from './missions.js?v=0.79.1';
+import { AD_PER_DAY } from './core/cont.js?v=0.79.1';
+import { roll, noteEnd, eligible, giftMoves, consume } from './core/help.js?v=0.79.1';
+import { LANG } from './i18n.js?v=0.79.1';
 
 let hp = null, pausedNow = false;
 export function helloOnce() {

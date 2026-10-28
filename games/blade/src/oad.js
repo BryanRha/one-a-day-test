@@ -11,4 +11,6 @@ export function installBack({ back }) {
   window.addEventListener('message', e => { if (!e.data || e.data.type !== 'oad:back') return; let h = false; try { h = run(); } catch (err) { console.warn(err); } try { window.parent.postMessage({ type: 'oad:back-result', handled: h }, '*'); } catch { /* */ } });
   if (inOAD && 'CloseWatcher' in window) { let w = null; const arm = () => { if (w) return; try { w = new CloseWatcher(); w.onclose = () => { w = null; let h = false; try { h = run(); } catch { h = false; } if (h) arm(); else exitToOAD(); }; } catch { w = null; } };
     arm(); addEventListener('pointerdown', arm, true); }
+  /* PC Esc = 뒤로 (단독 링크 · 사파리 · 파이어폭스) — CloseWatcher 가 Esc 를 받는 원어데이 안 크롬·엣지는 위에서 처리 · 첫 화면이면 원어데이 안에선 원어데이로 */
+  else addEventListener('keydown', e => { if (e.key !== 'Escape' || e.repeat || e.isComposing) return; e.preventDefault(); let h = false; try { h = run(); } catch { h = false; } if (!h && inOAD) exitToOAD(); });
 }

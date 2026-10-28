@@ -1,18 +1,18 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.79.0';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.79.0';
-import { choose } from '../core/ai.js?v=0.79.0';
-import { makeLevel } from '../core/levels.js?v=0.79.0';
-import { TINT, THEMES } from './Boot.js?v=0.79.0';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.79.0';
-import { audio } from '../audio.js?v=0.79.0';
-import { load, save } from '../save.js?v=0.79.0';
-import * as M from '../meta.js?v=0.79.0';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.79.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.79.0';
-import { bm } from '../oad_bm.js?v=0.79.0';
-import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.79.0';
-import { roundOver, afterRound, track, helpOn } from '../bmflow.js?v=0.79.0';
+import { W, H } from '../config.js?v=0.79.1';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.79.1';
+import { choose } from '../core/ai.js?v=0.79.1';
+import { makeLevel } from '../core/levels.js?v=0.79.1';
+import { TINT, THEMES } from './Boot.js?v=0.79.1';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.79.1';
+import { audio } from '../audio.js?v=0.79.1';
+import { load, save } from '../save.js?v=0.79.1';
+import * as M from '../meta.js?v=0.79.1';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.79.1';
+import { inOAD, exitToOAD } from '../oad.js?v=0.79.1';
+import { bm } from '../oad_bm.js?v=0.79.1';
+import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.79.1';
+import { roundOver, afterRound, track, helpOn } from '../bmflow.js?v=0.79.1';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };
@@ -20,6 +20,7 @@ const VO_PRAISE = [null, 'good', 'great', 'excellent', 'amazing', 'unbelievable'
 
 const CELL = 116, BW = CELL * N;
 const LIFT = 250;            // 끄는 동안 조각을 손가락 위로 띄우는 높이
+const LIFT_MOUSE = 0;        // 마우스는 손가락처럼 가리지 않으니 커서 바로 아래에 (PC 에서 조각이 커서 위로 떠 보이던 것)
 const TRAY_K = 0.52;
 // 칭찬: 2줄 Good · 3줄 Great · 4줄 Excellent · 5줄 Amazing · 큰 콤보와 겹치면 Unbelievable
 const PRAISE = [null, ['Good!', '#9BE7FF'], ['Great!', '#7CFFB2'], ['Excellent!', '#FFE07A'], ['Amazing!', '#FF9BD2'], ['Unbelievable!', '#C9A6FF']];
@@ -247,7 +248,7 @@ export class PlayScene extends Phaser.Scene {
       if (this.busy || this.paused || this.b.over || this.bot) return;
       const sl = this.slots.find(s => s.piece && s.piece.active && !s.piece.t.used && Math.abs(p.x - s.x) < 175 && Math.abs(p.y - s.y) < 190);
       if (!sl) return;
-      this.drag = { sl, piece: sl.piece };
+      this.drag = { sl, piece: sl.piece, lift: p.wasTouch ? LIFT : LIFT_MOUSE };   /* 터치만 손가락 위로 띄움 (Phaser 는 마우스 · 터치 이벤트를 따로 받음 — pointerType 없음) */
       audio.play('sfx_pick', { volume: 0.5 });
       this.tweens.killTweensOf(sl.piece);
       this.tweens.add({ targets: sl.piece, scale: 1, duration: 110, ease: 'Quad.easeOut' });
@@ -264,7 +265,7 @@ export class PlayScene extends Phaser.Scene {
   }
   moveDrag(p) {
     const pc = this.drag.piece;
-    pc.setPosition(p.x, p.y - LIFT);
+    pc.setPosition(p.x, p.y - this.drag.lift);
     const { r, c } = this.snapOf(pc), idx = this.b.tray.indexOf(pc.t);
     const pv = this.b.preview(idx, r, c);
     const key = pv ? `${r},${c}` : null;

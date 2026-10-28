@@ -32,8 +32,13 @@ function ask(fn, args, ms) {
   });
 }
 let wallet = 999;
+/* 시험용 가격표 (실제 가격은 서버 gold.js SHOP — 게임마다 다른 값은 게임이 시험에서 맞춤) */
+const FAKEP = { continue: 20, continue2: 40, walk: 5, gems100: 100, gems200: 100, crystal100: 100, energy: 25, outfit: 300, skin: 250, abyss: 20, arena: 300, speed: 20, boost: 20, storage: 150, deco: 300, revive: 15, revive2: 30, stamina: 25, hearts: 20, hearts2: 40, next: 50, boosters: 60, undo: 10, supply: 20, color: 250 };
+for (let i = 1; i <= 20; i++) FAKEP['choice' + i] = 30;
+/* 게임별 실제 가격으로 시험하려면 ?oadtest=1&oadprice=outfit:200,skin:300 */
+for (const kv of ((location.search.match(/[?&]oadprice=([^&]+)/) || [])[1] || '').split(',')) { const [k, v] = decodeURIComponent(kv).split(':'); if (k && Number(v) > 0) FAKEP[k] = Number(v); }
 function fake(fn, args) {
-  if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: { continue: 20, continue2: 40, walk: 5, gems100: 100, gems200: 100, crystal100: 100, energy: 25, outfit: 300, skin: 250, abyss: 20, arena: 300, speed: 20, boost: 20, storage: 150, deco: 300, revive: 15, revive2: 30, stamina: 25, choice: 30, hearts: 20, hearts2: 40, next: 50, boosters: 60, undo: 10, supply: 20, color: 250 }, items: [], ads: { reward: true, rewardLeft: 5, inter: false }, help: !/[?&]help=0/.test(location.search) };
+  if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: FAKEP, items: [], ads: { reward: true, rewardLeft: 5, inter: false }, help: !/[?&]help=0/.test(location.search) };
   if (fn === 'spend') { const p = (cache && cache.prices[args[0]]) || 20; if (wallet < p) return { ok: false, reason: 'short' }; wallet -= p; return { ok: true, gold: wallet }; }
   if (fn === 'rewardedAd') return { ok: true, via: 'test' };
   if (fn === 'score') return args[1] && args[1].assisted ? { ok: false, reason: 'assisted' } : { ok: true, best: args[0], rank: 3 };
