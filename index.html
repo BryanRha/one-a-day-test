@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="ko">
-<head><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
+<head><!--oad:test--><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
 S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return s.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};
 S.key=function(i){var a=[];for(var j=0;j<this.length;j++){var y=k.call(this,j);if(y&&y.indexOf(P)===0)a.push(y.slice(P.length))}return a[i]===undefined?null:a[i]};
-S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script>
+S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script><!--/oad:test--><!--oad:env--><script>window.OAD_ENV='test'</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#14102E">
@@ -19,9 +19,9 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <link rel="icon" href="icons/icon_192.png">
 <link rel="apple-touch-icon" href="icons/icon_192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="app.css?v=0.79.3">
+<link rel="stylesheet" href="app.css?v=0.80.0">
 </head>
-<body><div style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:99999;background:#E02440;color:#fff;font:700 11px sans-serif;padding:2px 10px;border-radius:0 0 8px 8px;pointer-events:none">TEST 0.79.3</div>
+<body><!--oad:test--><div style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:99999;background:#E02440;color:#fff;font:700 11px sans-serif;padding:2px 10px;border-radius:0 0 8px 8px;pointer-events:none">TEST 0.80.0</div><!--/oad:test-->
 <div id="app">
   <main id="view"></main>
   <nav id="tabs">
@@ -34,6 +34,6 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <div id="player" hidden>
 </div>
 <div id="sheet" hidden><div class="dim"></div><div class="panel"></div></div>
-<script type="module" src="app.js?v=0.79.3"></script>
+<script type="module" src="app.js?v=0.80.0"></script>
 </body>
 </html>

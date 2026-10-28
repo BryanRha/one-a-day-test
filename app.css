@@ -384,3 +384,12 @@ body.playing #app { visibility: hidden; }
   .today > .top, .today > .date, .today > .install { order: -2; }
   .today > .tgame { order: -1; margin-bottom: 18px; }
 }
+
+/* 게임물 등급 표시 (catalog.js RATING · 등급 받은 게임만) */
+.chip.rate { font-weight: 700; color: #fff; border-color: transparent; } .chip.rate.r-all { background: #2E9E4F; } .chip.rate.r-12 { background: #2F7BD8; } .chip.rate.r-15 { background: #E0A100; } .chip.rate.r-19 { background: #D7263D; }
+/* 연애 독설 5종: 19+ 배지 · 결제 전 성인 확인 (age-copy.md) */
+.sdp { position: relative; } .sdp .a19 { position: absolute; top: 8px; left: 8px; z-index: 2; padding: 2px 7px; border-radius: 99px; background: rgba(150,130,200,.28); color: #DCD2F5; font: 700 11px sans-serif; letter-spacing: .3px; }
+.sdp.young { cursor: default; } .sdp.young .sdpi p { margin: 4px 0 0; }
+.adultck { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 6px; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid var(--line); font-size: 14px; line-height: 1.5; cursor: pointer; } .adultck input { width: 20px; height: 20px; flex: none; margin-top: 1px; accent-color: #F2C14E; }
+.adultmsg { color: #FFB3D4; font-size: 12px; margin: 0 0 6px; } .sdbtn.off { opacity: .45; }
+.shake { animation: oadshake .35s; } @keyframes oadshake { 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }

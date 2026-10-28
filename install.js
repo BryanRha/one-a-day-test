@@ -18,12 +18,12 @@ export const env = {
 export const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true || localStorage.getItem('oad_installed') === '1';
 export const canPrompt = () => !!deferred;
 
-// 바깥 브라우저로 열기 (카카오톡은 전용 주소, 안드로이드는 크롬 인텐트)
+// 바깥 브라우저로 열기 (카카오톡은 전용 주소, 안드로이드는 크롬 인텐트) · 그 밖(아이폰 인스타 · 네이버 등)은 주소 복사 → Promise(복사 성공 여부) 돌려줌
 export function openExternal() {
   const url = location.href.split('#')[0];
   if (env.kakao) { location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(url)}`; return; }
   if (env.android) { location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`; return; }
-  copyLink();
+  return copyLink();
 }
 export async function copyLink() {
   try { await navigator.clipboard.writeText(location.href.split('#')[0]); return true; } catch { return false; }

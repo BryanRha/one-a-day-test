@@ -1,24 +1,26 @@
 // 게임 안 BM 규칙: 실험 그룹 · 광고 하루 한도 · 전면 광고 조건 (team/dev/tasks/261027-ingame-bm/summary.md)
 //   A = 지금 그대로(대조) · B = 보상형 광고 + 골드 · C = B + 약한 전면 광고
 //   소장자: 전면 없음 · 보상형 혜택은 광고 없이 바로 (하루 횟수는 같음)
+import { PROD } from './rules.js?v=0.80.0';
 const KEY = 'oad_bm';
+/* 실서버: 그룹은 기기 번호로 정한 무작위 그대로 고정 (설정의 '테스트:' 바꾸기 버튼 없음 · 테스트에서 바꿔 둔 값도 무시) */
 export const LIMIT = { rewardGame: 5, rewardApp: 15, interGame: 4, interApp: 8, interEvery: 3, interGapMs: 3 * 60e3, interFromPlay: 3 };
 
 export function group() {
-  try { const o = localStorage.getItem('oad_bm_group'); if (o === 'A' || o === 'B' || o === 'C') return o; } catch { /* */ }
+  if (!PROD) try { const o = localStorage.getItem('oad_bm_group'); if (o === 'A' || o === 'B' || o === 'C') return o; } catch { /* */ }
   let d = ''; try { d = localStorage.getItem('oad_did') || ''; } catch { /* */ }
   let h = 0; for (const c of d + 'bm1') h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return 'ABC'[h % 3];
 }
 // 연속 실패 응원 선물 실험: 켜짐(help) / 꺼짐 50:50 — BM 그룹과 따로 (team/dev/tasks/261028-fail-help/summary.md)
 export function helpOn() {
-  try { const o = localStorage.getItem('oad_help_group'); if (o === 'on') return true; if (o === 'off') return false; } catch { /* */ }
+  if (!PROD) try { const o = localStorage.getItem('oad_help_group'); if (o === 'on') return true; if (o === 'off') return false; } catch { /* */ }
   let d = ''; try { d = localStorage.getItem('oad_did') || ''; } catch { /* */ }
   let h = 0; for (const c of d + 'help1') h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return h % 2 === 0;
 }
-export function setHelp(v) { try { if (v) localStorage.setItem('oad_help_group', v); else localStorage.removeItem('oad_help_group'); } catch { /* */ } }
-export function setGroup(g) { try { if (g) localStorage.setItem('oad_bm_group', g); else localStorage.removeItem('oad_bm_group'); } catch { /* */ } }
+export function setHelp(v) { if (PROD) return; try { if (v) localStorage.setItem('oad_help_group', v); else localStorage.removeItem('oad_help_group'); } catch { /* */ } }
+export function setGroup(g) { if (PROD) return; try { if (g) localStorage.setItem('oad_bm_group', g); else localStorage.removeItem('oad_bm_group'); } catch { /* */ } }
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 function st() {

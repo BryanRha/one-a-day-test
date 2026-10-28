@@ -1,16 +1,16 @@
 // 작업대 (원작의 주방 보드): 7×9 머지-2 · 생산기 · 잠긴 상자 · 비눗방울 · 창고 · 주문 3장 · 팔기
-import { W, H } from '../config.js?v=0.79.3';
-import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.79.3';
-import { audio } from '../audio.js?v=0.79.3';
-import { load, save } from '../save.js?v=0.79.3';
-import { goPrev } from '../nav.js?v=0.79.3';
-import { hud } from '../hud.js?v=0.79.3';
-import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.79.3';
-import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.79.3';
-import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track } from '../store.js?v=0.79.3';
-import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.79.3';
-import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.79.3';
-import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.79.3';
+import { W, H } from '../config.js?v=0.80.0';
+import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.80.0';
+import { audio } from '../audio.js?v=0.80.0';
+import { load, save } from '../save.js?v=0.80.0';
+import { goPrev } from '../nav.js?v=0.80.0';
+import { hud } from '../hud.js?v=0.80.0';
+import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.80.0';
+import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.80.0';
+import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track } from '../store.js?v=0.80.0';
+import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.80.0';
+import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.80.0';
+import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.80.0';
 const E_GIFT = 15;   /* 하루 첫 에너지 바닥 응원 선물 */
 
 const COLS = 7, ROWS = 9, CS = 142, X0 = (1080 - COLS * CS) / 2, Y0 = 440;

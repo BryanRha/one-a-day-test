@@ -116,5 +116,15 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung'];
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
+// 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:
+//   이미 결제(소장)한 사람 = 라이브러리에 그대로 보이고 플레이 가능 · 신규 = 안 보임 — 빌드(tools/build.mjs GAMES)에서는 절대 빼지 말 것
+export const RETIRED = [];
+// 실서버 노출 (게임물 등급분류 — team/dev/tasks/261028-service-check/biz.md ①): 여기 있는 게임만 실서버(oneaday.kr)에 보임 · 테스트 · 개발은 전부
+//   { 게임: { grade: 'all' | '12' | '15' | '19', no: '등급분류번호' } } — 받으면 한 줄씩 추가 (등급 아이콘도 이 값으로 표시)
+//   서버 server/api/_lib/gold.js RATED 와 같아야 함 (다르면 build.mjs 가 멈춤) · 목록은 대표 결정 전이라 비워 둠
+export const RATING = {};
+// 브랜드 매장 쿠폰(게임 성과 → 실물 쿠폰)을 실서버에서도 발급할지 — 서면 계약 · 게임위 자문 전까지 false (테스트 · 개발은 늘 켜짐)
+//   게임은 hello() 응답의 coupon 으로 받음 (앱 밖에서 바로 열면 window.OAD_ENV !== 'prod' 일 때만)
+export const BRAND_COUPON_PROD = false;
 // 여명기사단 키우기(idle)는 2026-10-25 사용자 요청으로 목록에서 내림 — 보류 중 (CATALOG 항목·소스·idle/PROJECT_STATUS.md 남겨 둠)
 // K-다이스 투어(tour)는 2026-10-24 사용자 요청으로 목록에서 내림 — 대전 네트워크(서버)가 붙으면 다시 올림 (CATALOG 항목·소스는 남겨 둠)

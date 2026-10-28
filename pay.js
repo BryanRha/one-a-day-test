@@ -29,7 +29,16 @@ export async function orderGold(product, token) {
 }
 export const confirmGold = (o, paymentKey, amount) => post('/api/pay/confirm', { orderId: o.orderId, product: o.product, pair: o.pair, d: o.d, sig: o.sig, paymentKey, amount });
 export const keepReceipt = keep;
-export function order(product, me, pt, extra) { const d = localStorage.getItem('oad_did') || ''; return post('/api/pay/order', { ...(extra || {}), product, me, partner: pt, d }).then(o => ({ ...o, product, d })); }
+/* 운세 주문: 로그인 토큰을 주면 주문이 계정에 연결돼 결제 뒤 '내 구매'에 남음 (없으면 이 기기 + 주문번호 · 복원 코드) */
+export function order(product, me, pt, extra, token) {
+  const d = localStorage.getItem('oad_did') || '';
+  return fetch('/api/pay/order', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify({ ...(extra || {}), product, me, partner: pt, d }) })
+    .then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || '연결에 실패했어요'); return { ...j, product, d }; });
+}
+/* 이 기기에 보관한 영수증 목록 (설정 '내 구매') — 두 사람 열쇠(key)는 빼고 */
+export const myReceipts = () => receipts().map(({ key: _k, ...r }) => r);
+/* 주문번호 + 복원 코드로 영수증 다시 받기: 1단계(me 없이) → 상품 목록 · 2단계(me · 상품별 상대) → 영수증 */
+export const restoreByCode = body => post('/api/fortune/report', { act: 'restore', ...body });
 /* 신년 패키지처럼 영수증이 여러 장 오면 앱이 상품별 '두 사람'으로 나눠 보관 (setPackKeeper 로 등록) */
 let packKeeper = null;
 export const setPackKeeper = f => { packKeeper = f; };
@@ -37,7 +46,7 @@ export const setPackKeeper = f => { packKeeper = f; };
 // 결제 승인 → 영수증 보관
 export async function confirm(o, paymentKey, amount, me, pt) {
   const r = await post('/api/pay/confirm', { orderId: o.orderId, product: o.product, pair: o.pair, d: o.d, sig: o.sig, paymentKey, amount });
-  if (r.receipts && packKeeper) packKeeper(r.receipts); else keep(r, me, pt);
+  if (r.receipts && packKeeper) packKeeper(r.receipts.map(x => ({ ...x, code: r.code }))); else keep(r, me, pt);
   return r;
 }
 
@@ -59,7 +68,7 @@ export async function resume() {
   if (st !== 'ok') return { ok: false, msg: q.get('message') || '결제가 취소됐어요' };
   if (!pend || pend.o.orderId !== q.get('orderId')) return { ok: false, msg: '주문 정보를 찾지 못했어요. 고객센터로 문의해 주세요' };
   try { if (pend.gold) { const r = await confirmGold(pend.o, q.get('paymentKey'), Number(q.get('amount'))); return { ok: true, product: pend.o.product, gold: r.gold }; }
-    await confirm(pend.o, q.get('paymentKey'), Number(q.get('amount')), pend.me, pend.pt); return { ok: true, product: pend.o.product }; }
+    const r = await confirm(pend.o, q.get('paymentKey'), Number(q.get('amount')), pend.me, pend.pt); return { ok: true, product: pend.o.product, orderId: r.orderId, code: r.code, saved: r.saved }; }
   catch (e) { return { ok: false, msg: e.message }; }
 }
 

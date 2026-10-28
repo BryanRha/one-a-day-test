@@ -131,6 +131,21 @@ export const PAID = [
     lock: '그 사람이 숨기는 것 · 너를 어떻게 보는가 · 연락해도 되는 달 · 먼저 연락할 때 첫마디', cols: ['#6FA8DC', '#C9A0DC', '#FF8A3C', '#E02440'] },
 ];
 export const paidOf = id => PAID.find(p => p.id === id) || PAID[0];
+/* 연애 독설 운세 5종 = 만 19세 이상 (team/dev/tasks/261028-service-check/age-copy.md) — 숨김 · 결제 확인 · 배지가 모두 이 함수들만 씀
+   나이 셈법은 AGE_RULE 한 곳: 'year' = 연 나이(올해 − 태어난 해, 청소년보호법 셈법 · 대표 확정 전 기본값) · 'full' = 만 나이
+   서버(server/api/_lib/gold.js ADULT · AGE_RULE)도 같은 값이어야 함 — build.mjs 가 대조 */
+export const ADULT = ['cheating', 'forbidden', 'after', 'reunion', 'inner'];
+export const ADULT_AGE = 19, AGE_RULE = 'year';
+export const isAdultFortune = id => ADULT.includes(id);
+export function ageOf(me, now = new Date()) {
+  const y = Number(me && me.y); if (!y) return null;
+  const k = new Date(now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60e3), ty = k.getFullYear();   /* 한국 날짜 기준 */
+  if (AGE_RULE === 'year') return ty - y;
+  const md = (k.getMonth() + 1) * 100 + k.getDate(), bd = Number(me.m || 1) * 100 + Number(me.d || 1);
+  return ty - y - (md < bd ? 1 : 0);
+}
+/* 생년월일을 아직 안 넣었으면 false (카드는 보이고 19+ 배지 · 결제 전 확인 한 줄이 막음) */
+export const isUnder19 = me => { const a = ageOf(me); return a != null && a < ADULT_AGE; };
 /* 신년 패키지 24,900: 신년운세 + 아래에서 2개 (가격은 서버 gold.js FORTUNE.pack) */
 export const PACK = { id: 'pack', price: 24900, base: 'newyear', picks: ['wealth', 'compat', 'monthly', 'exam'], title: '2027 신년 패키지' };
 const COLORS = { wood: ['초록', '#4CB86A'], fire: ['빨강', '#E8503A'], earth: ['노랑', '#E8B04A'], metal: ['흰색', '#E8E8F0'], water: ['남색', '#3A5AB8'] };
