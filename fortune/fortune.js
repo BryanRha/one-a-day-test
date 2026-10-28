@@ -52,12 +52,12 @@ const DOK = {
 /* 점쟁이 진열대: 독설신당 5명(원화 있음) + 새 5명(원화 없이 오행 아이콘 · art 없음) — 이용자에게 '순한맛/매운맛' 구분은 보이지 않음
    tone 1 다정 ~ 10 매서움: 그날 일진 × 내 원국 관계로 그날의 점쟁이가 정해짐 (pickTeller) · 말투도 tone 따라 (다정 = 해요체, 매서움 = 독설) */
 export const CHARS = {
-  haesol: { name: '해솔선녀', seal: '溫情', el: 'wood', tone: 1 },
-  wolryeong: { name: '월령선생', seal: '月令', el: 'water', tone: 2 },
-  bokdeong: { name: '복덩도사', seal: '福德', el: 'earth', tone: 3 },
+  haesol: { name: '해솔선녀', seal: '溫情', el: 'wood', tone: 1, art: 1 },
+  wolryeong: { name: '월령선생', seal: '月令', el: 'water', tone: 2, art: 1 },
+  bokdeong: { name: '복덩도사', seal: '福德', el: 'earth', tone: 3, art: 1 },
   hoegwi: { name: '회귀낭자', seal: '回歸', el: 'water', tone: 4, art: 1 },
-  hwaryeon: { name: '화련아씨', seal: '花蓮', el: 'fire', tone: 5 },
-  cheongun: { name: '청운거사', seal: '靑雲', el: 'metal', tone: 6 },
+  hwaryeon: { name: '화련아씨', seal: '花蓮', el: 'fire', tone: 5, art: 1 },
+  cheongun: { name: '청운거사', seal: '靑雲', el: 'metal', tone: 6, art: 1 },
   tusim: { name: '투심도령', seal: '透心', el: 'wood', tone: 7, art: 1 },
   geumdan: { name: '금단도령', seal: '禁斷', el: 'fire', tone: 8, art: 1 },
   danjoe: { name: '단죄보살', seal: '斷罪', el: 'metal', tone: 9, art: 1 },
