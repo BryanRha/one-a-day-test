@@ -1,5 +1,5 @@
 // 저장 (localStorage 'marumi_v1'): 돈 · 지점별 열린 것/직원/칸에 부은 돈 · 강화 · 오늘 판 개수(쿠폰) · 미션 · 출석
-import { COUPON } from './data.js?v=0.81.4';
+import { COUPON } from './data.js?v=0.81.5';
 const KEY = 'marumi_v1';
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fresh = () => ({ v: 1, coins: 0, earned: 0, bi: 0, branch: {}, up: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), seen: {}, mast: {}, deco: {}, reg: {} });   /* mast: 메뉴 이름별 판매 수 · deco: 지점별 놓은 소품 · reg: 단골 { f 호감, day 마지막 방문, lv 받은 단계 } */

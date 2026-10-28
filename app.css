@@ -434,7 +434,7 @@ body.playing #app { visibility: hidden; }
 .sdhook.buy p { margin: 2px 0 10px; font-size: 13.5px; line-height: 1.5; color: var(--paper); }
 .sdhook.buy .hbtn { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 12px; background: linear-gradient(135deg, #FF3D5A, #C3112F); color: #fff; font-weight: 800; font-size: 14.5px; box-shadow: 0 6px 18px rgba(224,36,64,.45); animation: hbpulse 2.2s ease-in-out infinite; }
 .sdhook.buy .hbtn b { margin-left: 4px; padding: 2px 8px; border-radius: 99px; background: #fff; color: #C3112F; font-size: 11.5px; vertical-align: 1px; }
-.sdhook.buy .hbtn i { font-style: normal; font-size: 12px; font-weight: 700; opacity: .9; white-space: nowrap; }
+.sdhook.buy .hbtn i { font-style: normal; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: #fff; color: #C3112F; white-space: nowrap; }
 @keyframes hbpulse { 50% { transform: scale(1.025); box-shadow: 0 8px 26px rgba(224,36,64,.65); } }
 .sdmini { position: relative; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 12px; max-width: 92%; }
 .mchip { padding: 10px 11px; border-radius: 12px; background: rgba(13,11,12,.8); border: 1px solid rgba(201,164,92,.45); cursor: pointer; min-width: 0; }

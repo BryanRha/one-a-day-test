@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.81.4';
-import * as R from './rules.js?v=0.81.4';
-import * as I from './install.js?v=0.81.4';
-import * as T from './track.js?v=0.81.4';
-import * as P from './pay.js?v=0.81.4';
-import * as A from './account.js?v=0.81.4';
-import * as C from './cloud.js?v=0.81.4';
-import * as BM from './bm.js?v=0.81.4';
+import { PLANNED } from './catalog.js?v=0.81.5';
+import * as R from './rules.js?v=0.81.5';
+import * as I from './install.js?v=0.81.5';
+import * as T from './track.js?v=0.81.5';
+import * as P from './pay.js?v=0.81.5';
+import * as A from './account.js?v=0.81.5';
+import * as C from './cloud.js?v=0.81.5';
+import * as BM from './bm.js?v=0.81.5';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.4').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.5').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.4'), import('./fortune/types.js?v=0.81.4'), import('./fortune/chat.js?v=0.81.4')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.5'), import('./fortune/types.js?v=0.81.5'), import('./fortune/chat.js?v=0.81.5')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.81.4';
+const VERSION = '0.81.5';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -225,7 +225,7 @@ function fortuneCard(me, f, m) {
     : `<div class="recap"><b>오늘, 맞았나요?</b><span><button data-recap="y">맞았다</button><button data-recap="h">반반</button><button data-recap="n">아니던데</button></span></div>`;
   return `<div class="sdcard" data-fortune ${KB}>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
     <div class="sdscore"><b>${f.total}</b><small>점</small></div><h2>“${f.say}”</h2><p class="sdwarn">⚠ ${f.warn}</p><p class="sdwhy">${f.why}</p>
-    ${h ? `<div class="sdhook buy" data-paid="${h.id}" ${KB}><small>오늘 이 부분이 신경 쓰여요</small><p>${h.text}</p><span class="hbtn"><span>🔮 ${m.paidOf(h.id).title} <b>미리보기 무료</b></span><i>전체 ${won(m.paidOf(h.id).price)} →</i></span></div>` : ''}${recap}${gift}
+    ${h ? `<div class="sdhook buy" data-paid="${h.id}" ${KB}><small>오늘 이 부분이 신경 쓰여요</small><p>${h.text}</p><span class="hbtn"><span>🔮 ${m.paidOf(h.id).title} 살짝 엿보기</span><i>무료 →</i></span></div>` : ''}${recap}${gift}
     ${EX ? `<div class="sdmini">${EX.tarot.line(m, me, f, XC()) + EX.chat.line(m, me, f, XC())}</div>` : ''}<span class="sdgo">${me.name}의 오늘 전부 보기 →</span></div><span class="seal">${c.seal}</span></div>`;
 }
 /* 저녁 회고: 1탭 (메모 없음 · 기기에만) */
