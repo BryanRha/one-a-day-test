@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.81.5';
-import * as R from './rules.js?v=0.81.5';
-import * as I from './install.js?v=0.81.5';
-import * as T from './track.js?v=0.81.5';
-import * as P from './pay.js?v=0.81.5';
-import * as A from './account.js?v=0.81.5';
-import * as C from './cloud.js?v=0.81.5';
-import * as BM from './bm.js?v=0.81.5';
+import { PLANNED } from './catalog.js?v=0.82.0';
+import * as R from './rules.js?v=0.82.0';
+import * as I from './install.js?v=0.82.0';
+import * as T from './track.js?v=0.82.0';
+import * as P from './pay.js?v=0.82.0';
+import * as A from './account.js?v=0.82.0';
+import * as C from './cloud.js?v=0.82.0';
+import * as BM from './bm.js?v=0.82.0';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.81.5').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.82.0').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.81.5'), import('./fortune/types.js?v=0.81.5'), import('./fortune/chat.js?v=0.81.5')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.82.0'), import('./fortune/types.js?v=0.82.0'), import('./fortune/chat.js?v=0.82.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.81.5';
+const VERSION = '0.82.0';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -357,26 +357,30 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.82.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
   const teas = rp.teasers && rp.teasers.length ? `<div class="tzs">${rp.teasers.map(t => `<div class="tz"><small>${t.label}</small><b>${t.value || '██'}</b></div>`).join('')}</div>` : '';
   const chart = rp.chart ? `<section class="rsec"><small>2027 · 열두 달</small><h3>월별 총운 그래프</h3><div class="ych">${rp.chart.map(x => `<div><s style="height:${Math.max(6, x.score - 30)}px"></s><b>${x.score}</b><small>${x.label}</small></div>`).join('')}</div></section>` : '';
   const cal = rp.calendar ? `<section class="rsec"><small>${rp.ym ? `${rp.ym.slice(0, 4)}년 ${Number(rp.ym.slice(5))}월` : '앞으로 90일'}</small><h3>${PR.cal || '달력'}</h3><div class="wcal">${rp.calendar.map(d => `<span class="lv${d.level}"><b>${Number(d.date.slice(5, 7))}/${Number(d.date.slice(8))}</b>${'★'.repeat(d.level)}</span>`).join('') || '<p>이번 90일엔 크게 겹치는 날이 없어요</p>'}</div></section>` : '';
   const sec = s => s.free || (paid && s.body) ? `<section class="rsec"><small>${s.chapter}</small><h3>${s.title}</h3>${s.body.map(x => `<p>${x}</p>`).join('')}</section>`
-    : life ? `<section class="rsec lock"><small>${s.chapter} · 🔒</small><h3>${s.title}</h3><p class="blur">${me.name}님의 원국과 그 달의 기운을 맞춰 보면 이 부분은 ██월에 가장 크게 움직여요. 특히 ████의 기운이 들어오는 때라 미리 준비해 두면 좋아요.</p></section>`
-    : `<section class="rsec lock"><small>${s.chapter} · 🔒</small><h3>${s.title}</h3><p class="blur">${pt.name}의 사주 원국에서 이 부분은 가장 민감하게 드러난다. 특히 ██월과 ██월 사이에 흐름이 바뀌는데 그 이유는 일지와 ████이 부딪치기 때문이다. 이 시기에는 연락 패턴이 달라지고 ███한 핑계가 늘어난다.</p></section>`;
+    : `<section class="rsec lock"><small>${s.chapter} · 🔒 잠긴 장</small><h3>${s.title}</h3>${pk && pk.sub[s.id] ? `<p class="psub">${pk.sub[s.id]}</p>` : ''}<p class="plead">${pk && pk.lead[s.id] ? pk.lead[s.id] : ''} <span class="blur">${life ? '이 흐름은 ██월 무렵 가장 또렷해지는데, 그때 ████ 쪽을 먼저 챙기면 한 해의 결이 달라져요. 자세한 날짜와 이유는 ██에서 이어져요.' : '이 부분은 두 사람 원국이 만나는 자리에서 갈라지는데, ██월 무렵의 흐름과 ████의 기운이 겹치는 지점에서 결이 달라져요. 그 이유와 대처는 ██에서 이어져요.'}</span></p></section>`
+      + (++lk % 3 === 0 && lk < locked ? `<div class="pinbuy"><span>잠긴 ${locked - lk}장이 더 있어요</span><button class="sdbtn ghost" data-buy="${id}">🔓 이어서 전부 읽기 · ${won(PR.price)}</button></div>` : '');
   const q = PR.q.replace('{p}', pt.name).replace('{me}', me.name).replace('{m}', rp.ym ? Number(rp.ym.slice(5)) : '');
   const wasOpen = sdOpen; sdClose(); sdOpen = wasOpen;   /* 운세 상세 위에서 바로 열 때(solo) 화면이 두 겹 되지 않게 */
   const el = document.createElement('div'); el.id = 'sd'; el.innerHTML = `<div class="sdpage">
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
-    <div class="sdhero">${face(m, PR.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${C.name}의 ${PR.title} · ${paid ? '전체 풀이 · 결제 완료' : `무료 미리보기 · 전체 ${won(PR.price)} (${gold}골드)`}</div><h1>${q}</h1>
+    <div class="sdhero">${face(m, PR.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${C.name}의 ${PR.title} · ${paid ? '전체 풀이 · 결제 완료' : '무료 미리보기'}</div><h1>${q}</h1>
       <div class="gauge"><div class="gv" style="--p:${rp.score};--c:${lvlCol}"><b>${rp.score}</b><small>${rp.gauge || '바람기 지수'}</small></div><div class="gl" style="color:${lvlCol}">${rp.grade.label}</div></div></div><span class="seal lg">${C.seal}</span></div>
-    ${paid ? '' : `<div class="pcbuy"><div><b>전체 풀이 ${won(PR.price)}</b><small>${gold}골드 · 남은 ${locked}개 풀이 · 아래 무료 미리보기를 먼저 읽어 보세요</small></div><button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button></div>`}
+    ${paid ? '' : `<div class="pcbuy"><div><b>전체 풀이 · 잠긴 ${locked}장</b><small>아래 목차와 무료 미리보기를 먼저 읽어 보세요</small></div><button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button></div>`}
     <section><blockquote>“${rp.grade.summary}”</blockquote>${rp.factors.length ? `<div class="factors">${rp.factors.map(f => `<span${f.points < 0 ? ' style="opacity:.6"' : ''}>${f.points < 0 ? '−' : ''}${f.label}</span>`).join('')}</div>` : ''}</section>
     ${teas}${rp.share ? `<div class="shbtn"><button class="sdbtn ghost" data-share="${id}">💌 궁합 결과 카드 공유하기 (점수 · 한 줄만)</button></div>` : ''}
+    ${paid ? '' : `<section class="ptoc"><h3>이 풀이에 들어 있는 것 <small>${rp.sections.length}장 중 ${rp.sections.length - locked}장 무료</small></h3><ol>${rp.sections.map(s => `<li class="${s.free ? 'fr' : 'lk'}"><i>${s.free ? '무료' : '🔒'}</i><div><b>${s.title}</b>${!s.free && pk.sub[s.id] ? `<small>${pk.sub[s.id]}</small>` : ''}</div></li>`).join('')}</ol></section>`}
     ${rp.sections.filter(s => s.free).map(sec).join('')}
+    ${paid ? '' : `<div class="pcliff"><small>${pk.who}</small><p>${pk.cliff}</p></div>`}
     ${paid ? '' : `<div class="paywall"><b>${life ? '여기서부터 자세히 볼게요.' : '여기서부터 진짜다.'}</b><p>남은 ${locked}개 풀이 — ${PR.lock}${teas ? ' · 위에 가려진 시기도 실제 계산값 그대로 열려요' : ''}</p>
-      <button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button>${A.ON ? `<button class="sdbtn ghost gfort" data-gfort="${id}">🪙 ${gold}골드로 열기${paidGold ? ' (충전 골드)' : ''}${A.current() ? ` · 내 골드 ${gnum(goldOf())}` : ''}</button>` : ''}<small>한 번 결제하면 ${PR.monthly ? `${rp.ym ? Number(rp.ym.slice(5)) : ''}월 풀이는` : PR.solo ? '내 풀이는' : '이 두 사람 풀이는'} 계속 볼 수 있어요${paidGold ? ' · 보너스 골드는 입문 운세(3,900원 이하)에만 쓸 수 있어요' : ' · 보너스 골드도 쓸 수 있어요'}${PR.monthly ? ' · 21일부터는 다음 달 운세로 팔아요' : ''}</small></div>`}
+      <button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button>${A.ON ? `<button class="sdbtn ghost gfort" data-gfort="${id}">🪙 ${gold}골드로 열기${paidGold ? ' (충전 골드)' : ''}${A.current() ? ` · 내 골드 ${gnum(goldOf())}` : ''}</button>` : ''}<small>한 번 결제하면 ${PR.monthly ? `${rp.ym ? Number(rp.ym.slice(5)) : ''}월 풀이는` : PR.solo ? '내 풀이는' : '이 두 사람 풀이는'} 계속 볼 수 있어요${paidGold ? ' · 보너스 골드는 입문 운세에만 쓸 수 있어요' : ' · 보너스 골드도 쓸 수 있어요'}${PR.monthly ? ' · 21일부터는 다음 달 운세로 팔아요' : ''}</small></div>`}
     ${chart}${cal}
     ${rp.sections.filter(s => !s.free).map(sec).join('')}
     ${paid ? '' : `<div class="paywall"><button class="sdbtn" data-buy="${id}">🔓 ${won(PR.price)}에 전부 열기</button></div>`}
@@ -803,6 +807,8 @@ addEventListener('message', e => {
 try { const k = 'oad_exp_day', t = R.keyOf(new Date()); if (localStorage.getItem(k) !== t) { localStorage.setItem(k, t); setTimeout(() => T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0 }), 1500); } } catch { /* */ }
 let payCfg = {}; P.config().then(c => { payCfg = c || {}; if (c && c.ads) for (const k of Object.keys(BM.LIMIT)) if (Number.isFinite(c.ads[k])) BM.LIMIT[k] = c.ads[k]; });
 const reply = (id, result) => { try { frame && frame.contentWindow.postMessage({ type: 'oad:res', id, result }, location.origin); } catch { /* */ } };
+/* 그날 운세와 같은 씨앗 (오늘의 패 등 — 날짜 · 점쟁이 · 키워드 · 점수의 해시만 · 생년월일 X) · 운세 정보가 없으면 '' (게임은 날짜 씨앗) */
+function fortuneSeed() { try { const me = FT && FT.loadMe(); if (!me) return ''; const f = FT.fortune(me, R.now()); let h = 2166136261; for (const c of `${R.keyOf(R.now())}|${f.ch}|${f.key}|${f.total}`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); } catch { return ''; } }
 async function gameReq(gid, d) {
   const fn = d.fn, a = d.args || [], grp = BM.group(), me = A.current(), owned = !!(me && R.state().owned[gid]);
   const shopOf = () => ((me && me.shop) || payCfg.shop || {})[gid] || {};
@@ -812,7 +818,7 @@ async function gameReq(gid, d) {
     return done({ ok: true, v: 1, group: grp, login: !!me, owned, noAds: owned, gold: me ? (me.gold && me.gold.total) || 0 : null,
       prices: on ? Object.fromEntries(Object.entries(shopOf()).map(([k, v]) => [k, v.gold])) : {}, items: me ? (me.items || []).filter(x => x.startsWith('item:' + gid + ':')).map(x => x.split(':')[2]) : [],
       ads: { reward: on && BM.rewardLeft(gid) > 0, rewardLeft: on ? BM.rewardLeft(gid) : 0, inter: grp === 'C' && !owned }, help: BM.helpOn(),
-      env: R.FLAGS.env, coupon: R.FLAGS.coupon });   /* coupon: 브랜드 매장 쿠폰 발급 여부 (실서버 끔 — catalog.js BRAND_COUPON_PROD) */
+      env: R.FLAGS.env, coupon: R.FLAGS.coupon, fortune: { seed: fortuneSeed() } });   /* coupon: 브랜드 매장 쿠폰 발급 여부 (실서버 끔 — catalog.js BRAND_COUPON_PROD) */
   }
   if (fn === 'rewardedAd') {
     const place = String(a[0] || '').slice(0, 20);

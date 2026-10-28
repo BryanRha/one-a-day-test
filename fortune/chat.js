@@ -39,8 +39,19 @@ export function summary(f) {
 /* 추천 질문 3개: 오늘 점수가 낮은 분야부터 */
 const ASK = { 총운: '오늘 하루 뭘 조심하면 좋을까요?', 금전: '오늘 돈 쓰는 건 어떻게 해야 해요?', 연애: '요즘 연애운은 어때요?', '일·공부': '일이 잘 안 풀리는데 어떻게 해요?', 건강: '컨디션이 별론데 오늘 어떻게 보내요?' };
 const chips = f => Object.entries(f.scores).sort((a, b) => a[1] - b[1]).slice(0, 3).map(([k]) => ASK[k]);
-const greet = (f, C) => f.tone <= 3 ? `오늘은 제가 나왔네요, ${C.name}예요. ${f.why.replace(/ 나섰다$/, ' 나왔어요')}. 마음 쓰이는 게 있으면 편하게 물어봐요.`
-  : f.tone <= 6 ? `오늘은 내 차례네. ${f.why.replace(/ 나섰다$/, ' 나왔어')}. 뭐가 제일 걸려?` : `왔냐. ${f.why}. 돌려 말 안 한다. 뭐가 걸리는지 말해 봐.`;
+const jo = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return w + (c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? a : b); };
+/* 첫 인사: 오늘 운세에서 하나(가장 낮은 분야 · 높으면 가장 높은 분야)를 짚어 점쟁이가 먼저 말을 검 + 그에 맞는 첫 칩 */
+function opener(f, C) {
+  const e = Object.entries(f.scores).sort((a, b) => a[1] - b[1]), [lk, lv] = e[0], [hk, hv] = e[e.length - 1];
+  const low = lv < 68, [k, v] = low ? [lk, lv] : [hk, hv], why = f.why.replace(/ 나섰다$/, '');
+  const t = f.tone <= 3 ? `오늘은 제가 나왔네요, ${jo(C.name, '이에요', '예요')}. ${why} 나왔어요. 그런데 오늘 ${k} 점수가 ${v}점이라 눈에 걸리는 게 하나 있어요. 왜 그런지 들어 볼래요?`
+    : f.tone <= 6 ? `오늘은 내 차례네. ${why} 나왔어. 근데 너 오늘 ${k} ${v}점이야. ${low ? '이유가 하나 보이는데' : '이렇게 높은 날 놓치면 아깝지'}, 들어 볼래?`
+      : `왔냐. ${f.why}. 오늘 ${k} ${v}점. ${low ? '이유가 뻔히 보인다' : '이런 날은 드물다'}. 들을 거냐?`;
+  return { t, c: [`${jo(k, '이', '가')} 왜 ${v}점이에요?`, low ? `오늘 ${k} 어떻게 지켜요?` : `오늘 ${k} 어떻게 살려요?`, ASK[e[1][0]] || '오늘 뭘 조심해요?'] };
+}
+const greet = (f, C) => opener(f, C).t;
+/* 3마디 뒤 이어지는 이야기로 잇는 풀이 (가격 없이 이름만) */
+const LINK = { 금전: 'wealth', 연애: 'compat', '일·공부': 'exam', 총운: 'monthly', 건강: 'newyear' };
 
 /* 오늘 대화 (기기에만) */
 const KEY = 'oad_chat';
@@ -66,16 +77,16 @@ export async function open(X) {
   const m = await X.ft(), me = m.loadMe(); if (!me) return X.fortuneForm();
   const now = X.R.now(), day = X.R.keyOf(now), f = m.fortune(me, now), C = m.CHARS[f.ch];
   if (!eligible(me, f.chart)) return X.toast('AI 상담은 지금 일부 이용자(만 19세 이상)에게만 열려 있어요');
-  let s = load(day); if (!s || s.ch !== f.ch) s = { day, ch: f.ch, left: s ? s.left : FREE, msgs: [{ r: 'a', t: greet(f, C) }], stop: false };
+  let s = load(day); if (!s || s.ch !== f.ch) { const o = opener(f, C); s = { day, ch: f.ch, left: s ? s.left : FREE, msgs: [{ r: 'a', t: o.t, c: o.c }], stop: false }; }
   save(s); X.T.track('chat_open', { ch: f.ch, n: FREE - s.left });
   const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   const render = () => {
     const done = s.left <= 0 || s.stop;
     X.openSheet(`<div class="aichat"><div class="aihead">${X.face(m, f.ch, 'sm')}<div><b>${C.name}</b><small>🤖 AI와 대화 중 · 실험판 · 오늘 무료 ${Math.max(0, s.left)}마디</small></div></div>
       <p class="ainote">AI가 만든 답이에요. 실제 명리 계산 결과(해석 요약)를 바탕으로 말투와 대화를 만들어요. 생년월일 원본은 보내지 않고, 대화는 서버에 저장하지 않아요. 의료 · 투자 · 법률 판단은 전문가와 상의해 주세요.</p>
-      <div class="aimsgs" id="aiMsgs">${s.msgs.map((x, i) => `<div class="aim ${x.r}${x.s ? ' ' + x.s : ''}">${esc(x.t)}${x.r === 'a' && i > 0 && !x.s ? `<span class="airate"><button data-airate="up" data-i="${i}">👍</button><button data-airate="down" data-i="${i}">👎</button></span>` : ''}</div>`).join('')}</div>
-      ${done ? `<div class="aidone">${s.stop ? '오늘 상담은 여기까지예요.' : '오늘 무료 상담은 여기까지예요 · 내일은 또 다른 점쟁이가 기다려요'}${s.stop ? '' : `<button class="sdbtn ghost" data-aimore>더 묻기</button>`}</div>`
-        : `<div class="aichips">${chips(f).map(q => `<button data-aiq="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="aimsgs" id="aiMsgs">${s.msgs.map((x, i) => `<div class="aim ${x.r}${x.s ? ' ' + x.s : ''}">${esc(x.t)}${x.h ? `<p class="aihook">${esc(x.h)}</p>` : ''}${x.p ? `<div class="aipaid" data-paid="${x.p}">${esc(paidLine(x.p))} →</div>` : ''}${x.r === 'a' && i > 0 && !x.s ? `<span class="airate"><button data-airate="up" data-i="${i}">👍</button><button data-airate="down" data-i="${i}">👎</button></span>` : ''}</div>`).join('')}</div>
+      ${done ? `<div class="aidone">${s.stop ? '오늘 상담은 여기까지예요.' : '오늘 무료 이야기는 여기까지 · 내일 다시 무료로 이어서 들을 수 있어요'}${s.stop ? '' : `<button class="sdbtn ghost" data-aimore>더 묻기</button>`}</div>`
+        : `<div class="aichips">${nextChips().map(q => `<button data-aiq="${esc(q)}">${esc(q)}</button>`).join('')}</div>
       <form class="aiform" id="aiForm"><input name="q" maxlength="300" placeholder="${C.name}에게 물어보기 (300자)" autocomplete="off"><button class="sdbtn" type="submit">보내기</button></form>`}
       <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
     const box = X.$('#aiMsgs'); if (box) box.scrollTop = box.scrollHeight;
@@ -84,12 +95,25 @@ export async function open(X) {
     X.$('#sheet').querySelectorAll('[data-airate]').forEach(b => { b.onclick = () => { X.T.track('chat_rate', { rate: b.dataset.airate === 'up' ? 1 : 0, ch: f.ch }); b.parentElement.innerHTML = '고마워요'; }; });
     const mo = X.$('[data-aimore]'); if (mo) mo.onclick = more;
   };
+  /* 다음 칩: 마지막 점쟁이 말에 붙은 칩(모델이 만든 것 · 첫 인사 칩) → 없으면 오늘 낮은 분야 질문 */
+  function nextChips() { const a = [...s.msgs].reverse().find(x => x.r === 'a' && !x.s); if (a && a.s === 'crisis') return []; return a && a.c && a.c.length ? a.c : chips(f); }
+  function paidLine(id) { const P = m.paidOf(id); return `${m.CHARS[P.ch].name}의 ${P.title}에서 이 이야기를 더 깊게 볼 수 있어요`; }
+  /* 3마디를 다 쓰면: 점쟁이가 여운을 남기며 마무리 (마지막 떡밥 다시 짚기 + 관련 풀이 한 줄 · 가격 없음) — 한 번만 */
+  function closing() {
+    if (s.ended || s.stop) return; s.ended = true;
+    const last = [...s.msgs].reverse().find(x => x.r === 'a' && x.h), low = Object.entries(f.scores).sort((a, b) => a[1] - b[1])[0][0];
+    const hk = last ? `아까 말한 거 — “${last.h.replace(/[?？]$/, '')}” — ` : '';
+    const t = f.tone <= 3 ? `오늘 이야기는 여기까지예요. ${hk ? hk + '그 얘기는 아직 끝나지 않았어요. ' : ''}내일 다시 오면 무료로 이어서 들려드릴게요. 내일은 또 다른 점쟁이가 나올지도 몰라요.`
+      : f.tone <= 6 ? `오늘은 여기까지. ${hk ? hk + '그거 아직 반밖에 안 말했어. ' : ''}내일 와. 무료로 이어서 해 줄게.` : `오늘은 여기까지다. ${hk ? hk + '그 뒷얘기가 진짜다. ' : ''}내일 다시 와라.`;
+    s.msgs.push({ r: 'a', t, s: 'end', p: LINK[low] || 'monthly' });
+    X.T.track('chat_end_view', { ch: f.ch });
+  }
   let busy = false;
   async function send(q) {
     if (!q || busy || s.left <= 0 || s.stop) return;
     busy = true; s.msgs.push({ r: 'u', t: q.slice(0, 300) }); s.msgs.push({ r: 'a', t: '…', s: 'wait' }); render();
     X.T.track('chat_send', { ch: f.ch, n: FREE - s.left + 1 });
-    const hist = s.msgs.slice(0, -2).filter(x => !x.s).map(x => ({ r: x.r, t: x.t }));
+    const hist = s.msgs.slice(0, -2).filter(x => !x.s).map(x => ({ r: x.r, t: x.h ? `${x.t}\n다음: ${x.h}` : x.t }));   /* 내가 던진 떡밥도 기억하게 */
     let j = {}, code = 0;
     try { const r = await fetch('/api/fortune/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'chat', d: did(), qa: forced() ? 1 : 0, age: fullAge(me, f.chart), ch: f.ch, sum: summary(f), hist, q }) }); code = r.status; j = await r.json().catch(() => ({})); }
     catch { j = { error: '연결에 실패했어요' }; }
@@ -98,12 +122,13 @@ export async function open(X) {
     if (j.limit) { s.left = 0; X.T.track('chat_limit_hit', { ch: f.ch }); }
     else if (j.minor) { s.stop = true; s.msgs.push({ r: 'a', t: j.error, s: 'safe' }); }
     else if (j.text) {
-      s.msgs.push({ r: 'a', t: j.text, s: j.safety === 'crisis' ? 'crisis' : j.safety ? 'safe' : '' });
+      s.msgs.push({ r: 'a', t: j.text, h: j.safety ? undefined : j.hook, c: j.safety ? undefined : j.chips, s: j.safety === 'crisis' ? 'crisis' : j.safety ? 'safe' : '' });
       if (typeof j.left === 'number') s.left = j.left;
       if (j.stop) s.stop = true;
       if (j.safety) X.T.track('chat_safety', { safety: j.safety }); else X.T.track('chat_reply', { ch: f.ch, n: FREE - s.left });
       m.markDay(day, { c: 1 });
     } else { s.msgs.pop(); X.toast(j.error || (code === 403 ? '지금은 이용할 수 없어요' : '다시 시도해 주세요')); }
+    if (s.left <= 0) closing();
     save(s); render();
   }
   function more() {

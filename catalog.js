@@ -84,6 +84,12 @@ export const GAMES = {
     desc: '부산 영도대교점에서 시작하는 작은 감성커피. 원두를 볶고 새벽숲·제주 블루솔트·마이감성 라떼를 내려 손님에게 내어 주세요. 나무와 돌과 바람으로 가게를 꾸밀수록 손님이 늘고, 매일 찾아오는 단골들의 사연을 끝까지 들으면 그 사람만의 「시 한 줄」 액자를 벽에 걸 수 있어요.',
     path: 'games/gamsung/', cover: 'covers/gamsung.png', icon: 'covers/gamsung_icon.png', time: '5~15분',
   },
+  pae: {
+    title: '오늘의 패', en: "Today's Hand", genre: '카드 퍼즐', color: '#B3262B',
+    tagline: '오늘의 운세로 섞인 한 벌, 열두 달을 넘겨라',
+    desc: '그날의 운세로 섞인 꽃패 한 벌로 1월부터 12월까지 관문을 넘어요. 손패에서 골라 족보를 맞추면 점수가 미리 보이고, 제철 패는 두 배. 장터에서 부적을 사 모아 나만의 조합을 만들고, 계절마다 기다리는 계절신을 꺾어 보세요.',
+    path: 'games/pae/', cover: 'covers/pae.png', icon: 'covers/pae_icon.png', time: '12~15분',
+  },
   idle: {
     title: '여명기사단 키우기', en: 'Knights of Dawn: Idle', genre: '방치형 RPG', color: '#2A3A8A',
     tagline: '해가 사라진 대륙에 새벽을 되찾는 기사단',
@@ -105,7 +111,7 @@ export const SAVES = {
   witch: ['witch_whiskers_v1'], ocean: ['dessertpop_save_v1'], racer: ['honk_rush_v1'], blocks: ['panda_blocks_v1'],
   dice: ['rune_dice_v1'], war: ['front_tactics_v1', 'front_tactics_maps', 'front_tactics_resume'], seek: ['his_secret_v1'],
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
-  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'],
+  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'],
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
@@ -113,7 +119,7 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
 //   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드로 열기/소장은 의뢰사 계약 확인 전까지 X(광고로만)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
-export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung'];
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'blade', 'bagel', 'gamsung', 'pae'];
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
 // 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:

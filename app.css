@@ -442,3 +442,20 @@ body.playing #app { visibility: hidden; }
 .sdcard .sdgo { background: rgba(13,11,12,.55); border: 1px solid rgba(244,236,220,.35); box-shadow: none; font-size: 13.5px; }
 @media (hover: hover) { .mchip:hover { border-color: var(--sgold); } }
 @media (prefers-reduced-motion: reduce) { .sdhook.buy .hbtn { animation: none; } }
+
+/* ── 유료 미리보기 궁금증 (2026-10-28 과제 G): 목차 · 절벽 · 잠긴 장 첫 문장 · 사이사이 열기 ── */
+.ptoc { margin: 0 16px 14px; padding: 14px 16px; border-radius: 16px; background: var(--ink3); border: 1px solid var(--sline); }
+.ptoc h3 { margin: 0 0 8px; font: 800 16px serif; } .ptoc h3 small { margin-left: 6px; font: 600 12px sans-serif; color: var(--sgold); }
+.ptoc ol { margin: 0; padding: 0; list-style: none; } .ptoc li { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.ptoc li i { flex: none; width: 34px; font-style: normal; font-size: 11px; color: var(--sgold); padding-top: 2px; } .ptoc li.lk i { color: var(--paper2); }
+.ptoc li b { display: block; font-size: 13.5px; font-weight: 700; } .ptoc li small { display: block; margin-top: 2px; font-size: 12px; color: #ffb4b4; }
+.pcliff { position: relative; margin: 4px 16px 14px; padding: 14px 16px 18px; border-left: 3px solid var(--blood2); background: linear-gradient(90deg, rgba(179,18,42,.14), transparent); border-radius: 0 14px 14px 0; }
+.pcliff small { color: var(--sgold); font-size: 11px; letter-spacing: 2px; } .pcliff p { margin: 4px 0 0; font: 700 15px/1.6 serif; color: var(--paper); }
+.pcliff::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 18px; background: linear-gradient(0deg, var(--ink, #0d0b0c), transparent); }
+.rsec.lock .psub { margin: -2px 0 6px; font-size: 13px; color: #ffb4b4; font-weight: 700; }
+.rsec.lock .plead { color: var(--paper); line-height: 1.65; } .rsec.lock .plead .blur { color: var(--paper2); }
+.pinbuy { margin: 0 16px 14px; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--blood2); text-align: center; } .pinbuy span { display: block; margin-bottom: 8px; font-size: 12.5px; color: var(--paper2); } .pinbuy .sdbtn { margin: 0; }
+/* AI 상담 이야기 잇기 (과제 G): 떡밥 한 줄 · 관련 풀이 한 줄 · 마무리 */
+.aim .aihook { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed rgba(232,201,138,.35); color: #E8C98A; font-weight: 700; font-size: 13.5px; }
+.aim .aipaid { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(13,11,12,.5); border: 1px solid var(--sline); font-size: 12.5px; color: #ffb4b4; cursor: pointer; }
+.aim.end { border-color: #E8C98A; background: linear-gradient(135deg, rgba(232,201,138,.12), transparent); }
