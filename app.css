@@ -267,3 +267,4 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 .saveat .lnk { border: 0; background: none; padding: 0; color: var(--sub); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
 .tile .own { position: absolute; right: 6px; bottom: 6px; font: 11px 'Jua'; color: #3a2400; background: linear-gradient(135deg, var(--gold), var(--gold2)); border-radius: 6px; padding: 1px 6px; }
 .item.rest { opacity: .6; }
+.tile .collab { position: absolute; left: 6px; top: 6px; font: 11px "Jua"; color: #fff; background: rgba(0,0,0,.55); border-radius: 6px; padding: 1px 6px; }

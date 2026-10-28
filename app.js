@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED } from './catalog.js?v=0.76.0';
-import * as R from './rules.js?v=0.76.0';
-import * as I from './install.js?v=0.76.0';
-import * as T from './track.js?v=0.76.0';
-import * as P from './pay.js?v=0.76.0';
-import * as A from './account.js?v=0.76.0';
-import * as C from './cloud.js?v=0.76.0';
-import * as BM from './bm.js?v=0.76.0';
+import { PLANNED } from './catalog.js?v=0.76.1';
+import * as R from './rules.js?v=0.76.1';
+import * as I from './install.js?v=0.76.1';
+import * as T from './track.js?v=0.76.1';
+import * as P from './pay.js?v=0.76.1';
+import * as A from './account.js?v=0.76.1';
+import * as C from './cloud.js?v=0.76.1';
+import * as BM from './bm.js?v=0.76.1';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.76.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.76.1').then(m => (FT = m));
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.76.0';
+const VERSION = '0.76.1';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -72,7 +72,7 @@ function renderToday() {
       <div class="box"><div class="k">다음 게임 공개까지</div><div class="v" id="cd">--:--:--</div></div>
       <div class="box mystery"><div class="qmark"><span>?</span></div><div><div class="k">내일의 게임</div><div class="jua" style="font-size:17px">두근두근…</div></div></div>
     </div>
-    ${R.RULES.openAll ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : (hasY ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : '') + `<div class="section"><h3>브랜드 콜라보</h3><span class="more">언제든 열려 있어요</span></div><div class="list">${R.BRAND.map(itemCard).join('')}</div>`}
+    ${R.RULES.openAll ? `<div class="section"><h3>모든 게임</h3><span class="more">테스트 기간 · 자유 플레이</span></div><div class="list">${R.ORDER.filter(g => g !== id).map(itemCard).join('')}</div>` : (hasY ? `<div class="section"><h3>어제의 게임</h3></div>${itemCard(yId)}` : '')}
     <div class="section"><h3>이용 방법</h3><span class="more" data-intro>자세히 ›</span></div>
     <div class="box" style="color:#DDD5FA">매일 자정, 모든 플레이어에게 <b class="jua" style="color:var(--gold)">같은 게임 하나</b>가 열려요. 플레이한 게임은 라이브러리에 모이고, 다른 날 다시 하려면 광고로 열 수 있어요.</div>
   </div>`;
@@ -317,20 +317,21 @@ function tick() { const el = $('#cd'); if (el) el.textContent = hms(R.msToTomorr
 function itemCard(id) {
   const g = G(id), lib = R.state().library[id];
   if (!R.listed(id)) return `<div class="item rest" data-rest="${id}"><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : '소장한 게임'}</div></div><span class="state badge">잠시 쉬는 중</span></div>`;
-  const a = R.access(id), [cls, label] = R.isBrand(id) && a === 'free' ? ['open', '콜라보'] : STATE_BADGE[a];
+  const a = R.access(id), [cls, label] = STATE_BADGE[a];
   const sub = lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : a === 'owned' ? `${g.genre} · 소장 · 아직 안 해 봤어요` : `${g.genre} · 아직 안 해 봤어요`;
   return `<div class="item" data-open="${id}"><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${sub}</div></div><span class="state badge ${cls}">${label}</span></div>`;
 }
 
 // ── 라이브러리 ─────────────────────────────────────
 function renderLibrary() {
-  const st = R.state(), lib = st.library, ids = R.myGames();
+  const st = R.state(), lib = st.library, ids = R.myGames().filter(id => !R.isBrand(id));
   const last = id => (lib[id] && lib[id].last) || '';
   const own = ids.filter(id => st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
   const rest = ids.filter(id => !st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
   return `<div>${header()}
     <h1 style="font-size:28px">라이브러리</h1>
     <div class="date">내 게임 ${ids.length}개${own.length ? ` · 소장 ${own.length}개` : ''}</div>
+    ${R.BRAND.length ? `<div class="section"><h3>🤝 브랜드관</h3><span class="more">브랜드와 함께 만든 게임</span></div><div class="list brandhall">${R.BRAND.map(itemCard).join('')}</div>` : ''}
     ${ids.length ? `${own.length ? `<div class="section"><h3>소장</h3></div><div class="list">${own.map(itemCard).join('')}</div>` : ''}${rest.length ? `${own.length ? '<div class="section"><h3>만난 게임</h3></div>' : ''}<div class="list">${rest.map(itemCard).join('')}</div>` : ''}`
       : `<div class="empty"><div class="big">📚</div><p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button></div>`}
   </div>`;
@@ -340,7 +341,7 @@ function renderLibrary() {
 function renderCollection() {
   const rel = R.released(), st = R.state(), lib = st.library, total = Math.max(PLANNED, R.DAILY.length);
   const met = rel.filter(id => lib[id]).length;
-  const tile = (id, n) => `<div class="tile" data-open="${id}"><img src="${G(id).icon}" alt="">${n ? `<span class="n">#${n}</span>` : ''}${st.owned[id] ? '<span class="own">소장</span>' : ''}${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`;
+  const tile = (id, n) => `<div class="tile" data-open="${id}"><img src="${G(id).icon}" alt="">${n ? `<span class="n">#${n}</span>` : ''}${st.owned[id] ? '<span class="own">소장</span>' : ''}${R.isBrand(id) ? '<span class="collab">콜라보</span>' : ''}${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`;
   const tiles = R.DAILY.map((id, i) => rel.includes(id) ? tile(id, i + 1) : `<div class="tile unk">?</div>`), soon = [];
   for (let i = R.DAILY.length; i < total; i++) soon.push(`<div class="tile unk" style="font-size:16px">곧 공개</div>`);
   return `<div>${header()}
@@ -348,7 +349,6 @@ function renderCollection() {
     <div class="date">만난 게임 ${met} / 공개 ${rel.length} / 전체 ${total}</div>
     <div class="progress"><i style="width:${(met / total) * 100}%"></i></div>
     <div class="grid">${tiles.join('')}</div>
-    ${R.BRAND.length ? `<div class="section"><h3>브랜드 콜라보</h3><span class="more">언제든 열려 있어요</span></div><div class="grid">${R.BRAND.map(id => tile(id, 0)).join('')}</div>` : ''}
     ${soon.length ? `<div class="section"><h3>다가올 게임</h3><span class="more">하루 하나씩 공개돼요</span></div><div class="grid">${soon.join('')}</div>` : ''}
   </div>`;
 }
@@ -407,10 +407,10 @@ function detail(id) {
     ? `<div class="saveat"><span>☁ 저장 위치 · <b>내 계정</b></span><small>${last ? `마지막 저장 ${when(last)}` : '게임을 닫으면 저장돼요'}${C.canUndo(id) ? ` · <button class="lnk" data-cundo="${id}">직전 저장으로 되돌리기</button>` : ''}</small></div>`
     : `<div class="saveat"><span>📱 저장 위치 · <b>이 기기</b></span><small>${progressLine(id)}</small></div>`;
   const actions = a !== 'locked'
-    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`
+    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own && !R.isBrand(id) ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`
     : `<button class="btn alt" data-ad="${id}">📺 광고 보고 ${R.RULES.adUnlock === 'day' ? '오늘 하루' : '한 판'} 플레이</button>
-       <button class="btn gold" data-gbuy="day" data-gid="${id}">🪙 10골드로 오늘 하루 열기</button>
-       <button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 언제든 + 기록을 계정에</button>
+       ${R.isBrand(id) ? '' : `<button class="btn gold" data-gbuy="day" data-gid="${id}">🪙 10골드로 오늘 하루 열기</button>`}
+       ${R.isBrand(id) ? '' : `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 언제든 + 기록을 계정에</button>`}
        <div class="note">오늘의 게임이 돌아오는 날엔 무료로 할 수 있어요</div>`;
   openSheet(`<div class="cover" role="img" aria-label="${g.title}" style="background-image:url('${g.cover}')"></div>
     ${g.logo ? '' : `<h2>${g.title}</h2><div class="en" style="color:var(--sub);font-size:13px;letter-spacing:1.5px">${g.en.toUpperCase()}</div>`}
