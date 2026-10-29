@@ -1,9 +1,9 @@
 // 오늘 페이지 — 날마다 다른 세트 · 틀 7종(자리 · 속지 · 테이프) · 내가 고르는 기분 도장/한 줄 · 날짜 도장 '쿵' · 공유 카드(9:16)
 //   운세 한 줄은 운영 연동 전까지 숨김 (dd.fortune 이 오면 그 자리에 씀)
-import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.92.3';
-import { S, day, dayKey, parseDay, save } from './save.js?v=0.92.3';
-import * as A from './audio.js?v=0.92.3';
-import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.92.3';
+import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.92.4';
+import { S, day, dayKey, parseDay, save } from './save.js?v=0.92.4';
+import * as A from './audio.js?v=0.92.4';
+import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.92.4';
 
 export function pickStickers(got, k) {
   const { lucky, tpl } = dailySet(k); const spots = PAGE_TPL[tpl].spots;

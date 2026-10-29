@@ -1,17 +1,17 @@
 // 판 화면: 관문 소개 → 손패 고르기(점수 미리보기) → 내기(점수 연출) / 바람 → 통과 · 장터 → 다음 달 … → 판 끝
 //   규칙은 전부 core/run.js(엔진) — 이 파일은 보여 주기와 입력만
-import { W, H, C, N } from '../config.js?v=0.92.3';
-import { load, save } from '../save.js?v=0.92.3';
-import { audio } from '../audio.js?v=0.92.3';
-import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.92.3';
-import { CardView, CW, CH } from '../cards.js?v=0.92.3';
-import { ambient, burst } from '../fx.js?v=0.92.3';
-import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.92.3';
-import { yakuRow } from '../yakuview.js?v=0.92.3';
-import { Run, TOOL, TUNE } from '../core/run.js?v=0.92.3';
-import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.92.3';
-import { GOD } from '../core/gods.js?v=0.92.3';
-import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.92.3';
+import { W, H, C, N } from '../config.js?v=0.92.4';
+import { load, save } from '../save.js?v=0.92.4';
+import { audio } from '../audio.js?v=0.92.4';
+import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.92.4';
+import { CardView, CW, CH } from '../cards.js?v=0.92.4';
+import { ambient, burst } from '../fx.js?v=0.92.4';
+import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.92.4';
+import { yakuRow } from '../yakuview.js?v=0.92.4';
+import { Run, TOOL, TUNE } from '../core/run.js?v=0.92.4';
+import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.92.4';
+import { GOD } from '../core/gods.js?v=0.92.4';
+import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.92.4';
 
 const S_HAND = 0.52, S_STAGE = 0.42;
 const wait = (sc, ms) => new Promise(r => sc.time.delayedCall(Math.max(0, ms / (sc.speed || 1)), r));
