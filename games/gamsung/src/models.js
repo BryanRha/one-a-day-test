@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND, MENU } from './data.js?v=0.92.6';
+import { BRAND, MENU } from './data.js?v=0.92.7';
 
 const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
