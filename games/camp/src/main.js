@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.92.5';
-import * as G from './sim.js?v=0.92.5';
-import * as C from './chars.js?v=0.92.5';
-import * as C2 from './chars2d.js?v=0.92.5';
-import * as UI from './ui.js?v=0.92.5';
-import { sfx, music, setAudio } from './audio.js?v=0.92.5';
-import { bm } from './oad_bm.js?v=0.92.5';
-import { installBack } from './oad.js?v=0.92.5';
+import * as D from './data.js?v=0.92.6';
+import * as G from './sim.js?v=0.92.6';
+import * as C from './chars.js?v=0.92.6';
+import * as C2 from './chars2d.js?v=0.92.6';
+import * as UI from './ui.js?v=0.92.6';
+import { sfx, music, setAudio } from './audio.js?v=0.92.6';
+import { bm } from './oad_bm.js?v=0.92.6';
+import { installBack } from './oad.js?v=0.92.6';
 
 const Q = new URLSearchParams(location.search);
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
@@ -19,20 +19,37 @@ const S = G.S, R = G.R, IMG = UI.IMG;
 const frame = document.getElementById('frame'), board = document.getElementById('board'), world = document.getElementById('world'), taps = document.getElementById('taps');
 const bootBar = document.querySelector('#boot .ld i'); const setBoot = p => { if (bootBar) bootBar.style.width = Math.round(p * 100) + '%'; };
 /* 화면 맞추기: 더 길쭉한 화면(폴드 등)은 판을 가운데 두고 프레임만 길게 → HUD 는 화면 끝 (퀄리티 B5) */
-let OFFY = 0; const F = (x, y) => [x, y + OFFY];
-function fit() { const tall = innerHeight / innerWidth > H / W, s = tall ? innerWidth / W : innerHeight / H, FH = tall ? Math.round(innerHeight / s) : H;
-  frame.style.height = FH + 'px'; OFFY = Math.round((FH - H) / 2); frame.classList.toggle('tall', OFFY > 8); board.style.top = OFFY + 'px'; frame.style.transform = `translate(-50%,-50%) scale(${s})`; UI.setOffY && UI.setOffY(OFFY); }
-fit(); addEventListener('resize', fit);
+/* ── 넓은 세계 + 움직이는 카메라 (대표 피드백 10-30: 화면이 고정돼 좌우가 잘려 보임) ──
+   세계 = 판 좌표 x −420 ~ 1140 (가운데 720 은 캠프 · 양옆은 이어 그린 숲 · 잔디) · 화면 비율에 맞춰 보이는 폭이 정해짐 · UI 는 화면에 고정된 720 폭 기둥 */
+const WX0 = -420, WX1 = 1140, uiEl = document.getElementById('ui'), board2 = document.getElementById('board2');
+let FS = 1, FW = 720, FH = 1560, UIX = 0;
+const CAMV = { x: 360, y: 780, z: 1, vx: 0, vy: 0, tw: null };
+const baseZ = () => Math.max(FH / H, FW / (WX1 - WX0));
+const camZ = () => baseZ() * CAMV.z;
+function camClamp() { const z = camZ(), w = FW / z, h = FH / z; const cx0 = WX0 + w / 2, cx1 = WX1 - w / 2; CAMV.x = cx0 > cx1 ? 360 : Math.max(cx0, Math.min(cx1, CAMV.x)); const cy0 = h / 2, cy1 = H - h / 2; CAMV.y = cy0 > cy1 ? H / 2 : Math.max(cy0, Math.min(cy1, CAMV.y)); }
+let VIEW = { l: 0, t: 0, z: 1, w: 720, h: 1560 };
+function camApply() { camClamp(); const z = camZ(), w = FW / z, h = FH / z, l = CAMV.x - w / 2, t = CAMV.y - h / 2; VIEW = { l, t, z, w, h };
+  const tf = `translate(${(-l * z).toFixed(2)}px, ${(-t * z).toFixed(2)}px) scale(${z.toFixed(4)})`; board.style.transform = tf; board2.style.transform = tf;
+  if (typeof cam !== 'undefined') { cam.left = l - W / 2; cam.right = l + w - W / 2; cam.top = H / 2 - t; cam.bottom = H / 2 - (t + h); cam.updateProjectionMatrix(); } }
+/* 판 좌표 → UI 기둥 좌표 (날아가는 코인 · 손가락 안내) */
+const F = (x, y) => [(x - VIEW.l) * VIEW.z - UIX, (y - VIEW.t) * VIEW.z];
+let camInit = false;
+function fit() { FS = Math.min(innerWidth / W, innerHeight / H); FW = innerWidth / FS; FH = innerHeight / FS; UIX = (FW - W) / 2;
+  frame.style.width = FW + 'px'; frame.style.height = FH + 'px'; frame.style.transform = `scale(${FS})`; uiEl.style.left = UIX + 'px';
+  if (typeof renderer !== 'undefined') { renderer.setPixelRatio(Math.min(2, devicePixelRatio) * FS); renderer.setSize(FW, FH); renderer.domElement.style.width = FW + 'px'; renderer.domElement.style.height = FH + 'px'; }
+  if (!camInit) { camInit = true; const h = FH / camZ(); if (h < H) CAMV.y = H - h / 2 - 70; }   /* 넓은 화면은 처음에 키친 · 잔디 쪽이 보이게 */
+  camApply(); }
 setBoot(0.15);
 
 /* ── three ── */
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(W, H); renderer.setClearColor(0, 0);
-renderer.domElement.style.cssText = 'position:absolute;left:0;top:0;width:720px;height:1560px;pointer-events:none;z-index:2';
-board.insertBefore(renderer.domElement, document.getElementById('fx'));
+renderer.setClearColor(0, 0);
+renderer.domElement.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;z-index:2';
+frame.insertBefore(renderer.domElement, board2);   /* 3D 는 화면 크기 캔버스 · 카메라 절두체가 세계를 따라감 */
 const scene = new THREE.Scene();
 const cam = new THREE.OrthographicCamera(-W / 2, W / 2, H / 2, -H / 2, -4000, 4000);
 cam.position.set(0, Math.sin(EL) * 1000, Math.cos(EL) * 1000); cam.lookAt(0, 0, 0);
+fit(); addEventListener('resize', fit);
 const toWorld = (sx, sy) => new THREE.Vector3(sx - W / 2, 0, (sy - H / 2) / Math.sin(EL));
 const toScreen = v => [v.x + W / 2, v.z * Math.sin(EL) + H / 2 - v.y * Math.cos(EL)];
 /* 빛: 배경 햇살과 같은 오른쪽 위에서 · 그늘은 하늘빛 보라가 섞인 따뜻한 색 (검정 X) */
@@ -119,6 +136,28 @@ function giftEl(g) { if (g.el && g.el.isConnected) return; const d = document.cr
     const k = Object.keys(got)[0]; UI.numPop(...F(g.x, g.y - 40), `+${D.fmt(got[k])} ${({ ...D.CUR, big: '도시락' })[k]}`); save(); };
   g.el = d; layer.ui.append(d); }
 
+/* ── 드래그로 둘러보기 · 두 손가락 확대 (0.85~1.4) · 관성 · 끝에서 부드럽게 멈춤 · 누르기와 끌기 구분(8px) ── */
+const ptrs = new Map(); let drag = null, pinch = null, eatClick = false;
+const fxy = e => [e.clientX / FS, e.clientY / FS];   /* 화면 → 프레임 좌표 */
+function onUI(e) { return !!e.target.closest('#ui #hud > *, #ui #bar, #ui #sheet .sh, #ui #sheet .shade, #ui #pop .dlg, #ui #pop .shade'); }
+frame.addEventListener('pointerdown', e => { if (onUI(e)) return; ptrs.set(e.pointerId, fxy(e)); CAMV.tw = null;
+  if (ptrs.size === 1) drag = { start: fxy(e), last: fxy(e), t: performance.now(), moved: false, vx: 0, vy: 0 };
+  else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: CAMV.z, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; if (drag) drag.moved = true; } }, true);
+addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; const p = fxy(e); ptrs.set(e.pointerId, p);
+  if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; zoomAt(mid, Math.max(0.85, Math.min(1.4, pinch.z * d / pinch.d))); return; }
+  if (!drag) return; const dx = p[0] - drag.last[0], dy = p[1] - drag.last[1]; if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) * FS < 8) return;
+  drag.moved = true; const z = camZ(), now = performance.now(), dt = Math.max(1, now - drag.t); CAMV.x -= dx / z; CAMV.y -= dy * 0.6 / z; drag.vx = drag.vx * 0.6 + (-dx / z) / dt * 1000 * 0.4; drag.vy = drag.vy * 0.6 + (-dy * 0.6 / z) / dt * 1000 * 0.4; drag.last = p; drag.t = now; camApply(); });
+const endPtr = e => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size && drag) { if (drag.moved) { eatClick = true; CAMV.vx = drag.vx; CAMV.vy = drag.vy; setTimeout(() => { eatClick = false; }, 60); } drag = null; } };
+addEventListener('pointerup', endPtr); addEventListener('pointercancel', endPtr);
+addEventListener('click', e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);   /* 끈 다음의 '누름'은 무시 */
+frame.addEventListener('wheel', e => { if (onUI(e)) return; e.preventDefault(); zoomAt(fxy(e), Math.max(0.85, Math.min(1.4, CAMV.z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)))); }, { passive: false });
+function zoomAt(mid, nz) { const z0 = camZ(), wx = VIEW.l + mid[0] / z0, wy = VIEW.t + mid[1] / z0; CAMV.z = nz; const z1 = camZ(); CAMV.x = wx - mid[0] / z1 + FW / z1 / 2; CAMV.y = wy - mid[1] / z1 + FH / z1 / 2; camApply(); }
+/* 카메라가 부드럽게 그곳으로 (구역 열림 · 목표 누름) */
+export function camTo(x, y, z) { CAMV.tw = { x0: CAMV.x, y0: CAMV.y, z0: CAMV.z, x1: x, y1: y, z1: z ?? CAMV.z, t: 0 }; CAMV.vx = CAMV.vy = 0; }
+function camStep(dt) {
+  if (CAMV.tw) { const w = CAMV.tw; w.t += dt / 0.9; const k = w.t >= 1 ? 1 : 1 - (1 - w.t) ** 3; CAMV.x = w.x0 + (w.x1 - w.x0) * k; CAMV.y = w.y0 + (w.y1 - w.y0) * k; CAMV.z = w.z0 + (w.z1 - w.z0) * k; if (w.t >= 1) CAMV.tw = null; camApply(); return; }
+  if (!drag && (Math.abs(CAMV.vx) > 2 || Math.abs(CAMV.vy) > 2)) { const x0 = CAMV.x, y0 = CAMV.y; CAMV.x += CAMV.vx * dt; CAMV.y += CAMV.vy * dt; const f = Math.exp(-dt * 4.2); CAMV.vx *= f; CAMV.vy *= f; camApply(); if (Math.abs(CAMV.x - (x0 + CAMV.vx * 0)) < 0.01 && CAMV.x !== x0 + 0) {} if (CAMV.x === x0) CAMV.vx = 0; if (CAMV.y === y0) CAMV.vy = 0; }   /* 관성 · 끝(카메라 한계)에 닿으면 멈춤 */
+}
 /* ── 사람들 ── */
 const people = new Set();
 const mk = (look, x, y, seed) => {
@@ -178,7 +217,7 @@ function dust(x, y) { for (let i = 0; i < 14; i++) { const a = rnd(Math.PI * 0.9
 function star(x, y, r, a) { fx.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * 0.35 : r, an = a + i * Math.PI / 4; fx.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); } fx.closePath(); fx.fill(); }
 function heartP(x, y, s, al) { fx.save(); fx.translate(x, y); fx.scale(s, s); fx.globalAlpha = al; fx.fillStyle = '#FF7B8A'; fx.strokeStyle = '#B04A5A'; fx.lineWidth = 2.5; fx.beginPath(); fx.moveTo(0, 8); fx.bezierCurveTo(-16, -4, -9, -16, 0, -7); fx.bezierCurveTo(9, -16, 16, -4, 0, 8); fx.fill(); fx.stroke(); fx.restore(); }
 function draw2d(dt, now) {
-  fx.clearRect(0, 0, W, H);
+  fx.setTransform(1, 0, 0, 1, 0, 0); fx.clearRect(0, 0, 1560, 1560); fx.setTransform(1, 0, 0, 1, -WX0, 0);   /* 세계 폭 캔버스 (x −420 부터) */
   /* 햇살 */
   fx.save(); fx.globalCompositeOperation = 'lighter'; const sa = 0.045 + 0.02 * Math.sin(now * 0.6);
   for (let i = 0; i < 3; i++) { const g = fx.createLinearGradient(560, 0, 300, 760); g.addColorStop(0, `rgba(255,250,225,${sa})`); g.addColorStop(1, 'rgba(255,250,225,0)'); fx.fillStyle = g; fx.beginPath(); fx.moveTo(560 + i * 70, 0); fx.lineTo(620 + i * 70, 0); fx.lineTo(330 + i * 90, 760); fx.lineTo(250 + i * 90, 760); fx.fill(); }
@@ -278,7 +317,7 @@ function onEvent(e) {
     case 'visitorGone': visLeave(e.path); break;
     case 'build': { render(); const p = D.PADS.find(x => x.id === e.pid); const im = facEl[e.pid]; if (im) im.classList.add('pop'); dust(p.pos[0], p.pos[1] + 20); burst(p.pos[0], p.pos[1] - 40, 'sparkle', 18); sfx('build'); syncStaff(); break; }
     case 'upgrade': { const t = e.target, pos = t === 'oven' ? D.KITCHEN.oven : D.PADS.find(x => x.id === t).pos; if (e.tier) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 26); dust(pos[0], pos[1]); sfx('tier'); } else { const im = facEl[t]; if (im) { im.classList.remove('bump'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 6); } break; }
-    case 'workDone': case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
+    case 'workDone': case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
     case 'zoneWork': render(); break;
     case 'levelup': hero && hero.play('wave'); break;
   }
@@ -309,7 +348,7 @@ const walkStat = { frames: 0, checks: 0, bad: 0, samples: [] }; const recentPath
 function walkCheck() { walkStat.frames++; for (const p of people) { const [x, y] = toScreen(p.root.position); if (y > 1640) continue; walkStat.checks++; const WK = G.walkMap; if (!(WK.walkable(x, y) && (WK.pathDist(x, y) <= 14 || WK.branchDist(x, y) <= 14))) { walkStat.bad++; if (walkStat.samples.length < 10) walkStat.samples.push([Math.round(x), Math.round(y), p.look.cut || p.look.name, p.act, JSON.stringify((p.__path || []).map(q => q.map(Math.round))), p.target ? toScreen(p.target).map(Math.round) : null]); } } }
 let dbg = null;
 function drawDebug() {
-  if (!dbg) { dbg = document.createElement('canvas'); dbg.width = 720; dbg.height = 1560; dbg.style.cssText = 'position:absolute;left:0;top:0;width:720px;height:1560px;z-index:8;pointer-events:none'; board.append(dbg); }
+  if (!dbg) { dbg = document.createElement('canvas'); dbg.width = 720; dbg.height = 1560; dbg.style.cssText = 'position:absolute;left:0;top:0;width:720px;height:1560px;z-index:8;pointer-events:none'; board2.append(dbg); }
   const x = dbg.getContext('2d'), WK = G.walkMap, C8 = WK.G.CELL, grid = WK.G.grid(); x.clearRect(0, 0, 720, 1560);
   for (let gy = 0; gy < WK.G.GH; gy++) for (let gx = 0; gx < WK.G.GW; gx++) { x.fillStyle = grid[gy * WK.G.GW + gx] ? 'rgba(80,200,120,.22)' : 'rgba(220,60,60,.10)'; x.fillRect(gx * C8, gy * C8, C8, C8); }
   x.lineWidth = 2; for (const o of D.OCCLUDE) { x.strokeStyle = '#7A4AE0'; x.beginPath(); o.poly.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.stroke(); x.setLineDash([6, 4]); x.beginPath(); x.moveTo(0, o.base); x.lineTo(720, o.base); x.stroke(); x.setLineDash([]); }
@@ -361,7 +400,7 @@ let offlineRes = null;
 }
 if (S.audio) setAudio(S.audio); else if (S.muted) setAudio({ sfx: false, bgm: false });
 setBoot(0.4);
-const ctx = { portrait, save, render, fullBody, pressFx: el => pressFx(el), reskin: () => makeHero(), padPos: id => { if (id === 'ovenBody') return F(D.KITCHEN.oven[0] - 20, D.KITCHEN.oven[1] - 30); if (id === 'dish') { const el = [...dishEls.values()][0]; return el ? F(parseFloat(el.style.left), parseFloat(el.style.top)) : null; } const p = id === 'oven' ? D.P(772, 945) : (D.PADS.find(x => x.id === id) || {}).pos; return p && F(...p); },
+const ctx = { portrait, save, render, fullBody, pressFx: el => pressFx(el), camTo: (x, y) => camTo(x, y), padWorld: id => id === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === id) || {}).pos, reskin: () => makeHero(), padPos: id => { if (id === 'ovenBody') return F(D.KITCHEN.oven[0] - 20, D.KITCHEN.oven[1] - 30); if (id === 'dish') { const el = [...dishEls.values()][0]; return el ? F(parseFloat(el.style.left), parseFloat(el.style.top)) : null; } const p = id === 'oven' ? D.P(772, 945) : (D.PADS.find(x => x.id === id) || {}).pos; return p && F(...p); },
   tryOn: sec => { tryUntil = performance.now() + sec * 1000; makeHero(); UI.closeSheet(); setTimeout(() => { if (performance.now() >= tryUntil - 50) { makeHero(); if (!S.skin) UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점에서 만나요'); } }, sec * 1000); },
   previewDeco: sec => { decoUntil = performance.now() + sec * 1000; render(); UI.closeSheet(); burst(...D.SET_POS, 'sparkle', 24); setTimeout(() => { render(); if (!S.shop.deco) UI.toast('미리 보기가 끝났어요'); }, sec * 1000); },
   fx: (k, t) => { const pos = t === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === t) || {}).pos; if (pos) burst(pos[0], pos[1] - 40, 'sparkle', 8); } };
@@ -395,7 +434,7 @@ if (Q.get('demo') === 'behind') {   /* 확인용: 건물 뒤를 지나는 손님
   const loop = (look, a, b) => { const p = mk(C.LOOKS[look], ...a, 3); const go = (x, y) => { const r = G.walkMap.route(toScreen(p.root.position), [x, y]); walkPath(p, r, G.walkMap.pathLen(r) / 55, () => go(...(x === a[0] ? b : a))); }; go(...b); };
   loop('hiker', D.P(120, 760), D.P(470, 620)); loop('couple', D.P(560, 700), D.P(830, 700)); loop('grandma', D.P(300, 690), D.P(130, 750));
 }
-window.__camp = { G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx };
+window.__camp = { G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
 
 /* ── 반복 ── */
 const SPEED = Math.max(0.1, +(Q.get('speed') || 1));
@@ -408,7 +447,7 @@ function loop(t) {
   const dt = Math.min(0.1, rdt) * SPEED; let left = dt; while (left > 0) { const s = Math.min(0.25, left); G.step(s); left -= s; }
   for (const e of G.drain()) onEvent(e);
   for (const p of people) p.update(Math.min(0.05, rdt), t / 1000);
-  sidestep(); walkCheck(); floatersMove();
+  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove();
   for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); if (v.p.act === 'eat' && Math.random() < rdt * 0.6) burst(x, y - (v.p.look.h || 60) * D.PERSP(y) - 6, 'heart', 1); }   /* 먹으면서 '맛있다' 하트 */
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 40; const cur = toScreen(s.p.root.position), dst = [h[0] + rnd(-8, 8), h[1] + rnd(-3, 3)]; G.walkMap.addAnchor(dst); walkPath(s.p, G.walkMap.route(cur, dst), G.walkMap.pathLen(G.walkMap.route(cur, dst)) / 40 + 0.3, () => s.p.face(360, 1000, 0.5)); }
   if (hero.act === 'idle' && Math.random() < rdt * 0.05) { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1600); }
@@ -420,7 +459,8 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 window.__loadMs = Math.round(performance.now());
+setTimeout(() => { document.getElementById('sideL').classList.add('on'); document.getElementById('sideR').classList.add('on'); }, 600);   /* 양옆 세계 그림은 첫 화면 뒤에 (4G 3초) */
 setBoot(1); setTimeout(() => { const b = document.getElementById('boot'); b.classList.add('gone'); setTimeout(() => b.remove(), 900);
-  board.classList.add('intro'); frame.classList.add('intro'); setTimeout(() => { board.classList.remove('intro'); frame.classList.remove('intro'); }, 2000);   /* 시작 연출 1.5초 */
+  board.classList.add('intro'); board2.classList.add('intro'); frame.classList.add('intro'); setTimeout(() => { board.classList.remove('intro'); board2.classList.remove('intro'); frame.classList.remove('intro'); }, 2000);   /* 시작 연출 1.5초 */
   setTimeout(() => { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1700); }, 1500); }, 150);
 requestAnimationFrame(loop);

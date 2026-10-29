@@ -1,5 +1,5 @@
 // 저장 — 기기(localStorage) 한 덩어리 · 원어데이 소장자는 같은 키를 계정 클라우드로 (catalog.js SAVES: diary: ['oad_diary_v1'])
-import { TOOLS_DAILY, PAGES } from './data.js?v=0.92.5';
+import { TOOLS_DAILY, PAGES } from './data.js?v=0.92.6';
 export const KEY = 'oad_diary_v1';
 const Q = new URLSearchParams(location.search);
 const NOSAVE = Q.get('nosave') === '1';

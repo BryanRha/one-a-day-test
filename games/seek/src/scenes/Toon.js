@@ -1,13 +1,13 @@
 // 웹툰 결말: 컷이 차례로 내려오고 말풍선이 하나씩 · 마지막 컷 반전 → "다음 화에 계속"
-import { W, H } from '../config.js?v=0.92.5';
-import { T, C, btn } from '../ui.js?v=0.92.5';
-import { audio } from '../audio.js?v=0.92.5';
-import { goPrev } from '../nav.js?v=0.92.5';
-import { load, save } from '../save.js?v=0.92.5';
-import { EPISODES, hero, seasonOf, epNo } from '../episodes.js?v=0.92.5';
-import { waitLeft, fmtWait } from '../bm.js?v=0.92.5';
-import { nextOffer } from '../bmui.js?v=0.92.5';
-import { starOnce } from '../cafe/state.js?v=0.92.5';
+import { W, H } from '../config.js?v=0.92.6';
+import { T, C, btn } from '../ui.js?v=0.92.6';
+import { audio } from '../audio.js?v=0.92.6';
+import { goPrev } from '../nav.js?v=0.92.6';
+import { load, save } from '../save.js?v=0.92.6';
+import { EPISODES, hero, seasonOf, epNo } from '../episodes.js?v=0.92.6';
+import { waitLeft, fmtWait } from '../bm.js?v=0.92.6';
+import { nextOffer } from '../bmui.js?v=0.92.6';
+import { starOnce } from '../cafe/state.js?v=0.92.6';
 
 export class ToonScene extends Phaser.Scene {
   constructor() { super('Toon'); }

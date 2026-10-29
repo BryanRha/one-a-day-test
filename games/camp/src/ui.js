@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.92.5';
-import * as G from './sim.js?v=0.92.5';
-import { bm } from './oad_bm.js?v=0.92.5';
-import { sfx, setAudio, AUD } from './audio.js?v=0.92.5';
-import { pushBack } from './oad.js?v=0.92.5';
+import * as D from './data.js?v=0.92.6';
+import * as G from './sim.js?v=0.92.6';
+import { bm } from './oad_bm.js?v=0.92.6';
+import { sfx, setAudio, AUD } from './audio.js?v=0.92.6';
+import { pushBack } from './oad.js?v=0.92.6';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -28,7 +28,7 @@ const PRAISE = ['멋져요!', '좋아요!', '훌륭해요!', '역시 셰프님!'
 const praise = () => PRAISE[Math.floor(Math.random() * PRAISE.length)];
 
 let ctx = null;   /* main 이 넘겨줌: { portrait(look), save(), reskin(), boardOf(el), padPos(id) } */
-const frame = $('#frame'), hudEl = $('#hud'), barEl = $('#bar'), sheetEl = $('#sheet'), popEl = $('#pop'), flyEl = $('#fly'), toastEl = $('#toast');
+const frame = $('#frame'), uiCol = $('#ui'), hudEl = $('#hud'), barEl = $('#bar'), sheetEl = $('#sheet'), popEl = $('#pop'), flyEl = $('#fly'), toastEl = $('#toast');
 
 /* ── 누름 탄성 (모든 .btn · .tab · .sbtn · .pill) ── */
 addEventListener('pointerdown', e => { const b = e.target.closest('.btn,.tab,.sbtn,.pill,.st,.x,.dishrdy,.tipb'); if (!b) return; b.classList.add('press'); sfx(b.classList.contains('tab') || b.classList.contains('st') ? 'tab' : 'tap'); const up = () => { b.classList.remove('press'); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); }; addEventListener('pointerup', up); addEventListener('pointercancel', up); }, true);
@@ -170,7 +170,7 @@ export function closeSheet(instant) {
 function bindBody(me) { me.body.querySelectorAll('[data-a]').forEach(b => { const [a, v, w] = b.dataset.a.split(':'); b.onclick = () => act(a, v, w, b, me); if (a === 'up') hold(b, () => act(a, v, w, b, me, true)); }); }
 function hold(b, f) { let t = null, n = 0; const stop = () => { clearTimeout(t); t = null; }; b.addEventListener('pointerdown', () => { n = 0; const go = () => { n++; f(); t = setTimeout(go, Math.max(70, 240 - n * 25)); }; t = setTimeout(go, 420); }); b.addEventListener('pointerup', stop); b.addEventListener('pointerleave', stop); b.addEventListener('pointercancel', stop); }
 function bump(me, key) { const c = me.body.querySelector(`[data-k="${key}"]`); if (!c) return; c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.04)', background: '#FFF6D0' }, { transform: 'scale(1)' }], { duration: 380, easing: 'cubic-bezier(.34,1.56,.64,1)' }); }
-const cardPos = b => { const r = b.getBoundingClientRect(), f = frame.getBoundingClientRect(), s = f.width / 720; return [(r.left + r.width / 2 - f.left) / s, (r.top + r.height / 2 - f.top) / s]; };
+const cardPos = b => { const r = b.getBoundingClientRect(), f = uiCol.getBoundingClientRect(), s = f.width / 720; return [(r.left + r.width / 2 - f.left) / s, (r.top + r.height / 2 - f.top) / s]; };
 export const boardPos = cardPos;
 
 /* ── 동작 ── */
@@ -483,16 +483,17 @@ function tut() {
   const s = TUT[S.tut]; if (s.done && s.done()) { S.tut++; sfx('reward'); if (S.tut < TUT.length) numPop(360, 900, praise()); ctx.save(); return tut(); }
   if (!s.done) { tutT += 0.5; if (tutT > s.wait) { S.tut++; tutT = 0; return tut(); } }   /* 시간으로 넘어가는 단계: 넘긴 뒤 새 단계 문구로 다시 그림 (이전 문구가 남던 버그 · 퀄리티 QA) */
   if (s.when && !s.when()) { if (hintEl) hintEl.style.display = 'none'; if (ptr) ptr.style.display = 'none'; return; }
-  if (!hintEl) { hintEl = document.createElement('div'); hintEl.id = 'hint'; frame.appendChild(hintEl); }
-  hintEl.style.display = cur || curDlg ? 'none' : ''; hintEl.style.top = (1112 + OFFY) + 'px'; const html = `<span>${s.say}</span>`; if (hintEl.dataset.i !== String(S.tut)) { hintEl.innerHTML = html; hintEl.dataset.i = S.tut; }
+  if (!hintEl) { hintEl = document.createElement('div'); hintEl.id = 'hint'; uiCol.appendChild(hintEl); }
+  hintEl.style.display = cur || curDlg ? 'none' : ''; hintEl.style.top = Math.round(uiCol.clientHeight * 0.71) + 'px'; const html = `<span>${s.say}</span>`; if (hintEl.dataset.i !== String(S.tut)) { hintEl.innerHTML = html; hintEl.dataset.i = S.tut; }
   let at = null; if (s.pad) at = ctx.padPos(s.pad); else if (s.at) at = ctx.padPos(s.at); else if (s.tab) { const t = barEl.querySelector(`[data-t="${s.tab}"]`); if (t && !(cur && cur.id === s.tab)) at = cardPos(t); }
   if (cur && s.tab && cur.id === s.tab) at = null; if (curDlg) at = null; if (cur && !s.tab) at = null;
-  if (at) { if (!ptr) { ptr = document.createElement('div'); ptr.className = 'pointer'; frame.appendChild(ptr); } ptr.style.display = ''; ptr.style.left = at[0] + 'px'; ptr.style.top = at[1] + 'px'; } else if (ptr) ptr.style.display = 'none';
+  if (at) { if (!ptr) { ptr = document.createElement('div'); ptr.className = 'pointer'; uiCol.appendChild(ptr); } ptr.style.display = ''; ptr.style.left = at[0] + 'px'; ptr.style.top = at[1] + 'px'; } else if (ptr) ptr.style.display = 'none';
 }
 export function init(c) { ctx = c; hud(); }
 /* 목표를 누르면: 할 수 있는 일로 바로 데려감 (한 번에) */
 function goalAct() { const g = G.goalNow(), a = (g.step && g.step.act) || ({ oven3: { k: 'up', v: 'oven' }, oven10: { k: 'up', v: 'oven' }, sol: { k: 'tab', v: 'staff' }, bada: { k: 'tab', v: 'staff' }, stew: { k: 'tab', v: 'menu', w: 'soup' }, cocoa: { k: 'tab', v: 'menu', w: 'drink' }, fridge: { k: 'tab', v: 'fac', w: 'amen' }, pot: { k: 'build', v: 'L1' }, drink: { k: 'build', v: 'L3' }, tent: { k: 'build', v: 'F1' }, ftable: { k: 'build', v: 'F2' }, dtable: { k: 'build', v: 'D1' }, tapsell: { k: 'tap' } }[g.id]) || (D.ZONES.find(z => z.id === g.id) ? { k: 'zone', v: g.id } : { k: 'tab', v: 'fac' });
-  sfx('tap'); if (a.k === 'up') facDialog(a.v); else if (a.k === 'build') buildDialog(a.v); else if (a.k === 'zone') zoneDialog(a.v); else if (a.k === 'tab') openTab(a.v, a.w); else toast('반짝이는 요리를 눌러 직접 팔아요 · 직접 팔면 2배!'); }
+  sfx('tap'); { const pos = a.k === 'up' || a.k === 'build' ? ctx.padWorld(a.v) : a.k === 'zone' ? (r => r && [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2])(D.ZONE_FOG[a.v]) : null; if (pos && ctx.camTo) ctx.camTo(pos[0], pos[1]); }
+  if (a.k === 'up') facDialog(a.v); else if (a.k === 'build') buildDialog(a.v); else if (a.k === 'zone') zoneDialog(a.v); else if (a.k === 'tab') openTab(a.v, a.w); else toast('반짝이는 요리를 눌러 직접 팔아요 · 직접 팔면 2배!'); }
 /* 캠프가 돌아가는 법 (처음 1분 · '하는 법' 버튼) — 핵심 루프를 그림으로 */
 export function loopPop(force) { if (!force && S.loopShown) return; S.loopShown = 1; ctx.save();
   const st = [['guest', '손님이 와요', 'deco/heart'], ['cook', '셰프가 구워요', 'food/bagel'], ['sell', '눌러서 팔면 2배!', 'deco/coin'], ['coin', '코인이 모여요', 'deco/coin'], ['up', '시설 · 메뉴 강화', 'ui/hammer'], ['more', '손님이 더 많이, 더 비싸게', 'ui/sparkle']];

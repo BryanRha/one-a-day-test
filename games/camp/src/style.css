@@ -3,26 +3,34 @@
   --pop: cubic-bezier(.34, 1.56, .64, 1); --soft: cubic-bezier(.22, 1, .36, 1); }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-font-smoothing: antialiased; margin: 0; height: 100%; background: #EAF4E4; overflow: hidden; touch-action: none; font-family: var(--ff); color: var(--ink); user-select: none; -webkit-user-select: none; }
-#frame { position: absolute; left: 50%; top: 50%; width: 720px; height: 1560px; overflow: hidden; background: #CFE8C2; transform-origin: 50% 50%; }
+#frame { position: absolute; left: 0; top: 0; width: 720px; height: 1560px; overflow: hidden; background: #CFE8C2; transform-origin: 0 0; touch-action: none; }
+/* 넓은 세계 + 카메라 (대표 피드백 10-30): 세계(#board · #board2)는 카메라 변환으로 움직이고, UI(#ui)는 화면에 고정된 720 폭 기둥 */
+.wl { position: absolute; left: 0; top: 0; width: 720px; height: 1560px; transform-origin: 0 0; }
+#board2 { z-index: 3; pointer-events: none; } #board2 > * { pointer-events: auto; } #board2 > #fx, #board2 > #intro, #board2 > [data-front] { pointer-events: none; }
+#ui { position: absolute; top: 0; height: 100%; width: 720px; left: 0; z-index: 10; pointer-events: none; } #ui > * { pointer-events: none; } #ui > #hud > *, #ui > #bar { pointer-events: auto; }
+#frame .wside { position: absolute; top: 0; width: 520px; height: 1560px; background: #7FA866; } #frame .wside.l { left: -500px; } #frame .wside.r { left: 700px; }
+#frame .wside.on { background: #7FA866 url(../assets/tile_forest.webp) 0 0 / 300px 450px repeat; } #frame .wside.r.on { background-position: 150px 80px; }
+#frame .wside .lawn { position: absolute; left: 0; right: 0; top: 1010px; bottom: 0; background: #9CC45E; -webkit-mask-image: linear-gradient(#0000, #000 70px); mask-image: linear-gradient(#0000, #000 70px); }
+#frame .wside.on .lawn { background: #9CC45E url(../assets/tile_lawn.webp) 0 0 / 260px 260px repeat; filter: saturate(.82) brightness(1.02) hue-rotate(-6deg); }
+#frame .bg { -webkit-mask-image: linear-gradient(90deg, #0000, #000 90px, #000 calc(100% - 90px), #0000); mask-image: linear-gradient(90deg, #0000, #000 90px, #000 calc(100% - 90px), #0000); }
 /* 세로로 긴 화면(폴드 등): 판은 가운데, 위아래는 같은 그림을 흐리게 늘여 이어 붙임 · HUD 는 화면 끝에 (퀄리티 B5) */
 #frame .bgx { position: absolute; left: -20%; top: -10%; width: 140%; height: 120%; object-fit: cover; filter: blur(22px) saturate(1.05); opacity: .95; }
-#board { position: absolute; left: 0; top: 0; width: 720px; height: 1560px; }
 #board::before, #board::after { content: ''; position: absolute; left: -10px; right: -10px; height: 60px; z-index: 0; pointer-events: none; }
 #board::before { top: -30px; background: linear-gradient(#0000, #0000); }
 /* 시작 연출 1.5초: 하늘에서 숲으로 내려오며 안개가 걷히고, HUD 는 뒤늦게 미끄러져 들어옴 (퀄리티 A2) */
-#board.intro > .bg, #board.intro > #world, #board.intro > canvas, #board.intro > #taps, #board.intro > div[data-front] { animation: camIn 1.5s cubic-bezier(.22,1,.36,1) both; transform-origin: 50% 70%; }
+#board.intro > .bg, #board.intro > .wside, #board.intro > #world, #board2.intro > #taps, #board2.intro > #fx, #board2.intro > div[data-front] { animation: camIn 1.5s cubic-bezier(.22,1,.36,1) both; transform-origin: 50% 70%; }
 @keyframes camIn { from { transform: translateY(-170px) scale(1.16); } to { transform: none; } }
-#intro { position: absolute; inset: -40px; z-index: 9; pointer-events: none; background: radial-gradient(ellipse at 50% 60%, #FFFBF2 30%, #FFFBF2ee 60%, #F4F8F2 100%); opacity: 0; }
-#board.intro #intro { animation: mistOut 1.5s ease-out both; }
+#intro { position: absolute; left: -1400px; right: -1400px; top: -400px; bottom: -400px; z-index: 9; pointer-events: none; background: radial-gradient(ellipse at 50% 60%, #FFFBF2 30%, #FFFBF2ee 60%, #F4F8F2 100%); opacity: 0; }
+#board2.intro #intro { animation: mistOut 1.5s ease-out both; }
 @keyframes mistOut { 0% { opacity: 1; } 35% { opacity: .85; } 100% { opacity: 0; transform: scale(1.25); } }
-#frame.intro #hud > * { animation: hudTop .6s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 1.05s; }
-#frame.intro #bar { animation: hudBot .6s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 1.15s; }
+#frame.intro #ui #hud > * { animation: hudTop .6s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 1.05s; }
+#frame.intro #ui #bar { animation: hudBot .6s cubic-bezier(.34,1.56,.64,1) both; animation-delay: 1.15s; }
 @keyframes hudTop { from { transform: translateY(-150px); opacity: 0; } }
 @keyframes hudBot { from { transform: translateY(240px); opacity: 0; } }
 #frame .bg { position: absolute; left: -79px; top: 0; width: 878px; height: 1560px; }
 #world { position: absolute; inset: 0; z-index: 1; }
 #world canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
-#fx { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+#fx { position: absolute; left: -420px; top: 0; width: 1560px; height: 1560px; z-index: 3; pointer-events: none; }
 #taps { position: absolute; inset: 0; z-index: 4; }
 #hud { position: absolute; left: 0; right: 0; top: 0; height: 160px; z-index: 10; pointer-events: none; }
 #hud > * { pointer-events: auto; }
@@ -216,7 +224,7 @@ html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-ad
 .packs { display: flex; gap: 10px; margin: 6px 0 16px; }
 .sbtn .ic2 { width: 40px; height: 40px; }
 
-#frame.tall #board > .bg { -webkit-mask-image: linear-gradient(#0000, #000 70px, #000 calc(100% - 70px), #0000); mask-image: linear-gradient(#0000, #000 70px, #000 calc(100% - 70px), #0000); }
+
 /* 직접 누르기 (대표 피드백) — 다 된 음식 · 응원 게이지 · 하트 팁 · 콤보 · 누름 탄성 */
 .dishrdy { position: absolute; width: 42px; height: 42px; margin: -21px 0 0 -21px; cursor: pointer; z-index: 10; animation: dishIn .45s var(--pop) both; }
 .dishrdy img { width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 3px 0 #9C827866); animation: dishHop 1s var(--pop) infinite; transform-origin: 50% 100%; transition: transform .12s; }
