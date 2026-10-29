@@ -1,8 +1,8 @@
 // 부대 색 (꾸미기 · 능력치 없음): 아군 유닛 · 건물의 파란 부분만 다른 색으로 칠함
 //   푸른 여단(기본) · 자수정 근위대(골드 상품 'color' 🪙250, hello().items 로 복원) · 허스키 은빛(소장자 전용, 무료)
 //   원어데이 밖(hello().ok=false)에서는 기본 색만 (저장된 선택은 그대로 둠)
-import { load, save } from './save.js?v=0.92.4';
-import { bm } from './oad_bm.js?v=0.92.4';
+import { load, save } from './save.js?v=0.92.5';
+import { bm } from './oad_bm.js?v=0.92.5';
 
 export const COLORS = {
   blue: { name: '푸른 여단', desc: '기본 부대 색', hex: 0x3E7FD8, css: '#3E7FD8' },

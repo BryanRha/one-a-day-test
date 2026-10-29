@@ -1,9 +1,9 @@
 // 패 그림 합성 (부팅 때 한 번): 원화 + 테두리(종류 색) + 달 표시 + 종류 도장 + 띠 리본 → 'card_<id>' 텍스처
 //   그림 속엔 글자가 없고, 판정에 쓰는 정보(달 · 종류 · 띠 색)는 전부 여기서 코드로 그림 (그림=판정)
 //   덱 데이터(kinds · ribbons · months)만 읽으므로 덱을 바꿔도 그대로
-import { FONT, C } from './config.js?v=0.92.4';
-import { rr } from './ui.js?v=0.92.4';
-import { audio } from './audio.js?v=0.92.4';
+import { FONT, C } from './config.js?v=0.92.5';
+import { rr } from './ui.js?v=0.92.5';
+import { audio } from './audio.js?v=0.92.5';
 
 export const CW = 330, CH = 495;   /* 텍스처 크기 (화면에선 줄여 씀) */
 // 표시 방식: 2 = 왼쪽 위 달 색 꼬리표(기본 — 대표 결정 2026-10-28: 부채꼴로 겹쳐도 달 · 종류가 크게 보임) · 1 = 예전 작은 원(?cardv=1)
