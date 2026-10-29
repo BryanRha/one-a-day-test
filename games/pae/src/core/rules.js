@@ -2,7 +2,7 @@
 //   덱(deck)의 데이터만 읽음 — 덱 파일을 바꿔도 이 파일은 그대로
 //   점수 = (족보 점수 + 점수에 든 패의 패 점수) × (족보 배수 + 보탬) × 부적 곱
 //   제철(이달의 꽃): 패 점수 ×2 · 배수 +1 / 금박: 배수 +2 / 자개: 점수 +20 / 겹 족보: 다른 갈래 족보가 함께 들면 그 배수를 더함
-import { CHARM } from './charms.js?v=0.91.5';
+import { CHARM } from './charms.js?v=0.91.6';
 
 export function makeRules(deck) {
   const seasonOf = m => { const i = deck.seasons.findIndex(s => s.months.includes(m)); return i >= 0 ? deck.seasons[i].id : null; };
