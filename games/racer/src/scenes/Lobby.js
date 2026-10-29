@@ -1,14 +1,14 @@
 // 차고: 메인 일러스트 + 드라이버 선택 · 자동차 선택 · 부품 강화 → 출발
-import { W, H } from '../config.js?v=0.90.5';
-import { txt, fmt, fit, button, toast, popup } from '../ui.js?v=0.90.5';
-import { audio } from '../audio.js?v=0.90.5';
-import { load, save } from '../save.js?v=0.90.5';
-import { wind } from '../fx.js?v=0.90.5';
-import * as M from '../meta.js?v=0.90.5';
-import { bm } from '../oad_bm.js?v=0.90.5';
-import { helloOnce } from '../bmflow.js?v=0.90.5';
-import { hallShown, hallPopup } from '../hall.js?v=0.90.5';
-import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.90.5';
+import { W, H, VERSION } from '../config.js?v=0.91.0';
+import { txt, fmt, fit, button, iconButton, toast, popup, soundToggles } from '../ui.js?v=0.91.0';
+import { audio } from '../audio.js?v=0.91.0';
+import { load, save } from '../save.js?v=0.91.0';
+import { wind } from '../fx.js?v=0.91.0';
+import * as M from '../meta.js?v=0.91.0';
+import { bm } from '../oad_bm.js?v=0.91.0';
+import { helloOnce } from '../bmflow.js?v=0.91.0';
+import { hallShown, hallPopup } from '../hall.js?v=0.91.0';
+import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.91.0';
 
 // 게임 코인 가격 (코인 그림 + 숫자) — 🪙 는 원어데이 골드 전용이라 게임 코인엔 쓰지 않음
 function coinTxt(scene, x, y, n, size) {
@@ -53,6 +53,8 @@ export class LobbyScene extends Phaser.Scene {
     logo.setShadow(0, 10, '#0B1630', 0, true, true);
     this.tweens.add({ targets: logo, scale: 1.05, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     txt(this, W / 2, 210, 'STRESS CHA-CHA-CHA', 40, '#FFFFFF', { stroke: '#1E2A52', thick: 10 });
+    // 설정 (효과음 · 배경음) — 달리는 화면의 멈춤 버튼과 같은 자리 · 같은 모양
+    this.setBtn = iconButton(this, W - 70, 300, 'ico_settings', () => this.settingsPopup(), 104);
     // 코인 · 최고 기록
     const top = artH - 20;
     this.add.rectangle(W - 200, top - 60, 330, 72, 0x1E2A52, 0.85).setStrokeStyle(4, 0xFFE14D);
@@ -198,6 +200,15 @@ export class LobbyScene extends Phaser.Scene {
     });
     draw();
     window.__skinPop = pop;
+  }
+
+  // 설정: 효과음 · 배경음 (달리는 중 '잠시 멈춤'에서도 똑같이 바꿀 수 있음)
+  settingsPopup() {
+    const pop = popup(this, '설정', 760, { depth: 2000 });
+    pop.content.add(txt(this, 0, -190, '달리는 중에도 「잠시 멈춤」에서 바꿀 수 있어요', 30, '#E8F0FF', { stroke: '#22105A', thick: 6 }));
+    pop.content.add(soundToggles(this, 0, 10, { size: 170, gap: 340 }));
+    pop.content.add(txt(this, 0, 290, `스트레스 차차차 v${VERSION}`, 26, '#B8C2E0', { stroke: '#22105A', thick: 5 }));
+    window.__setPop = pop;
   }
 
   start() {

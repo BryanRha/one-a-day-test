@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.1' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.3' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -24,10 +24,74 @@ export const ZONE_FOG = { forest: FOG(40, 380, 455, 705), pine: FOG(505, 450, 86
 
 /* ── 고정 건물 ── */
 export const WELCOME = { pos: P(340, 820), door: P(300, 905), deck: P(372, 914) };   /* 데크 벤치는 고양이 자리(왼쪽 끝)와 떨어뜨림 */   /* 웰컴센터: 체크인 · 매점 · 꾸미기 */
-export const KITCHEN = { pos: P(640, 860), oven: P(700, 880), stand: P(640, 930), pick: P(560, 945) };   /* 공용 키친 (빵 오븐) */
-export const ENTRY = [P(445, 1180), P(445, 1600)];   /* 오솔길 입구 → 화면 아래 */
+export const KITCHEN = { pos: P(640, 860), oven: P(700, 880), stand: P(676, 934), pick: P(560, 952) };   /* 공용 키친 (빵 오븐) */
+export const ENTRY = [P(445, 1180), P(445, 1640)];   /* 오솔길 입구 → 화면 아래 */
 export const CAT_SPOT = P(195, 905);
-export const TRAIL = [P(462, 1010), P(482, 700)];   /* 웰컴센터와 키친 사이 오솔길 (위쪽 구역으로 가는 길) */                 /* 캠핑장 고양이가 볕을 쬐는 웰컴센터 데크 */
+/* ── 원근 · 크기 (대표 피드백: 건물과 캐릭터 비율) ──
+   기준: 웰컴센터 유리문 높이 ≈ 배경 73px(바닥 y 880) → 판 74px · 어른 키 = 문 높이 × 0.8 ≈ 60px
+   화면 위(먼 곳)는 작게, 아래(가까운 곳)는 크게: y 에 따라 선형 (사람 · 고양이 · 강아지 · 시설 · 장식 · 앉는 자리 모두 같은 규칙) */
+export const DOOR_Y = Math.round(880 * BG_S), ADULT_H = 60;
+export const PERSP = y => Math.max(0.7, Math.min(1.3, 1 + (y - DOOR_Y) * 0.00048));
+export const FAC_K = 0.5, DECO_K = 0.42;   /* 시설 · 장식 그림 배율 (× PERSP) — 식탁 폭 ≈ 어른 키 1.3배 · 텐트 높이 ≈ 어른 1.4배 */
+
+/* ── 걷는 곳 (배경 '봄' 기준 · 배경 그림 좌표 → 판) · 가을 배경을 새로 그리면 같은 꼴로 WALKMAP.autumn 을 만든다 ──
+   walk: 길 · 잔디 · 마당 · 데크 다각형 + 길 띠(line · r) · zone 이 열려야 걸을 수 있음
+   block: 건물 · 조리대 · 식탁 · 호수 (지은 시설은 sim 이 따로 붙임) */
+const PP = pts => pts.map(([x, y]) => P(x, y)), LN = (pts, r, zone) => ({ zone, line: PP(pts), r: Math.round(r * BG_S) });
+export const WALKMAP = { spring: {
+  walk: [
+    { zone: 'lawn', poly: PP([[0, 1050], [380, 1040], [400, 1030], [470, 1030], [520, 1045], [864, 1060], [864, 1400], [660, 1450], [240, 1450], [0, 1400]]) },   /* 잔디 광장 */
+    { zone: 'lawn', poly: PP([[385, 1380], [505, 1380], [505, 1652], [385, 1652]]) },                                                    /* 아래 입구 길 */
+    { zone: 'lawn', poly: PP([[60, 925], [470, 925], [560, 945], [560, 1000], [470, 965], [60, 965]]) },                                  /* 웰컴센터 앞 흙마당 */
+    { zone: 'lawn', poly: PP([[350, 955], [475, 955], [475, 1050], [350, 1050]]) },                                                       /* 가운데 계단 */
+    { zone: 'lawn', poly: PP([[40, 760], [155, 750], [155, 965], [140, 1060], [0, 1060], [0, 800]]) },                                    /* 왼쪽 흙길 */
+    { zone: 'lawn', poly: PP([[150, 868], [462, 868], [482, 935], [150, 935]]) },                                                         /* 웰컴센터 데크 */
+    { zone: 'lawn', poly: PP([[478, 935], [500, 893], [782, 893], [792, 968], [560, 1005], [478, 1005]]) },                               /* 공용 키친 바닥 */
+    { zone: 'lawn', poly: PP([[560, 955], [795, 950], [805, 1000], [560, 1012]]) },                                                       /* 키친 앞 */
+    LN([[120, 748], [250, 706], [330, 680], [420, 650], [470, 610], [550, 560]], 26, 'forest'),                                          /* 숲으로 가는 왼쪽 오솔길 */
+    { zone: 'forest', poly: PP([[80, 480], [410, 470], [440, 600], [400, 690], [130, 738], [70, 620]]) },                                 /* 숲속 존 빈터 */
+    { zone: 'pine', poly: PP([[540, 520], [864, 510], [864, 780], [560, 780], [540, 640]]) },                                            /* 솔숲 · 애견 존 */
+    LN([[400, 645], [430, 590], [470, 530], [520, 470], [590, 428]], 24, 'valley'),                                                      /* 계곡으로 가는 길 */
+    LN([[335, 328], [450, 380], [520, 420], [600, 432], [645, 418]], 24, 'valley'),                                                      /* 호숫가 길 */
+    { zone: 'stay', poly: PP([[100, 228], [410, 232], [410, 300], [342, 300], [342, 340], [290, 340], [290, 300], [100, 292]]) },        /* 스테이 데크 · 계단 */
+  ],
+  block: [
+    { poly: PP([[150, 762], [200, 722], [500, 718], [505, 796], [474, 802], [470, 868], [150, 868]]) },   /* 웰컴센터 건물 */
+    { poly: PP([[495, 772], [800, 778], [796, 893], [495, 893]]) },                                        /* 키친 조리대 · 화덕 */
+    { poly: PP([[535, 880], [652, 880], [652, 930], [535, 930]]) },                                        /* 키친 식탁 */
+    { poly: PP([[0, 90], [292, 95], [292, 228], [0, 228]]) },                                              /* 스테이 건물 */
+    { poly: PP([[530, 210], [864, 190], [864, 420], [700, 420], [650, 404], [560, 350]]) },                /* 호수 */
+  ],
+} };
+/* ── 길 그래프 (대표 지시: "캐릭터가 길을 따라 다니게") · 배경에 그려진 오솔길 · 돌길 · 데크 위 점을 이음 · 잔디를 가로지르는 지름길 X
+   노드: [x, y, zone] (배경 그림 좌표) · 시설 · 식탁 앞 '서는 자리'는 가장 가까운 길에서 짧은 가지로 이어짐(walk.js) · 봄 · 가을 배경마다 따로 */
+const GN = (o) => Object.fromEntries(Object.entries(o).map(([k, [x, y, z]]) => [k, [...P(x, y), z]]));
+export const WALKGRAPH = { spring: {
+  nodes: GN({
+    E0: [445, 1645, 'lawn'], E1: [445, 1455, 'lawn'], LF: [445, 1392, 'lawn'], LSW: [320, 1405, 'lawn'], LSE: [570, 1405, 'lawn'], LW: [245, 1222, 'lawn'], LE: [650, 1222, 'lawn'],
+    LC: [445, 1196, 'lawn'], LT: [445, 1268, 'lawn'], TOP: [440, 1105, 'lawn'], LV: [322, 1112, 'lawn'], LWp: [195, 1248, 'lawn'], LEp: [698, 1252, 'lawn'], ST: [425, 1040, 'lawn'], PC: [420, 962, 'lawn'],
+    PW: [205, 952, 'lawn'], PLW: [95, 945, 'lawn'], PLN: [92, 800, 'lawn'], D0: [352, 926, 'lawn'], DK: [292, 908, 'lawn'], PE: [505, 945, 'lawn'], KF: [604, 970, 'lawn'], KS: [676, 942, 'lawn'], KE: [745, 970, 'lawn'],
+    T1: [114, 754, 'forest'], T2: [252, 694, 'forest'], T3: [330, 680, 'forest'], T4: [418, 650, 'forest'], FC: [300, 622, 'forest'], F1n: [200, 584, 'forest'], F2n: [318, 552, 'forest'], F2w: [262, 505, 'forest'], F2b: [325, 476, 'forest'],
+    T5: [470, 610, 'pine'], T6: [540, 570, 'pine'], PN1: [612, 590, 'pine'], PN1b: [700, 560, 'pine'], PG: [720, 634, 'pine'], PN2: [720, 672, 'pine'], PN3w: [622, 702, 'pine'], PN3: [655, 746, 'pine'], PS: [722, 750, 'pine'],
+    V1: [430, 590, 'valley'], V2: [470, 530, 'valley'], V3: [520, 470, 'valley'], LKa: [600, 432, 'valley'], LKe: [645, 418, 'valley'], LKb: [520, 420, 'valley'], LKc: [450, 380, 'valley'], LKd: [335, 330, 'valley'],
+    STa: [315, 302, 'stay'], STb: [250, 292, 'stay'], STn: [300, 252, 'stay'], STw: [150, 250, 'stay'],
+  }),
+  edges: [['E0', 'E1'], ['E1', 'LF'], ['E1', 'LSW'], ['E1', 'LSE'], ['LSW', 'LW'], ['LSE', 'LE'], ['LW', 'LC'], ['LE', 'LC'], ['LC', 'LT'], ['LW', 'LWp'], ['LE', 'LEp'], ['LC', 'TOP'], ['TOP', 'LV'], ['TOP', 'ST'], ['ST', 'PC'],
+    ['PC', 'PW'], ['PW', 'PLW'], ['PLW', 'PLN'], ['PC', 'D0'], ['D0', 'DK'], ['PC', 'PE'], ['PE', 'KF'], ['KF', 'KS'], ['KF', 'KE'],
+    ['PLN', 'T1'], ['T1', 'T2'], ['T2', 'T3'], ['T3', 'T4'], ['T3', 'FC'], ['FC', 'F1n'], ['FC', 'F2n'], ['F1n', 'F2w'], ['F2w', 'F2b'],
+    ['T4', 'T5'], ['T5', 'T6'], ['T6', 'PN1'], ['PN1', 'PN1b'], ['PN1', 'PG'], ['PG', 'PN2'], ['PN2', 'PN3w'], ['PN3w', 'PN3'], ['PN3', 'PS'],
+    ['T4', 'V1'], ['V1', 'V2'], ['V2', 'V3'], ['V3', 'LKa'], ['LKa', 'LKe'], ['LKa', 'LKb'], ['LKb', 'LKc'], ['LKc', 'LKd'], ['LKd', 'STa'], ['STa', 'STb'], ['STa', 'STn'], ['STn', 'STw']],
+} };
+WALKGRAPH.autumn = WALKGRAPH.spring;   /* 가을 배경은 행사 때 새로 그림 → 그 배경에 맞춰 이 꼴로 다시 만듦 (지금은 같은 배치 가정) */
+/* 건물이 사람을 가리는 부분 (배경을 그 모양대로 잘라 사람 위에 그림 · base = 바닥선: 그보다 위(뒤)에 선 사람만 가림) */
+export const OCCLUDE = [
+  { id: 'welcome', poly: PP([[146, 758], [186, 712], [502, 712], [508, 800], [476, 806], [472, 870], [146, 870]]), base: P(0, 868)[1] },
+  { id: 'kitchen', poly: PP([[492, 762], [802, 768], [798, 802], [788, 950], [756, 950], [758, 816], [522, 812], [520, 902], [492, 902]]), base: P(0, 893)[1] },
+  { id: 'stay', poly: PP([[0, 86], [294, 92], [294, 232], [0, 232]]), base: P(0, 228)[1] },
+];
+/* 서는 자리 (앵커): 셰프는 화덕 옆 · 도우미는 키친 식탁 앞에서 음식을 받음 */
+export const OVEN_PICK = P(612, 950);
+export const VISIT_SPOT = P(300, 1105), GIFT_SPOT = P(390, 985);   /* 떠돌이 음악가가 서는 곳 (잔디 광장 위쪽 · 길 옆) */                 /* 캠핑장 고양이가 볕을 쬐는 웰컴센터 데크 */
 
 /* ── 시설 ──
    명세서 2장 생산 축 3개: 조리(라인 3 · 15/17/19초) · 재료 손질(레시피 해금 · 판매가↑) · 휴식(60초마다 연구 포인트) + 특수(하루 횟수 · 충전)
@@ -61,7 +125,7 @@ export const PADS = [
   { id: 'N1', zone: 'pine', pos: P(740, 578), fac: 'hammock' },
   { id: 'V1', zone: 'valley', pos: P(650, 335), fac: 'playpool' },
   { id: 'V2', zone: 'valley', pos: P(530, 420), fac: 'footwash' },
-  { id: 'S1', zone: 'stay', pos: P(250, 250), fac: 'bbq' },
+  { id: 'S1', zone: 'stay', pos: P(236, 272), fac: 'bbq' },
 ];
 /* 공용 키친 설비 = 재료 손질 (명세서: 레시피마다 대응하는 손질 시설이 있어야 열림) · 웰컴센터 설비 = 휴식 · 방치 상한 */
 export const AMEN = {
@@ -96,8 +160,12 @@ export const menuCost = (m, lv) => Math.ceil((2 + m.step) * 10 ** (1 + Math.floo
 export const restRate = (fac, lv) => 5 * 1.25 ** (lv - 1) * fac.rp;   /* 1분마다 쉼 포인트 (명세서 휴식 60초 주기) */
 
 /* ── 치명 요리 (명세서 4-6): 판매가 3배 · 기본 확률 + 상품/패스 +5~10%p · 광고 10분 30% ── */
-/* 직접 누르기: 안 누르면 다 된 음식은 3초 뒤 도우미가 나름 · 누르면 바로 + 값 ×1.25 · 응원 연타 0.6초씩(게이지 12 · 초당 1.5 회복) · 팁 35% (6초 · 한 접시의 40%) · 콤보 1.5초 안 */
-export const TAP = { autoWait: 1.5, dishK: 1.25, cheerSec: 0.4, cheerMax: 10, cheerRegen: 0.6, tipP: 0.35, tipK: 0.45, tipLife: 6, comboGap: 1.5, comboK: 0.03 };
+export const TAP = { autoWait: 5, autoK: 0.5, priceK: 1.6, shelf: 8, cheerSec: 0.4, cheerMax: 10, cheerRegen: 0.6, tipP: 0.25, tipSec: 6, tipLife: 6, comboGap: 1.5, comboK: 0.03 };
+/* 누르기 크기 사다리 (보상 = 현재 수입 N초치 · 명세서 13-1): 요리 = 한 접시 정가 · 팁 6초치 · 구름 양 1번 12초치(최대 12번 = 2분 24초치) · 선물 바구니 30/60/120초치 · 떠돌이 손님 1시간치
+   틀: 직접 누르면 정가, 두면 5초 뒤 도우미가 반값으로 자동 판매 → 화면에는 "직접 팔면 2배!" (보너스 말투) · 진열은 처음 8칸 (꽉 차면 더 굽지 않음) */
+export const CLOUD = { every: [100, 170], life: 15, taps: 12, sec: 8, autoDelay: 4, autoTaps: 8, autoK: 1.2 };
+export const GIFTBOX = { every: [160, 280], life: 25, boxes: 3, table: [['coin', 39], ['rp', 33], ['stamp', 12], ['gem', 8], ['treat', 6], ['big', 2]], tiers: [30, 60, 120] };
+export const VISITOR = { every: [420, 720], life: 40, perDay: 1, sec: 3600, needLv: 4 };
 export const CRIT = { base: 0.05, mult: 3, adP: 0.30, adSec: 600 };
 
 /* ── 직원 (명세서 5장 · 4-3 호감도) ── 외형 · 메인 스킬 1 · 보조 0~1 · 호감도 1~10 (경험치 1·2·5×10^k)
@@ -137,13 +205,13 @@ export const lvNeed = lv => Math.round(40 * 1.25 ** (lv - 1));
 
 /* ── 미션 · 출석 · 플레이 시간 (명세서 7장 · retention_numbers.csv) ──
    오늘의 할 일 약 10개(1~50회 · 보상 = 티켓 또는 수입 20~40분치) + 전부 하면 보너스 / 반복 퀘스트 단계형 / 플레이 시간 5·10·20·40·60분 (우리는 하루 5~15분 → 5·10·15) / 28일 출석 */
-export const DAILY = [
-  { id: 'serve', name: '손님 {n}명 대접하기', n: 25, r: { min: 20 } },
-  { id: 'upgrade', name: '시설 {n}번 강화하기', n: 5, r: { min: 20 } },
-  { id: 'gift', name: '손님 선물 {n}개 받기', n: 3, r: { gem: 20 } },
-  { id: 'treat', name: '직원에게 간식 {n}번 주기', n: 2, r: { min: 30 } },
-  { id: 'crit', name: '대박 요리 {n}번 만들기', n: 3, r: { gem: 15 } },
+export const DAILY = [   /* 절반(4)은 직접 누르기 (명세서 13 · 사업 의견 5) */
+  { id: 'tapsell', name: '다 된 요리 {n}번 직접 팔기', n: 20, r: { min: 20 } },
+  { id: 'cloud', name: '구름 양 {n}번 쓰다듬기', n: 10, r: { gem: 15 } },
+  { id: 'giftpick', name: '선물 바구니 {n}번 열기', n: 1, r: { treat: 2 } },
   { id: 'cat', name: '고양이 노을이 쓰다듬기', n: 1, r: { treat: 2 } },
+  { id: 'upgrade', name: '시설 {n}번 강화하기', n: 5, r: { min: 20 } },
+  { id: 'crit', name: '대박 요리 {n}번 만들기', n: 3, r: { gem: 15 } },
   { id: 'menu', name: '메뉴 {n}번 맛 올리기', n: 1, r: { min: 40 } },
   { id: 'box', name: '숲 선물 상자 열기', n: 1, r: { gem: 10 } },
 ];
@@ -194,6 +262,7 @@ export const ADS = {
   gifts: { name: '바닥 선물 한꺼번에 받기', limit: 2 },
   restock: { name: '매점 진열 새로', limit: 2 },
   inst: { name: '즉시 완성', limit: 5 },
+  giftrest: { name: '선물 바구니 나머지 전부', limit: 3 },
 };
 export const STAMP_SHOP = [{ id: 'rabbit', cost: 15 }, { id: 'swing', cost: 15 }, { id: 'lanterns', cost: 12 }, { id: 'cushion', cost: 6 }];
 

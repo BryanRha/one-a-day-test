@@ -1,9 +1,9 @@
 // 판 밖 이야기: 덱 등록 · 오늘의 패(화투점) · 칭찬 · 판 끝 독설 한 줄 · 도감 기록 · 응원 부적 조건
-import { DECK as HWATU } from './deck/hwatu.js?v=0.90.5';
-import { makeRules } from './core/rules.js?v=0.90.5';
-import { hash, kstDay, Rng } from './core/rng.js?v=0.90.5';
-import { DAILY_POOL } from './core/charms.js?v=0.90.5';
-import { load, save } from './save.js?v=0.90.5';
+import { DECK as HWATU } from './deck/hwatu.js?v=0.91.0';
+import { makeRules } from './core/rules.js?v=0.91.0';
+import { hash, kstDay, Rng } from './core/rng.js?v=0.91.0';
+import { DAILY_POOL } from './core/charms.js?v=0.91.0';
+import { load, save } from './save.js?v=0.91.0';
 
 // 덱 등록: 다른 꽃패(원어데이 고유 덱 등)를 만들면 여기에 한 줄 추가 — 엔진 코드는 그대로
 export const DECKS_DEF = { hwatu: HWATU };

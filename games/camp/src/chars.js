@@ -8,11 +8,18 @@ const TAU = Math.PI * 2, lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
 let toWorld = null;
-export function setup(o) { toWorld = o.toWorld; SPRING = o.spring !== false; }
+let PERSP = () => 1, EL = 30 * Math.PI / 180;
+export function setup(o) { toWorld = o.toWorld; SPRING = o.spring !== false; if (o.persp) PERSP = o.persp; if (o.el) EL = o.el; }
 const grad = new THREE.DataTexture(new Uint8Array([214, 214, 214, 255, 255, 255, 255, 255]), 2, 1, THREE.RGBAFormat); grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
 const grad3 = new THREE.DataTexture(new Uint8Array([176, 176, 176, 255, 222, 222, 222, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat); grad3.minFilter = grad3.magFilter = THREE.NearestFilter; grad3.needsUpdate = true;   /* 봄판: 밝음 · 기본 · 그림자 3단 */
-const MATS = {}; const toon = (c, map) => MATS[c + (map ? map.uuid : '')] ||= new THREE.MeshToonMaterial({ color: map ? 0xffffff : c, map: map || null, gradientMap: SPRING ? grad3 : grad });
+/* 배경 수채와 결을 맞춘 툰 (대표 지시 10-29 · 3D 유지): 부드러운 3단 음영 · 그늘은 따뜻한 보라 · 갈색(조명 쪽에서) · 아주 옅은 종이 결 노이즈 */
+const grad3w = new THREE.DataTexture(new Uint8Array([168, 168, 168, 255, 214, 214, 214, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat); grad3w.minFilter = grad3w.magFilter = THREE.NearestFilter; grad3w.needsUpdate = true;
+const paper = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+    vec2 pc = floor(gl_FragCoord.xy / 2.0); float n = fract(sin(dot(pc, vec2(12.9898, 78.233))) * 43758.5453); float n2 = fract(sin(dot(floor(gl_FragCoord.xy / 9.0), vec2(39.3468, 11.1352))) * 24634.6345);
+    gl_FragColor.rgb *= 0.968 + 0.035 * n + 0.02 * n2; gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * vec3(1.02, 0.99, 0.96), 0.6);`); };
+const MATS = {}; const toon = (c, map) => MATS[c + (map ? map.uuid : '')] ||= (() => { const m = new THREE.MeshToonMaterial({ color: map ? 0xffffff : c, map: map || null, gradientMap: SPRING ? grad3w : grad }); m.onBeforeCompile = paper; return m; })();
 const outline = new THREE.MeshBasicMaterial({ color: 0x6A4630, side: THREE.BackSide });
+let SHT = null; function shadowTex() { if (SHT) return SHT; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.55, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); SHT = new THREE.CanvasTexture(c); return SHT; }
 export const sceneRef = { scene: null };
 const OUT = {};   /* 봄판 외곽선: 그 색의 진한 같은 계열 (검정 X) */
 function outlineFor(c) {
@@ -33,7 +40,7 @@ function pattern(kind, a, b) {
   else if (kind === 'fringe') { x.lineWidth = 3; for (let i = 0; i < 128; i += 10) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 10, 22); x.lineTo(i + 20, 0); x.stroke(); } for (let y = 30; y < 128; y += 14) for (let i = 0; i < 128; i += 14) { x.beginPath(); x.arc(i + (y % 28 ? 7 : 0), y, 3, 0, TAU); x.fill(); } }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(kind === 'stripe' ? 1 : 2, kind === 'stripe' ? 2 : 2); t.colorSpace = THREE.SRGBColorSpace; return PAT[k] = t;
 }
-outline.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', 'float wob = 1.0 + 0.25 * sin(position.x * 0.31 + position.y * 0.23) * sin(position.z * 0.27);\n vec3 transformed = position + normal * 2.1 * wob;'); };
+outline.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', 'float wob = 1.0 + 0.25 * sin(position.x * 0.31 + position.y * 0.23) * sin(position.z * 0.27);\n vec3 transformed = position + normal * 2.8 * wob;'); };
 const G = {}; const geo = (k, f) => G[k] ||= f();
 function part(parent, g, c, x = 0, y = 0, z = 0, line = true, map = null) {
   const m = new THREE.Mesh(g, toon(c, map)); m.position.set(x, y, z); parent.add(m);
@@ -121,7 +128,7 @@ function makePerson(o) {
   }
   /* 손에 드는 것 */
   const held = new THREE.Group(); held.position.set(0, 46, 32); torso.add(held); J.held = held;
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(30, 24), new THREE.MeshBasicMaterial({ color: 0x5A4A20, transparent: true, opacity: 0.25, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.5; root.add(sh); J.shadow = sh;
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(30, 24), new THREE.MeshBasicMaterial({ map: shadowTex(), color: 0x6A4A5A, transparent: true, opacity: 0.42, depthWrite: false }));   /* 배경 그림 같은 부드러운 접지 그림자 */ sh.rotation.x = -Math.PI / 2; sh.position.y = 0.5; root.add(sh); J.shadow = sh;
   return { root, J };
 }
 /* 소품 */
@@ -171,7 +178,8 @@ const BLEND = 0.3;
 
 export class Person {
   constructor(look, sx, sy, seed = Math.random() * 5) {
-    const m = makePerson(look); this.root = m.root; this.J = m.J; sceneRef.scene.add(this.root); this.root.scale.setScalar((look.size || 1.05) * 0.86);
+    const m = makePerson(look); this.root = m.root; this.J = m.J; sceneRef.scene.add(this.root); this.k0 = (look.h || 60) / 165; this.root.scale.setScalar(this.k0);   /* 키 = look.h (어른 = 문 높이 × 0.8) · 원근은 update 에서 */
+    this.meshes = []; this.root.traverse(o => { if (o.isMesh) this.meshes.push([o, o.renderOrder || 0]); });
     this.root.position.copy(toWorld(sx, sy)); this.look = look; this.seed = seed; this.speed = look.speed || 70;
     this.yaw = 0; this.act = 'idle'; this.t = 0; this.from = null; this.fromT = 9; this.cur = base(); this.walkPh = 0; this.carry = false;
     this.blinkAt = rnd(1, 4); this.blinkEnd = 0; this.fx = '';
@@ -180,7 +188,8 @@ export class Person {
   play(a) { if (a === this.act) return; this.from = { ...this.cur }; this.fromT = 0; this.act = a; this.t = 0; }
   walkTo(sx, sy, then) { this.target = toWorld(sx, sy); this.then = then; this.play('walk'); }
   face(sx, sy, k = 1) { const w = toWorld(sx, sy); this.yawT = Math.atan2(w.x - this.root.position.x, w.z - this.root.position.z) * k; }   /* k < 1: 카메라 쪽으로 돌려 얼굴이 보이게 */
-  hold(obj) { this.J.held.clear(); if (obj) this.J.held.add(obj); this.carry = !!obj; }
+  hold(obj) { this.J.held.clear(); if (obj) this.J.held.add(obj); this.carry = !!obj; this.refreshMeshes(); }
+  refreshMeshes() { this.meshes = []; this.root.traverse(o => { if (o.isMesh) this.meshes.push([o, o.renderOrder > 0 ? 0 : o.renderOrder || 0]); }); }
   update(dt, now) {
     this.t += dt; this.fromT += dt; const P = this.root.position;
     if (this.act === 'walk' && this.target) {
@@ -209,6 +218,8 @@ export class Person {
     let [e, m] = FACEOF[this.act] || ['open', 'smile']; if (e === 'open' && now < this.blinkEnd) e = 'closed';
     const key = e + m; if (key !== this.fx) { J.face.material.map = faceTex(e, m, !!this.look.lash); J.face.material.needsUpdate = true; this.fx = key; }
     J.shadow.scale.setScalar(1 - p.hipY * 0.01);
+    /* 원근 + 앞뒤 순서 (발 y 로 · 건물 가림판과 같은 규칙) */
+    const sy = P.z * Math.sin(EL) + 780; this.persp = PERSP(sy); this.root.scale.setScalar(this.k0 * this.persp); const base = Math.round((sy + 220) * 10); for (const [m, off] of this.meshes) m.renderOrder = base + off;
   }
 }
 

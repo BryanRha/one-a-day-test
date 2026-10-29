@@ -5,8 +5,8 @@
 import * as THREE from 'three';
 const TAU = Math.PI * 2, lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t), rnd = (a, b) => a + Math.random() * (b - a);
-let toWorld = null, scene = null, EL = 30 * Math.PI / 180;
-export function setup(o) { toWorld = o.toWorld; scene = o.scene; if (o.el) EL = o.el; }
+let toWorld = null, scene = null, EL = 30 * Math.PI / 180, PERSP = y => 1;
+export function setup(o) { toWorld = o.toWorld; scene = o.scene; if (o.el) EL = o.el; if (o.persp) PERSP = o.persp; }
 const RIG = {}, TEXS = {};
 const loader = new THREE.TextureLoader();
 const NAMES = ['head', 'head2', 'torso', 'armL', 'armR', 'legL', 'legR'];
@@ -22,7 +22,7 @@ const GEO = {};
 function plane(name, part, s, pivot) {   /* 관절(pivot)이 원점에 오는 판 */
   const P = RIG[name].parts[part], k = `${name}/${part}/${s}`;
   const g = GEO[k] ||= (() => { const W = P.w * s, H = P.h * s, g = new THREE.PlaneGeometry(W, H); g.translate(-(pivot[0] - 0.5) * W, (pivot[1] - 0.5) * H, 0); return g; })();
-  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: TEXS[name + '/' + part], transparent: true, depthTest: false, depthWrite: false }));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: TEXS[name + '/' + part], alphaTest: 0.5, depthTest: false, depthWrite: false }));
   return m;
 }
 const FOOD = {}; function foodTex(src) { return FOOD[src] ||= (() => { const t = loader.load(src); t.colorSpace = THREE.SRGBColorSpace; return t; })(); }
@@ -61,7 +61,7 @@ export class Cut {
   face(sx, sy) { const w = toWorld(sx, sy), dx = w.x - this.root.position.x; if (Math.abs(dx) > 4) this.dir = dx < 0 ? -1 : 1; }
   hold(obj) { this.J.held.clear(); this.carry = !!obj; if (!obj) return;
     const src = typeof obj === 'string' ? obj : obj && obj.userData && obj.userData.img; if (!src) { this.J.held.add(obj); obj.scale.setScalar(0.8); return; }
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(40, 36), new THREE.MeshBasicMaterial({ map: foodTex(src), transparent: true, depthTest: false, depthWrite: false })); this.J.held.add(m); this.parts.push(m); }
+    const m = new THREE.Mesh(new THREE.PlaneGeometry((this.look.h || 60) * 0.5, (this.look.h || 60) * 0.45), new THREE.MeshBasicMaterial({ map: foodTex(src), transparent: true, depthTest: false, depthWrite: false })); this.J.held.add(m); this.parts.push(m); }
   update(dt, now) {
     this.t += dt; this.fromT += dt; const P = this.root.position;
     if (this.act === 'walk' && this.target) {
@@ -73,7 +73,7 @@ export class Cut {
     if (this.from && this.fromT < 0.25) { const w = ease(this.fromT / 0.25), q = {}; for (const k in p) q[k] = typeof p[k] === 'number' ? lerp(this.from[k] ?? 0, p[k], w) : p[k]; p = q; }
     this.cur = p; const J = this.J;
     /* 원근: 위(먼 곳)는 조금 작게 */
-    const sy = P.z * Math.sin(EL) + 780; this.persp = clamp(0.8 + 0.26 * (sy - 400) / 1000, 0.78, 1.06); this.root.scale.setScalar(this.persp);
+    const sy = P.z * Math.sin(EL) + 780; this.persp = PERSP(sy); this.root.scale.setScalar(this.persp);   /* 원근: 위(먼 곳) 작게 · 아래 크게 (data.js PERSP · 시설과 같은 규칙) */
     this.flip.scale.x = this.dir; this.flip.rotation.z = -p.lean * this.dir;
     this.hips.position.y = (this.legLen ?? (this.legLen = this.hips.position.y)) * (p.legK ?? 1) + p.bob;
     J.legL.rotation.z = p.lL; J.legR.rotation.z = p.lR; J.legL.scale.y = J.legR.scale.y = p.legK ?? 1;

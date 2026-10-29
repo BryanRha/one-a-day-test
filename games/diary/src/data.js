@@ -112,7 +112,7 @@ export const OBSTACLE_AT = { 11: 'ice', 21: 'chain' };
 export const LEVEL = {
   easy: { layout: 'a99', n: 7, cap: 1, pNew: 0.2 },
   normal: { layout: 'a99', n: 12, cap: 2, pNew: 0.5 },
-  hard: { layout: 'j129', n: 12, cap: 2, pNew: 0.5 },
+  hard: { layout: 'j129', n: 11, cap: 2, pNew: 0.5 },
 };
 /* 자유 다꾸: 판마다 고르는 난이도 · 보상(스티커 장수 · 금박 확률) */
 export const FREE_REWARD = { easy: { n: 2, foil: 0.03 }, normal: { n: 3, foil: 0.08 }, hard: { n: 5, foil: 0.2 } };

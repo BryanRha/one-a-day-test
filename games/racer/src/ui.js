@@ -1,8 +1,8 @@
 // 공용 UI 위젯: 글자 · 버튼 · 아이콘 버튼 · 재화 표시줄 · 팝업 · 토스트
-import { W, H, FONT, INK } from './config.js?v=0.90.5';
-import { load } from './save.js?v=0.90.5';
-import { audio } from './audio.js?v=0.90.5';
-import { pushBack } from './oad.js?v=0.90.5';
+import { W, H, FONT, INK } from './config.js?v=0.91.0';
+import { load } from './save.js?v=0.91.0';
+import { audio } from './audio.js?v=0.91.0';
+import { pushBack } from './oad.js?v=0.91.0';
 
 // 그림의 긴 변이 size 가 되도록 크기 조절 (원화 해상도가 바뀌어도 화면 크기 유지)
 export const fit = (img, size) => img.setScale(size / Math.max(img.width, img.height));
@@ -67,6 +67,30 @@ export function iconButton(scene, x, y, icon, onClick, size = 150, o = {}) {
   const badge = scene.add.circle(size * 0.36, -size * 0.36, size * 0.12, 0xFF3B6B).setStrokeStyle(5, 0xFFFFFF).setVisible(false);
   c.add(badge); c.badge = badge;
   return pressable(scene, c, size, size, onClick, bg, 'btn_icon');
+}
+
+// 효과음 · 배경음 켜고 끄기 (아이콘 두 개 + 아래 글자) — 차고 설정 · 잠시 멈춤 공용
+// o.size 아이콘 크기 · o.gap 두 아이콘 사이 · o.onMusic(on) 배경음을 바꾼 뒤 (멈춤 화면은 다시 줄임)
+export function soundToggles(scene, x, y, o = {}) {
+  const size = o.size || 150, gap = o.gap || 300;
+  const c = scene.add.container(x, y);
+  const make = (dx, name, iconOn, get, set) => {
+    const lab = txt(scene, dx, size * 0.5 + 40, '', 34, '#FFFFFF', { stroke: '#22105A', thick: 8 });
+    let b;
+    const paint = () => { const on = get(); b.icon.setTexture(on ? iconOn : `${iconOn}_off`); b.icon.setAlpha(on ? 1 : 0.8); lab.setText(`${name} ${on ? '켬' : '끔'}`).setColor(on ? '#FFE14D' : '#B8C2E0'); };
+    b = iconButton(scene, dx, 0, iconOn, () => {
+      const on = set(!get()); paint();
+      if (on && iconOn === 'ico_sound') audio.play('sfx_click', { volume: 0.5 });
+      scene.tweens.add({ targets: b.icon, scale: { from: b.icon.scale * 1.25, to: b.icon.scale }, duration: 220, ease: 'Back.easeOut' });
+      if (iconOn === 'ico_music') o.onMusic && o.onMusic(on);
+    }, size);
+    b.paint = paint; paint();
+    c.add([b, lab]);
+    return b;
+  };
+  c.sfx = make(-gap / 2, '효과음', 'ico_sound', () => load().sfx, on => audio.setSfx(on));
+  c.music = make(gap / 2, '배경음', 'ico_music', () => load().music, on => audio.setMusic(on));
+  return c;
 }
 
 // 재화 표시줄: 코인 · 별가루 · 간식 · 마력 결정

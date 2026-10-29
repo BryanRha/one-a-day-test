@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.90.5';
-import * as G from './sim.js?v=0.90.5';
-import { bm } from './oad_bm.js?v=0.90.5';
-import { sfx, setAudio, AUD } from './audio.js?v=0.90.5';
-import { pushBack } from './oad.js?v=0.90.5';
+import * as D from './data.js?v=0.91.0';
+import * as G from './sim.js?v=0.91.0';
+import { bm } from './oad_bm.js?v=0.91.0';
+import { sfx, setAudio, AUD } from './audio.js?v=0.91.0';
+import { pushBack } from './oad.js?v=0.91.0';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -82,7 +82,7 @@ export function hud() {
   $('#sPlay').onclick = () => openTab('mission', 'play');
   $('#sBuff').onclick = () => openTab('shop', 'stall');
   $('#gAll').onclick = () => watch('gifts', null, n => { toast(`선물 ${n}개를 한꺼번에 받았어요!`, true); fly('coin', 160, 1300, 8); ctx.render(); });
-  $('#sSnd').onclick = () => { const on = !(AUD.sfx || AUD.bgm); setAudio({ sfx: on, bgm: on }); S.muted = !on; ctx.save(); toast(on ? '소리를 켰어요' : '소리를 껐어요'); };
+  $('#sSnd').onclick = () => settingsPop();
   for (const k of ['coin', 'gem', 'rp']) shown[k] = S[k];
 }
 const TABS = [{ id: 'fac', name: '시설', img: 'fac/tent' }, { id: 'menu', name: '메뉴', img: 'food/bagel' }, { id: 'staff', name: '직원', img: 'deco/heart' }, { id: 'mission', name: '미션', img: 'ui/mission' }, { id: 'shop', name: '매점', img: 'deco/gift' }];
@@ -112,7 +112,7 @@ export function tick(dt) {
   $('#rate').textContent = `1분에 ${fmt(G.incomeRate() * 60)} · Lv.${S.lv}`;
   const pl = G.playReady().find(p => !p.got); const tmEl = $('#sPlay .tm'); if (tmEl) tmEl.textContent = pl ? (pl.ready ? '받기!' : clock(pl.m * 60 - S.play.sec)) : '내일';
   $('#sPlay').classList.toggle('glow', !!(pl && pl.ready));
-  $('#gAll').style.display = G.R.gifts.length >= 3 && adOn() && adOk('gifts') && !cur && !curDlg ? '' : 'none';
+  $('#gAll').style.display = G.R.gifts.length >= 3 && adOn('gifts') && adOk('gifts') && !cur && !curDlg ? '' : 'none';
   $('#sSnd b').textContent = AUD.sfx || AUD.bgm ? '소리 켜짐' : '소리 꺼짐'; $('#sSnd').style.opacity = AUD.sfx || AUD.bgm ? 1 : 0.6;
   const bf = $('#buffs'); const on = ['speed', 'crit', 'rest'].filter(k => G.buffOn(k)); const html = on.map(k => `<div class="lvtag" style="position:static;transform:none;background:#FFF0B8">${{ speed: '요리 2배 빠르게', crit: '대박 요리 +30%', rest: '쉼 포인트 +30%' }[k]} · ${clock(S.buff[k] - S.t)}</div>`).join(''); if (bf.innerHTML !== html) bf.innerHTML = html;
   $('#sBuff').classList.toggle('glow', bm.info.ok && !on.length && ['speed', 'crit', 'rest'].some(k => G.adLeft(k) > 0));
@@ -186,6 +186,7 @@ async function act(a, v, w, b, me, repeat) {
   else if (a === 'box') { if (v === 'ad') return watch('box', null, r => boxPop(r)); const r = G.openBox('gem'); if (r.err) err = r.err; else return boxPop(r); }
   else if (a === 'ad') { return watch(v, w, () => { toast(`${D.ADS[v].name} · 시작!`, true); ctx.render(); }); }
   else if (a === 'gold') return buyGold(v);
+  else if (a === 'gpick') return;
   else if (a === 'try') { if (v === 'skin') ctx.tryOn(15); else ctx.previewDeco(15); return toast(v === 'skin' ? '15초 동안 입어 볼게요 · 셰프를 봐 주세요!' : '15초 동안 잔디 왼쪽에 놓아 볼게요', true); }
   else if (a === 'charge') { const r = G.claimCharge(v); if (r) { flyR(r, at); sfx('gift'); ctx.render(); } }
   if (err) return nope(b, err);
@@ -196,7 +197,9 @@ function flyR(r, at) { sfx('reward'); if (r.coin) fly('coin', at[0], at[1], 6); 
 
 /* 광고 보고 받기 (원어데이 한도 + 게임 한도 · 남은 횟수 = 실제) */
 export const adOk = k => bm.info.ok && G.adLeft(k) > 0;
-const adOn = () => bm.info.ok && bm.info.ads && bm.info.ads.reward !== false;
+/* 광고 자리는 2곳 + 즉시 완성(bm-policy 2-1 규칙)만: 쉬는 동안 정산 2배 · 선물 바구니 나머지 전부 (사업 의견 4 · 강제 광고 0) */
+export const AD_SLOTS = new Set(['double', 'giftrest', 'inst']);
+const adOn = k => bm.info.ok && bm.info.ads && bm.info.ads.reward !== false && (!k || AD_SLOTS.has(k));
 export async function watch(k, arg, done) {
   if (!G.adLeft(k)) { soft('오늘 이 혜택은 다 받았어요 · 내일 또 만나요'); return false; }
   const r = await bm.rewardedAd('camp_' + k);
@@ -205,6 +208,8 @@ export async function watch(k, arg, done) {
 }
 /* 원어데이 골드 (가격 = 서버 표 · 앱 확인 창) */
 const GOLD = {
+  auto7: { name: '7일 자동 일손', desc: '7일 동안 도우미가 요리를 정가로 팔고, 구름 양도 알아서 쓰다듬어요 (직접 누를 때와 같은 값 · 더 받지는 않아요)', art: () => IMG('ui/serve'), give: () => { S.auto = S.auto || {}; S.auto.until = Math.max(S.auto.until || 0, S.t) + 7 * 86400; } },
+  autocloud: { name: '구름 양 목동 (영구)', desc: '구름 양이 오면 4초 뒤부터 대신 8번 쓰다듬어요 · 보상 +20% · 계정에 남아요', art: () => IMG('deco/sheep'), item: true, own: () => S.auto && S.auto.cloud, give: () => { S.auto = S.auto || {}; S.auto.cloud = true; } },
   gems100: { name: '솔방울 100개', n: 100, bonus: 0, give: () => { S.gem += 100; } },
   gems300: { name: '솔방울 330개', n: 330, bonus: 10, give: () => { S.gem += 330; } },
   gems1000: { name: '솔방울 1,200개', n: 1200, bonus: 20, give: () => { S.gem += 1200; } },
@@ -236,7 +241,7 @@ function facCard(t) {
   if (w) right = `<div style="display:flex;flex-direction:column;gap:6px;align-items:center"><small style="font-weight:800">공사 ${clock(w.end - S.t)}</small>${btn('inst:up:' + t, '바로 끝내기', 'yl')}</div>`;
   else if (lv >= D.UP.max) right = '<b style="color:#5E9E82">최고 단계</b>';
   else right = btn('up:' + t, `강화<small>${ic('coin')}${fmt(cost)}</small>`, nextT === lv + 1 ? 'yl' : 'go', S.coin < cost, 'style="flex-direction:column;min-width:150px"');
-  const extra = fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : fac.kind === 'special' && adOk('charge') && adOn() ? btn('ad:charge:' + t, `${ic('ad')} 바로 채우기`, 'sky') : '';
+  const extra = fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : fac.kind === 'special' && adOk('charge') && adOn('charge') ? btn('ad:charge:' + t, `${ic('ad')} 바로 채우기`, 'sky') : '';
   return card(t, img, `${fac.name} <small style="font-size:18px">Lv.${lv}</small> ${stars(tier)}`, `${eff}${nextT ? `<br>Lv.${nextT}에 단계가 올라 모습이 바뀌어요` : ''}`, `<div style="display:flex;flex-direction:column;gap:8px">${right}${extra}</div>`);
 }
 const PANELS = {
@@ -305,9 +310,10 @@ const PANELS = {
       /* 위: 솔방울 묶음 (원어데이 골드 · 클수록 보너스) */
       if (bm.info.ok) { const packs = ['gems100', 'gems300', 'gems1000'].filter(k => bm.price(k));
         if (packs.length) h += `<div class="sec">솔방울 묶음 · 골드 1 = 솔방울 1, 클수록 보너스</div><div class="packs">${packs.map((k, i) => { const g = GOLD[k]; return `<div class="pack${k === 'gems1000' ? ' best' : ''}" data-k="${k}" style="animation-delay:${i * 0.05}s">${k === 'gems1000' ? '<span class="tagb">가장 알뜰</span>' : ''}<img src="${IMG('food/gem')}" alt=""><b>${fmt(g.n)}</b><em>${g.bonus ? `+${g.bonus}% 보너스` : '&nbsp;'}</em>${btn('gold:' + k, `${ic('gold')} ${bm.price(k)}`, 'yl', false, 'style="padding:10px 12px;font-size:20px"')}</div>`; }).join('')}</div>`; }
+      if (bm.info.ok) { const au = ['auto7', 'autocloud'].filter(k => bm.price(k)); if (au.length) { h += `<div class="sec">일손 덜기 · 누르는 수고를 대신해요</div>`; for (const k of au) { const g = GOLD[k], own = g.item ? g.own() : (S.auto && S.auto.until > S.t); h += card('g' + k, g.art(), g.name, g.desc + (k === 'auto7' && own ? ` · ${tm(S.auto.until - S.t)} 남음` : ''), g.item && own ? '<b style="color:#5E9E82">가지고 있어요 ✓</b>' : btn('gold:' + k, `${ic('gold')} ${bm.price(k)}`, 'yl')); } } }
       const st = G.stall(); h += `<div class="sec">웰컴센터 매점 · 매일 새 물건이 들어와요</div>`;
       st.items.forEach((k, i) => { const it = D.STALL.find(x => x[0] === k), c = G.stallPrice(i), sold = st.bought.includes(i); h += card('s' + i, IMG({ treat: 'ui/cookie', big: 'deco/gift', rp: 'ui/tea', speed: 'food/icedcoffee' }[k]), it[1], { treat: '직원에게 주면 친해져요', big: '친밀도가 크게 올라요', rp: '메뉴 맛 올리기에 써요', speed: '5분 동안 요리 2배 빠르게' }[k], sold ? '<b style="color:#5E9E82">다 팔렸어요</b>' : btn('stall:' + i, `${ic('coin')}${fmt(c)}`, 'go', S.coin < c), { cls: sold ? 'done' : '' }); });
-      if (adOn()) { h += `<div style="text-align:center;margin-bottom:8px">${btn('ad:restock', `${ic('ad')} 새로 진열하기 <small>(${G.adLeft('restock')}번 남음)</small>`, 'sky', !adOk('restock'))}</div>`;
+      if (adOn('restock')) { h += `<div style="text-align:center;margin-bottom:8px">${btn('ad:restock', `${ic('ad')} 새로 진열하기 <small>(${G.adLeft('restock')}번 남음)</small>`, 'sky', !adOk('restock'))}</div>`;
         /* 아래: 광고 혜택 */
         h += `<div class="sec">광고 혜택 · 한 번 볼 때마다 스탬프 1개</div>`;
         for (const k of ['speed', 'crit', 'rest']) h += card(k, IMG({ speed: 'food/icedcoffee', crit: 'ui/sparkle', rest: 'fac/hammock' }[k]), D.ADS[k].name, G.buffOn(k) ? `켜져 있어요 · ${clock(S.buff[k] - S.t)} 남음` : `오늘 ${G.adLeft(k)}번 남음`, btn('ad:' + k, G.buffOn(k) ? `${ic('ad')} 늘리기` : `${ic('ad')} 켜기`, 'sky', !adOk(k))); }
@@ -316,7 +322,7 @@ const PANELS = {
     if (sub === 'box') { const left = D.BOX.pity - S.box.pity;
       h += `<div class="fair"><div>${left}번 안에<br>특별 장식 확정<small>30번째는 꼭 특별</small></div><div>확률 모두 공개<small>보통 ${D.RARITY.n.p * 100} · 희귀 ${D.RARITY.r.p * 100} · 특별 ${D.RARITY.s.p * 100}%</small></div><div>겹치면 돌려받기<small>솔방울 ${D.BOX.dupGem.n}~${D.BOX.dupGem.s}개</small></div></div>`;
       h += `<div class="card" data-k="box" style="flex-direction:column;text-align:center"><img src="${IMG('deco/gift')}" style="width:150px;animation:giftHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite"><b style="font:900 30px/1.3 var(--ff)">숲 선물 상자</b><span style="font:700 19px/1.5 var(--ff);color:#7A645A">캠프를 꾸밀 장식이 나와요 · 솔방울은 레벨업 · 미션 · 출석으로 모여요</span>
-        <div style="display:flex;gap:12px;margin-top:14px">${btn('box:gem', `${ic('gem')} ${D.BOX.cost} 열기`, 'pk', S.gem < D.BOX.cost)}${adOn() ? btn('box:ad', `${ic('ad')} 광고로 열기 <small>(${G.adLeft('box')})</small>`, 'sky', !adOk('box')) : ''}</div></div>`;
+        <div style="display:flex;gap:12px;margin-top:14px">${btn('box:gem', `${ic('gem')} ${D.BOX.cost} 열기`, 'pk', S.gem < D.BOX.cost)}${adOn('box') ? btn('box:ad', `${ic('ad')} 광고로 열기 <small>(${G.adLeft('box')})</small>`, 'sky', !adOk('box')) : ''}</div></div>`;
       for (const r of ['s', 'r', 'n']) h += `<div class="sec">${D.RARITY[r].name} · ${D.RARITY[r].p * 100}%</div>` + D.DECO.filter(d => d.rar === r).map(d => card(d.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ` · ${S.deco[d.id]}개` : ''}`, S.deco[d.id] ? '<b style="color:#5E9E82">✓</b>' : '', { cls: S.deco[d.id] ? 'done' : 'lock' })).join('');
       return h; }
     /* 꾸미기: 특별 상품(전용 그림 · 미리 보기) → 스탬프 교환 */
@@ -334,7 +340,7 @@ const AMEN_E = Object.fromEntries(Object.entries(AMEN_IMG).map(([k, v]) => [k, `
 const ZONE_E = Object.fromEntries(Object.entries({ lawn: 'fac/table', forest: 'fac/tent', pine: 'deco/pup_sit', valley: 'fac/playpool', stay: 'fac/bbq' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:84px;height:84px;object-fit:contain">`]));
 const ZONE_BG = { lawn: '#DDF2E8', forest: '#CFE6C2', pine: '#FDE7D4', valley: '#DCEBF8', stay: '#FCEFF2' };
 const ZONE_TXT = { lawn: '아이들이 뛰노는 잔디 · 웰컴센터와 공용 키친', forest: '소나무 · 잣나무 숲 사이 가족 캠핑 자리', pine: '반려견과 함께하는 울타리 존 · 어른만의 조용한 솔숲', valley: '아이들 물놀이 계곡 · 산책길과 폭포', stay: '바비큐 데크가 있는 숲속 스테이 · 루프탑' };
-const MIS_E = Object.fromEntries(Object.entries({ serve: 'ui/serve', upgrade: 'ui/hammer', gift: 'deco/gift', treat: 'ui/cookie', crit: 'ui/sparkle', cat: 'deco/cat_sit', menu: 'ui/menu', box: 'deco/gift_open', rserve: 'ui/serve', rup: 'ui/hammer', rcrit: 'ui/sparkle', play: 'ui/clock' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:76px;height:76px;object-fit:contain">`]));
+const MIS_E = Object.fromEntries(Object.entries({ serve: 'ui/serve', upgrade: 'ui/hammer', gift: 'deco/gift', treat: 'ui/cookie', crit: 'ui/sparkle', cat: 'deco/cat_sit', menu: 'ui/menu', box: 'deco/gift_open', tapsell: 'food/bagel', cloud: 'deco/sheep', giftpick: 'deco/gift', rserve: 'ui/serve', rup: 'ui/hammer', rcrit: 'ui/sparkle', play: 'ui/clock' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:76px;height:76px;object-fit:contain">`]));
 
 /* ── 지도에서 누른 시설 (작은 창 · 길게 눌러 계속 강화) ── */
 export function facDialog(t) {
@@ -349,7 +355,7 @@ function instBtns(key) {
   const w = G.workList().find(x => x.key === key); if (!w) return '<b>다 됐어요!</b>'; const left = w.end - S.t; if (left < D.INST_MIN) return `<b>곧 끝나요 · ${clock(left)}</b>`;
   const n = G.instGem(w), gp = bm.price('inst' + n);
   let h = `<div style="width:100%;font:800 24px/1 var(--ff);margin-bottom:6px">${ic('clock')} ${clock(left)}</div>`;
-  if (adOn()) h += btn('instad:' + key, `${ic('ad')} 광고로 즉시 완성 <small>(${G.adLeft('inst')}번)</small>`, 'sky', !adOk('inst'));
+  if (adOn('inst')) h += btn('instad:' + key, `${ic('ad')} 광고로 즉시 완성 <small>(${G.adLeft('inst')}번)</small>`, 'sky', !adOk('inst'));
   if (S.gem >= n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl');
   else if (bm.info.ok && gp === n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gold')}${n}`, 'yl');
   else h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl', true);
@@ -388,7 +394,7 @@ export function offlinePop(o) {
     const h = Math.floor(o.away / 3600), m = Math.floor(o.away % 3600 / 60);
     const me = dlg(`<div class="art"><img src="${IMG('deco/cat_sleep')}"></div><h3>${o.capped ? '가득 모았어요!' : '다녀오셨어요!'}</h3><p>${o.capped ? `${G.offlineCapH()}시간치를 꽉 채웠어요 · 손님 ${fmtL(o.served)}명이 쉬어 갔어요${S.amen.shower && S.amen.laundry ? '' : '<br><small>샤워장 · 세탁실을 지으면 더 오래 모여요</small>'}` : `${h ? h + '시간 ' : ''}${m}분 동안 직원들이 캠프를 지켰어요 · 손님 ${fmtL(o.served)}명`}</p>
       <div class="big">${ic('coin', '')}<span id="offN">0</span></div><p style="margin-top:-8px">${ic('rp')} ${fmtL(o.rp)} 쉼 포인트</p>
-      <div class="row">${btn('take', '받기', 'go')}${adOn() ? btn('x2', `${ic('ad')} 2배로 받기 <small>(${G.adLeft('double')})</small>`, 'yl', !adOk('double')) : ''}</div>`, { lock: true, rays: true });
+      <div class="row">${btn('take', '받기', 'go')}${adOn('double') ? btn('x2', `${ic('ad')} 2배로 받기 <small>(${G.adLeft('double')})</small>`, 'yl', !adOk('double')) : ''}</div>`, { lock: true, rays: true });
     const num = me.el.querySelector('#offN'); const t0 = performance.now(); (function up() { const k = Math.min(1, (performance.now() - t0) / 900); num.textContent = fmtL(o.coin * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(up); else sfx('count'); })();
     const take = mult => { G.takeOffline(o, mult); me.close(); fly('coin', 360, 760, 10); if (o.rp) fly('rp', 360, 800, 4); toast(mult > 1 ? '2배로 받았어요! 오늘도 멋진 캠프예요' : '오늘도 멋진 캠프를 만들어 봐요', true); ctx.save(); };
     me.el.querySelector('[data-a="take"]').onclick = () => take(1);
@@ -426,7 +432,7 @@ function boxPop(r) {
   setTimeout(() => { const b = me.el.querySelector('#bx'); b.innerHTML = `<img src="${IMG('deco/gift_open')}" style="animation:artIn .35s cubic-bezier(.34,1.56,.64,1)">`; me.el.querySelector('.rays').style.opacity = 1; }, 600);
   sfx('box', { rar: r.rar });
   setTimeout(() => { me.el.querySelector('#bx').innerHTML = `<img src="${IMG(d.img)}" class="${{ s: 'glowS', r: 'glowR' }[r.rar] || 'glowN'}" style="width:180px">`; me.el.querySelector('#bxT').innerHTML = `<span style="color:${{ s: '#C9861E', r: '#4A7AAE' }[r.rar] || 'var(--ink)'}">${rn}</span> · ${d.name}`; if (r.rar === 's') sfx('level'); if (r.dup) fly('gem', 360, 700, 5); me.el.querySelector('#bxP').innerHTML = r.dup ? `이미 있어서 솔방울 ${D.BOX.dupGem[r.rar]}개를 돌려받았어요` : `캠프에 놓았어요! 매력 +${d.appeal}`;
-    const row = me.el.querySelector('#bxR'); row.style.opacity = 1; row.style.transition = 'opacity .3s'; row.innerHTML = btn('ok', '좋아요', 'go') + (adOn() && adOk('again') ? btn('again', `${ic('ad')} 한 번 더`, 'sky') : '');
+    const row = me.el.querySelector('#bxR'); row.style.opacity = 1; row.style.transition = 'opacity .3s'; row.innerHTML = btn('ok', '좋아요', 'go') + (adOn('again') && adOk('again') ? btn('again', `${ic('ad')} 한 번 더`, 'sky') : '');
     if (r.rar === 's') confetti(40); ctx.render(); ctx.save();
     row.querySelector('[data-a="ok"]').onclick = () => me.close();
     const ag = row.querySelector('[data-a="again"]'); if (ag) ag.onclick = async () => { me.close(); await watch('again', null, rr => setTimeout(() => boxPop(rr), 260)); };
@@ -447,7 +453,7 @@ const LV_MSG = { 2: '첫 단골이 찾아올지도 몰라요', 3: '숲속 존을
 /* ── 처음 10분 안내 (막지 않는 손가락 + 한 줄) · docs/ux_notes.md 1장 ── */
 const TUT = [
   { say: '숲속 캠프에 오신 걸 환영해요! 손님이 오면 셰프가 베이글을 구워요', wait: 4, pad: null },
-  { say: '다 된 <b>베이글</b>을 눌러 손님에게 바로 건네요 · 값 +25%!', at: 'dish', done: () => G.R.tapStats.dish >= 2 },
+  { say: '다 된 <b>베이글</b>을 눌러 직접 팔아요 · <b>직접 팔면 2배!</b>', at: 'dish', done: () => G.R.tapStats.dish >= 2 },
   { say: '굽는 중인 <b>오븐</b>을 콕콕 누르면 응원해서 더 빨리 구워요', at: 'ovenBody', done: () => G.R.tapStats.cheer >= 5 },
   { say: '오븐 아래 <b>Lv 표지</b>를 눌러 강화해 봐요 · 베이글 값이 올라요', at: 'oven', done: () => S.oven.lv >= 3 },
   { say: '<b>직원</b>에서 요리사 솔을 고용해요', tab: 'staff', done: () => S.staff.sol, when: () => S.coin >= 300 || S.staff.sol },
@@ -472,4 +478,25 @@ function tut() {
   if (at) { if (!ptr) { ptr = document.createElement('div'); ptr.className = 'pointer'; frame.appendChild(ptr); } ptr.style.display = ''; ptr.style.left = at[0] + 'px'; ptr.style.top = at[1] + 'px'; } else if (ptr) ptr.style.display = 'none';
 }
 export function init(c) { ctx = c; hud(); }
+/* 설정: 효과음 · 배경음 · 진동 (출퇴근길 무음 · 사업 의견 7) */
+function settingsPop() {
+  const draw = d => { d.querySelector('.body2').innerHTML = `<h3>설정</h3>${[['sfx', '효과음', AUD.sfx], ['bgm', '배경음', AUD.bgm], ['vib', '진동', S.vib !== false]].map(([k, n, on]) => `<div class="tog">${n}${btn('set:' + k, on ? '켜짐' : '꺼짐', on ? 'go' : '', false, 'style="min-width:110px;padding:10px 14px"')}</div>`).join('')}<div class="row" style="margin-top:16px">${btn('ok', '닫기', 'yl')}</div>`;
+    d.querySelectorAll('[data-a^="set:"]').forEach(b => b.onclick = () => { const k = b.dataset.a.slice(4); if (k === 'vib') S.vib = S.vib === false; else setAudio({ [k]: !AUD[k] }); S.muted = !(AUD.sfx || AUD.bgm); S.audio = { sfx: AUD.sfx, bgm: AUD.bgm }; ctx.save(); draw(d); }); d.querySelector('[data-a="ok"]').onclick = () => me.close(); };
+  const me = dlg('<div class="body2"></div>'); draw(me.el);
+}
+/* 선물 바구니: 셋 중 하나 고르기 → 나머지는 광고로 (광고 자리 1) */
+let giftDlg = null;
+export function giftPop() {
+  const b = G.openGiftBox(); if (!b || giftDlg) return;
+  const lbl = it => it.k === 'coin' ? `숲 코인<br>${fmt(it.r.coin)}` : it.k === 'rp' ? `쉼 포인트<br>${fmt(it.r.rp)}` : it.k === 'stamp' ? '스탬프 2' : it.k === 'gem' ? `솔방울 ${it.r.gem}` : it.k === 'treat' ? '간식 2' : '특별 도시락';
+  const im = it => IMG({ coin: 'deco/coin', rp: 'ui/tea', stamp: 'ui/stamp', gem: 'food/gem', treat: 'ui/cookie', big: 'deco/gift' }[it.k]);
+  const draw = d => { const B = G.R.giftBox; if (!B) return; d.querySelector('.body2').innerHTML = `<h3>${B.picked < 0 ? '선물 바구니 하나를 골라요' : '이걸 받았어요!'}</h3><p>${B.picked < 0 ? '직원이 숲에서 선물을 주워 왔어요' : '나머지 바구니도 열어 볼까요?'}</p>
+    <div class="gpick">${B.items.map((it, i) => `<div data-i="${i}" class="${B.picked < 0 ? '' : i === B.picked ? 'got' : 'rest'}">${B.picked < 0 ? `<img src="${IMG('deco/gift')}">` : `<img src="${im(it)}" style="animation:artIn .5s cubic-bezier(.34,1.56,.64,1)">${lbl(it)}`}</div>`).join('')}</div>
+    <div class="row">${B.picked < 0 ? '' : btn('done', '좋아요', 'go') + (adOn('giftrest') ? btn('rest', `${ic('ad')} 나머지도 받기 <small>(${G.adLeft('giftrest')})</small>`, 'sky', !adOk('giftrest')) : '')}</div>`;
+    d.querySelectorAll('.gpick div').forEach(el => el.onclick = () => { if (G.R.giftBox.picked >= 0) return; ctx.pressFx && ctx.pressFx(el); const got = G.pickGift(+el.dataset.i); sfx('box', { rar: 'r' }); flyR(got, cardPos(el)); draw(d); ctx.save(); });
+    const done = d.querySelector('[data-a="done"]'); if (done) done.onclick = () => { G.closeGiftBox(); me.close(); };
+    const rest = d.querySelector('[data-a="rest"]'); if (rest) rest.onclick = async () => { const ok = await watch('giftrest', null, () => { const outs = G.takeRestGifts(); if (outs) outs.forEach(o => flyR(o, cardPos(rest))); }); if (ok) me.close(); }; };
+  const me = dlg('<div class="body2"></div>', { onClose: () => { giftDlg = null; if (G.R.giftBox && G.R.giftBox.picked >= 0) G.closeGiftBox(); } }); giftDlg = me; draw(me.el);
+}
+export function giftClose() { if (giftDlg) { const d = giftDlg; giftDlg = null; d.close(); } }
 export const isBusy = () => !!(cur || curDlg);

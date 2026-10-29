@@ -1,5 +1,5 @@
 // 효과음 / 배경음. 배경음은 처음 틀 때 받아 온다 (첫 로딩을 가볍게).
-import { load, save } from './save.js?v=0.90.5';
+import { load, save } from './save.js?v=0.91.0';
 
 export const SFX = [
   'sfx_honk_0', 'sfx_honk_1', 'sfx_honk_2', 'sfx_honk_3', 'sfx_honk_4', 'sfx_crash', 'sfx_smash', 'sfx_boom', 'sfx_jump', 'sfx_land',
@@ -47,11 +47,16 @@ class AudioManager {
   duck(v) { if (this.current) this.current.setVolume(v); }
   // 콤보가 쌓일수록 배경음을 살짝 빠르게 (긴장감)
   rate(r) { if (this.current && Math.abs((this.current.rate || 1) - r) > 0.004) try { this.current.setRate(r); } catch { /* */ } }
-  toggleSfx() { const d = load(); d.sfx = !d.sfx; save(); return d.sfx; }
-  toggleMusic() {
-    const d = load(); d.music = !d.music; save();
-    if (!d.music) this.stopMusic(); else if (this.currentKey) { const k = this.currentKey; this.currentKey = null; this.music(k); }
+  // 값을 '정하는' 함수 — 소리 한 버튼으로 둘 다 바꿀 때는 setAll (토글 두 번 = 두 값이 다르면 엇갈림)
+  setSfx(on) { const d = load(); d.sfx = !!on; save(); return d.sfx; }
+  setMusic(on) {
+    const d = load(), was = !!d.music; d.music = !!on; save();
+    if (!d.music) this.stopMusic(); else if (!was && this.currentKey) { const k = this.currentKey; this.currentKey = null; this.music(k); }
     return d.music;
   }
+  setAll(on) { this.setSfx(on); this.setMusic(on); return !!on; }
+  isOn() { const d = load(); return !!(d.sfx || d.music); }
+  toggleSfx() { return this.setSfx(!load().sfx); }
+  toggleMusic() { return this.setMusic(!load().music); }
 }
 export const audio = new AudioManager();

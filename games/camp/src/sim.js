@@ -1,7 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.90.5';
+import * as D from './data.js?v=0.91.0';
+import * as W from './walk.js?v=0.91.0';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -28,8 +29,8 @@ export function load(obj, now) {
   resetRun(); return { fresh: false };
 }
 export function resetRun() {   /* 저장 안 되는 진행 초기화 (연속으로 여러 판 해도 남지 않게) */
-  R.guests = []; R.orders = []; R.ready = []; R.tips = []; R.cheer = {}; R.combo = { n: 0, t: -9 }; R.tapStats = { dish: 0, cheer: 0, tip: 0, bonus: 0 }; R.gifts = []; R.ev = []; R.rateWin = []; R.nextSpawn = 2; R.earned = 0; R.regToday = null; R.gid = 0; R.seats = []; R.servers = []; R.stations = null;
-  buildSeats(); buildWorkers();
+  R.guests = []; R.orders = []; R.ready = []; R.tips = []; R.cheer = {}; R.combo = { n: 0, t: -9 }; R.tapStats = { dish: 0, cheer: 0, tip: 0, bonus: 0, cloud: 0, gift: 0, visit: 0 }; R.cloud = null; R.giftBox = null; R.visitor = null; R.nextCloud = null; R.nextGift = null; R.nextVisitor = null; R.gifts = []; R.ev = []; R.rateWin = []; R.nextSpawn = 2; R.earned = 0; R.regToday = null; R.gid = 0; R.seats = []; R.servers = []; R.stations = null;
+  W.setMap(D.WALKMAP.spring); W.setGraph(D.WALKGRAPH.spring); syncWalk(); buildSeats(); buildWorkers();
 }
 export const save = () => JSON.parse(JSON.stringify(S));
 /* 첫 30초 (퀄리티 A2): 새 판이면 첫 손님은 이미 데크에 앉아 먹는 중 → 3초 안에 첫 코인 · 처음 두 접시는 빨리 구움 */
@@ -40,14 +41,31 @@ export function quickStart() {
 }
 
 /* ── 자리 · 일꾼 ── */
-const SEAT_OFF = { table: [[-54, -34], [-18, -40], [18, -40], [54, -34]], bbq: [[-54, -46], [-18, -54], [18, -54], [54, -46]], firepit: [[-46, -36], [46, -36]] };   /* 식탁 뒤에 나란히 앉아 얼굴이 화면 쪽 (옆에 서서 먹는 손님 X · 퀄리티 B3) */   /* 식탁 뒤에 앉아 얼굴이 화면 쪽 */
+/* 앉는 자리: 식탁 · 데크 뒤에 나란히 (얼굴이 화면 쪽) · 원근 배율(PERSP)만큼 함께 커지고 작아짐 · 식탁 크기(그림 × FAC_K)에 맞춤 */
+const SEAT_OFF = { table: [[-27, -17], [-9, -21], [9, -21], [27, -17]], bbq: [[-28, -22], [-9, -26], [9, -26], [28, -22]], firepit: [[-30, -20], [30, -20]] };
+/* 지은 시설은 걷는 곳에서 뺌 (조리대 · 식탁 · 텐트 위로 걷지 않게) · 구역이 열리면 그 구역의 걷는 곳이 붙음 */
+const BLOCK_R = { cook: [26, 13], seat: [33, 12], rest: [42, 22], special: [44, 24] };
+export function syncWalk() {
+  W.setOpen(Object.keys(S.zones || {}).filter(z => S.zones[z].st === 'open'));
+  const ex = []; for (const p of D.PADS) { const b = S.pads && S.pads[p.id]; if (!b || b.lv < 1) continue; const f = D.FAC[p.fac], k = D.PERSP(p.pos[1]); let [rx, ry] = BLOCK_R[f.kind]; if (p.fac === 'firepit') [rx, ry] = [24, 14]; if (p.fac === 'footwash') continue;   /* 길 위의 발 씻는 곳은 길을 막지 않음 */   /* 길 위의 발 씻는 곳: 길을 막지 않게 작게 */ ex.push({ ell: [p.pos[0], p.pos[1] + 2, rx * k, ry * k] }); }
+  W.setExtra(ex);
+}
+export const walkMap = W;
+/* 시설이 새로 생기면 걷던 손님은 지금 자리에서 길을 다시 찾음 (새 시설 위로 걷지 않게) */
+function reroute() { for (const g of R.guests) { if (!((g.st === 'walk' || g.st === 'leave') && g.path)) continue; const at = W.pointAt(g.path, (S.t - g.t0) * SPEED.guest), end = g.path[g.path.length - 1];
+  const np = W.route(at, end); if (!W.walkable(...at)) continue; g.path = np; g.t0 = S.t; g.left = W.pathLen(np) / SPEED.guest; on('reroute', { g, path: np, dur: g.left }); } }
+/* 서는 자리 */
+export const serveAt = seat => seat.pad ? (() => { const p = D.PADS.find(x => x.id === seat.pad), k = D.PERSP(p.pos[1]); return [seat.x, p.pos[1] + 24 * k]; })() : [seat.x, seat.y + 18];
+export const cookAt = st => { if (st === 'oven') return D.KITCHEN.stand; const p = stationPos(st); if (!p) return null; const k = D.PERSP(p[1]); return [p[0] + (p[0] < 200 ? 40 : -40) * k, p[1] + 6 * k]; };
+export const pickAt = st => st === 'oven' ? D.OVEN_PICK : (() => { const c = cookAt(st); return c && [c[0], c[1] + 14]; })();
 export function buildSeats() {
   const keep = R.seats || []; R.seats = [];
   /* 웰컴센터 데크 벤치 2자리 (처음부터) */
   [[-44, 0], [40, 4]].forEach(([dx, dy], i) => R.seats.push({ id: 'W' + i, x: D.WELCOME.deck[0] + dx, y: D.WELCOME.deck[1] + dy, pad: null, face: [D.WELCOME.deck[0] + dx, D.WELCOME.deck[1] + 80] }));
   for (const p of D.PADS) { const b = S.pads[p.id]; if (!b || b.lv < 1) continue; const off = SEAT_OFF[p.fac]; if (!off) continue;
     const vip = (D.FAC[p.fac].vip || 1) * (1 + 0.06 * (b.lv - 1)) * (1 + 0.25 * D.tierOf(b.lv));   /* 자리 강화 = 그 자리 손님이 내는 값 + */
-    off.forEach(([dx, dy], i) => R.seats.push({ id: p.id + i, x: p.pos[0] + dx, y: p.pos[1] + dy, pad: p.id, vip, face: [p.pos[0], p.pos[1] + 12] })); }
+    const k = D.PERSP(p.pos[1]); off.forEach(([dx, dy], i) => R.seats.push({ id: p.id + i, x: p.pos[0] + dx * k, y: p.pos[1] + dy * k, pad: p.id, vip, face: [p.pos[0], p.pos[1] + 12] })); }
+  for (const s of R.seats) { W.addAnchor([s.x, s.y]); W.addAnchor(serveAt(s)); } for (const st of ['oven', 'pot', 'drink']) { const c = built(st) && cookAt(st); if (c) { W.addAnchor(c); W.addAnchor(pickAt(st)); } } for (const a of [D.KITCHEN.pick, D.KITCHEN.stand, D.CAT_SPOT, D.VISIT_SPOT, D.GIFT_SPOT]) if (a) W.addAnchor(a);
   R.seats = R.seats.map(s => { const k = keep.find(o => o.id === s.id); if (k) { Object.assign(k, { x: s.x, y: s.y, vip: s.vip, face: s.face }); return k; } s.guest = null; return s; });   /* 같은 자리는 같은 객체 (손님이 들고 있는 참조 유지) */
 }
 export function buildWorkers() {
@@ -76,7 +94,7 @@ export function staffBonus(line) {
 export const appeal = () => Object.entries(S.deco).reduce((a, [id, n]) => a + (n ? (D.DECO.find(d => d.id === id) || { appeal: 0 }).appeal : 0), 0) + (S.shop.deco ? D.DECO_SHOP.deco.appeal : 0) + (S.skin ? D.DECO_SHOP.skin.appeal : 0) + (S.owner ? D.OWNER_DECO.appeal : 0);
 export function dishPrice(m, vip = 1) {
   const line = D.LINES.find(l => l.id === m.line), lv = stLv(line.st), sb = staffBonus(m.line);
-  return D.price0(m) * D.menuMult(menuLv(m)) * D.UP.effK ** (lv - 1) * (1 + 0.5 * D.tierOf(lv)) * (1 + sb.k) * vip * (1 + appeal() * 0.004);
+  return D.TAP.priceK * D.price0(m) * D.menuMult(menuLv(m)) * D.UP.effK ** (lv - 1) * (1 + 0.5 * D.tierOf(lv)) * (1 + sb.k) * vip * (1 + appeal() * 0.004);
 }
 export const critP = line => Math.min(0.6, D.CRIT.base + staffBonus(line).crit + (buffOn('crit') ? D.CRIT.adP : 0));
 export const buffOn = k => (S.buff[k] || 0) > S.t;
@@ -113,7 +131,7 @@ export function canBuild(pid) { const p = D.PADS.find(x => x.id === pid); return
 export function build(pid) {
   if (!canBuild(pid)) return '아직 지을 수 없는 자리예요'; const c = padCost(); if (!spend('coin', c)) return '숲 코인이 조금 모자라요';
   const p = D.PADS.find(x => x.id === pid); S.pads[pid] = { fac: p.fac, lv: 1, base: c }; S.builds++; S.stats.builds++;
-  buildSeats(); buildWorkers(); addXp(10); count('build'); on('build', { pid, fac: p.fac }); return null;
+  syncWalk(); reroute(); buildSeats(); buildWorkers(); addXp(10); count('build'); on('build', { pid, fac: p.fac }); return null;
 }
 export const amenCost = () => D.buildCost(S.builds);
 export function buildAmen(id) {
@@ -156,7 +174,7 @@ export function expand(z) {
   if (!zoneNeedOk(z)) return `레벨 ${Z.need.lv} · 시설 ${Z.need.built}개부터 열 수 있어요`;
   S.zones[z] = { st: 'building', start: S.t, end: S.t + Z.build, dur: Z.build }; on('zoneWork', { z }); return null;
 }
-function finishZone(z) { const Z = D.ZONES.find(x => x.id === z); S.zones[z] = { st: 'open' }; gain({ gem: Z.reward }, 'zone'); addXp(20); on('zoneOpen', { z }); }
+function finishZone(z) { const Z = D.ZONES.find(x => x.id === z); S.zones[z] = { st: 'open' }; syncWalk(); gain({ gem: Z.reward }, 'zone'); addXp(20); on('zoneOpen', { z }); }
 /* 즉시 완성: 고른 공사 하나만 바로 끝냄 · 값은 남은 비율 (docs/bm-policy.md 2-1) */
 export function workList() {
   const L = []; for (const z of D.ZONES) { const o = S.zones[z.id]; if (o.st === 'building' && o.end > S.t) L.push({ key: 'zone:' + z.id, name: z.name + ' 열기', end: o.end, dur: o.dur, base: z.build }); }
@@ -242,14 +260,14 @@ export const offlineCapH = () => D.OFFLINE.capH + (S.amen.shower ? 1 : 0) + (S.a
 export function offline(now) {
   const away = Math.max(0, now - (S.lastSeen || now)); S.t = now; if (away < D.OFFLINE.min) return null;
   const sec = Math.min(away, offlineCapH() * 3600), rate = S.rate || incomeRate();
-  const coin = Math.floor(rate * sec * D.OFFLINE.eff), rp = Math.floor(restPerMin() * sec / 60 * D.OFFLINE.eff), served = Math.floor(sec / spawnGap() * 0.12);
+  const coin = Math.floor(rate * D.TAP.autoK * sec * D.OFFLINE.eff),   /* 쉬는 동안은 도우미가 파는 값(반값) */ rp = Math.floor(restPerMin() * sec / 60 * D.OFFLINE.eff), served = Math.floor(sec / spawnGap() * 0.12);
   return { away, sec, coin, rp, served, capped: away > offlineCapH() * 3600 };
 }
 export function takeOffline(o, mult = 1) { if (!o) return; S.coin += o.coin * mult; S.rp += o.rp * mult; S.stats.earned += o.coin * mult; S.stats.served += o.served; addXp(o.served);   /* 쉬는 동안 대접한 손님도 경험치 */ on('gain', { r: { coin: o.coin * mult, rp: o.rp * mult }, why: 'offline' }); }
 
 /* ── 한 걸음 (dt 초) ── */
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-export const SPEED = { guest: 70, serve: 90 };
+export const SPEED = { guest: 80, serve: 100 };
 export function step(dt) {
   S.t += dt; playTick(dt);
   /* 공사 끝 */
@@ -264,8 +282,9 @@ export function step(dt) {
   for (const st of Object.keys(R.cooks)) {
     if (!built(st)) continue; const s = R.stations[st];
     if (s.cur) { s.cur.left -= dt; if (s.cur.left <= 0) { const o = s.cur; s.cur = null; o.readyAt = S.t; R.ready.push(o); on('cooked', { st, o }); } }
-    else if (!working(st === 'oven' ? 'oven' : (padOf(st) || {}).id)) { const i = R.orders.findIndex(o => o.st === st); if (i >= 0) { const o = R.orders.splice(i, 1)[0]; o.left = cycleOf(st) * (R.fastCook > 0 ? (R.fastCook--, 0.3) : 1); s.cur = o; on('cook', { st, o, dur: o.left }); } }
+    else if (R.ready.length < D.TAP.shelf && !working(st === 'oven' ? 'oven' : (padOf(st) || {}).id)) {   /* 진열 8칸이 차면 더 굽지 않음 */ const i = R.orders.findIndex(o => o.st === st); if (i >= 0) { const o = R.orders.splice(i, 1)[0]; o.left = cycleOf(st) * (R.fastCook > 0 ? (R.fastCook--, 0.3) : 1); s.cur = o; on('cook', { st, o, dur: o.left }); } }
   }
+  cloudTick(dt); giftTick(dt); visitorTick(dt);
   /* 응원 게이지 회복 · 팁 사라짐 */
   for (const st of Object.keys(R.cheer)) R.cheer[st] = Math.min(D.TAP.cheerMax, R.cheer[st] + D.TAP.cheerRegen * dt);
   for (let i = R.tips.length - 1; i >= 0; i--) if (R.tips[i].end <= S.t) { on('tipGone', { tip: R.tips[i] }); R.tips.splice(i, 1); }
@@ -273,8 +292,9 @@ export function step(dt) {
   for (const sv of R.servers) {
     if (sv.job) { sv.job.left -= dt; if (sv.job.left <= 0) { const j = sv.job; sv.job = null; const g = R.guests.find(x => x.id === j.o.gid); if (g && g.st === 'wait') { g.st = 'eat'; g.left = 4.5; on('served', { g, sv: sv.id }); } } }
     else if (R.ready.length && S.t - R.ready[0].readyAt >= D.TAP.autoWait) { const o = R.ready.shift(), g = R.guests.find(x => x.id === o.gid); if (!g || g.st !== 'wait') continue;   /* 누르지 않으면 잠깐 뒤 도우미가 천천히 나름 */
-      const from = stationPos(o.st), base = D.STAFF.find(x => x.id === sv.id); const home = sv.pos || D.KITCHEN.pick;
-      const t = (dist(home, from) + dist(from, [g.seat.x, g.seat.y])) / SPEED.serve + 0.6; sv.job = { o, left: t }; sv.pos = [g.seat.x, g.seat.y + 22]; on('deliver', { sv: sv.id, o, from, to: sv.pos, dur: t, name: base.name }); }
+      const from = pickAt(o.st) || stationPos(o.st), base = D.STAFF.find(x => x.id === sv.id); const home = sv.pos || D.KITCHEN.pick, to = serveAt(g.seat);
+      const path1 = W.route(home, from), path2 = W.route(from, to), l1 = W.pathLen(path1), l2 = W.pathLen(path2);   /* 막힌 곳을 돌아가는 길 (건물 · 식탁 위 X) */
+      g.autoMult = autoMult(); const t = (l1 + l2) / SPEED.serve + 0.6; sv.job = { o, left: t, path: path1.concat(path2.slice(1)), t0: S.t }; sv.pos = to; on('deliver', { sv: sv.id, o, from, to, path1, path2, dur1: l1 / SPEED.serve, dur2: l2 / SPEED.serve + 0.6, dur: t, name: base.name }); }
   }
   /* 손님 */
   for (let i = R.guests.length - 1; i >= 0; i--) {
@@ -290,8 +310,7 @@ export function step(dt) {
   const live = sum / span, est = incomeRate(); S.rate = Math.max(est * 0.5, Math.min(est * 1.5, live || est));
 }
 /* 웰컴센터 · 키친보다 위(숲 · 계곡 · 스테이) 자리는 가운데 오솔길로 돌아 감 (건물을 가로지르지 않게) */
-const viaOf = seat => seat.y < D.WELCOME.pos[1] + 60 && seat.pad ? [D.TRAIL[0], D.TRAIL[1]] : [];
-const pathLen = p => { let L = 0; for (let i = 1; i < p.length; i++) L += dist(p[i - 1], p[i]); return L; };
+const pathLen = W.pathLen;
 function spawnGuest() {
   const free = R.seats.filter(s => !s.guest); if (!free.length) return;
   /* 단골: 하루 한 번, 레벨이 되면 */
@@ -300,9 +319,9 @@ function spawnGuest() {
   const dogSeat = free.filter(s => s.pad && D.PADS.find(p => p.id === s.pad).dog);
   const seat = reg && reg.dog && dogSeat.length ? pick(dogSeat) : pick(free);
   const look = reg ? reg.look : pick(['hiker', 'grandma', 'kid', 'couple', 'family']);
-  const path = [D.ENTRY[1], D.ENTRY[0], ...viaOf(seat), [seat.x, seat.y]], len = pathLen(path);
+  const path = W.route(D.ENTRY[1], [seat.x, seat.y]), len = pathLen(path);
   const g = { id: ++R.gid, look, seat, st: 'walk', left: len / SPEED.guest, reg: reg ? reg.id : null, dog: !!(reg && reg.dog) || (seat.pad && D.PADS.find(p => p.id === seat.pad).dog && RNG() < 0.5) };
-  seat.guest = g.id; R.guests.push(g); on('spawn', { g, path, dur: g.left });
+  g.path = path; g.t0 = S.t; seat.guest = g.id; R.guests.push(g); on('spawn', { g, path, dur: g.left });
 }
 function order(g, again) {
   const sts = Object.keys(R.cooks).filter(st => built(st) && menuFor(st).length);
@@ -313,26 +332,61 @@ function order(g, again) {
   const st = D.LINES.find(l => l.id === m.line).st, o = { gid: g.id, st, menu: m.id }; g.menu = m.id; R.orders.push(o); on('order', { g, m: m.id });
 }
 function payCoins(g, tap) {   /* 값 받기 (누른 접시는 건네는 순간 바로 · 아니면 다 먹고 나서) */
-  const m = D.MENU.find(x => x.id === g.menu); const crit = RNG() < critP(m.line); let c = dishPrice(m, g.seat.vip || 1) * (crit ? D.CRIT.mult : 1) * (g.tapMult || 1);
+  const m = D.MENU.find(x => x.id === g.menu); const crit = RNG() < critP(m.line); let c = dishPrice(m, g.seat.vip || 1) * (crit ? D.CRIT.mult : 1) * (g.tapMult || g.autoMult || 1);
   if (g.tapMult) R.tapStats.bonus += Math.ceil(c - c / g.tapMult);
   c = Math.ceil(c); S.coin += c; S.stats.earned += c; R.earned += c; S.stats.served++; count('serve'); if (crit) { S.stats.crits++; count('crit'); }
   addXp(1); on('paid', { g, c, crit, tap: !!tap }); g.prepaid = true; return c;
 }
 function pay(g) {
   const m = D.MENU.find(x => x.id === g.menu); if (!g.prepaid) payCoins(g);
-  if (RNG() < D.TAP.tipP) { const tip = { id: ++R.gid, x: g.seat.x, y: g.seat.y - 150, c: Math.ceil(dishPrice(m, g.seat.vip || 1) * D.TAP.tipK), end: S.t + D.TAP.tipLife }; R.tips.push(tip); on('tip', { tip }); }   /* 손님 머리 위 하트 팁 (누르면 받음) */
+  if (RNG() < D.TAP.tipP) { const tip = { id: ++R.gid, x: g.seat.x, y: g.seat.y - 70, c: Math.ceil(Math.max(5, incomeRate() * D.TAP.tipSec)), end: S.t + D.TAP.tipLife }; R.tips.push(tip); on('tip', { tip }); }   /* 손님 머리 위 하트 팁 (누르면 받음) */
   if (g.reg) { const o = S.regs[g.reg]; if (o.day !== dayNo(S.t)) { o.day = dayNo(S.t); if (o.fav < D.FAVOR_MAX) { o.fav++; addXp(10); on('story', { id: g.reg, fav: o.fav }); } } }
   if (RNG() < D.GIFT_P.chance && R.gifts.length < D.GIFT_P.max) { const k = wpick(D.GIFT)[0]; const gift = { kind: k, x: g.seat.x + rnd(-24, 24), y: g.seat.y + 40 }; R.gifts.push(gift); on('gift', { gift }); }
-  g.seat.guest = null; g.st = 'leave'; const lp = [[g.seat.x, g.seat.y], ...viaOf(g.seat).reverse(), D.ENTRY[0], D.ENTRY[1]]; g.left = pathLen(lp) / SPEED.guest; on('leave', { g, path: lp, dur: g.left });
+  g.seat.guest = null; g.st = 'leave'; const lp = W.route([g.seat.x, g.seat.y], D.ENTRY[1]); g.path = lp; g.t0 = S.t; g.left = pathLen(lp) / SPEED.guest; on('leave', { g, path: lp, dur: g.left });
 }
 /* ── 직접 누르기 (대표 피드백: 원작처럼 손으로 거두는 맛) ──
    ① 다 된 음식 누르기: 바로 손님에게 '퐁' · 그 자리에서 값 +25% · 콤보 ② 조리 중 연타 = 응원: 남은 시간 -0.4초씩 · 게이지 10(부드러운 상한)
    ③ 손님 머리 위 하트 팁 · 바닥 선물 · 고양이 · 숲 바구니 ④ 1.5초 안에 연달아 거두면 콤보 ×N (값 +3%씩, 최대 +30%) */
 function comboHit() { const c = R.combo; c.n = S.t - c.t <= D.TAP.comboGap ? c.n + 1 : 1; c.t = S.t; if (c.n >= 2) on('combo', { n: c.n }); return 1 + D.TAP.comboK * Math.min(c.n - 1, 10); }
 export const readyAt = st => R.ready.filter(o => o.st === st);
+/* 자동 판매 값: 반값 · 7일 자동권 / 자동 판매대가 있으면 정가 (누르는 수고를 덜어 주는 상품 · 누르는 것보다 더 받지는 않음) */
+export const autoOn = k => (S.auto && ((S.auto.until || 0) > S.t || S.auto[k]));
+const autoMult = () => autoOn('dish') ? 1 : D.TAP.autoK;
+/* ── 구름 양 (연타 대상): 가끔 하늘을 건너감 · 누를 때마다 수입 12초치 · 최대 12번 · 자동 상품이면 4초 뒤 8번 ×1.2 ── */
+function cloudTick(dt) {
+  if (R.nextCloud == null) R.nextCloud = rnd(...D.CLOUD.every) * 0.4;
+  if (!R.cloud) { R.nextCloud -= dt; if (R.nextCloud <= 0 && S.lv >= 2) { R.nextCloud = rnd(...D.CLOUD.every); const y = rnd(560, 760), dir = RNG() < 0.5 ? 1 : -1; R.cloud = { id: ++R.gid, t0: S.t, end: S.t + D.CLOUD.life, taps: 0, from: [dir > 0 ? -60 : 780, y], to: [dir > 0 ? 780 : -60, y - 40], auto: 0 }; on('cloud', { c: R.cloud }); } return; }
+  const c = R.cloud; if (S.t >= c.end || c.taps >= D.CLOUD.taps) { on('cloudGone', { c, full: c.taps >= D.CLOUD.taps }); R.cloud = null; return; }
+  if (autoOn('cloud') && S.t - c.t0 >= D.CLOUD.autoDelay && c.auto < D.CLOUD.autoTaps && S.t - (c.lastAuto || 0) >= 0.9) { c.lastAuto = S.t; c.auto++; tapCloud(true); }
+}
+export const cloudPos = c => { const k = Math.min(1, (S.t - c.t0) / D.CLOUD.life); return [c.from[0] + (c.to[0] - c.from[0]) * k, c.from[1] + (c.to[1] - c.from[1]) * k]; };
+export function tapCloud(auto) { const c = R.cloud; if (!c || c.taps >= D.CLOUD.taps) return null; c.taps++; const got = Math.ceil(Math.max(5, incomeRate() * D.CLOUD.sec) * (auto ? D.CLOUD.autoK : comboHit()));
+  S.coin += got; S.stats.earned += got; R.earned += got; R.tapStats.cloud = (R.tapStats.cloud || 0) + 1; count('cloud'); on('cloudTap', { c, got, n: c.taps, auto: !!auto }); return got; }
+/* ── 선물 바구니를 든 직원 (가끔): 바구니 3개 중 하나 고르기 · 광고 보면 나머지도 ── */
+function giftTick(dt) {
+  if (R.nextGift == null) R.nextGift = rnd(...D.GIFTBOX.every) * 0.5;
+  if (!R.giftBox) { R.nextGift -= dt; if (R.nextGift <= 0 && S.lv >= 3) { R.nextGift = rnd(...D.GIFTBOX.every); const sv = (R.servers[0] || {}).id || 'haru'; R.giftBox = { id: ++R.gid, sv, end: S.t + D.GIFTBOX.life, items: null }; on('giftBox', { b: R.giftBox }); } return; }
+  if (S.t >= R.giftBox.end + (R.giftBox.items ? 90 : 0)) { on('giftBoxGone', { b: R.giftBox }); R.giftBox = null; }   /* 열어 보는 중이면 조금 더 기다림 */
+}
+function giftItem() { const [k] = wpick(D.GIFTBOX.table), sec = pick(D.GIFTBOX.tiers);
+  return k === 'coin' ? { k, sec, r: { coin: Math.ceil(Math.max(10, incomeRate() * sec)) } } : k === 'rp' ? { k, sec, r: { rp: Math.ceil(restPerMin() * sec / 60 * 4 + 10) } } : k === 'stamp' ? { k, r: { stamp: 2 } } : k === 'gem' ? { k, r: { gem: pick([5, 10, 15]) } } : k === 'treat' ? { k, r: { treat: 2 } } : { k, r: { big: 1 } }; }
+export function openGiftBox() { const b = R.giftBox; if (!b) return null; if (!b.items) { b.items = Array.from({ length: D.GIFTBOX.boxes }, giftItem); b.picked = -1; } return b; }
+export function pickGift(i) { const b = R.giftBox; if (!b || !b.items || b.picked >= 0) return null; b.picked = i; count('giftpick'); R.tapStats.gift = (R.tapStats.gift || 0) + 1; const got = gain(b.items[i].r, 'giftbox'); return got; }
+export function takeRestGifts() { const b = R.giftBox; if (!b || !b.items || b.picked < 0) return null; const out = []; b.items.forEach((it, i) => { if (i !== b.picked) out.push(gain(it.r, 'giftbox')); }); closeGiftBox(); return out; }
+export function forceGift() { R.nextGift = 0; if (S.lv < 3) S.lv = 3; }   /* 시험용 */
+export function forceCloud() { R.nextCloud = 0; if (S.lv < 2) S.lv = 2; }
+export function closeGiftBox() { if (R.giftBox) on('giftBoxGone', { b: R.giftBox }); R.giftBox = null; }
+/* ── 떠돌이 음악가 (드문 손님): 하루 2번까지 · 누르면 수입 1시간치 ── */
+function visitorTick(dt) {
+  if (R.nextVisitor == null) R.nextVisitor = rnd(...D.VISITOR.every) * 0.5;
+  const day = dayNo(S.t); if (!S.visit || S.visit.day !== day) S.visit = { day, n: 0 };
+  if (!R.visitor) { R.nextVisitor -= dt; if (R.nextVisitor <= 0 && S.lv >= D.VISITOR.needLv && S.visit.n < D.VISITOR.perDay) { R.nextVisitor = rnd(...D.VISITOR.every); R.visitor = { id: ++R.gid, pos: [...D.VISIT_SPOT], end: S.t + D.VISITOR.life }; on('visitor', { v: R.visitor, path: W.route(D.ENTRY[1], D.VISIT_SPOT) }); } return; }
+  if (S.t >= R.visitor.end) { on('visitorGone', { v: R.visitor, path: W.route(D.VISIT_SPOT, D.ENTRY[1]) }); R.visitor = null; }
+}
+export function tapVisitor() { const v = R.visitor; if (!v) return null; S.visit.n++; const got = gain({ coin: Math.ceil(Math.max(100, incomeRate() * D.VISITOR.sec)) }, 'visitor'); R.tapStats.visit = (R.tapStats.visit || 0) + 1; on('visitorGone', { v, path: W.route(D.VISIT_SPOT, D.ENTRY[1]), got }); R.visitor = null; return got; }
 export function tapDish(st) {
   const i = R.ready.findIndex(o => o.st === st && (R.guests.find(g => g.id === o.gid) || {}).st === 'wait'); if (i < 0) return null;
-  const o = R.ready.splice(i, 1)[0], g = R.guests.find(x => x.id === o.gid); g.st = 'eat'; g.left = 3.2; g.tapMult = D.TAP.dishK * comboHit(); R.tapStats.dish++;
+  const o = R.ready.splice(i, 1)[0], g = R.guests.find(x => x.id === o.gid); g.st = 'eat'; g.left = 3.2; g.tapMult = comboHit(); R.tapStats.dish++; count('tapsell');
   on('tapServe', { o, g, from: stationPos(st) }); on('served', { g, sv: null, tap: true }); payCoins(g, true); return g;
 }
 export function tapCook(st) {
