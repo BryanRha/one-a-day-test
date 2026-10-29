@@ -163,7 +163,7 @@ export const restRate = (fac, lv) => 5 * 1.25 ** (lv - 1) * fac.rp;   /* 1분마
 export const TAP = { autoWait: 5, autoK: 0.5, priceK: 1.6, shelf: 8, cheerSec: 0.4, cheerMax: 10, cheerRegen: 0.6, tipP: 0.25, tipSec: 6, tipLife: 6, comboGap: 1.5, comboK: 0.03 };
 /* 누르기 크기 사다리 (보상 = 현재 수입 N초치 · 명세서 13-1): 요리 = 한 접시 정가 · 팁 6초치 · 구름 양 1번 12초치(최대 12번 = 2분 24초치) · 선물 바구니 30/60/120초치 · 떠돌이 손님 1시간치
    틀: 직접 누르면 정가, 두면 5초 뒤 도우미가 반값으로 자동 판매 → 화면에는 "직접 팔면 2배!" (보너스 말투) · 진열은 처음 8칸 (꽉 차면 더 굽지 않음) */
-export const CLOUD = { every: [100, 170], life: 15, taps: 12, sec: 8, autoDelay: 4, autoTaps: 8, autoK: 1.2 };
+export const CLOUD = { every: [100, 170], life: 15, taps: 12, sec: 8, autoDelay: 4, autoTaps: 8, autoK: 1 }   /* 2026-10-29 대표: 자동은 직접 누를 때 이하만 (능력치 판매 금지) */;
 export const GIFTBOX = { every: [160, 280], life: 25, boxes: 3, table: [['coin', 39], ['rp', 33], ['stamp', 12], ['gem', 8], ['treat', 6], ['big', 2]], tiers: [30, 60, 120] };
 export const VISITOR = { every: [420, 720], life: 40, perDay: 1, sec: 3600, needLv: 4 };
 export const CRIT = { base: 0.05, mult: 3, adP: 0.30, adSec: 600 };

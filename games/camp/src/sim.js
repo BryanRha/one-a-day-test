@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.91.0';
-import * as W from './walk.js?v=0.91.0';
+import * as D from './data.js?v=0.91.1';
+import * as W from './walk.js?v=0.91.1';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -352,7 +352,7 @@ export const readyAt = st => R.ready.filter(o => o.st === st);
 /* 자동 판매 값: 반값 · 7일 자동권 / 자동 판매대가 있으면 정가 (누르는 수고를 덜어 주는 상품 · 누르는 것보다 더 받지는 않음) */
 export const autoOn = k => (S.auto && ((S.auto.until || 0) > S.t || S.auto[k]));
 const autoMult = () => autoOn('dish') ? 1 : D.TAP.autoK;
-/* ── 구름 양 (연타 대상): 가끔 하늘을 건너감 · 누를 때마다 수입 12초치 · 최대 12번 · 자동 상품이면 4초 뒤 8번 ×1.2 ── */
+/* ── 구름 양 (연타 대상): 가끔 하늘을 건너감 · 누를 때마다 수입 12초치 · 최대 12번 · 자동 상품이면 4초 뒤 8번 (같은 값) ── */
 function cloudTick(dt) {
   if (R.nextCloud == null) R.nextCloud = rnd(...D.CLOUD.every) * 0.4;
   if (!R.cloud) { R.nextCloud -= dt; if (R.nextCloud <= 0 && S.lv >= 2) { R.nextCloud = rnd(...D.CLOUD.every); const y = rnd(560, 760), dir = RNG() < 0.5 ? 1 : -1; R.cloud = { id: ++R.gid, t0: S.t, end: S.t + D.CLOUD.life, taps: 0, from: [dir > 0 ? -60 : 780, y], to: [dir > 0 ? 780 : -60, y - 40], auto: 0 }; on('cloud', { c: R.cloud }); } return; }

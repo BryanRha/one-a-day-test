@@ -5,9 +5,9 @@
 //     봇 측정(tools/help_bot.js): 평균 거리 상승이 이어하기 1회의 0.15배 이하 (기준 ½ 이하)
 //   한도: 하루 2번(조건이 맞은 횟수) · bm.helpOn() 이 false(실험 꺼짐 그룹)면 주지 않음(help_eligible 기록만) · 소장자 · 비소장자 똑같이
 //   난이도는 몰래 바꾸지 않음 — 보이는 선물만
-import { load, save, todayKey } from './save.js?v=0.91.0';
-import { bm } from './oad_bm.js?v=0.91.0';
-import { inOAD } from './oad.js?v=0.91.0';
+import { load, save, todayKey } from './save.js?v=0.91.1';
+import { bm } from './oad_bm.js?v=0.91.1';
+import { inOAD } from './oad.js?v=0.91.1';
 
 export const HELP = { firstRuns: 3, streak: 3, shortRatio: 0.4, minDist: 300, minT: 20, perDay: 2, floorM: 500, capM: 1200 };
 

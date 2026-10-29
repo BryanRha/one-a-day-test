@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.91.0';
-import * as G from './sim.js?v=0.91.0';
-import { bm } from './oad_bm.js?v=0.91.0';
-import { sfx, setAudio, AUD } from './audio.js?v=0.91.0';
-import { pushBack } from './oad.js?v=0.91.0';
+import * as D from './data.js?v=0.91.1';
+import * as G from './sim.js?v=0.91.1';
+import { bm } from './oad_bm.js?v=0.91.1';
+import { sfx, setAudio, AUD } from './audio.js?v=0.91.1';
+import { pushBack } from './oad.js?v=0.91.1';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -209,7 +209,7 @@ export async function watch(k, arg, done) {
 /* 원어데이 골드 (가격 = 서버 표 · 앱 확인 창) */
 const GOLD = {
   auto7: { name: '7일 자동 일손', desc: '7일 동안 도우미가 요리를 정가로 팔고, 구름 양도 알아서 쓰다듬어요 (직접 누를 때와 같은 값 · 더 받지는 않아요)', art: () => IMG('ui/serve'), give: () => { S.auto = S.auto || {}; S.auto.until = Math.max(S.auto.until || 0, S.t) + 7 * 86400; } },
-  autocloud: { name: '구름 양 목동 (영구)', desc: '구름 양이 오면 4초 뒤부터 대신 8번 쓰다듬어요 · 보상 +20% · 계정에 남아요', art: () => IMG('deco/sheep'), item: true, own: () => S.auto && S.auto.cloud, give: () => { S.auto = S.auto || {}; S.auto.cloud = true; } },
+  autocloud: { name: '구름 양 목동 (영구)', desc: '구름 양이 오면 4초 뒤부터 대신 8번 쓰다듬어요 (직접 누를 때와 같은 값 · 더 받지는 않아요) · 계정에 남아요', art: () => IMG('deco/sheep'), item: true, own: () => S.auto && S.auto.cloud, give: () => { S.auto = S.auto || {}; S.auto.cloud = true; } },
   gems100: { name: '솔방울 100개', n: 100, bonus: 0, give: () => { S.gem += 100; } },
   gems300: { name: '솔방울 330개', n: 330, bonus: 10, give: () => { S.gem += 330; } },
   gems1000: { name: '솔방울 1,200개', n: 1200, bonus: 20, give: () => { S.gem += 1200; } },

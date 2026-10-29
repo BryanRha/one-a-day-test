@@ -1,8 +1,8 @@
 // 소장 게임 클라우드 저장: 게임 코드는 그대로, 앱이 게임의 저장 키(catalog SAVES)를 묶어 계정에 올리고 내림
 //   내려받기 = 게임 화면을 띄우기 직전 · 올리기 = 게임을 닫은 뒤 / 앱을 내릴 때 / 소장한 순간
 //   충돌 판정은 서버 판 번호(rev) + 내용 해시 · 두 기기 모두 바뀌었을 때만 물어봄 · 직전본 1개는 서버에 남음(되돌리기)
-import { SAVES, SAVES_ALWAYS } from './catalog.js?v=0.91.0';
-import * as A from './account.js?v=0.91.0';
+import { SAVES, SAVES_ALWAYS } from './catalog.js?v=0.91.1';
+import * as A from './account.js?v=0.91.1';
 
 const META = 'oad_sync';
 const meta = () => { try { return JSON.parse(localStorage.getItem(META) || '{}'); } catch { return {}; } };
