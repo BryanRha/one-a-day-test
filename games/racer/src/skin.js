@@ -2,9 +2,9 @@
 //   aurora 오로라 펄: 소장자 전용 (hello().owned 이면 무료로 열림)
 //   neon   네온 나이트: 원어데이 골드 상품 'skin' (bm.spend 성공 → 바로 · 다음 실행부터 hello().items 에 'skin')
 //   지금 차 원화를 다시 칠하고(차체 색) + 바닥 빛 · 배기 불꽃 색을 바꿈
-import { load, save } from './save.js?v=0.88.2';
-import { bm } from './oad_bm.js?v=0.88.2';
-import { hasItem } from './bmflow.js?v=0.88.2';
+import { load, save } from './save.js?v=0.89.0';
+import { bm } from './oad_bm.js?v=0.89.0';
+import { hasItem } from './bmflow.js?v=0.89.0';
 
 export const SKINS = {
   aurora: { name: '오로라 펄', desc: '청록에서 보라로 흐르는 진주빛', how: 'owner', glow: 0x5FF2E0, flame: [0x9AF7FF, 0x7A8BFF, 0xC77DFF] },

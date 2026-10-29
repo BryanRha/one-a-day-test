@@ -84,6 +84,12 @@ export const GAMES = {
     desc: '부산 영도대교점에서 시작하는 작은 감성커피. 원두를 볶고 새벽숲·제주 블루솔트·마이감성 라떼를 내려 손님에게 내어 주세요. 나무와 돌과 바람으로 가게를 꾸밀수록 손님이 늘고, 매일 찾아오는 단골들의 사연을 끝까지 들으면 그 사람만의 「시 한 줄」 액자를 벽에 걸 수 있어요.',
     path: 'games/gamsung/', cover: 'covers/gamsung.png', icon: 'covers/gamsung_icon.png', time: '5~15분',
   },
+  camp: {
+    title: '숲속 힐링 캠프', en: 'Forest Healing Camp', genre: '힐링 방치 경영', color: '#7FB26A',
+    tagline: '고원 숲 캠핑장, 오늘도 손님이 쉬어 가요',
+    desc: '소나무 숲 사이 작은 캠핑장을 꾸려요. 손님이 오면 셰프가 베이글을 굽고, 도우미가 날라요. 텐트 · 불멍 화로 · 계곡 놀이터를 짓고, 메뉴 17가지를 열고, 직원과 친해지고, 단골손님의 이야기를 하나씩 들어요. 떠나 있어도 캠프는 돌아가요. 웰컴센터 고양이 노을이도 잊지 말고 쓰다듬어 주세요.',
+    path: 'games/camp/', cover: 'covers/camp.png', icon: 'covers/camp_icon.png', time: '5~15분',
+  },
   pae: {
     title: '오늘의 패', en: "Today's Hand", genre: '카드 퍼즐', color: '#B3262B',
     tagline: '오늘의 운세로 섞인 한 벌, 열두 달을 넘겨라',
@@ -111,7 +117,7 @@ export const SAVES = {
   witch: ['witch_whiskers_v1'], ocean: ['dessertpop_save_v1'], racer: ['honk_rush_v1'], blocks: ['panda_blocks_v1'],
   dice: ['rune_dice_v1'], war: ['front_tactics_v1', 'front_tactics_maps', 'front_tactics_resume'], seek: ['his_secret_v1'],
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
-  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'],
+  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'],
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
@@ -119,7 +125,7 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
 //   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드로 열기/소장은 의뢰사 계약 확인 전까지 X(광고로만)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
-export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae'];   /* 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp'];   /* 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
 // 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:
@@ -142,6 +148,7 @@ export const TEASE = {
   racer: '빵빵! 비키세요, 골목길 최고 속도 갑니다',
   blocks: '딱 한 줄만 더… 지워지는 소리가 기분 좋아요',
   dice: '주사위 다섯 개로 세우는 나만의 룬 성벽',
+  camp: '솔숲 사이로 벚꽃잎, 오늘은 캠핑장이 문을 열어요',
   war: '허스키 부대, 작전 개시까지 하루 남았습니다',
   seek: '그 남자가 숨긴 물건, 내일은 찾을 수 있을까요',
   beauty: '섞고 합쳐 완성하는 나만의 K뷰티 레시피',
@@ -167,4 +174,5 @@ export const PICK = {
   bagel: '손이 빠르면 손님이 줄 선다. 굽고 또 구워.',
   gamsung: '단골 사연은 끝까지 들어. 네 복이 거기 있다.',
   pae: '패는 이미 섞였다. 제철 패를 아껴 둬.',
+  camp: '서두르지 마. 쉬어 가는 손님이 복을 두고 간다.',
 };
