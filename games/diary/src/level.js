@@ -1,0 +1,120 @@
+// 판 만들기 — 반드시 풀리는 판 (위에서부터 벗기는 순서를 먼저 정하고 그 순서대로 그림 · 얼음 · 사슬을 붙임)
+//   좌표 단위 = 타일 한 칸 · 층(z)이 높을수록 위 · 위층 타일과 가로 · 세로 모두 1칸 미만으로 겹치면 덮임
+//   얼음(iceAt = k): 판 시작부터 칸에 스티커를 k장 담으면 녹음 · 사슬(chain): 같은 층 · 같은 줄 바로 옆 타일이 모두 빠져야 풀림
+
+/* 시드 고정 난수 (같은 날 = 같은 판) */
+export function rng(seed) {
+  let s = (seed >>> 0) || 1;
+  return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+
+/* 줄 너비 목록 → 가운데 맞춘 칸 좌표 */
+function rows(z, y0, widths, cx) {
+  const out = [];
+  widths.forEach((w, r) => { for (let i = 0; i < w; i++) out.push({ x: cx - (w - 1) / 2 + i, y: y0 + r, z }); });
+  return out;
+}
+
+/* 판 모양 (장 수는 3의 배수로 맞춤) */
+export const LAYOUTS = {
+  /* 작은 판 36장: 오늘의 첫 판 · 진행 맵 앞쪽 */
+  small: () => [...rows(0, 0, [3, 5, 5, 5, 3], 3), ...rows(1, 0.5, [2, 4, 4, 2], 3), ...rows(2, 1.5, [1, 1, 1].slice(0, 3), 3)],
+  /* 다이아 66장 */
+  diamond: () => [...rows(0, 0, [3, 5, 7, 7, 7, 7, 5, 3], 3), ...rows(1, 1.5, [2, 4, 4, 4, 4, 2], 3), ...rows(2, 3, [1, 1], 3)],
+  /* 넓은 판 72장 */
+  wide: () => [...rows(0, 0, [7, 7, 7, 7, 7, 7], 3), ...rows(1, 0.5, [6, 6, 6, 6, 6], 3)],
+  /* 탑 81장 (4층) */
+  tower: () => [...rows(0, 0, [5, 5, 5, 5, 5, 5, 5], 3), ...rows(1, 0.5, [4, 4, 4, 4, 4, 4], 3), ...rows(2, 1, [3, 3, 3, 3, 3], 3), ...rows(3, 1.5, [1, 2, 2, 2], 3)],
+};
+export function layout(name = 'diamond') {
+  let t = LAYOUTS[name]();
+  t = t.slice(0, t.length - (t.length % 3));
+  return t.map((p, i) => ({ ...p, id: i, iceAt: 0, chain: false }));
+}
+
+export const covers = (top, low) => top.z > low.z && Math.abs(top.x - low.x) < 0.999 && Math.abs(top.y - low.y) < 0.999;
+export const neighbors = (t, list) => list.filter(b => b !== t && b.z === t.z && Math.abs(b.y - t.y) < 0.01 && Math.abs(Math.abs(b.x - t.x) - 1) < 0.01);
+
+/* 지금 누를 수 있는가: 덮이지 않음 · 얼음 녹음(taps = 지금까지 칸에 담은 수) · 사슬 옆이 비었음 */
+export const isCoveredIn = (t, list) => list.some(b => b !== t && covers(b, t));
+export const iced = (t, taps) => t.iceAt > 0 && taps < t.iceAt;
+export const chained = (t, list) => t.chain && neighbors(t, list).length > 0;
+export function canTake(t, list, taps) { return !isCoveredIn(t, list) && !iced(t, taps) && !chained(t, list); }
+export function freeOf(list, taps = 1e9) { return list.filter(a => canTake(a, list, taps)); }
+
+/* 벗기는 순서 정하기 (얼음 · 사슬 규칙도 지키면서) */
+function peel(tiles, rand, zw = 0.6, taps0 = 0) {
+  const left = tiles.slice(), order = [];
+  while (left.length) {
+    const f = freeOf(left, taps0 + order.length);
+    if (!f.length) return null;
+    f.sort((a, b) => (b.z - a.z) * zw + (rand() - 0.5) * 2);
+    const pick = f[0]; order.push(pick); left.splice(left.indexOf(pick), 1);
+  }
+  return order;
+}
+
+/* 그림 붙이기: 두 묶음씩 섞어(ABABBA 꼴) 같은 그림 세 장씩 배정 → 그 순서대로 두면 칸에 5장 넘게 쌓이지 않음
+   pre: 칸에 이미 있는 그림이 마저 필요한 장 수 (섞기 때 사용) → 맨 앞 타일들로 먼저 채움 */
+export function assign(tiles, typesPool, rand, pre = [], mix = 0.4, taps0 = 0) {
+  const order = peel(tiles, rand, 0.6, taps0); if (!order) return null;
+  let k = 0;
+  for (const need of pre) for (let i = 0; i < need.n; i++) order[k++].type = need.type;
+  const rest = order.slice(k);
+  const groups = typesPool.slice();
+  for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
+  let gi = 0;
+  for (let i = 0; i < rest.length; i += 6) {
+    const chunk = rest.slice(i, i + 6);
+    if (chunk.length === 6 && rand() < mix) {
+      const A = groups[gi++], B = groups[gi++];
+      const pat = rand() < 0.5 ? [A, B, A, B, B, A] : [A, A, B, A, B, B];
+      chunk.forEach((t, j) => { t.type = pat[j]; });
+    } else {
+      for (let j = 0; j < chunk.length; j += 3) { const A = groups[gi++]; chunk.slice(j, j + 3).forEach(t => { t.type = A; }); }
+    }
+  }
+  return order.map(t => t.id);
+}
+
+/* 얼음 · 사슬 붙이기: 정답 순서에서 '그때 이미 풀려 있을' 타일에만 → 풀리는 판이 그대로 유지됨 */
+function obstacles(tiles, order, rand, { ice = 0, chain = 0 }) {
+  const byId = new Map(tiles.map(t => [t.id, t])), idx = new Map(order.map((id, i) => [id, i]));
+  const cand = order.map(id => byId.get(id)).filter((t, i) => i >= 4);
+  for (let i = cand.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+  let ni = 0, nc = 0;
+  for (const t of cand) {
+    const at = idx.get(t.id);
+    if (ni < ice && !t.chain) { const k = 3 + Math.floor(rand() * 5); if (k <= at) { t.iceAt = k; ni++; continue; } }
+    if (nc < chain && !t.iceAt) { const nb = neighbors(t, tiles); if (nb.length && nb.every(b => idx.get(b.id) < at)) { t.chain = true; nc++; } }
+  }
+}
+
+/* 정해 둔 순서대로 두었을 때 정말 깨지는지 (칸 7 · 최대로 쌓인 수 · 얼음 · 사슬 규칙) */
+export function verify(tiles, order, slots = 7, tray0 = [], taps0 = 0) {
+  const left = tiles.slice(); const tray = tray0.slice(); let peak = tray.length, taps = taps0;
+  const byId = new Map(tiles.map(t => [t.id, t]));
+  for (const id of order) {
+    const t = byId.get(id); if (!t || !left.includes(t)) return { ok: false, why: '없는 타일' };
+    if (!canTake(t, left, taps)) return { ok: false, why: '아직 못 누르는 타일' };
+    left.splice(left.indexOf(t), 1); tray.push(t.type); taps++; peak = Math.max(peak, tray.length);
+    if (tray.length > slots) return { ok: false, why: '칸 넘침', peak };
+    if (tray.filter(x => x === t.type).length === 3) for (let i = 0; i < 3; i++) tray.splice(tray.indexOf(t.type), 1);
+  }
+  return { ok: left.length === 0 && tray.length === 0, peak };
+}
+
+/* 판 만들기: cfg = { layout, types(그림 번호 목록), mix, ice, chain } */
+export function makeLevel(seed, cfg = {}) {
+  const { layout: lname = 'diamond', types = [0, 1, 2, 3, 4, 5, 6, 7, 8], mix = 0.4, ice = 0, chain = 0 } = cfg;
+  const rand = rng(seed);
+  for (let tries = 0; tries < 80; tries++) {
+    const tiles = layout(lname);
+    const groups = tiles.length / 3, pool = []; for (let g = 0; g < groups; g++) pool.push(types[g % types.length]);
+    const order = assign(tiles, pool, rand, [], mix); if (!order) continue;
+    if (ice || chain) obstacles(tiles, order, rand, { ice, chain });
+    const v = verify(tiles, order);
+    if (v.ok) return { tiles, solution: order, peak: v.peak };
+  }
+  throw new Error('판 만들기 실패');
+}

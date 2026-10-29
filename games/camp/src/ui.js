@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.89.0';
-import * as G from './sim.js?v=0.89.0';
-import { bm } from './oad_bm.js?v=0.89.0';
-import { sfx, setAudio, AUD } from './audio.js?v=0.89.0';
-import { pushBack } from './oad.js?v=0.89.0';
+import * as D from './data.js?v=0.90.0';
+import * as G from './sim.js?v=0.90.0';
+import { bm } from './oad_bm.js?v=0.90.0';
+import { sfx, setAudio, AUD } from './audio.js?v=0.90.0';
+import { pushBack } from './oad.js?v=0.90.0';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
