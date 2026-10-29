@@ -2,9 +2,9 @@
 //   · 시작 때 hello 한 번 · 원어데이 밖(ok=false)이면 골드 · 광고 버튼을 숨기고 게임은 그대로
 //   · 가격은 서버 SHOP.pae (요청 목록 — team/dev/inbox) · ?oadtest=1 에선 시험 가격
 //   · 사행성 회피: 골드 → 엽전(판 안 재화) 환전 없음 · 골드로 사는 건 이어하기(+1손) · 꽃잎 2배 · 외형뿐
-import { bm } from './oad_bm.js?v=0.91.7';
-import { load, save } from './save.js?v=0.91.7';
-import { today } from './meta.js?v=0.91.7';
+import { bm } from './oad_bm.js?v=0.92.0';
+import { load, save } from './save.js?v=0.92.0';
+import { today } from './meta.js?v=0.92.0';
 
 export const PRICE_TEST = { continue: 20, continue2: 40, petal2: 20, back: 300 };
 let hp = null;

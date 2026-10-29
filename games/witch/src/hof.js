@@ -1,9 +1,9 @@
 // 이번 주 명예의 전당 (원어데이 소장자 혜택 · 아케이드 공통) — 원어데이 밖에서는 버튼부터 숨김
 //   점수 올리기: 결과 화면에서 bm.submitScore(점수, { assisted }) — 이어하기(골드 · 광고 · 별가루) · 응원 선물을 받은 판은 assisted
 //   보기: bm.board() 상위 20 · 내 순위 강조 · 이름은 서버가 가려서 줌
-import { W, H } from './config.js?v=0.91.7';
-import { txt, fmt, popup, scrollArea } from './ui.js?v=0.91.7';
-import { bm } from './oad_bm.js?v=0.91.7';
+import { W, H } from './config.js?v=0.92.0';
+import { txt, fmt, popup, scrollArea } from './ui.js?v=0.92.0';
+import { bm } from './oad_bm.js?v=0.92.0';
 
 export const hofShown = () => bm.info.ok;
 export const HOF_MSG = {

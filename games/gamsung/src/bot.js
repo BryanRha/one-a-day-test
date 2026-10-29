@@ -1,7 +1,7 @@
 // 시험용 자동 플레이 (?bot=1&speed=4): 손 추출(사람 손 속도 · 금빛 랜덤) · 라떼아트 · 쟁반 옮기기 · 볶기 · 찻값/치우기 · 사연 · 가구 · 동료 · 주문서
-import { MENU, ROAST, FURN, STAFF, ART } from './data.js?v=0.91.7';
-import { S, ST, save } from './state.js?v=0.91.7';
-import { storeMult, isJeong } from './game.js?v=0.91.7';
+import { MENU, ROAST, FURN, STAFF, ART } from './data.js?v=0.92.0';
+import { S, ST, save } from './state.js?v=0.92.0';
+import { storeMult, isJeong } from './game.js?v=0.92.0';
 
 export function startBot(app) {
   const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0, handT = 0, moveT = 0; window.__bot = true; S.fg = 3;

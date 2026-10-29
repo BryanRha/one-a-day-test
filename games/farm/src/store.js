@@ -5,9 +5,9 @@
 //   즉시 완성 (docs/bm-policy.md 2-1, 2026-10-29): 시간을 팔지 않고 '고른 칸 하나 바로 끝내기' · 골드는 생산품 기본값 × 남은 비율 → 등급 SKU instN
 //   원어데이 밖(hello().ok=false): 골드 · 광고 · 소장자 장식을 숨기고 지금처럼 (이미 산 창고 · 장식은 저장에 남음)
 //   골드 표시는 '100골드' 글자로 (🪙 기호는 이 게임에서 배추 코인 그림으로 바뀜)
-import { bm } from './oad_bm.js?v=0.91.7';
-import { load, save, dayNo, add } from './state.js?v=0.91.7';
-import { instSku } from './inst.js?v=0.91.7';
+import { bm } from './oad_bm.js?v=0.92.0';
+import { load, save, dayNo, add } from './state.js?v=0.92.0';
+import { instSku } from './inst.js?v=0.92.0';
 
 let helloP = null;
 // 시작 때 한 번 (기다리지 않음) → 응답이 오면 영구 상품 · 소장자 장식을 되살리고 화면을 다시 그림
@@ -51,7 +51,7 @@ export const goldMsg = r => !r || r.reason === 'cancel' ? '' : r.reason === 'sho
 // ── 보상형 광고 (자리별 하루 횟수 = 게임 쪽 상한 · 앱의 게임당 한도와 둘 다 지킴)
 export const AD_LIMIT = { speed: 5, boost: 3 };
 // ── 즉시 완성 (값 계산은 inst.js) · 서버 SHOP.farm instN 이 같은 값(N골드)일 때만 골드 버튼을 띄움 → 화면 값 = 실제 차감
-export { INST_MIN, INST, instBase, instGold, instSku } from './inst.js?v=0.91.7';
+export { INST_MIN, INST, instBase, instGold, instSku } from './inst.js?v=0.92.0';
 export const instPrice = g => (g && goldPrice(instSku(g)) === g ? g : 0);      /* 서버에 그 등급이 같은 값으로 있을 때만 */
 export async function buyInst(g) { if (!instPrice(g)) return { ok: false, reason: 'off' }; const r = await bm.spend(instSku(g)); if (r && r.ok) { const d = load(); (d.goldLog = d.goldLog || []).push({ item: instSku(g), gold: g, at: Date.now() }); if (d.goldLog.length > 30) d.goldLog.shift(); save(); } return r || { ok: false, reason: 'error' }; }
 function adDay() { const d = load(); if (!d.adUse || d.adUse.day !== dayNo()) d.adUse = { day: dayNo(), speed: 0, boost: 0 }; return d.adUse; }
