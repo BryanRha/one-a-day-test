@@ -1,8 +1,8 @@
 /* 숲속 힐링 캠프 — 봄 파스텔 + 고원 숲 톤 · 움직이지 않는 UI 가 없게 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점) */
-:root { --ff: -apple-system, 'Apple SD Gothic Neo', 'Pretendard', sans-serif; --ink: #5E4A42; --ink2: #8A746A; --line: #9C8278; --cream: #FFFBF2; --paper: #FFF7EA; --pink: #F3A9BA; --pink2: #F9D4DC; --mint: #A8DCC4; --mint2: #DDF2E8; --sky: #9CC8EE; --sky2: #DCEBF8; --yel: #FFE38A; --wood: #C9A27E; --wood2: #E8D2B8; --orange: #FF8A3D; --red: #FF6B6B;
+:root { --ff: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'SamsungOneKorean', 'Noto Sans KR', 'Noto Sans CJK KR', 'Malgun Gothic', sans-serif; --ink: #5E4A42; --ink2: #8A746A; --line: #9C8278; --cream: #FFFBF2; --paper: #FFF7EA; --pink: #F3A9BA; --pink2: #F9D4DC; --mint: #A8DCC4; --mint2: #DDF2E8; --sky: #9CC8EE; --sky2: #DCEBF8; --yel: #FFE38A; --wood: #C9A27E; --wood2: #E8D2B8; --orange: #FF8A3D; --red: #FF6B6B;
   --pop: cubic-bezier(.34, 1.56, .64, 1); --soft: cubic-bezier(.22, 1, .36, 1); }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #EAF4E4; overflow: hidden; touch-action: none; font-family: -apple-system, 'Apple SD Gothic Neo', 'Pretendard', sans-serif; color: var(--ink); user-select: none; -webkit-user-select: none; }
+html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-font-smoothing: antialiased; margin: 0; height: 100%; background: #EAF4E4; overflow: hidden; touch-action: none; font-family: var(--ff); color: var(--ink); user-select: none; -webkit-user-select: none; }
 #frame { position: absolute; left: 50%; top: 50%; width: 720px; height: 1560px; overflow: hidden; background: #CFE8C2; transform-origin: 50% 50%; }
 /* 세로로 긴 화면(폴드 등): 판은 가운데, 위아래는 같은 그림을 흐리게 늘여 이어 붙임 · HUD 는 화면 끝에 (퀄리티 B5) */
 #frame .bgx { position: absolute; left: -20%; top: -10%; width: 140%; height: 120%; object-fit: cover; filter: blur(22px) saturate(1.05); opacity: .95; }
@@ -186,9 +186,9 @@ html, body { margin: 0; height: 100%; background: #EAF4E4; overflow: hidden; tou
 .tst.good { background: #4E8E72ee; }
 @keyframes tstIn { 0% { transform: translateY(-20px) scale(.9); opacity: 0; } 10% { transform: none; opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 .fl { position: absolute; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-.num { position: absolute; transform: translate(-50%, -50%); font: 900 30px/1 var(--ff); color: #FFD45A; background: linear-gradient(#FFF3B0, #FFC23A 60%, #F29A1E); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 6px #6A3E1E; paint-order: stroke fill; filter: drop-shadow(0 2px 0 #6A3E1E); animation: numUp 1.2s var(--soft) forwards; white-space: nowrap; }
+.num { position: absolute; transform: translate(-50%, -50%); font: 900 30px/1 var(--ff); color: #FFD24A; text-shadow: 3.0px 0.0px 0 #6A3E1E, -3.0px 0.0px 0 #6A3E1E, 0.0px 3.0px 0 #6A3E1E, 0.0px -3.0px 0 #6A3E1E, 2.1px 2.1px 0 #6A3E1E, -2.1px 2.1px 0 #6A3E1E, 2.1px -2.1px 0 #6A3E1E, -2.1px -2.1px 0 #6A3E1E, 0 4px 0 #6A3E1E; animation: numUp 1.2s var(--soft) forwards; white-space: nowrap; }
 .num.crit { font-size: 42px; }
-.num.txt { font-size: 26px; background: linear-gradient(#FFFFFF, #FFE9F0); -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: 6px #8A4A5A; }
+.num.txt { font-size: 26px; color: #FFFFFF; text-shadow: 3.0px 0.0px 0 #8A4A5A, -3.0px 0.0px 0 #8A4A5A, 0.0px 3.0px 0 #8A4A5A, 0.0px -3.0px 0 #8A4A5A, 2.1px 2.1px 0 #8A4A5A, -2.1px 2.1px 0 #8A4A5A, 2.1px -2.1px 0 #8A4A5A, -2.1px -2.1px 0 #8A4A5A, 0 4px 0 #8A4A5A; }
 @keyframes numUp { 0% { transform: translate(-50%, -20%) scale(.4); opacity: 0; } 20% { transform: translate(-50%, -80%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -220%) scale(1); opacity: 0; } }
 .pointer { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 6px solid #FFE38A; box-shadow: 0 0 0 4px #fff8; animation: ptr 1.1s ease-out infinite; pointer-events: none; z-index: 60; }
 .pointer::after { content: ''; position: absolute; left: 30px; top: 30px; width: 30px; height: 30px; border-radius: 50%; background: #FFE38A; box-shadow: 0 0 0 5px #fff; animation: ptrHand 1.1s ease-in-out infinite; }
@@ -236,7 +236,7 @@ html, body { margin: 0; height: 100%; background: #EAF4E4; overflow: hidden; tou
 .gauge { position: absolute; width: 90px; height: 14px; margin-left: -45px; border-radius: 8px; background: #FFFBF2; border: 3px solid var(--line); overflow: hidden; z-index: 11; transition: opacity .4s; pointer-events: none; }
 .gauge i { display: block; height: 100%; background: linear-gradient(90deg, #FFB46A, #FF8A3D); transition: width .15s; }
 .gauge.low i { background: #D9C8B8; }
-.combo { position: absolute; transform: translate(-50%, -50%); font: 900 34px/1 var(--ff); color: #FF8A3D; -webkit-text-stroke: 7px #fff; paint-order: stroke fill; pointer-events: none; animation: comboPop 1.1s var(--pop) forwards; white-space: nowrap; text-align: center; }
+.combo { position: absolute; transform: translate(-50%, -50%); font: 900 34px/1 var(--ff); color: #FF8A3D; text-shadow: 3.5px 0.0px 0 #FFFFFF, -3.5px 0.0px 0 #FFFFFF, 0.0px 3.5px 0 #FFFFFF, 0.0px -3.5px 0 #FFFFFF, 2.4px 2.4px 0 #FFFFFF, -2.4px 2.4px 0 #FFFFFF, 2.4px -2.4px 0 #FFFFFF, -2.4px -2.4px 0 #FFFFFF; pointer-events: none; animation: comboPop 1.1s var(--pop) forwards; white-space: nowrap; text-align: center; }
 .combo b { font-size: 46px; color: #F3647A; } .combo small { display: block; font-size: 22px; color: #C9642A; }
 @keyframes comboPop { 0% { transform: translate(-50%, -50%) scale(.3) rotate(-10deg); opacity: 0; } 20% { transform: translate(-50%, -60%) scale(1.15) rotate(3deg); opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -140%) scale(1); opacity: 0; } }
 .lvtag.tapz { pointer-events: auto; cursor: pointer; }
@@ -255,3 +255,22 @@ html, body { margin: 0; height: 100%; background: #EAF4E4; overflow: hidden; tou
 .gpick div img { width: 92px; height: 92px; object-fit: contain; animation: giftHop 1.4s var(--pop) infinite; }
 .gpick div.got { background: #FFF6D0; border-color: #C9A04A; } .gpick div.rest { opacity: .75; } .gpick div:active { transform: scale(.9); }
 .tog { display: flex; justify-content: space-between; align-items: center; padding: 12px 6px; font: 800 22px/1 var(--ff); border-bottom: 2px solid #F0E2D0; }
+
+/* 넓은 화면(폴드 펼침 · PC): 양옆 빈 곳도 같은 그림을 흐리게 (퀄리티 B5 연장) */
+#backdrop { position: fixed; inset: -40px; background: url(../assets/bg_spring.webp) center 40% / cover; filter: blur(24px) saturate(1.05) brightness(1.02); }
+
+/* 목표 · 다음 해금 · 평판 · 하는 법 · 크게 축하 (대표 피드백: 게임성을 더 명확하게) */
+#goal { position: absolute; left: 22px; top: 168px; width: 440px; background: #FFFBF2f4; border: 3px solid var(--line); border-radius: 20px; padding: 8px 12px 8px; box-shadow: 0 4px 0 #9C827844; cursor: pointer; transition: transform .25s var(--pop); }
+#goal:active { transform: scale(.96); } #goal.new { animation: goalIn .6s var(--pop); } #goal.ready { box-shadow: 0 4px 0 #9C827844, 0 0 0 5px #FFE38A99; animation: sGlow 1.6s ease-in-out infinite; }
+@keyframes goalIn { 0% { transform: translateX(-30px) scale(.9); opacity: .2; } }
+#goal .gl { display: flex; align-items: center; gap: 8px; font: 800 20px/1.25 var(--ff); } #goal .gl img { width: 30px; height: 30px; } #goal .gt { flex: 1; } #goal .gr { display: flex; align-items: center; font: 800 18px/1 var(--ff); color: #6A5020; background: #FFF0B8; border-radius: 12px; padding: 4px 8px; white-space: nowrap; } #goal .gr img { width: 22px; height: 22px; }
+#goal .gbar, #unlock .ubar { height: 9px; border-radius: 5px; background: #F0E2D0; margin-top: 6px; overflow: hidden; } #goal .gbar i { display: block; height: 100%; background: linear-gradient(90deg, #A8DCC4, #6FBF98); transition: width .5s var(--soft); }
+#goal .gs { font: 700 16px/1.3 var(--ff); color: #7A645A; margin-top: 5px; }
+#unlock { position: absolute; left: 22px; top: 268px; width: 440px; font: 700 15px/1.2 var(--ff); color: #5E4A42; background: #FFFBF2cc; border-radius: 14px; padding: 5px 10px 6px; } #unlock .ubar { height: 6px; margin-top: 4px; } #unlock .ubar i { display: block; height: 100%; background: linear-gradient(90deg, #F9D4DC, #F3A9BA); transition: width .5s var(--soft); }
+.rep { color: #E8A21E; font-weight: 900; }
+.loop { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin: 10px 0 6px; } .loop div { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; font: 800 15px/1.25 var(--ff); text-align: center; opacity: 0; animation: cardIn .45s var(--pop) forwards; } .loop img { width: 54px; height: 54px; object-fit: contain; } .loop i { font-style: normal; font: 900 20px/1 var(--ff); color: #C9A04A; }
+.celebrate { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 45; transition: opacity .5s; } .celebrate.out { opacity: 0; }
+.celebrate .rays { position: absolute; left: 50%; top: 46%; width: 760px; height: 760px; margin: -380px 0 0 -380px; z-index: 0; }
+.celebrate .cc { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #FFFBF2f6; border: 4px solid #C9A04A; border-radius: 34px; padding: 22px 34px; box-shadow: 0 10px 40px #5E4A4244; animation: bannerIn 2.6s var(--pop) forwards; max-width: 560px; text-align: center; }
+.celebrate .cc > img { width: 110px; height: 110px; object-fit: contain; animation: artIn .7s var(--pop); } .celebrate .ico { width: 26px; height: 26px; } .celebrate b { font: 900 46px/1.1 var(--ff); color: #C9642A; } .celebrate span { font: 700 21px/1.35 var(--ff); color: #6A5A52; }
+.stars3 { position: absolute; transform: translate(-50%, -50%); font: 900 20px/1 var(--ff); color: #F2B21E; text-shadow: 0 0 3px #fff, 0 2px 0 #9A6A1E; pointer-events: none; animation: numUp 1.3s var(--soft) forwards; white-space: nowrap; }

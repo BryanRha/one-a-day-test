@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.91.3';
-import * as G from './sim.js?v=0.91.3';
-import * as C from './chars.js?v=0.91.3';
-import * as C2 from './chars2d.js?v=0.91.3';
-import * as UI from './ui.js?v=0.91.3';
-import { sfx, music, setAudio } from './audio.js?v=0.91.3';
-import { bm } from './oad_bm.js?v=0.91.3';
-import { installBack } from './oad.js?v=0.91.3';
+import * as D from './data.js?v=0.91.4';
+import * as G from './sim.js?v=0.91.4';
+import * as C from './chars.js?v=0.91.4';
+import * as C2 from './chars2d.js?v=0.91.4';
+import * as UI from './ui.js?v=0.91.4';
+import { sfx, music, setAudio } from './audio.js?v=0.91.4';
+import { bm } from './oad_bm.js?v=0.91.4';
+import { installBack } from './oad.js?v=0.91.4';
 
 const Q = new URLSearchParams(location.search);
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
@@ -158,10 +158,11 @@ function makeCat() { catEl = document.createElement('div'); catEl.className = 'c
   catEl.onclick = () => { pressFx(catEl); const r = G.petCat(); burst(cat.x, cat.y - 30, 'heart', r ? 4 : 1); if (r) { sfx('cat'); UI.toast(`노을이가 골골송을 불러요 · ${r.treat ? '간식 1개를 물어 왔어요' : '쉼 포인트 +5'}`, true); cat.st = 'sit'; cat.t = 0; save(); } else { sfx('cat'); UI.toast('노을이가 눈을 가늘게 떠요 · 조금 뒤에 또 쓰다듬어 줘요'); } }; }
 function catTick(dt) {
   if (!catEl) return; cat.t += dt; const im = catEl.firstChild;
-  if (cat.st === 'sleep') { im.style.transform = `scale(${1 + 0.03 * Math.sin(cat.t * 1.6)}, ${1 - 0.03 * Math.sin(cat.t * 1.6)})`; if (cat.t > cat.next) { cat.st = 'sit'; cat.t = 0; } }
-  else if (cat.st === 'sit') { im.style.transform = `rotate(${Math.sin(cat.t * 2) * 3}deg)`; if (cat.t > 4) { const seated = [...guests.values()].filter(v => v.seated && !v.gone); if (!cat.back && seated.length && Math.random() < 0.7) { const v = pick(seated); cat.tx = v.g.seat.x + 22; cat.ty = v.g.seat.y + 6; catGo(); cat.goal = v; } else if (cat.back) { cat.tx = D.CAT_SPOT[0]; cat.ty = D.CAT_SPOT[1]; catGo(); cat.goal = null; } else { cat.st = 'sleep'; cat.t = 0; cat.next = rnd(25, 50); } } }
+  if (cat.st === 'sleep') { im.style.transform = `scale(${1 + 0.03 * Math.sin(cat.t * 1.6)}, ${1 - 0.03 * Math.sin(cat.t * 1.6)})`; if (cat.t > cat.next) { cat.st = 'sit'; cat.t = 0; cat.stretch = 0; } }
+  else if (cat.st === 'sit') { const st = cat.stretch != null && cat.stretch < 0.8 ? (cat.stretch += dt, Math.sin(cat.stretch / 0.8 * Math.PI)) : 0; const tilt = (cat.t % 3) > 2.3 ? Math.sin(((cat.t % 3) - 2.3) / 0.7 * Math.PI) * 8 : 0;   /* 깨면 기지개 · 가끔 고개 갸웃 */
+    im.style.transform = `scale(${1 + 0.2 * st}, ${1 - 0.14 * st + 0.015 * Math.sin(cat.t * 2.2)}) rotate(${Math.sin(cat.t * 2) * 2 + tilt}deg)`; if (cat.t > 4) { const seated = [...guests.values()].filter(v => v.seated && !v.gone); if (!cat.back && seated.length && Math.random() < 0.7) { const v = pick(seated); cat.tx = v.g.seat.x + 22; cat.ty = v.g.seat.y + 6; catGo(); cat.goal = v; } else if (cat.back) { cat.tx = D.CAT_SPOT[0]; cat.ty = D.CAT_SPOT[1]; catGo(); cat.goal = null; } else { cat.st = 'sleep'; cat.t = 0; cat.next = rnd(25, 50); } } }
   else if (cat.st === 'walk') { const wp = cat.path && cat.path[cat.pi] || [cat.tx, cat.ty]; if (Math.hypot(wp[0] - cat.x, wp[1] - cat.y) < 4 && cat.path && cat.pi < cat.path.length - 1) cat.pi++; const nx = (cat.path && cat.path[cat.pi]) || [cat.tx, cat.ty]; const dx = nx[0] - cat.x, dy = nx[1] - cat.y, d = Math.hypot(dx, dy), v = 40 * dt; if (d < 4 && (!cat.path || cat.pi >= cat.path.length - 1)) { cat.st = cat.goal ? 'visit' : 'sleep'; cat.t = 0; cat.back = !!cat.goal; cat.next = rnd(25, 50); if (cat.goal) burst(cat.x - 30, cat.y - 120, 'heart', 2); } else { cat.x += dx / d * Math.min(v, d); cat.y += dy / d * Math.min(v, d); im.style.transform = `scaleX(${dx < 0 ? 1 : -1}) translateY(${-Math.abs(Math.sin(cat.t * 9)) * 3}px)`; } }
-  else if (cat.st === 'visit') { im.style.transform = `rotate(${Math.sin(cat.t * 2.4) * 4}deg)`; if (cat.t > 7) { cat.st = 'sit'; cat.t = 4; } }
+  else if (cat.st === 'visit') { im.style.transform = `rotate(${Math.sin(cat.t * 2.4) * 6}deg) translateX(${Math.sin(cat.t * 1.2) * 3}px)`; if (Math.random() < dt * 0.6) burst(cat.x, cat.y - 30, 'heart', 1);   /* 손님 다리에 몸 비비기 */ if (cat.t > 7) { cat.st = 'sit'; cat.t = 4; } }
   const src = IMG(cat.st === 'sleep' ? 'deco/cat_sleep' : cat.st === 'walk' ? 'deco/cat_walk' : 'deco/cat_sit'); if (!im.src.endsWith(src)) im.src = src;
   catEl.style.left = cat.x + 'px'; catEl.style.top = (cat.y - 14 * D.PERSP(cat.y)) + 'px'; im.style.width = Math.round(40 * D.PERSP(cat.y)) + 'px';
 }
@@ -256,7 +257,7 @@ function onEvent(e) {
     case 'served': { const s = servers[e.sv]; if (s) { if (s.p.target) { s.p.root.position.copy(toWorld(...s.to)); s.p.target = null; s.p.then = null; } s.p.hold(null); s.p.play('serve'); setTimeout(() => s.p.act === 'serve' && s.p.play('idle'), 700); }
       const v = guests.get(e.g.id); if (v) { if (!v.seated) sitDown(v); if (v.bub) v.bub.style.display = 'none'; v.p.hold(dishOf(v.p, D.MENU.find(m => m.id === e.g.menu).line, e.g.menu)); v.p.play('eat'); sfx('serve'); } break; }
     case 'paid': { const v = guests.get(e.g.id); if (!v) break; v.p.hold(null); v.p.play('happy'); const [x, y] = toScreen(v.p.root.position);
-      const hh = (v.p.look.h || 60) * D.PERSP(y); burst(x, y - hh - 10, 'heart', e.g.reg ? 3 : 1); UI.fly('coin', ...F(x, y - hh * 0.6), e.crit ? 7 : 2); UI.numPop(...F(x, y - hh - 24), `${e.crit ? '대박! ' : '+'}${D.fmt(e.c)}`, e.crit); if (e.tap) { lastTap = [x, y - hh - 24]; UI.fly('coin', ...F(x, y - hh * 0.6), 3); if ((R.tapStats.dish || 0) <= 6 || Math.random() < 0.12) setTimeout(() => UI.numPop(...F(x, y - hh - 56), '직접 팔면 2배!'), 120); } if (e.crit) { sfx('crit'); burst(x, y - hh, 'sparkle', 16); } break; }
+      const hh = (v.p.look.h || 60) * D.PERSP(y); burst(x, y - hh - 10, 'heart', e.g.reg ? 3 : 1); UI.fly('coin', ...F(x, y - hh * 0.6), e.crit ? 7 : 2); UI.numPop(...F(x, y - hh - 24), `${e.crit ? '대박! ' : '+'}${D.fmt(e.c)}`, e.crit); if (e.tap) { lastTap = [x, y - hh - 24]; UI.fly('coin', ...F(x, y - hh * 0.6), 3); if ((R.tapStats.dish || 0) <= 6 || Math.random() < 0.12) setTimeout(() => UI.numPop(...F(x, y - hh - 56), '직접 팔면 2배!'), 120); } if (e.crit) { sfx('crit'); burst(x, y - hh, 'sparkle', 16); } if (e.stars) { const st = document.createElement('div'); st.className = 'stars3'; st.textContent = '★'.repeat(e.stars); const [fx2, fy2] = F(x, y - hh - 52); st.style.left = fx2 + 'px'; st.style.top = fy2 + 'px'; document.getElementById('fly').append(st); setTimeout(() => st.remove(), 1400); } break; }
     case 'leave': { const v = guests.get(e.g.id); if (!v) break; v.gone = true; v.seated = false; if (v.bub) v.bub.remove(); setTimeout(() => { v.p.play('idle'); walkPath(v.p, e.path, e.dur, () => endGuest(e.g.id, v)); }, 900); v.kill = performance.now() + (e.dur + 6) * 1000; break; }
     case 'gift': giftEl(e.gift); sfx('gift'); break;
     case 'tapServe': { const el = dishEls.get(e.o); const from = el ? [parseFloat(el.style.left), parseFloat(el.style.top)] : dishSpot(e.o.st, 0); if (el) { el.remove(); dishEls.delete(e.o); }
@@ -379,12 +380,15 @@ bm.hello().then(h => {
 });
 installBack({ back: () => false });
 bm.hello().then(() => { if (offlineRes) UI.offlinePop(offlineRes); });   /* 광고 2배 버튼은 원어데이 응답 뒤에 */
+setTimeout(() => { if (!S.loopShown) UI.loopPop(); }, 40000);   /* 처음 1분 안에 '캠프가 돌아가는 법' */
 if (G.attendReady() && S.t - S.created > 600) setTimeout(() => UI.attendPop(), 600);   /* 처음 온 날은 캠프부터 보여 줌 (출석은 옆 버튼 빨간 점) */
 music(true);
 if (Q.get('lineup') === '1') {   /* 캐릭터 한 줄 보기 (확인용) */
   await Promise.all(Object.values(C.LOOKS).map(l => l.cut && C2.preload(l.cut)));
   const ks = ['hero', 'helper', 'cook1', 'cook2', 'helper2', 'hiker', 'grandma', 'kid', 'couple', 'family', 'yunseul', 'bomi', 'dodam', 'heroSkin'], acts = ['idle', 'walk', 'stir', 'wave', 'serve', 'happy', 'eat'];
-  ks.forEach((k, i) => { const x = 70 + (i % 7) * 96, y = 1180 + Math.floor(i / 7) * 190; const p = mk(C.LOOKS[k], x, y, i); p.play(acts[i % acts.length]); p.walkPh = 0; if (i % 3 === 1) p.hold(p.is2d ? IMG('food/bagel') : C.dish('bagel')); if (acts[i % acts.length] === 'walk') p.update = (u => function (dt, n) { this.walkPh += dt * 7; this.target = null; this.act = 'walk'; return u.call(this, dt, n); })(p.update); });
+  if (Q.get('zoom')) { const z = +Q.get('zoom'), tg = toWorld(360, +(Q.get('zy') || 1160)); cam.zoom = z; cam.position.set(tg.x, Math.sin(EL) * 1000, tg.z + Math.cos(EL) * 1000); cam.lookAt(tg.x, 0, tg.z); cam.updateProjectionMatrix(); for (const id of ['hud', 'bar', 'taps', 'world', 'fx']) document.getElementById(id).style.display = 'none'; document.querySelector('#board > .bg').style.filter = 'blur(2px)'; }
+  const who = Q.get('who') ? Q.get('who').split(',') : null; const KS = who || ks;
+  KS.forEach((k, i) => { const x = who ? 360 + (i - (who.length - 1) / 2) * 62 : 70 + (i % 7) * 96, y = who ? 1180 : 1180 + Math.floor(i / 7) * 190; const p = mk(C.LOOKS[k], x, y, i); const act = who ? (Q.get('act') || 'idle') : acts[i % acts.length]; p.play(act); p.face(x, y + 100); p.walkPh = 0; if (!who && i % 3 === 1) p.hold(p.is2d ? IMG('food/bagel') : C.dish('bagel')); if ((who ? Q.get('act') : acts[i % acts.length]) === 'walk') p.update = (u => function (dt, n) { this.walkPh += dt * 7; this.target = null; this.act = 'walk'; return u.call(this, dt, n); })(p.update); });
 }
 if (Q.get('demo') === 'behind') {   /* 확인용: 건물 뒤를 지나는 손님 (가려짐 확인) */
   for (const z of ['forest', 'pine']) S.zones[z] = { st: 'open' }; G.syncWalk(); render();
@@ -405,7 +409,7 @@ function loop(t) {
   for (const e of G.drain()) onEvent(e);
   for (const p of people) p.update(Math.min(0.05, rdt), t / 1000);
   sidestep(); walkCheck(); floatersMove();
-  for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); }
+  for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); if (v.p.act === 'eat' && Math.random() < rdt * 0.6) burst(x, y - (v.p.look.h || 60) * D.PERSP(y) - 6, 'heart', 1); }   /* 먹으면서 '맛있다' 하트 */
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 40; const cur = toScreen(s.p.root.position), dst = [h[0] + rnd(-8, 8), h[1] + rnd(-3, 3)]; G.walkMap.addAnchor(dst); walkPath(s.p, G.walkMap.route(cur, dst), G.walkMap.pathLen(G.walkMap.route(cur, dst)) / 40 + 0.3, () => s.p.face(360, 1000, 0.5)); }
   if (hero.act === 'idle' && Math.random() < rdt * 0.05) { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1600); }
   renderer.render(scene, cam); draw2d(Math.min(0.05, rdt), t / 1000); catTick(Math.min(0.05, rdt)); UI.tick(Math.min(0.1, rdt));

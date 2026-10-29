@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.91.3';
-import * as W from './walk.js?v=0.91.3';
+import * as D from './data.js?v=0.91.4';
+import * as W from './walk.js?v=0.91.4';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -108,7 +108,8 @@ export function incomeRate() {
   if (!n) return 0; const perGuest = r / n; return Math.min(sum, flow * perGuest) * (1 + critP('bread') * 2);
 }
 export const minsOf = m => Math.max(10, incomeRate() * 60 * m);
-export const spawnGap = () => Math.max(D.SPAWN.min, D.SPAWN.base / (1 + R.seats.length * 0.08 + appeal() * 0.01));
+export const repAvg = () => (S.rep && S.rep.avg) || 4.5;   /* 캠프 평판 (별 1~5 · 최근 손님들의 평균) */
+export const spawnGap = () => Math.max(D.SPAWN.min, D.SPAWN.base / (1 + R.seats.length * 0.08 + appeal() * 0.01) / (1 + (repAvg() - 4.5) * 0.12));   /* 평판이 좋으면 손님이 조금 더 자주 */
 
 /* ── 재화 · 경험치 ── */
 export function gain(r, why = '') {
@@ -324,6 +325,7 @@ function spawnGuest() {
   g.path = path; g.t0 = S.t; seat.guest = g.id; R.guests.push(g); on('spawn', { g, path, dur: g.left });
 }
 function order(g, again) {
+  if (!g.orderT) g.orderT = S.t;
   const sts = Object.keys(R.cooks).filter(st => built(st) && menuFor(st).length);
   if (!sts.length) return;
   if (again) { R.orders = R.orders.filter(o => o.gid !== g.id); }
@@ -335,7 +337,8 @@ function payCoins(g, tap) {   /* 값 받기 (누른 접시는 건네는 순간 �
   const m = D.MENU.find(x => x.id === g.menu); const crit = RNG() < critP(m.line); let c = dishPrice(m, g.seat.vip || 1) * (crit ? D.CRIT.mult : 1) * (g.tapMult || g.autoMult || 1);
   if (g.tapMult) R.tapStats.bonus += Math.ceil(c - c / g.tapMult);
   c = Math.ceil(c); S.coin += c; S.stats.earned += c; R.earned += c; S.stats.served++; count('serve'); if (crit) { S.stats.crits++; count('crit'); }
-  addXp(1); on('paid', { g, c, crit, tap: !!tap }); g.prepaid = true; return c;
+  addXp(1); const wait = Math.max(0, S.t - (g.orderT || S.t)), stars = Math.max(3, Math.min(5, 5 - Math.floor(Math.max(0, wait - 6) / 9) + (tap ? 0 : 0))); S.rep = S.rep || { avg: 4.5, n: 0 }; S.rep.n++; S.rep.avg += (stars - S.rep.avg) * 0.06; if (stars === 5) count('star5');   /* 빨리 받을수록 별이 많음 */
+  on('paid', { g, c, crit, tap: !!tap, stars }); g.prepaid = true; return c;
 }
 function pay(g) {
   const m = D.MENU.find(x => x.id === g.menu); if (!g.prepaid) payCoins(g);
@@ -386,7 +389,7 @@ function visitorTick(dt) {
 export function tapVisitor() { const v = R.visitor; if (!v) return null; S.visit.n++; const got = gain({ coin: Math.ceil(Math.max(100, incomeRate() * D.VISITOR.sec)) }, 'visitor'); R.tapStats.visit = (R.tapStats.visit || 0) + 1; on('visitorGone', { v, path: W.route(D.VISIT_SPOT, D.ENTRY[1]), got }); R.visitor = null; return got; }
 export function tapDish(st) {
   const i = R.ready.findIndex(o => o.st === st && (R.guests.find(g => g.id === o.gid) || {}).st === 'wait'); if (i < 0) return null;
-  const o = R.ready.splice(i, 1)[0], g = R.guests.find(x => x.id === o.gid); g.st = 'eat'; g.left = 3.2; g.tapMult = comboHit(); R.tapStats.dish++; count('tapsell');
+  const o = R.ready.splice(i, 1)[0], g = R.guests.find(x => x.id === o.gid); g.st = 'eat'; g.left = 3.2; g.tapMult = comboHit(); R.tapStats.dish++; count('tapsell'); S.stats.tapsold = (S.stats.tapsold || 0) + 1;
   on('tapServe', { o, g, from: stationPos(st) }); on('served', { g, sv: null, tap: true }); payCoins(g, true); return g;
 }
 export function tapCook(st) {
@@ -394,4 +397,50 @@ export function tapCook(st) {
   R.cheer[st] = Math.max(0, e - 1); const cut = Math.min(s.cur.left - 0.05, D.TAP.cheerSec * k); s.cur.left -= Math.max(0, cut); R.tapStats.cheer++; on('cheer', { st, cut, gauge: R.cheer[st] / D.TAP.cheerMax }); return cut;
 }
 export function tapTip(id) { const i = R.tips.findIndex(t => t.id === id); if (i < 0) return null; const t = R.tips.splice(i, 1)[0]; const c = Math.ceil(t.c * comboHit()); S.coin += c; S.stats.earned += c; R.earned += c; R.tapStats.tip++; count('tip'); on('tipTaken', { tip: t, c }); return c; }
+/* ── 지금 목표 하나 (대표 피드백: 무엇을 하면 무엇이 좋아지는지) · 끝나면 솔방울 · 다음 목표로 ── */
+const GOALS = [
+  ['tapsell', '다 된 요리 3번 직접 팔기', () => [S.stats.tapsold || 0, 3], 10],
+  ['oven3', '빵 오븐 Lv3 만들기', () => [S.oven.lv, 3], 10, () => upCostOf('oven')],
+  ['sol', '요리사 솔 데려오기', () => [S.staff.sol ? 1 : 0, 1], 15, () => D.STAFF[1].cost],
+  ['pot', '무쇠 솥 짓기', () => [S.pads.L1 ? 1 : 0, 1], 15, () => padCost()],
+  ['stew', '수프 메뉴 출시', () => [S.menu.stew ? 1 : 0, 1], 15, () => menuNewCost(D.MENU.find(m => m.id === 'stew'))],
+  ['drink', '음료 바 짓기', () => [S.pads.L3 ? 1 : 0, 1], 15, () => padCost()],
+  ['forest', '숲속 존 열기', () => [S.zones.forest.st === 'open' ? 1 : 0, 1], 20],
+  ['tent', '캠핑 텐트 짓기', () => [S.pads.F1 ? 1 : 0, 1], 20, () => padCost()],
+  ['bada', '요리사 바다 데려오기', () => [S.staff.bada ? 1 : 0, 1], 20, () => D.STAFF[2].cost],
+  ['cocoa', '코코아 출시', () => [S.menu.cocoa ? 1 : 0, 1], 20, () => menuNewCost(D.MENU.find(m => m.id === 'cocoa'))],
+  ['ftable', '숲속 식탁 짓기', () => [S.pads.F2 ? 1 : 0, 1], 20, () => padCost()],
+  ['fridge', '공용 냉장고 들이기', () => [S.amen.fridge ? 1 : 0, 1], 20, () => amenCost()],
+  ['oven10', '빵 오븐 Lv10 (단계 업!)', () => [S.oven.lv, 10], 30, () => upCostOf('oven')],
+  ['pine', '애견 · 솔숲 존 열기', () => [S.zones.pine.st === 'open' ? 1 : 0, 1], 30],
+  ['dtable', '애견 존 식탁 짓기', () => [S.pads.D1 ? 1 : 0, 1], 30, () => padCost()],
+  ['valley', '계곡 열기', () => [S.zones.valley.st === 'open' ? 1 : 0, 1], 40],
+  ['stay', '스테이 · 루프탑 열기', () => [S.zones.stay.st === 'open' ? 1 : 0, 1], 50],
+];
+/* 막히면 바로 할 수 있는 다음 걸음 (멈춰서 무엇을 할지 모르는 순간 0) */
+function stepGoal() {
+  const zone = D.ZONES.find(z => S.zones[z.id].st === 'locked');
+  if (zone && S.builds < zone.need.built) { const p = D.PADS.find(x => canBuild(x.id)); if (p) return { id: 'step', text: `${D.FAC[p.fac].name} 짓기`, cost: padCost(), act: { k: 'build', v: p.id } }; if (Object.keys(D.AMEN).some(a => !S.amen[a])) return { id: 'step', text: '편의 설비 하나 들이기', cost: amenCost(), act: { k: 'tab', v: 'fac', w: 'amen' } }; }
+  const ts = ['oven', ...Object.keys(S.pads)].filter(t => !working(t) && (t === 'oven' ? S.oven : S.pads[t]).lv < D.UP.max).sort((a, b) => upCostOf(a) - upCostOf(b));
+  const m = D.MENU.filter(x => menuOpen(x) && menuLv(x) > 0 && menuLv(x) < D.MENU_MAX).sort((a, b) => D.menuCost(a, menuLv(a)) - D.menuCost(b, menuLv(b)))[0];
+  if (m && S.rp >= D.menuCost(m, menuLv(m))) return { id: 'step', text: `${m.name} 맛 올리기`, cost: 0, act: { k: 'tab', v: 'menu', w: m.line } };
+  if (ts.length) { const t = ts[0], o = t === 'oven' ? S.oven : S.pads[t]; return { id: 'step', text: `${t === 'oven' ? '빵 오븐' : D.FAC[o.fac].name} Lv${o.lv + 1} 만들기`, cost: upCostOf(t), act: { k: 'up', v: t } }; }
+  return { id: 'step', text: '다 된 요리 직접 팔기', cost: 0, act: { k: 'tap' } };
+}
+export function goalNow() {
+  S.goal = S.goal || { i: 0 }; while (S.goal.i < GOALS.length) { const [, , f] = GOALS[S.goal.i]; const [h, n] = f(); if (h >= n) { const r = { gem: GOALS[S.goal.i][3] }; S.goal.i++; gain(r, 'goal'); on('goalDone', { text: GOALS[S.goal.i - 1][1], r }); continue; } break; }
+  const inc = Math.max(0.01, incomeRate()), eta = c => Math.max(0, (c - S.coin) / inc);
+  if (S.goal.i < GOALS.length) { const [id, text, f, gem, cf] = GOALS[S.goal.i], [have, need] = f(), cost = cf ? cf() : 0;
+    const zone = D.ZONES.find(z => z.id === id); let wait = 0, blocked = false, why = '';
+    if (zone) { const o = S.zones[id]; if (o.st === 'building') wait = o.end - S.t; else if (!zoneNeedOk(id)) { blocked = true; why = `레벨 ${S.lv}/${zone.need.lv} · 시설 ${S.builds}/${zone.need.built}`; } }
+    if (id === 'stew' && !lineReady('soup')) blocked = true; if (id === 'cocoa' && !lineReady('drink')) blocked = true; if (id === 'pot' && !S.staff.sol) blocked = true;
+    const g = { id, text, have, need, reward: { gem }, cost, eta: cost ? eta(cost) : 0, wait, why, main: true };
+    if (blocked || g.eta > 240 || g.wait > 0) { const st = stepGoal(); return { ...g, step: { ...st, eta: st.cost ? eta(st.cost) : 0 } }; }
+    return g; }
+  const st = stepGoal(); return { ...st, have: 0, need: 1, reward: { gem: 5 }, eta: st.cost ? eta(st.cost) : 0, main: false };
+}
+const lineReady = line => { const st = D.LINES.find(l => l.id === line).st; return built(st) && !!R.cooks[st]; };
+/* 다음 해금까지 (구역) */
+export function nextUnlock() { const z = D.ZONES.find(x => S.zones[x.id].st !== 'open'); if (!z) return null; const o = S.zones[z.id]; if (o.st === 'building') return { z, k: 1 - (o.end - S.t) / o.dur, text: `${z.name.split(' · ')[0]} 정리 중` };
+  const k = Math.min(1, Math.min(S.lv / z.need.lv, S.builds / Math.max(1, z.need.built))); return { z, k, text: `다음 해금 · ${z.name.split(' · ')[0]} · 레벨 ${Math.min(S.lv, z.need.lv)}/${z.need.lv} · 시설 ${Math.min(S.builds, z.need.built)}/${z.need.built}` }; }
 export const xpPct = () => S.lv >= D.LV_MAX ? 1 : S.xp / D.lvNeed(S.lv);

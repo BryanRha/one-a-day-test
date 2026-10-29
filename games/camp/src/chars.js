@@ -54,20 +54,24 @@ const cyl = (a, b, h, s = 20) => geo(`y${a},${b},${h}`, () => new THREE.Cylinder
 /* ── 얼굴 그림 ── */
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round'; draw(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
 const FACE_T = {};
-function faceTex(eye, mouth, lash) {
+function faceTex(eye, mouth, lash) {   /* 말랑한 얼굴 (대표 피드백 10-29): 큰 눈 + 하이라이트 2개 · 둥근 볼터치 · 입 5종(미소 · 기쁨 · 집중 · 놀람 · 오물오물) */
   const k = eye + mouth + lash; if (FACE_T[k]) return FACE_T[k];
   return FACE_T[k] = canvasTex(256, 192, (x, w, h) => {
-    const ey = h * 0.46, ex = w * 0.17, r = 15; x.fillStyle = 'rgba(255,150,120,0.5)';
-    for (const s of [-1, 1]) { x.beginPath(); x.ellipse(w / 2 + s * w * 0.27, h * 0.64, 22, 13, 0, 0, TAU); x.fill(); }
+    const ey = h * 0.47, ex = w * 0.18, r = 20;
+    const bl = x.createRadialGradient(0, 0, 2, 0, 0, 26); bl.addColorStop(0, 'rgba(255,128,120,0.62)'); bl.addColorStop(1, 'rgba(255,150,140,0)');
+    for (const s of [-1, 1]) { x.save(); x.translate(w / 2 + s * w * 0.3, h * 0.66); x.scale(1.25, 0.8); x.fillStyle = bl; x.beginPath(); x.arc(0, 0, 26, 0, TAU); x.fill(); x.restore(); }
     x.strokeStyle = '#3A2418'; x.fillStyle = '#3A2418'; x.lineWidth = 7;
     for (const s of [-1, 1]) { const cx = w / 2 + s * ex;
-      if (eye === 'open') { x.beginPath(); x.ellipse(cx, ey, r * 0.78, r, 0, 0, TAU); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(cx - 4, ey - 6, 4.5, 0, TAU); x.fill(); x.fillStyle = '#3A2418';
-        if (lash) { x.lineWidth = 4; x.beginPath(); x.moveTo(cx + s * 9, ey - 10); x.lineTo(cx + s * 17, ey - 16); x.stroke(); x.lineWidth = 7; } }
-      else if (eye === 'happy') { x.beginPath(); x.moveTo(cx - 13, ey + 5); x.quadraticCurveTo(cx, ey - 14, cx + 13, ey + 5); x.stroke(); }
-      else { x.beginPath(); x.moveTo(cx - 12, ey); x.quadraticCurveTo(cx, ey + 9, cx + 12, ey); x.stroke(); } }
-    const my = h * 0.68; x.lineWidth = 5; x.strokeStyle = '#6A3A28'; x.fillStyle = '#8A3A30';
-    if (mouth === 'smile') { x.beginPath(); x.moveTo(w / 2 - 12, my); x.quadraticCurveTo(w / 2, my + 11, w / 2 + 12, my); x.stroke(); }
+      if (eye === 'open') { x.fillStyle = '#3A2418'; x.beginPath(); x.ellipse(cx, ey, r * 0.8, r, 0, 0, TAU); x.fill(); x.fillStyle = '#6A3A26'; x.beginPath(); x.ellipse(cx, ey + 6, r * 0.55, r * 0.5, 0, 0, TAU); x.fill();
+        x.fillStyle = '#fff'; x.beginPath(); x.arc(cx - 5, ey - 8, 6.5, 0, TAU); x.fill(); x.beginPath(); x.arc(cx + 6, ey + 7, 3, 0, TAU); x.fill(); x.fillStyle = '#3A2418';
+        if (lash) { x.lineWidth = 4; x.beginPath(); x.moveTo(cx + s * 12, ey - 13); x.lineTo(cx + s * 20, ey - 19); x.stroke(); x.lineWidth = 7; } }
+      else if (eye === 'happy') { x.beginPath(); x.moveTo(cx - 15, ey + 6); x.quadraticCurveTo(cx, ey - 16, cx + 15, ey + 6); x.stroke(); }
+      else { x.beginPath(); x.moveTo(cx - 14, ey + 1); x.quadraticCurveTo(cx, ey + 10, cx + 14, ey + 1); x.stroke(); } }
+    const my = h * 0.7; x.lineWidth = 5; x.strokeStyle = '#6A3A28'; x.fillStyle = '#8A3A30';
+    if (mouth === 'smile') { x.beginPath(); x.moveTo(w / 2 - 11, my); x.quadraticCurveTo(w / 2 - 5, my + 7, w / 2, my + 2); x.quadraticCurveTo(w / 2 + 5, my + 7, w / 2 + 11, my); x.stroke(); }   /* ω 꼴 */
     else if (mouth === 'open') { x.beginPath(); x.moveTo(w / 2 - 14, my - 2); x.quadraticCurveTo(w / 2, my + 22, w / 2 + 14, my - 2); x.closePath(); x.fill(); x.stroke(); x.fillStyle = '#F08A78'; x.beginPath(); x.ellipse(w / 2, my + 9, 7, 4, 0, 0, TAU); x.fill(); }
+    else if (mouth === 'focus') { x.beginPath(); x.moveTo(w / 2 - 7, my + 3); x.lineTo(w / 2 + 7, my + 1); x.stroke(); }
+    else if (mouth === 'wow') { x.beginPath(); x.ellipse(w / 2, my + 4, 6, 8, 0, 0, TAU); x.fill(); x.stroke(); }
     else if (mouth === 'chew') { x.beginPath(); x.ellipse(w / 2, my + 3, 9, 7, 0, 0, TAU); x.fill(); x.stroke(); }
   });
 }
@@ -78,17 +82,18 @@ const T = (o, key, base) => o[key + 'Pat'] ? pattern(o[key + 'Pat'][0], base, o[
 function makePerson(o) {
   const J = {}, root = new THREE.Group(), hips = new THREE.Group(); root.add(hips); hips.position.y = 34; J.hips = hips;
   const torso = new THREE.Group(); hips.add(torso); J.torso = torso;
-  const body = part(torso, cap(25, 22), o.top, 0, 26, 0, true, T(o, 'top', o.top)); body.scale.set(1, 1, 0.9); J.body = body;
+  const body = part(torso, cap(26, 17), o.top, 0, 24, 0, true, T(o, 'top', o.top)); body.scale.set(1, 1, 0.92); J.body = body;   /* 몸통 짧고 둥글게 */
   if (o.apron) { const ap = part(torso, cap(26, 16), o.apron, 0, 22, 2.5, true, T(o, 'apron', o.apron)); ap.scale.set(0.97, 0.92, 0.88);
     const pk = part(torso, geo('pk', () => new THREE.BoxGeometry(18, 9, 3)), 0xFFF3E0, 0, 16, 26); pk.rotation.x = -0.15; }
   if (o.scarf) part(torso, geo('scarf', () => new THREE.TorusGeometry(17, 4.5, 8, 20)), o.scarf, 0, 54, 0).rotation.x = Math.PI / 2;
-  const neck = new THREE.Group(); neck.position.y = 56; torso.add(neck); J.neck = neck;
-  const head = new THREE.Group(); head.position.y = 36; neck.add(head); J.head = head;
-  part(head, sph(36), SKIN).scale.set(1.04, 0.97, 1);
+  const neck = new THREE.Group(); neck.position.y = 52; torso.add(neck); J.neck = neck;
+  const head = new THREE.Group(); head.position.y = 36; head.scale.setScalar(1.1); neck.add(head); J.head = head;   /* 머리 1.1배 → 약 2.3등신 */
+  part(head, sph(36), SKIN).scale.set(1.08, 0.95, 1.02); for (const s2 of [-1, 1]) part(head, sph(11), SKIN, s2 * 17, -14, 25, false).scale.set(1, 0.82, 0.7);   /* 말랑한 볼 (얼굴 안쪽 · 아래) */
   /* 머리카락: 뒤 반구 + 앞머리 덩어리 3 (움직일 때 늦게 흔들림) */
   const hairG = new THREE.Group(); head.add(hairG); J.hair = hairG;
-  const back = part(hairG, geo('hb', () => new THREE.SphereGeometry(38.5, 22, 16, 0, TAU, 0, 1.75)), o.hair, 0, 3, -3); back.rotation.x = -0.35;
-  [[-16, 22, 26, 15], [2, 26, 28, 16], [19, 21, 25, 14]].forEach(([x, y, z, r]) => part(hairG, sph(r), o.hair, x, o.bucket ? y - 6 : y, o.bucket ? z - 2 : z).scale.set(1.15, 0.75, 0.8));
+  const back = part(hairG, geo('hb', () => new THREE.SphereGeometry(40.5, 22, 16, 0, TAU, 0, 1.8)), o.hair, 0, 4, -4); back.rotation.x = -0.35;   /* 볼륨 */
+  [[-25, 19, 22, 13], [-12, 26, 28, 15], [3, 28, 30, 15], [17, 25, 28, 14], [28, 16, 21, 11]].forEach(([x, y, z, r]) => part(hairG, sph(r), o.hair, x, o.bucket ? y - 6 : y, o.bucket ? z - 2 : z).scale.set(1.1, 0.8, 0.75));   /* 앞머리 5 덩어리 */
+  for (const s2 of [-1, 1]) part(hairG, cap(6.5, 9), o.hair, s2 * 35, 2, 8).rotation.z = s2 * 0.12;   /* 옆머리 */
   if (o.bun) { const b = part(hairG, sph(15), o.hair, 0, 34, -22); J.bun = b; }
   if (o.pony) { const p = new THREE.Group(); p.position.set(0, 12, -36); hairG.add(p); part(p, cap(10, 22), o.hair, 0, -16, -4); J.pony = p; }
   /* 얼굴 */
@@ -116,14 +121,14 @@ function makePerson(o) {
   /* 팔 (어깨 → 팔꿈치 → 손) */
   for (const s of [-1, 1]) {
     const sh = new THREE.Group(); sh.position.set(s * 25, 44, 0); torso.add(sh);
-    part(sh, cap(8, 12), o.top, 0, -10, 0, true, T(o, 'top', o.top));
-    const el = new THREE.Group(); el.position.y = -20; sh.add(el); part(el, cap(7.5, 8), o.sleeve || o.top, 0, -7, 0, true, T(o, 'top', o.top)); if (o.rolled) part(el, geo('cuff', () => new THREE.TorusGeometry(8, 2.6, 6, 14)), o.rolled, 0, -11, 0).rotation.x = Math.PI / 2;   /* 소매 접힘 */ part(el, sph(8.5), SKIN, 0, -17, 0);
+    part(sh, cap(8.5, 8), o.top, 0, -8, 0, true, T(o, 'top', o.top));
+    const el = new THREE.Group(); el.position.y = -16; sh.add(el); part(el, cap(7.5, 6), o.sleeve || o.top, 0, -6, 0, true, T(o, 'top', o.top)); if (o.rolled) part(el, geo('cuff', () => new THREE.TorusGeometry(8, 2.6, 6, 14)), o.rolled, 0, -11, 0).rotation.x = Math.PI / 2;   /* 소매 접힘 */ part(el, sph(10), SKIN, 0, -15, 0);   /* 동그란 손 */
     J[s < 0 ? 'armR' : 'armL'] = sh; J[s < 0 ? 'elbR' : 'elbL'] = el;
   }
   /* 다리 (엉덩이 → 무릎 → 발) */
   for (const s of [-1, 1]) {
     const hp = new THREE.Group(); hp.position.set(s * 12, 0, 0); hips.add(hp); part(hp, cap(10, 6), o.pants, 0, -8, 0);
-    const kn = new THREE.Group(); kn.position.y = -16; hp.add(kn); part(kn, cap(9, 4), o.pants, 0, -5, 0); part(kn, geo('shoe', () => new THREE.SphereGeometry(10, 16, 10)), o.shoe || 0x6A4A3A, 0, -14, 4).scale.set(1, 0.6, 1.4); if (o.boots) part(kn, cyl(9.5, 10, 14), o.boots, 0, -8, 0); if (o.socks) part(kn, geo('sock', () => new THREE.TorusGeometry(8.6, 2.4, 6, 14)), o.socks, 0, -6, 0).rotation.x = Math.PI / 2;
+    const kn = new THREE.Group(); kn.position.y = -13; hp.add(kn); part(kn, cap(9.5, 3), o.pants, 0, -4, 0); part(kn, geo('shoe', () => new THREE.SphereGeometry(11.5, 16, 10)), o.shoe || 0x6A4A3A, 0, -13, 4).scale.set(1.05, 0.72, 1.25);   /* 짧고 동그란 발 */ if (o.boots) part(kn, cyl(9.5, 10, 14), o.boots, 0, -8, 0); if (o.socks) part(kn, geo('sock', () => new THREE.TorusGeometry(8.6, 2.4, 6, 14)), o.socks, 0, -6, 0).rotation.x = Math.PI / 2;
     J[s < 0 ? 'legR' : 'legL'] = hp; J[s < 0 ? 'kneeR' : 'kneeL'] = kn;
   }
   /* 손에 드는 것 */
@@ -146,15 +151,17 @@ const KEYS = ['hipY', 'lean', 'sway', 'twist', 'hx', 'hy', 'hz', 'aLx', 'aLz', '
 const base = () => Object.fromEntries(KEYS.map(k => [k, 0]));
 const STRIDE = 2 * 2 * 26 * Math.sin(0.5);   /* 다리 길이 ≈ 26 · 진폭 0.5 → 한 주기 이동 거리 */
 const POSE = {
-  idle(t, a) { const p = base(), b = Math.sin(t * TAU / 3.2 + a.seed), g = (t + a.seed * 2) % 5.5, tilt = g < 1.6 ? Math.sin(g / 1.6 * Math.PI) : 0;
-    p.hipY = 0.6 * b; p.lean = 0.02 * b; p.hz = 0.22 * tilt; p.hy = 0.15 * Math.sin(t * 0.5 + a.seed); p.aLz = 0.12 + 0.03 * b; p.aRz = 0.12 + 0.03 * b; p.eL = -0.25; p.eR = -0.25;
+  idle(t, a) { const p = base(), b = Math.sin(t * TAU / 3.2 + a.seed), g = (t + a.seed * 2) % 5.5, tilt = g < 1.6 ? Math.sin(g / 1.6 * Math.PI) : 0, lk = (t + a.seed * 3) % 7.5, look = lk > 5.8 ? Math.sin((lk - 5.8) / 1.7 * TAU) : 0;   /* 숨쉬기 + 가끔 두리번 */
+    p.hipY = 0.8 * b; p.lean = 0.025 * b; p.hz = 0.22 * tilt; p.hy = 0.15 * Math.sin(t * 0.5 + a.seed) + 0.55 * look; p.aLz = 0.12 + 0.03 * b; p.aRz = 0.12 + 0.03 * b; p.eL = -0.25; p.eR = -0.25;
     const sh = Math.sin(t * 0.37 + a.seed) > 0.6 ? 1 : 0; p.sway = 0.04 * sh; p.lR = -0.05 * sh; p.kR = 0.12 * sh; return p; },
   walk(t, a) { const ph = a.walkPh, s = Math.sin(ph), p = base();
     p.lL = 0.5 * s; p.lR = -0.5 * s; p.kL = 0.55 * Math.max(0, Math.sin(ph + 0.9)); p.kR = 0.55 * Math.max(0, Math.sin(ph + Math.PI + 0.9));
     p.hipY = 2.2 * Math.abs(Math.cos(ph)) - 1; p.sway = 0.05 * s; p.twist = 0.12 * s; p.lean = 0.06;
     p.aLx = a.carry ? -1.2 : -0.55 * s; p.aRx = a.carry ? -1.2 : 0.55 * s; p.eL = a.carry ? -0.6 : -0.35; p.eR = p.eL; p.aLz = 0.08; p.aRz = 0.08;
     p.hz = -0.04 * s; p.hx = 0.03 * Math.cos(ph * 2 - 0.6); return p; },
-  stir(t) { const a = TAU * t / 1.5, p = base();   /* 국자 원 · 몸 쏠림 · 머리 반 박자 늦게 */
+  stir(t) { const ph = t % 3.4; if (ph > 2.4) { const k = Math.sin((ph - 2.4) / 1.0 * Math.PI), p = base();   /* 2단계: 젓다가 → 들여다보고 한 줌 넣기 */
+      p.lean = 0.28 * k; p.hx = 0.32 * k; p.aLx = -0.6 - 1.2 * k; p.aLz = 0.3; p.eL = -1.0 - 0.3 * Math.sin(t * 20) * k; p.aRx = -0.9; p.aRz = 0.3; p.eR = -1.0; p.hipY = -1.2 * k; return p; }
+    const a = TAU * t / 1.5, p = base();   /* 국자 원 · 몸 쏠림 · 머리 반 박자 늦게 */
     p.lean = 0.18 + 0.07 * Math.sin(a); p.sway = 0.05 * Math.cos(a); p.twist = 0.08 * Math.cos(a);
     p.aRx = -1.0 + 0.25 * Math.sin(a); p.aRz = 0.25 + 0.25 * Math.cos(a); p.eR = -0.9 + 0.2 * Math.sin(a - 0.4);
     p.aLx = -0.5; p.aLz = 0.35; p.eL = -1.6; p.hx = 0.18 + 0.06 * Math.sin(a - 0.9); p.hz = 0.06 * Math.cos(a - 1.1); p.hipY = 0.8 * Math.cos(a * 2); return p; },
@@ -164,13 +171,14 @@ const POSE = {
   sit(t, a) { const k = ease(t / 0.5), p = base(), b = Math.sin(t * TAU / 3 + a.seed);
     p.hipY = -12 * k; p.lL = -1.45 * k; p.lR = -1.45 * k; p.kL = 1.45 * k; p.kR = 1.45 * k; p.lean = 0.05 * b; p.aLx = -0.6 * k; p.aRx = -0.6 * k; p.eL = -0.6 * k; p.eR = -0.6 * k;
     p.hx = 0.08; p.hz = 0.18 * Math.sin(t * 0.7 + a.seed) * k; return p; },
-  eat(t, a) { const p = POSE.sit(9, a), bite = Math.max(0, Math.sin(TAU * t / 1.1));
-    p.aRx = -1.1 - 0.7 * bite; p.eR = -1.2 - 0.6 * bite; p.hx = 0.18 - 0.15 * bite; p.lean = 0.12 - 0.06 * bite; p.hy = 0.05 * Math.sin(t * 9) * bite; return p; },
+  eat(t, a) { const p = POSE.sit(9, a), bite = Math.max(0, Math.sin(TAU * t / 1.1)), nod = (t % 2.2) > 1.6 ? Math.sin(((t % 2.2) - 1.6) / 0.6 * TAU * 2) : 0;   /* 먹다가 '맛있다' 끄덕끄덕 */
+    p.aRx = -1.1 - 0.7 * bite; p.eR = -1.2 - 0.6 * bite; p.hx = 0.18 - 0.15 * bite + 0.16 * nod; p.lean = 0.12 - 0.06 * bite; p.hy = 0.05 * Math.sin(t * 9) * bite; return p; },
   happy(t, a) { const p = POSE.sit(9, a), k = Math.sin(clamp(t / 1.2, 0, 1) * Math.PI); p.aLx = -0.6 - 1.6 * k; p.aRx = -0.6 - 1.6 * k; p.aLz = 0.5 * k; p.aRz = 0.5 * k; p.hx = -0.15 * k; p.hipY = -12 + 4 * k; p.sway = 0.1 * Math.sin(t * 14) * k; return p; },
   wave(t) { const p = base(), k = Math.sin(clamp(t / 1.6, 0, 1) * Math.PI); p.aRx = -0.4 * k; p.aRz = 2.4 * k; p.eR = (-0.3 - 0.5 * Math.max(0, Math.sin(t * 16))) * k; p.hz = -0.15 * k; p.sway = -0.04 * k; p.hipY = 1.2 * Math.sin(t * 7) * k; return p; },
-  serve(t) { const p = base(), k = Math.sin(clamp(t / 0.8, 0, 1) * Math.PI); p.lean = 0.3 * k; p.aLx = -1.2 - 0.2 * k; p.aRx = -1.2 - 0.2 * k; p.eL = -0.6; p.eR = -0.6; p.hx = 0.2 * k; return p; }
+  serve(t) { const p = base(), up = clamp(t / 0.3, 0, 1), dn = clamp((t - 0.3) / 0.35, 0, 1), bow = clamp((t - 0.65) / 0.35, 0, 1), k = Math.sin(bow * Math.PI);   /* 3단계: 들어 올림 → 내려놓음 → 꾸벅 */
+    p.aLx = -1.2 - 0.6 * up + 0.5 * dn; p.aRx = p.aLx; p.eL = -0.6 - 0.3 * up; p.eR = p.eL; p.lean = 0.12 * dn + 0.28 * k; p.hx = 0.1 * dn + 0.3 * k; p.hipY = 1.5 * up - 1.5 * dn; return p; }
 };
-const FACEOF = { idle: ['open', 'smile'], walk: ['open', 'smile'], stir: ['open', 'smile'], taste: ['happy', 'open'], sit: ['open', 'smile'], eat: ['happy', 'chew'], happy: ['happy', 'open'], wave: ['happy', 'open'], serve: ['open', 'open'] };
+const FACEOF = { idle: ['open', 'smile'], walk: ['open', 'smile'], stir: ['open', 'focus'], serve: ['open', 'smile'], taste: ['happy', 'open'], sit: ['open', 'smile'], eat: ['happy', 'chew'], happy: ['happy', 'open'], wave: ['happy', 'open'], serve: ['open', 'open'] };
 
 class Spring { constructor(k, c) { this.k = k; this.c = c; this.x = 0; this.v = 0; } step(t, dt) { this.v += ((t - this.x) * this.k - this.v * this.c) * dt; this.x += this.v * dt; return this.x; } }
 const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
@@ -194,9 +202,9 @@ export class Person {
     this.t += dt; this.fromT += dt; const P = this.root.position;
     if (this.act === 'walk' && this.target) {
       const dx = this.target.x - P.x, dz = this.target.z - P.z, d = Math.hypot(dx, dz);
-      if (d < 2) { this.target = null; this.play('idle'); const f = this.then; this.then = null; f && f(); }
-      else { this.yawT = Math.atan2(dx, dz); const off = Math.abs(angDiff(this.yaw, this.yawT)), v = this.speed * Math.max(0.25, Math.cos(Math.min(off, 1.5))) * Math.min(1, this.t / 0.3 + 0.3) * Math.min(1, d / 25 + 0.4);
-        const st = Math.min(d, v * dt); P.x += dx / d * st; P.z += dz / d * st; this.walkPh += st / (STRIDE * (this.look.size || 1.05) * 0.86) * TAU; }   /* 걸음 박자 = 이동 거리 ÷ 보폭 → 발 미끄러짐 없음 */
+      if (d < 2) { this.target = null; this.play('idle'); this.settle = 0; const f = this.then; this.then = null; f && f(); }
+      else { this.yawT = Math.atan2(dx, dz); const off = Math.abs(angDiff(this.yaw, this.yawT)), v = this.speed * (off > 1.0 ? 0 : Math.max(0.2, Math.cos(off)))   /* 크게 돌 땐 몸을 먼저 돌리고 출발 */ * Math.min(1, this.t / 0.3 + 0.3) * Math.min(1, d / 25 + 0.4);
+        const st = Math.min(d, v * dt); P.x += dx / d * st; P.z += dz / d * st; this.walkPh += st / (STRIDE * (this.k0 || 0.36) * (this.persp || 1)) * TAU; }   /* 실제 크기 기준 보폭 → 발이 미끄러지지 않음 */   /* 걸음 박자 = 이동 거리 ÷ 보폭 → 발 미끄러짐 없음 */
     }
     if (this.yawT !== undefined) { this.yaw += angDiff(this.yaw, this.yawT) * Math.min(1, dt * 6); this.root.rotation.y = this.yaw; }
     let p = POSE[this.act](this.t, this);
@@ -206,7 +214,9 @@ export class Person {
     const v = P.distanceTo(this.prevPos) / Math.max(dt, 1e-3); this.prevPos.copy(P); const acc = (v - this.vel) / Math.max(dt, 1e-3); this.vel = v;
     const yawV = angDiff(this.prevYaw, this.yaw) / Math.max(dt, 1e-3); this.prevYaw = this.yaw;
     const lag = this.sp.lag.step(clamp(-acc * 0.0012, -0.15, 0.15), dt), hx = this.sp.hair.step(clamp(-acc * 0.002 + (p.hipY - (this.pHip ?? p.hipY)) * 0.25, -0.3, 0.3), dt), hz = this.sp.hairZ.step(clamp(yawV * 0.1, -0.4, 0.4), dt); this.pHip = p.hipY;
-    J.hips.position.y = 34 + p.hipY; J.hips.rotation.set(0, p.twist * 0.4, p.sway);
+    /* 멈출 때 살짝 기울었다 서기 */ if (this.settle !== undefined && this.settle < 0.7) { this.settle += dt; p.lean += 0.16 * Math.exp(-this.settle * 6) * Math.sin(this.settle * 15); }
+    J.hips.position.y = 31 + p.hipY; J.hips.rotation.set(0, p.twist * 0.4, p.sway);
+    /* 걸을 때 통통 (위아래 늘었다 줄었다 · 소량) */ const sq = this.act === 'walk' ? 0.045 * Math.cos(this.walkPh * 2) : this.act === 'happy' ? 0.05 * Math.sin(this.t * 14) : 0; J.torso.scale.set(1 - sq * 0.5, 1 + sq, 1 - sq * 0.5);
     J.torso.rotation.set(p.lean + lag, -p.twist * 0.7, -p.sway * 0.6);
     const br = Math.sin(now * TAU / 3.2 + this.seed); J.body.scale.set(1 - 0.012 * br, 1 + 0.025 * br, 0.9);
     J.neck.rotation.set(p.hx - (p.lean + lag) * 0.5, p.hy + p.twist * 0.4, p.hz);
@@ -215,7 +225,8 @@ export class Person {
     J.hair.rotation.set(hx * 0.25, 0, hz * 0.15); if (J.pony) J.pony.rotation.set(0.3 + hx * 1.6, 0, hz * 1.5); if (J.bun) J.bun.position.x = hz * 2; if (J.hat) J.hat.rotation.z = (this.look.chef ? 0.12 : 0) + hz * 0.2;
     J.held.position.set(0, 44, 30); J.held.visible = this.carry;
     if (now > this.blinkAt) { this.blinkEnd = now + rnd(0.08, 0.16); this.blinkAt = now + rnd(2.2, 5); }
-    let [e, m] = FACEOF[this.act] || ['open', 'smile']; if (e === 'open' && now < this.blinkEnd) e = 'closed';
+    if (!this.smileAt) this.smileAt = now + rnd(4, 9); if (now > this.smileAt) { this.smileEnd = now + rnd(0.6, 1.1); this.smileAt = now + rnd(6, 11); }   /* 가끔 웃는 눈 */
+    let [e, m] = FACEOF[this.act] || ['open', 'smile']; if (e === 'open' && now < this.blinkEnd) e = 'closed'; else if (e === 'open' && now < (this.smileEnd || 0) && (this.act === 'idle' || this.act === 'walk' || this.act === 'sit')) e = 'happy';
     const key = e + m; if (key !== this.fx) { J.face.material.map = faceTex(e, m, !!this.look.lash); J.face.material.needsUpdate = true; this.fx = key; }
     J.shadow.scale.setScalar(1 - p.hipY * 0.01);
     /* 원근 + 앞뒤 순서 (발 y 로 · 건물 가림판과 같은 규칙) */
