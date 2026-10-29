@@ -2,8 +2,8 @@
 //   moon  달빛 예복: 소장자 전용 (hello().owned 이면 무료로 열림)
 //   gold  황금 별자리: 원어데이 골드 상품 'outfit' (bm.spend 성공 · 다음 실행부터 hello().items 에 'outfit')
 //   지금 있는 원화를 다시 칠하고(옷 · 머리색) + 따라다니는 빛 장식(후광 · 입자)을 더함
-import { load, save } from './save.js?v=0.90.4';
-import { bm } from './oad_bm.js?v=0.90.4';
+import { load, save } from './save.js?v=0.90.5';
+import { bm } from './oad_bm.js?v=0.90.5';
 
 export const OUTFITS = {
   moon: { name: '달빛 예복', desc: '은빛 남색 예복 · 초승달 가루', hue: 224, hueDark: 236, sat: 0.5, lift: 0.1, tints: [0xE8F0FF, 0xB8C8FF, 0xFFFFFF], halo: 0xC8D8FF, how: 'owner' },

@@ -1,11 +1,11 @@
 // 결과: 도달 웨이브 · 처치 · 보스 · 최고 눈 · 받은 수정 · 새 해금
-import { W, H } from '../config.js?v=0.90.4';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.90.4';
-import { audio } from '../audio.js?v=0.90.4';
-import { load } from '../save.js?v=0.90.4';
-import * as M from '../meta.js?v=0.90.4';
-import * as BM from '../bmflow.js?v=0.90.4';
-import { RUNES } from '../core/sim.js?v=0.90.4';
+import { W, H } from '../config.js?v=0.90.5';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.90.5';
+import { audio } from '../audio.js?v=0.90.5';
+import { load } from '../save.js?v=0.90.5';
+import * as M from '../meta.js?v=0.90.5';
+import * as BM from '../bmflow.js?v=0.90.5';
+import { RUNES } from '../core/sim.js?v=0.90.5';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
