@@ -1,9 +1,9 @@
 // '이번 주 명예의 전당' (소장자 혜택 · 원어데이 안에서만 — 밖에서는 버튼 자체를 숨김)
 //   판 끝: bm.submitScore(점수, { assisted }) — 이어하기 · 응원 선물을 받은 판은 assisted (순위에 안 올라감)
 //   보기: bm.board() 상위 20 (이름은 서버가 가려서 줌) · 내 순위는 금색 강조, 20위 밖이면 맨 아래 따로
-import { W, H } from './config.js?v=0.90.3';
-import { txt, fmt, button, popup } from './ui.js?v=0.90.3';
-import { bm } from './oad_bm.js?v=0.90.3';
+import { W, H } from './config.js?v=0.90.4';
+import { txt, fmt, button, popup } from './ui.js?v=0.90.4';
+import { bm } from './oad_bm.js?v=0.90.4';
 
 export const hallShown = () => !!bm.info.ok;
 

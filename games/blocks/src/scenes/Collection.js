@@ -1,12 +1,12 @@
 // 컬렉션: 블록 스킨(별 조각으로 해금 · 원어데이 안에서는 소장자 전용 1 · 골드 1 추가) · 지난 주 그림 갤러리 · 기록
-import { W, H } from '../config.js?v=0.90.3';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.90.3';
-import { audio } from '../audio.js?v=0.90.3';
-import { load, save } from '../save.js?v=0.90.3';
-import { SKINS } from '../meta.js?v=0.90.3';
-import { makeSkinPreview, makeBlockTextures } from './Boot.js?v=0.90.3';
-import { special, skinShown, skinOpen, effSkin, buySkin } from '../bmflow.js?v=0.90.3';
-import { bm } from '../oad_bm.js?v=0.90.3';
+import { W, H } from '../config.js?v=0.90.4';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.90.4';
+import { audio } from '../audio.js?v=0.90.4';
+import { load, save } from '../save.js?v=0.90.4';
+import { SKINS } from '../meta.js?v=0.90.4';
+import { makeSkinPreview, makeBlockTextures } from './Boot.js?v=0.90.4';
+import { special, skinShown, skinOpen, effSkin, buySkin } from '../bmflow.js?v=0.90.4';
+import { bm } from '../oad_bm.js?v=0.90.4';
 
 export class CollectionScene extends Phaser.Scene {
   constructor() { super('Collection'); }
