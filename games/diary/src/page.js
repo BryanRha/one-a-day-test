@@ -1,9 +1,9 @@
 // 오늘 페이지 — 날마다 다른 세트 · 틀 7종(자리 · 속지 · 테이프) · 내가 고르는 기분 도장/한 줄 · 날짜 도장 '쿵' · 공유 카드(9:16)
 //   운세 한 줄은 운영 연동 전까지 숨김 (dd.fortune 이 오면 그 자리에 씀)
-import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.90.1';
-import { S, day, dayKey, parseDay, save } from './save.js?v=0.90.1';
-import * as A from './audio.js?v=0.90.1';
-import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.90.1';
+import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.90.2';
+import { S, day, dayKey, parseDay, save } from './save.js?v=0.90.2';
+import * as A from './audio.js?v=0.90.2';
+import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.90.2';
 
 export function pickStickers(got, k) {
   const { lucky, tpl } = dailySet(k); const spots = PAGE_TPL[tpl].spots;
@@ -128,4 +128,15 @@ export async function openShare(k) {
   sh.classList.add('on'); window.__card = url;
   sh.onclick = async e => { const a = e.target.dataset?.s; if (a === 'close') sh.classList.remove('on');
     if (a === 'share') { try { const blob = await (await fetch(url)).blob(); const f = new File([blob], `oneaday-diary-${k}.png`, { type: 'image/png' }); if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], title: '오늘의 다꾸' }); else toast('이 기기에선 이미지 저장을 눌러 주세요'); } catch { /* 공유 창을 닫음 */ } } };
+}
+
+/* 썸네일: 실제 페이지(390×844)를 그대로 그려 줄임 → 날짜 도장 · 스티커 전부 · 속지 · 테이프 · 기분 도장이 한 장에 */
+export const miniHTML = (k, cap = '') => `<div class="pmini" data-k="${k}"><div class="pagebox"><div class="head"></div><div class="line"></div></div>${cap ? `<figcaption>${cap}</figcaption>` : ''}</div>`;
+export function fillMinis(root) {
+  root.querySelectorAll(".pmini[data-k]").forEach(w => {
+    const pb = w.querySelector('.pagebox'), k = w.dataset.k;
+    renderPage(pb, k, { missed: !S.days[k]?.done });
+    const fit = () => { const s = w.clientWidth / 390; if (s > 0) pb.style.transform = `scale(${s})`; };
+    fit(); requestAnimationFrame(fit);
+  });
 }

@@ -15,16 +15,25 @@ function rows(z, y0, widths, cx) {
   return out;
 }
 
-/* 판 모양 (장 수는 3의 배수로 맞춤) */
+const stack = spec => spec.flatMap(([w, h], z) => { const o = []; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) o.push({ x: 3 - (w - 1) / 2 + i, y: 3.5 - (h - 1) / 2 + j, z }); return o; });
+/* 판 모양 (장 수는 3의 배수로 맞춤) · 홀수 층은 반 칸 어긋나 아래층이 반쯤 보임 */
 export const LAYOUTS = {
-  /* 작은 판 36장: 오늘의 첫 판 · 진행 맵 앞쪽 */
-  small: () => [...rows(0, 0, [3, 5, 5, 5, 3], 3), ...rows(1, 0.5, [2, 4, 4, 2], 3), ...rows(2, 1.5, [1, 1, 1].slice(0, 3), 3)],
-  /* 다이아 66장 */
+  /* 연습 36장 (3층) */
+  small: () => [...rows(0, 0, [3, 5, 5, 5, 3], 3), ...rows(1, 0.5, [2, 4, 4, 2], 3), ...rows(2, 1.5, [1, 1, 1], 3)],
+  /* 66장 (3층) */
   diamond: () => [...rows(0, 0, [3, 5, 7, 7, 7, 7, 5, 3], 3), ...rows(1, 1.5, [2, 4, 4, 4, 4, 2], 3), ...rows(2, 3, [1, 1], 3)],
-  /* 넓은 판 72장 */
+  /* 72장 (2층 · 넓음) */
   wide: () => [...rows(0, 0, [7, 7, 7, 7, 7, 7], 3), ...rows(1, 0.5, [6, 6, 6, 6, 6], 3)],
-  /* 탑 81장 (4층) */
+  /* 81장 (4층) */
   tower: () => [...rows(0, 0, [5, 5, 5, 5, 5, 5, 5], 3), ...rows(1, 0.5, [4, 4, 4, 4, 4, 4], 3), ...rows(2, 1, [3, 3, 3, 3, 3], 3), ...rows(3, 1.5, [1, 2, 2, 2], 3)],
+  /* 아래부터 직사각형을 쌓은 판 (가장자리가 고리처럼 드러나 고를 거리가 넉넉함 · 같은 크기를 두 번 쌓으면 아래가 완전히 가려져 어려워짐) */
+  a42: () => stack([[5, 6], [3, 4], [1, 2]]),
+  a69: () => stack([[7, 6], [5, 4], [3, 2], [1, 2]]),
+  a99: () => stack([[7, 8], [5, 6], [3, 4], [1, 2]]),
+  m117: () => stack([[7, 8], [5, 6], [3, 6], [3, 4], [1, 2]]),
+  h114: () => stack([[7, 8], [5, 6], [3, 4], [3, 4], [1, 2], [1, 2]]),
+  j129: () => stack([[7, 8], [5, 6], [5, 6], [3, 4], [1, 2]]),
+  k147: () => stack([[7, 8], [7, 6], [5, 6], [3, 4], [3, 2], [1, 2]]),
 };
 export function layout(name = 'diamond') {
   let t = LAYOUTS[name]();
@@ -77,6 +86,27 @@ export function assign(tiles, typesPool, rand, pre = [], mix = 0.4, taps0 = 0) {
   return order.map(t => t.id);
 }
 
+/* 흩어 붙이기 (난이도용): 벗기는 순서를 따라가며 묶음(같은 그림 3장)을 동시에 최대 cap 개까지 열어 둠
+   열린 묶음은 칸에 2장까지만 남으므로 정답 순서의 칸은 2 × cap 장을 넘지 않음 (cap ≤ 3 → 6장 ≤ 7칸 → 반드시 풀림)
+   cap · pNew 가 클수록 같은 그림이 깊은 층까지 흩어져 칸 관리가 어려워짐 */
+export function assignSpread(tiles, typesPool, rand, { cap = 2, pNew = 0.5, zw = 0.35, taps0 = 0 } = {}) {
+  const order = peel(tiles, rand, zw, taps0); if (!order) return null;
+  const groups = typesPool.slice();
+  for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
+  const open = []; let gi = 0;
+  for (let i = 0; i < order.length; i++) {
+    const R = order.length - i, need = open.reduce((a, g) => a + 3 - g.c, 0);
+    const canNew = gi < groups.length && open.length < cap && R - need >= 3;
+    let g;
+    if (canNew && (!open.length || rand() < pNew)) { g = { type: groups[gi++], c: 0 }; open.push(g); }
+    else if (open.length) g = open[Math.floor(rand() * open.length)];
+    else return null;
+    order[i].type = g.type; g.c++;
+    if (g.c === 3) open.splice(open.indexOf(g), 1);
+  }
+  return open.length ? null : order.map(t => t.id);
+}
+
 /* 얼음 · 사슬 붙이기: 정답 순서에서 '그때 이미 풀려 있을' 타일에만 → 풀리는 판이 그대로 유지됨 */
 function obstacles(tiles, order, rand, { ice = 0, chain = 0 }) {
   const byId = new Map(tiles.map(t => [t.id, t])), idx = new Map(order.map((id, i) => [id, i]));
@@ -104,14 +134,14 @@ export function verify(tiles, order, slots = 7, tray0 = [], taps0 = 0) {
   return { ok: left.length === 0 && tray.length === 0, peak };
 }
 
-/* 판 만들기: cfg = { layout, types(그림 번호 목록), mix, ice, chain } */
+/* 판 만들기: cfg = { layout, types(그림 번호 목록), cap · pNew(흩어 붙이기) 또는 mix(옛 방식), ice, chain } */
 export function makeLevel(seed, cfg = {}) {
-  const { layout: lname = 'diamond', types = [0, 1, 2, 3, 4, 5, 6, 7, 8], mix = 0.4, ice = 0, chain = 0 } = cfg;
+  const { layout: lname = 'diamond', types = [0, 1, 2, 3, 4, 5, 6, 7, 8], mix = 0.4, cap = 0, pNew = 0.5, zw = 0.35, ice = 0, chain = 0 } = cfg;
   const rand = rng(seed);
-  for (let tries = 0; tries < 80; tries++) {
+  for (let tries = 0; tries < 120; tries++) {
     const tiles = layout(lname);
     const groups = tiles.length / 3, pool = []; for (let g = 0; g < groups; g++) pool.push(types[g % types.length]);
-    const order = assign(tiles, pool, rand, [], mix); if (!order) continue;
+    const order = cap ? assignSpread(tiles, pool, rand, { cap, pNew, zw }) : assign(tiles, pool, rand, [], mix); if (!order) continue;
     if (ice || chain) obstacles(tiles, order, rand, { ice, chain });
     const v = verify(tiles, order);
     if (v.ok) return { tiles, solution: order, peak: v.peak };

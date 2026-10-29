@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.0' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.1' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -23,10 +23,11 @@ const FOG = (a, b, c, d) => [...P(a, b), ...P(c, d)];
 export const ZONE_FOG = { forest: FOG(40, 380, 455, 705), pine: FOG(505, 450, 864, 775), valley: FOG(430, 40, 864, 440), stay: FOG(0, 40, 430, 330) };
 
 /* ── 고정 건물 ── */
-export const WELCOME = { pos: P(340, 820), door: P(300, 905), deck: P(210, 900) };   /* 웰컴센터: 체크인 · 매점 · 꾸미기 */
+export const WELCOME = { pos: P(340, 820), door: P(300, 905), deck: P(372, 914) };   /* 데크 벤치는 고양이 자리(왼쪽 끝)와 떨어뜨림 */   /* 웰컴센터: 체크인 · 매점 · 꾸미기 */
 export const KITCHEN = { pos: P(640, 860), oven: P(700, 880), stand: P(640, 930), pick: P(560, 945) };   /* 공용 키친 (빵 오븐) */
 export const ENTRY = [P(445, 1180), P(445, 1600)];   /* 오솔길 입구 → 화면 아래 */
-export const CAT_SPOT = P(195, 905);                 /* 캠핑장 고양이가 볕을 쬐는 웰컴센터 데크 */
+export const CAT_SPOT = P(195, 905);
+export const TRAIL = [P(462, 1010), P(482, 700)];   /* 웰컴센터와 키친 사이 오솔길 (위쪽 구역으로 가는 길) */                 /* 캠핑장 고양이가 볕을 쬐는 웰컴센터 데크 */
 
 /* ── 시설 ──
    명세서 2장 생산 축 3개: 조리(라인 3 · 15/17/19초) · 재료 손질(레시피 해금 · 판매가↑) · 휴식(60초마다 연구 포인트) + 특수(하루 횟수 · 충전)
@@ -95,6 +96,8 @@ export const menuCost = (m, lv) => Math.ceil((2 + m.step) * 10 ** (1 + Math.floo
 export const restRate = (fac, lv) => 5 * 1.25 ** (lv - 1) * fac.rp;   /* 1분마다 쉼 포인트 (명세서 휴식 60초 주기) */
 
 /* ── 치명 요리 (명세서 4-6): 판매가 3배 · 기본 확률 + 상품/패스 +5~10%p · 광고 10분 30% ── */
+/* 직접 누르기: 안 누르면 다 된 음식은 3초 뒤 도우미가 나름 · 누르면 바로 + 값 ×1.25 · 응원 연타 0.6초씩(게이지 12 · 초당 1.5 회복) · 팁 35% (6초 · 한 접시의 40%) · 콤보 1.5초 안 */
+export const TAP = { autoWait: 1.5, dishK: 1.25, cheerSec: 0.4, cheerMax: 10, cheerRegen: 0.6, tipP: 0.35, tipK: 0.45, tipLife: 6, comboGap: 1.5, comboK: 0.03 };
 export const CRIT = { base: 0.05, mult: 3, adP: 0.30, adSec: 600 };
 
 /* ── 직원 (명세서 5장 · 4-3 호감도) ── 외형 · 메인 스킬 1 · 보조 0~1 · 호감도 1~10 (경험치 1·2·5×10^k)
@@ -175,6 +178,7 @@ export const DECO = [
   { id: 'lanternpost', name: '꽃바구니 가로등', rar: 's', img: 'fac/lantern', appeal: 12, pos: P(560, 1180) },
 ];
 /* 꾸미기 상품 (골드 item) · 소장자 전용 */
+export const SET_POS = P(250, 1105);   /* 벚꽃 정원 세트를 놓는 자리 (잔디 왼쪽) */
 export const DECO_SHOP = { deco: { name: '벚꽃 정원 세트', appeal: 20, items: ['tulip', 'lanterns', 'bench'] }, skin: { name: '셰프 봄 의상 · 연노랑 앞치마', appeal: 5 } };
 export const OWNER_DECO = { name: '금빛 꽃바구니 가로등', appeal: 15 };
 

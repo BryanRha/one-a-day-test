@@ -3,21 +3,25 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.90.1';
-import * as G from './sim.js?v=0.90.1';
-import * as C from './chars.js?v=0.90.1';
-import * as UI from './ui.js?v=0.90.1';
-import { sfx, music, setAudio } from './audio.js?v=0.90.1';
-import { bm } from './oad_bm.js?v=0.90.1';
-import { installBack } from './oad.js?v=0.90.1';
+import * as D from './data.js?v=0.90.2';
+import * as G from './sim.js?v=0.90.2';
+import * as C from './chars.js?v=0.90.2';
+import * as C2 from './chars2d.js?v=0.90.2';
+import * as UI from './ui.js?v=0.90.2';
+import { sfx, music, setAudio } from './audio.js?v=0.90.2';
+import { bm } from './oad_bm.js?v=0.90.2';
+import { installBack } from './oad.js?v=0.90.2';
 
 const Q = new URLSearchParams(location.search);
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)], clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const S = G.S, R = G.R, IMG = UI.IMG;
-const frame = document.getElementById('frame'), world = document.getElementById('world'), taps = document.getElementById('taps');
+const frame = document.getElementById('frame'), board = document.getElementById('board'), world = document.getElementById('world'), taps = document.getElementById('taps');
 const bootBar = document.querySelector('#boot .ld i'); const setBoot = p => { if (bootBar) bootBar.style.width = Math.round(p * 100) + '%'; };
-function fit() { const s = Math.min(innerWidth / W, innerHeight / H); frame.style.transform = `translate(-50%,-50%) scale(${s})`; }
+/* 화면 맞추기: 더 길쭉한 화면(폴드 등)은 판을 가운데 두고 프레임만 길게 → HUD 는 화면 끝 (퀄리티 B5) */
+let OFFY = 0; const F = (x, y) => [x, y + OFFY];
+function fit() { const tall = innerHeight / innerWidth > H / W, s = tall ? innerWidth / W : innerHeight / H, FH = tall ? Math.round(innerHeight / s) : H;
+  frame.style.height = FH + 'px'; OFFY = Math.round((FH - H) / 2); frame.classList.toggle('tall', OFFY > 8); board.style.top = OFFY + 'px'; frame.style.transform = `translate(-50%,-50%) scale(${s})`; UI.setOffY && UI.setOffY(OFFY); }
 fit(); addEventListener('resize', fit);
 setBoot(0.15);
 
@@ -25,7 +29,7 @@ setBoot(0.15);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.setSize(W, H); renderer.setClearColor(0, 0);
 renderer.domElement.style.cssText = 'position:absolute;left:0;top:0;width:720px;height:1560px;pointer-events:none;z-index:2';
-frame.insertBefore(renderer.domElement, document.getElementById('fx'));
+board.insertBefore(renderer.domElement, document.getElementById('fx'));
 const scene = new THREE.Scene();
 const cam = new THREE.OrthographicCamera(-W / 2, W / 2, H / 2, -H / 2, -4000, 4000);
 cam.position.set(0, Math.sin(EL) * 1000, Math.cos(EL) * 1000); cam.lookAt(0, 0, 0);
@@ -33,7 +37,9 @@ const toWorld = (sx, sy) => new THREE.Vector3(sx - W / 2, 0, (sy - H / 2) / Math
 const toScreen = v => [v.x + W / 2, v.z * Math.sin(EL) + H / 2 - v.y * Math.cos(EL)];
 scene.add(new THREE.AmbientLight(0xfff4e6, 1.55));
 const sun = new THREE.DirectionalLight(0xfff0d8, 1.15); sun.position.set(0.6, 1, 0.5); scene.add(sun);
-C.setup({ toWorld, spring: true }); C.sceneRef.scene = scene;
+C.setup({ toWorld, spring: true }); C.sceneRef.scene = scene; C2.setup({ toWorld, scene, el: EL });
+C.register('cut', (look, x, y, seed) => new C2.Cut(look.cut, look, x, y, seed));   /* 2D 컷아웃 몸 (퀄리티 A1) */
+const USE2D = Q.get('body') !== '3d';
 /* 단골 · 의상 (같은 원칙: 주색 1 · 보조 1 · 포인트 1) */
 Object.assign(C.LOOKS, {
   hiker: C.LOOKS.g1, grandma: C.LOOKS.g2, kid: C.LOOKS.g3,
@@ -42,6 +48,11 @@ Object.assign(C.LOOKS, {
   dodam: { ...C.LOOKS.g3, size: 0.95, top: 0xBFD8EE, collar: 0xFFFBF2, collarPat: null, teddy: null, pants: 0xE2D2B4, boots: null, shoe: 0x8A5A3A, speed: 70 },
   heroSkin: { ...C.LOOKS.hero, apron: 0xFFE38A, pocket: 0xF0CC6A, ties: 0xFFE38A, ribbon: 0xF3A9BA },
 });
+/* 2D 컷아웃 그림 연결 (h = 화면 키 px · 시설 높이의 약 0.8배) */
+const CUT = { hero: ['chef', 124], heroSkin: ['chef_skin', 124], helper: ['helper', 122], cook1: ['cook1', 128], cook2: ['cook2', 122], helper2: ['helper2', 104],
+  hiker: ['hiker', 124], g1: ['hiker', 124], grandma: ['grandma', 110], g2: ['grandma', 110], kid: ['kid', 90], g3: ['kid', 90], couple: ['couple', 120], family: ['family', 126],
+  yunseul: ['yunseul', 120], bomi: ['bomi', 108], dodam: ['dodam', 122] };
+for (const [k, [cut, h]] of Object.entries(CUT)) if (C.LOOKS[k]) C.LOOKS[k] = { ...C.LOOKS[k], cut, h };
 const lookOf = g => C.LOOKS[g.reg || g.look] || C.LOOKS.g1;
 
 /* ── 시설 · 자리 · 안개 (DOM · 판 좌표) ── */
@@ -49,56 +60,72 @@ const natural = {};
 function facImg(src, x, y, scale = 0.86, cls = 'fac') { const im = document.createElement('img'); im.className = cls; im.src = src; im.style.left = x + 'px'; im.style.top = y + 'px'; im.draggable = false;
   const set = () => { im.style.width = Math.round(im.naturalWidth * scale) + 'px'; }; if (im.complete && im.naturalWidth) set(); else im.onload = set; return im; }
 const layer = { fac: document.createElement('div'), front: document.createElement('div'), ui: document.createElement('div') }; layer.fac.style.cssText = 'position:absolute;inset:0;'; layer.front.style.cssText = 'position:absolute;inset:0;z-index:2;pointer-events:none'; layer.ui.style.cssText = 'position:absolute;inset:0;';
-world.append(layer.fac); document.getElementById('fx').before(layer.front); taps.append(layer.ui);   /* 식탁 · 데크는 사람 앞(뒤에 앉은 손님의 다리를 가림) */
+world.append(layer.fac); layer.front.dataset.front = 1; document.getElementById('fx').before(layer.front); taps.append(layer.ui);   /* 식탁 · 데크는 사람 앞(뒤에 앉은 손님의 다리를 가림) */
 /* 3D 캔버스 위에 그려야 하는 것(시설 앞부분) 없음 → 시설은 사람 뒤(z 1), 표지 · 버튼은 사람 앞(taps z 4) */
 const facEl = {};
 export function render() {
   layer.fac.innerHTML = ''; layer.front.innerHTML = ''; layer.ui.innerHTML = '';
   /* 장식 (뽑기 · 스탬프 · 골드 세트 · 소장자) */
-  const decoOn = new Set(Object.keys(S.deco).filter(k => S.deco[k] > 0)); if (S.shop.deco) D.DECO_SHOP.deco.items.forEach(k => decoOn.add(k));
-  for (const d of D.DECO) if (decoOn.has(d.id)) layer.fac.append(facImg(IMG(d.img), d.pos[0], d.pos[1], 0.62));
+  const decoOn = new Set(Object.keys(S.deco).filter(k => S.deco[k] > 0)), setOn = S.shop.deco || performance.now() < decoUntil;
+  for (const d of D.DECO) if (decoOn.has(d.id) && !(setOn && D.DECO_SHOP.deco.items.includes(d.id))) layer.fac.append(facImg(IMG(d.img), d.pos[0], d.pos[1], 0.62));
+  if (setOn) { const im = facImg(IMG('deco/set_sakura'), D.SET_POS[0], D.SET_POS[1] + 60, 0.62); if (!S.shop.deco) im.style.filter = 'drop-shadow(0 0 10px #FFE38A)'; layer.fac.append(im); }   /* 벚꽃 정원 세트 전용 그림 (퀄리티 A4) */
   if (S.owner) { const im = facImg(IMG('fac/lantern'), ...D.P(110, 1180), 0.62); im.style.filter = 'sepia(.6) saturate(1.8) hue-rotate(-12deg) drop-shadow(0 0 8px #FFE38A)'; layer.fac.append(im); }
   /* 시설 */
   for (const p of D.PADS) {
     const b = S.pads[p.id], [x, y] = p.pos;
     if (b && b.lv > 0) { const f = D.FAC[p.fac], t = D.tierOf(b.lv), im = facImg(IMG(f.img), x, y + 18, 0.82 + 0.05 * t, 'fac t' + t); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im;
       if (t >= 2) { const gl = document.createElement('div'); gl.className = 'garland'; gl.style.left = x + 'px'; gl.style.top = (y - 70) + 'px'; for (let i = 0; i < 7; i++) { const d = document.createElement('i'); d.style.left = (i - 3) * 20 - 7 + 'px'; d.style.top = Math.abs(i - 3) ** 1.6 * 3 + 'px'; d.style.animationDelay = -i * 0.3 + 's'; gl.append(d); } layer.fac.append(gl); }
-      tag(p.id, x, y + 26); hit(x, y - 30, 150, 130, () => UI.facDialog(p.id)); }
+      tag(p.id, x, y + 26); hit(x, y - 30, 150, 130, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
     else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.style.left = x + 'px'; pd.style.top = y + 'px'; pd.innerHTML = `<span>+ ${D.FAC[p.fac].name}</span>`; pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
   }
   /* 공용 키친 빵 오븐 (배경 그림 속 화덕) */
-  tag('oven', D.KITCHEN.oven[0] - 10, D.KITCHEN.oven[1] + 30); hit(D.KITCHEN.pos[0], D.KITCHEN.pos[1] + 10, 210, 150, () => UI.facDialog('oven'));
+  tag('oven', D.KITCHEN.oven[0] - 10, D.KITCHEN.oven[1] + 30); hit(D.KITCHEN.pos[0], D.KITCHEN.pos[1] + 10, 210, 150, () => stationTap('oven', () => UI.facDialog('oven')), 'oven');
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
-  const am = Object.keys(D.AMEN).filter(a => S.amen[a]); const E = { fridge: '🧊', sink: '🚰', toaster: '🍞', micro: '♨️', shower: '🚿', laundry: '🧺' };
-  let ki = 0, wi = 0; for (const a of am) { const k = D.AMEN[a].at === 'kitchen'; const s = document.createElement('div'); s.className = 'lvtag'; s.style.fontSize = '20px'; s.style.padding = '3px 6px'; const [bx, by] = k ? D.P(560 + ki++ * 46, 990) : D.P(250 + wi++ * 46, 770); s.style.left = bx + 'px'; s.style.top = by + 'px'; s.textContent = E[a]; s.title = D.AMEN[a].name; layer.fac.append(s); }
+  const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
+  let ki = 0, wi = 0; for (const a of am) { const k = D.AMEN[a].at === 'kitchen'; const s = document.createElement('div'); s.className = 'lvtag'; s.style.padding = '3px'; const [bx, by] = k ? D.P(560 + ki++ * 52, 990) : D.P(250 + wi++ * 52, 770); s.style.left = bx + 'px'; s.style.top = by + 'px'; s.innerHTML = `<img src="${IMG(UI.AMEN_IMG[a])}" alt="">`; s.title = D.AMEN[a].name; layer.fac.append(s); }
   /* 잠긴 구역 안개 · 공사 */
+  /* 안개 = 배경 화풍으로 그린 구름 여러 겹이 천천히 흐름 · 큰 라벨은 '다음에 열릴 구역' 하나만, 나머지는 작은 자물쇠 (퀄리티 A3) */
+  const nextZ = (D.ZONES.find(z => S.zones[z.id].st !== 'open') || {}).id;
   for (const z of D.ZONES) { const o = S.zones[z.id], r = D.ZONE_FOG[z.id]; if (!r || o.st === 'open') continue;
     const f = document.createElement('div'); f.className = 'fog'; Object.assign(f.style, { left: r[0] + 'px', top: r[1] + 'px', width: r[2] - r[0] + 'px', height: r[3] - r[1] + 'px' }); f.dataset.z = z.id;
-    const ok = G.zoneNeedOk(z.id); f.innerHTML = o.st === 'building' ? `<div class="lock">🔨 ${z.name.split(' · ')[0]}<small class="zt">정리 중</small></div>` : `<div class="lock">${ok ? '✨ ' : '🔒 '}${z.name.split(' · ')[0]}<small>${ok ? '지금 열 수 있어요!' : `레벨 ${z.need.lv} · 시설 ${z.need.built}개`}</small></div>`;
-    if (ok && o.st === 'locked') f.querySelector('.lock').style.animation = 'dotHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite';
-    if (r[2] >= 700) f.style.paddingRight = '120px'; if (r[1] < 100) f.style.paddingTop = '140px';
+    const fw = r[2] - r[0], fh = r[3] - r[1]; let seed = z.id.length * 7 + z.id.charCodeAt(0); const rr = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    /* 구름 2~3겹: 가운데 긴 띠 하나 + 작은 뭉게구름 1~2 · 그 아래 땅은 살짝 흐리고 옅게 (잠긴 곳이라는 표시) */
+    const veil = document.createElement('div'); veil.className = 'veil'; f.append(veil);
+    const put = (n, cw, x, y, wpx, op = 0.95) => { const im = document.createElement('img'); im.className = 'cl'; im.src = IMG('fog/cloud0' + n); im.style.width = wpx + 'px'; im.style.left = x + 'px'; im.style.top = y + 'px'; im.style.opacity = op; im.style.setProperty('--d', (11 + rr() * 8) + 's'); im.style.setProperty('--dx', (10 + rr() * 14) + 'px'); im.style.animationDelay = -rr() * 10 + 's'; f.append(im); };
+    put(1, 486, fw * 0.02, fh * 0.42, fw * 0.96); put(rr() < 0.5 ? 2 : 3, 215, fw * (0.05 + rr() * 0.2), fh * 0.12, fw * 0.42, 0.9); if (fh > 260) put(4, 323, fw * (0.4 + rr() * 0.15), fh * 0.72, fw * 0.5, 0.85);
+    const ok = G.zoneNeedOk(z.id), short = z.name.split(' · ')[0], lab = document.createElement('div');
+    if (o.st === 'building') { lab.className = 'work2'; lab.innerHTML = `<img src="${IMG('ui/hammer')}" alt=""><span class="zt"></span>`; }
+    else if (z.id === nextZ) { lab.className = 'lock'; lab.innerHTML = `<b><img src="${IMG(ok ? 'ui/sparkle' : 'ui/lock')}" alt="">${short}</b><small>${ok ? '지금 열 수 있어요!' : `레벨 ${z.need.lv} · 시설 ${z.need.built}개`}</small>`; if (ok) lab.style.animation = 'dotHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite'; }
+    else { lab.className = 'mini'; lab.innerHTML = `<img src="${IMG('ui/lock')}" alt="">`; }
+    f.append(lab);
+    if (r[2] >= 700) f.style.paddingRight = '130px'; if (r[1] < 100) f.style.paddingTop = '150px';
     f.onclick = () => { sfx('tap'); UI.zoneDialog(z.id); }; layer.ui.append(f); }
   for (const g of R.gifts) giftEl(g);
   for (const v of guests.values()) if (v.bub && v.bub.style.display !== 'none') layer.ui.append(v.bub);
   catEl && layer.ui.append(catEl);
+  for (const el of dishEls.values()) layer.ui.append(el); for (const el of tipEls.values()) layer.ui.append(el);
 }
-function tag(t, x, y) { const d = document.createElement('div'); d.className = 'lvtag'; d.style.left = x + 'px'; d.style.top = y + 'px'; d.dataset.t = t; layer.ui.append(d); updTag(d); }
+function tag(t, x, y) { const d = document.createElement('div'); d.className = 'lvtag tapz'; d.onclick = ev => { ev.stopPropagation(); sfx('tap'); UI.facDialog(t); }; d.style.left = x + 'px'; d.style.top = y + 'px'; d.dataset.t = t; layer.ui.append(d); updTag(d); }
 function updTag(d) { const t = d.dataset.t, o = t === 'oven' ? S.oven : S.pads[t]; if (!o) return; const w = G.working(t); const can = !w && o.lv < D.UP.max && S.coin >= G.upCostOf(t);
-  const txt = w ? `🔨 ${Math.ceil((w.end - S.t) / 60)}분` : `Lv.${o.lv}${can ? ' ▲' : ''}`; if (d.textContent !== txt) d.textContent = txt; d.classList.toggle('up', can); }
-function hit(x, y, w, h, f) { const d = document.createElement('div'); d.className = 'hit'; Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', marginLeft: -w / 2 + 'px' }); d.style.transform = 'translate(0,-50%)'; d.onclick = () => { sfx('tap'); f(); }; layer.ui.append(d); }
+  const txt = w ? `<img src="${IMG('ui/hammer')}" alt="">${UI.clock(w.end - S.t)}` : `Lv.${o.lv}${can ? ' ▲' : ''}`; if (d.dataset.h !== txt) { d.innerHTML = txt; d.dataset.h = txt; } d.classList.toggle('up', can); }
+function hit(x, y, w, h, f, k) { const d = document.createElement('div'); d.className = 'hit'; if (k) d.dataset.k = k; Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', marginLeft: -w / 2 + 'px' }); d.style.transform = 'translate(0,-50%)'; d.onclick = () => { sfx('tap'); f(); }; layer.ui.append(d); }
 function giftEl(g) { if (g.el && g.el.isConnected) return; const d = document.createElement('div'); d.className = 'gift in'; d.style.left = g.x + 'px'; d.style.top = g.y + 'px'; d.innerHTML = `<img src="${IMG(g.kind === 'rare' || g.kind === 'gem' ? 'deco/gift' : g.kind === 'treat' ? 'deco/treats' : 'deco/gift')}">`;
   d.onclick = () => { const i = R.gifts.indexOf(g); if (i < 0) return; const got = G.takeGift(i); if (!got) return; d.remove(); sfx('gift'); burst(g.x, g.y, 'sparkle', 10);
-    if (got.coin) UI.fly('coin', g.x, g.y, 5); if (got.gem) UI.fly('gem', g.x, g.y, 4); if (got.rp) UI.fly('rp', g.x, g.y, 4);
-    const k = Object.keys(got)[0]; UI.numPop(g.x, g.y - 40, `+${D.fmt(got[k])} ${({ ...D.CUR, big: '도시락' })[k]}`); save(); };
+    if (got.coin) UI.fly('coin', ...F(g.x, g.y), 5); if (got.gem) UI.fly('gem', ...F(g.x, g.y), 4); if (got.rp) UI.fly('rp', ...F(g.x, g.y), 4);
+    const k = Object.keys(got)[0]; UI.numPop(...F(g.x, g.y - 40), `+${D.fmt(got[k])} ${({ ...D.CUR, big: '도시락' })[k]}`); save(); };
   g.el = d; layer.ui.append(d); }
 
 /* ── 사람들 ── */
 const people = new Set();
-const mk = (look, x, y, seed) => { const p = C.create('person', look, x, y, seed); people.add(p); return p; };
+const mk = (look, x, y, seed) => {
+  if (USE2D && look.cut && !C2.has(look.cut) && C2.has('hiker')) look = { ...look, cut: 'hiker' };
+  const p = C.create(USE2D && look.cut && C2.has(look.cut) ? 'cut' : 'person', look, x, y, seed); people.add(p); return p; };
+const dishOf = (p, line, menuId) => p.is2d ? IMG((D.MENU.find(m => m.id === menuId) || D.MENU.find(m => m.line === line)).img) : C.dish(KIND[line]);
 const drop = p => { if (!p) return; scene.remove(p.root); people.delete(p); };
 let hero = null, lad = null;
-function makeHero() { const at = hero ? [toScreen(hero.root.position)[0], toScreen(hero.root.position)[1]] : D.KITCHEN.stand; drop(hero); hero = mk(S.skin ? C.LOOKS.heroSkin : C.LOOKS.hero, at[0], at[1], 0); hero.face(D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90); lad = C.ladle(); hero.J.elbR.add(lad); lad.position.set(0, -18, 0); }
+let tryUntil = 0, decoUntil = 0;
+function makeHero() { const at = hero ? [toScreen(hero.root.position)[0], toScreen(hero.root.position)[1]] : D.KITCHEN.stand; drop(hero); hero = mk(S.skin || performance.now() < tryUntil ? C.LOOKS.heroSkin : C.LOOKS.hero, at[0], at[1], 0); hero.face(D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90); if (!hero.is2d) { lad = C.ladle(); hero.J.elbR.add(lad); lad.position.set(0, -18, 0); } else hero.face(D.KITCHEN.oven[0], D.KITCHEN.oven[1]); }
 const cooks = {};     /* st → { id, p } */
 const servers = {};   /* staff id → { p } */
 function syncStaff() {
@@ -164,25 +191,52 @@ function draw2d(dt, now) {
     else if (q.k === 'sparkle') { q.vy += 260 * dt; q.vx *= 0.97; q.x += q.vx * dt; q.y += q.vy * dt; fx.fillStyle = q.c; fx.globalAlpha = 1 - k; star(q.x, q.y, q.r * (1 - k * 0.5) * 1.6, q.t * 4); fx.globalAlpha = 1; }
     else if (q.k === 'twinkle') { fx.fillStyle = '#FFF6D0'; fx.globalAlpha = Math.sin(k * Math.PI); star(q.x, q.y, q.r * Math.sin(k * Math.PI), 0); fx.globalAlpha = 1; }
     else if (q.k === 'heart') { q.vx *= 0.92; q.vy *= 0.95; q.x += q.vx * dt * 0.4; q.y += (q.vy * 0.3 - 30) * dt; heartP(q.x, q.y, 0.8 + 0.3 * Math.sin(k * Math.PI), 1 - Math.max(0, k - 0.6) / 0.4); }
+    else if (q.k === 'flame') { q.vy -= 60 * dt; q.x += q.vx * dt * 0.5; q.y += q.vy * dt * 0.6; fx.fillStyle = `rgba(255,${150 + Math.round(80 * (1 - k))},70,${1 - k})`; fx.beginPath(); fx.arc(q.x, q.y, q.r * (1.2 - k), 0, TAU); fx.fill(); }
     else if (q.k === 'dust') { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.94; fx.fillStyle = `rgba(232,214,184,${0.7 * (1 - k)})`; fx.beginPath(); fx.arc(q.x, q.y, q.r * (1 + k), 0, TAU); fx.fill(); }
   }
 }
 
+/* ── 직접 누르기 화면 (대표 피드백) ── 다 된 음식이 통통 튀며 반짝 → 누르면 '퐁' 손님에게 · 조리 중 연타 = 응원 · 머리 위 하트 팁 · 콤보 */
+const dishEls = new Map(), tipEls = new Map(); let lastTap = [360, 900];
+const dishSpot = (st, i) => { const b = st === 'oven' ? [D.KITCHEN.oven[0] - 62, D.KITCHEN.oven[1] + 14] : (() => { const p = G.stationPos(st) || [360, 900]; return [p[0] + (p[0] < 200 ? 62 : -62), p[1] - 46]; })(); return [b[0] + (i % 3) * 22 - (i > 2 ? 11 : 0), b[1] - Math.floor(i / 3) * 18 - (i % 3) * 4]; };
+function dishEl(o) { const d = document.createElement('div'); d.className = 'dishrdy'; d.innerHTML = `<img src="${IMG(D.MENU.find(m => m.id === o.menu).img)}" alt=""><i></i>`;
+  d.onclick = ev => { ev.stopPropagation(); const g = G.tapDish(o.st); if (!g) { d.classList.remove('no'); void d.offsetWidth; d.classList.add('no'); return; } lastTap = [parseFloat(d.style.left), parseFloat(d.style.top)]; };
+  dishEls.set(o, d); layer.ui.append(d); restack(o.st); sfx('ding'); }
+function restack(st) { let i = 0; for (const [o, el] of dishEls) if (o.st === st) { const [x, y] = dishSpot(st, i++); el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.zIndex = 10 + i; } }
+function flyFood(from, to, src) { const f = document.createElement('img'); f.src = src; f.className = 'flyfood'; layer.ui.append(f); const mx = (from[0] + to[0]) / 2, my = Math.min(from[1], to[1]) - 120;
+  const an = f.animate([{ left: from[0] + 'px', top: from[1] + 'px', transform: 'translate(-50%,-50%) scale(1) rotate(0)' }, { left: mx + 'px', top: my + 'px', transform: 'translate(-50%,-50%) scale(1.35) rotate(-12deg)', offset: 0.5 }, { left: to[0] + 'px', top: to[1] + 'px', transform: 'translate(-50%,-50%) scale(.8) rotate(8deg)' }], { duration: 420, easing: 'cubic-bezier(.3,.6,.4,1)' });
+  an.onfinish = () => { f.remove(); burst(to[0], to[1], 'sparkle', 10); }; }
+function tipEl(t) { const d = document.createElement('div'); d.className = 'tipb'; d.style.left = t.x + 'px'; d.style.top = t.y + 'px'; d.innerHTML = `<img src="${IMG('deco/heart')}" alt=""><img src="${IMG('deco/coin')}" alt="" class="c">`;
+  d.onclick = ev => { ev.stopPropagation(); const c = G.tapTip(t.id); if (c == null) return; d.remove(); tipEls.delete(t.id); sfx('heart'); burst(t.x, t.y, 'heart', 3); burst(t.x, t.y, 'sparkle', 8); UI.fly('coin', ...F(t.x, t.y), 3); UI.numPop(...F(t.x, t.y - 30), `+${D.fmt(c)}`); lastTap = [t.x, t.y]; };
+  tipEls.set(t.id, d); layer.ui.append(d); }
+const gaugeEls = {};
+function gauge(st, pos, k) { let g = gaugeEls[st]; if (!g || !g.isConnected) { g = gaugeEls[st] = document.createElement('div'); g.className = 'gauge'; g.innerHTML = '<i></i>'; layer.ui.append(g); }
+  g.style.left = pos[0] + 'px'; g.style.top = (pos[1] + 12) + 'px'; g.firstChild.style.width = Math.round(k * 100) + '%'; g.classList.toggle('low', k < 0.15); g.style.opacity = 1; clearTimeout(g.tm); g.tm = setTimeout(() => { g.style.opacity = 0; }, 1600); }
+function stationTap(st, open) { if (st && R.stations && R.stations[st] && R.stations[st].cur && G.built(st)) { G.tapCook(st); return; } open(); }
+function comboFx(n) { const d = document.createElement('div'); d.className = 'combo'; d.innerHTML = `콤보 <b>×${n}</b><small>+${Math.min(n - 1, 10) * Math.round(D.TAP.comboK * 100)}%</small>`; const [x, y] = F(...lastTap); d.style.left = x + 'px'; d.style.top = (y - 60) + 'px'; document.getElementById('fly').append(d); setTimeout(() => d.remove(), 1100); sfx('combo', { up: Math.min(n, 8) }); }
 /* ── sim 이벤트 → 화면 ── */
 function onEvent(e) {
   switch (e.type) {
     case 'spawn': { const g = e.g, p = mk(lookOf(g), ...e.path[0], g.id % 5); const v = { p, g }; guests.set(g.id, v); if (g.dog) pup(v); walkPath(p, e.path, e.dur, () => { if (!v.gone && guests.get(g.id) === v) sitDown(v); }); break; }
     case 'order': { const v = guests.get(e.g.id); if (v) { if (!v.seated) sitDown(v); bubble(v, e.m); } break; }
     case 'cook': { const pr = e.st === 'oven' ? hero : cooks[e.st] && cooks[e.st].p; if (pr) { pr.play('stir'); pr.face(...(e.st === 'oven' ? D.KITCHEN.oven : G.stationPos(e.st)), 0.3); } break; }
-    case 'cooked': { const pr = e.st === 'oven' ? hero : cooks[e.st] && cooks[e.st].p; if (pr) { pr.play('taste'); const home = pr === hero ? [D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90] : null; if (home) pr.face(...home); setTimeout(() => { if (pr.act === 'taste') pr.play('idle'); }, 1400); } const at = e.st === 'oven' ? D.KITCHEN.oven : G.stationPos(e.st); if (at) puff(at[0], at[1] - 50, 4); break; }
-    case 'deliver': { const s = servers[e.sv]; if (!s) break; const p = s.p, cur = toScreen(p.root.position), line = D.MENU.find(m => m.id === e.o.menu).line;
-      const from = [e.from[0] - 30, e.from[1] + 40]; walkPath(p, [cur, from], e.dur * 0.4, () => { p.hold(C.dish(KIND[line])); p.speed *= 1; walkPath(p, [from, e.to], e.dur * 0.55, () => { const v = guests.get(e.o.gid); if (v) p.face(v.g.seat.x, v.g.seat.y); p.play('serve'); }); }); s.to = e.to; break; }
+    case 'cooked': { dishEl(e.o); const pr = e.st === 'oven' ? hero : cooks[e.st] && cooks[e.st].p; if (pr) { pr.play('taste'); const home = pr === hero ? [D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90] : null; if (home) pr.face(...home); setTimeout(() => { if (pr.act === 'taste') pr.play('idle'); }, 1400); } const at = e.st === 'oven' ? D.KITCHEN.oven : G.stationPos(e.st); if (at) puff(at[0], at[1] - 50, 4); break; }
+    case 'deliver': { const de = dishEls.get(e.o); if (de) { de.remove(); dishEls.delete(e.o); restack(e.o.st); } const s = servers[e.sv]; if (!s) break; const p = s.p, cur = toScreen(p.root.position), line = D.MENU.find(m => m.id === e.o.menu).line;
+      const from = [e.from[0] - 30, e.from[1] + 40]; walkPath(p, [cur, from], e.dur * 0.4, () => { p.hold(dishOf(p, line, e.o.menu)); p.speed *= 1; walkPath(p, [from, e.to], e.dur * 0.55, () => { const v = guests.get(e.o.gid); if (v) p.face(v.g.seat.x, v.g.seat.y); p.play('serve'); }); }); s.to = e.to; break; }
     case 'served': { const s = servers[e.sv]; if (s) { if (s.p.target) { s.p.root.position.copy(toWorld(...s.to)); s.p.target = null; s.p.then = null; } s.p.hold(null); s.p.play('serve'); setTimeout(() => s.p.act === 'serve' && s.p.play('idle'), 700); }
-      const v = guests.get(e.g.id); if (v) { if (!v.seated) sitDown(v); if (v.bub) v.bub.style.display = 'none'; v.p.hold(C.dish(KIND[D.MENU.find(m => m.id === e.g.menu).line])); v.p.play('eat'); sfx('serve'); } break; }
+      const v = guests.get(e.g.id); if (v) { if (!v.seated) sitDown(v); if (v.bub) v.bub.style.display = 'none'; v.p.hold(dishOf(v.p, D.MENU.find(m => m.id === e.g.menu).line, e.g.menu)); v.p.play('eat'); sfx('serve'); } break; }
     case 'paid': { const v = guests.get(e.g.id); if (!v) break; v.p.hold(null); v.p.play('happy'); const [x, y] = toScreen(v.p.root.position);
-      burst(x, y - 140, 'heart', e.g.reg ? 3 : 1); UI.fly('coin', x, y - 90, e.crit ? 7 : 2); UI.numPop(x, y - 150, `${e.crit ? '대박! ' : '+'}${D.fmt(e.c)}`, e.crit); if (e.crit) { sfx('crit'); burst(x, y - 120, 'sparkle', 16); } break; }
+      burst(x, y - 140, 'heart', e.g.reg ? 3 : 1); UI.fly('coin', ...F(x, y - 90), e.crit ? 7 : 2); UI.numPop(...F(x, y - 150), `${e.crit ? '대박! ' : '+'}${D.fmt(e.c)}`, e.crit); if (e.tap) { lastTap = [x, y - 150]; UI.fly('coin', ...F(x, y - 90), 3); } if (e.crit) { sfx('crit'); burst(x, y - 120, 'sparkle', 16); } break; }
     case 'leave': { const v = guests.get(e.g.id); if (!v) break; v.gone = true; v.seated = false; if (v.bub) v.bub.remove(); setTimeout(() => { v.p.play('idle'); walkPath(v.p, e.path, e.dur, () => endGuest(e.g.id, v)); }, 900); v.kill = performance.now() + (e.dur + 6) * 1000; break; }
     case 'gift': giftEl(e.gift); sfx('gift'); break;
+    case 'tapServe': { const el = dishEls.get(e.o); const from = el ? [parseFloat(el.style.left), parseFloat(el.style.top)] : dishSpot(e.o.st, 0); if (el) { el.remove(); dishEls.delete(e.o); }
+      const v = guests.get(e.g.id), to = v ? toScreen(v.p.root.position) : [e.g.seat.x, e.g.seat.y]; flyFood(from, [to[0], to[1] - 60], IMG(D.MENU.find(m => m.id === e.o.menu).img)); sfx('pop'); restack(e.o.st); break; }
+    case 'cheer': { const pos = e.st === 'oven' ? D.KITCHEN.oven : G.stationPos(e.st); if (!pos) break; puff(pos[0], pos[1] - 50, 2); if (e.cut > 0.2) burst(pos[0], pos[1] - 40, 'flame', 5);
+      UI.numPop(...F(pos[0] + (Math.random() - 0.5) * 50, pos[1] - 80), e.cut > 0.2 ? `-${e.cut.toFixed(1)}초` : '숨 고르는 중'); sfx('cheer', { up: Math.round((1 - e.gauge) * 6) }); gauge(e.st, pos, e.gauge);
+      const pr = e.st === 'oven' ? hero : cooks[e.st] && cooks[e.st].p; if (pr && pr.is2d) pr.t = Math.max(0, pr.t - 0.2); break; }
+    case 'tip': tipEl(e.tip); break;
+    case 'tipGone': { const el = tipEls.get(e.tip.id); if (el) { el.classList.add('out'); setTimeout(() => el.remove(), 400); tipEls.delete(e.tip.id); } break; }
+    case 'combo': comboFx(e.n); break;
     case 'build': { render(); const p = D.PADS.find(x => x.id === e.pid); const im = facEl[e.pid]; if (im) im.classList.add('pop'); dust(p.pos[0], p.pos[1] + 20); burst(p.pos[0], p.pos[1] - 40, 'sparkle', 18); sfx('build'); syncStaff(); break; }
     case 'upgrade': { const t = e.target, pos = t === 'oven' ? D.KITCHEN.oven : D.PADS.find(x => x.id === t).pos; if (e.tier) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 26); dust(pos[0], pos[1]); sfx('tier'); } else { const im = facEl[t]; if (im) { im.classList.remove('bump'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 6); } break; }
     case 'workDone': case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
@@ -201,8 +255,18 @@ addEventListener('pagehide', save); document.addEventListener('visibilitychange'
 /* ── 초상화 (3D 캐릭터를 한 번 그려 그림으로) ── */
 const portraits = {};
 let pr = null;
+/* 전신 그림 (상품 카드 · 입어 보기 미리보기) */
+const bodies = {}; let prB = null;
+function fullBody(cut) {
+  if (bodies[cut]) return bodies[cut]; if (!C2.has(cut)) return IMG('deco/gift');
+  try { if (!prB) { prB = { r: new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }), s: new THREE.Scene() }; prB.r.setSize(240, 300); prB.r.setClearColor(0, 0); prB.c = new THREE.OrthographicCamera(-80, 80, 190, -10, -500, 500); prB.c.position.set(0, 0, 300); prB.c.lookAt(0, 0, 0); }
+    const c = new C2.Cut(cut, { h: 170, scene: prB.s }, W / 2, H / 2, 1); c.root.position.set(0, 0, 0); c.update(0.016, 0.5); c.root.scale.setScalar(1); c.bb.rotation.x = 0; c.play('wave'); c.t = 0.8; c.update(0.016, 0.5); c.root.scale.setScalar(1);
+    prB.r.render(prB.s, prB.c); bodies[cut] = prB.r.domElement.toDataURL(); prB.s.remove(c.root); } catch { bodies[cut] = IMG('deco/gift'); }
+  return bodies[cut];
+}
 function portrait(key) {
   if (portraits[key]) return portraits[key];
+  const lk = C.LOOKS[key]; if (USE2D && lk && lk.cut && C2.has(lk.cut)) return portraits[key] = C2.headUrl(lk.cut);
   try { if (!pr) { pr = { r: new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }), s: new THREE.Scene() }; pr.r.setSize(160, 160); pr.r.setClearColor(0, 0); pr.s.add(new THREE.AmbientLight(0xfff4e6, 1.6)); const l = new THREE.DirectionalLight(0xfff0d8, 1.1); l.position.set(0.5, 1, 0.8); pr.s.add(l); pr.c = new THREE.OrthographicCamera(-60, 60, 60, -60, -500, 500); pr.c.position.set(0, 160, 300); pr.c.lookAt(0, 140, 0); }
     const look = C.LOOKS[key] || C.LOOKS.g1; const keep = C.sceneRef.scene; C.sceneRef.scene = pr.s; const p = C.create('person', look, W / 2, H / 2, 1); C.sceneRef.scene = keep; p.root.position.set(0, 0, 0); p.root.rotation.y = 0.35; p.update(0.016, 1); pr.c.position.set(0, 150 * p.root.scale.y, 300); pr.c.lookAt(0, 130 * p.root.scale.y, 0);
     pr.r.render(pr.s, pr.c); portraits[key] = pr.r.domElement.toDataURL(); pr.s.remove(p.root); } catch { portraits[key] = IMG('deco/heart'); }
@@ -218,12 +282,19 @@ let offlineRes = null;
 }
 if (S.muted) setAudio({ sfx: false, bgm: false });
 setBoot(0.4);
-const ctx = { portrait, save, render, reskin: () => makeHero(), padPos: id => id === 'oven' ? [D.KITCHEN.oven[0] - 10, D.KITCHEN.oven[1] + 10] : (D.PADS.find(p => p.id === id) || {}).pos,
+const ctx = { portrait, save, render, fullBody, reskin: () => makeHero(), padPos: id => { if (id === 'ovenBody') return F(D.KITCHEN.oven[0] - 20, D.KITCHEN.oven[1] - 30); if (id === 'dish') { const el = [...dishEls.values()][0]; return el ? F(parseFloat(el.style.left), parseFloat(el.style.top)) : null; } const p = id === 'oven' ? [D.KITCHEN.oven[0] - 10, D.KITCHEN.oven[1] + 44] : (D.PADS.find(x => x.id === id) || {}).pos; return p && F(...p); },
+  tryOn: sec => { tryUntil = performance.now() + sec * 1000; makeHero(); UI.closeSheet(); setTimeout(() => { if (performance.now() >= tryUntil - 50) { makeHero(); if (!S.skin) UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점에서 만나요'); } }, sec * 1000); },
+  previewDeco: sec => { decoUntil = performance.now() + sec * 1000; render(); UI.closeSheet(); burst(...D.SET_POS, 'sparkle', 24); setTimeout(() => { render(); if (!S.shop.deco) UI.toast('미리 보기가 끝났어요'); }, sec * 1000); },
   fx: (k, t) => { const pos = t === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === t) || {}).pos; if (pos) burst(pos[0], pos[1] - 40, 'sparkle', 8); } };
 UI.init(ctx);
+/* 첫 화면에 필요한 몸만 먼저 (4G 3초) · 나머지는 뒤에서 불러옴 — 아직 안 온 손님 몸은 온 것으로 잠깐 대신 */
+const FIRST = ['chef', 'helper', 'hiker'];
+await Promise.all(FIRST.map(n => C2.preload(n).catch(() => null)));
+setTimeout(() => { for (const n of new Set(Object.values(C.LOOKS).map(l => l.cut).filter(Boolean))) C2.preload(n).catch(() => null); }, 1200);
+setBoot(0.6);
 makeHero(); syncStaff(); makeCat(); render();
-/* 첫 화면부터 '돌아가는 캠프': 처음엔 손님 하나가 이미 걸어오는 중 */
-R.nextSpawn = 0.3;
+/* 첫 30초 (퀄리티 A2): 새 판이면 첫 손님이 이미 데크에서 먹는 중 → 3초 안에 첫 코인 · 다음 손님은 1.2초 뒤 */
+if (!G.quickStart()) R.nextSpawn = 0.3;
 setBoot(0.7);
 bm.hello().then(h => {
   if (h.ok) { const items = h.items || []; if (items.includes('deco')) S.shop.deco = true; if (items.includes('skin') && !S.skin) { S.skin = true; makeHero(); } S.owner = !!h.owned; render(); }
@@ -232,6 +303,11 @@ installBack({ back: () => false });
 bm.hello().then(() => { if (offlineRes) UI.offlinePop(offlineRes); });   /* 광고 2배 버튼은 원어데이 응답 뒤에 */
 if (G.attendReady() && S.t - S.created > 600) setTimeout(() => UI.attendPop(), 600);   /* 처음 온 날은 캠프부터 보여 줌 (출석은 옆 버튼 빨간 점) */
 music(true);
+if (Q.get('lineup') === '1') {   /* 캐릭터 한 줄 보기 (확인용) */
+  await Promise.all(Object.values(C.LOOKS).map(l => l.cut && C2.preload(l.cut)));
+  const ks = ['hero', 'helper', 'cook1', 'cook2', 'helper2', 'hiker', 'grandma', 'kid', 'couple', 'family', 'yunseul', 'bomi', 'dodam', 'heroSkin'], acts = ['idle', 'walk', 'stir', 'wave', 'serve', 'happy', 'eat'];
+  ks.forEach((k, i) => { const x = 70 + (i % 7) * 96, y = 1180 + Math.floor(i / 7) * 190; const p = mk(C.LOOKS[k], x, y, i); p.play(acts[i % acts.length]); p.walkPh = 0; if (i % 3 === 1) p.hold(p.is2d ? IMG('food/bagel') : C.dish('bagel')); if (acts[i % acts.length] === 'walk') p.update = (u => function (dt, n) { this.walkPh += dt * 7; this.target = null; this.act = 'walk'; return u.call(this, dt, n); })(p.update); });
+}
 window.__camp = { G, D, S, R, UI, render, save, people, guests, burst };
 
 /* ── 반복 ── */
@@ -249,11 +325,13 @@ function loop(t) {
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 60; s.p.walkTo(h[0] + rnd(-20, 20), h[1] + rnd(-6, 10), () => s.p.face(360, 900, 0.5)); }
   if (hero.act === 'idle' && Math.random() < rdt * 0.05) { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1600); }
   renderer.render(scene, cam); draw2d(Math.min(0.05, rdt), t / 1000); catTick(Math.min(0.05, rdt)); UI.tick(Math.min(0.1, rdt));
-  if ((acc += rdt) > 0.5) { acc = 0; layer.ui.querySelectorAll('.lvtag').forEach(updTag); layer.ui.querySelectorAll('.pad').forEach(p => p.classList.toggle('cant', S.coin < G.padCost())); const zt = layer.ui.querySelectorAll('.fog .zt'); zt.forEach(z => { const id = z.closest('.fog').dataset.z, o = S.zones[id]; if (o.st === 'building') z.textContent = `정리 중 · ${UI.tm(o.end - S.t)} · 눌러서 바로 끝내기`; });
+  if ((acc += rdt) > 0.5) { acc = 0; for (const [o, el] of dishEls) if (!R.ready.includes(o)) { el.remove(); dishEls.delete(o); restack(o.st); } layer.ui.querySelectorAll('.lvtag').forEach(updTag); layer.ui.querySelectorAll('.pad').forEach(p => p.classList.toggle('cant', S.coin < G.padCost())); const zt = layer.ui.querySelectorAll('.fog .zt'); zt.forEach(z => { const id = z.closest('.fog').dataset.z, o = S.zones[id]; if (o.st === 'building') z.textContent = UI.clock(o.end - S.t); });
     if (Q.get('fps') === '1') { let el = document.getElementById('fpsx'); if (!el) { el = document.createElement('div'); el.id = 'fpsx'; el.style.cssText = 'position:absolute;left:8px;bottom:4px;z-index:99;font:12px monospace;color:#5E4A42'; frame.append(el); } el.textContent = JSON.stringify(window.__stats()); } }
   if ((saveAt += rdt) > 10) save();
   requestAnimationFrame(loop);
 }
 window.__loadMs = Math.round(performance.now());
-setBoot(1); setTimeout(() => { const b = document.getElementById('boot'); b.classList.add('gone'); setTimeout(() => b.remove(), 900); }, 250);
+setBoot(1); setTimeout(() => { const b = document.getElementById('boot'); b.classList.add('gone'); setTimeout(() => b.remove(), 900);
+  board.classList.add('intro'); frame.classList.add('intro'); setTimeout(() => { board.classList.remove('intro'); frame.classList.remove('intro'); }, 2000);   /* 시작 연출 1.5초 */
+  setTimeout(() => { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1700); }, 1500); }, 150);
 requestAnimationFrame(loop);

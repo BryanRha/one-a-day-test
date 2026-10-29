@@ -10,14 +10,20 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <title>숲속 힐링 캠프</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="src/style.css">
+<link rel="modulepreload" href="lib/three-r160.module.min.js"><link rel="modulepreload" href="src/main.js"><link rel="modulepreload" href="src/data.js"><link rel="modulepreload" href="src/sim.js"><link rel="modulepreload" href="src/chars.js"><link rel="modulepreload" href="src/chars2d.js"><link rel="modulepreload" href="src/ui.js"><link rel="modulepreload" href="src/audio.js"><link rel="modulepreload" href="src/oad_bm.js"><link rel="modulepreload" href="src/oad.js">
+<link rel="preload" as="image" href="assets/bg_spring.webp">
 <script type="importmap">{ "imports": { "three": "./lib/three-r160.module.min.js" } }</script>
 </head>
 <body>
 <div id="frame">
-  <img class="bg" id="bg" src="assets/bg_spring.jpg" alt="">
+  <img class="bgx" src="assets/bg_spring.webp" alt="">
+  <div id="board">
+  <img class="bg" id="bg" src="assets/bg_spring.webp" alt="">
   <div id="world"></div>
   <canvas id="fx" width="720" height="1560"></canvas>
   <div id="taps"></div>
+  <div id="intro"></div>
+  </div>
   <div id="hud"></div>
   <div id="bar"></div>
   <div id="sheet"></div>
@@ -26,6 +32,6 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
   <div id="toast"></div>
   <div id="boot"><div class="logo">숲속 힐링 캠프</div><div class="sub">고원 숲에서 하루 쉬어 가요</div><div class="ld"><i></i></div></div>
 </div>
-<script type="module" src="src/main.js?v=0.90.1"></script>
+<script type="module" src="src/main.js?v=0.90.2"></script>
 </body>
 </html>

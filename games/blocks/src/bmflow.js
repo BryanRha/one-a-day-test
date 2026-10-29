@@ -2,9 +2,9 @@
 //   · 시작 때 hello 한 번 (결과는 bm.info 로 바로 읽음 · 원어데이 밖이면 ok = false → 골드 · 광고 버튼 숨김)
 //   · 판 끝 전면 광고: 판이 끝나면 roundOver(), 다음 화면으로 넘어갈 때 afterRound() 를 기다림 → 판마다 한 번만 앱에 물어봄
 //   · 광고 · 확인 창 동안 소리 멈춤
-import { bm } from './oad_bm.js?v=0.90.1';
-import { load, save } from './save.js?v=0.90.1';
-import { dayKey, SKINS } from './meta.js?v=0.90.1';
+import { bm } from './oad_bm.js?v=0.90.2';
+import { load, save } from './save.js?v=0.90.2';
+import { dayKey, SKINS } from './meta.js?v=0.90.2';
 
 let hp = null;
 // hello 는 한 번만 (Boot 가 스킨을 그리기 전에 기다림 · 원어데이 밖이면 바로 ok=false)

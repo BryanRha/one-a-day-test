@@ -55,6 +55,10 @@ export function sfx(k, o = {}) {
     case 'serve': tone('triangle', 76, t, 0.08, 0.12, out); tone('triangle', 81, t + 0.06, 0.1, 0.1, out); break;
     case 'no': tone('sine', 62, t, 0.16, 0.18, out); tone('sine', 59, t + 0.1, 0.2, 0.14, out); break;
     case 'story': [69, 72, 76, 81].forEach((n, i) => pluck(n, t + i * 0.12, 0.14, out, 1.4)); break;
+    case 'ding': bell(91, t, 0.1, out); bell(98, t + 0.05, 0.06, out); break;
+    case 'pop': tone('sine', 70, t, 0.12, 0.25, out, { slide: 1400 }); noise(t, 0.05, 0.06, out, 3000); bell(93, t + 0.05, 0.1, out); break;
+    case 'cheer': tone('triangle', 72 + up, t, 0.07, 0.14, out, { lp: 2600 }); noise(t, 0.06, 0.04, out, 1800); break;
+    case 'combo': [84, 88, 91].forEach((n, i) => bell(n + up, t + i * 0.04, 0.12, out)); break;
     case 'reward': [79, 84, 88].forEach((n, i) => bell(n, t + i * 0.07, 0.14, out)); break;
   }
 }

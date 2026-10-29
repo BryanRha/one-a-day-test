@@ -33,22 +33,6 @@ export const NOTES = [
 ];
 export const PAGES = 12, PAGE_DONE = 5;
 
-/* 진행 맵 30단계: 10단계마다 새 방해 요소 + 새 노트 테마
-   1~10 기본 · 11~20 얼음 · 21~30 얼음 + 사슬 */
-const LAY = ['small', 'small', 'diamond', 'small', 'diamond', 'wide', 'diamond', 'wide', 'tower', 'diamond'];
-const SETR = ['travel', 'cafe', 'season'];
-export function stageCfg(n) {
-  const k = (n - 1) % 10, tier = Math.floor((n - 1) / 10);
-  const nTypes = Math.min(9, 6 + Math.floor(k / 3) + tier);
-  const set = SETS[SETR[(n - 1) % 3]];
-  return {
-    layout: LAY[k], types: set.slice(0, nTypes), mix: Math.min(0.7, 0.15 + k * 0.04 + tier * 0.08),
-    ice: tier >= 1 ? 2 + Math.floor(k / 2) + (tier - 1) * 2 : 0, chain: tier >= 2 ? 2 + Math.floor(k / 3) : 0,
-    reward: n % 10 === 0 ? 'note' : 'sticker',
-  };
-}
-export const OBSTACLE_AT = { 11: 'ice', 21: 'chain' };
-
 /* ---------- 날마다 다른 '오늘의 세트' ----------
    36종을 색 · 재질 계열로 묶고, 하루에 계열마다 한 장씩만 골라 9종 (유리 · 병 계열은 한 판에 하나만 → 비슷한 그림 없음) */
 export const FAMILY = {
@@ -67,10 +51,10 @@ export function dailySet(dayKey) {
   const ord = Math.round(Date.UTC(y, m - 1, d) / 86400000);
   return { set, lucky, tpl: ((ord % PAGE_TPL.length) + PAGE_TPL.length) % PAGE_TPL.length };
 }
-/* 오늘의 판 3판: 점점 조금 어렵게 */
+/* 오늘의 3판: 쉬움 → 보통 → 어려움 (오늘의 세트 9종 + 다른 계열로 채움) */
 export function dailyCfg(dayKey, w) {
-  const { set } = dailySet(dayKey);
-  return [{ layout: 'small', types: set.slice(0, 7), mix: 0.15 }, { layout: 'diamond', types: set.slice(0, 8), mix: 0.3 }, { layout: 'diamond', types: set, mix: 0.4 }][w];
+  const { set } = dailySet(dayKey), L = LEVEL[['easy', 'normal', 'hard'][w]];
+  return { layout: L.layout, types: pickTypes('day' + dayKey, L.n, set), cap: L.cap, pNew: L.pNew, zw: 1.5, kind: ['easy', 'normal', 'hard'][w] };
 }
 
 /* 페이지 틀 7종: 스티커 자리(비율 x · y · 크기 · 기울기) · 속지 · 마테 테이프 색 */
@@ -93,16 +77,48 @@ export const linesFor = dayKey => { const r = seeded('line' + dayKey); return [.
 /* 꾸미기: 마테 테이프 6 · 속지 4 */
 export const TAPES = ['#9db39a', '#d9a5a0', '#e3c98d', '#b9c9d6', '#c9a97c', '#b4473a'];
 export const PAPERS = [{ id: 'dot', name: '점' }, { id: 'line', name: '줄' }, { id: 'grid', name: '격자' }, { id: 'kraft', name: '크라프트' }];
-/* 검사용: 어느 날 하루의 오늘 판 3개 */
-export const DAILY_CFG = [0, 1, 2].map(w => dailyCfg('2026-10-29', w));
 
-/* 자유 다꾸: 끝없이 · 판 모양 · 세트 · 방해 요소가 돌아가며 (맵에서 연 방해 요소만) */
-export function freeCfg(i, mapCleared) {
-  const k = i % 10, set = SETS[SETR[i % 3]];
+/* ---------- 난이도 (2026-10-29 대표 "너무 쉬워서 게임 같지 않아") ----------
+   판 재료: 그림 12~16종 · 4~6층 · 90~138장 · 같은 그림을 깊은 층에 흩어 붙임(cap · pNew) · 칸 7 그대로
+   톱니 곡선: 1~5 연습 · 일반 · 15 · 25 어려운 판(붉은 표시 · 보상 2배) · 10 · 20 · 30 보스 · 11~ 얼음 · 21~ 사슬
+   측정: tools/difficulty.mjs (사람 같은 봇 · 시드 200) → PROJECT_STATUS.md 표 */
+export const ALL = [...Array(COUNT).keys()];
+/* n종 고르기: 계열마다 한 장씩 먼저(비슷한 그림 최소) → 그다음 둘째 장 */
+export function pickTypes(key, n, must = []) {
+  const r = seeded('t' + key), fams = Object.keys(FAMILY).sort(() => r() - 0.5), out = [...must];
+  for (let round = 0; out.length < n && round < 6; round++) for (const f of fams) { if (out.length >= n) break; const left = FAMILY[f].filter(x => !out.includes(x)); if (left.length) out.push(left[Math.floor(r() * left.length)]); }
+  return out.slice(0, n);
+}
+export function stageKind(n) { return n <= 5 ? 'practice' : n % 10 === 0 ? 'boss' : n % 5 === 0 ? 'hard' : 'normal'; }
+/* 단계 표 (tools/difficulty.mjs 로 맞춘 값) — 연습 1~5 · 일반 · 어려움 15 · 25 · 보스 10 · 20 · 30 */
+const STAGE = {
+  1: ['a42', 5, 1, .2], 2: ['a42', 6, 1, .2], 3: ['a69', 6, 1, .2], 4: ['a99', 6, 1, .2], 5: ['a99', 6, 1, .3],
+  6: ['a99', 11, 2, .5], 7: ['a99', 11, 2, .4], 8: ['a99', 12, 2, .5], 9: ['a99', 12, 2, .4], 10: ['k147', 12, 1, .3],
+  11: ['a99', 11, 2, .3], 12: ['a99', 11, 2, .3], 13: ['a99', 11, 2, .4], 14: ['a99', 12, 2, .3], 15: ['j129', 12, 2, .5],
+  16: ['a99', 12, 2, .3], 17: ['a99', 12, 2, .4], 18: ['a99', 12, 2, .4], 19: ['a99', 12, 2, .3], 20: ['k147', 10, 1, .2],
+  21: ['a99', 10, 2, .3], 22: ['a99', 11, 2, .3], 23: ['a99', 11, 2, .3], 24: ['a99', 11, 2, .3], 25: ['j129', 11, 2, .4],
+  26: ['a99', 12, 2, .3], 27: ['a99', 11, 2, .3], 28: ['a99', 12, 2, .3], 29: ['a99', 10, 2, .3], 30: ['k147', 10, 1, .2],
+};
+export function stageCfg(n) {
+  const kind = stageKind(n), tier = Math.floor((n - 1) / 10), [layout, nt, cap, pNew] = STAGE[n];
   return {
-    layout: LAY[(k + 3) % 10], types: set.slice(0, 7 + (k % 3)), mix: 0.25 + (k % 5) * 0.08,
-    ice: mapCleared >= 10 && k % 2 ? 3 : 0, chain: mapCleared >= 20 && k % 3 === 2 ? 2 : 0,
+    layout, types: pickTypes('stage' + n, nt), cap, pNew, zw: 1.5, kind,
+    ice: tier >= 1 ? 2 + Math.floor(((n - 1) % 10) / 3) + (tier - 1) : 0, chain: tier >= 2 ? 2 + Math.floor(((n - 1) % 10) / 4) : 0,
+    reward: n % 10 === 0 ? 'note' : 'sticker',
   };
+}
+export const OBSTACLE_AT = { 11: 'ice', 21: 'chain' };
+
+export const LEVEL = {
+  easy: { layout: 'a99', n: 7, cap: 1, pNew: 0.2 },
+  normal: { layout: 'a99', n: 12, cap: 2, pNew: 0.5 },
+  hard: { layout: 'j129', n: 12, cap: 2, pNew: 0.5 },
+};
+/* 자유 다꾸: 판마다 고르는 난이도 · 보상(스티커 장수 · 금박 확률) */
+export const FREE_REWARD = { easy: { n: 2, foil: 0.03 }, normal: { n: 3, foil: 0.08 }, hard: { n: 5, foil: 0.2 } };
+export function freeCfg(i, mapCleared, diff = 'normal') {
+  const L = LEVEL[diff], lays = { easy: ['a99', 'a69', 'a99'], normal: ['a99', 'a99', 'a99'], hard: ['j129', 'j129', 'j129'] }[diff];
+  return { layout: lays[i % 3], types: pickTypes('free' + i, L.n), cap: lays[i % 3] === 'k147' ? 1 : L.cap, pNew: L.pNew, zw: 1.5, ice: mapCleared >= 10 && i % 2 ? 3 : 0, chain: mapCleared >= 20 && i % 3 === 2 ? 2 : 0, kind: diff };
 }
 
 /* 상점 (서버 SKU 요청 목록 — 가격은 docs/bm-policy.md · biz.md) */

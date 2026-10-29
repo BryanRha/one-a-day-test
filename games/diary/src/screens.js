@@ -1,10 +1,11 @@
 // 화면들 — 홈 · 진행 맵 · 테마 노트(책장 · 꾸미기) · 스티커 서랍 · 상점 · 다이어리(달력)
-import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.90.1';
-import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.90.1';
-import { renderPage, openShare } from './page.js?v=0.90.1';
-import * as A from './audio.js?v=0.90.1';
-import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.90.1';
-import { bm } from './oad_bm.js?v=0.90.1';
+import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.90.2';
+import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.90.2';
+import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.90.2';
+import { inOAD, exitToOAD } from './oad.js?v=0.90.2';
+import * as A from './audio.js?v=0.90.2';
+import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.90.2';
+import { bm } from './oad_bm.js?v=0.90.2';
 
 let go = null; /* main.js 가 넣어 줌: go.daily() · go.map(n) · go.free() */
 export const bind = g => { go = g; };
@@ -18,6 +19,12 @@ export function show(name) {
   ({ home, map, notes, drawer, shop, diary })[name]?.();
   if (name === 'home') { const h = $('#home'); h.classList.remove('enter'); void h.offsetWidth; if (prev !== 'home' || !h.dataset.once) h.classList.add('enter'); h.dataset.once = 1; }
   goldChip();
+}
+/* 뒤로가기용: 꾸미기의 열린 시트 · 선택을 먼저 닫음 */
+export function closeSheets() {
+  const sh = $('#esheet.on'); if (sh) { sh.classList.remove('on'); return true; }
+  if (cur === 'editor' && ED && ED.sel != null) { select(null); return true; }
+  return false;
 }
 export function goldChip() { const i = bm.info; document.querySelectorAll('.gold').forEach(g => { g.classList.toggle('off', !i.ok); if (i.ok) g.innerHTML = coin(i.gold ?? 0); }); }
 const noteOpen = n => n.open === 'free' || (n.open.startsWith('map:') && S.map >= +n.open.slice(4)) || (n.open.startsWith('gold:') && S.owned[n.open.slice(5)]) || (n.open === 'owner' && bm.info.owned);
@@ -39,9 +46,10 @@ function home() {
   const ob = S.map < 10 ? '11단계부터 얼음이 나와요' : S.map < 20 ? '21단계부터 사슬이 나와요' : S.map >= 30 ? '30단계를 모두 깼어요!' : '얼음 · 사슬 · 마지막 구간';
   const working = NOTES.filter(noteOpen).map(n => ({ n, nt: S.notes[n.id] })).sort((a, b) => (b.nt ? pagesDone(b.nt) + 1 : 0) - (a.nt ? pagesDone(a.nt) + 1 : 0)).slice(0, 3);
   const first = !Object.values(S.days).some(x => x.done);
+  const recent = Object.keys(S.days).filter(k => S.days[k].done).sort().reverse().slice(0, 7);
   const { set, lucky } = dailySet(dayKey());
   let i = 0; const R = () => `class="rise" style="--i:${i++}"`;
-  $('#home').innerHTML = `<div class="hero"><div class="ht"><h1>오늘의 다꾸</h1><p>${t.getMonth() + 1}월 ${t.getDate()}일 ${DAYS[t.getDay()]}요일 · 하루 한 판, 다이어리 한 장</p></div><div class="hr"><button class="pbtn" id="h_set" aria-label="설정">${ICON.gear}</button><div class="gold off"></div></div></div>
+  $('#home').innerHTML = `<div class="hero"><div class="ht"><h1>오늘의 다꾸</h1><p>${t.getMonth() + 1}월 ${t.getDate()}일 ${DAYS[t.getDay()]}요일 · 하루 한 판, 다이어리 한 장</p></div><div class="hr">${inOAD ? `<button class="pbtn oadexit" id="h_exit" aria-label="원어데이로">↩ 원어데이</button>` : ''}<button class="pbtn" id="h_set" aria-label="설정">${ICON.gear}</button><div class="gold off"></div></div></div>
   <div ${R()}><div class="today paper">
     <div class="tp"><b>오늘 페이지</b><span class="dots">${dots}</span><em>${dd.done ? '완성!' : `${w}/3판`}</em></div>
     <p>${dd.done ? '오늘 페이지에 도장을 찍었어요. 이제 자유 다꾸로 마음껏 꾸며요.' : w ? `${3 - w}판만 더 깨면 오늘 페이지가 완성돼요.` : '오늘의 스티커로 세 판을 깨면 날짜 도장이 찍힌 페이지 한 장이 남아요.'}</p>
@@ -50,6 +58,7 @@ function home() {
     <button class="btn main big" id="h_today">${dd.done ? '오늘 페이지 보기' : `오늘의 판 시작 <small>${w + 1}/3</small>`}</button>
     <div class="week">${week.join('')}</div>
   </div></div>
+  ${recent.length ? `<div class="paper minibox" ${R()}><div class="mh" id="h_pages"><b>최근 페이지</b><span class="lnk">다이어리 ›</span></div><div class="homepages">${recent.map(k => { const d = parseDay(k); return `<button data-day="${k}">${miniHTML(k, `${d.getMonth() + 1}/${d.getDate()}`)}</button>`; }).join('')}</div></div>` : ''}
   <div class="cards" ${R()}>
     <button class="cardb" id="h_map"><i class="ic map"></i><b>진행 맵</b><span>${S.map}/30단계</span><small>${ob}</small></button>
     <button class="cardb" id="h_free"><i class="ic free"></i><b>자유 다꾸</b><span>${S.free}판 · 제한 없음</span><small>서랍 스티커 ${drawerTotal()}장</small></button>
@@ -57,7 +66,9 @@ function home() {
   <div class="paper mini" ${R()}><div class="mh" id="h_notes"><b>꾸미는 중인 노트</b><span class="lnk">책장 ›</span></div><div class="mrow">${working.map(({ n, nt }) => `<button class="mn" data-id="${n.id}" style="--c:${n.color}"><span><img src="${img(n.sig)}"></span><small>${n.name}<br>${nt ? pagesDone(nt) : 0}/${PAGES}쪽</small></button>`).join('')}</div></div>
   <button class="btn rise" style="--i:${i++}" id="h_diary">내 다이어리 보기 · ${Object.values(S.days).filter(d => d.done).length}장</button>`;
   $('#h_today').onclick = () => dd.done ? openDay(dayKey()) : go.daily();
-  $('#h_set').onclick = () => window.__settings();
+  $('#h_set').onclick = () => window.__settings(); if ($('#h_exit')) $('#h_exit').onclick = () => exitToOAD();
+  if ($('#h_pages')) $('#h_pages').onclick = () => show('diary');
+  document.querySelectorAll('#home .homepages [data-day]').forEach(b => b.onclick = () => openDay(b.dataset.day)); fillMinis($('#home'));
   $('#h_notes').onclick = e => { if (!e.target.closest('.mn')) show('notes'); }; document.querySelectorAll('#home .mn').forEach(b => b.onclick = () => openEditor(b.dataset.id));
   $('#h_map').onclick = () => show('map'); $('#h_free').onclick = () => go.free(); $('#h_diary').onclick = () => show('diary');
   document.querySelectorAll('#home .wk').forEach(b => b.onclick = () => dayTap(b.dataset.day, miss));
@@ -79,10 +90,11 @@ function diary() {
   <div class="paper calw"><div class="calh"><button data-m="-1">‹</button><b>${cal.y}년 ${cal.m + 1}월</b><button data-m="1">›</button></div>
   <div class="cal">${DAYS.map(x => `<small>${x}</small>`).join('')}${cells}</div></div>
   <div class="legend"><span><i class="lg r"></i>완성한 날</span><span><i class="lg g"></i>쉬어 간 날 (벌 없음)</span><span><i class="lg t"></i>오늘</span></div>
-  <div class="paper mini"><div class="mh"><b>최근 페이지</b></div><div class="recent">${done.slice(0, 4).map(thumb).join('') || '<p class="sub">하루 세 판을 깨면 첫 페이지가 여기에 생겨요.</p>'}</div></div>
+  <div class="paper minibox"><div class="mh"><b>최근 페이지</b><span class="lnk">${done.length > 4 ? '달력에서 더 보기' : ''}</span></div><div class="recent4">${done.slice(0, 4).map(k => { const d = parseDay(k), m = MOODS.find(o => o.id === S.days[k].mood); return `<button data-day="${k}">${miniHTML(k, `${d.getMonth() + 1}/${d.getDate()}${m ? ' · ' + m.name : ''}`)}</button>`; }).join('') || '<p class="sub">하루 세 판을 깨면 첫 페이지가 여기에 생겨요.</p>'}</div></div>
   <p class="tip">소장하면 매일 열리고, 다이어리가 계정에 평생 보관돼요.</p>`;
   $('#diary').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { cal.m += +b.dataset.m; if (cal.m < 0) { cal.m = 11; cal.y--; } if (cal.m > 11) { cal.m = 0; cal.y++; } diary(); });
   $('#diary').querySelectorAll('[data-day]').forEach(b => b.onclick = () => dayTap(b.dataset.day, miss));
+  fillMinis($('#diary'));
 }
 export function openDay(k) {
   const pg = $('#page'), missed = !S.days[k]?.done;
@@ -100,7 +112,9 @@ function map() {
     const st = n <= S.map ? 'done' : n === S.map + 1 ? 'cur' : 'lock', side = ['l', 'c', 'r', 'c'][n % 4];
     const nb = n % 10 === 0 ? NOTES[2 + n / 10] : null;
     const tag = nb ? `<em class="gift" style="--c:${nb.color}"><span class="mcv"><img src="${img(nb.sig)}"></span>${nb.name}</em>` : OBSTACLE_AT[n] ? `<em class="new">${OBSTACLE_AT[n] === 'ice' ? '얼음 등장' : '사슬 등장'}</em>` : '';
-    h += `<div class="node ${side}"><button class="st ${st} ${nb ? 'big' : ''}" data-n="${n}">${nb ? '<i class="ic note"></i>' : `<b>${n}</b>`}</button>${tag}</div>`;
+    const kd = n % 10 === 0 ? 'boss' : n > 5 && n % 5 === 0 ? 'hard' : '';
+    const tag2 = kd === 'hard' ? `<em class="new" style="color:var(--stamp)">어려운 판 · 보상 2배</em>` : '';
+    h += `<div class="node ${side}"><button class="st ${st} ${nb ? 'big' : ''} ${st !== 'done' ? kd : ''}" data-n="${n}">${nb ? '<i class="ic note"></i>' : `<b>${n}</b>`}</button>${tag}${tag2}</div>`;
   }
   $('#map').innerHTML = `<div class="hd sticky"><div><h1>진행 맵</h1><p>${S.map}/30단계 · 10단계마다 새 노트와 새 재미</p></div><div class="gold off"></div></div><div class="path">${h}</div>`;
   $('#map').querySelectorAll('.st').forEach(b => b.onclick = () => { const n = +b.dataset.n; if (n > S.map + 1) { A.nope(); toast(`${S.map + 1}단계를 먼저 깨 주세요`); return; } go.map(n); });

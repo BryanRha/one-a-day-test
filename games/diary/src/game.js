@@ -1,11 +1,11 @@
 // 판 플레이 — 7칸 · 도구 3 · 얼음 · 사슬 · 실패 → 무료 돌려받기 → 이어하기(광고 · 골드) · 응원 선물
 //   한 판마다 start() 가 상태를 처음부터 다시 만듦 (지난 판의 상태가 남지 않게 — 씬 재사용 주의)
-import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.90.1';
-import { img } from './data.js?v=0.90.1';
-import * as A from './audio.js?v=0.90.1';
-import { S, save } from './save.js?v=0.90.1';
-import { bm } from './oad_bm.js?v=0.90.1';
-import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.90.1';
+import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.90.2';
+import { img } from './data.js?v=0.90.2';
+import * as A from './audio.js?v=0.90.2';
+import { S, save } from './save.js?v=0.90.2';
+import { bm } from './oad_bm.js?v=0.90.2';
+import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.90.2';
 
 const SLOTS = 7;
 const stage = $('#stage');
@@ -23,13 +23,15 @@ function measure() {
   const top = 64, bottom = TRAY.y - 22;
   if (G) { const xs = G.tiles.map(t => t.x), ys = G.tiles.map(t => t.y); BB = { x0: Math.min(...xs), y0: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs) + 1, h: Math.max(...ys) - Math.min(...ys) + 1 }; }
   const zmax = G ? Math.max(...G.tiles.map(t => t.z)) : 2;
-  T = Math.floor(Math.min((W - 14) / (BB.w + 0.1), (bottom - top) / (BB.h + 0.35 + zmax * 0.1), 64));
-  OX = (W - T * BB.w) / 2 + T * 0.06 * zmax / 2 - BB.x0 * T; OY = top + Math.max(0, (bottom - top - T * (BB.h + 0.2)) / 2) + T * 0.1 * zmax - BB.y0 * T;
+  T = Math.floor(Math.min((W - 14) / (BB.w + 0.1 + zmax * 0.09), (bottom - top) / (BB.h + 0.35 + zmax * 0.14), 64));
+  OX = (W - T * (BB.w + zmax * 0.09)) / 2 + T * 0.09 * zmax - BB.x0 * T; OY = top + Math.max(0, (bottom - top - T * (BB.h + 0.2 + zmax * 0.14)) / 2) + T * 0.14 * zmax - BB.y0 * T;
   const tray = $('#tray'); Object.assign(tray.style, { left: TRAY.x + 'px', top: TRAY.y + 'px', width: TRAY.w + 'px', height: TRAY.h + 'px' });
   tray.innerHTML = ''; for (let i = 0; i < SLOTS; i++) { const s = document.createElement('div'); s.className = 'slot'; Object.assign(s.style, { left: 6 + i * SL + 2 + 'px', top: 6 + 2 + 'px', width: SL - 4 + 'px', height: SL - 4 + 'px' }); tray.appendChild(s); }
   $('#tools').style.top = toolsY + 'px';
 }
-const boardPos = t => ({ x: OX + t.x * T - t.z * T * 0.06, y: OY + t.y * T - t.z * T * 0.1 });
+/* 층마다 왼쪽 위로 조금씩 어긋나 쌓여 보이게 (마작 패처럼 옆면이 드러남) */
+const ZX = 0.09, ZY = 0.14;
+const boardPos = t => ({ x: OX + t.x * T - t.z * T * ZX, y: OY + t.y * T - t.z * T * ZY });
 const slotPos = i => ({ x: TRAY.x + 6 + i * SL + SL * 0.02, y: TRAY.y + 6 + SL * 0.02 });
 const zBoard = t => 10 + t.z * 100 + Math.round(t.y * 2) * 6 + Math.round(t.x * 2);
 function place(t, p, s = 1) { t.px = p.x; t.py = p.y; t.ps = s; t.el.style.transform = `translate(${p.x}px,${p.y}px) scale(${s})`; }
@@ -151,7 +153,13 @@ function popTriple(ids) {
     }, sp(300));
   }; go();
 }
-function tightCheck() { const n = live().length; $('#tray').classList.toggle('tight', n >= SLOTS - 1); if (n >= SLOTS - 1 && !G.warned) { G.warned = true; A.warn(); } if (n < SLOTS - 2) G.warned = false; }
+/* 칸 6장 = 한 칸 남음 경고 (칸이 숨쉬듯 붉게 · 짧은 흔들림 · '한 칸 남았어요' 꼬리표) */
+function tightCheck() {
+  const n = live().length, tr = $('#tray'); tr.classList.toggle('tight', n >= SLOTS - 1);
+  if (n >= SLOTS - 1 && !G.warned) { G.warned = true; A.warn(); buzz(25); tr.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: sp(240) }); tr.dataset.warn = '한 칸 남았어요 · 같은 그림을 찾아요'; }
+  if (n < SLOTS - 1) delete tr.dataset.warn;
+  if (n < SLOTS - 2) G.warned = false;
+}
 
 /* ---------- 끝 판정 ---------- */
 function checkEnd() {
@@ -168,12 +176,13 @@ function fail() {
   G.over = true; G.fails++; buzz(20);
   const info = bm.info, inApp = info.ok, n = G.cont, left = onBoard().length;
   /* '아까운 순간'에만 이어하기 권함: 남은 스티커가 적을 때 (12장 이하 또는 30% 이하) · 처음 3판 X (docs/bm-policy.md 5장) */
-  const near = left <= Math.max(12, Math.round(G.tiles.length * 0.3));
+  const pairs = Math.ceil(left / 3);
+  const near = left <= Math.max(18, Math.round(G.tiles.length * 0.25));
   const canCont = inApp && n < 2 && S.plays > 3 && near;
   const sku = n === 0 ? 'continue' : 'continue2', price = bm.price(sku) || (n === 0 ? 20 : 40);
   const adLeft = info.ads?.reward ? info.ads.rewardLeft : 0;
   const head = near ? '아깝다, 거의 다 왔어요' : '칸이 다 찼어요';
-  const base = `<h3>${head}</h3><p class="left">남은 스티커 <b>${left}</b>장</p>`;
+  const base = `<h3>${head}</h3><p class="left">남은 짝 <b>${pairs}</b>개${near ? ' — 거의 다 왔어요' : ''}</p><p class="sub">${G.tiles.length - left}장을 떼어 냈어요 · 남은 스티커 ${left}장</p>`;
   const tail = `<div class="row"><button class="btn" data-a="again">처음부터</button><button class="btn ghost" data-a="quit">나가기</button></div>`;
   if (G.rescue > 0) return modal(base + `<p>괜찮아요. 마지막 세 장을 판으로 돌려 드릴게요.</p><button class="btn main" data-a="rescue">세 장 돌려받기 (무료)</button>` + tail, onModal, { sheet: true });
   if (canCont) {

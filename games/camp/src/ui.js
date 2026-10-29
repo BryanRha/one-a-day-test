@@ -1,21 +1,27 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.90.1';
-import * as G from './sim.js?v=0.90.1';
-import { bm } from './oad_bm.js?v=0.90.1';
-import { sfx, setAudio, AUD } from './audio.js?v=0.90.1';
-import { pushBack } from './oad.js?v=0.90.1';
+import * as D from './data.js?v=0.90.2';
+import * as G from './sim.js?v=0.90.2';
+import { bm } from './oad_bm.js?v=0.90.2';
+import { sfx, setAudio, AUD } from './audio.js?v=0.90.2';
+import { pushBack } from './oad.js?v=0.90.2';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
-export const IMG = p => `assets/art/${p}.png`;
-const STAMP = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#F9D4DC" stroke="#C9788A" stroke-width="4"/><g fill="#C9788A"><ellipse cx="32" cy="38" rx="10" ry="8"/><circle cx="20" cy="27" r="4.5"/><circle cx="27" cy="20" r="4.5"/><circle cx="37" cy="20" r="4.5"/><circle cx="44" cy="27" r="4.5"/></g></svg>');
-export const ICON = { coin: IMG('deco/coin'), gem: IMG('food/gem'), rp: IMG('deco/star'), treat: IMG('deco/treats'), big: IMG('deco/gift'), stamp: STAMP, heart: IMG('deco/heart') };
+/* 읽기 쉬운 긴 표기: 14,900 → '1만 4,900' · 억 이상은 짧게 (퀄리티 B11) */
+export function fmtL(n) { n = Math.floor(n); if (n < 1e4) return n.toLocaleString('ko-KR'); if (n < 1e8) { const a = Math.floor(n / 1e4), b = n % 1e4; return `${a.toLocaleString('ko-KR')}만${b ? ' ' + b.toLocaleString('ko-KR') : ''}`; } return fmt(n); }
+export const IMG = p => `assets/art/${p}.webp`;
+const STAMP_OLD = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#F9D4DC" stroke="#C9788A" stroke-width="4"/><g fill="#C9788A"><ellipse cx="32" cy="38" rx="10" ry="8"/><circle cx="20" cy="27" r="4.5"/><circle cx="27" cy="20" r="4.5"/><circle cx="37" cy="20" r="4.5"/><circle cx="44" cy="27" r="4.5"/></g></svg>');
+export const ICON = { coin: IMG('deco/coin'), gem: IMG('food/gem'), rp: IMG('ui/tea'), treat: IMG('ui/cookie'), big: IMG('deco/gift'), stamp: IMG('ui/stamp'), heart: IMG('deco/heart'), gold: IMG('ui/gold'),
+  ad: IMG('ui/ad'), inst: IMG('ui/inst'), lock: IMG('ui/lock'), hammer: IMG('ui/hammer'), clock: IMG('ui/clock'), mission: IMG('ui/mission'), ribbon: IMG('ui/ribbon'), sound: IMG('ui/sound'), serve: IMG('ui/serve'), sparkle: IMG('ui/sparkle'), menu: IMG('ui/menu') };
+/* 이모지 대신 우리 아이콘 한 세트 (퀄리티 B1 · B2: 쉼 포인트 = 찻잔 · 미션 = 체크 노트 · 혜택 = 리본 · 원어데이 골드 = 초승달 금화) */
+export let OFFY = 0; export const setOffY = v => { OFFY = v; };
+export const AMEN_IMG = { fridge: 'food/strawmilk', sink: 'ui/tea', toaster: 'food/loaf', micro: 'food/hotpot', shower: 'fac/footwash', laundry: 'deco/cushion' };
 const ic = (k, c = 'ico') => `<img class="${c}" src="${ICON[k]}" alt="">`;
 const NAME = { ...D.CUR, big: '특별 도시락' };
 export const tm = s => { s = Math.max(0, Math.ceil(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}시간${m ? ' ' + m + '분' : ''}` : m ? `${m}분${x ? ' ' + x + '초' : ''}` : `${x}초`; };
-const clock = s => { s = Math.max(0, Math.ceil(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+export const clock = s => { s = Math.max(0, Math.ceil(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
 /* 보상 글자 (min = 지금 수입 × 분) */
 export function rtxt(r) { const o = []; if (r.min) o.push(ic('coin') + fmt(G.minsOf(r.min))); for (const k of ['coin', 'gem', 'rp', 'treat', 'big', 'stamp']) if (r[k]) o.push(ic(k) + fmt(r[k])); return o.join(' '); }
 const PRAISE = ['멋져요!', '좋아요!', '훌륭해요!', '역시 셰프님!', '캠프가 더 예뻐졌어요!', '손님들이 좋아해요!'];
@@ -25,7 +31,7 @@ let ctx = null;   /* main 이 넘겨줌: { portrait(look), save(), reskin(), boa
 const frame = $('#frame'), hudEl = $('#hud'), barEl = $('#bar'), sheetEl = $('#sheet'), popEl = $('#pop'), flyEl = $('#fly'), toastEl = $('#toast');
 
 /* ── 누름 탄성 (모든 .btn · .tab · .sbtn · .pill) ── */
-addEventListener('pointerdown', e => { const b = e.target.closest('.btn,.tab,.sbtn,.pill,.st,.x'); if (!b) return; b.classList.add('press'); sfx(b.classList.contains('tab') || b.classList.contains('st') ? 'tab' : 'tap'); const up = () => { b.classList.remove('press'); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); }; addEventListener('pointerup', up); addEventListener('pointercancel', up); }, true);
+addEventListener('pointerdown', e => { const b = e.target.closest('.btn,.tab,.sbtn,.pill,.st,.x,.dishrdy,.tipb'); if (!b) return; b.classList.add('press'); sfx(b.classList.contains('tab') || b.classList.contains('st') ? 'tab' : 'tap'); const up = () => { b.classList.remove('press'); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); }; addEventListener('pointerup', up); addEventListener('pointercancel', up); }, true);
 
 /* ── 알림 ── */
 export function toast(msg, good = false) {
@@ -47,7 +53,7 @@ export function fly(k, x, y, n = 5) {
     an.onfinish = () => { f.remove(); p.classList.remove('hit2'); void p.offsetWidth; p.classList.add('hit2'); if (i === 0) sfx('coin', { up: Math.floor(Math.random() * 3) }); };
   }
 }
-export function numPop(x, y, txt, crit) { const d = document.createElement('div'); d.className = 'num' + (crit ? ' crit' : ''); d.style.left = x + 'px'; d.style.top = y + 'px'; d.innerHTML = txt; flyEl.appendChild(d); setTimeout(() => d.remove(), 1250); }
+export function numPop(x, y, txt, crit) { const d = document.createElement('div'); d.className = 'num' + (crit ? ' crit' : '') + (/^[+대]/.test(String(txt)) ? '' : ' txt'); d.style.left = x + 'px'; d.style.top = y + 'px'; d.innerHTML = txt; flyEl.appendChild(d); setTimeout(() => d.remove(), 1250); }
 export function confetti(n = 40) { const cs = ['#F3A9BA', '#FFE38A', '#A8DCC4', '#9CC8EE', '#FFB46A']; for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.className = 'confetti'; c.style.left = 360 + (Math.random() - 0.5) * 300 + 'px'; c.style.top = 260 + Math.random() * 80 + 'px'; c.style.background = cs[i % cs.length]; c.style.setProperty('--dx', (Math.random() - 0.5) * 700 + 'px'); c.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg'); c.style.animationDelay = Math.random() * 0.25 + 's'; flyEl.appendChild(c); setTimeout(() => c.remove(), 2000); } }
 function banner(t, sub) { const b = document.createElement('div'); b.className = 'banner'; b.innerHTML = `<div>${t}${sub ? `<small>${sub}</small>` : ''}</div>`; flyEl.appendChild(b); setTimeout(() => b.remove(), 2500); }
 
@@ -59,27 +65,27 @@ export function hud() {
   <div class="pill" id="pGem" style="left:252px">${ic('gem', '')}<span>0</span><i class="plus">+</i></div>
   <div class="pill" id="pRp" style="left:476px">${ic('rp', '')}<span>0</span></div>
   <div id="lvb"><div class="ring"><b>1</b></div><div class="nm">숲속 힐링 캠프<br><small id="rate" style="font-weight:600;font-size:16px;color:var(--ink2)"></small></div></div>
-  <div class="btn sky" id="gAll" style="position:absolute;left:22px;top:1290px;display:none;animation:giftHop 1.6s cubic-bezier(.34,1.56,.64,1) infinite">📺 선물 한꺼번에</div>
+  <div class="btn sky" id="gAll" style="position:absolute;left:22px;top:1290px;display:none;animation:giftHop 1.6s cubic-bezier(.34,1.56,.64,1) infinite">${ic('ad')} 선물 한꺼번에</div>
   <div id="buffs" style="position:absolute;left:22px;top:172px;display:flex;flex-direction:column;gap:8px"></div>
   <div class="side">
     <div class="sbtn" id="sAtt">${ic('big', '')}출석</div>
-    <div class="sbtn" id="sPlay">${ic('gem', '')}선물<span class="tm"></span></div>
-    <div class="sbtn" id="sBuff">${ic('rp', '')}혜택</div>
-    <div class="sbtn" id="sSnd" style="height:64px">소리<br><b style="font-size:13px">켜짐</b></div>
+    <div class="sbtn" id="sPlay">${ic('clock', 'ic2')}선물<span class="tm"></span></div>
+    <div class="sbtn" id="sBuff">${ic('ribbon', 'ic2')}혜택</div>
+    <div class="sbtn" id="sSnd">${ic('sound', 'ic2')}<b style="font-size:15px">켜짐</b></div>
   </div>`;
   barEl.innerHTML = `<div class="tabs">${TABS.map(t => `<div class="tab" data-t="${t.id}"><img src="${IMG(t.img)}" alt="">${t.name}</div>`).join('')}</div>`;
   barEl.querySelectorAll('.tab').forEach(t => t.onclick = () => openTab(t.dataset.t));
-  $('#pGem').onclick = () => openTab('shop', bm.info.ok ? 'gold' : 'box');
+  $('#pGem').onclick = () => openTab('shop', bm.info.ok ? 'stall' : 'box');
   $('#pCoin').onclick = () => toast(`숲 코인 · 지금 1분에 약 ${fmt(G.incomeRate() * 60)} 벌어요`);
   $('#pRp').onclick = () => toast(`쉼 포인트 · 1분에 ${fmt(G.restPerMin())} · 메뉴 맛 올리기에 써요`);
   $('#sAtt').onclick = () => attendPop();
   $('#sPlay').onclick = () => openTab('mission', 'play');
-  $('#sBuff').onclick = () => openTab('shop', 'ads');
+  $('#sBuff').onclick = () => openTab('shop', 'stall');
   $('#gAll').onclick = () => watch('gifts', null, n => { toast(`선물 ${n}개를 한꺼번에 받았어요!`, true); fly('coin', 160, 1300, 8); ctx.render(); });
   $('#sSnd').onclick = () => { const on = !(AUD.sfx || AUD.bgm); setAudio({ sfx: on, bgm: on }); S.muted = !on; ctx.save(); toast(on ? '소리를 켰어요' : '소리를 껐어요'); };
   for (const k of ['coin', 'gem', 'rp']) shown[k] = S[k];
 }
-const TABS = [{ id: 'fac', name: '시설', img: 'fac/tent' }, { id: 'menu', name: '메뉴', img: 'food/bagel' }, { id: 'staff', name: '직원', img: 'deco/heart' }, { id: 'mission', name: '미션', img: 'deco/star' }, { id: 'shop', name: '매점', img: 'deco/gift' }];
+const TABS = [{ id: 'fac', name: '시설', img: 'fac/tent' }, { id: 'menu', name: '메뉴', img: 'food/bagel' }, { id: 'staff', name: '직원', img: 'deco/heart' }, { id: 'mission', name: '미션', img: 'ui/mission' }, { id: 'shop', name: '매점', img: 'deco/gift' }];
 function setDot(el, n) { if (!el) return; let d = el.querySelector(':scope > .dot'); if (!n) { if (d) d.remove(); return; } if (!d) { d = document.createElement('i'); d.className = 'dot'; el.appendChild(d); } if (typeof n === 'number' && n > 1) { d.classList.add('n'); d.textContent = n > 9 ? '9+' : n; } else { d.classList.remove('n'); d.textContent = ''; } }
 /* 빨간 점 규칙 (docs/ux_notes.md 4장) */
 export function dots() {
@@ -91,7 +97,9 @@ export function dots() {
   const staff = D.STAFF.some(s => !S.staff[s.id] && S.coin >= s.cost) || D.REGULARS.some(r => (S.regs[r.id] || {}).fav > (S.regs[r.id] || {}).read);
   const mis = G.dailyList().filter(m => !m.got && m.p >= m.n).length + (G.dailyAllReady() ? 1 : 0) + G.repeatList().filter(q => !q.done && q.have >= q.need).length + (G.attendReady() ? 1 : 0) + G.playReady().filter(p => p.ready).length;
   const shop = (bm.info.ok && G.adLeft('box') > 0 && bm.info.ads.reward) || S.gem >= D.BOX.cost;
-  const T = barEl.querySelectorAll('.tab'); setDot(T[0], fac); setDot(T[1], menuNew || menuUp); setDot(T[2], staff); setDot(T[3], mis); setDot(T[4], shop);
+  const T = barEl.querySelectorAll('.tab');
+  if (tutOn()) { const tab = tutTab(); TABS.forEach((t, i) => setDot(T[i], t.id === tab)); setDot($('#sAtt'), false); setDot($('#sPlay'), false); return; }   /* 안내 중에는 안내가 가리키는 한 곳만 (퀄리티 A2) */
+  setDot(T[0], fac); setDot(T[1], menuNew || menuUp); setDot(T[2], staff); setDot(T[3], mis); setDot(T[4], shop);
   setDot($('#sAtt'), G.attendReady()); setDot($('#sPlay'), G.playReady().some(p => p.ready));
 }
 export const lineReady = line => { const st = D.LINES.find(l => l.id === line).st; return G.built(st) && !!G.R.cooks[st]; };
@@ -105,7 +113,7 @@ export function tick(dt) {
   const pl = G.playReady().find(p => !p.got); const tmEl = $('#sPlay .tm'); if (tmEl) tmEl.textContent = pl ? (pl.ready ? '받기!' : clock(pl.m * 60 - S.play.sec)) : '내일';
   $('#sPlay').classList.toggle('glow', !!(pl && pl.ready));
   $('#gAll').style.display = G.R.gifts.length >= 3 && adOn() && adOk('gifts') && !cur && !curDlg ? '' : 'none';
-  $('#sSnd b').textContent = AUD.sfx || AUD.bgm ? '켜짐' : '꺼짐';
+  $('#sSnd b').textContent = AUD.sfx || AUD.bgm ? '소리 켜짐' : '소리 꺼짐'; $('#sSnd').style.opacity = AUD.sfx || AUD.bgm ? 1 : 0.6;
   const bf = $('#buffs'); const on = ['speed', 'crit', 'rest'].filter(k => G.buffOn(k)); const html = on.map(k => `<div class="lvtag" style="position:static;transform:none;background:#FFF0B8">${{ speed: '요리 2배 빠르게', crit: '대박 요리 +30%', rest: '쉼 포인트 +30%' }[k]} · ${clock(S.buff[k] - S.t)}</div>`).join(''); if (bf.innerHTML !== html) bf.innerHTML = html;
   $('#sBuff').classList.toggle('glow', bm.info.ok && !on.length && ['speed', 'crit', 'rest'].some(k => G.adLeft(k) > 0));
   dots(); tut();
@@ -178,6 +186,7 @@ async function act(a, v, w, b, me, repeat) {
   else if (a === 'box') { if (v === 'ad') return watch('box', null, r => boxPop(r)); const r = G.openBox('gem'); if (r.err) err = r.err; else return boxPop(r); }
   else if (a === 'ad') { return watch(v, w, () => { toast(`${D.ADS[v].name} · 시작!`, true); ctx.render(); }); }
   else if (a === 'gold') return buyGold(v);
+  else if (a === 'try') { if (v === 'skin') ctx.tryOn(15); else ctx.previewDeco(15); return toast(v === 'skin' ? '15초 동안 입어 볼게요 · 셰프를 봐 주세요!' : '15초 동안 잔디 왼쪽에 놓아 볼게요', true); }
   else if (a === 'charge') { const r = G.claimCharge(v); if (r) { flyR(r, at); sfx('gift'); ctx.render(); } }
   if (err) return nope(b, err);
   ctx.save(); if (me) { me.refresh(true); bump(me, b.closest('[data-k]') && b.closest('[data-k]').dataset.k); }
@@ -196,9 +205,11 @@ export async function watch(k, arg, done) {
 }
 /* 원어데이 골드 (가격 = 서버 표 · 앱 확인 창) */
 const GOLD = {
-  gems100: { name: '솔방울 100개', desc: '골드 1 = 솔방울 1 · 하루 5번까지', img: 'food/gem', give: () => { S.gem += 100; } },
-  deco: { name: D.DECO_SHOP.deco.name, desc: `튤립 · 등불 · 벤치를 한꺼번에 · 캠프 매력 +${D.DECO_SHOP.deco.appeal} (손님이 더 자주 와요)`, img: 'deco/tulip', item: true, own: () => S.shop.deco, give: () => { S.shop.deco = true; } },
-  skin: { name: D.DECO_SHOP.skin.name, desc: `주인공 셰프의 봄 의상 · 매력 +${D.DECO_SHOP.skin.appeal}`, img: 'deco/cushion', item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
+  gems100: { name: '솔방울 100개', n: 100, bonus: 0, give: () => { S.gem += 100; } },
+  gems300: { name: '솔방울 330개', n: 330, bonus: 10, give: () => { S.gem += 330; } },
+  gems1000: { name: '솔방울 1,200개', n: 1200, bonus: 20, give: () => { S.gem += 1200; } },
+  deco: { name: D.DECO_SHOP.deco.name, desc: `벚꽃나무 아래 벤치 · 튤립 화단 · 종이 등불 · 잔디 왼쪽에 놓여요 · 매력 +${D.DECO_SHOP.deco.appeal} (손님이 조금 더 자주 와요)`, art: () => IMG('deco/set_sakura'), item: true, own: () => S.shop.deco, give: () => { S.shop.deco = true; } },
+  skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 매력 +${D.DECO_SHOP.skin.appeal}`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
 };
 async function buyGold(sku) {
   const g = GOLD[sku]; if (g.item && g.own()) return toast('이미 가지고 있어요');
@@ -225,7 +236,7 @@ function facCard(t) {
   if (w) right = `<div style="display:flex;flex-direction:column;gap:6px;align-items:center"><small style="font-weight:800">공사 ${clock(w.end - S.t)}</small>${btn('inst:up:' + t, '바로 끝내기', 'yl')}</div>`;
   else if (lv >= D.UP.max) right = '<b style="color:#5E9E82">최고 단계</b>';
   else right = btn('up:' + t, `강화<small>${ic('coin')}${fmt(cost)}</small>`, nextT === lv + 1 ? 'yl' : 'go', S.coin < cost, 'style="flex-direction:column;min-width:150px"');
-  const extra = fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : fac.kind === 'special' && adOk('charge') && adOn() ? btn('ad:charge:' + t, '📺 바로 채우기', 'sky') : '';
+  const extra = fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : fac.kind === 'special' && adOk('charge') && adOn() ? btn('ad:charge:' + t, `${ic('ad')} 바로 채우기`, 'sky') : '';
   return card(t, img, `${fac.name} <small style="font-size:18px">Lv.${lv}</small> ${stars(tier)}`, `${eff}${nextT ? `<br>Lv.${nextT}에 단계가 올라 모습이 바뀌어요` : ''}`, `<div style="display:flex;flex-direction:column;gap:8px">${right}${extra}</div>`);
 }
 const PANELS = {
@@ -239,14 +250,14 @@ const PANELS = {
       return h;
     }
     if (sub === 'amen') { const c = G.amenCost(); let h = `<div class="sec">공용 키친 설비는 새 메뉴를, 웰컴센터 설비는 휴식을 늘려요</div>`;
-      for (const [id, a] of Object.entries(D.AMEN)) h += card(id, null, a.name, a.desc, S.amen[id] ? '<b style="color:#5E9E82">있어요 ✓</b>' : btn('amen:' + id, `짓기<small>${ic('coin')}${fmt(c)}</small>`, 'go', S.coin < c, 'style="flex-direction:column;min-width:150px"'), { bg: a.at === 'kitchen' ? '#FDE7D4' : '#DCEBF8', cls: S.amen[id] ? 'done' : '' }).replace('<div class="im" style', `<div class="im" style="font-size:46px;display:flex" data-e="1"`).replace('</div><div class="tx">', `${AMEN_E[id]}</div><div class="tx">`);
+      for (const [id, a] of Object.entries(D.AMEN)) h += card(id, null, a.name, a.desc, S.amen[id] ? '<b style="color:#5E9E82">있어요 ✓</b>' : btn('amen:' + id, `짓기<small>${ic('coin')}${fmt(c)}</small>`, 'go', S.coin < c, 'style="flex-direction:column;min-width:150px"'), { bg: a.at === 'kitchen' ? '#FDE7D4' : '#DCEBF8', cls: S.amen[id] ? 'done' : '' }).replace('</div><div class="tx">', `${AMEN_E[id]}</div><div class="tx">`);
       return h; }
     let h = `<div class="sec">고원 숲 캠핑장 · 웰컴센터를 가운데 두고 길을 따라 넓어져요</div>`;
     for (const z of D.ZONES) { const o = S.zones[z.id]; let right = '';
       if (o.st === 'open') right = '<b style="color:#5E9E82">열림 ✓</b>';
       else if (o.st === 'building') right = `<div style="display:flex;flex-direction:column;gap:6px;align-items:center"><small style="font-weight:800">${clock(o.end - S.t)}</small>${btn('inst:zone:' + z.id, '바로 끝내기', 'yl')}</div>`;
       else right = G.zoneNeedOk(z.id) ? btn('zone:' + z.id, `열기<small>${tm(z.build)}</small>`, 'pk', false, 'style="flex-direction:column"') : `<small style="font-weight:700;text-align:right">레벨 ${z.need.lv}<br>시설 ${z.need.built}개</small>`;
-      h += card(z.id, null, z.name, ZONE_TXT[z.id] + (z.reward ? ` · 열면 ${ic('gem')}${z.reward}` : ''), right, { bg: ZONE_BG[z.id], cls: o.st === 'open' ? 'done' : o.st === 'locked' && !G.zoneNeedOk(z.id) ? 'lock' : '' }).replace('</div><div class="tx">', `<span style="font-size:46px">${ZONE_E[z.id]}</span></div><div class="tx">`);
+      h += card(z.id, null, z.name, ZONE_TXT[z.id] + (z.reward ? ` · 열면 ${ic('gem')}${z.reward}` : ''), right, { bg: ZONE_BG[z.id], cls: o.st === 'open' ? 'done' : o.st === 'locked' && !G.zoneNeedOk(z.id) ? 'lock' : '' }).replace('</div><div class="tx">', `${ZONE_E[z.id]}</div><div class="tx">`);
     }
     return h;
   } },
@@ -267,9 +278,9 @@ const PANELS = {
     if (sub === 'staff') { h += `<div class="sec">간식을 주면 친해지고, 친할수록 값 · 대박 확률이 올라요 · 간식 ${S.treat} · 도시락 ${S.big}</div>`;
       for (const st of D.STAFF) { const o = S.staff[st.id], role = st.role === 'cook' ? '요리사' : '서빙', sk = `${st.skill.line === 'all' ? '모든 메뉴' : D.LINES.find(l => l.id === st.skill.line).name} 값 +${Math.round(st.skill.k * 100)}%`;
         if (!o) { h += card(st.id, ctx.portrait(st.look), `${st.name} <small style="font-size:17px">${role}</small>`, `${sk} · "${st.line}"`, btn('hire:' + st.id, `고용<small>${ic('coin')}${fmt(st.cost)}</small>`, 'pk', S.coin < st.cost, 'style="flex-direction:column;min-width:140px"'), { bg: '#FCEFF2' }); continue; }
-        const need = D.FAV_EXP[o.fav - 1]; h += card(st.id, ctx.portrait(st.look), `${st.name} <small style="font-size:17px">${role} · 친밀도 ${o.fav}</small>`, `${sk} · 친밀 보너스 값 +${Math.round(D.FAV_BONUS[o.fav - 1] * 25)}% · 대박 +${Math.round(D.FAV_CRIT[o.fav - 1] * 25)}%p`,
+        const need = D.FAV_EXP[o.fav - 1]; h += card(st.id, ctx.portrait(st.look), `${st.name} <small style="font-size:17px">${role} · 친밀도 ${o.fav}</small>`, `${sk}${D.FAV_BONUS[o.fav - 1] ? ` · 친밀 보너스 값 +${Math.round(D.FAV_BONUS[o.fav - 1] * 25)}%` : ''}${D.FAV_CRIT[o.fav - 1] ? ` · 대박 +${Math.round(D.FAV_CRIT[o.fav - 1] * 25)}%p` : ''}${o.fav < 10 ? `<br>더 친해지면: 값 +${Math.round(D.FAV_BONUS[o.fav] * 25)}%${D.FAV_CRIT[o.fav] ? ` · 대박 +${Math.round(D.FAV_CRIT[o.fav] * 25)}%p` : ''}` : ''}`,
           o.fav >= 10 ? '<b style="color:#5E9E82">최고로 친해요</b>' : `<div style="display:flex;flex-direction:column;gap:8px">${btn('feed:' + st.id, `${ic('treat')} 쿠키`, 'go', S.treat < 1)}${btn('feed:' + st.id + ':big', `${ic('big')} 도시락`, 'yl', S.big < 1)}</div>`, { bar: o.fav >= 10 ? 1 : o.exp / need, bg: '#FCEFF2' }); }
-      h += `<div class="odds">직원은 일하다가 텐트 · 해먹에서 쉬어요. 쉬는 동안 <b>쉼 포인트</b>가 모여요.</div>`; return h; }
+      return h; }
     h += `<div class="sec">단골손님은 하루 한 번 와요 · 올 때마다 이야기가 하나씩 열려요</div>`;
     for (const r of D.REGULARS) { const o = S.regs[r.id] || { fav: 0 }; const open = S.lv >= r.needLv;
       h += card(r.id, ctx.portrait(r.look), `${r.name} <span class="hearts">${'♥'.repeat(o.fav)}${'♡'.repeat(D.FAVOR_MAX - o.fav)}</span>`, open ? `${r.who} · 좋아하는 메뉴: ${D.MENU.find(m => m.id === r.likes).name}` : `레벨 ${r.needLv}부터 캠프에 와요`,
@@ -280,44 +291,50 @@ const PANELS = {
     let h = '';
     if (sub === 'daily') { const L = G.dailyList(), done = L.filter(m => m.got).length;
       h += card('all', IMG('deco/gift'), '오늘의 할 일 모두 끝내기', `${done}/${L.length} · 보상 ${rtxt(D.DAILY_BONUS)}`, S.daily.all ? '<b style="color:#5E9E82">받았어요 ✓</b>' : btn('dailyAll', '받기', 'yl', !G.dailyAllReady()), { bar: done / L.length, bg: '#FFF0B8' });
-      for (const m of [...L].sort((a, b) => (a.got - b.got) || ((b.p >= b.n) - (a.p >= a.n)))) h += card(m.id, null, m.name.replace('{n}', m.n), `${m.p}/${m.n} · ${rtxt(m.r)}`, m.got ? '<b style="color:#5E9E82">✓</b>' : btn('daily:' + m.id, '받기', 'go', m.p < m.n), { bar: m.p / m.n, cls: m.got ? 'done' : '' }).replace('<div class="im">', `<div class="im" style="font-size:44px">${MIS_E[m.id]}`);
+      for (const m of [...L].sort((a, b) => (a.got - b.got) || ((b.p >= b.n) - (a.p >= a.n)))) h += card(m.id, null, m.name.replace('{n}', m.n), `${m.p}/${m.n} · ${rtxt(m.r)}`, m.got ? '<b style="color:#5E9E82">✓</b>' : btn('daily:' + m.id, '받기', 'go', m.p < m.n), { bar: m.p / m.n, cls: m.got ? 'done' : '' }).replace('<div class="im">', `<div class="im">${MIS_E[m.id]}`);
       return h; }
-    if (sub === 'repeat') { for (const q of G.repeatList()) h += card(q.id, null, `${q.name} ${q.done ? '완료' : q.need + '번'}`, q.done ? '모든 단계를 끝냈어요!' : `${fmt(Math.min(q.have, q.need))}/${fmt(q.need)} · ${rtxt(q.r(q.step))} · ${q.step + 1}단계`, q.done ? '' : btn('repeat:' + q.id, '받기', 'go', q.have < q.need), { bar: q.done ? 1 : Math.min(1, q.have / q.need) }).replace('<div class="im">', `<div class="im" style="font-size:44px">${{ rserve: '🍽️', rup: '🔨', rcrit: '✨' }[q.id]}`); return h; }
+    if (sub === 'repeat') { for (const q of G.repeatList()) h += card(q.id, null, `${q.name} ${q.done ? '완료' : q.need + '번'}`, q.done ? '모든 단계를 끝냈어요!' : `${fmt(Math.min(q.have, q.need))}/${fmt(q.need)} · ${rtxt(q.r(q.step))} · ${q.step + 1}단계`, q.done ? '' : btn('repeat:' + q.id, '받기', 'go', q.have < q.need), { bar: q.done ? 1 : Math.min(1, q.have / q.need) }).replace('<div class="im">', `<div class="im">${MIS_E[q.id]}`); return h; }
     if (sub === 'attend') { const idx = S.attend.idx, ready = G.attendReady();
       h += `<div class="sec">28일 출석 · 7일째마다 솔방울 80개</div><div class="grid28">${D.ATTEND.map((r, i) => `<div class="${i < idx ? 'got' : i === idx && ready ? 'today' : ''}"><b>${i + 1}</b>${i < idx ? '✓' : rtxt(r).replace(/class="ico"/g, 'class="ico" style="width:20px;height:20px"').replace(/(\d[\d,.만억조]*)/, '<br>$1')}</div>`).join('')}</div><div style="text-align:center;margin-top:18px">${btn('attend', ready ? '오늘 출석하기' : '내일 또 만나요', 'yl', !ready)}</div>`; return h; }
-    for (const p of G.playReady()) h += card('p' + p.i, null, `오늘 ${p.m}분 머물기`, `${rtxt(p.r)} · ${Math.min(p.m, Math.floor(S.play.sec / 60))}/${p.m}분`, p.got ? '<b style="color:#5E9E82">✓</b>' : btn('play:' + p.i, '받기', 'go', !p.ready), { bar: Math.min(1, S.play.sec / 60 / p.m), cls: p.got ? 'done' : '' }).replace('<div class="im">', '<div class="im" style="font-size:44px">⏰');
+    for (const p of G.playReady()) h += card('p' + p.i, null, `오늘 ${p.m}분 머물기`, `${rtxt(p.r)} · ${Math.min(p.m, Math.floor(S.play.sec / 60))}/${p.m}분`, p.got ? '<b style="color:#5E9E82">✓</b>' : btn('play:' + p.i, '받기', 'go', !p.ready), { bar: Math.min(1, S.play.sec / 60 / p.m), cls: p.got ? 'done' : '' }).replace('<div class="im">', `<div class="im">${MIS_E.play}`);
     return h;
   } },
-  shop: { title: '매점 · 웰컴센터', subs: [['stall', '매점'], ['box', '선물 상자'], ['deco', '꾸미기'], ['ads', '광고 혜택'], ['gold', '골드']], render(sub) {
+  shop: { title: '매점 · 웰컴센터', subs: [['stall', '진열'], ['deco', '꾸미기'], ['box', '선물 상자']], render(sub) {
     let h = '';
-    if (sub === 'stall') { const st = G.stall(); h += `<div class="sec">웰컴센터 매점 · 매일 새 물건이 들어와요</div>`;
-      st.items.forEach((k, i) => { const it = D.STALL.find(x => x[0] === k), c = G.stallPrice(i), sold = st.bought.includes(i); h += card('s' + i, IMG({ treat: 'deco/treats', big: 'deco/gift', rp: 'deco/star', speed: 'food/icedcoffee' }[k]), it[1], { treat: '직원에게 주면 친해져요', big: '친밀도가 크게 올라요', rp: '메뉴 맛 올리기에 써요', speed: '5분 동안 요리 2배 빠르게' }[k], sold ? '<b style="color:#5E9E82">다 팔렸어요</b>' : btn('stall:' + i, `${ic('coin')}${fmt(c)}`, 'go', S.coin < c), { cls: sold ? 'done' : '' }); });
-      if (adOn()) h += `<div style="text-align:center">${btn('ad:restock', `📺 새로 진열하기 <small>(${G.adLeft('restock')}번 남음)</small>`, 'sky', !adOk('restock'))}</div>`; return h; }
+    if (sub === 'stall') {
+      /* 위: 솔방울 묶음 (원어데이 골드 · 클수록 보너스) */
+      if (bm.info.ok) { const packs = ['gems100', 'gems300', 'gems1000'].filter(k => bm.price(k));
+        if (packs.length) h += `<div class="sec">솔방울 묶음 · 골드 1 = 솔방울 1, 클수록 보너스</div><div class="packs">${packs.map((k, i) => { const g = GOLD[k]; return `<div class="pack${k === 'gems1000' ? ' best' : ''}" data-k="${k}" style="animation-delay:${i * 0.05}s">${k === 'gems1000' ? '<span class="tagb">가장 알뜰</span>' : ''}<img src="${IMG('food/gem')}" alt=""><b>${fmt(g.n)}</b><em>${g.bonus ? `+${g.bonus}% 보너스` : '&nbsp;'}</em>${btn('gold:' + k, `${ic('gold')} ${bm.price(k)}`, 'yl', false, 'style="padding:10px 12px;font-size:20px"')}</div>`; }).join('')}</div>`; }
+      const st = G.stall(); h += `<div class="sec">웰컴센터 매점 · 매일 새 물건이 들어와요</div>`;
+      st.items.forEach((k, i) => { const it = D.STALL.find(x => x[0] === k), c = G.stallPrice(i), sold = st.bought.includes(i); h += card('s' + i, IMG({ treat: 'ui/cookie', big: 'deco/gift', rp: 'ui/tea', speed: 'food/icedcoffee' }[k]), it[1], { treat: '직원에게 주면 친해져요', big: '친밀도가 크게 올라요', rp: '메뉴 맛 올리기에 써요', speed: '5분 동안 요리 2배 빠르게' }[k], sold ? '<b style="color:#5E9E82">다 팔렸어요</b>' : btn('stall:' + i, `${ic('coin')}${fmt(c)}`, 'go', S.coin < c), { cls: sold ? 'done' : '' }); });
+      if (adOn()) { h += `<div style="text-align:center;margin-bottom:8px">${btn('ad:restock', `${ic('ad')} 새로 진열하기 <small>(${G.adLeft('restock')}번 남음)</small>`, 'sky', !adOk('restock'))}</div>`;
+        /* 아래: 광고 혜택 */
+        h += `<div class="sec">광고 혜택 · 한 번 볼 때마다 스탬프 1개</div>`;
+        for (const k of ['speed', 'crit', 'rest']) h += card(k, IMG({ speed: 'food/icedcoffee', crit: 'ui/sparkle', rest: 'fac/hammock' }[k]), D.ADS[k].name, G.buffOn(k) ? `켜져 있어요 · ${clock(S.buff[k] - S.t)} 남음` : `오늘 ${G.adLeft(k)}번 남음`, btn('ad:' + k, G.buffOn(k) ? `${ic('ad')} 늘리기` : `${ic('ad')} 켜기`, 'sky', !adOk(k))); }
+      if (bm.info.ok) h += `<div class="odds">골드는 원어데이 공용 재화예요. 능력치나 막힌 길은 팔지 않고, 모든 상품은 플레이 · 광고로도 얻을 수 있어요.</div>`;
+      return h; }
     if (sub === 'box') { const left = D.BOX.pity - S.box.pity;
-      h += `<div class="card" data-k="box" style="flex-direction:column;text-align:center"><img src="${IMG('deco/gift')}" style="width:150px;animation:giftHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite"><b style="font:800 28px/1.3 var(--ff)">숲 선물 상자</b><span style="font:600 19px/1.5 var(--ff);color:var(--ink2)">캠프를 꾸밀 장식이 나와요 · 특별 장식까지 <b>${left}번</b> (30번 안에 꼭 나와요)<br>이미 가진 장식이 나오면 솔방울을 돌려드려요</span>
-        <div style="display:flex;gap:12px;margin-top:14px">${btn('box:gem', `${ic('gem')} ${D.BOX.cost} 열기`, 'pk', S.gem < D.BOX.cost)}${adOn() ? btn('box:ad', `📺 광고로 열기 <small>(${G.adLeft('box')})</small>`, 'sky', !adOk('box')) : ''}</div></div>`;
-      h += `<div class="odds"><b>확률 공개</b> · 보통 ${D.RARITY.n.p * 100}% · 희귀 ${D.RARITY.r.p * 100}% · 특별 ${D.RARITY.s.p * 100}% · 30번째에는 특별 확정<br>중복 시 돌려받기: 보통 ${D.BOX.dupGem.n} · 희귀 ${D.BOX.dupGem.r} · 특별 ${D.BOX.dupGem.s} 솔방울<br>솔방울은 레벨업 · 미션 · 출석 · 구역 열기로 모여요</div>`;
-      for (const r of ['s', 'r', 'n']) h += `<div class="sec">${D.RARITY[r].name}</div>` + D.DECO.filter(d => d.rar === r).map(d => card(d.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ` · ${S.deco[d.id]}개` : ''}`, S.deco[d.id] ? '<b style="color:#5E9E82">✓</b>' : '', { cls: S.deco[d.id] ? 'done' : 'lock' })).join('');
+      h += `<div class="fair"><div>${left}번 안에<br>특별 장식 확정<small>30번째는 꼭 특별</small></div><div>확률 모두 공개<small>보통 ${D.RARITY.n.p * 100} · 희귀 ${D.RARITY.r.p * 100} · 특별 ${D.RARITY.s.p * 100}%</small></div><div>겹치면 돌려받기<small>솔방울 ${D.BOX.dupGem.n}~${D.BOX.dupGem.s}개</small></div></div>`;
+      h += `<div class="card" data-k="box" style="flex-direction:column;text-align:center"><img src="${IMG('deco/gift')}" style="width:150px;animation:giftHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite"><b style="font:900 30px/1.3 var(--ff)">숲 선물 상자</b><span style="font:700 19px/1.5 var(--ff);color:#7A645A">캠프를 꾸밀 장식이 나와요 · 솔방울은 레벨업 · 미션 · 출석으로 모여요</span>
+        <div style="display:flex;gap:12px;margin-top:14px">${btn('box:gem', `${ic('gem')} ${D.BOX.cost} 열기`, 'pk', S.gem < D.BOX.cost)}${adOn() ? btn('box:ad', `${ic('ad')} 광고로 열기 <small>(${G.adLeft('box')})</small>`, 'sky', !adOk('box')) : ''}</div></div>`;
+      for (const r of ['s', 'r', 'n']) h += `<div class="sec">${D.RARITY[r].name} · ${D.RARITY[r].p * 100}%</div>` + D.DECO.filter(d => d.rar === r).map(d => card(d.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ` · ${S.deco[d.id]}개` : ''}`, S.deco[d.id] ? '<b style="color:#5E9E82">✓</b>' : '', { cls: S.deco[d.id] ? 'done' : 'lock' })).join('');
       return h; }
-    if (sub === 'deco') { h += `<div class="sec">스탬프 교환 · 광고 혜택을 받을 때마다 스탬프 1개 (지금 ${S.stamp}개)</div>`;
-      for (const o of D.STAMP_SHOP) { const d = D.DECO.find(x => x.id === o.id); h += card('st' + o.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ' · 가지고 있어요' : ''}`, btn('stamp:' + o.id, `${ic('stamp')} ${o.cost}`, 'go', S.stamp < o.cost)); }
-      if (bm.info.ok) { h += `<div class="sec">특별 꾸미기 (원어데이 골드 · 계정에 남아요)</div>`; for (const k of ['deco', 'skin']) { const g = GOLD[k], p = bm.price(k); if (!p) continue; h += card('g' + k, IMG(g.img), g.name, g.desc, g.own() ? '<b style="color:#5E9E82">가지고 있어요 ✓</b>' : btn('gold:' + k, `🪙 ${p}`, 'yl')); }
-        h += card('own', IMG('fac/lantern'), D.OWNER_DECO.name, `원어데이에서 이 게임을 소장하면 받는 전용 장식 · 매력 +${D.OWNER_DECO.appeal}`, S.owner ? '<b style="color:#5E9E82">소장 ✓</b>' : '<small>소장자 전용</small>', { cls: S.owner ? 'done' : '' }); }
-      return h; }
-    if (sub === 'ads') { if (!adOn()) return `<div class="odds">원어데이 앱 안에서 광고 혜택을 받을 수 있어요.</div>`;
-      h += `<div class="sec">광고 한 번 = 혜택 하나 · 스탬프도 1개 · 하루 횟수는 아래와 같아요</div>`;
-      for (const k of ['speed', 'crit', 'rest']) h += card(k, IMG({ speed: 'food/icedcoffee', crit: 'deco/star', rest: 'fac/hammock' }[k]), D.ADS[k].name, G.buffOn(k) ? `켜져 있어요 · ${clock(S.buff[k] - S.t)} 남음` : `오늘 ${G.adLeft(k)}번 남음`, btn('ad:' + k, G.buffOn(k) ? '📺 시간 늘리기' : '📺 켜기', 'sky', !adOk(k)));
-      h += `<div class="odds">다른 광고 혜택: 쉬는 동안 받은 것 2배 · 선물 상자 · 계곡 놀이터 바로 채우기 · 바닥 선물 한꺼번에 · 매점 새로 진열 · 공사 바로 끝내기</div>`; return h; }
-    if (!bm.info.ok) return `<div class="odds">원어데이 앱 안에서 골드를 쓸 수 있어요.</div>`;
-    const p = bm.price('gems100'); if (p) h += card('gems100', IMG('food/gem'), GOLD.gems100.name, GOLD.gems100.desc, btn('gold:gems100', `🪙 ${p}`, 'yl'));
-    h += `<div class="odds">골드는 원어데이 공용 재화예요 · 솔방울 1 = 골드 1 · 능력치나 막힌 길은 팔지 않아요. 모든 상품은 플레이 · 광고로도 얻을 수 있어요.</div>`; return h;
+    /* 꾸미기: 특별 상품(전용 그림 · 미리 보기) → 스탬프 교환 */
+    if (bm.info.ok) { h += `<div class="sec">특별 꾸미기 · 원어데이 골드 · 계정에 남아요</div>`;
+      for (const k of ['skin', 'deco']) { const g = GOLD[k], p = bm.price(k); if (!p) continue; const own = g.own();
+        h += `<div class="card" data-k="g${k}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:14px;align-items:center"><div class="im" style="width:150px;height:170px;background:${k === 'skin' ? '#FFF6D0' : '#FCEFF2'}"><img src="${g.art()}" style="width:146px;height:166px"></div><div class="tx"><b>${g.name}</b><span>${g.desc}</span></div></div>
+          <div style="display:flex;gap:10px;margin-top:12px">${own ? '<b style="color:#5E9E82;flex:1;text-align:center">가지고 있어요 ✓</b>' : `${btn('try:' + k, k === 'skin' ? '입어 보기' : '놓아 보기', 'sky')}${btn('gold:' + k, `${ic('gold')} ${p}`, 'yl')}`}</div></div>`; }
+      h += card('own', IMG('fac/lantern'), D.OWNER_DECO.name, `원어데이에서 이 게임을 소장하면 받는 전용 장식 · 매력 +${D.OWNER_DECO.appeal}`, S.owner ? '<b style="color:#5E9E82">소장 ✓</b>' : '<small>소장자 전용</small>', { cls: S.owner ? 'done' : '' }); }
+    h += `<div class="sec">스탬프 교환 · 광고 혜택을 받을 때마다 1개 (지금 ${S.stamp}개)</div>`;
+    for (const o of D.STAMP_SHOP) { const d = D.DECO.find(x => x.id === o.id); h += card('st' + o.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ' · 가지고 있어요' : ''}`, btn('stamp:' + o.id, `${ic('stamp')} ${o.cost}`, 'go', S.stamp < o.cost)); }
+    return h;
   } },
 };
-const AMEN_E = { fridge: '🧊', sink: '🚰', toaster: '🍞', micro: '♨️', shower: '🚿', laundry: '🧺' };
-const ZONE_E = { lawn: '🌱', forest: '🌲', pine: '🐕', valley: '💦', stay: '🏡' };
+const AMEN_E = Object.fromEntries(Object.entries(AMEN_IMG).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:80px;height:80px;object-fit:contain">`]));
+const ZONE_E = Object.fromEntries(Object.entries({ lawn: 'fac/table', forest: 'fac/tent', pine: 'deco/pup_sit', valley: 'fac/playpool', stay: 'fac/bbq' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:84px;height:84px;object-fit:contain">`]));
 const ZONE_BG = { lawn: '#DDF2E8', forest: '#CFE6C2', pine: '#FDE7D4', valley: '#DCEBF8', stay: '#FCEFF2' };
 const ZONE_TXT = { lawn: '아이들이 뛰노는 잔디 · 웰컴센터와 공용 키친', forest: '소나무 · 잣나무 숲 사이 가족 캠핑 자리', pine: '반려견과 함께하는 울타리 존 · 어른만의 조용한 솔숲', valley: '아이들 물놀이 계곡 · 산책길과 폭포', stay: '바비큐 데크가 있는 숲속 스테이 · 루프탑' };
-const MIS_E = { serve: '🍽️', upgrade: '🔨', gift: '🎁', treat: '🍪', crit: '✨', cat: '🐈', menu: '📖', box: '🧺' };
+const MIS_E = Object.fromEntries(Object.entries({ serve: 'ui/serve', upgrade: 'ui/hammer', gift: 'deco/gift', treat: 'ui/cookie', crit: 'ui/sparkle', cat: 'deco/cat_sit', menu: 'ui/menu', box: 'deco/gift_open', rserve: 'ui/serve', rup: 'ui/hammer', rcrit: 'ui/sparkle', play: 'ui/clock' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:76px;height:76px;object-fit:contain">`]));
 
 /* ── 지도에서 누른 시설 (작은 창 · 길게 눌러 계속 강화) ── */
 export function facDialog(t) {
@@ -327,15 +344,15 @@ export function facDialog(t) {
     d.querySelectorAll('[data-a]').forEach(b => { const [a, v, x] = b.dataset.a.split(':'); if (a === 'up') { b.onclick = () => act('up', v, null, b, null); hold(b, () => act('up', v, null, b, null, true)); } else if (a === 'instad' || a === 'instgo') b.onclick = () => instAct(a, v + ':' + x, b); else b.onclick = () => act(a, v, x, b, null); }); };
   const me = dlg(`<div class="body2"></div>`, { live: d => draw(d) }); draw(me.el);
 }
-/* 즉시 완성 2버튼 (docs/bm-policy.md 2-1): [📺 광고로 즉시 완성] + [⚡ 즉시 완성 · N] (솔방울이 N 이상이면 솔방울, 모자라면 같은 버튼이 🪙N) · 10초 미만이면 숨김 */
+/* 즉시 완성 2버튼 (docs/bm-policy.md 2-1): [${ic('ad')} 광고로 즉시 완성] + [${ic('inst')} 즉시 완성 · N] (솔방울이 N 이상이면 솔방울, 모자라면 같은 버튼이 🪙N) · 10초 미만이면 숨김 */
 function instBtns(key) {
   const w = G.workList().find(x => x.key === key); if (!w) return '<b>다 됐어요!</b>'; const left = w.end - S.t; if (left < D.INST_MIN) return `<b>곧 끝나요 · ${clock(left)}</b>`;
   const n = G.instGem(w), gp = bm.price('inst' + n);
-  let h = `<div style="width:100%;font:800 24px/1 var(--ff);margin-bottom:6px">⏳ ${clock(left)}</div>`;
-  if (adOn()) h += btn('instad:' + key, `📺 광고로 즉시 완성 <small>(${G.adLeft('inst')}번)</small>`, 'sky', !adOk('inst'));
-  if (S.gem >= n) h += btn('instgo:' + key, `⚡ 즉시 완성 · ${ic('gem')}${n}`, 'yl');
-  else if (bm.info.ok && gp === n) h += btn('instgo:' + key, `⚡ 즉시 완성 · 🪙${n}`, 'yl');
-  else h += btn('instgo:' + key, `⚡ 즉시 완성 · ${ic('gem')}${n}`, 'yl', true);
+  let h = `<div style="width:100%;font:800 24px/1 var(--ff);margin-bottom:6px">${ic('clock')} ${clock(left)}</div>`;
+  if (adOn()) h += btn('instad:' + key, `${ic('ad')} 광고로 즉시 완성 <small>(${G.adLeft('inst')}번)</small>`, 'sky', !adOk('inst'));
+  if (S.gem >= n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl');
+  else if (bm.info.ok && gp === n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gold')}${n}`, 'yl');
+  else h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl', true);
   return h;
 }
 async function instAct(a, key, b) {
@@ -361,7 +378,7 @@ export function zoneDialog(z) {
   const Z = D.ZONES.find(x => x.id === z), o = S.zones[z];
   if (o.st === 'building') return instDialog('zone:' + z);
   const ok = G.zoneNeedOk(z);
-  const me = dlg(`<div class="art" style="font-size:120px">${ZONE_E[z]}</div><h3>${Z.name}</h3><p>${ZONE_TXT[z]}<br>${ok ? `정리하는 데 ${tm(Z.build)} · 열면 ${ic('gem')}${Z.reward}` : `레벨 ${Z.need.lv} · 시설 ${Z.need.built}개가 되면 열 수 있어요<br>(지금 레벨 ${S.lv} · 시설 ${S.builds}개)`}</p><div class="row">${ok ? btn('z', '구역 열기', 'pk') : btn('c', '알겠어요', 'go')}</div>`);
+  const me = dlg(`<div class="art">${ZONE_E[z].replace(/84px/g, '170px')}</div><h3>${Z.name}</h3><p>${ZONE_TXT[z]}<br>${ok ? `정리하는 데 ${tm(Z.build)} · 열면 ${ic('gem')}${Z.reward}` : `레벨 ${Z.need.lv} · 시설 ${Z.need.built}개가 되면 열 수 있어요<br>(지금 레벨 ${S.lv} · 시설 ${S.builds}개)`}</p><div class="row">${ok ? btn('z', '구역 열기', 'pk') : btn('c', '알겠어요', 'go')}</div>`);
   me.el.querySelector('[data-a]').onclick = () => { if (ok) { G.expand(z); sfx('build'); toast(`${Z.name} 정리를 시작했어요 · ${tm(Z.build)}`, true); ctx.save(); } me.close(); };
 }
 
@@ -369,10 +386,10 @@ export function zoneDialog(z) {
 export function offlinePop(o) {
   enqueue(0, () => {
     const h = Math.floor(o.away / 3600), m = Math.floor(o.away % 3600 / 60);
-    const me = dlg(`<div class="art"><img src="${IMG('deco/cat_sleep')}"></div><h3>다녀오셨어요!</h3><p>${h ? h + '시간 ' : ''}${m}분 동안 직원들이 캠프를 지켰어요 · 손님 ${fmt(o.served)}명${o.capped ? `<br><small>(최대 ${G.offlineCapH()}시간까지 모여요 · 샤워장 · 세탁실을 지으면 늘어요)</small>` : ''}</p>
-      <div class="big">${ic('coin', '')}<span id="offN">0</span></div><p style="margin-top:-8px">${ic('rp')} ${fmt(o.rp)} 쉼 포인트</p>
-      <div class="row">${btn('take', '받기', 'go')}${adOn() ? btn('x2', `📺 2배로 받기 <small>(${G.adLeft('double')})</small>`, 'yl', !adOk('double')) : ''}</div>`, { lock: true, rays: true });
-    const num = me.el.querySelector('#offN'); const t0 = performance.now(); (function up() { const k = Math.min(1, (performance.now() - t0) / 900); num.textContent = fmt(o.coin * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(up); else sfx('count'); })();
+    const me = dlg(`<div class="art"><img src="${IMG('deco/cat_sleep')}"></div><h3>${o.capped ? '가득 모았어요!' : '다녀오셨어요!'}</h3><p>${o.capped ? `${G.offlineCapH()}시간치를 꽉 채웠어요 · 손님 ${fmtL(o.served)}명이 쉬어 갔어요${S.amen.shower && S.amen.laundry ? '' : '<br><small>샤워장 · 세탁실을 지으면 더 오래 모여요</small>'}` : `${h ? h + '시간 ' : ''}${m}분 동안 직원들이 캠프를 지켰어요 · 손님 ${fmtL(o.served)}명`}</p>
+      <div class="big">${ic('coin', '')}<span id="offN">0</span></div><p style="margin-top:-8px">${ic('rp')} ${fmtL(o.rp)} 쉼 포인트</p>
+      <div class="row">${btn('take', '받기', 'go')}${adOn() ? btn('x2', `${ic('ad')} 2배로 받기 <small>(${G.adLeft('double')})</small>`, 'yl', !adOk('double')) : ''}</div>`, { lock: true, rays: true });
+    const num = me.el.querySelector('#offN'); const t0 = performance.now(); (function up() { const k = Math.min(1, (performance.now() - t0) / 900); num.textContent = fmtL(o.coin * (1 - (1 - k) ** 3)); if (k < 1) requestAnimationFrame(up); else sfx('count'); })();
     const take = mult => { G.takeOffline(o, mult); me.close(); fly('coin', 360, 760, 10); if (o.rp) fly('rp', 360, 800, 4); toast(mult > 1 ? '2배로 받았어요! 오늘도 멋진 캠프예요' : '오늘도 멋진 캠프를 만들어 봐요', true); ctx.save(); };
     me.el.querySelector('[data-a="take"]').onclick = () => take(1);
     const x2 = me.el.querySelector('[data-a="x2"]'); if (x2) x2.onclick = async () => { const ok = await watch('double', null, () => {}); if (ok) take(2); };
@@ -404,15 +421,17 @@ export function storyPop(id, i, reread) {
 function boxPop(r) {
   if (!r || r.err) return r && soft(r.err);
   const d = D.DECO.find(x => x.id === r.id), rn = r.rar === 'stamp' ? '스탬프 교환' : D.RARITY[r.rar].name;
-  const me = dlg(`<div class="art" id="bx"><img src="${IMG('deco/gift')}" style="animation:shakeNo .3s 3"></div><h3 id="bxT">상자를 여는 중…</h3><p id="bxP">&nbsp;</p><div class="row" id="bxR" style="opacity:0"></div>`, { rays: r.rar === 's' });
+  /* 상자 연출 약 1.5초: 흔들림 → 열림(뚜껑 튐) → 등급 색 빛 → 장식 확대 · 특별은 금빛 + 팡파르 (퀄리티 B10) */
+  const me = dlg(`<div class="rays ${r.rar === 's' ? '' : r.rar === 'r' ? 'r' : 'n'}" style="opacity:0;transition:opacity .4s"></div><div class="art" id="bx"><img src="${IMG('deco/gift')}" style="animation:shakeNo .25s 3"></div><h3 id="bxT">상자를 여는 중…</h3><p id="bxP">&nbsp;</p><div class="row" id="bxR" style="opacity:0"></div>`);
+  setTimeout(() => { const b = me.el.querySelector('#bx'); b.innerHTML = `<img src="${IMG('deco/gift_open')}" style="animation:artIn .35s cubic-bezier(.34,1.56,.64,1)">`; me.el.querySelector('.rays').style.opacity = 1; }, 600);
   sfx('box', { rar: r.rar });
-  setTimeout(() => { me.el.querySelector('#bx').innerHTML = `<img src="${IMG(d.img)}">`; me.el.querySelector('#bxT').innerHTML = `${rn} · ${d.name}`; me.el.querySelector('#bxP').innerHTML = r.dup ? `이미 있어서 솔방울 ${D.BOX.dupGem[r.rar]}개를 돌려받았어요` : `캠프에 놓았어요! 매력 +${d.appeal}`;
-    const row = me.el.querySelector('#bxR'); row.style.opacity = 1; row.style.transition = 'opacity .3s'; row.innerHTML = btn('ok', '좋아요', 'go') + (adOn() && adOk('again') ? btn('again', '📺 한 번 더', 'sky') : '');
+  setTimeout(() => { me.el.querySelector('#bx').innerHTML = `<img src="${IMG(d.img)}" class="${{ s: 'glowS', r: 'glowR' }[r.rar] || 'glowN'}" style="width:180px">`; me.el.querySelector('#bxT').innerHTML = `<span style="color:${{ s: '#C9861E', r: '#4A7AAE' }[r.rar] || 'var(--ink)'}">${rn}</span> · ${d.name}`; if (r.rar === 's') sfx('level'); if (r.dup) fly('gem', 360, 700, 5); me.el.querySelector('#bxP').innerHTML = r.dup ? `이미 있어서 솔방울 ${D.BOX.dupGem[r.rar]}개를 돌려받았어요` : `캠프에 놓았어요! 매력 +${d.appeal}`;
+    const row = me.el.querySelector('#bxR'); row.style.opacity = 1; row.style.transition = 'opacity .3s'; row.innerHTML = btn('ok', '좋아요', 'go') + (adOn() && adOk('again') ? btn('again', `${ic('ad')} 한 번 더`, 'sky') : '');
     if (r.rar === 's') confetti(40); ctx.render(); ctx.save();
     row.querySelector('[data-a="ok"]').onclick = () => me.close();
     const ag = row.querySelector('[data-a="again"]'); if (ag) ag.onclick = async () => { me.close(); await watch('again', null, rr => setTimeout(() => boxPop(rr), 260)); };
     if (cur) cur.refresh(true);
-  }, 950);
+  }, 1250);
 }
 /* sim 이벤트 → UI */
 export function onEvent(e) {
@@ -428,8 +447,9 @@ const LV_MSG = { 2: '첫 단골이 찾아올지도 몰라요', 3: '숲속 존을
 /* ── 처음 10분 안내 (막지 않는 손가락 + 한 줄) · docs/ux_notes.md 1장 ── */
 const TUT = [
   { say: '숲속 캠프에 오신 걸 환영해요! 손님이 오면 셰프가 베이글을 구워요', wait: 4, pad: null },
-  { say: '잔디 광장에 <b>피크닉 식탁</b>을 놓아 손님 자리를 늘려요', pad: 'L2', done: () => S.pads.L2 },
-  { say: '공용 키친의 <b>빵 오븐</b>을 눌러 강화해 봐요 · 베이글 값이 올라요', at: 'oven', done: () => S.oven.lv >= 3 },
+  { say: '다 된 <b>베이글</b>을 눌러 손님에게 바로 건네요 · 값 +25%!', at: 'dish', done: () => G.R.tapStats.dish >= 2 },
+  { say: '굽는 중인 <b>오븐</b>을 콕콕 누르면 응원해서 더 빨리 구워요', at: 'ovenBody', done: () => G.R.tapStats.cheer >= 5 },
+  { say: '오븐 아래 <b>Lv 표지</b>를 눌러 강화해 봐요 · 베이글 값이 올라요', at: 'oven', done: () => S.oven.lv >= 3 },
   { say: '<b>직원</b>에서 요리사 솔을 고용해요', tab: 'staff', done: () => S.staff.sol, when: () => S.coin >= 300 || S.staff.sol },
   { say: '<b>무쇠 솥</b>을 지으면 솔이 수프를 끓여요', pad: 'L1', done: () => S.pads.L1 },
   { say: '<b>메뉴</b>에서 수프를 출시해요', tab: 'menu', done: () => D.MENU.filter(m => m.line === 'soup').some(m => G.menuLv(m) > 0) },
@@ -437,13 +457,16 @@ const TUT = [
 ];
 let tutT = 0, ptr = null, hintEl = null;
 function tutSaw() { tut(); }
+export const tutOn = () => S.tut < TUT.length;
+const tutTab = () => { const s = TUT[S.tut]; return s && s.tab && (!s.when || s.when()) ? s.tab : null; };
+export const tutSay = () => (TUT[S.tut] || {}).say || '';
 function tut() {
   if (S.tut >= TUT.length) { if (ptr) { ptr.remove(); ptr = null; } if (hintEl) { hintEl.remove(); hintEl = null; } return; }
   const s = TUT[S.tut]; if (s.done && s.done()) { S.tut++; sfx('reward'); if (S.tut < TUT.length) numPop(360, 900, praise()); ctx.save(); return tut(); }
-  if (!s.done) { tutT += 0.5; if (tutT > s.wait) { S.tut++; tutT = 0; } }
+  if (!s.done) { tutT += 0.5; if (tutT > s.wait) { S.tut++; tutT = 0; return tut(); } }   /* 시간으로 넘어가는 단계: 넘긴 뒤 새 단계 문구로 다시 그림 (이전 문구가 남던 버그 · 퀄리티 QA) */
   if (s.when && !s.when()) { if (hintEl) hintEl.style.display = 'none'; if (ptr) ptr.style.display = 'none'; return; }
   if (!hintEl) { hintEl = document.createElement('div'); hintEl.id = 'hint'; frame.appendChild(hintEl); }
-  hintEl.style.display = cur || curDlg ? 'none' : ''; const html = `<span>${s.say}</span>`; if (hintEl.dataset.i !== String(S.tut)) { hintEl.innerHTML = html; hintEl.dataset.i = S.tut; }
+  hintEl.style.display = cur || curDlg ? 'none' : ''; hintEl.style.top = (1112 + OFFY) + 'px'; const html = `<span>${s.say}</span>`; if (hintEl.dataset.i !== String(S.tut)) { hintEl.innerHTML = html; hintEl.dataset.i = S.tut; }
   let at = null; if (s.pad) at = ctx.padPos(s.pad); else if (s.at) at = ctx.padPos(s.at); else if (s.tab) { const t = barEl.querySelector(`[data-t="${s.tab}"]`); if (t && !(cur && cur.id === s.tab)) at = cardPos(t); }
   if (cur && s.tab && cur.id === s.tab) at = null; if (curDlg) at = null; if (cur && !s.tab) at = null;
   if (at) { if (!ptr) { ptr = document.createElement('div'); ptr.className = 'pointer'; frame.appendChild(ptr); } ptr.style.display = ''; ptr.style.left = at[0] + 'px'; ptr.style.top = at[1] + 'px'; } else if (ptr) ptr.style.display = 'none';
