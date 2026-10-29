@@ -3,8 +3,8 @@
 //   openGuide(how)  환경별 단계 안내      openOffer(kind)  권유 시트(첫 게임 끝 · 2일째 · 3일 연속)
 //   openInstalled()  설치 앱 첫 실행 화면  openHelp() · openDiag()  '설치가 안 돼요' · 설정 진단
 //   열 때만 불러옴(install.js ui()) · 모양은 install-guide.css · 기록은 track.js
-import * as I from './install.js?v=0.92.2';
-import { track } from './track.js?v=0.92.2';
+import * as I from './install.js?v=0.92.3';
+import { track } from './track.js?v=0.92.3';
 
 /* ── 모양 불러오기 ── */
 let cssP = null;
@@ -372,7 +372,7 @@ async function doAct(a, d) {
 }
 async function send(d) {
   T('install_diag', { what: 'send', how: d.verdict.code, msg: `${d.summary} | ${d.ua}`.slice(0, 200) });
-  try { const m = await import('./track.js?v=0.92.2'); m.flush && m.flush(); } catch { /* */ }
+  try { const m = await import('./track.js?v=0.92.3'); m.flush && m.flush(); } catch { /* */ }
   toast('보냈어요. 고마워요! 빨리 살펴볼게요');
 }
 /* 자주 막히는 3가지 (환경마다 다름) */
