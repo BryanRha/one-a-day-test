@@ -1,11 +1,11 @@
 // 화면들 — 홈 · 진행 맵 · 테마 노트(책장 · 꾸미기) · 스티커 서랍 · 상점 · 다이어리(달력)
-import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.92.1';
-import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.92.1';
-import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.92.1';
-import { inOAD, exitToOAD } from './oad.js?v=0.92.1';
-import * as A from './audio.js?v=0.92.1';
-import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.92.1';
-import { bm } from './oad_bm.js?v=0.92.1';
+import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.92.2';
+import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.92.2';
+import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.92.2';
+import { inOAD, exitToOAD } from './oad.js?v=0.92.2';
+import * as A from './audio.js?v=0.92.2';
+import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.92.2';
+import { bm } from './oad_bm.js?v=0.92.2';
 
 let go = null; /* main.js 가 넣어 줌: go.daily() · go.map(n) · go.free() */
 export const bind = g => { go = g; };
