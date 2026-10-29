@@ -1,21 +1,21 @@
 // One a Day 앱 화면: 오늘 · 라이브러리 · 컬렉션 · 설정 + 게임 실행(iframe) + 잠금 해제(테스트 광고)
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.91.4';
-import * as R from './rules.js?v=0.91.4';
-import * as I from './install.js?v=0.91.4';
-import * as T from './track.js?v=0.91.4';
-import * as P from './pay.js?v=0.91.4';
-import * as A from './account.js?v=0.91.4';
-import * as C from './cloud.js?v=0.91.4';
-import * as BM from './bm.js?v=0.91.4';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.91.5';
+import * as R from './rules.js?v=0.91.5';
+import * as I from './install.js?v=0.91.5';
+import * as T from './track.js?v=0.91.5';
+import * as P from './pay.js?v=0.91.5';
+import * as A from './account.js?v=0.91.5';
+import * as C from './cloud.js?v=0.91.5';
+import * as BM from './bm.js?v=0.91.5';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.91.4').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.91.5').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.91.4'), import('./fortune/types.js?v=0.91.4'), import('./fortune/chat.js?v=0.91.4')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.91.5'), import('./fortune/types.js?v=0.91.5'), import('./fortune/chat.js?v=0.91.5')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.91.4';
+const VERSION = '0.91.5';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null;
 
@@ -521,7 +521,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.91.4')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.91.5')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -861,7 +861,8 @@ function renderSettings() {
       <div><span>테스트: 게임 안 BM 그룹 <span class="badge">${BM.group()}</span><br><small style="color:var(--mute)">A 지금 그대로 · B 보상형 광고 + 골드 · C B + 약한 전면 광고</small></span><span><button data-bmg="A">A</button> <button data-bmg="B">B</button> <button data-bmg="C">C</button></span></div>
       <div><span>테스트: 연속 실패 응원 선물 <span class="badge">${BM.helpOn() ? '켜짐' : '꺼짐'}</span></span><span><button data-helpg="on">켜기</button> <button data-helpg="off">끄기</button></span></div>
       <div><span>테스트: 메인 화면 <span class="badge">${LAY === 'b' ? '새(B)' : '예전(A)'}</span><br><small style="color:var(--mute)">B 이번 주 달력 허브 · A 예전 메인 · 주소 ?home=a|b 로도</small></span><span><button data-homeg="b">새(B)</button> <button data-homeg="a">예전(A)</button></span></div>
-      <div><span>테스트: 하루 한 게임 규칙<br><small style="color:var(--mute)">켜면 실제처럼 잠기고 광고 · 골드로 열어요</small></span><button data-strict>${R.RULES.openAll ? '켜기' : '끄기'}</button></div>`}
+      <div><span>테스트: 하루 한 게임 규칙<br><small style="color:var(--mute)">켜면 실제처럼 잠기고 광고 · 골드로 열어요</small></span><button data-strict>${R.RULES.openAll ? '켜기' : '끄기'}</button></div>
+      <div><span>테스트: 시안 보기 (실험실)<br><small style="color:var(--mute)">앱 목록에 아직 없는 시안 · 새 창으로 열려요</small></span><span><button data-lab="/lab/story/">하루 한 화</button></span></div>`}
       <div><span>모든 기록 지우기</span><button class="warn" data-reset>초기화</button></div>
     </div>
     <div class="box"><div class="jua" style="font-size:18px;margin-bottom:6px">이용 규칙 (현재)</div><ul class="rules" style="margin:0;padding-left:18px">
@@ -1121,7 +1122,7 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg],[data-lab]');
   if (!t) return;
   const d = t.dataset;
   /* 메인 기록: 어느 칸에서 무엇을 눌렀나 + 게임 · 운세로 넘어갈 때 붙일 from */
@@ -1160,6 +1161,7 @@ document.addEventListener('click', e => {
   else if ('ghist' in d) goldHistory();
   else if (d.gbuy) spendGold(d.gbuy, d.gid, t);
   else if ('gfort' in d) fortuneGold(t);
+  else if ('lab' in d) { if (!R.PROD && /^\/lab\/[a-z0-9-]+\/$/.test(d.lab)) location.href = d.lab; }
   else if ('strict' in d) { try { localStorage.setItem('oad_strict', R.RULES.openAll ? '1' : '0'); } catch { /* */ } location.reload(); }
   else if ('login' in d) { T.track('login_click'); if (I.env.inApp) needLogin(); else A.login().catch(er => toast(er.message)); }
   else if ('logout' in d) { A.logout().then(() => { go('settings'); toast('로그아웃했어요'); }); }
