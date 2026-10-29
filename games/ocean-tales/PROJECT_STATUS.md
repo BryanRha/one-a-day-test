@@ -1,5 +1,7 @@
 # 웨일 테일 (Whale Tale, 구 바다이야기 · 원어데이 게임 id `ocean`) — 프로젝트 현황 · 인수인계
 
+- **2026-10-28 PC 공통 정리**: 창 크기 왕복(가로→좁고 긴 창 · 폰 가로→세로) 찌그러짐 수정(main.js fitMode: EXPAND 전환 때 displaySize 비율 고정 해제) · 단독 링크 · 사파리/파이어폭스 Esc = 뒤로(oad.js keydown, 원어데이 안 크롬은 CloseWatcher 그대로) · 보고 team/dev/inbox/20261028-pc-games.md
+
 마지막 작업: 2026-10-28 · 버전 **v2.8.0** (원어데이 BM) · 공개 주소 https://bryanrha.github.io/dessert-pop/
 저장 키 `dessertpop_save_v1` 은 절대 바꾸지 않음 (원어데이 catalog SAVES 와 같음)
 
