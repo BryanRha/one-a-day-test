@@ -1,11 +1,11 @@
 // 시작: 렌더러 · 쿼터뷰 카메라(끌어서 둘러보기 · 두 손가락/휠 확대) · 누르기 · 저장 · 루프
 import * as THREE from 'three';
-import { Game, STACK } from './game.js?v=0.92.0';
-import { UI } from './ui.js?v=0.92.0';
-import { S, loadSave, save, addSkew } from './state.js?v=0.92.0';
-import { music, setAudio, preloadSfx } from './audio.js?v=0.92.0';
-import { installBack, runBack, inOAD } from './oad.js?v=0.92.0';
-import { bm } from './oad_bm.js?v=0.92.0';
+import { Game, STACK } from './game.js?v=0.92.1';
+import { UI } from './ui.js?v=0.92.1';
+import { S, loadSave, save, addSkew } from './state.js?v=0.92.1';
+import { music, setAudio, preloadSfx } from './audio.js?v=0.92.1';
+import { installBack, runBack, inOAD } from './oad.js?v=0.92.1';
+import { bm } from './oad_bm.js?v=0.92.1';
 
 const app = {}; window.__app = app; window.__S = () => S;
 const canvas = document.getElementById('view');
@@ -65,7 +65,7 @@ setTimeout(() => { if (!window.__bot) app.ui.welcome(away0); }, 900);   /* 동�
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 실행 */ } };
 addEventListener('error', e => report(e.error || e.message)); addEventListener('unhandledrejection', e => report(e.reason));
-const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.92.0').then(m => m.startBot(app));
+const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.92.1').then(m => m.startBot(app));
 if (q.get('fresh')) { localStorage.removeItem('gamsung_v1'); q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
 let last = performance.now();
 const loop = now => { requestAnimationFrame(loop); const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
