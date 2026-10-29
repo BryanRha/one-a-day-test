@@ -1,7 +1,7 @@
 // 공용 UI: 글자 · 옻칠 판 · 버튼 · 토스트 · 팝업 (나전칠기 톤 — 옻칠 검정 + 금박 테두리 + 주칠 버튼)
-import { W, H, FONT, C } from './config.js?v=0.91.1';
-import { audio } from './audio.js?v=0.91.1';
-import { pushBack } from './oad.js?v=0.91.1';
+import { W, H, FONT, C } from './config.js?v=0.91.2';
+import { audio } from './audio.js?v=0.91.2';
+import { pushBack } from './oad.js?v=0.91.2';
 
 export const fmt = n => Math.floor(n).toLocaleString('en-US');
 
