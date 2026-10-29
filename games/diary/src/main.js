@@ -1,35 +1,35 @@
 // 오늘의 다꾸 v0.1 — 시작 · 화면 잇기 · 판 끝 보상
 //   오늘의 페이지(하루 3판 → 날짜 도장 페이지 한 장) · 자유 다꾸(무제한 · 스티커 서랍 · 테마 노트) · 진행 맵 30단계
-import { DAILY_CFG, stageCfg, freeCfg, NOTES, LUCKY, img, nameOf, isFoil, SHOP } from './data.js?v=0.90.0';
-import { S, load, save, day, dayKey, give } from './save.js?v=0.90.0';
-import * as A from './audio.js?v=0.90.0';
-import * as Game from './game.js?v=0.90.0';
-import { renderPage, completeToday, openShare } from './page.js?v=0.90.0';
-import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.90.0';
-import { $, sp, toast, modal, closeModal, burst, praise, app } from './ui.js?v=0.90.0';
-import { bm } from './oad_bm.js?v=0.90.0';
+import { dailyCfg, dailySet, stageCfg, freeCfg, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.90.1';
+import { S, load, save, day, dayKey, give } from './save.js?v=0.90.1';
+import * as A from './audio.js?v=0.90.1';
+import * as Game from './game.js?v=0.90.1';
+import { renderPage, completeToday, openShare } from './page.js?v=0.90.1';
+import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.90.1';
+import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.90.1';
+import { bm } from './oad_bm.js?v=0.90.1';
 
 const Q = new URLSearchParams(location.search);
 window.__errs = [];
 addEventListener('error', e => window.__errs.push(String(e.message)));
 addEventListener('unhandledrejection', e => window.__errs.push(String(e.reason)));
 if (Q.get('gray') === '1') document.body.classList.add('gray');
-load(); A.setMuted(!S.sound);
+load(); A.setMuted(!S.sound); setHaptic(S.haptic !== false); A.setMusic(S.music !== false);
 
 const hash = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
 /* ---------- 판 시작 (모드별) ---------- */
 let mode = null;
-function play(m, cfg, seed, label, key, lucky = false) {
+function play(m, cfg, seed, label, key, lucky = null, tutorial = false) {
   mode = m; S.plays++; save();
-  show('game'); $('#result').classList.remove('on');
-  Game.start({ cfg, seed, label, key, lucky, onEnd: r => onEnd(m, r), onQuit: () => show(m.kind === 'map' ? 'map' : 'home') });
+  show('game'); $('#result').classList.remove('on'); $('#preview').classList.remove('on');
+  Game.start({ cfg, seed, label, key, lucky, tutorial, onEnd: r => onEnd(m, r), onQuit: () => show(m.kind === 'map' ? 'map' : 'home') });
 }
 const go = {
   daily() {
     const dd = day(); if (dd.done) return openDay(dayKey());
     const w = dd.wins; dd.tries = (dd.tries || 0) + 1;
-    play({ kind: 'daily', w }, DAILY_CFG[w], hash(dayKey()) + w * 101 + dd.tries * 7, `오늘 페이지 <b>${w + 1}/3</b>`, 'daily' + w, true);
+    play({ kind: 'daily', w }, dailyCfg(dayKey(), w), hash(dayKey()) + w * 101 + dd.tries * 7, `오늘 페이지 <b>${w + 1}/3</b>`, 'daily' + w, dailySet(dayKey()).lucky, !S.tut && w === 0);
   },
   map(n) {
     const intro = { 11: ['얼음이 나와요', '얼음에 싸인 스티커는 칸에 스티커를 몇 장 더 담으면 녹아요. 숫자가 남은 장 수예요.'], 21: ['사슬이 나와요', '사슬에 묶인 스티커는 같은 줄 바로 옆 스티커를 먼저 떼면 풀려요.'] }[n];
@@ -58,7 +58,7 @@ function onEnd(m, r) {
   const got = reward(r.cleared, r.perfect);
   let msg = '', btns = '', extra = null;
   if (m.kind === 'daily') {
-    const dd = day(); dd.wins = Math.min(3, dd.wins + 1); dd.got.push(...r.cleared);
+    const dd = day(); m.prevGot = [...new Set(dd.got)]; dd.wins = Math.min(3, dd.wins + 1); dd.got.push(...r.cleared);
     if (dd.wins >= 3) { completeToday(); extra = 'page'; }
     else { msg = `오늘 페이지 ${dd.wins}/3 · ${3 - dd.wins}판만 더 깨면 날짜 도장이 찍혀요`; btns = `<button class="btn main" data-n="next">다음 판</button><button class="btn" data-n="home">홈</button>`; }
   }
@@ -78,40 +78,61 @@ function onEnd(m, r) {
   save(true);
   setTimeout(() => {
     $('#big').animate([{ opacity: 1 }, { opacity: 0 }], { duration: sp(300), fill: 'forwards' });
-    if (extra === 'page') return showToday(got);
-    result(got, msg, btns);
-    bm.interstitial('round_end');
-  }, sp(1300));
+    /* 이번 판 스티커가 노트에 '착' 붙는 미리보기 → 결과 카드 (오늘 판은 지금까지 모인 오늘 페이지가 보이게) */
+    const t = preview(m, got);
+    setTimeout(() => { if (extra === 'page') { $('#preview').classList.remove('on'); return showToday(got); } result(got, msg, btns); bm.interstitial('round_end'); }, t);
+  }, sp(900));
+}
+function preview(m, got) {
+  const pv = $('#preview'), k = dayKey(), dd = day(k);
+  const tpl = PAGE_TPL[dailySet(k).tpl].spots;
+  pv.innerHTML = m.kind === 'daily' ? `<h4>오늘 페이지</h4><small>${dd.wins}/3판 · 스티커가 모이고 있어요</small>` : `<h4>스티커 서랍</h4><small>노트에 붙일 스티커가 생겼어요</small>`;
+  const prev = m.kind === 'daily' ? (m.prevGot || []).filter(x => !got.includes(x)).slice(0, Math.max(0, tpl.length - got.length)) : [];
+  const all = [...prev.map(ty => ({ ty, old: 1 })), ...got.map(ty => ({ ty }))].slice(0, 8);
+  pv.classList.add('on');
+  all.forEach((s, i) => {
+    const [fx, fy, fw, rot] = tpl[i % tpl.length]; const e = document.createElement('div'); e.className = 'pv' + (isFoil(s.ty) ? ' foil' : '');
+    e.style.left = fx * 100 + '%'; e.style.top = (fy * 100 - 8) + '%'; e.style.width = fw * 100 + '%'; e.style.transform = `rotate(${rot}deg)`; e.innerHTML = `<img src="${img(s.ty)}" alt="">`; pv.appendChild(e);
+    if (s.old) return;
+    const d = sp(250 + (i - prev.length) * 230);
+    e.animate([{ transform: `translateY(260px) rotate(${rot * 3}deg) scale(1.5)`, opacity: 0 }, { transform: `translateY(-10px) rotate(${rot}deg) scale(1.15)`, opacity: 1, offset: .75 }, { transform: `rotate(${rot}deg) scale(.95)`, offset: .9 }, { transform: `rotate(${rot}deg)` }], { duration: sp(440), delay: d, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'backwards' });
+    setTimeout(() => { A.stick(i); buzz(6); }, d + sp(380));
+  });
+  return sp(250 + got.length * 230 + 700);
 }
 function result(got, msg, btns) {
   const el = $('#result');
   el.innerHTML = `<div class="card"><h3>스티커 ${got.length}장을 서랍에 넣었어요</h3><div class="got">${got.map((id, i) => `<span class="${isFoil(id) ? 'foil' : ''}" style="--d:${i * 90}ms"><img src="${img(id)}" alt="${nameOf(id)}"></span>`).join('')}</div><p>${msg}</p><div class="row">${btns}</div></div>`;
   el.classList.add('on'); got.forEach((_, i) => setTimeout(() => A.get(), sp(200 + i * 90)));
-  el.onclick = e => { const n = e.target.closest('[data-n]')?.dataset.n; if (!n) return; el.classList.remove('on');
+  el.onclick = e => { const n = e.target.closest('[data-n]')?.dataset.n; if (!n) return; el.classList.remove('on'); $('#preview').classList.remove('on');
     if (n === 'next') go.daily(); if (n === 'home') show('home'); if (n === 'nextmap') go.map(mode.n + 1); if (n === 'map') show('map'); if (n === 'free') go.free(); if (n === 'notes') show('notes'); };
 }
-/* 오늘 페이지 완성 장면 */
-function showToday() {
+/* 오늘 페이지 완성 장면 (전면 광고는 여기서 부르지 않음 — 홈으로 돌아갈 때) */
+async function showToday() {
   const pg = $('#page'), k = dayKey(); pg.classList.add('on');
   $('#pageUI').classList.remove('on');
   pg.animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }], { duration: sp(520), easing: 'cubic-bezier(.2,.9,.3,1)', fill: 'forwards' });
-  const t = renderPage(pg, k, { animate: true });
-  setTimeout(() => {
-    $('#pageUI').innerHTML = `<button class="btn main" data-p="share">공유 카드 만들기</button><button class="btn" data-p="free">자유 다꾸 계속</button><button class="btn ghost" data-p="home">홈</button>`;
-    $('#pageUI').classList.add('on');
-    $('#pageUI').onclick = e => { const p = e.target.dataset.p; if (p === 'share') openShare(k); if (p === 'free' || p === 'home') { pg.classList.remove('on'); $('#pageUI').classList.remove('on'); p === 'free' ? go.free() : show('home'); } };
-    bm.interstitial('round_end');
-  }, t + sp(400));
+  await renderPage(pg, k, { animate: true });
+  $('#pageUI').innerHTML = `<button class="btn main" data-p="share">공유 카드 만들기</button><button class="btn" data-p="free">자유 다꾸 계속</button><button class="btn ghost" data-p="home">홈</button>`;
+  $('#pageUI').classList.add('on');
+  $('#pageUI').onclick = e => { const p = e.target.dataset.p; if (p === 'share') openShare(k); if (p === 'free' || p === 'home') { pg.classList.remove('on'); $('#pageUI').classList.remove('on'); if (p === 'free') go.free(); else { show('home'); bm.interstitial('round_end'); } } };
 }
+function settings() {
+  const row = (k, label, on) => `<button class="btn tg ${on ? 'on' : ''}" data-a="${k}"><span>${label}</span><i></i></button>`;
+  modal(`<h3>설정</h3>${row('sfx', '효과음', !A.isMuted())}${row('bgm', '배경음', A.musicOn())}${row('hap', '진동', S.haptic !== false)}<button class="btn main" data-a="close">닫기</button>`, a => {
+    if (a === 'sfx') { A.setMuted(!A.isMuted()); S.sound = !A.isMuted(); } if (a === 'bgm') { A.setMusic(!A.musicOn()); S.music = A.musicOn(); } if (a === 'hap') { S.haptic = S.haptic === false; setHaptic(S.haptic); buzz(10); }
+    if (a === 'close') return closeModal(); save(); settings(); });
+}
+window.__settings = settings;
 
 /* ---------- 버튼 ---------- */
 $('#t_undo').onclick = () => Game.useTool('undo'); $('#t_magnet').onclick = () => Game.useTool('magnet'); $('#t_shuffle').onclick = () => Game.useTool('shuffle');
-$('#pause').onclick = () => { A.unlock(); modal(`<h3>잠깐 쉬어요</h3><p>나가면 이 판은 처음부터 다시 시작해요. 모은 스티커와 페이지는 그대로예요.</p><button class="btn main" data-a="close">계속하기</button><button class="btn" data-a="mute">${A.isMuted() ? '소리 켜기' : '소리 끄기'}</button><button class="btn ghost" data-a="leave">그만하고 나가기</button>`, a => {
-  if (a === 'close') closeModal(); if (a === 'mute') { A.setMuted(!A.isMuted()); S.sound = !A.isMuted(); save(); closeModal(); }
+$('#pause').onclick = () => { A.unlock(); modal(`<h3>잠깐 쉬어요</h3><p>나가면 이 판은 처음부터 다시 시작해요. 모은 스티커와 페이지는 그대로예요.</p><button class="btn main" data-a="close">계속하기</button><button class="btn" data-a="set">소리 · 진동 설정</button><button class="btn ghost" data-a="leave">그만하고 나가기</button>`, a => {
+  if (a === 'close') closeModal(); if (a === 'set') settings();
   if (a === 'leave') { closeModal(); Game.quit(); show(mode?.kind === 'map' ? 'map' : 'home'); } }); };
 document.querySelectorAll('#nav button').forEach(b => b.onclick = () => { A.unlock(); show(b.dataset.go); });
 addEventListener('resize', () => Game.relayout());
-document.addEventListener('pointerdown', () => A.unlock(), { once: true });
+document.addEventListener('pointerdown', () => { A.unlock(); A.startMusic(); }, { once: true });
 
 /* ---------- 시작 ---------- */
 (async () => {
@@ -120,7 +141,8 @@ document.addEventListener('pointerdown', () => A.unlock(), { once: true });
   if (h.ok) for (const sku of h.items || []) if (SHOP[sku]?.kind === 'item') grant(sku);
   save(); goldChip();
   const s = Q.get('screen');
-  if (s === 'page') { const dd = day(); if (!dd.got.length) dd.got = [0, 1, 2, 3, 4, 5, 6, 8]; completeToday(); showToday(); }
+  if (s === 'page') { const dd = day(); if (!dd.got.length) dd.got = dailySet(dayKey()).set.slice(); if (Q.get('mood')) { dd.mood = Q.get('mood'); dd.line = Q.get('line') || ''; } completeToday(); showToday(); }
+  else if (s === 'day') { const dd = day(); if (!dd.got.length) dd.got = dailySet(dayKey()).set.slice(); dd.mood = Q.get('mood') || 'sun'; dd.line = Q.get('line') || ''; completeToday(); show('home'); openDay(dayKey()); }
   else if (s === 'game') go.daily();
   else if (s === 'editor') openEditor(Q.get('note') || 'travel');
   else show(s || 'home');

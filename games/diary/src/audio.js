@@ -70,3 +70,32 @@ export function unchain() { if (!ok()) return; const t = ac.currentTime; [1320, 
 export function get() { if (!ok()) return; const t = ac.currentTime; tone(1046.5, t, { type: 'sine', dec: 0.15, peak: 0.1 }); tone(1568, t + 0.06, { type: 'sine', dec: 0.2, peak: 0.08 }); }
 /* 버튼: 종이 톡 */
 export function click() { if (!ok()) return; const t = ac.currentTime; noise(t, { f: 2400, q: 1.5, dec: 0.025, peak: 0.1 }); }
+
+/* ---------- 배경음: 잔잔한 로파이 (합성 · 파일 없음 · 설정에서 끔) ----------
+   Cmaj7 → Am7 → Fmaj7 → G6, 한 마디 약 3.4초 · 부드러운 패드 + 건반 아르페지오 + 아주 작은 테이프 잡음 */
+let music = true, mgain = null, mtimer = 0, mnext = 0, mbar = 0;
+const CH = [[48, 52, 55, 59], [45, 48, 52, 55], [41, 45, 48, 52], [43, 47, 50, 52]];
+const hz = n => 440 * Math.pow(2, (n - 69) / 12);
+export const musicOn = () => music;
+export function setMusic(v) { music = v; if (mgain) mgain.gain.setTargetAtTime(v ? 0.055 : 0, ac.currentTime, 0.4); if (v) startMusic(); }
+function key(f, t, len, vol) { const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter(); o.type = 'triangle'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f * 2.003; fl.type = 'lowpass'; fl.frequency.value = 1800;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(fl); o2.connect(fl); fl.connect(g); g.connect(mgain); o.start(t); o2.start(t); o.stop(t + len + 0.05); o2.stop(t + len + 0.05); }
+function pad(notes, t, len) { for (const n of notes) { const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = (Math.random() - 0.5) * 8; fl.type = 'lowpass'; fl.frequency.value = 600;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.9); g.gain.linearRampToValueAtTime(0.0001, t + len); o.connect(fl); fl.connect(g); g.connect(mgain); o.start(t); o.stop(t + len + 0.1); } }
+function schedule() {
+  if (!ac || !mgain) return;
+  while (mnext < ac.currentTime + 1.2) {
+    const ch = CH[mbar % 4], beat = 0.85, t0 = mnext;
+    pad(ch, t0, beat * 4 + 0.6);
+    const pat = [0, 2, 1, 3, 2, 1, 3, 2];
+    pat.forEach((p, i) => { if (Math.random() < 0.86) key(hz(ch[p] + 12), t0 + i * beat / 2 + (Math.random() - 0.5) * 0.02, 1.6, 0.11 * (i % 2 ? 0.7 : 1)); });
+    if (mbar % 2 === 1) key(hz(ch[3] + 24), t0 + beat * 3.5, 2.2, 0.05);
+    mnext += beat * 4; mbar++;
+  }
+}
+export function startMusic() {
+  if (!ac || mtimer) return; mgain = ac.createGain(); mgain.gain.value = 0; mgain.connect(ac.destination); mgain.gain.setTargetAtTime(music ? 0.055 : 0, ac.currentTime, 1.2);
+  mnext = ac.currentTime + 0.3; mtimer = setInterval(schedule, 400); schedule();
+  document.addEventListener('visibilitychange', () => { if (!mgain) return; mgain.gain.setTargetAtTime(document.hidden || !music ? 0 : 0.055, ac.currentTime, 0.3); });
+}

@@ -1,11 +1,11 @@
 // 판 플레이 — 7칸 · 도구 3 · 얼음 · 사슬 · 실패 → 무료 돌려받기 → 이어하기(광고 · 골드) · 응원 선물
 //   한 판마다 start() 가 상태를 처음부터 다시 만듦 (지난 판의 상태가 남지 않게 — 씬 재사용 주의)
-import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.90.0';
-import { img, LUCKY } from './data.js?v=0.90.0';
-import * as A from './audio.js?v=0.90.0';
-import { S, save } from './save.js?v=0.90.0';
-import { bm } from './oad_bm.js?v=0.90.0';
-import { $, sp, toast, modal, closeModal, burst, praise, app } from './ui.js?v=0.90.0';
+import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.90.1';
+import { img } from './data.js?v=0.90.1';
+import * as A from './audio.js?v=0.90.1';
+import { S, save } from './save.js?v=0.90.1';
+import { bm } from './oad_bm.js?v=0.90.1';
+import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.90.1';
 
 const SLOTS = 7;
 const stage = $('#stage');
@@ -43,21 +43,22 @@ export const canTap = (t, list = onBoard()) => t.where === 'board' && !isCovered
 /* ---------- 판 시작 ----------
    opts: { cfg, seed, label, key(응원 선물 · 실패 횟수 묶음), lucky, onEnd({ win, cleared, perfect }), onQuit() } */
 export function start(opts) {
-  stage.innerHTML = ''; closeModal(); $('#big').style.opacity = 0; $('#tray').classList.remove('tight');
+  stage.innerHTML = ''; closeModal(); $('#big').style.opacity = 0; $('#tray').classList.remove('tight'); $('#game').classList.remove('won'); $('#tutor')?.remove();
   const lv = makeLevel(opts.seed, opts.cfg);
   G = { opts, tiles: lv.tiles, solution: lv.solution, tray: [], pend: new Set(), hist: [], combo: 0, lastPop: 0, cleared: [], rescue: 1, cont: 0, over: false, taps: 0, used: 0, warned: false, gift: 0, fails: 0 };
   $('#glabel').innerHTML = opts.label;
   measure();
   for (const t of G.tiles) {
-    const el = document.createElement('div'); el.className = 'tile' + (opts.lucky && t.type === LUCKY ? ' lucky' : '');
+    const luck = opts.lucky != null && t.type === opts.lucky;
+    const el = document.createElement('div'); el.className = 'tile' + (luck ? ' lucky' : '');
     el.style.width = el.style.height = T + 'px'; el.style.setProperty('--th', Math.max(3, Math.round(T * 0.08)) + 'px');
-    el.innerHTML = (opts.lucky && t.type === LUCKY ? '<i class="ring"></i>' : '') + `<img src="${img(t.type)}" alt="">` + (t.iceAt ? '<i class="frost"><b></b></i>' : '') + (t.chain ? '<i class="chainov"></i>' : '');
+    el.innerHTML = (luck ? '<i class="ring"></i>' : '') + `<img src="${img(t.type)}" alt="">` + (t.iceAt ? '<i class="frost"><b></b></i>' : '') + (t.chain ? '<i class="chainov"></i>' : '');
     el.dataset.id = t.id; t.el = el; t.where = 'board'; el.style.zIndex = zBoard(t);
     stage.appendChild(el); place(t, boardPos(t));
     el.addEventListener('pointerdown', e => { e.preventDefault(); A.unlock(); tapTile(t); });
   }
   refresh(); toolBadges(); intro();
-  helpGift();
+  if (opts.tutorial) setTimeout(() => tutorial(), sp(900)); else helpGift();
 }
 /* 시작 연출: 타일이 위에서 종이처럼 내려앉음 */
 function intro() {
@@ -69,7 +70,7 @@ function refresh() {
   const list = onBoard();
   for (const t of list) {
     const cov = isCoveredIn(t, list), ice = isIced(t), ch = isChained(t, list);
-    t.el.classList.toggle('covered', cov); t.el.classList.toggle('free', !cov && !ice && !ch);
+    t.el.classList.toggle('covered', cov); t.el.classList.toggle('free', !cov && !ice && !ch && (!G.tut || G.tut.id === t.id));
     t.el.classList.toggle('iced', ice); t.el.classList.toggle('chained', ch);
     if (t.iceAt) { const fr = t.el.querySelector('.frost'); if (fr) { if (!ice && !fr.dataset.gone) { fr.dataset.gone = 1; fr.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.3)' }], { duration: sp(300), fill: 'forwards' }); if (!cov) A.crack(); } else if (ice) fr.querySelector('b').textContent = t.iceAt - G.taps; } }
     if (t.chain && !ch) { const c = t.el.querySelector('.chainov'); if (c && !c.dataset.gone) { c.dataset.gone = 1; c.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(8px) rotate(8deg)' }], { duration: sp(320), fill: 'forwards' }); A.unchain(); } }
@@ -97,7 +98,8 @@ export function tapTile(t, auto = false) {
     return false;
   }
   if (live().length >= SLOTS) { A.nope(); return false; }
-  A.tap(); toTray(t); return true;
+  if (G.tut && G.tut.id !== t.id) { A.nope(); t.el.classList.remove('shake'); void t.el.offsetWidth; t.el.classList.add('shake'); toast('손가락이 가리키는 스티커를 눌러 보세요'); return false; }
+  A.tap(); buzz(6); toTray(t); if (G.tut) tutorial(); return true;
 }
 function toTray(t) {
   let idx = -1; for (let i = G.tray.length - 1; i >= 0; i--) if (tileOf(G.tray[i]).type === t.type) { idx = i + 1; break; }
@@ -139,7 +141,7 @@ function popTriple(ids) {
     const now = performance.now(); G.combo = now - G.lastPop < 2600 ? G.combo + 1 : 0; G.lastPop = now;
     ts.forEach(t => { t.popping = true; const a = t.el.animate([{ transform: t.el.style.transform }, { transform: `translate(${mid.px}px,${mid.py}px) scale(${t.ps})`, offset: .45 }, { transform: `translate(${mid.px - T * t.ps * .14}px,${mid.py - 6 - T * t.ps * .14}px) scale(${t.ps * 1.28})`, opacity: 1, offset: .7 }, { transform: `translate(${mid.px + T * t.ps * .4}px,${mid.py - 10 + T * t.ps * .4}px) scale(${t.ps * 0.2})`, opacity: 0 }], { duration: sp(300), easing: 'ease-in', fill: 'forwards' }); a.onfinish = () => t.el.remove(); });
     setTimeout(() => {
-      if (!G) return; A.pop(G.combo); burst(c.x, c.y, 16, G.opts.lucky && ts[0].type === LUCKY);
+      if (!G) return; A.pop(G.combo); burst(c.x, c.y, 18, ts[0].type === G.opts.lucky); peel(ts[1], ts[0].type); buzz(14);
       if (G.combo >= 1) praise(c.x, c.y - T * 0.8, PRAISE[Math.min(G.combo - 1, PRAISE.length - 1)]);
     }, sp(150));
     setTimeout(() => {
@@ -159,25 +161,32 @@ function checkEnd() {
   else unstick();
 }
 function win() {
-  const g = G; S.fails[g.opts.key] = 0; save();
+  const g = G; S.fails[g.opts.key] = 0; save(); $('#game').classList.add('won');
   g.opts.onEnd({ win: true, cleared: g.cleared.slice(), perfect: g.used === 0 && g.fails === 0 && g.cont === 0 });
 }
 function fail() {
-  G.over = true; G.fails++;
-  const info = bm.info, inApp = info.ok, n = G.cont;
-  const canCont = inApp && n < 2 && S.plays >= 3;
+  G.over = true; G.fails++; buzz(20);
+  const info = bm.info, inApp = info.ok, n = G.cont, left = onBoard().length;
+  /* '아까운 순간'에만 이어하기 권함: 남은 스티커가 적을 때 (12장 이하 또는 30% 이하) · 처음 3판 X (docs/bm-policy.md 5장) */
+  const near = left <= Math.max(12, Math.round(G.tiles.length * 0.3));
+  const canCont = inApp && n < 2 && S.plays > 3 && near;
   const sku = n === 0 ? 'continue' : 'continue2', price = bm.price(sku) || (n === 0 ? 20 : 40);
   const adLeft = info.ads?.reward ? info.ads.rewardLeft : 0;
-  const near = onBoard().length <= G.tiles.length * 0.5;
   const head = near ? '아깝다, 거의 다 왔어요' : '칸이 다 찼어요';
-  let h = `<h3>${head}</h3><p>${G.rescue > 0 ? '괜찮아요. 마지막 세 장을 판으로 돌려 드릴게요.' : canCont ? `여기까지 잘 왔어요. 세 장을 돌려받고 이어서 해 볼까요?` : '여기까지도 충분히 잘했어요. 다시 해 봐요.'}</p>`;
-  if (G.rescue > 0) h += `<button class="btn main" data-a="rescue">세 장 돌려받기 (무료)</button>`;
-  else if (canCont) {
-    if (adLeft > 0) h += `<button class="btn main" data-a="contAd">📺 광고 보고 이어하기 <small>${adLeft}번 남음</small></button>`;
-    h += `<button class="btn ${adLeft > 0 ? '' : 'main'}" data-a="contGold">⚡ 이어하기 · 🪙${price}</button>`;
+  const base = `<h3>${head}</h3><p class="left">남은 스티커 <b>${left}</b>장</p>`;
+  const tail = `<div class="row"><button class="btn" data-a="again">처음부터</button><button class="btn ghost" data-a="quit">나가기</button></div>`;
+  if (G.rescue > 0) return modal(base + `<p>괜찮아요. 마지막 세 장을 판으로 돌려 드릴게요.</p><button class="btn main" data-a="rescue">세 장 돌려받기 (무료)</button>` + tail, onModal, { sheet: true });
+  if (canCont) {
+    modal(base + `<p>여기까지 정말 잘 왔어요. 세 장을 돌려받고 이어서 해 볼까요?</p><div class="cd"><i></i></div>` +
+      (adLeft > 0 ? `<button class="btn main" data-a="contAd">${ICON.ad} 광고 보고 이어하기 <small>${adLeft}번 남음</small></button>` : '') +
+      `<button class="btn ${adLeft > 0 ? '' : 'main'}" data-a="contGold">${ICON.instant} 이어하기 · ${coin(price)}</button>` + tail, onModal, { sheet: true });
+    /* 8초 카운트다운 → 끝나면 조용히 다시 하기로 */
+    const t0 = Date.now(), D = sp(8000); clearInterval(window.__cd);
+    window.__cd = setInterval(() => { const bar = $('#modal .cd i'); if (!bar) return clearInterval(window.__cd); const u = Math.min(1, (Date.now() - t0) / D); bar.style.transform = `scaleX(${1 - u})`;
+      if (u >= 1) { clearInterval(window.__cd); modal(base + `<p>괜찮아요, 손에 익었으니 다음 판은 더 쉬울 거예요.</p>` + tail, onModal, { sheet: true }); } }, 100);
+    return;
   }
-  h += `<button class="btn" data-a="again">처음부터</button><button class="btn ghost" data-a="quit">나가기</button>`;
-  modal(h, onModal);
+  modal(base + `<p>${near ? '정말 아까웠어요. 다시 하면 금방이에요.' : '여기까지도 충분히 잘했어요. 다시 해 봐요.'}</p>` + tail, onModal, { sheet: true });
 }
 async function onModal(a) {
   if (a === 'rescue') { G.rescue--; resume(); }
@@ -219,8 +228,8 @@ function refillSheet(k) {
   const adLeft = info.ads?.reward ? info.ads.rewardLeft : 0, price = bm.price('tools3') || 30;
   const NAME = { undo: '되돌리기', magnet: '모으기', shuffle: '섞기' };
   modal(`<h3>${NAME[k]}를 다 썼어요</h3><p>내일이면 무료로 다시 채워져요. 지금 바로 채울 수도 있어요.</p>` +
-    (adLeft > 0 ? `<button class="btn main" data-r="ad">📺 광고 보고 ${NAME[k]} +1 <small>${adLeft}번 남음</small></button>` : '') +
-    `<button class="btn ${adLeft > 0 ? '' : 'main'}" data-r="gold">⚡ 도구 묶음 (각 1) · 🪙${price}</button><button class="btn ghost" data-a="close">괜찮아요</button>`, async (a, e) => {
+    (adLeft > 0 ? `<button class="btn main" data-r="ad">${ICON.ad} 광고 보고 ${NAME[k]} +1 <small>${adLeft}번 남음</small></button>` : '') +
+    `<button class="btn ${adLeft > 0 ? '' : 'main'}" data-r="gold">${ICON.instant} 도구 묶음 (각 1) · ${coin(price)}</button><button class="btn ghost" data-a="close">괜찮아요</button>`, async (a, e) => {
       const r = e.target.closest('[data-r]')?.dataset.r; if (a === 'close') return closeModal();
       if (r === 'ad') { const x = await bm.rewardedAd('tool'); if (x.ok) { S.tools[k]++; save(); toolBadges(); closeModal(); toast(`${NAME[k]} +1`); } }
       if (r === 'gold') { const x = await bm.spend('tools3'); if (x.ok) { for (const t of ['undo', 'magnet', 'shuffle']) S.tools[t]++; save(); toolBadges(); closeModal(); toast('도구를 하나씩 채웠어요'); } else if (x.reason === 'short') toast('골드가 모자라요'); }
@@ -255,11 +264,36 @@ function shuffle() {
   A.shuffle();
   copy.forEach(c => { const t = tileOf(c.id); const el = t.el;
     el.animate([{ transform: el.style.transform }, { transform: el.style.transform + ' scaleX(0)', offset: .5 }, { transform: el.style.transform }], { duration: sp(320), easing: 'ease-in-out' });
-    setTimeout(() => { if (!G || !G.tiles.includes(t)) return; t.type = c.type; el.querySelector('img').src = img(c.type); const luck = G.opts.lucky && c.type === LUCKY; el.classList.toggle('lucky', luck); const rg = el.querySelector('.ring'); if (luck && !rg) el.insertAdjacentHTML('afterbegin', '<i class="ring"></i>'); if (!luck && rg) rg.remove(); }, sp(160)); });
+    setTimeout(() => { if (!G || !G.tiles.includes(t)) return; t.type = c.type; el.querySelector('img').src = img(c.type); const luck = G.opts.lucky != null && c.type === G.opts.lucky; el.classList.toggle('lucky', luck); const rg = el.querySelector('.ring'); if (luck && !rg) el.insertAdjacentHTML('afterbegin', '<i class="ring"></i>'); if (!luck && rg) rg.remove(); }, sp(160)); });
   return true;
 }
 export function toolBadges() { for (const k of ['undo', 'magnet', 'shuffle']) { const b = $(`#t_${k}`); const n = S.tools[k] || 0; b.querySelector('b').textContent = n > 0 ? n : '+'; b.classList.toggle('empty', n <= 0); } }
 
+/* ---------- 첫 판 손가락 안내 3단계 ---------- */
+const TUT = ['맨 위 스티커를 눌러 아래 칸에 담아요', '좋아요! 같은 그림을 하나 더 담아요', '세 개를 모으면 뽁! 하고 사라져요'];
+function tutorial() {
+  if (!G) return; const T0 = G.tut;
+  if (!T0) { const list = onBoard(), free = list.filter(t => canTap(t, list)), by = {}; free.forEach(t => { (by[t.type] = by[t.type] || []).push(t); });
+    const best = Object.values(by).sort((a, b) => b.length - a.length)[0]; if (!best) return; G.tutType = best[0].type; G.tutStep = 0; }
+  else G.tutStep++;
+  const list = onBoard(), next = list.filter(t => t.type === G.tutType && !isCoveredIn(t, list) && !isIced(t) && !isChained(t, list))[0];
+  if (G.tutStep >= 3 || !next) { G.tut = null; $('#tutor')?.remove(); refresh(); G.tutPop = true; S.tut = 1; save(); return; }
+  G.tut = { id: next.id }; refresh();
+  let f = $('#tutor'); if (!f) { f = document.createElement('div'); f.id = 'tutor'; f.innerHTML = '<i class="hand"></i><p></p>'; app.appendChild(f); }
+  f.querySelector('p').innerHTML = `<small>${G.tutStep + 1}/3</small> ${TUT[G.tutStep]}`;
+  const h = f.querySelector('.hand'); h.style.left = next.px + T * 0.5 + 'px'; h.style.top = next.py + T * 0.55 + 'px';
+}
+/* '뽁': 가운데 한 장을 칼선 스티커로 '톡' 떼어 위쪽 칩(오늘 페이지 · 진행 맵 · 자유 다꾸)으로 날려 보냄 */
+function peel(t, type) {
+  const chip = $('#glabel').getBoundingClientRect(), ar = app.getBoundingClientRect(), s = T * t.ps;
+  const e = document.createElement('img'); e.className = 'peel'; e.src = img(type); e.style.width = e.style.height = s * 0.86 + 'px'; app.appendChild(e);
+  const x0 = t.px + s * 0.07, y0 = t.py + s * 0.07, x1 = chip.left - ar.left + chip.width / 2 - s * 0.43, y1 = chip.top - ar.top + chip.height / 2 - s * 0.43;
+  e.animate([{ transform: `translate(${x0}px,${y0}px) scale(1) rotate(0)` }, { transform: `translate(${x0}px,${y0 - 14}px) scale(1.18) rotate(-10deg)`, offset: .22 },
+    { transform: `translate(${(x0 + x1) / 2}px,${Math.min(y0, y1) - 60}px) scale(1) rotate(8deg)`, offset: .6 }, { transform: `translate(${x1}px,${y1}px) scale(.35) rotate(0)`, opacity: .9 }], { duration: sp(620), easing: 'cubic-bezier(.4,0,.3,1)' }).onfinish = () => {
+    e.remove(); const c = $('#glabel'); c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: sp(220) }); A.get();
+    if (G?.tutPop) { G.tutPop = false; const f = document.createElement('div'); f.id = 'tutor'; f.innerHTML = '<p>이 스티커가 오늘 페이지에 붙어요!</p>'; app.appendChild(f); setTimeout(() => f.remove(), 2600); }
+  };
+}
 export function relayout() { if (!G) return; measure(); for (const t of G.tiles) { if (t.where === 'gone') continue; t.el.style.width = t.el.style.height = T + 'px'; if (t.where === 'board') place(t, boardPos(t)); } layoutTray(); }
 export function quit() { if (G) { G.over = true; failCount(); } }
 export const geom = () => ({ T, SL, TRAY, W, H });

@@ -32,10 +32,11 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
     <div id="stage"></div>
     <div id="tools">
       <button class="tool" id="t_undo" aria-label="되돌리기"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9 6 14l5 5"/><path d="M6 14h13a7 7 0 0 1 0 14h-4"/></svg><b>2</b></button>
-      <button class="tool" id="t_magnet" aria-label="모으기"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6v10a7 7 0 0 0 14 0V6"/><path d="M9 11h5M18 11h5M14 6v10a2 2 0 0 0 4 0V6"/><path d="M25 22l2 1M5 22l2 1M16 27v2"/></svg><b>2</b></button>
+      <button class="tool" id="t_magnet" aria-label="모으기"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 5h6v10a3 3 0 0 0 6 0V5h6v10a9 9 0 0 1-18 0z"/><path d="M7 10h6M19 10h6" stroke-width="3"/><path d="M5 26l2-2M27 26l-2-2M16 30v-3" stroke-linecap="round"/></svg><b>2</b></button>
       <button class="tool" id="t_shuffle" aria-label="섞기"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10h5c6 0 6 12 12 12h5"/><path d="M5 22h5c2.5 0 3.8-2 5-4.5M17 14.5C18.2 12 19.5 10 22 10h5"/><path d="m24 7 3 3-3 3M24 19l3 3-3 3"/></svg><b>2</b></button>
     </div>
     <div id="big"></div>
+    <div id="preview"></div>
     <div id="result"></div>
   </section>
   <nav id="nav">
@@ -50,6 +51,6 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
   <div id="modal"></div>
   <div id="toast"></div>
 </div>
-<script type="module" src="src/main.js?v=0.90.0"></script>
+<script type="module" src="src/main.js?v=0.90.1"></script>
 </body>
 </html>
