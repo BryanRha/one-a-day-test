@@ -1,5 +1,5 @@
 // 봇 두뇌 (밸런스 봇 · 화면 시험이 같이 씀) — skill 0(처음 해 보는 사람) ~ 1(숙련)
-import { CHARM } from './charms.js?v=0.91.2';
+import { CHARM } from './charms.js?v=0.91.3';
 
 // 손패에서 낼 수 있는 모든 조합 (최대 maxPlay 장) → 점수 큰 순
 export function plays(run) {
