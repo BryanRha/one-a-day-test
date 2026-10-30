@@ -6,10 +6,10 @@
 //   outfit  특별 코디 🪙200 (item) : 오늘의 코디 옷장 · hello().items 로 복원
 //   choiceN 특별 선택지 🪙30 (item, 화별) : special.js — 첫 1회 맛보기 무료
 //   선택지는 광고로 열지 않음 (이야기 가치 보호)
-import { bm } from './oad_bm.js?v=0.95.0';
-import { inOAD } from './oad.js?v=0.95.0';
-import { load, save } from './save.js?v=0.95.0';
-import { EPISODES } from './episodes.js?v=0.95.0';
+import { bm } from './oad_bm.js?v=0.95.1';
+import { inOAD } from './oad.js?v=0.95.1';
+import { load, save } from './save.js?v=0.95.1';
+import { EPISODES } from './episodes.js?v=0.95.1';
 
 export { bm };
 export const HINT_COST = 10;                   // 힌트 = 게임 코인 10 (골드 상품 아님)

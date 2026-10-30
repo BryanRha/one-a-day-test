@@ -1,6 +1,6 @@
 // 업적 62 (원작 칭호 목록 · 한국어로 다시 씀) · 오늘의 작전 3
-import { T } from './data.js?v=0.95.0';
-import { unitMax, heroMax } from './meta.js?v=0.95.0';
+import { T } from './data.js?v=0.95.1';
+import { unitMax, heroMax } from './meta.js?v=0.95.1';
 
 const ch = c => [...Array(10)].map((_, i) => c * 10 + i);
 const allCleared = (d, list) => list.every(s => d.cleared[s]);

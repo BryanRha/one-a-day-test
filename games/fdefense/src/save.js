@@ -1,5 +1,5 @@
 // 저장 (localStorage) · 원어데이 catalog SAVES: fdefense_v1 (진행) · fdefense_resume_v1 (판 중간 이어하기)
-import { freshMeta } from './core/meta.js?v=0.95.0';
+import { freshMeta } from './core/meta.js?v=0.95.1';
 const KEY = 'fdefense_v1', RESUME = 'fdefense_resume_v1';
 let data = null;
 export const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };

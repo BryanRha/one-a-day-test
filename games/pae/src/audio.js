@@ -1,5 +1,5 @@
 // 효과음 / 배경음 (전부 직접 합성한 소리 — pae/tools/audio.mjs). 배경음은 처음 틀 때 받아 옴 (첫 로딩을 가볍게)
-import { load, save } from './save.js?v=0.95.0';
+import { load, save } from './save.js?v=0.95.1';
 
 export const SFX = ['sfx_pick', 'sfx_unpick', 'sfx_click', 'sfx_deal', 'sfx_flip', 'sfx_play', ...Array.from({ length: 8 }, (_, i) => 'sfx_chip_' + i),
   'sfx_mult', 'sfx_xmult', 'sfx_total', 'sfx_big', 'sfx_clear', 'sfx_boss', 'sfx_bosswin', 'sfx_fail', 'sfx_wind', 'sfx_coin', 'sfx_buy', 'sfx_charm', 'sfx_err', 'sfx_season', 'sfx_open', 'sfx_petal'];

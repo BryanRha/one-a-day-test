@@ -1,6 +1,6 @@
 // 봇 (사람처럼: 판에 보이는 것만 보고 0.5초마다 한 가지씩 함) — 밸런스 · 막힘 검사용
-import { T } from './data.js?v=0.95.0';
-import { BUY_ROWS, CHAR } from './sim.js?v=0.95.0';
+import { T } from './data.js?v=0.95.1';
+import { BUY_ROWS, CHAR } from './sim.js?v=0.95.1';
 
 const ROAD_R = 1.9;   // 길 칸 세는 반경 (칸)
 export function spots(sim) {

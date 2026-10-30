@@ -5,10 +5,10 @@
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 외형 전부 숨김, 게임은 예전 그대로
 //   연속 실패 응원 선물(6장 · 단계형): 같은 스테이지 3연속 실패 → 다음 도전 시작 때 선물, 6번째 조금 더
 import * as THREE from 'three';
-import { bm } from './oad_bm.js?v=0.95.0';
-import { inOAD } from './oad.js?v=0.95.0';
-import { G, save } from './state.js?v=0.95.0';
-import { STAMINA } from './data.js?v=0.95.0';
+import { bm } from './oad_bm.js?v=0.95.1';
+import { inOAD } from './oad.js?v=0.95.1';
+import { G, save } from './state.js?v=0.95.1';
+import { STAMINA } from './data.js?v=0.95.1';
 export { bm };
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
