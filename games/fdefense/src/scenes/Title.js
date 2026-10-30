@@ -1,9 +1,9 @@
 // 타이틀: 원작 전쟁 일러스트를 천천히 훑으며 로고 · 불씨 · 출정 버튼. 판 그림은 여기서 이어 받는다
-import { W, H, C } from '../config.js?v=0.94.1';
-import { text, button } from '../ui.js?v=0.94.1';
-import { audio } from '../audio.js?v=0.94.1';
-import { queuePlayAssets, indexFrames } from './Boot.js?v=0.94.1';
-import { load } from '../save.js?v=0.94.1';
+import { W, H, C } from '../config.js?v=0.95.0';
+import { text, button } from '../ui.js?v=0.95.0';
+import { audio } from '../audio.js?v=0.95.0';
+import { queueCore, queueHome, indexFrames } from './Boot.js?v=0.95.0';
+import { load } from '../save.js?v=0.95.0';
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
@@ -37,10 +37,11 @@ export class TitleScene extends Phaser.Scene {
     text(this, W / 2, H - 150, first ? '웨이브 15 · 약 4분' : `깬 스테이지 ${Object.keys(d.cleared).length}/50 · 명예 ${d.heroism.toLocaleString()}`, 32, C.mute, { weight: '700' });
     text(this, W / 2, H - 70, 'SN · One a Day', 26, '#6D6A60', { weight: '700', shadow: false });
 
-    queuePlayAssets(this);
+    queueCore(this);
     this.load.on('progress', p => { if (!this.ready) this.go.label.setText(`준비 중 ${Math.round(p * 100)}%`); });
     this.load.once('complete', () => {
       indexFrames(this); this.ready = true;
+      if (!this.first) { queueHome(this); this.load.once('complete', () => indexFrames(this)); this.load.start(); }
       this.go.label.setText(this.first ? '▶  출정' : '▶  시작'); this.go.setEnabled(true);
       this.tweens.add({ targets: this.go, scale: 1.04, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     });

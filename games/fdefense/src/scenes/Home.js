@@ -1,15 +1,15 @@
 // 홈: 세계 지도(출정) · 강화 · 영웅 · 기록 — 아래 탭 4개, 시작까지 탭 1번
-import { W, H, C, FONT } from '../config.js?v=0.94.1';
-import { T, CHAPTERS, STAGE_NAMES, UP_NAMES, HERO_UP_NAMES, HERO_NAMES, ITEM_NAMES, ITEM_ICONS, UNIT_ICONS, itemDesc, SPECIAL_NAMES } from '../core/data.js?v=0.94.1';
-import * as M from '../core/meta.js?v=0.94.1';
-import { AWARDS, missions, claimMission, checkAwards, MISSION_REWARD, MISSION_BONUS } from '../core/awards.js?v=0.94.1';
-import { EST } from '../core/balance.js?v=0.94.1';
-import { text, panel, button, toast, icon, scrollList } from '../ui.js?v=0.94.1';
-import { audio } from '../audio.js?v=0.94.1';
-import { load, save, loadResume, saveResume, dayKey } from '../save.js?v=0.94.1';
-import { FRAME_ATLAS } from './Boot.js?v=0.94.1';
-import { pushBack } from '../oad.js?v=0.94.1';
-import { oadOn, owned, bm, track } from '../bmflow.js?v=0.94.1';
+import { W, H, C, FONT } from '../config.js?v=0.95.0';
+import { T, CHAPTERS, STAGE_NAMES, UP_NAMES, HERO_UP_NAMES, HERO_NAMES, ITEM_NAMES, ITEM_ICONS, UNIT_ICONS, itemDesc, SPECIAL_NAMES } from '../core/data.js?v=0.95.0';
+import * as M from '../core/meta.js?v=0.95.0';
+import { AWARDS, missions, claimMission, checkAwards, MISSION_REWARD, MISSION_BONUS } from '../core/awards.js?v=0.95.0';
+import { EST } from '../core/balance.js?v=0.95.0';
+import { text, panel, button, toast, icon, scrollList } from '../ui.js?v=0.95.0';
+import { audio } from '../audio.js?v=0.95.0';
+import { load, save, loadResume, saveResume, dayKey } from '../save.js?v=0.95.0';
+import { FRAME_ATLAS, queueHome, indexFrames } from './Boot.js?v=0.95.0';
+import { pushBack } from '../oad.js?v=0.95.0';
+import { oadOn, owned, bm, track } from '../bmflow.js?v=0.95.0';
 
 const TOP = 150, TAB = 176;
 const CH_POS = [[0.28, 0.83], [0.70, 0.67], [0.25, 0.43], [0.74, 0.29], [0.28, 0.10]];
@@ -18,7 +18,14 @@ const TABS = [['map', '출정'], ['up', '강화'], ['hero', '영웅'], ['rec', '
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
   init(d) { this.tab = d?.tab || 'map'; this.flash = d?.flash || null; }
+  preload() {
+    queueHome(this);
+    const g = this.add.graphics();
+    this.load.on('progress', p => { g.clear(); g.fillStyle(0x2A3142, 1).fillRoundedRect(340, H / 2, 400, 12, 6); g.fillStyle(0xFFC94A, 1).fillRoundedRect(340, H / 2, 400 * p, 12, 6); });
+    this.load.once('complete', () => g.destroy());
+  }
   create() {
+    indexFrames(this);
     this.d = load(); this.popup = null; this.popBack = null; this.layer = null; this.scroll = null; this.heroSel = this.heroSel ?? 0; this.cls = this.cls ?? 0; this.heroSub = this.heroSub ?? 'up'; this.cat = this.cat ?? 1;
     missions(this.d, dayKey());
     const got = M.claimMilestones(this.d); checkAwards(this.d); save();

@@ -1,16 +1,16 @@
 // 판 화면 (세로): 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 HUD · 아래 엄지 조작 칸
-import { W, H, C, SCALE } from '../config.js?v=0.94.1';
-import { T, A, CHAR_NAMES, HERO_NAMES, SPECIAL_NAMES, STAGE_NAMES, CHAPTERS } from '../core/data.js?v=0.94.1';
-import { Sim, TICK, BUY_ROWS, DETAIL_SPRITE, HERO_SPRITE, CHAR, runSummary } from '../core/sim.js?v=0.94.1';
-import * as M from '../core/meta.js?v=0.94.1';
-import { BUNDLE } from '../core/balance.js?v=0.94.1';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.94.1';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.94.1';
-import { audio, S } from '../audio.js?v=0.94.1';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.94.1';
-import { FRAME_ATLAS } from './Boot.js?v=0.94.1';
-import { pushBack } from '../oad.js?v=0.94.1';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.94.1';
+import { W, H, C, SCALE } from '../config.js?v=0.95.0';
+import { T, A, CHAR_NAMES, HERO_NAMES, SPECIAL_NAMES, STAGE_NAMES, CHAPTERS } from '../core/data.js?v=0.95.0';
+import { Sim, TICK, BUY_ROWS, DETAIL_SPRITE, HERO_SPRITE, CHAR, runSummary } from '../core/sim.js?v=0.95.0';
+import * as M from '../core/meta.js?v=0.95.0';
+import { BUNDLE } from '../core/balance.js?v=0.95.0';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.0';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.95.0';
+import { audio, S } from '../audio.js?v=0.95.0';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.95.0';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.0';
+import { pushBack } from '../oad.js?v=0.95.0';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.0';
 
 const HUD_H = 176, TRAY_MIN = 520;
 // 효과 번호 → 그림 묶음 (원작 렌더러 표)
@@ -26,7 +26,14 @@ const CARDS = [
 export class PlayScene extends Phaser.Scene {
   constructor() { super('Play'); }
   init(d) { this.stageNo = d.stage ?? 0; this.mode = d.mode ?? 0; this.resumeSnap = d.resume || null; this.giftGold = d.giftGold || 0; }
+  preload() {
+    queueStage(this, this.stageNo, load().meta.owned);
+    const g = this.add.graphics();
+    this.load.on('progress', p => { g.clear(); g.fillStyle(0x2A3142, 1).fillRoundedRect(340, H / 2, 400, 12, 6); g.fillStyle(0xFFC94A, 1).fillRoundedRect(340, H / 2, 400 * p, 12, 6); });
+    this.load.once('complete', () => g.destroy());
+  }
   create() {
+    indexFrames(this);
     // 씬 재사용 대비: 상태 전부 초기화 (Phaser 규칙)
     const dd = load();
     this.sim = new Sim(this.stageNo, { seed: (Date.now() & 0xffff) + 1, mode: this.mode, meta: M.simMeta(dd.meta), bundle: BUNDLE[this.stageNo] || 1, startGold: this.giftGold });
@@ -161,9 +168,10 @@ export class PlayScene extends Phaser.Scene {
     else if (s.mode === 2) { const gs = s.objects.filter(o => o.role === 'start'), hp = gs.reduce((a, o) => a + Math.max(0, o.hp), 0), mx = gs.reduce((a, o) => a + o.maxHp, 0); this.tWave.setText(`성문 ${Math.ceil(hp / mx * 100)}% · 웨이브 ${Math.min(s.wave + 1, s.waveTotal)}/${s.waveTotal}`); }
     else this.tWave.setText(`웨이브 ${Math.min(s.wave + 1, s.waveTotal)} / ${s.waveTotal}`);
     const g = this.waveBar; g.clear();
-    g.fillStyle(0x2A3142, 1).fillRoundedRect(300, 124, 590, 16, 8);
-    g.fillStyle(0xFFC94A, 1).fillRoundedRect(300, 124, Math.max(16, 590 * s.progress()), 16, 8);
-    if (s.mode === 2) { const gs = s.objects.filter(o => o.role === 'start'), hp = gs.reduce((a, o) => a + Math.max(0, o.hp), 0), mx = gs.reduce((a, o) => a + o.maxHp, 0); g.fillStyle(0xFF6B4A, 1).fillRoundedRect(300, 148, Math.max(10, 590 * hp / mx), 10, 5); }
+    const bx = Math.max(300, 36 + this.tWave.width + 30), bw = 890 - bx;
+    g.fillStyle(0x2A3142, 1).fillRoundedRect(bx, 124, bw, 16, 8);
+    g.fillStyle(0xFFC94A, 1).fillRoundedRect(bx, 124, Math.max(16, bw * s.progress()), 16, 8);
+    if (s.mode === 2) { const gs = s.objects.filter(o => o.role === 'start'), hp = gs.reduce((a, o) => a + Math.max(0, o.hp), 0), mx = gs.reduce((a, o) => a + o.maxHp, 0); g.fillStyle(0xFF6B4A, 1).fillRoundedRect(bx, 148, Math.max(10, bw * hp / mx), 10, 5); }
   }
 
   // ---------- 아래 조작 칸 ----------
@@ -548,10 +556,10 @@ export class PlayScene extends Phaser.Scene {
     const cy = this.by + this.bh * 0.42;
     let band;
     if (g === 0) { const bf = this.frame('special_sword_background'); band = this.add.image(W / 2, cy, bf[0], bf[1]).setScale(this.sp * 1.15, this.sp * 1.6); }
-    else band = this.add.image(W / 2, cy, `band_${kind}`).setDisplaySize(W * 1.1, 520);
+    else { band = this.add.graphics(); const col = [0, 0xC0306A, 0x3A9FD8][g]; for (let i = 0; i < 26; i++) { const a = 0.9 * Math.sin(Math.PI * (i + 0.5) / 26); band.fillStyle(col, a * 0.85).fillRect(0, cy - 260 + i * 20, W, 20); } band.fillStyle(0xFFFFFF, 0.5).fillRect(0, cy - 262, W, 4).fillRect(0, cy + 258, W, 4); }
     band.setAlpha(0); c.add(band);
     const lines = []; for (let i = 0; i < 14; i++) { const nm = [`special_${kind}_lines`, `special_${kind}_linem`, `special_${kind}_lineb`][i % 3], f = this.frame(nm); if (!f) continue; const l = this.add.image(Phaser.Math.Between(0, W * 1.5), cy + Phaser.Math.Between(-200, 200), f[0], f[1]).setScale(this.sp * 1.4).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD); c.add(l); lines.push(l); }
-    const hero = this.add.image(W + 600, cy + 20, `hero_cut_${kind}`).setScale(0.95); c.add(hero);
+    const hero = this.add.image(W + 600, cy + 20, `hero_cut_${kind}`); hero.setScale(Math.min(0.95, 760 / hero.height, 1100 / hero.width)); c.add(hero);
     const name = text(this, W / 2, cy + 420, SPECIAL_NAMES[g] + '!', 96, ['#FFF3C4', '#FFE1F0', '#D8F4FF'][g], { stroke: ['#7A3A00', '#6A1040', '#0A3A6A'][g], st: 12 }).setAlpha(0); c.add(name);
     this.cutin = { c, dim, band, hero, lines, name, t: 0, blades: [], h, g, kind };
   }
@@ -625,7 +633,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   // ---------- 일시정지 · 결과 ----------
-  onBack() { if (this.offer) { this.offer.destroy(); this.offer = null; this.showResult(false); return true; } if (this.ended) return false; if (this.paused) { this.resume(); return true; } this.pause(); return true; }
+  onBack() { if (this.offer) { this.offerClose ? this.offerClose() : this.offer.destroy(); this.offer = null; this.showResult(false); return true; } if (this.ended) return false; if (this.paused) { this.resume(); return true; } this.pause(); return true; }
   pause() {
     if (this.paused || this.ended) return;
     this.paused = true; this.closeMenu(); this.cancelDrag();
@@ -657,7 +665,7 @@ export class PlayScene extends Phaser.Scene {
     this.offerContinue();
   }
   offerContinue() {
-    const s = this.sim, sku = this.contUsed === 0 ? 'cont1' : 'cont2', price = bm.price ? bm.price(sku) : (this.contUsed === 0 ? 20 : 40);
+    const s = this.sim, sku = this.contUsed === 0 ? 'cont1' : 'cont2', price = (bm.price && bm.price(sku)) || (this.contUsed === 0 ? 20 : 40);
     const c = this.add.container(0, 0).setDepth(9900); this.offer = c;
     c.add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.62).setInteractive());
     c.add(panel(this, 100, H / 2 - 430, W - 200, 860, { r: 44, line: 0xFFC94A }));
@@ -666,8 +674,9 @@ export class PlayScene extends Phaser.Scene {
     c.add(text(this, W / 2, H / 2 - 250, msg, 38, C.ink, { weight: '700' }));
     c.add(text(this, W / 2, H / 2 - 190, '목숨 10을 채우고 이 웨이브부터 다시', 32, C.mute, { weight: '700' }));
     const cd = text(this, W / 2, H / 2 - 90, '8', 96, C.ink); c.add(cd);
-    let left = 8; const tm = this.time.addEvent({ delay: 1000, repeat: 7, callback: () => { left--; cd.setText(String(left)); if (left <= 0) { close(); this.showResult(false); } } });
-    const close = () => { tm.remove(); c.destroy(); this.offer = null; };
+    let left = 8; const tm = this.time.addEvent({ delay: 1000, repeat: 7, callback: () => { if (!cd.active) return; left--; cd.setText(String(left)); if (left <= 0) { close(); this.showResult(false); } } });
+    const close = () => { tm.remove(); c.destroy(); this.offer = null; this.offerClose = null; };
+    this.offerClose = close;
     let y = H / 2 + 40;
     if (!this.contAd && adReady()) {
       c.add(button(this, W / 2, y, 640, 130, '▷ 광고 보고 이어하기', async () => { tm.paused = true; const r = await bm.rewardedAd('revive'); if (r && r.ok) { this.contAd = true; close(); this.doContinue(); } else { tm.paused = false; } }, { size: 42, fill: 0x2B3A1E, edge: 0x9BD56A, color: '#DFF5C6' }));
