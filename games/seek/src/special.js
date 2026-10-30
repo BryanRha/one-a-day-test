@@ -3,8 +3,8 @@
 //   상품: SHOP.seek.choiceN (N = 화 번호 ep.no 1~20, 🪙30, item — 계정에 남음 · 다음 실행부터 hello().items 로 복원)
 //   첫 1회는 맛보기 무료 (기기 저장) · 광고로는 열지 않음 · 소장자도 같은 가격 · 원어데이 밖에선 버튼 · 앨범 숨김
 //   그림은 새로 그리지 않고 기존 인물 표정 · 배경을 다시 씀
-import { load, save } from './save.js?v=0.93.4';
-import { bm, oadOn, track } from './bm.js?v=0.93.4';
+import { load, save } from './save.js?v=0.94.0';
+import { bm, oadOn, track } from './bm.js?v=0.94.0';
 
 const S = (bg, ...lines) => lines.map((l, i) => ({ ...(i === 0 && bg ? { bg } : {}), who: l[0], face: l[1], t: l[2] }));
 const SY = '서윤', DH = '도현', JA = '지아', HN = '하나', MO = '어머니', SJ = '서진', FA = '아빠';

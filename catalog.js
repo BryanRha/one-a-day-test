@@ -90,6 +90,12 @@ export const GAMES = {
     desc: '맨 위 스티커를 눌러 아래 칸에 담고, 같은 그림 세 개를 모으면 뽁! 하루 세 판을 깨면 날짜 도장이 찍힌 오늘 페이지 한 장이 남아요. 그다음엔 판 수 제한 없이 스티커를 모아 여행 · 카페 · 계절 노트를 꾸며 보세요.',
     path: 'games/diary/', cover: 'covers/diary.png', icon: 'covers/diary_icon.png', time: '5~15분',
   },
+  fdefense: {
+    title: 'Fantasy Defense', en: 'Fantasy Defense', genre: '타워 디펜스', color: '#7A4B2A',
+    tagline: '성문을 지켜라, 판타지 왕국의 마지막 방어선',
+    desc: '전사 · 궁수 · 마법사 · 챔피언을 길목에 세워 몰려오는 몬스터 웨이브를 막아요. 병사를 강화하고 전직시키며, 영웅의 필살기 칼춤으로 위기를 뒤집으세요. 50개 스테이지와 무한 · 성문 부수기 모드가 기다려요.',
+    path: 'games/fdefense/', cover: 'covers/fdefense.png', icon: 'covers/fdefense_icon.png', time: '8~15분',
+  },
   camp: {
     title: '숲속 힐링 캠프', en: 'Forest Healing Camp', genre: '힐링 방치 경영', color: '#7FB26A',
     tagline: '고원 숲 캠핑장, 오늘도 손님이 쉬어 가요',
@@ -123,7 +129,7 @@ export const SAVES = {
   witch: ['witch_whiskers_v1'], ocean: ['dessertpop_save_v1'], racer: ['honk_rush_v1'], blocks: ['panda_blocks_v1'],
   dice: ['rune_dice_v1'], war: ['front_tactics_v1', 'front_tactics_maps', 'front_tactics_resume'], seek: ['his_secret_v1'],
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
-  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'],
+  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'], fdefense: ['fdefense_v1'],
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
@@ -131,7 +137,7 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
 //   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드로 열기/소장은 의뢰사 계약 확인 전까지 X(광고로만)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
-export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary'];   /* 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary', 'fdefense'];   /* 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
 // 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:
@@ -155,6 +161,7 @@ export const TEASE = {
   blocks: '딱 한 줄만 더… 지워지는 소리가 기분 좋아요',
   dice: '주사위 다섯 개로 세우는 나만의 룬 성벽',
   diary: '스티커 세 장이 모이면 뽁, 오늘 페이지가 한 장 늘어요',
+  fdefense: '내일 새벽, 성문 앞에 몬스터 대군이 몰려옵니다',
   camp: '솔숲 사이로 벚꽃잎, 오늘은 캠핑장이 문을 열어요',
   war: '허스키 부대, 작전 개시까지 하루 남았습니다',
   seek: '그 남자가 숨긴 물건, 내일은 찾을 수 있을까요',
@@ -182,5 +189,6 @@ export const PICK = {
   gamsung: '단골 사연은 끝까지 들어. 네 복이 거기 있다.',
   pae: '패는 이미 섞였다. 제철 패를 아껴 둬.',
   diary: '같은 것 셋이 모이면 터진다. 오늘은 짝을 찾는 날.',
+  fdefense: '길목 하나가 승부를 가른다. 서두르지 말고 자리를 봐.',
   camp: '서두르지 마. 쉬어 가는 손님이 복을 두고 간다.',
 };

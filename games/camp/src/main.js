@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.93.4';
-import * as G from './sim.js?v=0.93.4';
-import * as C from './chars.js?v=0.93.4';
-import * as C2 from './chars2d.js?v=0.93.4';
-import * as UI from './ui.js?v=0.93.4';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.93.4';
-import { bm } from './oad_bm.js?v=0.93.4';
-import { installBack } from './oad.js?v=0.93.4';
+import * as D from './data.js?v=0.94.0';
+import * as G from './sim.js?v=0.94.0';
+import * as C from './chars.js?v=0.94.0';
+import * as C2 from './chars2d.js?v=0.94.0';
+import * as UI from './ui.js?v=0.94.0';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.94.0';
+import { bm } from './oad_bm.js?v=0.94.0';
+import { installBack } from './oad.js?v=0.94.0';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
