@@ -136,7 +136,7 @@ export function bannerHTML(o = {}) {
 
 /* 그림 안내 모듈 (열 때만 불러옴) */
 let G = null;
-export const ui = () => G || (G = import('./install-guide.js?v=0.93.2'));
+export const ui = () => G || (G = import('./install-guide.js?v=0.93.3'));
 
 /* ── 글 안내 (PC · 그림 모듈을 못 불러올 때의 폴백) ── */
 const SHARE_IOS = '<svg viewBox="0 0 24 24" width="22" height="22" style="vertical-align:-5px"><path fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M7.5 7.5L12 3l4.5 4.5M6 11H5v10h14V11h-1"/></svg>';

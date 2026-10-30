@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.93.2';
-import * as G from './sim.js?v=0.93.2';
-import * as C from './chars.js?v=0.93.2';
-import * as C2 from './chars2d.js?v=0.93.2';
-import * as UI from './ui.js?v=0.93.2';
-import { sfx, music, setAudio } from './audio.js?v=0.93.2';
-import { bm } from './oad_bm.js?v=0.93.2';
-import { installBack } from './oad.js?v=0.93.2';
+import * as D from './data.js?v=0.93.3';
+import * as G from './sim.js?v=0.93.3';
+import * as C from './chars.js?v=0.93.3';
+import * as C2 from './chars2d.js?v=0.93.3';
+import * as UI from './ui.js?v=0.93.3';
+import { sfx, music, setAudio } from './audio.js?v=0.93.3';
+import { bm } from './oad_bm.js?v=0.93.3';
+import { installBack } from './oad.js?v=0.93.3';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
@@ -69,6 +69,10 @@ Object.assign(C.LOOKS, {
   bomi: { ...C.LOOKS.g2, top: 0xF3C8D0, pants: 0xF3C8D0, shawl: 0xFFF6E6 },
   dodam: { ...C.LOOKS.g3, size: 0.95, top: 0xBFD8EE, collar: 0xFFFBF2, collarPat: null, teddy: null, pants: 0xE2D2B4, boots: null, shoe: 0x8A5A3A, speed: 70 },
   heroSkin: { ...C.LOOKS.hero, apron: 0xFFE38A, pocket: 0xF0CC6A, ties: 0xFFE38A, ribbon: 0xF3A9BA },
+  /* 옷장 (v0.2 BM · 같은 원칙: 주색 1 · 보조 1 · 포인트 1) */
+  out_walk: { ...C.LOOKS.hero, chef: false, apron: null, pocket: null, ties: null, ribbon: null, double: false, top: 0xD3ECDD, topPat: ['knit', 0xBFE0CC], collar: 0xFFFBF2, buttons: 0xB98A5E, bucket: 0xFBF1D8, bucketBand: 0xF3A9BA, pants: 0xF2E8D8, rolled: 0xD3ECDD },
+  out_knit: { ...C.LOOKS.hero, chef: false, apron: null, pocket: null, ties: null, ribbon: null, double: false, collar: null, buttons: null, top: 0xC8693A, topPat: ['knit', 0xB05A30], beanie: 0xE6B84A, scarf: 0xF6E2B0, pants: 0x8A6A4A, rolled: 0xC8693A },
+  out_fire: { ...C.LOOKS.hero, chef: false, double: false, ribbon: null, collar: null, top: 0xC0504A, topPat: ['check', 0x6E2A2A], apron: 0x6E9A6A, pocket: 0x5E8A5A, ties: 0x6E9A6A, scarf: 0xF6EAD0, pants: 0x5A4A3A, rolled: 0xC0504A },
 });
 /* 2D 컷아웃 그림 연결 (h = 화면 키 px · 시설 높이의 약 0.8배) */
 /* 키 = 어른 기준(D.ADULT_H = 문 높이 × 0.8) 의 비율 · 실제 화면 키는 × 원근(D.PERSP) */
@@ -87,11 +91,11 @@ world.append(layer.fac); layer.front.dataset.front = 1; document.getElementById(
 /* 3D 캔버스 위에 그려야 하는 것(시설 앞부분) 없음 → 시설은 사람 뒤(z 1), 표지 · 버튼은 사람 앞(taps z 4) */
 const facEl = {};
 /* 단계 그림 (art/fac/st · 필요할 때만 불러옴 — 첫 화면에 보이는 단계만 받음) · 폭을 판 px 로 바로 지정 */
-function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img'); im.className = cls; im.src = IMG('fac/' + (kind || /^[ap]_/.test(s) ? SZ.st : 'st') + '/' + (kind ? kind + '_' + s : s));   /* 시설 단계 · 소품은 계절판(st = 봄 · sta = 가을), 편의 설비는 공통 */ im.draggable = false; im.decoding = 'async'; Object.assign(im.style, { left: x + 'px', top: y + 'px', width: Math.round(w) + 'px' }); return im; }
+function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img'); im.className = cls; im.src = IMG('fac/' + (kind || /^[ap]_/.test(s) ? G.facDir() : 'st') + '/' + (kind ? kind + '_' + s : s));   /* 시설 단계 · 소품은 계절판(st = 봄 · sta = 가을), 편의 설비는 공통 */ im.draggable = false; im.decoding = 'async'; Object.assign(im.style, { left: x + 'px', top: y + 'px', width: Math.round(w) + 'px' }); return im; }
 /* 짝수 레벨마다 시설 둘레에 작은 소품 (화분 · 등불 · 상자 …) — 이 단계 안에서 0~3개 · 자리마다 고정된 종류 (시설 id 로 골라 매번 같음) */
 const PROP_SLOT = [[-0.56, 0.06], [0.56, 0.1], [-0.42, -0.3]];
-function propsAt(id, lv, x, y, w, pk, back) { const n = SEASON === 'autumn' ? Math.min(3, D.propsOf(lv) + 1) : D.propsOf(lv);   /* 가을은 호박 · 담요 · 낙엽 하나를 기본으로 */ let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
-  for (let i = 0; i < n; i++) { const [dx, dy] = PROP_SLOT[i], PL = SZ.props || D.STAGE.props, k = PL[(h + i * 3) % PL.length], im = stImg(null, k, x + dx * w, y + dy * w * 0.5 + (back ? -8 : 0), ((SZ.propM || D.STAGE.propM)[k] || 0.5) * D.PX_M * pk, 'fac prop'); im.dataset.p = id + i; if (i === 2 || back) layer.fac.prepend(im); else layer.fac.append(im); } }
+function propsAt(id, lv, x, y, w, pk, back) { const n = G.facDir() === 'sta' ? Math.min(3, D.propsOf(lv) + 1) : D.propsOf(lv);   /* 가을은 호박 · 담요 · 낙엽 하나를 기본으로 */ let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
+  for (let i = 0; i < n; i++) { const [dx, dy] = PROP_SLOT[i], PL = G.facDir() === 'sta' ? D.SEASONS.autumn.props : D.STAGE.props, k = PL[(h + i * 3) % PL.length], im = stImg(null, k, x + dx * w, y + dy * w * 0.5 + (back ? -8 : 0), ((G.facDir() === 'sta' ? D.SEASONS.autumn.propM : D.STAGE.propM)[k] || 0.5) * D.PX_M * pk, 'fac prop'); im.dataset.p = id + i; if (i === 2 || back) layer.fac.prepend(im); else layer.fac.append(im); } }
 let roofEl = null;   /* 키친 지붕 · 기둥 (배경 조각) — 오븐 단계 그림 앞에 */
 function makeRoof() { const img = document.getElementById('bg'); if (!img.complete || !img.naturalWidth) { img.addEventListener('load', makeRoof, { once: true }); return; }
   const kx = img.naturalWidth / 878, ky = img.naturalHeight / 1560, poly = D.OVEN_ROOF, xs = poly.map(p => p[0]), ys = poly.map(p => p[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0, R = 2;
@@ -188,8 +192,17 @@ const mk = (look, x, y, seed) => {
 const dishOf = (p, line, menuId) => p.is2d ? IMG((D.MENU.find(m => m.id === menuId) || D.MENU.find(m => m.line === line)).img) : C.dish(KIND[line]);
 const drop = p => { if (!p) return; scene.remove(p.root); people.delete(p); };
 let hero = null, lad = null;
-let tryUntil = 0, decoUntil = 0;
-function makeHero() { const at = hero ? [toScreen(hero.root.position)[0], toScreen(hero.root.position)[1]] : D.KITCHEN.stand; drop(hero); hero = mk(S.skin || performance.now() < tryUntil ? C.LOOKS.heroSkin : C.LOOKS.hero, at[0], at[1], 0); hero.face(D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90); if (!hero.is2d) { lad = C.ladle(); hero.J.elbR.add(lad); lad.position.set(0, -18, 0); } else hero.face(D.KITCHEN.oven[0], D.KITCHEN.oven[1]); }
+let tryUntil = 0, decoUntil = 0, tryLook = null, tryPet = false;
+const LOOK_OF = { base: 'hero', skin: 'heroSkin' };
+const curLook = () => { const id = (performance.now() < tryUntil && tryLook) || S.wear || (S.skin ? 'skin' : 'base'); return C.LOOKS[LOOK_OF[id] || id] || C.LOOKS.hero; };
+function makeHero() { const at = hero ? [toScreen(hero.root.position)[0], toScreen(hero.root.position)[1]] : D.KITCHEN.stand; drop(hero); hero = mk(curLook(), at[0], at[1], 0); hero.face(D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90); if (!hero.is2d) { lad = C.ladle(); hero.J.elbR.add(lad); lad.position.set(0, -18, 0); } else hero.face(D.KITCHEN.oven[0], D.KITCHEN.oven[1]); }
+/* 동행 펫 (비숑 몽이) — 셰프 옆을 길 따라 졸졸 · 손님이 가까이 오면 꼬리 흔들기 · 걷는 곳 밖으로는 안 감(길 그래프 경로만) */
+let pet = null, petCheerT = 0; const petCheered = new Map();
+function syncPet() { const want = (S.pet && S.petOn !== false) || (tryPet && performance.now() < tryUntil); if (want && !pet && !USE2D) { const at = hero ? toScreen(hero.root.position) : D.KITCHEN.stand; pet = new C.Pet(at[0] - 26, at[1] + 8, { h: D.ADULT_H * 1.25, collar: 0xF3A9BA }); } else if (!want && pet) { scene.remove(pet.root); pet = null; } }
+function petStep(dt, now) { if (!pet) return; const pp = toScreen(pet.root.position);
+  if (hero && !pet.moving) { const hp = toScreen(hero.root.position), tg = [hp[0] - 28, hp[1] + 10]; if (Math.hypot(tg[0] - pp[0], tg[1] - pp[1]) > 46) { const r = G.walkMap.route(pp, G.walkMap.walkable(tg[0], tg[1]) ? tg : hp); if (r && r.length > 1) pet.goPath(r.slice(1)); } }
+  petCheerT -= dt; if (petCheerT <= 0) { petCheerT = 0.5; for (const v of guests.values()) { if (!v.p) continue; const gp = toScreen(v.p.root.position); if (Math.hypot(gp[0] - pp[0], gp[1] - pp[1]) < 120 && now - (petCheered.get(v) || -99) > 8) { petCheered.set(v, now); pet.cheer(gp[0], gp[1]); break; } } }
+  pet.update(dt, now); }
 const cooks = {};     /* st → { id, p } */
 /* 직원 구별 소품 (3D): 솔 = 긴 국자 · 바다 = 거품기 · 별 = 주문 수첩 · 하루 = 귀에 꽂은 연필 */
 function prop(p, id) { if (p.is2d || !p.J) return; const M = c => new THREE.MeshToonMaterial({ color: c }); const g = new THREE.Group();
@@ -417,6 +430,11 @@ function fullBody(cut) {
     prB.r.render(prB.s, prB.c); bodies[cut] = prB.r.domElement.toDataURL(); prB.s.remove(c.root); } catch { bodies[cut] = IMG('deco/gift'); }
   return bodies[cut];
 }
+const lookArts = {};
+function petArt() {   /* 비숑 몽이 카드 그림 (3D 그대로) */
+  try { const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(240, 280); r.setClearColor(0, 0); const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xFFF4E2, 0xC8B0D0, 1.25)); sc.add(new THREE.AmbientLight(0xE8D4E6, 0.55)); const l = new THREE.DirectionalLight(0xFFF0D8, 1.0); l.position.set(120, 200, 160); sc.add(l);
+    const keep = C.sceneRef.scene; C.sceneRef.scene = sc; const p = new C.Pet(W / 2, H / 2, { h: 165, collar: 0xF3A9BA }); C.sceneRef.scene = keep; p.root.position.set(0, 0, 0); p.excite = 1; p.update(0.016, 0.3); p.root.scale.setScalar(1.9); p.root.rotation.y = 0.6;
+    const c = new THREE.OrthographicCamera(-60, 60, 110, -30, -500, 500); c.position.set(0, 80, 300); c.lookAt(0, 30, 0); r.render(sc, c); const url = r.domElement.toDataURL(); r.dispose(); return url; } catch { return IMG('deco/pup_sit'); } }
 function body3d(key) {   /* 3D 몸 전신 카드 (상품 · 입어 보기) */
   try { const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(240, 300); r.setClearColor(0, 0); const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xFFF4E2, 0xC8B0D0, 1.25)); sc.add(new THREE.AmbientLight(0xE8D4E6, 0.55)); const l = new THREE.DirectionalLight(0xFFEFD2, 1.2); l.position.set(0.7, 1, 0.8); sc.add(l);
     const keep = C.sceneRef.scene; C.sceneRef.scene = sc; const p = C.create('person', { ...C.LOOKS[key], h: 165 }, W / 2, H / 2, 1); C.sceneRef.scene = keep; p.root.position.set(0, 0, 0); p.play('wave'); p.t = 0.8; p.update(0.016, 0.5); p.root.scale.setScalar(1); p.root.rotation.y = 0.35;
@@ -440,7 +458,11 @@ let offlineRes = null;
 if (S.audio) setAudio(S.audio); else if (S.muted) setAudio({ sfx: false, bgm: false });
 setBoot(0.4);
 const ctx = { portrait, save, render, fullBody, pressFx: el => pressFx(el), camTo: (x, y) => camTo(x, y), padWorld: id => id === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === id) || {}).pos, reskin: () => makeHero(), padPos: id => { if (id === 'ovenBody') return F(D.KITCHEN.oven[0] - 20, D.KITCHEN.oven[1] - 30); if (id === 'dish') { const el = [...dishEls.values()][0]; return el ? F(parseFloat(el.style.left), parseFloat(el.style.top)) : null; } const p = id === 'oven' ? D.P(772, 945) : (D.PADS.find(x => x.id === id) || {}).pos; return p && F(...p); },
-  tryOn: sec => { tryUntil = performance.now() + sec * 1000; makeHero(); UI.closeSheet(); setTimeout(() => { if (performance.now() >= tryUntil - 50) { makeHero(); if (!S.skin) UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점에서 만나요'); } }, sec * 1000); },
+  tryOn: (sec, id = 'skin') => { tryUntil = performance.now() + sec * 1000; tryLook = id === 'pet' ? null : id; tryPet = id === 'pet'; makeHero(); syncPet(); UI.closeSheet(); if (camTo(hero ? toScreen(hero.root.position)[0] : 640, (hero ? toScreen(hero.root.position)[1] : 930) - 40, 1.35, true)) {}
+    setTimeout(() => { if (performance.now() >= tryUntil - 50) { tryLook = null; tryPet = false; makeHero(); syncPet(); UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점 꾸미기에서 만나요'); } }, sec * 1000); },
+  wearNow: () => { makeHero(); syncPet(); render(); },
+  lookArt: id => lookArts[id] ||= body3d(LOOK_OF[id] || id),
+  petArt: () => lookArts.pet ||= petArt(),
   previewDeco: sec => { decoUntil = performance.now() + sec * 1000; render(); UI.closeSheet(); burst(...D.SET_POS, 'sparkle', 24); setTimeout(() => { render(); if (!S.shop.deco) UI.toast('미리 보기가 끝났어요'); }, sec * 1000); },
   fx: (k, t) => { const pos = t === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === t) || {}).pos; if (pos) burst(pos[0], pos[1] - 40, 'sparkle', 8); } };
 UI.init(ctx); setTimeout(() => UI.seasonIntro(), 3200);
@@ -449,12 +471,12 @@ const FIRST = ['chef', 'helper', 'hiker'];
 await Promise.all(FIRST.map(n => C2.preload(n).catch(() => null)));
 setTimeout(() => { for (const n of new Set(Object.values(C.LOOKS).map(l => l.cut).filter(Boolean))) C2.preload(n).catch(() => null); }, 1200);
 setBoot(0.6);
-makeHero(); syncStaff(); makeCat(); render(); makeOccluders();
+makeHero(); syncPet(); syncStaff(); makeCat(); render(); makeOccluders();
 /* 첫 30초 (퀄리티 A2): 새 판이면 첫 손님이 이미 데크에서 먹는 중 → 3초 안에 첫 코인 · 다음 손님은 1.2초 뒤 */
 if (!G.quickStart()) R.nextSpawn = 0.3;
 setBoot(0.7);
 bm.hello().then(h => {
-  if (h.ok) { const items = h.items || []; if (items.includes('deco')) S.shop.deco = true; if (items.includes('skin') && !S.skin) { S.skin = true; makeHero(); } S.owner = !!h.owned; render(); }
+  if (h.ok) { const items = h.items || []; if (items.includes('deco')) S.shop.deco = true; if (items.includes('skin') && !S.skin) { S.skin = true; makeHero(); } for (const w of D.WARDROBE) if (w.sku && w.id !== 'skin' && items.includes(w.sku)) G.ownLook(w.id); if (items.includes(D.PET.sku) && !S.pet) { S.pet = true; syncPet(); } if (items.includes(D.FAC_SKIN.sku)) S.fskin = true;   /* 계정에 남은 꾸미기 되살림 */ S.owner = !!h.owned; render(); }
 });
 installBack({ back: () => false });
 bm.hello().then(() => { if (offlineRes) UI.offlinePop(offlineRes); });   /* 광고 2배 버튼은 원어데이 응답 뒤에 */
@@ -473,7 +495,7 @@ if (Q.get('demo') === 'behind') {   /* 확인용: 건물 뒤를 지나는 손님
   const loop = (look, a, b) => { const p = mk(C.LOOKS[look], ...a, 3); const go = (x, y) => { const r = G.walkMap.route(toScreen(p.root.position), [x, y]); walkPath(p, r, G.walkMap.pathLen(r) / 55, () => go(...(x === a[0] ? b : a))); }; go(...b); };
   loop('hiker', D.P(120, 760), D.P(470, 620)); loop('couple', D.P(560, 700), D.P(830, 700)); loop('grandma', D.P(300, 690), D.P(130, 750));
 }
-window.__camp = { G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
+window.__camp = { ctx, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
 
 /* ── 반복 ── */
 const SPEED = Math.max(0.1, +(Q.get('speed') || 1));
@@ -485,7 +507,7 @@ function loop(t) {
   if (gap > 60) { S.lastSeen = S.t; const o = G.offline(S.t + gap); if (o) UI.offlinePop(o); }   /* 오래 떠나 있다 돌아옴 (탭 숨김 등) */
   const dt = Math.min(0.1, rdt) * SPEED; let left = dt; while (left > 0) { const s = Math.min(0.25, left); G.step(s); left -= s; }
   for (const e of G.drain()) onEvent(e);
-  for (const p of people) p.update(Math.min(0.05, rdt), t / 1000);
+  for (const p of people) p.update(Math.min(0.05, rdt), t / 1000); petStep(Math.min(0.05, rdt), t / 1000);
   camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove();
   for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); if (v.p.act === 'eat' && Math.random() < rdt * 0.6) burst(x, y - (v.p.look.h || 60) * D.PERSP(y) - 6, 'heart', 1); }   /* 먹으면서 '맛있다' 하트 */
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 40; const cur = toScreen(s.p.root.position), dst = [h[0] + rnd(-8, 8), h[1] + rnd(-3, 3)]; G.walkMap.addAnchor(dst); walkPath(s.p, G.walkMap.route(cur, dst), G.walkMap.pathLen(G.walkMap.route(cur, dst)) / 40 + 0.3, () => s.p.face(360, 1000, 0.5)); }

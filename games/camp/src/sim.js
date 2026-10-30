@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.93.2';
-import * as W from './walk.js?v=0.93.2';
+import * as D from './data.js?v=0.93.3';
+import * as W from './walk.js?v=0.93.3';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -36,12 +36,13 @@ export const save = () => JSON.parse(JSON.stringify(S));
 /* ── 시즌 (data.js SEASONS · 기기 날짜 또는 ?season= · 봇은 직접 정함) ── 시즌 상태는 S.sea = { id, start(일), prog{키:수}, got[] } · 다른 시즌이 오면 새로 */
 let SEASON = 'spring'; export const season = () => SEASON;
 export function setSeason(id) { SEASON = D.SEASONS[id] ? id : 'spring'; }
+export const facDir = () => SEASON === 'autumn' || (S.fskin && S.fskinOn !== false) ? 'sta' : 'st';   /* 시설 그림 폴더: 가을 시즌 또는 '가을 시설 외형'을 켠 사람 */
 export const seasonOn = id => SEASON === id && !!D.SEASON_EV[id];
 function seaState() { const ev = D.SEASON_EV[SEASON]; if (!ev) return null; if (!S.sea || S.sea.id !== SEASON) { S.sea = { id: SEASON, start: dayNo(S.t), prog: {}, got: [] }; for (const m of D.MENU) if (m.season === SEASON && !S.menu[m.id]) S.menu[m.id] = 1; } return S.sea; }   /* 시즌 첫날: 한정 메뉴 3종 맛 1을 바로 줌 */
 export const seasonDay = () => { const q = seaState(); return q ? Math.min(7, dayNo(S.t) - q.start + 1) : 0; };
 export const seasonList = () => { const q = seaState(); if (!q) return []; const d = seasonDay(); return D.SEASON_EV[SEASON].missions.map((m, i) => ({ ...m, day: i + 1, open: i < d, p: Math.min(m.n, q.prog[m.key] || 0), got: q.got.includes(m.id) })); };
 export function claimSeason(id) { const m = seasonList().find(x => x.id === id); if (!m || !m.open || m.got || m.p < m.n) return null; S.sea.got.push(id); addXp(8); const r = gain(m.r, 'season');
-  if (S.sea.got.length >= D.SEASON_EV[SEASON].missions.length && !S.deco[D.SEASON_EV[SEASON].final.id]) { S.deco[D.SEASON_EV[SEASON].final.id] = 1; on('seasonFinal', { id: D.SEASON_EV[SEASON].final.id }); } return r; }
+  if (S.sea.got.length >= D.SEASON_EV[SEASON].missions.length && !S.deco[D.SEASON_EV[SEASON].final.id]) { S.deco[D.SEASON_EV[SEASON].final.id] = 1; if (SEASON === 'autumn') S.fskin = true;   /* 무료 길: 가을 시설 외형 */ on('seasonFinal', { id: D.SEASON_EV[SEASON].final.id }); } return r; }
 /* 첫 30초 (퀄리티 A2): 새 판이면 첫 손님은 이미 데크에 앉아 먹는 중 → 3초 안에 첫 코인 · 처음 두 접시는 빨리 구움 */
 export function quickStart() {
   if (S.stats.served > 0 || R.guests.length) return false; const seat = R.seats.find(s => s.id === 'L21') || R.seats.find(s => s.id === 'W1') || R.seats[0]; if (!seat) return false;
@@ -149,6 +150,12 @@ export function build(pid) {
   const p = D.PADS.find(x => x.id === pid); S.pads[pid] = { fac: p.fac, lv: 1, base: c }; S.builds++; S.stats.builds++;
   syncWalk(); reroute(); buildSeats(); buildWorkers(); addXp(10); count('build'); on('build', { pid, fac: p.fac }); return null;
 }
+/* 옷장 · 펫 (무료 길: 스탬프 교환 · 골드 구매는 ui 가 bm.spend 뒤 own() 호출) */
+export function ownLook(id) { S.wardrobe = S.wardrobe || {}; S.wardrobe[id] = true; }
+export const hasLook = id => id === 'base' || (id === 'skin' ? !!S.skin : !!(S.wardrobe && S.wardrobe[id]));
+export function wear(id) { if (!hasLook(id)) return '아직 없는 옷이에요'; S.wear = id; return null; }
+export function stampLook(id) { const w = D.WARDROBE.find(x => x.id === id); if (!w || !w.stamp || hasLook(id)) return '바꿀 수 없어요'; if (!spend('stamp', w.stamp)) return '스탬프가 모자라요'; ownLook(id); S.wear = id; return null; }
+export function stampPet() { if (S.pet) return '이미 함께해요'; if (!spend('stamp', D.PET.stamp)) return '스탬프가 모자라요'; S.pet = true; S.petOn = true; return null; }
 export const amenCost = () => D.buildCost(S.builds);
 export function buildAmen(id) {
   if ((S.amen[id] || 0) > 0) return '이미 있어요'; const c = amenCost(); if (!spend('coin', c)) return '숲 코인이 조금 모자라요';

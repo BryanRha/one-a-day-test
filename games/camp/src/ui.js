@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.93.2';
-import * as G from './sim.js?v=0.93.2';
-import { bm } from './oad_bm.js?v=0.93.2';
-import { sfx, setAudio, AUD } from './audio.js?v=0.93.2';
-import { pushBack } from './oad.js?v=0.93.2';
+import * as D from './data.js?v=0.93.3';
+import * as G from './sim.js?v=0.93.3';
+import { bm } from './oad_bm.js?v=0.93.3';
+import { sfx, setAudio, AUD } from './audio.js?v=0.93.3';
+import { pushBack } from './oad.js?v=0.93.3';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -209,7 +209,13 @@ async function act(a, v, w, b, me, repeat) {
   else if (a === 'ad') { return watch(v, w, () => { toast(`${D.ADS[v].name} · 시작!`, true); ctx.render(); }); }
   else if (a === 'gold') return buyGold(v);
   else if (a === 'gpick') return;
-  else if (a === 'try') { if (v === 'skin') ctx.tryOn(15); else ctx.previewDeco(15); return toast(v === 'skin' ? '15초 동안 입어 볼게요 · 셰프를 봐 주세요!' : '15초 동안 잔디 왼쪽에 놓아 볼게요', true); }
+  else if (a === 'wear') { err = G.wear(v); if (!err) { sfx('unlock'); ctx.wearNow(); toast(`${D.WARDROBE.find(w => w.id === v).name}${josa(D.WARDROBE.find(w => w.id === v).name, '으로/로')} 갈아입었어요`, true); } }
+  else if (a === 'stampw') { err = G.stampLook(v); if (!err) { sfx('box', { rar: 's' }); confetti(24); ctx.wearNow(); toast('새 옷을 받았어요 · 바로 입었어요!', true); } }
+  else if (a === 'stampp') { err = G.stampPet(); if (!err) { sfx('box', { rar: 's' }); confetti(24); ctx.wearNow(); toast('몽이가 캠프에 왔어요!', true); } }
+  else if (a === 'peton') { S.petOn = S.petOn === false; ctx.wearNow(); toast(S.petOn ? '몽이와 함께해요' : '몽이는 텐트에서 쉬어요', true); }
+  else if (a === 'fskin') { S.fskinOn = S.fskinOn === false; ctx.render(); toast(S.fskinOn ? '시설이 가을 모습이 됐어요' : '시설이 봄 모습으로 돌아왔어요', true); }
+  else if (a === 'try' && v !== 'skin' && v !== 'deco') { ctx.tryOn(15, v); return toast(v === 'pet' ? '15초 동안 몽이와 함께해 볼게요!' : '15초 동안 입어 볼게요 · 셰프를 봐 주세요!', true); }
+  else if (a === 'try') { if (v === 'skin') ctx.tryOn(15, 'skin'); else ctx.previewDeco(15); return toast(v === 'skin' ? '15초 동안 입어 볼게요 · 셰프를 봐 주세요!' : '15초 동안 잔디 왼쪽에 놓아 볼게요', true); }
   else if (a === 'charge') { const r = G.claimCharge(v); if (r) { flyR(r, at); sfx('gift'); ctx.render(); } }
   if (err) return nope(b, err);
   ctx.save(); if (me) { me.refresh(true); bump(me, b.closest('[data-k]') && b.closest('[data-k]').dataset.k); }
@@ -236,6 +242,11 @@ const GOLD = {
   gems300: { name: '솔방울 330개', n: 330, bonus: 10, give: () => { S.gem += 330; } },
   gems1000: { name: '솔방울 1,200개', n: 1200, bonus: 20, give: () => { S.gem += 1200; } },
   deco: { name: D.DECO_SHOP.deco.name, desc: `벚꽃나무 아래 벤치 · 튤립 화단 · 종이 등불 · 잔디 왼쪽에 놓여요 · 매력 +${D.DECO_SHOP.deco.appeal} (손님이 조금 더 자주 와요)`, art: () => IMG('deco/set_sakura'), item: true, own: () => S.shop.deco, give: () => { S.shop.deco = true; } },
+  out_walk: { name: '셰프 의상 · 봄 산책', item: true, own: () => G.hasLook('out_walk'), give: () => { G.ownLook('out_walk'); S.wear = 'out_walk'; ctx.wearNow(); } },
+  out_knit: { name: '셰프 의상 · 가을 니트', item: true, own: () => G.hasLook('out_knit'), give: () => { G.ownLook('out_knit'); S.wear = 'out_knit'; ctx.wearNow(); } },
+  out_fire: { name: '셰프 의상 · 밤 캠프파이어', item: true, own: () => G.hasLook('out_fire'), give: () => { G.ownLook('out_fire'); S.wear = 'out_fire'; ctx.wearNow(); } },
+  pet_bichon: { name: D.PET.name, item: true, own: () => !!S.pet, give: () => { S.pet = true; S.petOn = true; ctx.wearNow(); } },
+  skin_autumn: { name: D.FAC_SKIN.name, item: true, own: () => !!S.fskin, give: () => { S.fskin = true; S.fskinOn = true; ctx.render(); } },
   skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 매력 +${D.DECO_SHOP.skin.appeal}`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
 };
 async function buyGold(sku) {
@@ -353,6 +364,16 @@ const PANELS = {
       for (const r of ['s', 'r', 'n']) h += `<div class="sec">${D.RARITY[r].name} · ${D.RARITY[r].p * 100}%</div>` + D.DECO.filter(d => d.rar === r).map(d => card(d.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ` · ${S.deco[d.id]}개` : ''}`, S.deco[d.id] ? '<b style="color:#5E9E82">✓</b>' : '', { cls: S.deco[d.id] ? 'done' : 'lock' })).join('');
       return h; }
     /* 꾸미기: 특별 상품(전용 그림 · 미리 보기) → 스탬프 교환 */
+    /* 옷장 · 동행 · 시설 외형 (능력치 0 · 입어 보기 · 무료 길 = 스탬프) */
+    h += `<div class="sec">옷장 · 동행 · 외형 — 모습만 바뀌어요 (능력치 없음) · 입어 보기 무료</div>`;
+    const gbtn = sku => { const p = bm.info.ok && bm.price(sku); return p ? btn('gold:' + sku, `${ic('gold')} ${p}`, 'yl') : ''; };
+    for (const w of D.WARDROBE) { const own = G.hasLook(w.id), worn = (S.wear || (S.skin ? 'skin' : 'base')) === w.id; if (w.id === 'skin' && !own) continue;
+      h += `<div class="card" data-k="w${w.id}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:14px;align-items:center"><div class="im" style="width:120px;height:140px;background:#FFF6E6"><img src="${ctx.lookArt(w.id)}" style="width:116px;height:136px"></div><div class="tx"><b>${w.name}</b><span>${w.desc}</span></div></div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">${worn ? '<b style="color:#5E9E82;flex:1;text-align:center">입고 있어요 ✓</b>' : own ? btn('wear:' + w.id, '입기', 'go') : `${btn('try:' + w.id, '입어 보기', 'sky')}${gbtn(w.sku)}${w.stamp ? btn('stampw:' + w.id, `${ic('stamp')} ${w.stamp}`, 'go', S.stamp < w.stamp) : ''}`}</div></div>`; }
+    { const own = !!S.pet; h += `<div class="card" data-k="pet" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:14px;align-items:center"><div class="im" style="width:120px;height:140px;background:#EEF4FB"><img src="${ctx.petArt()}" style="width:116px;height:136px"></div><div class="tx"><b>${D.PET.name}</b><span>${D.PET.desc}</span></div></div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">${own ? btn('peton', S.petOn === false ? '데리고 다니기' : '텐트에서 쉬게 하기', S.petOn === false ? 'go' : 'sky') : `${btn('try:pet', '함께해 보기', 'sky')}${gbtn(D.PET.sku)}${btn('stampp', `${ic('stamp')} ${D.PET.stamp}`, 'go', S.stamp < D.PET.stamp)}`}</div></div>`; }
+    { const own = !!S.fskin; h += `<div class="card" data-k="fskin" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:14px;align-items:center"><div class="im" style="width:120px;height:140px;background:#FBE3CC"><img src="${IMG('fac/sta/tent_3')}" style="width:112px;height:auto;max-height:132px;object-fit:contain"></div><div class="tx"><b>${D.FAC_SKIN.name}</b><span>${D.FAC_SKIN.desc} · 무료 길: ${D.FAC_SKIN.free}</span></div></div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">${own ? (G.season() === 'autumn' ? '<b style="color:#5E9E82;flex:1;text-align:center">가지고 있어요 ✓ · 지금은 가을이에요</b>' : btn('fskin', S.fskinOn === false ? '가을 모습 켜기' : '봄 모습으로', 'go')) : gbtn(D.FAC_SKIN.sku) || '<small>원어데이 앱에서 살 수 있어요</small>'}</div></div>`; }
     if (bm.info.ok) { h += `<div class="sec">특별 꾸미기 · 원어데이 골드 · 계정에 남아요</div>`;
       for (const k of ['skin', 'deco']) { const g = GOLD[k], p = bm.price(k); if (!p) continue; const own = g.own();
         h += `<div class="card" data-k="g${k}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:14px;align-items:center"><div class="im" style="width:150px;height:170px;background:${k === 'skin' ? '#FFF6D0' : '#FCEFF2'}"><img src="${g.art()}" style="width:146px;height:166px"></div><div class="tx"><b>${g.name}</b><span>${g.desc}</span></div></div>

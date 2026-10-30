@@ -262,3 +262,48 @@ Object.assign(LOOKS, {
 const REG = { person: (look, sx, sy, seed) => new Person(look, sx, sy, seed) };
 export const register = (kind, f) => { REG[kind] = f; };
 export const create = (kind, look, sx, sy, seed) => (REG[kind] || REG.person)(look, sx, sy, seed);
+
+/* ── 동행 펫 · 비숑 (v0.2 BM · 능력치 없음) — 마루미 계열: 동글동글 털뭉치 · 같은 툰 · 같은 외곽선 · 같은 원근/앞뒤 규칙
+   셰프 옆을 길 따라 졸졸 · 손님이 가까이 오면 그쪽을 보고 꼬리를 세차게 흔들며 콩콩 뜀 · 가만히 있으면 앉아서 숨 고르기 */
+export class Pet {
+  constructor(sx, sy, o = {}) {
+    const W_ = o.fur || 0xFFFBF4, C_ = o.ear || 0xF4E6D4, root = new THREE.Group(), J = {};
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(30, 24), new THREE.MeshBasicMaterial({ map: shadowTex(), color: 0x6A4A5A, transparent: true, opacity: 0.4, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.5; sh.scale.set(0.8, 1.15, 1); sh.renderOrder = -2; root.add(sh); J.shadow = sh;
+    const bd = new THREE.Group(); bd.position.y = 17; root.add(bd); J.body = bd;
+    part(bd, sph(14), W_).scale.set(1, 0.86, 1.32);
+    for (const [x, y, z, r] of [[-9, 3, 6, 7], [9, 3, 6, 7], [-9, 2, -8, 7], [9, 2, -8, 7], [0, 9, -2, 8], [0, -4, 12, 7]]) part(bd, sph(r), W_, x, y, z, false);   /* 털뭉치 */
+    J.legs = [[-7, 9], [7, 9], [-7, -10], [7, -10]].map(([x, z]) => { const g = new THREE.Group(); g.position.set(x, 10, z); bd.parent.add(g); part(g, cap(4, 5), W_, 0, -5, 0); part(g, sph(4.6), W_, 0, -9.5, 1, false); return g; });
+    const hd = new THREE.Group(); hd.position.set(0, 33, 15); root.add(hd); J.head = hd;
+    part(hd, sph(13), W_).scale.set(1.05, 0.95, 0.95); part(hd, sph(10), W_, 0, 9, -2, false); part(hd, sph(6.5), W_, -8, -3, 4, false); part(hd, sph(6.5), W_, 8, -3, 4, false);
+    J.ears = [-1, 1].map(s => { const g = new THREE.Group(); g.position.set(s * 11, 3, -1); hd.add(g); part(g, sph(6), C_, 0, -6, 0).scale.set(0.75, 1.35, 0.7); return g; });
+    part(hd, sph(5.5), 0xFFFFFF, 0, -5, 10, false).scale.set(1.15, 0.8, 0.9);   /* 주둥이 */
+    for (const s of [-1, 1]) { part(hd, sph(2.3), 0x2E2420, s * 5, 1.5, 11.5, false); part(hd, sph(0.8), 0xFFFFFF, s * 5 + 0.8, 2.6, 13.4, false); part(hd, sph(2.2), 0xF6B8C4, s * 8.5, -3.5, 9.5, false).scale.set(1, 0.6, 0.4); }   /* 눈 · 반짝 · 볼터치 */
+    part(hd, sph(2.1), 0x2E2420, 0, -2.6, 15.4, false); J.tongue = part(hd, cap(1.6, 1.6), 0xF08A9A, 0, -8, 13, false); J.tongue.visible = false;
+    const tl = new THREE.Group(); tl.position.set(0, 24, -17); root.add(tl); J.tail = tl; part(tl, sph(6.5), W_, 0, 6, -3); part(tl, sph(4.5), W_, 0, 10, -1, false);
+    if (o.collar) { const c = part(hd, new THREE.TorusGeometry(9, 1.8, 8, 20), o.collar, 0, -9, -2, false); c.rotation.x = Math.PI / 2 - 0.3; }
+    this.root = root; this.J = J; sceneRef.scene.add(root); this.k0 = (o.h || 60) / 165; root.scale.setScalar(this.k0); root.position.copy(toWorld(sx, sy));
+    this.meshes = []; root.traverse(m => { if (m.isMesh) this.meshes.push([m, m.renderOrder || 0]); });
+    this.path = []; this.speed = o.speed || 92; this.yaw = 0; this.t = 0; this.excite = 0; this.lookAt = null; this.idleT = 0; this.ph = 0;
+  }
+  goPath(pts) { this.path = pts.map(([x, y]) => toWorld(x, y)); }
+  cheer(sx, sy) { this.excite = 1.6; this.lookAt = toWorld(sx, sy); }   /* 손님을 보고 꼬리 흔들기 */
+  get moving() { return this.path.length > 0; }
+  update(dt, now) {
+    this.t += dt; const P = this.root.position, J = this.J; let v = 0;
+    if (this.path.length) { const tg = this.path[0], dx = tg.x - P.x, dz = tg.z - P.z, d = Math.hypot(dx, dz);
+      if (d < 2) this.path.shift(); else { const yt = Math.atan2(dx, dz); this.yaw += angDiff(this.yaw, yt) * Math.min(1, dt * 9); const st = Math.min(d, this.speed * dt); P.x += dx / d * st; P.z += dz / d * st; v = st / dt; } this.idleT = 0; }
+    else { this.idleT += dt; if (this.lookAt) { const yt = Math.atan2(this.lookAt.x - P.x, this.lookAt.z - P.z); this.yaw += angDiff(this.yaw, yt) * Math.min(1, dt * 6); } }
+    this.root.rotation.y = this.yaw; this.excite = Math.max(0, this.excite - dt); if (this.excite <= 0) this.lookAt = null;
+    /* 걷기: 종종걸음 (다리 4개 엇갈림 · 몸 통통) · 신남: 콩콩 뛰기 · 가만히: 앉아 숨 고르기 */
+    this.ph += dt * (v > 1 ? 16 : this.excite > 0 ? 13 : 3);
+    const walk = v > 1, hop = !walk && this.excite > 0 ? Math.abs(Math.sin(this.ph)) * 5 : 0, sit = !walk && this.excite <= 0 && this.idleT > 1.2;
+    J.legs.forEach((g, i) => { g.rotation.x = walk ? Math.sin(this.ph + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.7 : 0; });
+    J.body.position.y = 17 + (walk ? Math.abs(Math.sin(this.ph)) * 1.6 : 0) + hop - (sit ? 3 : 0); J.body.rotation.x = sit ? -0.28 : 0; J.head.position.y = 33 + hop - (sit ? 1 : 0) + (walk ? Math.abs(Math.sin(this.ph)) * 1.2 : 0);
+    J.legs[2].position.y = J.legs[3].position.y = sit ? 6 : 10;
+    const wag = this.excite > 0 ? 18 : walk ? 9 : 4; J.tail.rotation.z = Math.sin(now * wag) * (this.excite > 0 ? 0.7 : 0.35); J.tail.rotation.x = -0.3;
+    J.head.rotation.set(sit ? 0.08 : 0, 0, Math.sin(now * 1.7) * 0.06 + (this.excite > 0 ? Math.sin(now * 9) * 0.12 : 0)); for (const [i, e] of J.ears.entries()) e.rotation.z = (i ? -1 : 1) * (0.1 + (walk || this.excite > 0 ? Math.abs(Math.sin(this.ph)) * 0.35 : 0));
+    J.tongue.visible = this.excite > 0 || (sit && Math.sin(now * 0.7) > 0.3); if (J.tongue.visible) J.tongue.position.y = -8 - Math.abs(Math.sin(now * 8)) * 0.8;
+    J.shadow.scale.set(0.8 - hop * 0.02, 1.15 - hop * 0.03, 1);
+    const sy = P.z * Math.sin(EL) + 780; this.persp = PERSP(sy); this.root.scale.setScalar(this.k0 * this.persp); const base = Math.round((sy + 220) * 10); for (const [m, off] of this.meshes) m.renderOrder = base + off;
+  }
+}
