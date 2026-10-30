@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.93.1';
-import * as W from './walk.js?v=0.93.1';
+import * as D from './data.js?v=0.93.2';
+import * as W from './walk.js?v=0.93.2';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -30,9 +30,18 @@ export function load(obj, now) {
 }
 export function resetRun() {   /* 저장 안 되는 진행 초기화 (연속으로 여러 판 해도 남지 않게) */
   R.guests = []; R.orders = []; R.ready = []; R.tips = []; R.cheer = {}; R.combo = { n: 0, t: -9 }; R.tapStats = { dish: 0, cheer: 0, tip: 0, bonus: 0, cloud: 0, gift: 0, visit: 0 }; R.cloud = null; R.giftBox = null; R.visitor = null; R.nextCloud = null; R.nextGift = null; R.nextVisitor = null; R.gifts = []; R.ev = []; R.rateWin = []; R.nextSpawn = 2; R.earned = 0; R.regToday = null; R.gid = 0; R.seats = []; R.servers = []; R.stations = null;
-  W.setMap(D.WALKMAP.spring); W.setGraph(D.WALKGRAPH.spring); syncWalk(); buildSeats(); buildWorkers();
+  W.setMap(D.WALKMAP[SEASON] || D.WALKMAP.spring); W.setGraph(D.WALKGRAPH[SEASON] || D.WALKGRAPH.spring); seaState(); syncWalk(); buildSeats(); buildWorkers();
 }
 export const save = () => JSON.parse(JSON.stringify(S));
+/* ── 시즌 (data.js SEASONS · 기기 날짜 또는 ?season= · 봇은 직접 정함) ── 시즌 상태는 S.sea = { id, start(일), prog{키:수}, got[] } · 다른 시즌이 오면 새로 */
+let SEASON = 'spring'; export const season = () => SEASON;
+export function setSeason(id) { SEASON = D.SEASONS[id] ? id : 'spring'; }
+export const seasonOn = id => SEASON === id && !!D.SEASON_EV[id];
+function seaState() { const ev = D.SEASON_EV[SEASON]; if (!ev) return null; if (!S.sea || S.sea.id !== SEASON) { S.sea = { id: SEASON, start: dayNo(S.t), prog: {}, got: [] }; for (const m of D.MENU) if (m.season === SEASON && !S.menu[m.id]) S.menu[m.id] = 1; } return S.sea; }   /* 시즌 첫날: 한정 메뉴 3종 맛 1을 바로 줌 */
+export const seasonDay = () => { const q = seaState(); return q ? Math.min(7, dayNo(S.t) - q.start + 1) : 0; };
+export const seasonList = () => { const q = seaState(); if (!q) return []; const d = seasonDay(); return D.SEASON_EV[SEASON].missions.map((m, i) => ({ ...m, day: i + 1, open: i < d, p: Math.min(m.n, q.prog[m.key] || 0), got: q.got.includes(m.id) })); };
+export function claimSeason(id) { const m = seasonList().find(x => x.id === id); if (!m || !m.open || m.got || m.p < m.n) return null; S.sea.got.push(id); addXp(8); const r = gain(m.r, 'season');
+  if (S.sea.got.length >= D.SEASON_EV[SEASON].missions.length && !S.deco[D.SEASON_EV[SEASON].final.id]) { S.deco[D.SEASON_EV[SEASON].final.id] = 1; on('seasonFinal', { id: D.SEASON_EV[SEASON].final.id }); } return r; }
 /* 첫 30초 (퀄리티 A2): 새 판이면 첫 손님은 이미 데크에 앉아 먹는 중 → 3초 안에 첫 코인 · 처음 두 접시는 빨리 구움 */
 export function quickStart() {
   if (S.stats.served > 0 || R.guests.length) return false; const seat = R.seats.find(s => s.id === 'L21') || R.seats.find(s => s.id === 'W1') || R.seats[0]; if (!seat) return false;
@@ -83,6 +92,7 @@ export const stLv = st => st === 'oven' ? S.oven.lv : (S.pads[(padOf(st) || {}).
 /* ── 값 계산 ── */
 export const menuOpen = m => {
   const need = { 1: null, 2: 'fridge', 3: 'sink', 4: 'toaster', 5: 'micro', 6: 'micro' }[m.step];
+  if (m.season) return seasonOn(m.season);   /* 시즌 한정: 그 시즌에만 (설비 조건 없음 · 누구나) */
   return (!need || (S.amen[need] || 0) > 0) && (m.step < 6 || S.lv >= 12);
 };
 export const menuLv = m => S.menu[m.id] || 0;
@@ -91,15 +101,20 @@ export function staffBonus(line) {
   for (const st of D.STAFF) { const o = S.staff[st.id]; if (!o) continue; if (st.skill.line === line || st.skill.line === 'all') k += st.skill.k * (1 + o.fav * 0.1); k += D.FAV_BONUS[o.fav - 1] * 0.25; crit += D.FAV_CRIT[o.fav - 1] * 0.25; }
   return { k, crit };
 }
-export const appeal = () => Object.entries(S.deco).reduce((a, [id, n]) => a + (n ? (D.DECO.find(d => d.id === id) || { appeal: 0 }).appeal : 0), 0) + (S.shop.deco ? D.DECO_SHOP.deco.appeal : 0) + (S.skin ? D.DECO_SHOP.skin.appeal : 0) + (S.owner ? D.OWNER_DECO.appeal : 0);
+export const appeal = () => Object.entries(S.deco).reduce((a, [id, n]) => a + (n ? (D.DECO.find(d => d.id === id) || { appeal: 0 }).appeal : 0), 0) + (S.shop.deco ? D.DECO_SHOP.deco.appeal : 0) + (S.skin ? D.DECO_SHOP.skin.appeal : 0) + (S.owner ? D.OWNER_DECO.appeal : 0) + (S.deco && S.deco.harvest ? D.SEASON_EV.autumn.final.appeal : 0);
+function basePrice(m, mlv, vip = 1) { const line = D.LINES.find(l => l.id === m.line), lv = stLv(line.st), sb = staffBonus(m.line);
+  return D.TAP.priceK * D.price0(m) * D.menuMult(mlv) * D.UP.effK ** (lv - 1) * (1 + 0.5 * D.tierOf(lv)) * (1 + sb.k) * vip * (1 + appeal() * 0.004); }
 export function dishPrice(m, vip = 1) {
+  if (m.season) { const best = D.MENU.filter(x => !x.season && x.line === m.line && menuLv(x) > 0).reduce((a, x) => Math.max(a, dishPrice(x, vip)), 0);   /* 시즌 메뉴 = 그 라인에서 지금 가장 비싼 메뉴의 1.2배 (초반 진도를 깨지 않고, 후반에도 쓸모 있게) */
+    const m0 = D.MENU.find(x => !x.season && x.line === m.line && x.step === 1);   /* 아직 그 라인 메뉴가 없으면 1단계 메뉴 값 기준 */
+    return (best || basePrice(m0, 1, vip)) * D.SEASON_PREM * D.menuMult(menuLv(m)); }
   const line = D.LINES.find(l => l.id === m.line), lv = stLv(line.st), sb = staffBonus(m.line);
   return D.TAP.priceK * D.price0(m) * D.menuMult(menuLv(m)) * D.UP.effK ** (lv - 1) * (1 + 0.5 * D.tierOf(lv)) * (1 + sb.k) * vip * (1 + appeal() * 0.004);
 }
 export const critP = line => Math.min(0.6, D.CRIT.base + staffBonus(line).crit + (buffOn('crit') ? D.CRIT.adP : 0));
 export const buffOn = k => (S.buff[k] || 0) > S.t;
 export const cycleOf = st => { const l = D.LINES.find(x => x.st === st); return l.cycle / (buffOn('speed') ? 2 : 1) / (1 + 0.15 * D.tierOf(stLv(st))); };
-export function menuFor(st) { const line = D.LINES.find(l => l.st === st).id; return D.MENU.filter(m => m.line === line && menuLv(m) > 0); }
+export function menuFor(st) { const line = D.LINES.find(l => l.st === st).id; return D.MENU.filter(m => m.line === line && menuLv(m) > 0 && (!m.season || seasonOn(m.season))); }
 /* 지금 수입/초 추정 (보상 = 수입 × N초 · 쉬는 동안 정산) */
 export function incomeRate() {
   let r = 0; const seatCap = R.seats.length, flow = Math.min(seatCap / 9, 1 / spawnGap());
@@ -213,7 +228,7 @@ export function petCat() { if (S.t - (S.catPet || 0) < 600) return null; S.catPe
 
 /* ── 미션 · 출석 · 플레이 시간 ── */
 function daily() { const d = dayNo(S.t); if (S.daily.day !== d) S.daily = { day: d, prog: {}, got: {}, all: false }; return S.daily; }
-export function count(id, n = 1) { const d = daily(); d.prog[id] = (d.prog[id] || 0) + n; }
+export function count(id, n = 1) { const d = daily(); d.prog[id] = (d.prog[id] || 0) + n; const q = seaState(); if (q) q.prog[id] = (q.prog[id] || 0) + n; }
 export const dailyList = () => { const d = daily(); return D.DAILY.map(m => ({ ...m, p: Math.min(m.n, d.prog[m.id] || 0), got: !!d.got[m.id] })); };
 export function claimDaily(id) { const d = daily(), m = D.DAILY.find(x => x.id === id); if (!m || d.got[id] || (d.prog[id] || 0) < m.n) return null; d.got[id] = true; addXp(6); return gain(m.r, 'daily'); }
 export const dailyAllReady = () => { const d = daily(); return !d.all && D.DAILY.every(m => d.got[m.id]); };
@@ -336,7 +351,7 @@ function order(g, again) {
 function payCoins(g, tap) {   /* 값 받기 (누른 접시는 건네는 순간 바로 · 아니면 다 먹고 나서) */
   const m = D.MENU.find(x => x.id === g.menu); const crit = RNG() < critP(m.line); let c = dishPrice(m, g.seat.vip || 1) * (crit ? D.CRIT.mult : 1) * (g.tapMult || g.autoMult || 1);
   if (g.tapMult) R.tapStats.bonus += Math.ceil(c - c / g.tapMult);
-  c = Math.ceil(c); S.coin += c; S.stats.earned += c; R.earned += c; S.stats.served++; count('serve'); if (crit) { S.stats.crits++; count('crit'); }
+  c = Math.ceil(c); S.coin += c; S.stats.earned += c; R.earned += c; S.stats.served++; count('serve'); if (m.season) count('smenu'); if (crit) { S.stats.crits++; count('crit'); }
   addXp(1); const wait = Math.max(0, S.t - (g.orderT || S.t)), stars = Math.max(3, Math.min(5, 5 - Math.floor(Math.max(0, wait - 6) / 9) + (tap ? 0 : 0))); S.rep = S.rep || { avg: 4.5, n: 0 }; S.rep.n++; S.rep.avg += (stars - S.rep.avg) * 0.06; if (stars === 5) count('star5');   /* 빨리 받을수록 별이 많음 */
   on('paid', { g, c, crit, tap: !!tap, stars }); g.prepaid = true; return c;
 }
@@ -386,7 +401,7 @@ function visitorTick(dt) {
   if (!R.visitor) { R.nextVisitor -= dt; if (R.nextVisitor <= 0 && S.lv >= D.VISITOR.needLv && S.visit.n < D.VISITOR.perDay) { R.nextVisitor = rnd(...D.VISITOR.every); R.visitor = { id: ++R.gid, pos: [...D.VISIT_SPOT], end: S.t + D.VISITOR.life }; on('visitor', { v: R.visitor, path: W.route(D.ENTRY[1], D.VISIT_SPOT) }); } return; }
   if (S.t >= R.visitor.end) { on('visitorGone', { v: R.visitor, path: W.route(D.VISIT_SPOT, D.ENTRY[1]) }); R.visitor = null; }
 }
-export function tapVisitor() { const v = R.visitor; if (!v) return null; S.visit.n++; const got = gain({ coin: Math.ceil(Math.max(100, incomeRate() * D.VISITOR.sec)) }, 'visitor'); R.tapStats.visit = (R.tapStats.visit || 0) + 1; on('visitorGone', { v, path: W.route(D.VISIT_SPOT, D.ENTRY[1]), got }); R.visitor = null; return got; }
+export function tapVisitor() { const v = R.visitor; if (!v) return null; S.visit.n++; const sg = D.SEASON_EV[SEASON] && D.SEASON_EV[SEASON].guest; const got = gain({ coin: Math.ceil(Math.max(100, incomeRate() * D.VISITOR.sec) * (sg ? sg.mult : 1)) }, 'visitor'); count('visit'); R.tapStats.visit = (R.tapStats.visit || 0) + 1; on('visitorGone', { v, path: W.route(D.VISIT_SPOT, D.ENTRY[1]), got }); R.visitor = null; return got; }
 export function tapDish(st) {
   const i = R.ready.findIndex(o => o.st === st && (R.guests.find(g => g.id === o.gid) || {}).st === 'wait'); if (i < 0) return null;
   const o = R.ready.splice(i, 1)[0], g = R.guests.find(x => x.id === o.gid); g.st = 'eat'; g.left = 3.2; g.tapMult = comboHit(); R.tapStats.dish++; count('tapsell'); S.stats.tapsold = (S.stats.tapsold || 0) + 1;

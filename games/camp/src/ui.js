@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.93.1';
-import * as G from './sim.js?v=0.93.1';
-import { bm } from './oad_bm.js?v=0.93.1';
-import { sfx, setAudio, AUD } from './audio.js?v=0.93.1';
-import { pushBack } from './oad.js?v=0.93.1';
+import * as D from './data.js?v=0.93.2';
+import * as G from './sim.js?v=0.93.2';
+import { bm } from './oad_bm.js?v=0.93.2';
+import { sfx, setAudio, AUD } from './audio.js?v=0.93.2';
+import { pushBack } from './oad.js?v=0.93.2';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -100,7 +100,7 @@ export function dots() {
   const menuNew = D.MENU.some(m => G.menuOpen(m) && G.menuLv(m) === 0 && S.coin >= G.menuNewCost(m) && lineReady(m.line));
   const menuUp = D.MENU.some(m => G.menuLv(m) > 0 && G.menuLv(m) < D.MENU_MAX && S.rp >= D.menuCost(m, G.menuLv(m)));
   const staff = D.STAFF.some(s => !S.staff[s.id] && S.coin >= s.cost) || D.REGULARS.some(r => (S.regs[r.id] || {}).fav > (S.regs[r.id] || {}).read);
-  const mis = G.dailyList().filter(m => !m.got && m.p >= m.n).length + (G.dailyAllReady() ? 1 : 0) + G.repeatList().filter(q => !q.done && q.have >= q.need).length + (G.attendReady() ? 1 : 0) + G.playReady().filter(p => p.ready).length;
+  const mis = G.dailyList().filter(m => !m.got && m.p >= m.n).length + (G.dailyAllReady() ? 1 : 0) + G.repeatList().filter(q => !q.done && q.have >= q.need).length + (G.attendReady() ? 1 : 0) + G.playReady().filter(p => p.ready).length + G.seasonList().filter(m => m.open && !m.got && m.p >= m.n).length;
   const shop = (bm.info.ok && G.adLeft('box') > 0 && bm.info.ads.reward) || S.gem >= D.BOX.cost;
   const T = barEl.querySelectorAll('.tab');
   if (tutOn()) { const tab = tutTab(); TABS.forEach((t, i) => setDot(T[i], t.id === tab)); setDot($('#sAtt'), false); setDot($('#sPlay'), false); return; }   /* 안내 중에는 안내가 가리키는 한 곳만 (퀄리티 A2) */
@@ -198,6 +198,7 @@ async function act(a, v, w, b, me, repeat) {
   else if (a === 'feed') { const lvB = S.staff[v].fav; err = G.feed(v, w === 'big'); if (!err) { sfx('heart'); fly('heart', at[0], at[1], 0); numPop(at[0], at[1] - 40, S.staff[v].fav > lvB ? '더 친해졌어요!' : '맛있어요!'); } }
   else if (a === 'story') return storyPop(v, +w, true);
   else if (a === 'daily') { const r = G.claimDaily(v); if (r) flyR(r, at); }
+  else if (a === 'season') { const r = G.claimSeason(v); if (r) { flyR(r, at); sfx('gift'); } }
   else if (a === 'dailyAll') { const r = G.claimDailyAll(); if (r) { flyR(r, at); confetti(30); sfx('level'); } }
   else if (a === 'repeat') { const r = G.claimRepeat(v); if (r) flyR(r, at); }
   else if (a === 'attend') { closeSheet(); return attendPop(); }
@@ -291,12 +292,12 @@ const PANELS = {
     const line = D.LINES.find(l => l.id === sub); let h = '';
     if (!lineReady(sub)) h += `<div class="odds">${sub === 'soup' ? '무쇠 솥을 짓고 요리사 <b>솔</b>을 고용하면 수프를 팔아요' : '음료 바를 짓고 요리사 <b>바다</b>(또는 솔)를 고용하면 음료를 팔아요'}</div>`;
     else h += `<div class="sec">맛을 올리면 한 접시 값이 올라요 · ${line.name} ${G.cycleOf(line.st).toFixed(1)}초에 하나</div>`;
-    for (const m of D.MENU.filter(x => x.line === sub)) { const lv = G.menuLv(m), open = G.menuOpen(m); let right, s;
+    for (const m of D.MENU.filter(x => x.line === sub && (!x.season || G.seasonOn(x.season))).sort((a, b) => !!b.season - !!a.season)) { const lv = G.menuLv(m), open = G.menuOpen(m); let right, s;
       if (!open) { const need = { 2: 'fridge', 3: 'sink', 4: 'toaster', 5: 'micro', 6: 'micro' }[m.step]; s = m.step === 6 && S.amen.micro ? '레벨 12부터' : `${D.AMEN[need].name}${josa(D.AMEN[need].name)} 있으면 열려요`; right = ''; }
       else if (lv === 0) { const c = G.menuNewCost(m); s = `새 메뉴 · 한 접시 ${fmt(D.price0(m))}부터`; right = btn('menu:' + m.id, `출시<small>${ic('coin')}${fmt(c)}</small>`, 'pk', S.coin < c, 'style="flex-direction:column;min-width:150px"'); }
       else if (lv >= D.MENU_MAX) { s = `한 접시 ${fmt(G.dishPrice(m))} · 최고 맛`; right = '<b style="color:#5E9E82">최고 ✓</b>'; }
       else { const c = D.menuCost(m, lv); s = `한 접시 ${fmt(G.dishPrice(m))} → ${fmt(G.dishPrice(m) * 1.22)}`; right = btn('menu:' + m.id, `맛 올리기<small>${ic('rp')}${fmt(c)}</small>`, 'go', S.rp < c, 'style="flex-direction:column;min-width:150px"'); }
-      h += card(m.id, IMG(m.img), `${m.name}${lv ? ` <small style="font-size:18px">맛 ${lv}/${D.MENU_MAX}</small>` : ''}`, s, right, { cls: open ? '' : 'lock', bar: lv ? lv / D.MENU_MAX : null, bg: { bread: '#FDE7D4', soup: '#DDF2E8', drink: '#DCEBF8' }[sub] }); }
+      h += card(m.id, IMG(m.img), `${m.season ? `<span class="seab"><img src="${IMG('ui/leaf')}" alt="">${D.SEASONS[m.season].name.split(' ')[0]} 한정</span>` : ''}${m.name}${lv ? ` <small style="font-size:18px">맛 ${lv}/${D.MENU_MAX}</small>` : ''}`, s, right, { cls: open ? '' : 'lock', bar: lv ? lv / D.MENU_MAX : null, bg: { bread: '#FDE7D4', soup: '#DDF2E8', drink: '#DCEBF8' }[sub] }); }
     return h;
   } },
   staff: { title: '직원 · 단골', subs: [['staff', '직원'], ['regs', '단골 이야기']], render(sub) {
@@ -313,8 +314,13 @@ const PANELS = {
         open && o.fav ? `<div style="display:flex;flex-direction:column;gap:6px">${r.story.slice(0, o.fav).map((_, i) => btn(`story:${r.id}:${i}`, `이야기 ${i + 1}`, i + 1 > (o.read || 0) ? 'pk' : '', false, 'style="padding:9px 14px;font-size:18px"')).reverse().slice(0, 2).join('')}</div>` : '', { cls: open ? '' : 'lock', bg: '#FFF0B8' }); }
     return h;
   } },
-  mission: { title: '미션', subs: [['daily', '오늘'], ['repeat', '성장'], ['attend', '출석'], ['play', '머문 시간']], render(sub) {
+  mission: { title: '미션', get subs() { const b = [['daily', '오늘'], ['repeat', '성장'], ['attend', '출석'], ['play', '머문 시간']]; return G.seasonList().length ? [['season', D.SEASONS[G.season()].name], ...b] : b; }, render(sub) {
     let h = '';
+    if (sub === 'season') { const L = G.seasonList(), ev = D.SEASON_EV[G.season()], done = L.filter(m => m.got).length, has = !!S.deco[ev.final.id];   /* 시즌 미션 7일 (하루에 하나씩 열림 · 놓친 날은 나중에) */
+      h += `<div class="seahd"><img src="${IMG('ui/leaf')}" alt=""><div><b>${D.SEASONS[G.season()].name} · ${G.seasonDay()}일째</b><small>한정 메뉴 3 · 단풍 여행자 · 하루 하나씩 열리는 미션 7개</small></div></div>`;
+      h += card('sfinal', IMG('deco/set_harvest'), `7개 다 하면 · ${ev.final.name}`, `${done}/7 · 캠프에 놓이고 매력 +${ev.final.appeal}`, has ? '<b style="color:#5E9E82">받았어요 ✓</b>' : `<b>${done}/7</b>`, { bar: done / 7, bg: '#FBE3CC' });
+      for (const m of L) h += card(m.id, IMG('ui/leaf'), `${m.day}일째 · ${m.name.replace('{n}', m.n)}`, m.open ? `${m.p}/${m.n} · ${rtxt(m.r)}` : `${m.day}일째에 열려요`, m.got ? '<b style="color:#5E9E82">✓</b>' : m.open ? btn('season:' + m.id, '받기', 'go', m.p < m.n) : `<img src="${IMG('ui/lock')}" style="width:34px" alt="">`, { cls: m.open ? '' : 'lock', bar: m.open ? m.p / m.n : null });
+      return h; }
     if (sub === 'daily') { const L = G.dailyList(), done = L.filter(m => m.got).length;
       h += card('all', IMG('deco/gift'), '오늘의 할 일 모두 끝내기', `${done}/${L.length} · 보상 ${rtxt(D.DAILY_BONUS)}`, S.daily.all ? '<b style="color:#5E9E82">받았어요 ✓</b>' : btn('dailyAll', '받기', 'yl', !G.dailyAllReady()), { bar: done / L.length, bg: '#FFF0B8' });
       for (const m of [...L].sort((a, b) => (a.got - b.got) || ((b.p >= b.n) - (a.p >= a.n)))) h += card(m.id, null, m.name.replace('{n}', m.n), `${m.p}/${m.n} · ${rtxt(m.r)}`, m.got ? '<b style="color:#5E9E82">✓</b>' : btn('daily:' + m.id, '받기', 'go', m.p < m.n), { bar: m.p / m.n, cls: m.got ? 'done' : '' }).replace('<div class="im">', `<div class="im">${MIS_E[m.id]}`);
@@ -366,9 +372,9 @@ const MIS_E = Object.fromEntries(Object.entries({ serve: 'ui/serve', upgrade: 'u
 /* ── 지도에서 누른 시설 (작은 창 · 길게 눌러 계속 강화) ── */
 /* 강화 창 그림 = 지금 모습 → 다음 모습 (Lv5 · 10 · 20 단계 그림 · 열 때만 불러옴) — 다음 단계가 손에 잡히게 */
 function stageArt(t, lv) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, vl = G.working(t) ? lv - 1 : lv, st = D.stageOf(vl), nx = D.STAGE.at[st + 1];
-  const cur = `<img src="${IMG(`fac/st/${kind}_${st}`)}" style="animation:none;max-height:150px;width:auto">`;
+  const cur = `<img src="${IMG(`fac/${D.SEASONS[G.season()].st}/${kind}_${st}`)}" style="animation:none;max-height:150px;width:auto">`;
   if (!nx) return `<div class="art">${cur}</div><div class="stnext"><b>최고 모습이에요!</b></div>`;
-  return `<div class="art stg">${cur}<span class="arr">▶</span><span class="nx"><img src="${IMG(`fac/st/${kind}_${st + 1}`)}" style="animation:none"><small>Lv.${nx} 새 단장</small></span></div><div class="stnext">${nx - vl}번 더 강화하면 모습이 바뀌어요 · 짝수 레벨마다 소품 하나</div>`; }
+  return `<div class="art stg">${cur}<span class="arr">▶</span><span class="nx"><img src="${IMG(`fac/${D.SEASONS[G.season()].st}/${kind}_${st + 1}`)}" style="animation:none"><small>Lv.${nx} 새 단장</small></span></div><div class="stnext">${nx - vl}번 더 강화하면 모습이 바뀌어요 · 짝수 레벨마다 소품 하나</div>`; }
 export function facDialog(t) {
   const draw = d => { const { fac, lv, tier, nextT, eff } = facInfo(t), w = G.working(t), cost = G.upCostOf(t);
     d.querySelector('.body2').mhtml = `${stageArt(t, lv)}<h3>${fac.name} Lv.${lv} ${stars(tier)}</h3><p>${eff}${nextT ? `<br>Lv.${nextT}에 공사로 효율이 올라요` : ''}</p>
@@ -471,6 +477,7 @@ export function onEvent(e) {
     const z = D.ZONES.find(x => x.need.lv === e.lv); if (z) setTimeout(() => toast(`${z.name}${josa(z.name, '을/를')} 열 수 있게 됐어요 (시설 ${z.need.built}개)`, true), 1600); }
   else if (e.type === 'zoneOpen') { const z = D.ZONES.find(x => x.id === e.z); celebrate(`${z.name.split(' · ')[0]} 열림!`, `${ic('gem')}${z.reward} · 새 자리가 생겼어요`, 'fac/tent'); sfx('unlock'); }
   else if (e.type === 'goalDone') { banner('목표 달성!', `${e.text} · ${rtxt(e.r)}`); sfx('reward'); fly('gem', 360, 220, 4); }
+  else if (e.type === 'seasonFinal') { lastCele = 0; celebrate('수확 축제 장식 도착!', `캠프 잔디에 놓였어요 · 매력 +${D.SEASON_EV.autumn.final.appeal}`, 'deco/set_harvest'); sfx('tier'); }
   else if (e.type === 'menuNew') { const m = D.MENU.find(x => x.id === e.id); if (m) celebrate('새 메뉴!', m.name, m.img); }
   else if (e.type === 'hire') { const st = D.STAFF.find(x => x.id === e.id); if (st) celebrate(`${st.name} 합류!`, st.line, 'deco/heart'); }
   else if (e.type === 'story') storyPop(e.id, e.fav - 1);
@@ -516,8 +523,10 @@ export function loopPop(force) { if (!force && S.loopShown) return; S.loopShown 
   const st = [['guest', '손님이 와요', 'deco/heart'], ['cook', '셰프가 구워요', 'food/bagel'], ['sell', '눌러서 팔면 2배!', 'deco/coin'], ['coin', '코인이 모여요', 'deco/coin'], ['up', '시설 · 메뉴 강화', 'ui/hammer'], ['more', '손님이 더 많이, 더 비싸게', 'ui/sparkle']];
   enqueue(force ? 1 : 4, () => { const me = dlg(`<h3>캠프가 돌아가는 법</h3><div class="loop">${st.map(([, t, im], i) => `<div style="animation-delay:${i * 0.12}s"><img src="${IMG(im)}" alt=""><span>${t}</span></div>`).join('<i>→</i>')}</div><p>목표 칸을 누르면 지금 할 일로 바로 가요</p><div class="row">${btn('ok', '알겠어요!', 'go')}</div>`); me.el.querySelector('[data-a]').onclick = () => me.close(); }); }
 /* 크게 축하 (레벨업 · 해금 · 목표) */
+/* 시즌 시작 안내 (시즌마다 한 번) */
+export function seasonIntro() { const q = S.sea; if (!q || !D.SEASON_EV[G.season()] || q.intro) return; q.intro = 1; lastCele = 0; celebrate(`${D.SEASONS[G.season()].name} 시작!`, '한정 메뉴 3가지 · 단풍 여행자 · 7일 미션', 'ui/leaf'); }
 /* 시설 단계 업 (Lv5 · 10 · 20) — 새 모습 그림으로 크게 축하 */
-export function stageUp(t, st) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, name = t === 'oven' ? '빵 오븐' : D.FAC[kind].name; lastCele = 0; celebrate(`${name} 새 단장!`, `${['', '조금 더 아늑해졌어요', '훨씬 근사해졌어요', '숲속 최고 명소가 됐어요'][st]} · 손님이 더 좋아해요`, `fac/st/${kind}_${st}`); }
+export function stageUp(t, st) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, name = t === 'oven' ? '빵 오븐' : D.FAC[kind].name; lastCele = 0; celebrate(`${name} 새 단장!`, `${['', '조금 더 아늑해졌어요', '훨씬 근사해졌어요', '숲속 최고 명소가 됐어요'][st]} · 손님이 더 좋아해요`, `fac/${D.SEASONS[G.season()].st}/${kind}_${st}`); }
 let lastCele = 0; function celebrate(title, sub, img) { const now = performance.now(); if (now - lastCele < 1500) { toast(`${title} ${sub}`, true); return; } lastCele = now; flyEl.querySelectorAll('.celebrate').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'celebrate'; d.innerHTML = `<div class="rays"></div><div class="cc"><img src="${IMG(img)}" alt=""><b>${title}</b><span>${sub}</span></div>`; flyEl.appendChild(d); confetti(60); setTimeout(() => d.classList.add('out'), 2200); setTimeout(() => d.remove(), 2700); }
 /* 설정: 효과음 · 배경음 · 진동 (출퇴근길 무음 · 사업 의견 7) */
 function settingsPop() {

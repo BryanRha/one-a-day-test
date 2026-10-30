@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.7' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.9' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -42,6 +42,7 @@ export const STAGE = {
   ovenW: [118, 122, 128, 136],   /* 오븐은 배경 속 화덕을 다 덮어야 해서 처음부터 크게 · 덜 자람 */
   w: (kind, s) => kind === 'oven' ? STAGE.ovenW[s] : STAGE.k[kind] * STAGE.grow[s],
   props: ['p_tulip', 'p_lamp', 'p_crate', 'p_mush', 'p_shrub', 'p_flower', 'p_logs', 'p_fern'],
+  propM: { p_tulip: 0.42, p_lamp: 0.3, p_crate: 0.62, p_mush: 0.42, p_shrub: 0.8, p_flower: 0.7, p_logs: 0.78, p_fern: 0.55 },   /* 소품 실제 폭(m) */
 };
 export const stageOf = lv => lv >= 20 ? 3 : lv >= 10 ? 2 : lv >= 5 ? 1 : 0;
 /* 짝수 레벨 소품: 이 단계 안에서 늘어난 짝수 레벨 수 (단계가 바뀌면 새 그림이 소품을 품으니 다시 0부터 · 최대 3개) */
@@ -95,13 +96,23 @@ export const WALKGRAPH = { spring: {
     ['T4', 'T5'], ['T5', 'T6'], ['T6', 'PN1'], ['PN1', 'PN1b'], ['PN1', 'PG'], ['PG', 'PN2'], ['PN2', 'PN3w'], ['PN3w', 'PN3'], ['PN3', 'PS'],
     ['T4', 'V1'], ['V1', 'V2'], ['V2', 'V3'], ['V3', 'LKa'], ['LKa', 'LKe'], ['LKa', 'LKb'], ['LKb', 'LKc'], ['LKc', 'LKd'], ['LKd', 'STa'], ['STa', 'STb'], ['STa', 'STn'], ['STn', 'STw']],
 } };
-WALKGRAPH.autumn = WALKGRAPH.spring;   /* 가을 배경은 행사 때 새로 그림 → 그 배경에 맞춰 이 꼴로 다시 만듦 (지금은 같은 배치 가정) */
+/* 가을: 가을 배경은 봄 배경과 같은 배치를 계절색으로 다시 칠한 그림(tools/autumnize.py · 길 · 건물 자리가 같음)
+   → 걷는 곳 · 길 그래프는 봄 꼴을 복사한 뒤 가을에만 놓이는 것(수확 축제 장식 · 볏짚 · 호박)을 막힘으로 더함 · 모든 길 토막이 막힘을 비켜 가는지 봇 · 화면 걷기 검사로 확인 */
+const clone = o => JSON.parse(JSON.stringify(o));
+export const HARVEST_POS = P(700, 1108);   /* 가을 수확 축제 장식 세트 자리 (잔디 오른쪽 위 · 길에서 120px 넘게 떨어짐) */
+export const AUTUMN_DECO = [['a_hay', P(40, 1330), 0.9], ['a_pumpkin', P(190, 1436), 0.75], ['a_leaves', P(700, 1436), 0.8], ['a_lantern', P(812, 1080), 0.35], ['a_mum', P(84, 1076), 0.45]];   /* 가을 내내 놓이는 작은 장식 [그림, 자리, 폭 m] — 길 밖 */
+WALKMAP.autumn = clone(WALKMAP.spring);
+WALKMAP.autumn.block.push({ ell: [HARVEST_POS[0], HARVEST_POS[1] + 4, 52, 22] }, ...AUTUMN_DECO.map(([, [x, y], m]) => ({ ell: [x, y + 2, Math.max(8, m * 22), Math.max(5, m * 9)] })));
+WALKGRAPH.autumn = clone(WALKGRAPH.spring);
 /* 건물이 사람을 가리는 부분 (배경을 그 모양대로 잘라 사람 위에 그림 · base = 바닥선: 그보다 위(뒤)에 선 사람만 가림) */
 /* 오븐 단계 그림 위로 다시 덮는 배경 조각 (키친 지붕 · 오븐 앞 기둥) — 단계 그림이 배경 속 화덕을 가리고, 지붕 · 기둥은 그 앞에 */
 export const OVEN_ROOF = PP([[600, 770], [804, 770], [800, 800], [796, 812], [734, 857], [733, 952], [719, 952], [719, 858], [712, 851], [640, 834], [600, 826]]);
 export const OVEN_AT = P(712, 922);   /* 단계 그림 바닥 가운데 (배경 화덕 자리) */
 /* 편의 설비 그림 자리 (배경 좌표 → 판) · w = 폭(판 px) — 키친 조리대 위 · 끝, 웰컴센터 데크 옆 · 길(걷는 선) 밖 */
-export const AMEN_AT = { fridge: [P(538, 908), 40], sink: [P(604, 884), 52], toaster: [P(642, 876), 26], micro: [P(668, 874), 28], shower: [P(472, 872), 44], laundry: [P(176, 884), 46] };
+/* 크기 규칙 (원근): 문 앞 어른 키 ADULT_H = 1.65m → 1m = PX_M 판 px · 그 자리의 PERSP 를 곱함 (편의 설비 · 소품은 실제 크기(m)로 정함 · 대표 10-30 "조리대 위에서 커 보임") */
+export const PX_M = ADULT_H / 1.65;
+export const AMEN_AT = { sink: [P(548, 886), 1.05], fridge: [P(526, 914), 0.72], micro: [P(756, 906), 0.6], toaster: [P(642, 874), 0.42], shower: [P(472, 876), 0.95], laundry: [P(176, 886), 1.2] };   /* [자리(배경 좌표), 폭 m] — 토스터만 조리대 위, 나머지는 바닥 */
+export const OCCLUDE_OF = s => OCCLUDE;   /* 가림판: 배치가 같아 다각형은 같고, 잘라 쓰는 그림이 그 계절 배경(#bg)이라 색이 따라감 */
 export const OCCLUDE = [
   { id: 'welcome', poly: PP([[146, 758], [186, 712], [502, 712], [508, 800], [476, 806], [472, 870], [146, 870]]), base: P(0, 868)[1] },
   { id: 'kitchen', poly: PP([[492, 762], [802, 768], [798, 802], [788, 950], [756, 950], [758, 816], [522, 812], [520, 902], [492, 902]]), base: P(0, 893)[1] },
@@ -170,7 +181,8 @@ export const MENU = [
   ['bread', 1, '크림치즈 베이글', 'bagel'], ['bread', 2, '블루베리 베이글', 'blueberry'], ['bread', 3, '숲속 샌드위치', 'sandwich'], ['bread', 4, '시나몬 롤', 'cinnamon'], ['bread', 5, '딸기잼 스콘', 'scone'], ['bread', 6, '시골빵 한 덩이', 'loaf'],
   ['soup', 1, '채소 크림 스튜', 'stew'], ['soup', 2, '버섯 수프', 'mushroom'], ['soup', 3, '옥수수 수프', 'corn'], ['soup', 4, '단호박 수프', 'pumpkin'], ['soup', 5, '토마토 콩 스튜', 'bean'], ['soup', 6, '숲속 나물 전골', 'hotpot'],
   ['drink', 1, '마시멜로 코코아', 'cocoa'], ['drink', 2, '레모네이드', 'lemonade'], ['drink', 3, '딸기 우유', 'strawmilk'], ['drink', 4, '허브차', 'herbtea'], ['drink', 5, '아이스 커피', 'icedcoffee'],
-].map(([line, step, name, img]) => ({ id: img, line, step, name, img: 'food/' + img, start: { bread: 10, soup: 14, drink: 8 }[line] }));
+  ['soup', 3, '호박씨 포타주', 'kabocha', 'autumn'], ['bread', 3, '군밤 베이글', 'chestnut_bagel', 'autumn'], ['drink', 3, '시나몬 사과 사이다', 'cider', 'autumn'],   /* 가을 시즌 한정 (시즌이 끝나면 숨김 · 맛 레벨은 남아 내년에 이어짐) */
+].map(([line, step, name, img, season]) => ({ id: img, line, step, name, img: 'food/' + img, start: { bread: 10, soup: 14, drink: 8 }[line], ...(season ? { season } : {}) }));
 export const price0 = m => (m.start + 10 * m.step) * 10 ** (m.step - 1) * 0.6;   /* 판매가: 단계 안에서 선형 + 단계마다 자릿수 (v0.1 이 12시간 안에 끝나도록) */
 export const MENU_MAX = 10;
 export const menuMult = lv => 1.22 ** Math.max(0, lv - 1);
@@ -264,6 +276,31 @@ export const DECO = [
   { id: 'lanternpost', name: '꽃바구니 가로등', rar: 's', img: 'fac/lantern', appeal: 12, pos: P(560, 1180) },
 ];
 /* 꾸미기 상품 (골드 item) · 소장자 전용 */
+/* ── 시즌 (명세서 8장 재해석 · 원작은 중앙값 27일 · 시즌 재화 · 미션 · 상점 · 패스 · 한정 시설/코스튬) ──
+   v0.1: 원어데이 서버 달력이 생기기 전 → 기기 날짜(한국) + 시험 옵션 ?season=autumn|spring · index.html 머리 스크립트와 같은 날짜를 씀
+   기본은 봄 파스텔(대표 방향) · 가을은 행사 기간에만 (from ~ to · 날짜는 대표 확인 전 임시) */
+export const SEASONS = {
+  spring: { id: 'spring', name: '봄 캠프', bg: 'bg_spring', st: 'st', petals: ['#FAD4DE', '#F7C0CF', '#FFE6EC', '#FFF3B8'] },
+  autumn: { id: 'autumn', name: '가을 캠프', from: '2026-11-09', to: '2026-12-07', bg: 'bg_autumn', st: 'sta', petals: ['#E8743B', '#D9472B', '#F2A93B', '#C9682E'],
+    props: ['a_pumpkin', 'a_leaves', 'a_hay', 'a_blanket', 'a_apples', 'a_mum', 'a_lantern', 'a_chestnut'], propM: { a_pumpkin: 0.6, a_leaves: 0.7, a_hay: 0.8, a_blanket: 0.5, a_apples: 0.6, a_mum: 0.45, a_lantern: 0.32, a_chestnut: 0.42 } },
+};
+export const kstDate = ms => new Date(ms + 9 * 3600e3).toISOString().slice(0, 10);
+export const seasonOf = (ms, force) => SEASONS[force] ? force : Object.values(SEASONS).find(z => z.from && kstDate(ms) >= z.from && kstDate(ms) < z.to)?.id || 'spring';
+/* 시즌 행사: 한정 메뉴 3 · 한정 손님 1 (떠돌이 손님이 그 시즌 손님으로 · 보상 1.5배) · 시즌 미션 7일 (하루에 하나씩 열림 · 놓친 날은 나중에 해도 됨 · 7개 다 하면 수확 축제 장식 세트) */
+export const SEASON_PREM = 1.2;   /* 시즌 메뉴 값 = 그 라인 최고 메뉴 × 1.2 × 시즌 메뉴 맛 레벨 배율 */
+export const SEASON_EV = { autumn: {
+  guest: { name: '단풍 여행자 가을', look: { top: 0xD9733A, scarf: 0xF2D27A, hair: 0x6A3E26, pants: 0x8A6A4A, shoe: 0x5E3A22, bucket: 0xC9682E }, mult: 1.5, line: '단풍 따라 걷다 보니 여기까지 왔어요!' },
+  missions: [
+    { id: 'a1', key: 'smenu', n: 5, name: '가을 한정 메뉴 {n}그릇 팔기', r: { gem: 20 } },
+    { id: 'a2', key: 'cloud', n: 15, name: '구름 양 {n}번 쓰다듬기', r: { gem: 20 } },
+    { id: 'a3', key: 'visit', n: 1, name: '단풍 여행자 맞이하기', r: { treat: 3 } },
+    { id: 'a4', key: 'upgrade', n: 10, name: '시설 {n}번 강화하기', r: { gem: 20 } },
+    { id: 'a5', key: 'tapsell', n: 40, name: '다 된 요리 {n}번 직접 팔기', r: { gem: 25 } },
+    { id: 'a6', key: 'giftpick', n: 2, name: '선물 바구니 {n}번 열기', r: { treat: 3 } },
+    { id: 'a7', key: 'crit', n: 5, name: '대박 요리 {n}번 만들기', r: { gem: 30 } },
+  ],
+  final: { id: 'harvest', name: '수확 축제 장식', appeal: 10 },
+} };
 export const SET_POS = P(250, 1105);   /* 벚꽃 정원 세트를 놓는 자리 (잔디 왼쪽) */
 export const DECO_SHOP = { deco: { name: '벚꽃 정원 세트', appeal: 20, items: ['tulip', 'lanterns', 'bench'] }, skin: { name: '셰프 봄 의상 · 연노랑 앞치마', appeal: 5 } };
 export const OWNER_DECO = { name: '금빛 꽃바구니 가로등', appeal: 15 };

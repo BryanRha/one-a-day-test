@@ -302,3 +302,14 @@ html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-ad
 .dlg .art.stg { width: 100%; height: 170px; }
 .dlg .art.stg > img { max-width: 180px; max-height: 160px; }
 .dlg .art.stg .nx img { max-width: 130px; }
+
+/* 시즌 (가을 캠프) */
+html[data-season="autumn"] #frame .wside, html[data-season="autumn"] #frame .wside.on { background-color: #8A7A3E; }
+html[data-season="autumn"] #frame .wside.on { background-image: url(../assets/tile_forest_autumn.webp); }
+html[data-season="autumn"] #frame .wside .lawn { background-color: #B8A456; }
+html[data-season="autumn"] #frame .wside.on .lawn { background-image: url(../assets/tile_lawn_autumn.webp); filter: none; }
+html[data-season="autumn"] #frame { background: #C9B26A; }
+.seab { display: inline-flex; align-self: flex-start; width: fit-content; align-items: center; gap: 3px; margin-right: 6px; padding: 2px 8px 2px 4px; border-radius: 10px; background: #FBE3CC; color: #B4532A; font: 800 15px/1.2 var(--ff); vertical-align: 2px; white-space: nowrap; }
+.seab img { width: 18px; height: 18px; }
+.seahd { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; padding: 12px 14px; border-radius: 18px; background: linear-gradient(135deg, #FBE3CC, #F6D3B0); color: #7A3E1E; }
+.seahd img { width: 46px; height: 46px; } .seahd b { display: block; font: 800 22px/1.2 var(--ff); } .seahd small { font: 700 16px/1.3 var(--ff); color: #9A5A36; word-break: keep-all; }

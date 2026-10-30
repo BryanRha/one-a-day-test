@@ -3,16 +3,19 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.93.1';
-import * as G from './sim.js?v=0.93.1';
-import * as C from './chars.js?v=0.93.1';
-import * as C2 from './chars2d.js?v=0.93.1';
-import * as UI from './ui.js?v=0.93.1';
-import { sfx, music, setAudio } from './audio.js?v=0.93.1';
-import { bm } from './oad_bm.js?v=0.93.1';
-import { installBack } from './oad.js?v=0.93.1';
+import * as D from './data.js?v=0.93.2';
+import * as G from './sim.js?v=0.93.2';
+import * as C from './chars.js?v=0.93.2';
+import * as C2 from './chars2d.js?v=0.93.2';
+import * as UI from './ui.js?v=0.93.2';
+import { sfx, music, setAudio } from './audio.js?v=0.93.2';
+import { bm } from './oad_bm.js?v=0.93.2';
+import { installBack } from './oad.js?v=0.93.2';
 
 const Q = new URLSearchParams(location.search);
+/* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
+const SEASON = D.SEASONS[window.CAMP_SEASON] ? window.CAMP_SEASON : D.seasonOf(Date.now(), Q.get('season')), SZ = D.SEASONS[SEASON]; G.setSeason(SEASON); document.documentElement.dataset.season = SEASON;
+{ const want = `assets/${SZ.bg}.webp`; for (const im of document.querySelectorAll('#frame .bgx, #bg')) if (!im.getAttribute('src') || !im.getAttribute('src').endsWith(want)) im.src = want; }
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)], clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const S = G.S, R = G.R, IMG = UI.IMG;
@@ -84,11 +87,11 @@ world.append(layer.fac); layer.front.dataset.front = 1; document.getElementById(
 /* 3D 캔버스 위에 그려야 하는 것(시설 앞부분) 없음 → 시설은 사람 뒤(z 1), 표지 · 버튼은 사람 앞(taps z 4) */
 const facEl = {};
 /* 단계 그림 (art/fac/st · 필요할 때만 불러옴 — 첫 화면에 보이는 단계만 받음) · 폭을 판 px 로 바로 지정 */
-function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img'); im.className = cls; im.src = IMG('fac/st/' + (kind ? kind + '_' + s : s)); im.draggable = false; im.decoding = 'async'; Object.assign(im.style, { left: x + 'px', top: y + 'px', width: Math.round(w) + 'px' }); return im; }
+function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img'); im.className = cls; im.src = IMG('fac/' + (kind || /^[ap]_/.test(s) ? SZ.st : 'st') + '/' + (kind ? kind + '_' + s : s));   /* 시설 단계 · 소품은 계절판(st = 봄 · sta = 가을), 편의 설비는 공통 */ im.draggable = false; im.decoding = 'async'; Object.assign(im.style, { left: x + 'px', top: y + 'px', width: Math.round(w) + 'px' }); return im; }
 /* 짝수 레벨마다 시설 둘레에 작은 소품 (화분 · 등불 · 상자 …) — 이 단계 안에서 0~3개 · 자리마다 고정된 종류 (시설 id 로 골라 매번 같음) */
 const PROP_SLOT = [[-0.56, 0.06], [0.56, 0.1], [-0.42, -0.3]];
-function propsAt(id, lv, x, y, w, pk, back) { const n = D.propsOf(lv); let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
-  for (let i = 0; i < n; i++) { const [dx, dy] = PROP_SLOT[i], k = D.STAGE.props[(h + i * 3) % D.STAGE.props.length], im = stImg(null, k, x + dx * w, y + dy * w * 0.5 + (back ? -8 : 0), 22 * pk, 'fac prop'); im.dataset.p = id + i; if (i === 2 || back) layer.fac.prepend(im); else layer.fac.append(im); } }
+function propsAt(id, lv, x, y, w, pk, back) { const n = SEASON === 'autumn' ? Math.min(3, D.propsOf(lv) + 1) : D.propsOf(lv);   /* 가을은 호박 · 담요 · 낙엽 하나를 기본으로 */ let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
+  for (let i = 0; i < n; i++) { const [dx, dy] = PROP_SLOT[i], PL = SZ.props || D.STAGE.props, k = PL[(h + i * 3) % PL.length], im = stImg(null, k, x + dx * w, y + dy * w * 0.5 + (back ? -8 : 0), ((SZ.propM || D.STAGE.propM)[k] || 0.5) * D.PX_M * pk, 'fac prop'); im.dataset.p = id + i; if (i === 2 || back) layer.fac.prepend(im); else layer.fac.append(im); } }
 let roofEl = null;   /* 키친 지붕 · 기둥 (배경 조각) — 오븐 단계 그림 앞에 */
 function makeRoof() { const img = document.getElementById('bg'); if (!img.complete || !img.naturalWidth) { img.addEventListener('load', makeRoof, { once: true }); return; }
   const kx = img.naturalWidth / 878, ky = img.naturalHeight / 1560, poly = D.OVEN_ROOF, xs = poly.map(p => p[0]), ys = poly.map(p => p[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0, R = 2;
@@ -101,6 +104,9 @@ export function render() {
   const decoOn = new Set(Object.keys(S.deco).filter(k => S.deco[k] > 0)), setOn = S.shop.deco || performance.now() < decoUntil;
   for (const d of D.DECO) if (decoOn.has(d.id) && !(setOn && D.DECO_SHOP.deco.items.includes(d.id))) layer.fac.append(facImg(IMG(d.img), d.pos[0], d.pos[1], D.DECO_K * D.PERSP(d.pos[1])));
   if (setOn) { const im = facImg(IMG('deco/set_sakura'), D.SET_POS[0], D.SET_POS[1] + 40, 0.44 * D.PERSP(D.SET_POS[1])); if (!S.shop.deco) im.style.filter = 'drop-shadow(0 0 10px #FFE38A)'; layer.fac.append(im); }   /* 벚꽃 정원 세트 전용 그림 (퀄리티 A4) */
+  if (SEASON === 'autumn') {   /* 가을 장식: 길 밖 작은 장식 5 + 7일 미션 보상 '수확 축제 장식' (걷는 곳에서는 막힘으로 빠져 있음 · data.js WALKMAP.autumn) */
+    for (const [k, [ax, ay], m] of D.AUTUMN_DECO) layer.fac.append(stImg(null, k, ax, ay, m * D.PX_M * D.PERSP(ay), 'fac prop'));
+    if (S.deco.harvest) { const [hx, hy] = D.HARVEST_POS; const im = document.createElement('img'); im.className = 'fac'; im.src = IMG('deco/set_harvest'); im.draggable = false; Object.assign(im.style, { left: hx + 'px', top: hy + 10 + 'px', width: Math.round(3.4 * D.PX_M * D.PERSP(hy)) + 'px' }); layer.fac.append(im); } }
   if (S.owner) { const im = facImg(IMG('fac/lantern'), ...D.P(110, 1180), D.DECO_K * D.PERSP(D.P(110, 1180)[1])); im.style.filter = 'sepia(.6) saturate(1.8) hue-rotate(-12deg) drop-shadow(0 0 8px #FFE38A)'; layer.fac.append(im); }
   /* 시설 */
   for (const p of D.PADS) {
@@ -116,7 +122,7 @@ export function render() {
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
   const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
-  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
+  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
   /* 잠긴 구역 안개 · 공사 */
   /* 안개 = 배경 화풍으로 그린 구름 여러 겹이 천천히 흐름 · 큰 라벨은 '다음에 열릴 구역' 하나만, 나머지는 작은 자물쇠 (퀄리티 A3) */
   const nextZ = (D.ZONES.find(z => S.zones[z.id].st !== 'open') || {}).id;
@@ -225,7 +231,7 @@ function catGo() { cat.path = G.walkMap.route([cat.x, cat.y], [cat.tx, cat.ty]);
 
 /* ── 2D 효과 ── */
 const fx = document.getElementById('fx').getContext('2d'); const parts = [];
-const petals = Array.from({ length: 10 }, () => ({ x: rnd(0, W), y: rnd(-200, 1100), v: rnd(18, 34), ph: rnd(0, 6), s: rnd(7, 11), c: pick(['#FAD4DE', '#F7C0CF', '#FFE6EC', '#FFF3B8']) }));
+const petals = Array.from({ length: 10 }, () => ({ x: rnd(0, W), y: rnd(-200, 1100), v: rnd(18, 34), ph: rnd(0, 6), s: rnd(7, 11), c: pick(SZ.petals) }));   /* 봄 = 벚꽃잎 · 가을 = 단풍잎 */
 const flies = [0, 1, 2].map(i => ({ x: rnd(100, 600), y: rnd(500, 1100), ph: rnd(0, 6), c: ['#FFE38A', '#BFE0F6', '#F9D4DC'][i] }));
 function puff(x, y, n = 1) { for (let i = 0; i < n; i++) parts.push({ k: 'steam', x: x + rnd(-8, 8), y, vx: rnd(-6, 6), vy: rnd(-30, -22), life: rnd(1.4, 2.2), t: 0, r: rnd(7, 11) }); }
 export function burst(x, y, k = 'sparkle', n = 12) { for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(60, 200); parts.push({ k, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - (k === 'heart' ? 80 : 40), life: rnd(0.6, 1.1) * (k === 'heart' ? 1.5 : 1), t: 0, r: rnd(4, 8), c: pick(['#FFE38A', '#FFF6D0', '#F9D4DC', '#BFE6D6']) }); } }
@@ -265,7 +271,7 @@ function draw2d(dt, now) {
   for (const p of D.PADS) { const b = S.pads[p.id]; if (b && D.tierOf(b.lv) >= 1 && Math.random() < dt * 0.5 * D.tierOf(b.lv)) parts.push({ k: 'twinkle', x: p.pos[0] + rnd(-60, 60), y: p.pos[1] - rnd(10, 100), life: 0.9, t: 0, r: rnd(5, 9) }); }
   /* 꽃잎 · 나비 */
   for (const l of petals) { l.y += l.v * dt; l.ph += dt * 1.6; const x = l.x + Math.sin(l.ph) * 26; if (l.y > 1200) { l.y = rnd(-80, -10); l.x = rnd(0, W); }
-    fx.save(); fx.translate(x, l.y); fx.rotate(Math.sin(l.ph * 1.3) * 0.9); fx.fillStyle = l.c; fx.strokeStyle = '#C98A9A'; fx.lineWidth = 1.5; const r = l.s * 0.8; fx.beginPath(); fx.moveTo(0, -r); fx.quadraticCurveTo(r, -r * 0.2, 0, r); fx.quadraticCurveTo(-r, -r * 0.2, 0, -r); fx.fill(); fx.stroke(); fx.restore(); }
+    fx.save(); fx.translate(x, l.y); fx.rotate(Math.sin(l.ph * 1.3) * 0.9); fx.fillStyle = l.c; fx.strokeStyle = SEASON === 'autumn' ? '#9A4A26' : '#C98A9A'; fx.lineWidth = 1.5; const r = l.s * 0.8; fx.beginPath(); fx.moveTo(0, -r); fx.quadraticCurveTo(r, -r * 0.2, 0, r); fx.quadraticCurveTo(-r, -r * 0.2, 0, -r); fx.fill(); fx.stroke(); fx.restore(); }
   for (const b of flies) { b.ph += dt; b.x += Math.cos(b.ph * 0.7) * 40 * dt; b.y += Math.sin(b.ph * 1.1) * 30 * dt; b.x = clamp(b.x, 40, W - 40); b.y = clamp(b.y, 380, 1150); const f = Math.abs(Math.sin(b.ph * 14));
     fx.save(); fx.translate(b.x, b.y + Math.sin(b.ph * 3) * 6); fx.fillStyle = b.c; fx.strokeStyle = '#7A6A7A'; fx.lineWidth = 1.5; for (const s of [-1, 1]) { fx.beginPath(); fx.ellipse(s * 7 * f, -3, 8 * f + 1, 7, s * 0.4, 0, TAU); fx.fill(); fx.stroke(); fx.beginPath(); fx.ellipse(s * 5 * f, 5, 5 * f + 1, 5, -s * 0.3, 0, TAU); fx.fill(); fx.stroke(); } fx.fillStyle = '#7A6A7A'; fx.fillRect(-1.2, -6, 2.4, 13); fx.restore(); }
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -310,7 +316,7 @@ const GIFT_SPOT = D.GIFT_SPOT;
 function giftArrive(b) { const st = D.STAFF.find(x => x.id === b.sv) || D.STAFF[0]; const r = G.walkMap.route(D.KITCHEN.pick, GIFT_SPOT); giftP = mk(C.LOOKS[st.look], ...r[0], 7); walkPath(giftP, r, G.walkMap.pathLen(r) / 70, () => { giftP && giftP.play('wave'); });
   giftBub = document.createElement('div'); giftBub.className = 'bubble big'; giftBub.innerHTML = `<img src="${IMG('deco/gift')}" alt="">`; giftBub.onclick = ev => { ev.stopPropagation(); pressFx(giftBub); UI.giftPop(); }; layer.ui.append(giftBub); sfx('gift'); }
 function giftLeave() { if (giftBub) giftBub.remove(); giftBub = null; const p = giftP; giftP = null; if (!p) return; const r = G.walkMap.route(toScreen(p.root.position), D.KITCHEN.pick); walkPath(p, r, G.walkMap.pathLen(r) / 70, () => drop(p)); }
-function visArrive(v, path) { visP = mk({ ...C.LOOKS.family, h: D.ADULT_H }, ...path[0], 9); walkPath(visP, path, G.walkMap.pathLen(path) / 60, () => { visP && visP.play('wave'); });
+function visArrive(v, path) { const sg = D.SEASON_EV[SEASON] && D.SEASON_EV[SEASON].guest; visP = mk({ ...C.LOOKS.family, ...(sg ? sg.look : {}), h: D.ADULT_H }, ...path[0], 9); if (sg) UI.toast(`${sg.name} · ${sg.line}`, true);   /* 시즌 한정 손님 (가을 = 단풍 여행자 · 보상 1.5배) */ walkPath(visP, path, G.walkMap.pathLen(path) / 60, () => { visP && visP.play('wave'); });
   visBub = document.createElement('div'); visBub.className = 'bubble big star'; visBub.innerHTML = `<img src="${IMG('ui/sparkle')}" alt=""><b>♪</b>`; visBub.onclick = ev => { ev.stopPropagation(); pressFx(visBub); const got = G.tapVisitor(); if (got) { const [x, y] = toScreen(visP ? visP.root.position : toWorld(...D.VISIT_SPOT)); burst(x, y - 60, 'sparkle', 30); UI.fly('coin', ...F(x, y - 50), 10); UI.numPop(...F(x, y - 90), `+${D.fmt(got.coin)}`, true); sfx('level'); UI.toast('떠돌이 음악가가 노래 값을 두고 갔어요 · 수입 1시간치!', true); } }; layer.ui.append(visBub); sfx('chime'); UI.toast('떠돌이 음악가가 캠프에 들렀어요 · 눌러 보세요!', true); }
 function visLeave(path) { if (visBub) visBub.remove(); visBub = null; const p = visP; visP = null; if (!p) return; const r = G.walkMap.route(toScreen(p.root.position), D.ENTRY[1]); walkPath(p, r, G.walkMap.pathLen(r) / 60, () => drop(p)); }
 function floatersMove() { sheepMove(); for (const [p, b] of [[giftP, giftBub], [visP, visBub]]) if (p && b) { const [x, y] = toScreen(p.root.position), k = D.PERSP(y); b.style.left = x + 'px'; b.style.top = (y - (p.look.h || 60) * k - 34) + 'px'; } }
@@ -437,7 +443,7 @@ const ctx = { portrait, save, render, fullBody, pressFx: el => pressFx(el), camT
   tryOn: sec => { tryUntil = performance.now() + sec * 1000; makeHero(); UI.closeSheet(); setTimeout(() => { if (performance.now() >= tryUntil - 50) { makeHero(); if (!S.skin) UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점에서 만나요'); } }, sec * 1000); },
   previewDeco: sec => { decoUntil = performance.now() + sec * 1000; render(); UI.closeSheet(); burst(...D.SET_POS, 'sparkle', 24); setTimeout(() => { render(); if (!S.shop.deco) UI.toast('미리 보기가 끝났어요'); }, sec * 1000); },
   fx: (k, t) => { const pos = t === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === t) || {}).pos; if (pos) burst(pos[0], pos[1] - 40, 'sparkle', 8); } };
-UI.init(ctx);
+UI.init(ctx); setTimeout(() => UI.seasonIntro(), 3200);
 /* 첫 화면에 필요한 몸만 먼저 (4G 3초) · 나머지는 뒤에서 불러옴 — 아직 안 온 손님 몸은 온 것으로 잠깐 대신 */
 const FIRST = ['chef', 'helper', 'hiker'];
 await Promise.all(FIRST.map(n => C2.preload(n).catch(() => null)));

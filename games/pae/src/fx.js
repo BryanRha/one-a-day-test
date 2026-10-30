@@ -1,5 +1,5 @@
 // 효과: 꽃잎 · 금박 불꽃 · 단풍 · 눈 · 반딧불 텍스처(코드로 그림) + 계절 분위기 입자 + 점수 터짐
-import { W, H } from './config.js?v=0.93.1';
+import { W, H } from './config.js?v=0.93.2';
 
 export function makeFxTextures(scene) {
   const mk = (key, w, h, draw) => { if (scene.textures.exists(key)) return; const t = scene.textures.createCanvas(key, w, h); draw(t.getContext(), w, h); t.refresh(); };
