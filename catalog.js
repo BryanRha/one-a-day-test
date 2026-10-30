@@ -93,7 +93,7 @@ export const GAMES = {
   fdefense: {
     title: 'Fantasy Defense', en: 'Fantasy Defense', genre: '타워 디펜스', color: '#7A4B2A',
     tagline: '성문을 지켜라, 판타지 왕국의 마지막 방어선',
-    desc: '전사 · 궁수 · 마법사 · 챔피언을 길목에 세워 몰려오는 몬스터 웨이브를 막아요. 병사를 강화하고 전직시키며, 영웅의 필살기 칼춤으로 위기를 뒤집으세요. 50개 스테이지와 무한 · 성문 부수기 모드가 기다려요.',
+    desc: '전 세계 150개국 앱스토어 1위, 모바일 디펜스 게임의 시초 \'판타지 디펜스\'가 돌아왔어요! 전사 · 궁수 · 마법사 · 챔피언을 길목에 세워 몰려오는 몬스터 웨이브를 막아요. 병사를 강화하고 전직시키며, 영웅의 필살기 칼춤으로 위기를 뒤집으세요. 50개 스테이지와 무한 · 성문 부수기 모드가 기다려요.',
     path: 'games/fdefense/', cover: 'covers/fdefense.png', icon: 'covers/fdefense_icon.png', time: '8~15분',
   },
   camp: {

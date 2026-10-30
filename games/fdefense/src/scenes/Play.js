@@ -1,16 +1,16 @@
 // 판 화면 (세로): 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 HUD · 아래 엄지 조작 칸
-import { W, H, C, SCALE } from '../config.js?v=0.95.1';
-import { T, A, CHAR_NAMES, HERO_NAMES, SPECIAL_NAMES, STAGE_NAMES, CHAPTERS } from '../core/data.js?v=0.95.1';
-import { Sim, TICK, BUY_ROWS, DETAIL_SPRITE, HERO_SPRITE, CHAR, runSummary } from '../core/sim.js?v=0.95.1';
-import * as M from '../core/meta.js?v=0.95.1';
-import { BUNDLE } from '../core/balance.js?v=0.95.1';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.1';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.95.1';
-import { audio, S } from '../audio.js?v=0.95.1';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.95.1';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.1';
-import { pushBack } from '../oad.js?v=0.95.1';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.1';
+import { W, H, C, SCALE } from '../config.js?v=0.95.2';
+import { T, A, CHAR_NAMES, HERO_NAMES, SPECIAL_NAMES, STAGE_NAMES, CHAPTERS } from '../core/data.js?v=0.95.2';
+import { Sim, TICK, BUY_ROWS, DETAIL_SPRITE, HERO_SPRITE, CHAR, runSummary } from '../core/sim.js?v=0.95.2';
+import * as M from '../core/meta.js?v=0.95.2';
+import { BUNDLE } from '../core/balance.js?v=0.95.2';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.2';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.95.2';
+import { audio, S } from '../audio.js?v=0.95.2';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.95.2';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.2';
+import { pushBack } from '../oad.js?v=0.95.2';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.2';
 
 const HUD_H = 176, TRAY_MIN = 520;
 // 효과 번호 → 그림 묶음 (원작 렌더러 표)

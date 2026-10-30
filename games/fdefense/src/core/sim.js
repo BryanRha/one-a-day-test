@@ -1,8 +1,8 @@
 // 판 로직 (화면과 분리 · Node 에서 봇으로도 돌림)
 // 원작 좌표계 그대로: 판 675×450px(15×10칸, 칸 45px), 위치 단위 = px×50, 1틱 = 1/41초
 // 화면은 이 좌표를 시계 방향 90° 돌려 세로로 그린다 (view.js)
-import { T, nameOfChar } from './data.js?v=0.95.1';
-import { HPS } from './balance.js?v=0.95.1';
+import { T, nameOfChar } from './data.js?v=0.95.2';
+import { HPS } from './balance.js?v=0.95.2';
 
 export const TICK = 41;
 const TILE = 45, U = 50;
