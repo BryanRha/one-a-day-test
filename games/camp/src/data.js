@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.2.0' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.2.1' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -302,7 +302,7 @@ export const SEASON_EV = { autumn: {
   final: { id: 'harvest', name: '수확 축제 장식', appeal: 10 },
 } };
 export const SET_POS = P(250, 1105);   /* 벚꽃 정원 세트를 놓는 자리 (잔디 왼쪽) */
-export const DECO_SHOP = { deco: { name: '벚꽃 정원 세트', appeal: 20, items: ['tulip', 'lanterns', 'bench'] }, skin: { name: '셰프 봄 의상 · 연노랑 앞치마', appeal: 5 } };
+export const DECO_SHOP = { deco: { name: '벚꽃 정원 세트', appeal: 0, items: ['tulip', 'lanterns', 'bench'] }, skin: { name: '셰프 봄 의상 · 연노랑 앞치마', appeal: 0 } };   /* 2026-10-30 대표: 파는 꾸미기는 외형만 · 능력치(매력) 0 */
 /* ── 옷장 · 동행 펫 · 시설 외형 (v0.2 BM · 대표 지시 10-30 · bm-policy: 꾸미기 = 판다 · 능력치 = 안 판다) ──
    능력치 0 (매력도 없음 · 외형과 작은 반응만) · 모두 '입어 보기 15초' · 무료 길 = 스탬프(광고 혜택마다 1개) 교환 · 계정에 남음(item SKU)
    가격: 의상 250~400 · 펫 400~600 골드 (bm-policy) */
@@ -315,7 +315,7 @@ export const WARDROBE = [
 ];
 export const PET = { id: 'pet_bichon', name: '비숑 동행 펫 · 몽이', sku: 'pet_bichon', gold: 500, stamp: 90, desc: '셰프 옆을 졸졸 따라다니고, 손님이 오면 꼬리를 세차게 흔들어요 · 가만히 있으면 앉아서 쉬어요' };
 export const FAC_SKIN = { id: 'skin_autumn', name: '가을 시설 외형', sku: 'skin_autumn', gold: 350, desc: '시설 10종이 1년 내내 가을 모습(단풍 · 호박 · 담요 · 따뜻한 등불)으로 · 켜고 끌 수 있어요', free: '가을 캠프 미션 7개를 다 하면 무료' };
-export const OWNER_DECO = { name: '금빛 꽃바구니 가로등', appeal: 15 };
+export const OWNER_DECO = { name: '금빛 꽃바구니 가로등', appeal: 0 };   /* 소장자 장식도 외형만 (2026-10-30 대표) */
 
 /* ── 광고 자리 (명세서 9-1 의 10곳을 같은 비중으로) · 하루 한도는 원어데이(게임당 5)와 게임 쪽 둘 다 ── */
 export const ADS = {

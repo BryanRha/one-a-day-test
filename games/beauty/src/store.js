@@ -2,10 +2,10 @@
 // 원화 결제(PROVIDER): 지금은 꺼짐(enabled=false) → 원어데이 밖에선 '곧 열려요', 원어데이 안에선 골드 상품으로 대체
 // 원어데이 안(oad_bm hello().ok): 광고 자리 3곳(energy · bubble · dailyBonus) = bm.rewardedAd · 골드 = bm.spend (가격은 서버 SHOP.beauty 만 기준)
 //   소장자는 rewardedAd 가 via:'owner' 로 광고 없이 바로 성공 · 원어데이 밖에선 광고 · 골드 버튼을 숨기고 지금처럼
-import { load, save } from './save.js?v=0.93.3';
-import { bm } from './oad_bm.js?v=0.93.3';
-import { today, tickEnergy } from './state.js?v=0.93.3';
-import { ENERGY } from './data.js?v=0.93.3';
+import { load, save } from './save.js?v=0.93.4';
+import { bm } from './oad_bm.js?v=0.93.4';
+import { today, tickEnergy } from './state.js?v=0.93.4';
+import { ENERGY } from './data.js?v=0.93.4';
 
 export const PRODUCTS = [
   { id: 'gems_s', n: '보석 한 줌', price: 1200, gems: 80, tag: '' },

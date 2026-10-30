@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.93.3';
-import * as G from './sim.js?v=0.93.3';
-import { bm } from './oad_bm.js?v=0.93.3';
-import { sfx, setAudio, AUD } from './audio.js?v=0.93.3';
-import { pushBack } from './oad.js?v=0.93.3';
+import * as D from './data.js?v=0.93.4';
+import * as G from './sim.js?v=0.93.4';
+import { bm } from './oad_bm.js?v=0.93.4';
+import { sfx, setAudio, AUD } from './audio.js?v=0.93.4';
+import { pushBack } from './oad.js?v=0.93.4';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -241,13 +241,13 @@ const GOLD = {
   gems100: { name: '솔방울 100개', n: 100, bonus: 0, give: () => { S.gem += 100; } },
   gems300: { name: '솔방울 330개', n: 330, bonus: 10, give: () => { S.gem += 330; } },
   gems1000: { name: '솔방울 1,200개', n: 1200, bonus: 20, give: () => { S.gem += 1200; } },
-  deco: { name: D.DECO_SHOP.deco.name, desc: `벚꽃나무 아래 벤치 · 튤립 화단 · 종이 등불 · 잔디 왼쪽에 놓여요 · 매력 +${D.DECO_SHOP.deco.appeal} (손님이 조금 더 자주 와요)`, art: () => IMG('deco/set_sakura'), item: true, own: () => S.shop.deco, give: () => { S.shop.deco = true; } },
+  deco: { name: D.DECO_SHOP.deco.name, desc: `벚꽃나무 아래 벤치 · 튤립 화단 · 종이 등불 · 잔디 왼쪽에 놓여요 · 모습만 바뀌어요`, art: () => IMG('deco/set_sakura'), item: true, own: () => S.shop.deco, give: () => { S.shop.deco = true; } },
   out_walk: { name: '셰프 의상 · 봄 산책', item: true, own: () => G.hasLook('out_walk'), give: () => { G.ownLook('out_walk'); S.wear = 'out_walk'; ctx.wearNow(); } },
   out_knit: { name: '셰프 의상 · 가을 니트', item: true, own: () => G.hasLook('out_knit'), give: () => { G.ownLook('out_knit'); S.wear = 'out_knit'; ctx.wearNow(); } },
   out_fire: { name: '셰프 의상 · 밤 캠프파이어', item: true, own: () => G.hasLook('out_fire'), give: () => { G.ownLook('out_fire'); S.wear = 'out_fire'; ctx.wearNow(); } },
   pet_bichon: { name: D.PET.name, item: true, own: () => !!S.pet, give: () => { S.pet = true; S.petOn = true; ctx.wearNow(); } },
   skin_autumn: { name: D.FAC_SKIN.name, item: true, own: () => !!S.fskin, give: () => { S.fskin = true; S.fskinOn = true; ctx.render(); } },
-  skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 매력 +${D.DECO_SHOP.skin.appeal}`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
+  skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 모습만 바뀌어요`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
 };
 async function buyGold(sku) {
   const g = GOLD[sku]; if (g.item && g.own()) return toast('이미 가지고 있어요');
@@ -378,7 +378,7 @@ const PANELS = {
       for (const k of ['skin', 'deco']) { const g = GOLD[k], p = bm.price(k); if (!p) continue; const own = g.own();
         h += `<div class="card" data-k="g${k}" style="flex-direction:column;align-items:stretch"><div style="display:flex;gap:14px;align-items:center"><div class="im" style="width:150px;height:170px;background:${k === 'skin' ? '#FFF6D0' : '#FCEFF2'}"><img src="${g.art()}" style="width:146px;height:166px"></div><div class="tx"><b>${g.name}</b><span>${g.desc}</span></div></div>
           <div style="display:flex;gap:10px;margin-top:12px">${own ? '<b style="color:#5E9E82;flex:1;text-align:center">가지고 있어요 ✓</b>' : `${btn('try:' + k, k === 'skin' ? '입어 보기' : '놓아 보기', 'sky')}${btn('gold:' + k, `${ic('gold')} ${p}`, 'yl')}`}</div></div>`; }
-      h += card('own', IMG('fac/lantern'), D.OWNER_DECO.name, `원어데이에서 이 게임을 소장하면 받는 전용 장식 · 매력 +${D.OWNER_DECO.appeal}`, S.owner ? '<b style="color:#5E9E82">소장 ✓</b>' : '<small>소장자 전용</small>', { cls: S.owner ? 'done' : '' }); }
+      h += card('own', IMG('fac/lantern'), D.OWNER_DECO.name, `원어데이에서 이 게임을 소장하면 받는 전용 장식`, S.owner ? '<b style="color:#5E9E82">소장 ✓</b>' : '<small>소장자 전용</small>', { cls: S.owner ? 'done' : '' }); }
     h += `<div class="sec">스탬프 교환 · 광고 혜택을 받을 때마다 1개 (지금 ${S.stamp}개)</div>`;
     for (const o of D.STAMP_SHOP) { const d = D.DECO.find(x => x.id === o.id); h += card('st' + o.id, IMG(d.img), d.name, `매력 +${d.appeal}${S.deco[d.id] ? ' · 가지고 있어요' : ''}`, btn('stamp:' + o.id, `${ic('stamp')} ${o.cost}`, 'go', S.stamp < o.cost)); }
     return h;

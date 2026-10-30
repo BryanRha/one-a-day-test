@@ -3,18 +3,18 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.93.3';
-import * as G from './sim.js?v=0.93.3';
-import * as C from './chars.js?v=0.93.3';
-import * as C2 from './chars2d.js?v=0.93.3';
-import * as UI from './ui.js?v=0.93.3';
-import { sfx, music, setAudio } from './audio.js?v=0.93.3';
-import { bm } from './oad_bm.js?v=0.93.3';
-import { installBack } from './oad.js?v=0.93.3';
+import * as D from './data.js?v=0.93.4';
+import * as G from './sim.js?v=0.93.4';
+import * as C from './chars.js?v=0.93.4';
+import * as C2 from './chars2d.js?v=0.93.4';
+import * as UI from './ui.js?v=0.93.4';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.93.4';
+import { bm } from './oad_bm.js?v=0.93.4';
+import { installBack } from './oad.js?v=0.93.4';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
-const SEASON = D.SEASONS[window.CAMP_SEASON] ? window.CAMP_SEASON : D.seasonOf(Date.now(), Q.get('season')), SZ = D.SEASONS[SEASON]; G.setSeason(SEASON); document.documentElement.dataset.season = SEASON;
+const SEASON = D.SEASONS[window.CAMP_SEASON] ? window.CAMP_SEASON : D.seasonOf(Date.now(), Q.get('season')), SZ = D.SEASONS[SEASON]; G.setSeason(SEASON); setSong(SEASON); document.documentElement.dataset.season = SEASON;
 { const want = `assets/${SZ.bg}.webp`; for (const im of document.querySelectorAll('#frame .bgx, #bg')) if (!im.getAttribute('src') || !im.getAttribute('src').endsWith(want)) im.src = want; }
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)], clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -258,8 +258,8 @@ function stageFx(t, prevLv, afterWork) {
     const now = performance.now(), back = { x: CAMV.x, y: CAMV.y, z: CAMV.z };
     if (now - lastStageCam > 4000 && now - bootT > 6000 && camTo(pos[0], pos[1] - 50, Math.min(1.4, Math.max(CAMV.z, 1.25)), true)) { lastStageCam = now;
       setTimeout(() => { if (lastTouch < now && !ptrs.size && !CAMV.tw) camTo(back.x, back.y, back.z, true); }, 3400); }
-    if (old) old.classList.add('old'); dust(pos[0], pos[1]); burst(pos[0], pos[1] - 40, 'sparkle', 10);
-    setTimeout(() => { render(); const im = facEl[t]; if (im) im.classList.add('grow'); burst(pos[0], pos[1] - 50, 'sparkle', 30); dust(pos[0], pos[1]); sfx('tier'); UI.stageUp(t, ns); }, 480);
+    if (old) old.classList.add('old'); dust(pos[0], pos[1]); burst(pos[0], pos[1] - 40, 'sparkle', 10); sfx('stageup');
+    setTimeout(() => { render(); const im = facEl[t]; if (im) im.classList.add('grow'); burst(pos[0], pos[1] - 50, 'sparkle', 30); dust(pos[0], pos[1]); UI.stageUp(t, ns); }, 480);
     return; }
   if (afterWork) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 16); return; }
   if (D.propsOf(lv) > D.propsOf(prevLv)) { render(); const pe = layer.fac.querySelector(`[data-p="${t}${D.propsOf(lv) - 1}"]`); if (pe) { pe.classList.add('grow'); burst(+pe.style.left.slice(0, -2), +pe.style.top.slice(0, -2) - 10, 'sparkle', 5); } }
@@ -495,7 +495,7 @@ if (Q.get('demo') === 'behind') {   /* 확인용: 건물 뒤를 지나는 손님
   const loop = (look, a, b) => { const p = mk(C.LOOKS[look], ...a, 3); const go = (x, y) => { const r = G.walkMap.route(toScreen(p.root.position), [x, y]); walkPath(p, r, G.walkMap.pathLen(r) / 55, () => go(...(x === a[0] ? b : a))); }; go(...b); };
   loop('hiker', D.P(120, 760), D.P(470, 620)); loop('couple', D.P(560, 700), D.P(830, 700)); loop('grandma', D.P(300, 690), D.P(130, 750));
 }
-window.__camp = { ctx, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
+window.__camp = { ctx, C, THREE, sfx, music, setAudio, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
 
 /* ── 반복 ── */
 const SPEED = Math.max(0.1, +(Q.get('speed') || 1));
