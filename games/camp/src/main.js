@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.93.0';
-import * as G from './sim.js?v=0.93.0';
-import * as C from './chars.js?v=0.93.0';
-import * as C2 from './chars2d.js?v=0.93.0';
-import * as UI from './ui.js?v=0.93.0';
-import { sfx, music, setAudio } from './audio.js?v=0.93.0';
-import { bm } from './oad_bm.js?v=0.93.0';
-import { installBack } from './oad.js?v=0.93.0';
+import * as D from './data.js?v=0.93.1';
+import * as G from './sim.js?v=0.93.1';
+import * as C from './chars.js?v=0.93.1';
+import * as C2 from './chars2d.js?v=0.93.1';
+import * as UI from './ui.js?v=0.93.1';
+import { sfx, music, setAudio } from './audio.js?v=0.93.1';
+import { bm } from './oad_bm.js?v=0.93.1';
+import { installBack } from './oad.js?v=0.93.1';
 
 const Q = new URLSearchParams(location.search);
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
@@ -153,20 +153,23 @@ function giftEl(g) { if (g.el && g.el.isConnected) return; const d = document.cr
 const ptrs = new Map(); let drag = null, pinch = null, eatClick = false;
 const fxy = e => [e.clientX / FS, e.clientY / FS];   /* 화면 → 프레임 좌표 */
 function onUI(e) { return !!e.target.closest('#ui #hud > *, #ui #bar, #ui #sheet .sh, #ui #sheet .shade, #ui #pop .dlg, #ui #pop .shade'); }
-frame.addEventListener('pointerdown', e => { if (onUI(e)) return; ptrs.set(e.pointerId, fxy(e)); CAMV.tw = null;
+frame.addEventListener('pointerdown', e => { if (onUI(e)) return; ptrs.set(e.pointerId, fxy(e)); CAMV.tw = null; lastTouch = performance.now();
   if (ptrs.size === 1) drag = { start: fxy(e), last: fxy(e), t: performance.now(), moved: false, vx: 0, vy: 0 };
   else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: CAMV.z, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; if (drag) drag.moved = true; } }, true);
-addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; const p = fxy(e); ptrs.set(e.pointerId, p);
+addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; lastTouch = performance.now(); const p = fxy(e); ptrs.set(e.pointerId, p);
   if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; zoomAt(mid, Math.max(0.85, Math.min(1.4, pinch.z * d / pinch.d))); return; }
   if (!drag) return; const dx = p[0] - drag.last[0], dy = p[1] - drag.last[1]; if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) * FS < 8) return;
   drag.moved = true; const z = camZ(), now = performance.now(), dt = Math.max(1, now - drag.t); CAMV.x -= dx / z; CAMV.y -= dy * 0.6 / z; drag.vx = drag.vx * 0.6 + (-dx / z) / dt * 1000 * 0.4; drag.vy = drag.vy * 0.6 + (-dy * 0.6 / z) / dt * 1000 * 0.4; drag.last = p; drag.t = now; camApply(); });
-const endPtr = e => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size && drag) { if (drag.moved) { eatClick = true; CAMV.vx = drag.vx; CAMV.vy = drag.vy; setTimeout(() => { eatClick = false; }, 60); } drag = null; } };
+const endPtr = e => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); lastTouch = performance.now(); if (ptrs.size < 2) pinch = null; if (!ptrs.size && drag) { if (drag.moved) { eatClick = true; CAMV.vx = drag.vx; CAMV.vy = drag.vy; setTimeout(() => { eatClick = false; }, 60); } drag = null; } };
 addEventListener('pointerup', endPtr); addEventListener('pointercancel', endPtr);
 addEventListener('click', e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);   /* 끈 다음의 '누름'은 무시 */
 frame.addEventListener('wheel', e => { if (onUI(e)) return; e.preventDefault(); zoomAt(fxy(e), Math.max(0.85, Math.min(1.4, CAMV.z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)))); }, { passive: false });
 function zoomAt(mid, nz) { const z0 = camZ(), wx = VIEW.l + mid[0] / z0, wy = VIEW.t + mid[1] / z0; CAMV.z = nz; const z1 = camZ(); CAMV.x = wx - mid[0] / z1 + FW / z1 / 2; CAMV.y = wy - mid[1] / z1 + FH / z1 / 2; camApply(); }
 /* 카메라가 부드럽게 그곳으로 (구역 열림 · 목표 누름) */
-export function camTo(x, y, z) { CAMV.tw = { x0: CAMV.x, y0: CAMV.y, z0: CAMV.z, x1: x, y1: y, z1: z ?? CAMV.z, t: 0 }; CAMV.vx = CAMV.vy = 0; }
+/*   자동 이동은 손가락이 화면에 닿아 있는 동안 · 막 끈 직후(1.2초)엔 하지 않음 — 끄는 중에 카메라를 빼앗으면 '끌어도 안 움직임' (대표 제보 10-30)
+   · 강화 단계 업은 4초에 한 번만 · 시작 6초 안(쉬는 동안 끝난 공사가 한꺼번에 옴)엔 카메라를 안 움직임 */
+let lastTouch = -1e9; const touching = () => ptrs.size > 0 || performance.now() - lastTouch < 1200;
+export function camTo(x, y, z, auto) { if (auto && touching()) return false; CAMV.tw = { x0: CAMV.x, y0: CAMV.y, z0: CAMV.z, x1: x, y1: y, z1: z ?? CAMV.z, t: 0 }; CAMV.vx = CAMV.vy = 0; return true; }
 function camStep(dt) {
   if (CAMV.tw) { const w = CAMV.tw; w.t += dt / 0.9; const k = w.t >= 1 ? 1 : 1 - (1 - w.t) ** 3; CAMV.x = w.x0 + (w.x1 - w.x0) * k; CAMV.y = w.y0 + (w.y1 - w.y0) * k; CAMV.z = w.z0 + (w.z1 - w.z0) * k; if (w.t >= 1) CAMV.tw = null; camApply(); return; }
   if (!drag && (Math.abs(CAMV.vx) > 2 || Math.abs(CAMV.vy) > 2)) { const x0 = CAMV.x, y0 = CAMV.y; CAMV.x += CAMV.vx * dt; CAMV.y += CAMV.vy * dt; const f = Math.exp(-dt * 4.2); CAMV.vx *= f; CAMV.vy *= f; camApply(); if (Math.abs(CAMV.x - (x0 + CAMV.vx * 0)) < 0.01 && CAMV.x !== x0 + 0) {} if (CAMV.x === x0) CAMV.vx = 0; if (CAMV.y === y0) CAMV.vy = 0; }   /* 관성 · 끝(카메라 한계)에 닿으면 멈춤 */
@@ -227,14 +230,18 @@ const flies = [0, 1, 2].map(i => ({ x: rnd(100, 600), y: rnd(500, 1100), ph: rnd
 function puff(x, y, n = 1) { for (let i = 0; i < n; i++) parts.push({ k: 'steam', x: x + rnd(-8, 8), y, vx: rnd(-6, 6), vy: rnd(-30, -22), life: rnd(1.4, 2.2), t: 0, r: rnd(7, 11) }); }
 export function burst(x, y, k = 'sparkle', n = 12) { for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(60, 200); parts.push({ k, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - (k === 'heart' ? 80 : 40), life: rnd(0.6, 1.1) * (k === 'heart' ? 1.5 : 1), t: 0, r: rnd(4, 8), c: pick(['#FFE38A', '#FFF6D0', '#F9D4DC', '#BFE6D6']) }); } }
 /* 강화 연출 (대표 10-30) — 레벨마다: 통통 + 반짝 · 짝수 레벨: 소품 하나가 톡 · 단계(Lv5 · 10 · 20): 카메라가 다가가 먼지 → 옛 모습이 작아지고 새 모습이 튀어나옴 + 크게 축하 */
+let lastStageCam = -1e9; const bootT = performance.now();
 const facPos = t => t === 'oven' ? D.OVEN_AT : D.PADS.find(x => x.id === t).pos;
 function stageFx(t, prevLv, afterWork) {
   const o = t === 'oven' ? S.oven : S.pads[t]; if (!o) return; const lv = o.lv, pos = facPos(t), ps = D.stageOf(prevLv), ns = D.stageOf(lv), old = facEl[t];
   if (ns !== ps) {
-    const back = { x: CAMV.x, y: CAMV.y, z: CAMV.z }; camTo(pos[0], pos[1] - 50, Math.min(2.2, Math.max(1.35, CAMV.z * 1.3)));
+    /* 카메라는 '내가 누른 강화'일 때만 · 4초에 한 번만 · 확대는 손가락 확대 범위(≤1.4) 안 · 돌아오기는 그 사이 손을 안 댔을 때만 (공사 끝 여러 개가 한꺼번에 와도 카메라가 날아다니지 않게) */
+    const now = performance.now(), back = { x: CAMV.x, y: CAMV.y, z: CAMV.z };
+    if (now - lastStageCam > 4000 && now - bootT > 6000 && camTo(pos[0], pos[1] - 50, Math.min(1.4, Math.max(CAMV.z, 1.25)), true)) { lastStageCam = now;
+      setTimeout(() => { if (lastTouch < now && !ptrs.size && !CAMV.tw) camTo(back.x, back.y, back.z, true); }, 3400); }
     if (old) old.classList.add('old'); dust(pos[0], pos[1]); burst(pos[0], pos[1] - 40, 'sparkle', 10);
     setTimeout(() => { render(); const im = facEl[t]; if (im) im.classList.add('grow'); burst(pos[0], pos[1] - 50, 'sparkle', 30); dust(pos[0], pos[1]); sfx('tier'); UI.stageUp(t, ns); }, 480);
-    setTimeout(() => { if (!CAMV.tw && Math.abs(CAMV.x - pos[0]) < 60) camTo(back.x, back.y, back.z); }, 3400); return; }
+    return; }
   if (afterWork) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 16); return; }
   if (D.propsOf(lv) > D.propsOf(prevLv)) { render(); const pe = layer.fac.querySelector(`[data-p="${t}${D.propsOf(lv) - 1}"]`); if (pe) { pe.classList.add('grow'); burst(+pe.style.left.slice(0, -2), +pe.style.top.slice(0, -2) - 10, 'sparkle', 5); } }
   const im = facEl[t]; if (im && im.isConnected) { im.classList.remove('bump', 'grow'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 6); }
@@ -343,7 +350,7 @@ function onEvent(e) {
     case 'build': { render(); const p = D.PADS.find(x => x.id === e.pid); const im = facEl[e.pid]; if (im) im.classList.add('pop'); dust(p.pos[0], p.pos[1] + 20); burst(p.pos[0], p.pos[1] - 40, 'sparkle', 18); sfx('build'); syncStaff(); break; }
     case 'upgrade': { const t = e.target; if (e.tier && G.working(t)) { render(); const pos = facPos(t); burst(pos[0], pos[1] - 40, 'sparkle', 12); dust(pos[0], pos[1]); } else stageFx(t, e.lv - 1); break; }
     case 'workDone': stageFx(e.target, (e.target === 'oven' ? S.oven : S.pads[e.target]).lv - 1, true); break;
-    case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
+    case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2, undefined, true); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
     case 'zoneWork': render(); break;
     case 'levelup': hero && hero.play('wave'); break;
   }

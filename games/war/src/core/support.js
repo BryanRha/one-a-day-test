@@ -1,8 +1,8 @@
 // 지원 부대: 작전 시작 때 아군 본부 가까이에 유닛을 더 배치 (화면과 무관 — Node 봇에서도 씀)
 //   광고 보급 보너스(작전 실패 1~2번째) · 응원 선물(같은 작전 3연속 패배 · 6번째 조금 더)이 같은 방식을 씀
 //   크기 근거: tools/help_bot.mjs (봇 승률 변화) — 응원 선물은 보급 보너스 효과의 ½ 이하
-import { TERRAIN, UNITS } from './data.js?v=0.93.0';
-import { TCH } from './sim.js?v=0.93.0';
+import { TERRAIN, UNITS } from './data.js?v=0.93.1';
+import { TCH } from './sim.js?v=0.93.1';
 
 export const SUPPORT = {
   supply: { units: ['ltank', 'inf'], name: '보급 보너스', desc: '경전차 · 소총병 지원' },   /* 광고 1회 (작전 실패 후 '같은 배치로 다시') */

@@ -1,22 +1,22 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.93.0';
-import * as R from './rules.js?v=0.93.0';
-import * as I from './install.js?v=0.93.0';
-import * as T from './track.js?v=0.93.0';
-import * as P from './pay.js?v=0.93.0';
-import * as A from './account.js?v=0.93.0';
-import * as C from './cloud.js?v=0.93.0';
-import * as BM from './bm.js?v=0.93.0';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.93.1';
+import * as R from './rules.js?v=0.93.1';
+import * as I from './install.js?v=0.93.1';
+import * as T from './track.js?v=0.93.1';
+import * as P from './pay.js?v=0.93.1';
+import * as A from './account.js?v=0.93.1';
+import * as C from './cloud.js?v=0.93.1';
+import * as BM from './bm.js?v=0.93.1';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.93.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.93.1').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.93.0'), import('./fortune/types.js?v=0.93.0'), import('./fortune/chat.js?v=0.93.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.93.1'), import('./fortune/types.js?v=0.93.1'), import('./fortune/chat.js?v=0.93.1')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.93.0';
+const VERSION = '0.93.1';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -60,7 +60,10 @@ function go(t, via, seg) {
   if (t === 'settings') return openSettings();   /* 옛 '설정 탭' 부르기 → 설정 시트 */
   if (t === 'library' || t === 'collection') { seg = t === 'collection' ? 'coll' : 'game'; t = 'box'; }
   if (!RENDER[t]) t = 'today';
-  if (tab === 'neorang' && t !== 'neorang' && via !== 'back' && !nrSkip && nrPushed && player.hidden) return nrLeave(t, via, seg);   /* 너랑 안에서 쌓인 기록을 먼저 되돌림 */
+  if (via !== 'back' && !tbSkip && player.hidden && tab !== 'today' && t !== tab) {   /* 받침 · 너랑 시안 안 칸을 먼저 되돌림 (탭 뒤로가기 아래 설명) */
+    const k = (tab === 'neorang' ? nrDepth() : 0) + (t === 'today' && tbPushed ? 1 : 0), sp = spare && (k > 0) ? 1 : 0;
+    if (k + sp > 0) { spare = spare && !sp; return tbLeave(k + sp, t, via, seg); }
+  }
   if (t === 'neorang' && tab === 'neorang' && $('#nrframe')) return;   /* 너랑 시안은 다시 그리지 않음 (안에서 보던 화면 유지) */
   const re = !via && t === tab && t === 'today' && HM.live;   /* 같은 메인을 다시 그리기만(설치 가능 · 로그인 반영 등) = 노출 기록은 이어 감 */
   if (!re) homeLeave();
@@ -70,7 +73,7 @@ function go(t, via, seg) {
   const from = tab; tab = t; document.body.dataset.tab = t; document.body.dataset.lay = LAY;   /* PC 넓은 화면은 '게임'만 두 칸으로 넓힘 (app.css) */
   document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.tab === t); if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   clearInterval(timer);
-  if (t === 'neorang' && from !== 'neorang') nrEnter(); else if (from === 'neorang' && t !== 'neorang') nrPushed = false;
+  if (t === 'today') { tbPushed = false; tbNeed = false; unwatchTab(); } else if (!tbPushed) tbEnter(); else if (!tcw) watchTab();
   FVIA = via || '';
   if (t !== 'today') R.checkIn();   /* 🔥 출석은 어느 탭으로 들어와도 (게임 탭은 그리면서 함) */
   view.innerHTML = RENDER[t]();
@@ -479,12 +482,12 @@ async function fortuneCalendar(ym) {
 let sdOpen = false;
 function sdClose() { const el = $('#sd'); if (el) el.remove(); sdOpen = false; document.body.style.overflow = ''; }
 addEventListener('popstate', () => {
-  if (nrGoing) { nrArrive(); return; }   /* 너랑에서 다른 탭으로: 쌓인 기록을 다 되돌림 */
+  if (tbGoing) { tbArrive(); return; }   /* 다른 탭 · 게임 탭으로: 쌓인 기록을 다 되돌림 */
   if (!sheet.hidden) { closeSheet(true); if ($('#player').hidden) setHash(); return; }
   if (sdOpen) { spare = false; sdClose(); setHash(); return; }
-  if (spare && $('#player').hidden) { spare = false; setHash(); return; }
-  /* 너랑 탭: 시안 안 이동(#hash)은 시안이 받고, 탭에 들어올 때 만든 칸까지 되돌아오면 게임 탭으로 (앱이 꺼지지 않게) */
-  if (tab === 'neorang' && $('#player').hidden && !(history.state && history.state.nr)) { nrPushed = false; go('today', 'back'); return; }
+  if (spare && $('#player').hidden) { spare = false; if (tab === 'today' || isTb(history.state)) { setHash(); return; } }   /* 받침 아래까지 왔으면 남은 칸 처리가 아니라 게임 탭으로 (아래) */
+  /* 게임 탭이 아닌 탭: 받침까지 되돌아오면(받침 아래 칸) 게임 탭으로 · 너랑 시안 안 이동(#hash)은 시안이 받음 */
+  if (tab !== 'today' && $('#player').hidden && !isTb(history.state)) { tbPushed = false; go('today', 'back'); return; }
   if ($('#player').hidden) setHash();   /* 되돌아간 칸의 주소를 지금 탭에 맞춤 */
 });
 /* 주소의 # 만 바꿔 들어온 경우(같은 페이지에서 옛 주소 #library 등): 지금 탭과 다르면 그 탭으로 · 뒤로가기로 바뀐 주소는 popstate 가 먼저 지금 탭에 맞춰 둠 */
@@ -608,7 +611,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.93.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.93.1')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -885,8 +888,7 @@ function boxMem() {
 
 // ── 너랑 (AI 캐릭터 대화 · 2026-10-30 · 시안 shots/oad/03) ──
 //   테스트 · 개발: 탭 안 iframe 에 /lab/story/ 시안 (같은 주소라 시안 쪽 아래 탭 · 옆 안내는 숨김) · 실서버: '곧 공개' 안내만
-//   뒤로가기: 탭에 들어올 때 기록 한 칸 {nr} → 시안 안 이동(#hash)은 그 위에 쌓임 → 뒤로가기는 시안 안에서 먼저 돌아가고, 끝까지 가면 게임 탭으로
-//   다른 탭을 누르면 쌓인 기록(1 + 시안 안 칸 수)을 한 번에 되돌린 뒤 그 탭으로 (남은 기록에 막혀 뒤로가기가 헛돌지 않게)
+//   뒤로가기: 아래 '탭 뒤로가기' 받침 {tb} 위에 시안 안 이동(#hash)이 쌓임 → 시안 안에서 먼저 돌아가고, 끝까지 가면 게임 탭으로
 const NR_SRC = '/lab/story/';
 function renderNeorang() {
   if (R.PROD) return `<div class="nrtab">${header('<span class="nrlogo">너랑<small>NEORANG</small></span>')}${nrSoon()}</div>`;
@@ -894,13 +896,7 @@ function renderNeorang() {
 }
 const nrSoon = note => `<div class="nrsoon"><div class="moon" aria-hidden="true"></div><span class="tag">AI 캐릭터 대화</span><b class="serif">너랑, 곧 만나요</b><p>매일 밤 9시, 캐릭터마다 사건 하나.<br>기억이 이어지는 대화를 준비하고 있어요.</p>
   <div class="nrcards" aria-hidden="true">${['로맨스', '미스터리', '로판'].map(t => `<div><span>${t}</span><i>?</i></div>`).join('')}</div>${note ? `<p class="note">${note}</p>` : '<p class="note">공개되면 이 탭에서 바로 열려요</p>'}</div>`;
-let nrHist = [], nrGoing = null, nrTimer = 0, nrSkip = false, nrPushed = false;   /* nrPushed: 너랑에 들어올 때 만든 기록 칸이 아직 있음 */
-function nrEnter() {
-  if (!player.hidden) return;
-  if (history.state && history.state.nr) { nrPushed = true; return; }   /* 너랑에서 새로 고침: 이미 있는 칸을 그대로 씀 */
-  if (spare) { spare = false; history.replaceState({ nr: 1 }, ''); } else history.pushState({ nr: 1 }, '');   /* 버튼으로 닫은 시트의 남은 한 칸이 있으면 그 칸을 씀 */
-  nrPushed = true;
-}
+let nrHist = [];
 function nrSetup() {
   const fr = $('#nrframe'); if (!fr) return;
   fr.addEventListener('load', () => {
@@ -919,12 +915,44 @@ function nrDepth() {
   try { const n = fr && fr.contentWindow.navigation; if (n && n.currentEntry) k = n.currentEntry.index; } catch { /* */ }
   return k;
 }
-function nrLeave(t, via, seg) {
-  const k = 1 + nrDepth() + (spare ? 1 : 0); spare = false;
-  nrGoing = { t, via, seg }; clearTimeout(nrTimer); nrTimer = setTimeout(nrArrive, 800);
+
+// ── 탭 뒤로가기 (2026-10-30 대표 제보 '운세 탭에서 뒤로가기 → 앱이 꺼짐' 근본 수정) ──
+//   규칙: 게임 탭이 아닌 탭(운세 · 너랑 · 보관함)에서 뒤로가기 = 게임 탭으로 · 게임 탭에서만 앱 동작(나가기)
+//   ① 받침 한 칸 {tb}: 게임 탭 → 다른 탭으로 갈 때 '터치 안에서' pushState (폰 크롬은 터치 없이 만든 기록을 뒤로가기 때 건너뛰어 앱이 꺼짐 — 게임 뒤로가기와 같은 문제)
+//      다른 탭끼리 옮길 때는 받침 그대로 · 터치가 없으면(새로 고침 · 새 버전 · #fortune 로 바로 열림) 첫 터치 때 채움(게임 rearm 과 같은 방식)
+//   ② CloseWatcher (안드로이드 크롬 120+ · PC 는 Esc 와 겹쳐 안 씀): 기록보다 먼저 뒤로가기를 받음 → 시트 · 운세 풀이 · 너랑 시안 안 칸이 있으면 history.back(그쪽이 처리), 없으면 게임 탭으로
+//   너랑: 시안 안 이동(#hash)은 받침 위에 쌓임 → 뒤로가기는 시안 안에서 먼저 → 받침까지 오면 게임 탭 · 다른 탭을 누르면 시안 안 칸(+ 게임 탭이면 받침)을 한 번에 되돌림
+let tbPushed = false, tbNeed = false, tbGoing = null, tbTimer = 0, tbSkip = false, tcw = null;
+const isTb = st => !!(st && (st.tb || st.nr));   /* nr: 0.93.0 의 너랑 받침 (새로 고침해도 이어 씀) */
+function tbEnter() {
+  if (!player.hidden || tab === 'today') return;
+  if (isTb(history.state)) { tbPushed = true; tbNeed = false; return watchTab(); }   /* 새로 고침: 이미 있는 받침을 그대로 씀 */
+  if (!active()) { tbNeed = true; return; }   /* 터치 없이 만들면 폰 크롬이 건너뜀 → 첫 터치 때 */
+  tbNeed = false;
+  if (spare) { spare = false; history.replaceState({ tb: 1 }, ''); } else history.pushState({ tb: 1 }, '');   /* 버튼으로 닫은 시트의 남은 한 칸이 있으면 그 칸을 씀 */
+  tbPushed = true; watchTab();
+}
+/* 첫 터치 · 키 누름 때 받침 채우기 (너랑 시안 안 터치는 위 창으로 이벤트가 안 오므로 사용자 활성 상태도 살핌) */
+const tbArm = () => { if (tbNeed && tab !== 'today' && player.hidden && navigator.userActivation && navigator.userActivation.isActive) tbEnter(); };
+['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'].forEach(ev => addEventListener(ev, tbArm, true));
+setInterval(tbArm, 300);
+function unwatchTab() { if (tcw) { const c = tcw; tcw = null; c.onclose = null; try { c.destroy(); } catch { /* */ } } }
+function watchTab() {
+  unwatchTab(); if (tab === 'today' || !player.hidden || !('CloseWatcher' in window) || isPC()) return;
+  try { tcw = new CloseWatcher(); tcw.onclose = () => { tcw = null; tabBack(); }; } catch { tcw = null; }
+}
+/* 뒤로가기 한 번 (CloseWatcher 로 받은 것): 열린 것부터 닫고, 없으면 게임 탭으로 */
+function tabBack() {
+  if (!player.hidden || tab === 'today') return;
+  if (!sheet.hidden || sdOpen || (tab === 'neorang' && nrDepth() > 0)) { history.back(); setTimeout(watchTab, 0); return; }
+  if (tbPushed) go('today', 'cw'); else go('today', 'back');
+}
+/* 기록 k 칸을 한 번에 되돌린 뒤 그 탭으로 (popstate 에서 tbArrive · 안 오면 0.8초 뒤) */
+function tbLeave(k, t, via, seg) {
+  tbGoing = { t, via, seg }; clearTimeout(tbTimer); tbTimer = setTimeout(tbArrive, 800);
   history.go(-k);
 }
-function nrArrive() { clearTimeout(nrTimer); const g = nrGoing; nrGoing = null; if (!g) return; nrSkip = true; try { go(g.t, g.via || 'tab', g.seg); } finally { nrSkip = false; } }   /* 한 번 되돌린 뒤에는 다시 되돌리지 않음 (기록이 어긋나도 헛돌지 않게) */
+function tbArrive() { clearTimeout(tbTimer); const g = tbGoing; tbGoing = null; if (!g) return; tbSkip = true; try { go(g.t, g.via || 'tab', g.seg); } finally { tbSkip = false; } }   /* 한 번 되돌린 뒤에는 다시 되돌리지 않음 (기록이 어긋나도 헛돌지 않게) */
 
 // ── 설정 ───────────────────────────────────────────
 // 계정 카드: 로그인 전 = 구글 로그인 버튼 · 후 = 이름 · 골드
@@ -1111,7 +1139,7 @@ function play(id, synced) {
     });
     return;
   }
-  closeSheet(); homeLeave();
+  closeSheet(); homeLeave(); unwatchTab();   /* 탭 받침 CloseWatcher 는 게임 동안 쉼 (게임 쪽 CloseWatcher 가 받음 · 닫으면 go 가 다시 켬) */
   playing = { id, t: Date.now() };
   const now0 = performance.now();
   T.track('game_start', { game: id, how: R.access(id), today: R.gameOn(R.dayIndex()) === id ? 1 : 0, from: synced ? (PFROM ? PFROM : 'synced') : PFROM || 'other', ms: HM.t ? Math.round(now0 - HM.t) : -1, ms0: Math.round(now0), nth: ++HM.nth }); PFROM = '';
@@ -1119,7 +1147,7 @@ function play(id, synced) {
   // 게임용 기록 여러 칸을 '누른 순간', 게임 화면(iframe)을 넣기 '전에' 만들어 둠
   //   · 폰 크롬은 터치 없이 만든 기록을 뒤로가기 때 건너뛰어 앱이 꺼짐 → 터치 순간에 미리 쌓고, 하나씩 씀
   //   · iframe 을 먼저 넣으면 게임이 불러와지면서 방금 만든 기록이 사라질 수 있음
-  history.pushState({ game: id, g: 1 }, '');
+  if (spare) { spare = false; history.replaceState({ game: id, g: 1 }, ''); } else history.pushState({ game: id, g: 1 }, '');   /* 막 닫은 시트(계정 기록 확인 등)의 남은 칸을 게임 칸으로 — 게임을 닫은 뒤 헛도는 칸이 남지 않게 */
   frame = document.createElement('iframe'); backReady = false;
   frame.id = 'frame'; frame.title = G(id).title; frame.allow = 'autoplay; fullscreen; vibrate';
   frame.src = `${G(id).path}${G(id).path.includes('?') ? '&' : '?'}v=${VERSION}`;

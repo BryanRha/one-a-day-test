@@ -1,8 +1,8 @@
 // 한 판(열두 달) 진행 엔진: 관문 · 손 · 바람 · 장터 · 이어하기 — 화면과 분리된 순수 로직 (봇 · 저장 · 화면이 같은 걸 씀)
 //   상태는 전부 JSON 으로 저장됨 (앱이 게임을 닫아도 이어서)
-import { Rng } from './rng.js?v=0.93.0';
-import { CHARMS, CHARM, COST, RARITY_P } from './charms.js?v=0.93.0';
-import { GODS, GOD } from './gods.js?v=0.93.0';
+import { Rng } from './rng.js?v=0.93.1';
+import { CHARMS, CHARM, COST, RARITY_P } from './charms.js?v=0.93.1';
+import { GODS, GOD } from './gods.js?v=0.93.1';
 
 export const TUNE = {
   target: [260, 490, 880, 1580],   /* 계절마다 첫 관문 목표 (tools/bot.js 로 맞춤) */
