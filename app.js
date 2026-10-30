@@ -1,22 +1,22 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.94.0';
-import * as R from './rules.js?v=0.94.0';
-import * as I from './install.js?v=0.94.0';
-import * as T from './track.js?v=0.94.0';
-import * as P from './pay.js?v=0.94.0';
-import * as A from './account.js?v=0.94.0';
-import * as C from './cloud.js?v=0.94.0';
-import * as BM from './bm.js?v=0.94.0';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.94.1';
+import * as R from './rules.js?v=0.94.1';
+import * as I from './install.js?v=0.94.1';
+import * as T from './track.js?v=0.94.1';
+import * as P from './pay.js?v=0.94.1';
+import * as A from './account.js?v=0.94.1';
+import * as C from './cloud.js?v=0.94.1';
+import * as BM from './bm.js?v=0.94.1';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.94.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.94.1').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.94.0'), import('./fortune/types.js?v=0.94.0'), import('./fortune/chat.js?v=0.94.0')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.94.1'), import('./fortune/types.js?v=0.94.1'), import('./fortune/chat.js?v=0.94.1')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.94.0';
+const VERSION = '0.94.1';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -611,7 +611,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.94.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.94.1')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -1162,13 +1162,23 @@ function play(id, synced) {
 //   커질 때는 그대로(게임은 크기 변화를 모름) · 더 작아질 때만 한 번 줄임 · 폭이 바뀌면(화면 회전) 새로 잼
 //   PC(마우스 · 앱 속 브라우저 아님)는 주소창이 출렁이지 않으므로 창 높이를 늘 그대로 따름 (줄였다 늘린 창에서 게임이 작게 멈추던 문제)
 let lockW = 0, lockH = 0;
+/* 키보드 구분 (2026-10-30 다꾸 · 폴드 접힘 제보: 입력칸 키보드를 내린 뒤에도 게임이 낮은 높이로 남아 아래 절반이 빔)
+   예전 규칙 '더 작아질 때만 줄임'이 키보드로 줄어든 높이까지 잠가 버렸음 → 키보드일 때는 잠금은 그대로 두고 화면만 잠깐 맞춤
+   키보드로 봄: 같은 폭에서 잠근 높이의 25% 넘게 줄었음 · 또는 게임(iframe) 안 입력칸에 포커스가 있음 (주소창 출렁임은 보통 10% 안쪽) */
+const KB_DROP = 0.75;
+function frameTyping() {
+  try { if (!frame || document.activeElement !== frame) return false; const a = frame.contentDocument && frame.contentDocument.activeElement; return !!a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable); } catch { return false; }
+}
 function lockFrame(on) {
   document.documentElement.classList.toggle('playing', on); document.body.classList.toggle('playing', on);
   if (!on) { document.documentElement.style.removeProperty('--ph'); lockW = lockH = 0; return; }
   const vv = window.visualViewport, h = Math.round(Math.min(innerHeight, vv ? vv.height : innerHeight));
-  if (isPC()) { lockW = innerWidth; lockH = innerHeight; }
-  else if (!lockH || Math.abs(innerWidth - lockW) > 40) { lockW = innerWidth; lockH = h; } else lockH = Math.min(lockH, h);
-  document.documentElement.style.setProperty('--ph', lockH + 'px');
+  let ph;
+  if (isPC()) { lockW = innerWidth; lockH = innerHeight; ph = lockH; }
+  else if (!lockH || Math.abs(innerWidth - lockW) > 40) { lockW = innerWidth; lockH = h; ph = h; }   /* 처음 · 화면 회전(폭이 바뀜): 새로 잼 */
+  else if (h < lockH * KB_DROP || (h < lockH && frameTyping())) ph = h;   /* 키보드: 잠금은 그대로 · 보이는 높이에만 잠깐 맞춤 → 내리면 원래 높이로 */
+  else { lockH = Math.min(lockH, h); ph = lockH; }   /* 앱 속 브라우저 주소창 출렁임: 지금까지 본 가장 작은 높이로 고정 (커질 때는 그대로) */
+  document.documentElement.style.setProperty('--ph', ph + 'px');
 }
 addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });
 window.visualViewport && visualViewport.addEventListener('resize', () => { if (!player.hidden) lockFrame(true); });

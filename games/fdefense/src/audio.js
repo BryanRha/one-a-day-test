@@ -1,5 +1,5 @@
 // 효과음 · 배경음 (원작 소리 m4a). 원작 소리 번호(playSound) → 파일 이름
-import { load, save } from './save.js?v=0.94.0';
+import { load, save } from './save.js?v=0.94.1';
 
 // 원작 번호: 0 로고 · 1~9 맞는 소리 · 10~20 기타 · 21~29 공격 목소리 · 30 칼춤 적중
 const NAME = ['sfx_snlogo', ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `sfx_att_${i}`), ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(i => `sfx_etc_${i}`), ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `sfx_voice_${i}`), 'sfx_spebladehit'];

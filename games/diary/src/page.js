@@ -1,9 +1,9 @@
 // 오늘 페이지 — 날마다 다른 세트 · 틀 7종(자리 · 속지 · 테이프) · 내가 고르는 기분 도장/한 줄 · 날짜 도장 '쿵' · 공유 카드(9:16)
 //   운세 한 줄은 운영 연동 전까지 숨김 (dd.fortune 이 오면 그 자리에 씀)
-import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.94.0';
-import { S, day, dayKey, parseDay, save } from './save.js?v=0.94.0';
-import * as A from './audio.js?v=0.94.0';
-import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.94.0';
+import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.94.1';
+import { S, day, dayKey, parseDay, save } from './save.js?v=0.94.1';
+import * as A from './audio.js?v=0.94.1';
+import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.94.1';
 
 export function pickStickers(got, k) {
   const { lucky, tpl } = dailySet(k); const spots = PAGE_TPL[tpl].spots;
@@ -26,20 +26,34 @@ export function stampSVG(k, missed = false) {
 const moodOf = id => MOODS.find(m => m.id === id);
 
 /* 페이지 그리기 (animate = 오늘 완성 장면 · 아니면 다시 보기) */
-export function renderPage(pg, k, { animate = false, missed = false } = {}) {
+/* 페이지 배치 (px · 화면 크기마다 새로 계산) — 서로 겹치지 않는 네 구역
+   ① 왼쪽 위 글자(날짜 · 요일 · 손글씨 한 줄, 두 줄 자리 미리 잡음) ② 오른쪽 위 날짜 도장 + 그 아래 기분 도장
+   ③ 그 아래부터 버튼 띠 위까지 = 스티커 구역 (틀의 fy 를 이 구역 안으로 옮겨 놓음) ④ 맨 아래 버튼 띠(band) */
+export function pageLayout(PW, PH, band) {
+  const pad = Math.round(PW * 0.07), top = Math.round(Math.min(Math.max(PH * 0.05, 26), 54));
+  const st = Math.round(Math.min(Math.max(PW * 0.27, 90), 130)), md = Math.round(st * 0.46);
+  return { pad, top, st, md, stampX: PW - pad - st, stampY: top, moodX: PW - pad - md - Math.round(st * 0.08), moodY: top + Math.round(st * 1.08) + 6, headW: PW - pad * 2 - st - 12, band };
+}
+export function renderPage(pg, k, { animate = false, missed = false, band = 96 } = {}) {
   const d = parseDay(k), dd = S.days[k];
   const tpl = PAGE_TPL[dd?.tpl ?? dailySet(k).tpl];
   pg.dataset.paper = missed ? 'dot' : tpl.paper;
   pg.querySelectorAll('.pst,.stamp,.bit,.mood,.ptape').forEach(e => e.remove());
-  pg.querySelector('.head').innerHTML = `<b>${d.getMonth() + 1}월 ${d.getDate()}일</b><span>${DAYS[d.getDay()]}요일 · ${missed ? '쉬어 간 날 · 괜찮아요' : '오늘의 다꾸'}</span>`;
-  const text = dd?.fortune || dd?.line || '';
-  const line = pg.querySelector('.line'); line.textContent = text; line.style.display = text ? '' : 'none';
-  /* 틀의 마테 테이프 두 줄 (페이지 모서리) */
-  if (!missed) tpl.tape.forEach((c, i) => { const t = document.createElement('i'); t.className = 'ptape'; t.style.background = c; t.style.cssText += i ? ';left:-4%;bottom:14%;transform:rotate(-38deg)' : ';right:30%;top:1.6%;transform:rotate(3deg)'; pg.appendChild(t); });
+  const PW = pg.clientWidth || 390, PH = pg.clientHeight || 844, H = innerHeight, W = innerWidth, L = pageLayout(PW, PH, band);
+  const head = pg.querySelector('.head'), text = dd?.fortune || dd?.line || '';
+  head.innerHTML = `<b>${d.getMonth() + 1}월 ${d.getDate()}일</b><span>${DAYS[d.getDay()]}요일 · ${missed ? '쉬어 간 날 · 괜찮아요' : '오늘의 다꾸'}</span><em class="hl">${esc(text)}</em>`;
+  Object.assign(head.style, { left: L.pad + 'px', top: L.top + 6 + 'px', width: L.headW + 'px' });
+  pg.querySelector('.line').style.display = 'none';
+  /* 스티커 구역: 글자 · 도장 아래부터 버튼 띠 위까지 */
+  const areaTop = Math.max(head.offsetTop + head.offsetHeight, L.moodY + L.md) + 10, areaBot = PH - band - 6, areaH = Math.max(80, areaBot - areaTop);
+  const base = Math.min(PW - L.pad, areaH * 0.78);
+  pg.dataset.area = `${areaTop},${areaBot}`;
+  /* 틀의 마테 테이프 두 줄 (위 찢긴 가장자리 · 스티커 구역 왼쪽) */
+  if (!missed) tpl.tape.forEach((c, i) => { const t = document.createElement('i'); t.className = 'ptape'; t.style.background = c; t.style.cssText += i ? `;left:-4%;top:${Math.round(areaTop + areaH * 0.42)}px;transform:rotate(-32deg)` : `;left:${Math.round(PW * 0.3)}px;width:${Math.max(40, Math.min(Math.round(PW * 0.26), L.stampX - Math.round(PW * 0.3) - 14))}px;top:4px;height:${Math.max(10, L.top - 14)}px;transform:rotate(2deg)`; pg.appendChild(t); });
   const list = missed ? [] : (dd?.stickers || []);
-  const PW = pg.clientWidth || 390, PH = pg.clientHeight || 844, H = innerHeight, W = innerWidth;
   list.forEach((s_, i) => {
-    const w = PW * s_.fw, x = PW * s_.fx, y = PH * s_.fy;
+    const w = Math.round(s_.fw * base * 1.12), yn = Math.min(1, Math.max(0, (s_.fy - 0.22) / 0.62));
+    const x = Math.round(Math.min(PW - w - L.pad * 0.4, Math.max(L.pad * 0.4, s_.fx * PW))), y = Math.round(areaTop + yn * (areaH - w));
     const e = document.createElement('div'); e.className = 'pst' + (String(s_.ty).startsWith('f') ? ' foil' : ''); e.style.width = e.style.height = w + 'px';
     e.innerHTML = `<img src="${img(s_.ty)}" alt="${nameOf(s_.ty)}">` + (i === 1 || i === 5 ? `<i class="tape" style="background:${tpl.tape[i === 1 ? 0 : 1]};opacity:.8;transform:rotate(${-s_.rot - 6}deg)"></i>` : '');
     pg.appendChild(e);
@@ -56,9 +70,9 @@ export function renderPage(pg, k, { animate = false, missed = false } = {}) {
     }, sp(650 + i * 280));
   });
   const stamps = (anim) => {
-    const s = document.createElement('div'); s.className = 'stamp'; s.innerHTML = stampSVG(k, missed); pg.appendChild(s);
+    const s = document.createElement('div'); s.className = 'stamp'; s.innerHTML = stampSVG(k, missed); Object.assign(s.style, { left: L.stampX + 'px', top: L.stampY + 'px', width: L.st + 'px', right: 'auto' }); pg.appendChild(s);
     const m = !missed && dd?.mood && moodOf(dd.mood);
-    if (m) { const e = document.createElement('div'); e.className = 'mood'; e.innerHTML = moodSVG(m); pg.appendChild(e); if (!anim) e.style.opacity = 1; else e.animate([{ opacity: 0, transform: 'scale(1.7) rotate(14deg)' }, { opacity: 1, transform: 'scale(1) rotate(8deg)' }], { duration: sp(320), delay: sp(420), easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' }); }
+    if (m) { const e = document.createElement('div'); e.className = 'mood'; e.innerHTML = moodSVG(m); Object.assign(e.style, { left: L.moodX + 'px', top: L.moodY + 'px', width: L.md + 'px', right: 'auto' }); pg.appendChild(e); if (!anim) e.style.opacity = 1; else e.animate([{ opacity: 0, transform: 'scale(1.7) rotate(14deg)' }, { opacity: 1, transform: 'scale(1) rotate(8deg)' }], { duration: sp(320), delay: sp(420), easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' }); }
     if (!anim) { s.style.opacity = missed ? .75 : .9; s.style.transform = 'rotate(-10deg)'; return; }
     s.animate([{ opacity: 0, transform: 'scale(1.9) rotate(-22deg)' }, { opacity: .95, transform: 'scale(.94) rotate(-9deg)', offset: .7 }, { opacity: .9, transform: 'scale(1) rotate(-10deg)' }], { duration: sp(360), easing: 'cubic-bezier(.5,0,.7,1)', fill: 'forwards' });
     setTimeout(() => { A.stamp(); pg.animate([{ transform: 'translate(0,0)' }, { transform: 'translate(1px,2px)' }, { transform: 'translate(0,0)' }], { duration: 120 }); }, sp(250));
@@ -67,7 +81,7 @@ export function renderPage(pg, k, { animate = false, missed = false } = {}) {
   if (!animate) { if (dd?.done || missed) stamps(false); return 0; }
   /* 오늘 완성: 스티커가 다 붙으면 → 기분 · 한 줄 고르기 → 도장 '쿵' */
   const tEnd = 650 + list.length * 280 + 400;
-  return new Promise(res => setTimeout(() => choose(k, () => { const t2 = (dd?.fortune || dd?.line || ''); line.textContent = t2; line.style.display = t2 ? '' : 'none'; stamps(true); setTimeout(res, sp(1100)); }), sp(tEnd)));
+  return new Promise(res => setTimeout(() => choose(k, () => { head.querySelector('.hl').textContent = dd?.fortune || dd?.line || ''; stamps(true); setTimeout(res, sp(1100)); }), sp(tEnd)));
 }
 function dust(pg, x, y, w) { if (sp(1) < 1) return; for (let i = 0; i < 8; i++) { const b = document.createElement('div'); b.className = 'bit'; b.style.width = b.style.height = '4px'; b.style.borderRadius = '50%'; b.style.background = 'rgba(120,95,70,.35)'; pg.appendChild(b); const a = (i / 8) * Math.PI * 2, r = w * 0.5; b.animate([{ transform: `translate(${x + Math.cos(a) * r * .8}px,${y + Math.sin(a) * r * .8}px)`, opacity: .8 }, { transform: `translate(${x + Math.cos(a) * r * 1.15}px,${y + Math.sin(a) * r * 1.15}px)`, opacity: 0 }], { duration: 380, easing: 'ease-out' }).onfinish = () => b.remove(); } }
 
@@ -135,7 +149,7 @@ export const miniHTML = (k, cap = '') => `<div class="pmini" data-k="${k}"><div 
 export function fillMinis(root) {
   root.querySelectorAll(".pmini[data-k]").forEach(w => {
     const pb = w.querySelector('.pagebox'), k = w.dataset.k;
-    renderPage(pb, k, { missed: !S.days[k]?.done });
+    renderPage(pb, k, { missed: !S.days[k]?.done, band: 30 });
     const fit = () => { const s = w.clientWidth / 390; if (s > 0) pb.style.transform = `scale(${s})`; };
     fit(); requestAnimationFrame(fit);
   });

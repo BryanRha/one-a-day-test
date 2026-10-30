@@ -1,10 +1,11 @@
-import { W, BASE_H, setH } from './config.js?v=0.94.0';
-import { audio } from './audio.js?v=0.94.0';
-import { BootScene } from './scenes/Boot.js?v=0.94.0';
-import { TitleScene } from './scenes/Title.js?v=0.94.0';
-import { PlayScene } from './scenes/Play.js?v=0.94.0';
-import { installBack } from './oad.js?v=0.94.0';
-import { initBM } from './bmflow.js?v=0.94.0';
+import { W, BASE_H, setH } from './config.js?v=0.94.1';
+import { audio } from './audio.js?v=0.94.1';
+import { BootScene } from './scenes/Boot.js?v=0.94.1';
+import { TitleScene } from './scenes/Title.js?v=0.94.1';
+import { PlayScene } from './scenes/Play.js?v=0.94.1';
+import { HomeScene } from './scenes/Home.js?v=0.94.1';
+import { installBack } from './oad.js?v=0.94.1';
+import { initBM } from './bmflow.js?v=0.94.1';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }
@@ -13,7 +14,7 @@ async function start() {
     scale: { mode: innerHeight / innerWidth > BASE_H / W ? Phaser.Scale.EXPAND : Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     render: { antialias: true, powerPreference: 'high-performance' },
     input: { activePointers: 2 }, fps: { target: 60 },
-    scene: [BootScene, TitleScene, PlayScene],
+    scene: [BootScene, TitleScene, HomeScene, PlayScene],
   });
   audio.attach(game);
   setH(game.scale.height);
@@ -28,6 +29,6 @@ async function start() {
   addEventListener('resize', refresh); addEventListener('orientationchange', refresh);
   window.__game = game;
   initBM(game);
-  installBack(game, { home: 'Title', roots: [] });
+  installBack(game, { home: 'Home', roots: ['Title'] });
 }
 start();

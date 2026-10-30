@@ -412,7 +412,7 @@ body.gray { filter: grayscale(1); }
 /* 썸네일: 실제 페이지(390×844)를 그대로 그린 뒤 줄여서 보여 줌 → 도장 · 스티커 · 속지가 한 장에 */
 .pmini { position: relative; width: 100%; aspect-ratio: 390/844; border-radius: 6px 12px 12px 6px; overflow: hidden; box-shadow: 0 4px 12px rgba(70,50,30,.2); background: #f1e7d6; }
 .pmini > .pagebox { position: absolute; left: 0; top: 0; width: 390px; height: 844px; transform-origin: 0 0; pointer-events: none; }
-.pmini > .pagebox .stamp { top: 6.5%; } .pmini > .pagebox .head { top: 8%; } .pmini > .pagebox .mood { top: 20%; }
+
 .pmini figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px; font-size: 12px; text-align: center; background: linear-gradient(transparent, rgba(251,246,236,.95)); color: var(--ink); }
 .recent4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; } .recent4 button { border: 0; padding: 0; background: none; }
 .homepages { display: flex; gap: 10px; overflow-x: auto; margin-top: 10px; padding-bottom: 4px; scroll-snap-type: x mandatory; } .homepages button { flex: 0 0 26%; border: 0; padding: 0; background: none; scroll-snap-align: start; }
@@ -420,3 +420,8 @@ body.gray { filter: grayscale(1); }
 .minibox { margin: 10px 0; padding: 12px 14px; } .recent4 .pmini figcaption { font-size: 11px; }
 .hero .ht { min-width: 0; flex: 1; margin-right: 8px; } .hero .ht p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hero .hr { position: absolute; right: 12px; top: 12px; } .hero .ht { flex: 0 1 auto; max-width: 86%; margin-right: 0; } .hero .ht p { white-space: normal; }
+
+/* 오늘 페이지 글자 구역: 손글씨 한 줄은 날짜 아래 흐름 안에 (두 줄 자리를 미리 잡아 겹치지 않음) */
+.pagebox .head { right: auto; }
+.pagebox .head .hl { display: block; margin-top: 6px; min-height: 2.3em; font-family: 'Nanum Pen Script', cursive; font-style: normal; font-size: 24px; line-height: 1.15; color: #4b3f35; word-break: keep-all; }
+.pagebox .stamp { right: auto; } .pagebox .mood { right: auto; }

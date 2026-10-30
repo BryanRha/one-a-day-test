@@ -1,5 +1,5 @@
 // 저장 (localStorage 'gamsung_v1'): 돈 · 마음 · 경험치 · 원두 · 매장별 가구/머신/진열 · 동료 · 단골 · 오늘(판매·주문서·출석·쿠폰)
-import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.94.0';
+import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.94.1';
 const KEY = 'gamsung_v1';
 /* 시계: 시험용 배속(?speed)일 때 머신·로스터 시간도 같이 빨라지게 */
 let skew = 0; export const now = () => Date.now() + skew; export const addSkew = ms => { skew += ms; };
