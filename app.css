@@ -2,6 +2,7 @@
 :root {
   --bg: #14102E; --bg2: #221A4A; --card: #2A2158; --card2: #352A6E; --line: rgba(255,255,255,.1);
   --text: #F6F2FF; --sub: #B9AEE0; --mute: #8378B0; --gold: #FFC93C; --gold2: #FF9F1C; --pink: #FF6FAE; --mint: #6EE7C8;
+  --moon: #F1D7A2; --moon2: #E2B36A; --nrink: #0A0E1C;
   --r: 22px; --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -94,12 +95,15 @@ h1, h2, h3, .jua { font-family: 'Jua', sans-serif; font-weight: 400; margin: 0; 
 .group button.warn { background: rgba(255,111,174,.18); color: #FFB3D4; }
 .rules li { margin: 6px 0; color: #DDD5FA; }
 
-/* 하단 탭 */
-#tabs { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; display: grid; grid-template-columns: repeat(4, 1fr);
-  padding: 8px 10px calc(8px + var(--safe-b)); background: rgba(20,16,46,.86); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--line); z-index: 10; }
-#tabs button { appearance: none; border: 0; background: none; color: var(--mute); display: flex; flex-direction: column; align-items: center; gap: 3px; font: 12px 'Jua'; padding: 6px 0; cursor: pointer; }
+/* 하단 탭 — A안 4칸 (2026-10-30 · lab/story-mock/oad.html .tabbar 와 같은 값): 아이콘 알약 52×30 · 글자 12.5px · 켜진 칸 금색 · 너랑은 달빛색 */
+#tabs { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 6px 2px calc(8px + var(--safe-b)); background: rgba(20,16,46,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); z-index: 10; }
+#tabs button { appearance: none; border: 0; background: none; color: var(--mute); position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; font: 12.5px/1.2 'Jua'; padding: 3px 0 2px; min-width: 0; white-space: nowrap; cursor: pointer; }
+#tabs .ic { display: grid; place-items: center; width: 52px; height: 30px; border-radius: 99px; transition: background .2s; }
 #tabs svg { width: 24px; height: 24px; fill: currentColor; }
-#tabs button.on { color: var(--gold); }
+#tabs button.on { color: var(--gold); } #tabs button.on .ic { background: rgba(255,201,60,.16); }
+#tabs button.nr.on { color: var(--moon); } #tabs button.nr.on .ic { background: rgba(241,215,162,.16); }
+#tabs button.dot::after { content: ''; position: absolute; top: 3px; left: calc(50% + 9px); width: 8px; height: 8px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 2px var(--bg); }
 
 /* 게임 화면 */
 /* 게임 창 높이 고정: 카톡 등 앱 속 브라우저에서 주소창이 들락날락해도 게임이 출렁이지 않게 '가장 작은 화면 높이'로 */
@@ -584,6 +588,7 @@ body.playing #app { visibility: hidden; }
   #tabs { order: -1; position: sticky; top: 0; left: auto; bottom: auto; transform: none; width: auto; max-width: none; margin: 0 0 0; display: flex; align-items: center; gap: 4px; padding: 10px 18px; background: rgba(20,16,46,.88); border-top: 0; border-bottom: 1px solid var(--line); border-radius: 0 0 18px 18px; }
   #tabs::before { content: '🌙 One a Day'; margin-right: auto; font: 21px 'Jua', sans-serif; color: var(--gold); }
   #tabs button { flex-direction: row; gap: 6px; padding: 7px 14px; border-radius: 99px; font-size: 15px; } #tabs svg { width: 18px; height: 18px; } #tabs button.on { background: rgba(255,201,60,.14); }
+  #tabs .ic { width: auto; height: auto; background: none !important; } #tabs button.nr.on { background: rgba(241,215,162,.14); } #tabs button.dot::after { top: 5px; left: 26px; }
   .top .brand { visibility: hidden; }
   .toast { bottom: 40px; }
   /* 새 메인 B: 달력 한 줄 · 왼쪽 오늘의 게임 · 오른쪽 운세 · 내일 · 만난 게임 · 아래 진열장 6칸 */
@@ -607,3 +612,81 @@ body.playing #app { visibility: hidden; }
   body[data-tab="today"] .today > .top { height: 0; margin: 0; } body[data-tab="today"] .today > .top .tchips { position: absolute; top: 12px; left: 230px; z-index: 11; }
 }
 .wd .adl em { font-style: normal; } @media (max-width: 380px) { .wd .adl em { display: none; } }
+
+/* ── 아래 탭 A안 (2026-10-30 대표 · lab/story-mock/oad.html · shots/oad/*.png) ── */
+/* 머리줄 톱니 → 설정 시트 · 제목 머리줄(운세 · 너랑 · 보관함) */
+.gear { appearance: none; flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; padding: 0; background: rgba(255,255,255,.06); border: 1px solid var(--line); cursor: pointer; }
+.gear svg { width: 18px; height: 18px; fill: var(--sub); }
+.top:not(.tt) .goldchip { display: none; }   /* 게임 탭 머리줄은 시안대로 로고 · 연속 · 톱니 (골드는 보관함 · 운세 · 설정에서) */
+.top.tt { margin-bottom: 10px; } .ttl { font: 26px 'Jua', sans-serif; margin: 0; color: var(--text); white-space: nowrap; }
+.tt .tchips, .ftop .tchips { gap: 8px; }
+/* 운세 탭: 예전 운세 전체 화면(.sdpage)을 그대로 탭 안에 · 위에 머리줄 */
+body[data-tab="fortune"] { background: #060505; } body[data-tab="fortune"]::before { display: none; }
+body[data-tab="fortune"] #view, body[data-tab="neorang"] #view { padding: 0; }
+.ftab { position: relative; color: var(--paper); min-height: 70vh; padding-bottom: 8px; }
+.ftop { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; padding: calc(14px + var(--safe-t)) 16px 0; }
+.ftop .ttl { font-size: 24px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+.ftop .gear { background: rgba(13,11,12,.55); border-color: rgba(255,255,255,.16); }
+.ftab .sdhero .seal { top: calc(64px + var(--safe-t)); }
+.ftab .fwait { padding: calc(120px + var(--safe-t)) 24px 40px; text-align: center; color: var(--paper2); font-size: 18px; }
+.ftab.new .fnew { padding: calc(64px + var(--safe-t)) 16px 0; } .ftab.new .sdfoot { text-align: center; }
+.ftab .sdbtns { padding: 0 16px; }
+/* 보관함: 안쪽 칸 · 요약 · 3칸 격자 (시안 04) */
+.bseg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid var(--line); margin: 2px 0 12px; }
+.bseg button { appearance: none; border: 0; background: none; padding: 8px 0; border-radius: 10px; font: 14px 'Jua', sans-serif; color: var(--sub); white-space: nowrap; cursor: pointer; }
+.bseg button.on { background: var(--card2); color: var(--gold); box-shadow: 0 2px 8px rgba(0,0,0,.25); } .bseg button.nr.on { color: var(--moon); }
+.sumrow { display: flex; gap: 8px; margin-bottom: 12px; }
+.sumrow div { flex: 1; padding: 10px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); text-align: center; }
+.sumrow b { display: block; font: 20px 'Jua', sans-serif; color: var(--gold); } .sumrow small { font-size: 11px; color: var(--sub); }
+.bgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+.bg { min-width: 0; cursor: pointer; }
+.bg .im { position: relative; aspect-ratio: 1; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+.bg .im img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg .st { position: absolute; left: 5px; bottom: 5px; font: 11px 'Jua', sans-serif; padding: 1px 7px; border-radius: 8px; background: rgba(0,0,0,.6); color: #E8E2FF; white-space: nowrap; }
+.bg .st.own, .bg .st.open { background: var(--mint); color: #053A2E; } .bg .st.today { background: var(--gold); color: #3A2600; }
+.bg .collab { position: absolute; left: 5px; top: 5px; font: 10.5px 'Jua', sans-serif; color: #fff; background: rgba(0,0,0,.55); border-radius: 6px; padding: 1px 6px; }
+.bg .t { font: 14px 'Jua', sans-serif; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bg .s { font-size: 11px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bsub { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 22px 0 8px; } .bsub b { font: 17px 'Jua', sans-serif; color: #FFB98A; } .bsub span { font-size: 12px; color: var(--sub); }
+.bh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 4px 0 2px; } .bh b { font: 18px 'Jua', sans-serif; white-space: nowrap; } .bh span { font-size: 12px; color: var(--sub); text-align: right; }
+.bfoot { text-align: center; font-size: 11.5px; color: var(--mute); margin: 18px 0 0; }
+@media (hover: hover) { .bg:hover .im { border-color: rgba(255,201,60,.55); } .bg { transition: transform .12s; } .bg:hover { transform: translateY(-2px); } .gear:hover { border-color: rgba(255,201,60,.5); } }
+/* 너랑: 테스트는 시안 iframe (탭 바 위 칸 전체) · 실서버는 '곧 공개' */
+body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]::before { display: none; }
+.nrtab { min-height: 70vh; background: radial-gradient(500px 300px at 85% -5%, rgba(241,215,162,.16), transparent 60%), linear-gradient(180deg, #0D1226, var(--nrink) 70%); padding: calc(18px + var(--safe-t)) 16px 24px; }
+.nrtab.live { padding: 0; background: var(--nrink); }
+.nrbox { position: fixed; left: 50%; transform: translateX(-50%); top: 0; bottom: var(--tabh, 72px); width: 100%; max-width: 480px; background: var(--nrink); }
+.nrbox iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--nrink); }
+.nrbox .nrfail { padding: calc(40px + var(--safe-t)) 16px; }
+.nrlogo { display: inline-flex; align-items: baseline; gap: 8px; font: 700 27px 'Nanum Myeongjo', 'AppleMyungjo', 'Noto Serif KR', serif; color: var(--moon); letter-spacing: -.5px; }
+.nrlogo small { font: 11px -apple-system, 'Noto Sans KR', sans-serif; color: var(--sub); letter-spacing: 1.5px; }
+.nrsoon { margin-top: 18px; padding: 28px 20px 22px; border-radius: 24px; text-align: center; background: linear-gradient(160deg, #1B2343, #121831); border: 1px solid rgba(241,215,162,.28); color: #E6E9F5; }
+.nrsoon .moon { width: 54px; height: 54px; margin: 0 auto 10px; border-radius: 50%; box-shadow: inset -14px -4px 0 0 var(--moon); transform: rotate(-20deg); filter: drop-shadow(0 0 14px rgba(241,215,162,.45)); }
+.nrsoon .tag { display: inline-block; font-size: 11.5px; letter-spacing: 1px; color: var(--moon2); font-weight: 700; }
+.nrsoon b { display: block; margin: 4px 0 6px; font-size: 24px; color: var(--moon); }
+.nrsoon p { margin: 0; font-size: 13.5px; line-height: 1.6; color: #AEB4CB; } .nrsoon .note { margin-top: 14px; font-size: 11.5px; color: #6E7794; }
+.nrcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+.nrcards div { position: relative; aspect-ratio: 3/4; border-radius: 14px; border: 1px dashed rgba(255,255,255,.16); background: repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 10px, transparent 10px 20px), #0E1428; display: grid; place-items: center; }
+.nrcards span { position: absolute; top: 7px; left: 7px; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 99px; color: var(--moon); border: 1px solid rgba(241,215,162,.35); background: rgba(10,14,28,.65); }
+.nrcards i { font: 700 30px serif; font-style: normal; color: rgba(241,215,162,.35); }
+.nrsoon.sm { margin-top: 4px; } .nrsoon.sm b { font-size: 20px; }
+.nrgo { appearance: none; margin-top: 14px; padding: 9px 16px; border-radius: 99px; border: 1px solid rgba(241,215,162,.45); background: rgba(241,215,162,.1); color: var(--moon); font: 14px 'Jua', sans-serif; cursor: pointer; }
+/* 설정 시트 (시안 05): 제목 줄 + 닫기 · 묶음 이름 */
+.sethead { display: flex; align-items: center; justify-content: space-between; margin: 0 0 14px; } .sethead h2 { font-size: 28px; }
+.setx { appearance: none; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255,255,255,.08); color: var(--text); font-size: 16px; cursor: pointer; }
+.sgh { margin: 0 0 6px 4px; font: 14px 'Jua', sans-serif; color: var(--sub); }
+.setpanel .acct { margin-bottom: 16px; }
+/* 탭 바뀜 안내 말풍선: 보관함 탭 위 */
+.tabtip { position: fixed; z-index: 60; bottom: calc(var(--tabh, 72px) + 10px); right: max(10px, calc(50% - 230px)); max-width: min(330px, calc(100% - 20px)); display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 16px; background: #FFF6DC; color: #3A2600; font-size: 13.5px; box-shadow: 0 10px 30px rgba(0,0,0,.45); animation: up .3s cubic-bezier(.2,.9,.3,1.2); cursor: pointer; }
+.tabtip::after { content: ''; position: absolute; right: 44px; bottom: -7px; width: 14px; height: 14px; background: #FFF6DC; transform: rotate(45deg); border-radius: 2px; }
+.tabtip b { color: #B5530B; } .tabtip button { appearance: none; flex: 0 0 auto; border: 0; border-radius: 10px; padding: 6px 10px; background: #3A2600; color: #FFE7B0; font: 13px 'Jua', sans-serif; cursor: pointer; }
+.tabtip.out { opacity: 0; transition: opacity .25s; }
+@media (pointer: fine) and (min-width: 960px) {
+  .top:not(.tt) .goldchip { display: inline-flex; }
+  .nrbox { top: var(--tabh, 56px); bottom: 0; }
+  #tabs::before { white-space: nowrap; }
+  body:not([data-tab="today"]) #tabs { padding: 10px 10px; gap: 2px; } body:not([data-tab="today"]) #tabs::before { font-size: 19px; }   /* 게임 탭 말고는 앱 폭 480 — 로고 · 탭 4개가 한 줄에 */
+  body:not([data-tab="today"]) #tabs button { padding: 7px 10px; font-size: 14px; gap: 5px; }
+  .tabtip { top: calc(var(--tabh, 56px) + 10px); bottom: auto; } .tabtip::after { top: -7px; bottom: auto; }
+}
+@media (max-width: 360px) { .ttl { font-size: 23px; } .bseg button { font-size: 13px; } .tabtip { font-size: 12.5px; } }

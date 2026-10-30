@@ -46,9 +46,15 @@ html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-ad
 @keyframes facPop { 0% { transform: translate(-50%, -82%) scale(.6, .4); } 45% { transform: translate(-50%, -82%) scale(1.12, .92); } 70% { transform: translate(-50%, -82%) scale(.96, 1.05); } 100% { transform: translate(-50%, -82%) scale(1); } }
 .fac.bump { animation: facBump .45s var(--pop); }
 @keyframes facBump { 0% { transform: translate(-50%, -82%) scale(1); } 35% { transform: translate(-50%, -82%) scale(1.08, .93); } 100% { transform: translate(-50%, -82%) scale(1); } }
-.fac.t1 { filter: drop-shadow(0 0 0 #fff) saturate(1.05); }
-.fac.t2 { filter: drop-shadow(0 0 6px #FFF3B8) saturate(1.1); }
-.fac.t3 { filter: drop-shadow(0 0 10px #FFE38A) drop-shadow(0 0 3px #fff) saturate(1.15); }
+.fac.prop, .fac.amen { transform: translate(-50%, -88%); transform-origin: 50% 88%; }
+.fac.s3 { filter: drop-shadow(0 0 6px #FFF1C2); }
+/* 단계가 바뀔 때: 먼지 속에서 옛 모습이 작아지고 → 새 모습이 통통 튀며 나타남 */
+.fac.old { animation: facOld .5s ease-in both; }
+@keyframes facOld { 0% { transform: translate(-50%, -82%) scale(1); opacity: 1; } 60% { transform: translate(-50%, -82%) scale(1.06, .9); opacity: 1; } 100% { transform: translate(-50%, -82%) scale(.6, .3); opacity: 0; } }
+.fac.grow { animation: facGrow .9s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes facGrow { 0% { transform: translate(-50%, -82%) scale(.5, .2); opacity: 0; } 30% { opacity: 1; } 55% { transform: translate(-50%, -82%) scale(1.12, .9); } 75% { transform: translate(-50%, -82%) scale(.96, 1.05); } 100% { transform: translate(-50%, -82%) scale(1); } }
+.fac.prop.grow { animation: propIn .6s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes propIn { 0% { transform: translate(-50%, -88%) scale(0); } 100% { transform: translate(-50%, -88%) scale(1); } }
 .garland { position: absolute; transform: translate(-50%, -50%); pointer-events: none; font-size: 0; }
 .garland i { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--pink); border: 2px solid #C98A9A; animation: bob 2.4s ease-in-out infinite; }
 .garland i:nth-child(2n) { background: var(--yel); border-color: #C9A04A; animation-delay: -.6s; }
@@ -282,3 +288,17 @@ html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-ad
 .celebrate .cc { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #FFFBF2f6; border: 4px solid #C9A04A; border-radius: 34px; padding: 22px 34px; box-shadow: 0 10px 40px #5E4A4244; animation: bannerIn 2.6s var(--pop) forwards; max-width: 560px; text-align: center; }
 .celebrate .cc > img { width: 110px; height: 110px; object-fit: contain; animation: artIn .7s var(--pop); } .celebrate .ico { width: 26px; height: 26px; } .celebrate b { font: 900 46px/1.1 var(--ff); color: #C9642A; } .celebrate span { font: 700 21px/1.35 var(--ff); color: #6A5A52; }
 .stars3 { position: absolute; transform: translate(-50%, -50%); font: 900 20px/1 var(--ff); color: #F2B21E; text-shadow: 0 0 3px #fff, 0 2px 0 #9A6A1E; pointer-events: none; animation: numUp 1.3s var(--soft) forwards; white-space: nowrap; }
+
+/* 한 번 보인 판은 주기 갱신 때 다시 튀어나오지 않게 (등장 연출은 처음 한 번만) */
+.sh .body.shown .card, .sh .body.shown .pack { animation: none; opacity: 1; transform: none; }
+
+/* 강화 창: 지금 모습 → 다음 단계 모습 */
+.art.stg { display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+.art.stg .arr { align-self: center; color: var(--wood2, #B98A5E); font-size: 22px; }
+.art.stg .nx { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.art.stg .nx img { max-height: 110px; width: auto; filter: saturate(.9) brightness(1.04); opacity: .95; }
+.art.stg .nx small { font: 800 15px/1 var(--ff); background: #FFF3C9; border-radius: 10px; padding: 4px 8px; color: #8A6A3A; white-space: nowrap; }
+.stnext { font: 700 16px/1.3 var(--ff); color: #8A7A6E; margin: 4px 0 2px; word-break: keep-all; }
+.dlg .art.stg { width: 100%; height: 170px; }
+.dlg .art.stg > img { max-width: 180px; max-height: 160px; }
+.dlg .art.stg .nx img { max-width: 130px; }

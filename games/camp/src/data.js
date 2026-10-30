@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.5' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.1.6' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -32,7 +32,20 @@ export const CAT_SPOT = P(195, 905);
    화면 위(먼 곳)는 작게, 아래(가까운 곳)는 크게: y 에 따라 선형 (사람 · 고양이 · 강아지 · 시설 · 장식 · 앉는 자리 모두 같은 규칙) */
 export const DOOR_Y = Math.round(880 * BG_S), ADULT_H = 60;
 export const PERSP = y => Math.max(0.7, Math.min(1.3, 1 + (y - DOOR_Y) * 0.00048));
-export const FAC_K = 0.5, DECO_K = 0.42;   /* 시설 · 장식 그림 배율 (× PERSP) — 식탁 폭 ≈ 어른 키 1.3배 · 텐트 높이 ≈ 어른 1.4배 */
+export const FAC_K = 0.5, DECO_K = 0.42;
+/* 시설 단계 외형 (대표 10-30: 강화하면 룩이 바뀌어야) — Lv1 · Lv5 · Lv10 · Lv20 4단계, 같은 실루엣이 자라는 그림 (art/fac/st/<종류>_0~3)
+   폭(판 px · × PERSP) = 처음 폭 × 자람 배율 — 자람은 1.26배까지만 (자라도 길을 막지 않게 · 바닥 차지는 그대로, 위로 · 뒤로 자람)
+   단계 사이 짝수 레벨마다 작은 소품 하나 (화분 · 등불 · 상자 …) · 높은 단계일수록 휘게포레스트 톤 (세련된 마감 · 조명) */
+export const STAGE = {
+  at: [1, 5, 10, 20], label: ['Lv1', 'Lv5', 'Lv10', 'Lv20'], grow: [0.92, 1, 1.12, 1.26],
+  k: { pot: 70, drink: 66, table: 79, bbq: 80, tent: 92, firepit: 75, hammock: 72, footwash: 82, playpool: 88, oven: 104 },
+  ovenW: [118, 122, 128, 136],   /* 오븐은 배경 속 화덕을 다 덮어야 해서 처음부터 크게 · 덜 자람 */
+  w: (kind, s) => kind === 'oven' ? STAGE.ovenW[s] : STAGE.k[kind] * STAGE.grow[s],
+  props: ['p_tulip', 'p_lamp', 'p_crate', 'p_mush', 'p_shrub', 'p_flower', 'p_logs', 'p_fern'],
+};
+export const stageOf = lv => lv >= 20 ? 3 : lv >= 10 ? 2 : lv >= 5 ? 1 : 0;
+/* 짝수 레벨 소품: 이 단계 안에서 늘어난 짝수 레벨 수 (단계가 바뀌면 새 그림이 소품을 품으니 다시 0부터 · 최대 3개) */
+export const propsOf = lv => Math.min(3, Math.floor(lv / 2) - Math.floor(STAGE.at[stageOf(lv)] / 2));
 
 /* ── 걷는 곳 (배경 '봄' 기준 · 배경 그림 좌표 → 판) · 가을 배경을 새로 그리면 같은 꼴로 WALKMAP.autumn 을 만든다 ──
    walk: 길 · 잔디 · 마당 · 데크 다각형 + 길 띠(line · r) · zone 이 열려야 걸을 수 있음
@@ -84,6 +97,11 @@ export const WALKGRAPH = { spring: {
 } };
 WALKGRAPH.autumn = WALKGRAPH.spring;   /* 가을 배경은 행사 때 새로 그림 → 그 배경에 맞춰 이 꼴로 다시 만듦 (지금은 같은 배치 가정) */
 /* 건물이 사람을 가리는 부분 (배경을 그 모양대로 잘라 사람 위에 그림 · base = 바닥선: 그보다 위(뒤)에 선 사람만 가림) */
+/* 오븐 단계 그림 위로 다시 덮는 배경 조각 (키친 지붕 · 오븐 앞 기둥) — 단계 그림이 배경 속 화덕을 가리고, 지붕 · 기둥은 그 앞에 */
+export const OVEN_ROOF = PP([[600, 770], [804, 770], [800, 800], [796, 812], [734, 857], [733, 952], [719, 952], [719, 858], [712, 851], [640, 834], [600, 826]]);
+export const OVEN_AT = P(712, 922);   /* 단계 그림 바닥 가운데 (배경 화덕 자리) */
+/* 편의 설비 그림 자리 (배경 좌표 → 판) · w = 폭(판 px) — 키친 조리대 위 · 끝, 웰컴센터 데크 옆 · 길(걷는 선) 밖 */
+export const AMEN_AT = { fridge: [P(538, 908), 40], sink: [P(604, 884), 52], toaster: [P(642, 876), 26], micro: [P(668, 874), 28], shower: [P(472, 872), 44], laundry: [P(176, 884), 46] };
 export const OCCLUDE = [
   { id: 'welcome', poly: PP([[146, 758], [186, 712], [502, 712], [508, 800], [476, 806], [472, 870], [146, 870]]), base: P(0, 868)[1] },
   { id: 'kitchen', poly: PP([[492, 762], [802, 768], [798, 802], [788, 950], [756, 950], [758, 816], [522, 812], [520, 902], [492, 902]]), base: P(0, 893)[1] },

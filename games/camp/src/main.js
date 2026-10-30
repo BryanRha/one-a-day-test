@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.92.7';
-import * as G from './sim.js?v=0.92.7';
-import * as C from './chars.js?v=0.92.7';
-import * as C2 from './chars2d.js?v=0.92.7';
-import * as UI from './ui.js?v=0.92.7';
-import { sfx, music, setAudio } from './audio.js?v=0.92.7';
-import { bm } from './oad_bm.js?v=0.92.7';
-import { installBack } from './oad.js?v=0.92.7';
+import * as D from './data.js?v=0.93.0';
+import * as G from './sim.js?v=0.93.0';
+import * as C from './chars.js?v=0.93.0';
+import * as C2 from './chars2d.js?v=0.93.0';
+import * as UI from './ui.js?v=0.93.0';
+import { sfx, music, setAudio } from './audio.js?v=0.93.0';
+import { bm } from './oad_bm.js?v=0.93.0';
+import { installBack } from './oad.js?v=0.93.0';
 
 const Q = new URLSearchParams(location.search);
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
@@ -83,6 +83,18 @@ const layer = { fac: document.createElement('div'), front: document.createElemen
 world.append(layer.fac); layer.front.dataset.front = 1; document.getElementById('fx').before(layer.front); taps.append(layer.ui);   /* 식탁 · 데크는 사람 앞(뒤에 앉은 손님의 다리를 가림) */
 /* 3D 캔버스 위에 그려야 하는 것(시설 앞부분) 없음 → 시설은 사람 뒤(z 1), 표지 · 버튼은 사람 앞(taps z 4) */
 const facEl = {};
+/* 단계 그림 (art/fac/st · 필요할 때만 불러옴 — 첫 화면에 보이는 단계만 받음) · 폭을 판 px 로 바로 지정 */
+function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img'); im.className = cls; im.src = IMG('fac/st/' + (kind ? kind + '_' + s : s)); im.draggable = false; im.decoding = 'async'; Object.assign(im.style, { left: x + 'px', top: y + 'px', width: Math.round(w) + 'px' }); return im; }
+/* 짝수 레벨마다 시설 둘레에 작은 소품 (화분 · 등불 · 상자 …) — 이 단계 안에서 0~3개 · 자리마다 고정된 종류 (시설 id 로 골라 매번 같음) */
+const PROP_SLOT = [[-0.56, 0.06], [0.56, 0.1], [-0.42, -0.3]];
+function propsAt(id, lv, x, y, w, pk, back) { const n = D.propsOf(lv); let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
+  for (let i = 0; i < n; i++) { const [dx, dy] = PROP_SLOT[i], k = D.STAGE.props[(h + i * 3) % D.STAGE.props.length], im = stImg(null, k, x + dx * w, y + dy * w * 0.5 + (back ? -8 : 0), 22 * pk, 'fac prop'); im.dataset.p = id + i; if (i === 2 || back) layer.fac.prepend(im); else layer.fac.append(im); } }
+let roofEl = null;   /* 키친 지붕 · 기둥 (배경 조각) — 오븐 단계 그림 앞에 */
+function makeRoof() { const img = document.getElementById('bg'); if (!img.complete || !img.naturalWidth) { img.addEventListener('load', makeRoof, { once: true }); return; }
+  const kx = img.naturalWidth / 878, ky = img.naturalHeight / 1560, poly = D.OVEN_ROOF, xs = poly.map(p => p[0]), ys = poly.map(p => p[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0, R = 2;
+  const c = document.createElement('canvas'); c.width = w * R; c.height = h * R; const g = c.getContext('2d'); g.scale(R, R); g.beginPath(); poly.forEach(([px, py], i) => i ? g.lineTo(px - x0, py - y0) : g.moveTo(px - x0, py - y0)); g.closePath(); g.clip();
+  g.drawImage(img, (x0 + 79) * kx, y0 * ky, w * kx, h * ky, 0, 0, w, h); Object.assign(c.style, { position: 'absolute', left: x0 + 'px', top: y0 + 'px', width: w + 'px', height: h + 'px', pointerEvents: 'none' }); roofEl = c; if (facEl.oven && facEl.oven.isConnected) facEl.oven.after(c); }
+makeRoof();
 export function render() {
   layer.fac.innerHTML = ''; layer.front.innerHTML = ''; layer.ui.innerHTML = '';
   /* 장식 (뽑기 · 스탬프 · 골드 세트 · 소장자) */
@@ -93,17 +105,18 @@ export function render() {
   /* 시설 */
   for (const p of D.PADS) {
     const b = S.pads[p.id], [x, y] = p.pos; let pk = D.PERSP(y);
-    if (b && b.lv > 0) { const f = D.FAC[p.fac], t = D.tierOf(b.lv), im = facImg(IMG(f.img), x, y + 12 * pk, D.FAC_K * (1 + 0.05 * t) * pk, 'fac t' + t); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im;
-      if (t >= 2) { const gl = document.createElement('div'); gl.className = 'garland'; gl.style.left = x + 'px'; gl.style.top = (y - 70) + 'px'; for (let i = 0; i < 7; i++) { const d = document.createElement('i'); d.style.left = (i - 3) * 20 - 7 + 'px'; d.style.top = Math.abs(i - 3) ** 1.6 * 3 + 'px'; d.style.animationDelay = -i * 0.3 + 's'; gl.append(d); } layer.fac.append(gl); }
-      tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, 110 * pk, 90 * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
+    if (b && b.lv > 0) { const f = D.FAC[p.fac], vl = G.working(p.id) ? b.lv - 1 : b.lv, st = D.stageOf(vl), w = D.STAGE.w(p.fac, st) * pk, im = stImg(p.fac, st, x, y + 12 * pk, w, 'fac s' + st); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im;
+      propsAt(p.id, vl, x, y + 12 * pk, w, pk);
+      tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
     else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.style.left = x + 'px'; pd.style.top = y + 'px'; pd.innerHTML = `<span>+ ${D.FAC[p.fac].name}</span>`; pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
   }
   /* 공용 키친 빵 오븐 (배경 그림 속 화덕) */
+  { const vl = G.working('oven') ? S.oven.lv - 1 : S.oven.lv, st = D.stageOf(vl), [ox, oy] = D.OVEN_AT, im = stImg('oven', st, ox, oy, D.STAGE.w('oven', st) * D.PERSP(oy), 'fac s' + st); layer.fac.append(im); facEl.oven = im; propsAt('oven', vl, ox - 6, oy + 4, 70, 0.8, true); if (roofEl) layer.fac.append(roofEl); }
   tag('oven', ...D.P(772, 932)); hit(D.KITCHEN.pos[0], D.KITCHEN.pos[1] + 10, 210, 150, () => stationTap('oven', () => UI.facDialog('oven')), 'oven');
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
   const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
-  let ki = 0, wi = 0; for (const a of am) { const k = D.AMEN[a].at === 'kitchen'; const s = document.createElement('div'); s.className = 'lvtag'; s.style.padding = '3px'; const [bx, by] = k ? D.P(560 + ki++ * 52, 990) : D.P(250 + wi++ * 52, 770); s.style.left = bx + 'px'; s.style.top = by + 'px'; s.innerHTML = `<img src="${IMG(UI.AMEN_IMG[a])}" alt="">`; s.title = D.AMEN[a].name; layer.fac.append(s); }
+  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
   /* 잠긴 구역 안개 · 공사 */
   /* 안개 = 배경 화풍으로 그린 구름 여러 겹이 천천히 흐름 · 큰 라벨은 '다음에 열릴 구역' 하나만, 나머지는 작은 자물쇠 (퀄리티 A3) */
   const nextZ = (D.ZONES.find(z => S.zones[z.id].st !== 'open') || {}).id;
@@ -213,6 +226,18 @@ const petals = Array.from({ length: 10 }, () => ({ x: rnd(0, W), y: rnd(-200, 11
 const flies = [0, 1, 2].map(i => ({ x: rnd(100, 600), y: rnd(500, 1100), ph: rnd(0, 6), c: ['#FFE38A', '#BFE0F6', '#F9D4DC'][i] }));
 function puff(x, y, n = 1) { for (let i = 0; i < n; i++) parts.push({ k: 'steam', x: x + rnd(-8, 8), y, vx: rnd(-6, 6), vy: rnd(-30, -22), life: rnd(1.4, 2.2), t: 0, r: rnd(7, 11) }); }
 export function burst(x, y, k = 'sparkle', n = 12) { for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(60, 200); parts.push({ k, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - (k === 'heart' ? 80 : 40), life: rnd(0.6, 1.1) * (k === 'heart' ? 1.5 : 1), t: 0, r: rnd(4, 8), c: pick(['#FFE38A', '#FFF6D0', '#F9D4DC', '#BFE6D6']) }); } }
+/* 강화 연출 (대표 10-30) — 레벨마다: 통통 + 반짝 · 짝수 레벨: 소품 하나가 톡 · 단계(Lv5 · 10 · 20): 카메라가 다가가 먼지 → 옛 모습이 작아지고 새 모습이 튀어나옴 + 크게 축하 */
+const facPos = t => t === 'oven' ? D.OVEN_AT : D.PADS.find(x => x.id === t).pos;
+function stageFx(t, prevLv, afterWork) {
+  const o = t === 'oven' ? S.oven : S.pads[t]; if (!o) return; const lv = o.lv, pos = facPos(t), ps = D.stageOf(prevLv), ns = D.stageOf(lv), old = facEl[t];
+  if (ns !== ps) {
+    const back = { x: CAMV.x, y: CAMV.y, z: CAMV.z }; camTo(pos[0], pos[1] - 50, Math.min(2.2, Math.max(1.35, CAMV.z * 1.3)));
+    if (old) old.classList.add('old'); dust(pos[0], pos[1]); burst(pos[0], pos[1] - 40, 'sparkle', 10);
+    setTimeout(() => { render(); const im = facEl[t]; if (im) im.classList.add('grow'); burst(pos[0], pos[1] - 50, 'sparkle', 30); dust(pos[0], pos[1]); sfx('tier'); UI.stageUp(t, ns); }, 480);
+    setTimeout(() => { if (!CAMV.tw && Math.abs(CAMV.x - pos[0]) < 60) camTo(back.x, back.y, back.z); }, 3400); return; }
+  if (afterWork) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 16); return; }
+  if (D.propsOf(lv) > D.propsOf(prevLv)) { render(); const pe = layer.fac.querySelector(`[data-p="${t}${D.propsOf(lv) - 1}"]`); if (pe) { pe.classList.add('grow'); burst(+pe.style.left.slice(0, -2), +pe.style.top.slice(0, -2) - 10, 'sparkle', 5); } }
+  const im = facEl[t]; if (im && im.isConnected) { im.classList.remove('bump', 'grow'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 6); }
 function dust(x, y) { for (let i = 0; i < 14; i++) { const a = rnd(Math.PI * 0.9, Math.PI * 2.1); parts.push({ k: 'dust', x: x + rnd(-40, 40), y: y + rnd(-6, 6), vx: Math.cos(a) * rnd(30, 90), vy: rnd(-40, -10), life: rnd(0.6, 1), t: 0, r: rnd(8, 16) }); } }
 function star(x, y, r, a) { fx.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * 0.35 : r, an = a + i * Math.PI / 4; fx.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); } fx.closePath(); fx.fill(); }
 function heartP(x, y, s, al) { fx.save(); fx.translate(x, y); fx.scale(s, s); fx.globalAlpha = al; fx.fillStyle = '#FF7B8A'; fx.strokeStyle = '#B04A5A'; fx.lineWidth = 2.5; fx.beginPath(); fx.moveTo(0, 8); fx.bezierCurveTo(-16, -4, -9, -16, 0, -7); fx.bezierCurveTo(9, -16, 16, -4, 0, 8); fx.fill(); fx.stroke(); fx.restore(); }
@@ -316,8 +341,9 @@ function onEvent(e) {
     case 'visitor': visArrive(e.v, e.path); break;
     case 'visitorGone': visLeave(e.path); break;
     case 'build': { render(); const p = D.PADS.find(x => x.id === e.pid); const im = facEl[e.pid]; if (im) im.classList.add('pop'); dust(p.pos[0], p.pos[1] + 20); burst(p.pos[0], p.pos[1] - 40, 'sparkle', 18); sfx('build'); syncStaff(); break; }
-    case 'upgrade': { const t = e.target, pos = t === 'oven' ? D.KITCHEN.oven : D.PADS.find(x => x.id === t).pos; if (e.tier) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 26); dust(pos[0], pos[1]); sfx('tier'); } else { const im = facEl[t]; if (im) { im.classList.remove('bump'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 6); } break; }
-    case 'workDone': case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
+    case 'upgrade': { const t = e.target; if (e.tier && G.working(t)) { render(); const pos = facPos(t); burst(pos[0], pos[1] - 40, 'sparkle', 12); dust(pos[0], pos[1]); } else stageFx(t, e.lv - 1); break; }
+    case 'workDone': stageFx(e.target, (e.target === 'oven' ? S.oven : S.pads[e.target]).lv - 1, true); break;
+    case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
     case 'zoneWork': render(); break;
     case 'levelup': hero && hero.play('wave'); break;
   }
@@ -459,6 +485,9 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 window.__loadMs = Math.round(performance.now());
+/* 창에서 쓰는 그림은 첫 화면 뒤에 미리 불러 캐시 (창을 열 때 늦게 뜨거나 깜빡이지 않게) */
+const PRELOAD = []; setTimeout(() => { const L = new Set([...D.MENU.map(m => m.img), ...Object.values(D.FAC).map(f => f.img).filter(Boolean), ...D.DECO.map(d => d.img), ...['ad', 'inst', 'lock', 'hammer', 'clock', 'gold', 'tea', 'mission', 'ribbon', 'sound', 'serve', 'cookie', 'sparkle', 'menu', 'stamp'].map(k => 'ui/' + k), 'deco/gift', 'deco/gift_open', 'deco/coin', 'deco/heart', 'deco/treats', 'deco/set_sakura', 'deco/cat_sit', 'deco/cat_sleep', 'deco/pup_sit', 'deco/sheep', 'food/gem']);
+  for (const k of L) { const im = new Image(); im.decoding = 'async'; im.src = IMG(k); PRELOAD.push(im); } }, 2500);
 setTimeout(() => { document.getElementById('sideL').classList.add('on'); document.getElementById('sideR').classList.add('on'); }, 600);   /* 양옆 세계 그림은 첫 화면 뒤에 (4G 3초) */
 setBoot(1); setTimeout(() => { const b = document.getElementById('boot'); b.classList.add('gone'); setTimeout(() => b.remove(), 900);
   board.classList.add('intro'); board2.classList.add('intro'); frame.classList.add('intro'); setTimeout(() => { board.classList.remove('intro'); board2.classList.remove('intro'); frame.classList.remove('intro'); }, 2000);   /* 시작 연출 1.5초 */
