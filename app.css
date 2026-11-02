@@ -760,22 +760,23 @@ body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]:
   radial-gradient(48% 34% at 78% 18%, color-mix(in srgb, var(--c) 85%, transparent), transparent 70%), radial-gradient(40% 30% at 18% 40%, rgba(247,214,207,.9), transparent 70%),
   radial-gradient(50% 36% at 70% 72%, rgba(246,222,170,.75), transparent 70%), radial-gradient(40% 30% at 10% 92%, color-mix(in srgb, var(--c) 45%, transparent), transparent 70%); }
 .owcard .grain { position: absolute; inset: 0; opacity: .4; mix-blend-mode: multiply; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-.owcard .ghost { position: absolute; right: -30cqw; top: 26cqw; opacity: .5; filter: blur(.8cqw); } .owcard .ghost svg { width: 92cqw; height: 92cqw; }
+.owcard .ghost { position: absolute; left: 34cqw; top: 34cqw; width: 62cqw; height: 62cqw; opacity: .5; filter: blur(.8cqw); } .owcard .ghost svg { width: 100%; height: 100%; display: block; }   /* 카드 안에 다 들어오게 (2026-11-02 대표 제보) */
 .owcard .ctop { position: absolute; top: 8cqw; left: 8cqw; right: 8cqw; display: flex; justify-content: space-between; font: 500 2.7cqw var(--owmono); letter-spacing: .3cqw; }
 #ow .owcard .bub { position: absolute; font-size: 3.7cqw; padding: 2.2cqw 3.6cqw; border-radius: 4.6cqw; max-width: none; white-space: nowrap; margin: 0; color: var(--owk); }
 #ow .owcard .bub.q { top: 17cqw; right: 8cqw; border-bottom-right-radius: 1.4cqw; background: rgba(255,255,255,.55); }
 #ow .owcard .bub.a { top: 27cqw; left: 8cqw; border-bottom-left-radius: 1.4cqw; background: #fff; font-weight: 700; }
 #ow .owcard .typing { gap: 1cqw; padding: 3.4cqw 4cqw !important; } #ow .owcard .typing i { width: 1.6cqw; height: 1.6cqw; }
 .owcard .word { position: absolute; top: 44cqw; left: 6cqw; right: 6cqw; font: 800 38cqw/1 var(--owserif); letter-spacing: -2.4cqw; white-space: nowrap; }
-.owcard .word.l4 { font-size: 21cqw; letter-spacing: -1cqw; top: 52cqw; } .owcard .word.l5, .owcard .word.l6 { font-size: 17cqw; letter-spacing: -.6cqw; top: 55cqw; }
-.owcard .rows { position: absolute; top: 103cqw; left: 8cqw; right: 8cqw; border-top: 1px solid rgba(35,32,29,.55); } .owcard .rows.ex { top: 98cqw; }
+.owcard .rows { position: absolute; top: 103cqw; left: 8cqw; right: 8cqw; border-top: 1px solid rgba(35,32,29,.55); } .owcard .rows.ex { top: 96cqw; }
 .owcard .rows > div { display: flex; justify-content: space-between; align-items: center; gap: 2cqw; padding: 2.4cqw 0; border-bottom: 1px solid rgba(35,32,29,.18); }
 .owcard .rows span { font: 500 2.7cqw var(--owmono); letter-spacing: .4cqw; color: var(--ows); }
-.owcard .rows b { display: flex; align-items: center; gap: 1.6cqw; font: 700 4.4cqw var(--owserif); white-space: nowrap; }
-.owcard .rows b small { font: 2.7cqw -apple-system, sans-serif; color: var(--ows); }
+.owcard .rows b { display: flex; align-items: center; justify-content: flex-end; gap: 1.6cqw; font: 700 4.4cqw var(--owserif); white-space: nowrap; min-width: 0; max-width: 78%; }
+.owcard .rows b small { font: 2.7cqw -apple-system, sans-serif; color: var(--ows); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .owcard .sw { display: inline-block; width: 3cqw; height: 3cqw; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
-.owcard .exr { justify-content: flex-start !important; gap: 4cqw !important; flex-wrap: wrap; } .owcard .exr em { font: 700 3.8cqw var(--owserif); font-style: normal; } .owcard .exr em span { font-size: 2.5cqw; margin-right: 1.4cqw; }
-.owcard .line { position: absolute; top: 139cqw; left: 8cqw; right: 8cqw; margin: 0; font: 700 4.9cqw/1.55 var(--owserif); } .owcard .rows.ex ~ .line { top: 143cqw; }
+.owcard .rows > .exr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2cqw; padding: 2cqw 0 2.4cqw; border-radius: 1.4cqw; }
+.owcard .exr em { font: 800 4.2cqw/1.25 var(--owserif); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .owcard .exr em span { display: block; font: 500 2.4cqw var(--owmono); letter-spacing: .3cqw; color: var(--ows); }
+.owcard .exr.flash { animation: owflash 1.6s ease-out 2; } @keyframes owflash { 0%, 100% { background: transparent; } 30% { background: color-mix(in srgb, var(--c) 45%, transparent); } }
+.owcard .line { position: absolute; top: 139cqw; left: 8cqw; right: 8cqw; margin: 0; font: 700 4.9cqw/1.55 var(--owserif); } .owcard .rows.ex ~ .line { top: 146cqw; font-size: 4.5cqw; }
 .owcard .cfoot { position: absolute; bottom: 7cqw; left: 8cqw; right: 8cqw; display: flex; justify-content: space-between; align-items: baseline; font: 500 2.6cqw var(--owmono); }
 .owcard .lg { font: 4.2cqw 'Jua', sans-serif; }
 .owcard .bbig { position: absolute; top: 50cqw; left: 0; right: 0; text-align: center; font: 800 60cqw/1 var(--owserif); color: rgba(35,32,29,.08); }
@@ -823,9 +824,16 @@ body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]:
 #ow .mk { width: 40px; font: 500 12px var(--owmono); color: var(--ows); letter-spacing: 1px; }
 #ow .mw { flex: 1; display: flex; align-items: center; gap: 8px; } #ow .mw i { font-style: normal; letter-spacing: 2px; color: #B9B0A6; } #ow .mw b { font: 800 17px var(--owserif); } #ow .mw .owi { width: 16px; height: 16px; stroke: var(--ows); }
 #ow .mrow .buy { padding: 8px 12px; border-radius: 10px; font: 14px 'Jua', sans-serif; white-space: nowrap; background: var(--owp); border: 1px solid var(--owk); }
-#ow .mrow .buy.arm, .owsheet .bundle.arm { background: #B5530B; color: #fff; border-color: #B5530B; }
+#ow .mrow .buy.arm { background: #B5530B; color: #fff; border-color: #B5530B; }
 #ow .mrow .got { font-size: 12px; color: var(--ows); }
-.owsheet .bundle { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 4px; padding: 14px 16px; border-radius: 16px; background: var(--owk); color: var(--owp); }
+#ow .owsheet .bundle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 4px; padding: 14px 16px; border-radius: 16px; background: var(--owk); color: var(--owp); box-shadow: 0 8px 20px rgba(35,32,29,.25); }
+#ow .owsheet .bundle.arm { background: #B5530B; }
+#ow .owsheet .bundle .bp s { opacity: .55; }
+#ow .shdone { display: block; width: 100%; margin-top: 4px; padding: 14px; border-radius: 16px; text-align: center; font-weight: 700; background: var(--owk); color: var(--owp); }
+#ow .mrow.got { border-color: color-mix(in srgb, var(--owk) 35%, transparent); } #ow .mrow.got .mw { flex-direction: column; align-items: flex-start; gap: 0; } #ow .mrow.got .mw b { font-size: 21px; line-height: 1.25; } #ow .mrow.got .mw small { font-size: 11.5px; color: var(--ows); }
+#ow .gotb { flex: none; font: 14px 'Jua', sans-serif; color: #2F7A4F; background: rgba(47,122,79,.1); padding: 7px 10px; border-radius: 10px; }
+#ow .mrow.reveal { animation: owgot .6s cubic-bezier(.2,.9,.3,1.3); } #ow .mrow.reveal .mw b { animation: owword .7s .1s both cubic-bezier(.2,.9,.3,1.3); }
+@keyframes owgot { 0% { background: #FFF3D6; transform: scale(.97); } 100% { background: #fff; transform: none; } } @keyframes owword { from { opacity: 0; transform: translateY(6px) scale(.8); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 .owsheet .bundle b { display: block; font: 18px 'Jua', sans-serif; } .owsheet .bundle small { font-size: 11.5px; opacity: .75; } #ow .bp { font: 18px 'Jua', sans-serif; } #ow .bp s { opacity: .5; font-size: 14px; margin-right: 4px; }
 #ow .shn { margin: 10px 0 0; font-size: 10.5px; color: #8E857C; text-align: center; line-height: 1.5; }
 /* 너랑 첫 인사 */

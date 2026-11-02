@@ -20,7 +20,23 @@ function words(rec) {
   const f = OW.FLOWERS.find(x => x.id === rec.res.f), co = OW.COLORS.find(x => x.id === rec.res.c), w = OW.WEATHERS.find(x => x.id === rec.res.w);
   return f && co && w ? { flower: f, color: co, weather: w } : null;
 }
-const extrasOf = rec => OW.EXTRA_KEYS.filter(k => rec.bought && rec.bought[k]).map(k => [OW.EXTRA[k].ko, OW.extraWord(k, rec.a, rec.il, rec.day).w]);
+const EXEN = { season: 'SEASON', animal: 'ANIMAL', scent: 'SCENT' };
+const extrasOf = rec => OW.EXTRA_KEYS.filter(k => rec.bought && rec.bought[k]).map(k => [OW.EXTRA[k].ko, OW.extraWord(k, rec.a, rec.il, rec.day).w, EXEN[k]]);
+/* 추가 단어 짧은 풀이: 그 단어의 꼬리표 두 개 */
+const exNote = (k, w) => `${w.t.slice(0, 2).map(t => OW.TAG_KO[t]).join(' · ')} — 오늘 당신과 닮은 ${OW.EXTRA[k].ko}`;
+
+/* 큰 단어 맞추기 (2026-11-02 대표 제보: '메밀꽃'이 카드 밖으로 잘림) — 글꼴이 기기마다 달라 실제 폭을 재서 줄임
+   기본 38cqw · 넘치면 5%씩 줄임 · 줄인 만큼 세로 가운데로 · 자간도 같은 비율 */
+export function fitWords(root = document) {
+  root.querySelectorAll('.owcard .word').forEach(el => {
+    const W = el.closest('.owcard').clientWidth; if (!W) return;
+    const base = W * .38, max = W * .88; let fs = base;
+    const set = () => { el.style.fontSize = fs + 'px'; el.style.letterSpacing = (-fs * .063) + 'px'; };
+    set(); let n = 0;
+    while (el.scrollWidth > max + .5 && n++ < 40) { fs *= .95; set(); }
+    el.style.top = (W * .44 + (base - fs) * .45) + 'px';
+  });
+}
 
 /* ── 그림 조각 ── */
 const hex2 = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
@@ -61,12 +77,12 @@ function card(rec, back = false) {
     <div class="ghost">${flowerSvg(W.flower.hex, 300)}</div>
     <div class="ctop"><span>HOW AI SEES ME — TODAY</span><span>${dateDot(rec.day)}</span></div>
     <div class="bub q">나는 오늘 무슨 꽃이야?</div><div class="bub a">${esc(W.flower.w)}.</div>
-    <div class="word${W.flower.w.length > 3 ? ' l' + Math.min(W.flower.w.length, 6) : ''}">${esc(W.flower.w)}</div>
+    <div class="word">${esc(W.flower.w)}</div>
     <div class="rows${ex.length ? ' ex' : ''}">
       <div><span>FLOWER</span><b>${esc(W.flower.w)}<small>${esc(W.flower.m)}</small></b></div>
       <div><span>COLOR</span><b>${esc(W.color.w)}<i class="sw" style="background:${W.color.hex}"></i></b></div>
       <div><span>WEATHER</span><b>${esc(W.weather.w)}</b></div>
-      ${ex.length ? `<div class="exr">${ex.map(([k, w]) => `<em><span>${k}</span>${esc(w)}</em>`).join('')}</div>` : ''}
+      ${ex.length ? `<div class="exr">${ex.map(([k, w, en]) => `<em><span>${en}</span>${esc(w)}</em>`).join('')}</div>` : ''}
     </div>
     <p class="line">${esc(rec.res.line)}</p>
     <div class="cfoot"><span class="lg">One a Day</span><span>oneaday.kr — 너도 물어봐</span></div></div></div>`;
@@ -107,6 +123,7 @@ function draw() {
   const el = host(), s = S.scr;
   el.className = 'ow';
   el.innerHTML = s[0] === 'q' ? question(+s.slice(1)) : s === 'reveal' ? reveal() : s === 'nr' ? neorang() : result();
+  fitWords(el); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitWords(el));
   if (s === 'reveal') afterReveal();
 }
 function question(n) {
@@ -135,13 +152,28 @@ function result() {
     <p class="ownote">${AI_NOTE} · 하루 한 번, 내일 또 새 카드</p></div>`;
 }
 function moreSheet() {
-  const bought = S.bought || {}, none = !OW.EXTRA_KEYS.some(k => bought[k]), gold = C.A.current() ? C.goldOf() : null;
-  const rows = OW.EXTRA_KEYS.map(k => `<div class="mrow"><span class="mk">${OW.EXTRA[k].ko}</span><span class="mw">${bought[k] ? `<b>${esc(OW.extraWord(k, S.a, S.il, S.day).w)}</b>` : `<i>${'○'.repeat(3)}</i>${ic('lock')}`}</span>${bought[k] ? '<span class="got">받음</span>' : `<button class="buy" data-owbuy="${k}">${PRICE[k]} 골드</button>`}</div>`).join('');
+  const bought = S.bought || {}, left = OW.EXTRA_KEYS.filter(k => !bought[k]), acc = acct(), gold = acc.current() ? ((acc.current().gold || {}).total || 0) : null, arm = S.arm || '';
+  const rows = OW.EXTRA_KEYS.map(k => {
+    if (bought[k]) { const w = OW.extraWord(k, S.a, S.il, S.day); return `<div class="mrow got${S.fresh && S.fresh.includes(k) ? ' reveal' : ''}"><span class="mk">${OW.EXTRA[k].ko}</span><span class="mw"><b>${esc(w.w)}</b><small>${esc(exNote(k, w))}</small></span><span class="gotb">받음 ✓</span></div>`; }
+    return `<div class="mrow"><span class="mk">${OW.EXTRA[k].ko}</span><span class="mw"><i>○○○</i>${ic('lock')}</span><button class="buy${arm === k ? ' arm' : ''}" data-owbuy="${k}">${arm === k ? `${PRICE[k]} 골드 쓰기` : `${PRICE[k]} 골드`}</button></div>`;
+  }).join('');
+  /* 셋 묶음: 하나도 안 샀을 때만 (서버 묶음 값이 70 고정 · 산 줄이 있으면 남은 줄만 낱개로) */
+  const off = PRICE.season * 3 - PRICE.all3;
+  const bundle = left.length === 3 ? `<button class="bundle${arm === 'all3' ? ' arm' : ''}" data-owbuy="all3"><span><b>${arm === 'all3' ? '한 번 더 누르면 받아요' : '셋 다 받기'}</b><small>계절 · 동물 · 향 · ${off} 골드 아낌</small></span><span class="bp">${arm === 'all3' ? `${PRICE.all3} 골드 쓰기` : `<s>${PRICE.season * 3}</s>${PRICE.all3} 골드`}</span></button>` : '';
   return `<div class="owdim" data-ow="sheet-close"></div><div class="owsheet"><div class="grab"></div>
     <div class="shd"><b>단어 더 받기</b>${gold != null ? `<span class="gold"><i class="coin"></i>${C.gnum(gold)}</span>` : ''}</div>
-    <p class="shs">오늘의 당신을 세 단어 더. 받은 단어는 카드 아래 줄에 함께 실려요.</p>${rows}
-    ${none ? `<button class="bundle" data-owbuy="all3"><span><b>셋 다 받기</b><small>계절 · 동물 · 향</small></span><span class="bp"><s>${PRICE.season * 3}</s> ${PRICE.all3} 골드</span></button>` : ''}
+    <p class="shs">${left.length ? '오늘의 당신을 세 단어 더. 받은 단어는 카드 아래 줄에 함께 실려요.' : '세 단어를 다 받았어요. 닫으면 카드 아래 줄에서 볼 수 있어요.'}</p>${rows}${bundle}
+    ${left.length ? '' : '<button class="shdone" data-ow="sheet-close">카드에서 보기</button>'}
     <p class="shn">확률 없이 오늘 답에 맞는 단어를 그대로 보여 줘요 · 오늘 카드에만 · 같은 날 다시 사도 한 번만 빠져요</p></div>`;
+}
+function sheetDraw() { document.querySelectorAll('#ow .owdim,#ow .owsheet').forEach(x => x.remove()); host().insertAdjacentHTML('beforeend', moreSheet()); const sh = document.querySelector('#ow .owsheet'); if (sh) sh.style.animation = 'none'; }
+function sheetClose() {
+  const had = S.fresh && S.fresh.length; S.fresh = null; S.arm = '';
+  document.querySelectorAll('#ow .owdim,#ow .owsheet').forEach(x => x.remove());
+  if (!had) return;
+  S.scr = 'result'; draw();
+  const ex = document.querySelector('#ow .owres .exr'), box = document.querySelector('#ow .owres');
+  if (ex && box) { box.scrollTop = 0; const r = ex.getBoundingClientRect(); if (r.bottom > innerHeight - 20) box.scrollTop += r.bottom - innerHeight + 80; ex.classList.add('flash'); }
 }
 function neorang() {
   const W = words(S);
@@ -193,14 +225,15 @@ export async function cardBlob(rec) {
   x.fillStyle = '#F3EEE7'; x.fillRect(0, 0, 1080, 1920);
   const blob = (cx, cy, r, c, a) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, c + Math.round(a * 255).toString(16).padStart(2, '0')); g.addColorStop(1, c + '00'); x.fillStyle = g; x.fillRect(0, 0, 1080, 1920); };
   blob(842, 345, 620, mix(col, '#FFFFFF', .1), .8); blob(194, 768, 520, '#F7D6CF', .85); blob(756, 1382, 640, '#F6DEAA', .7); blob(108, 1766, 520, mix(col, '#FFFFFF', .2), .45);
-  await new Promise(res => { const im = new Image(); im.onload = () => { x.save(); x.globalAlpha = .5; try { x.filter = 'blur(8px)'; } catch { /* */ } x.drawImage(im, 1080 - 70 * u, 26 * u, 92 * u, 92 * u); x.restore(); res(); }; im.onerror = res; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(flowerSvg(W.flower.hex, 600)); });
+  await new Promise(res => { const im = new Image(); im.onload = () => { x.save(); x.globalAlpha = .5; try { x.filter = 'blur(8px)'; } catch { /* */ } x.drawImage(im, 34 * u, 34 * u, 62 * u, 62 * u); x.restore(); res(); }; im.onerror = res; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(flowerSvg(W.flower.hex, 600)); });
   x.fillStyle = '#23201D'; x.textBaseline = 'alphabetic';
   x.font = `500 ${2.7 * u}px ${MONO}`; x.textAlign = 'left'; x.fillText('HOW AI SEES ME — TODAY', 8 * u, 11 * u); x.textAlign = 'right'; x.fillText(dateDot(rec.day), 92 * u, 11 * u);
   const bubble = (txt, right, top, bg, bold) => { x.font = `${bold ? 700 : 400} ${3.7 * u}px ${SANS}`; const w = x.measureText(txt).width + 7.2 * u, h = 8.6 * u, l = right ? 92 * u - w : 8 * u; x.fillStyle = bg; x.beginPath(); x.roundRect(l, top, w, h, [4.6 * u, 4.6 * u, right ? 1.4 * u : 4.6 * u, right ? 4.6 * u : 1.4 * u]); x.fill(); x.fillStyle = '#23201D'; x.textAlign = 'left'; x.fillText(txt, l + 3.6 * u, top + 5.7 * u); };
   bubble('나는 오늘 무슨 꽃이야?', true, 17 * u, 'rgba(255,255,255,.6)'); bubble(W.flower.w + '.', false, 27 * u, '#FFFFFF', true);
-  const fs = W.flower.w.length <= 2 ? 38 : W.flower.w.length === 3 ? 27 : W.flower.w.length === 4 ? 21 : 17;
-  x.fillStyle = '#23201D'; x.textAlign = 'left'; x.font = `800 ${fs * u}px ${SERIF}`; x.fillText(W.flower.w, 6 * u, 44 * u + fs * u * .86);
-  const rows = [['FLOWER', W.flower.w], ['COLOR', W.color.w], ['WEATHER', W.weather.w]]; let y = (ex.length ? 98 : 103) * u;
+  let fs = 38 * u; x.font = `800 ${fs}px ${SERIF}`;   /* 화면 카드와 같이: 실제 폭을 재서 88% 안에 맞춤 */
+  while (x.measureText(W.flower.w).width > 88 * u && fs > 6 * u) { fs *= .95; x.font = `800 ${fs}px ${SERIF}`; }
+  x.fillStyle = '#23201D'; x.textAlign = 'left'; x.fillText(W.flower.w, 6 * u, 44 * u + (38 * u - fs) * .45 + fs * .86);
+  const rows = [['FLOWER', W.flower.w], ['COLOR', W.color.w], ['WEATHER', W.weather.w]]; let y = (ex.length ? 96 : 103) * u;
   x.strokeStyle = 'rgba(35,32,29,.55)'; x.lineWidth = 2; x.beginPath(); x.moveTo(8 * u, y); x.lineTo(92 * u, y); x.stroke();
   for (const [k, v] of rows) {
     x.font = `500 ${2.7 * u}px ${MONO}`; x.fillStyle = '#6F6760'; x.textAlign = 'left'; x.fillText(k, 8 * u, y + 6.4 * u);
@@ -208,7 +241,12 @@ export async function cardBlob(rec) {
     if (k === 'COLOR') { x.fillStyle = col; x.beginPath(); x.arc(92 * u - 1.5 * u, y + 5.2 * u, 1.5 * u, 0, 7); x.fill(); }
     y += 9.6 * u; x.strokeStyle = 'rgba(35,32,29,.18)'; x.beginPath(); x.moveTo(8 * u, y); x.lineTo(92 * u, y); x.stroke();
   }
-  if (ex.length) { x.textAlign = 'left'; let ex0 = 8 * u; for (const [k, v] of ex) { x.font = `500 ${2.5 * u}px ${MONO}`; x.fillStyle = '#6F6760'; x.fillText(k, ex0, y + 5.6 * u); const kw = x.measureText(k).width + 1.4 * u; x.font = `700 ${3.8 * u}px ${SERIF}`; x.fillStyle = '#23201D'; x.fillText(v, ex0 + kw, y + 5.8 * u); ex0 += kw + x.measureText(v).width + 4 * u; } y += 8.6 * u; }
+  if (ex.length) {   /* 카드 아래 줄: SEASON · ANIMAL · SCENT 세 칸 (산 것만) */
+    x.textAlign = 'left'; const cw = 84 * u / 3;
+    ex.forEach(([, v, en], i) => { const x0 = 8 * u + i * cw; x.font = `500 ${2.4 * u}px ${MONO}`; x.fillStyle = '#6F6760'; x.fillText(en, x0, y + 4.6 * u);
+      let f = 4.2 * u; x.font = `800 ${f}px ${SERIF}`; while (x.measureText(v).width > cw - 2 * u && f > 2 * u) { f *= .94; x.font = `800 ${f}px ${SERIF}`; } x.fillStyle = '#23201D'; x.fillText(v, x0, y + 10 * u); });
+    y += 12.6 * u; x.strokeStyle = 'rgba(35,32,29,.18)'; x.beginPath(); x.moveTo(8 * u, y); x.lineTo(92 * u, y); x.stroke();
+  }
   x.font = `700 ${4.9 * u}px ${SERIF}`; x.fillStyle = '#23201D'; x.textAlign = 'left';
   let ln = '', ly = y + 9 * u; for (const wd of rec.res.line.split(' ')) { if (x.measureText(ln + wd).width > 84 * u && ln) { x.fillText(ln.trim(), 8 * u, ly); ln = ''; ly += 7.6 * u; } ln += wd + ' '; } x.fillText(ln.trim(), 8 * u, ly);
   x.font = `${4.2 * u}px Jua, ${SANS}`; x.fillText('One a Day', 8 * u, 1920 - 7 * u); x.font = `500 ${2.6 * u}px ${MONO}`; x.textAlign = 'right'; x.fillText('oneaday.kr — 너도 물어봐', 92 * u, 1920 - 7 * u);
@@ -216,33 +254,43 @@ export async function cardBlob(rec) {
 }
 
 /* ── 누르기 ── */
-let buyArm = '';
-async function buy(k, btn) {
-  if (!C.A.ON) return C.toast('골드는 곧 열려요');
-  if (!C.A.current()) { C.needLogin('골드로 단어를 더 받으려면 로그인해 주세요'); const sh = document.getElementById('sheet'); if (sh) sh.classList.add('over'); return; }
-  const price = PRICE[k], gold = C.goldOf();
+let armT = 0;
+/* 폰 시험만: 가짜 계정(로그인 · 골드 차감 흐름) — 테스트 빌드에서만 */
+const acct = () => (!C.R.PROD && window.__owTestA) || C.A;
+async function buy(k) {
+  const A = acct();
+  if (!A.ON) return C.toast('골드는 곧 열려요');
+  if (!A.current()) { C.needLogin('골드로 단어를 더 받으려면 로그인해 주세요'); const sh = document.getElementById('sheet'); if (sh) sh.classList.add('over'); return; }
+  const price = PRICE[k], gold = (A.current().gold && A.current().gold.total) || 0;
   if (gold < price) { C.toast(`골드가 ${C.gnum(price - gold)}개 모자라요`); return; }
-  if (buyArm !== k) { buyArm = k; btn.textContent = `${price} 골드 쓰기`; btn.classList.add('arm'); setTimeout(() => { if (buyArm === k) { buyArm = ''; if (btn.isConnected) { btn.classList.remove('arm'); btn.innerHTML = k === 'all3' ? `<span><b>셋 다 받기</b><small>계절 · 동물 · 향</small></span><span class="bp"><s>${PRICE.season * 3}</s> ${PRICE.all3} 골드</span>` : `${price} 골드`; } } }, 3500); return; }
-  buyArm = ''; btn.disabled = true; btn.textContent = '받는 중…';
+  if (S.arm !== k) { S.arm = k; sheetDraw(); clearTimeout(armT); armT = setTimeout(() => { if (S && S.arm === k) { S.arm = ''; if (document.querySelector('#ow .owsheet')) sheetDraw(); } }, 4000); return; }   /* 한 번 누르면 '쓰기'로 바뀌고 한 번 더 누르면 차감 (실수 방지) */
+  clearTimeout(armT); S.arm = '';
+  const btn = document.querySelector(`#ow [data-owbuy="${k}"]`); if (btn) { btn.disabled = true; btn.textContent = '받는 중…'; }
+  const got = () => {
+    const keys = k === 'all3' ? OW.EXTRA_KEYS : [k], bought = { ...(S.bought || {}) }; keys.forEach(x => { bought[x] = 1; });
+    S.bought = bought; S.fresh = [...new Set([...(S.fresh || []), ...keys])]; save({ day: S.day, il: S.il, a: S.a, res: S.res, bought });
+    sheetDraw();
+  };
   try {
-    await C.A.call({ act: 'use', game: 'oneword', item: k, ref: `ow-${S.day.replace(/-/g, '')}-${k}` });
-    const bought = { ...(S.bought || {}) }; (k === 'all3' ? OW.EXTRA_KEYS : [k]).forEach(x => { bought[x] = 1; });
-    S.bought = bought; save({ day: S.day, il: S.il, a: S.a, res: S.res, bought });
-    C.T.track('oneword_buy', { item: k, gold: price }); C.toast('카드에 실었어요');
-    S.scr = 'result'; draw(); if (C.onGold) C.onGold();
-  } catch (e) { btn.disabled = false; btn.textContent = `${price} 골드`; C.toast(e.message || '다시 시도해 주세요'); }
+    await A.call({ act: 'use', game: 'oneword', item: k, ref: `ow-${S.day.replace(/-/g, '')}-${k}` });
+    C.T.track('oneword_buy', { item: k, gold: price }); got();
+  } catch (e) {
+    /* 오늘 이미 산 기록(하루 1번 · 앞 요청의 답만 놓친 경우)이면 받은 것으로 */
+    if (e && e.reason === 'limit') { C.T.track('oneword_buy', { item: k, gold: 0, again: 1 }); got(); return; }
+    sheetDraw(); C.toast((e && e.message) || '다시 시도해 주세요');
+  }
 }
 async function onClick(e) {
   const a = e.target.closest('[data-ans]');
   if (a) { const [n, i] = a.dataset.ans.split(':').map(Number); S.a = S.a.slice(0, n - 1); S.a[n - 1] = i; draw(); setTimeout(() => { if (!S) return; S.scr = n < 5 ? 'q' + (n + 1) : 'reveal'; S.ph = 0; draw(); }, 320); return; }
-  const b = e.target.closest('[data-owbuy]'); if (b) return buy(b.dataset.owbuy, b);
+  const b = e.target.closest('[data-owbuy]'); if (b) return buy(b.dataset.owbuy);
   const g = e.target.closest('[data-ow]'); if (!g) return;
   const k = g.dataset.ow;
   if (k === 'close') return close();
   if (k === 'flip') return flip();
   if (/^q\d$/.test(k) || k === 'result') { S.scr = k; return draw(); }
-  if (k === 'more') { const el = host(); el.insertAdjacentHTML('beforeend', moreSheet()); C.T.track('oneword_more'); return; }
-  if (k === 'sheet-close') { document.querySelectorAll('.owdim,.owsheet').forEach(x => x.remove()); return; }
+  if (k === 'more') { S.arm = ''; S.fresh = null; host().insertAdjacentHTML('beforeend', moreSheet()); C.T.track('oneword_more'); return; }
+  if (k === 'sheet-close') return sheetClose();
   if (k === 'nr') { S.scr = 'nr'; C.T.track('oneword_nr'); return draw(); }
   if (k === 'nrgo') { close(); return C.go('neorang', 'oneword'); }
   if (k === 'save') { g.disabled = true; try { const how = await C.saveImage(await cardBlob(S), `oneaday-${S.day}-oneword.png`); C.T.track('oneword_save', { how }); } finally { g.disabled = false; } return; }
