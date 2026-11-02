@@ -368,3 +368,16 @@ html[data-season="autumn"] #frame { background: #C9B26A; }
 .fsign { position: absolute; transform: translate(-50%, -50%); z-index: 1; pointer-events: none; padding: 2px 8px; border-radius: 6px; background: linear-gradient(#C99A62, #A9784A); color: #FFF6E4; font-weight: 800; font-family: var(--ff); border: 2px solid #7A5232; box-shadow: 0 2px 0 #5E3E22; white-space: nowrap; }
 .garland i { width: 10px; height: 10px; }
 .ribbon.small { padding: 6px 22px 8px; } .ribbon.small b { font-size: 24px; } .ribbon.small small { font-size: 16px; }
+
+/* 열 수 있는 존 화살표 (화면 밖일 때만 · 6초) */
+.zarrow { position: fixed; z-index: 60; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; animation: hintIn .3s; }
+.zarrow i { width: 34px; height: 34px; border-radius: 50%; background: #FFFBF2; border: 3px solid #E8A33A; box-shadow: 0 3px 0 #9C827844; position: relative; } .zarrow i::after { content: ''; position: absolute; left: 9px; top: 9px; width: 10px; height: 10px; border-right: 4px solid #C9861E; border-top: 4px solid #C9861E; transform: rotate(45deg); }
+.zarrow b { font: 800 12px/1.2 sans-serif; color: #5E4A42; background: #FFFBF2e6; border-radius: 8px; padding: 1px 6px; white-space: nowrap; }
+
+/* 화면 덜어내기 (대표 11-02) */
+.lvtag:not(.show) { display: none; } .lvtag.up:not(.work) { padding: 4px 8px; font-size: 16px; }
+.pad { border-color: #FFFBF288; background: #FFFBF214; } .pad.cant { opacity: .45; } .pad .ham { width: 34px; height: 34px; border-radius: 50%; background: #FFF6D0 url(../assets/art/ui/hammer.webp) center / 24px no-repeat; box-shadow: 0 0 0 4px #FFE38A66, 0 0 18px #FFE38A; animation: dotHop 1.6s cubic-bezier(.34,1.56,.64,1) infinite; }
+.fog .cl { opacity: .72 !important; } .fog .veil { opacity: .55; }
+.fog .zready { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 22px; background: #FFFBF2ee; border: 3px solid #E8C25A; box-shadow: 0 0 18px #FFE38A; cursor: pointer; animation: dotHop 1.6s cubic-bezier(.34,1.56,.64,1) infinite; } .fog .zready img { width: 30px; height: 30px; } .fog .zready span { font: 800 20px/1.2 var(--ff); color: #5E4A42; white-space: nowrap; }
+.fog .quiet { display: none; }
+.morel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 14px; } .morel .btn { justify-content: flex-start; gap: 8px; }

@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.96.1';
-import * as G from './sim.js?v=0.96.1';
-import { bm } from './oad_bm.js?v=0.96.1';
-import { sfx, setAudio, AUD } from './audio.js?v=0.96.1';
-import { pushBack } from './oad.js?v=0.96.1';
+import * as D from './data.js?v=0.96.2';
+import * as G from './sim.js?v=0.96.2';
+import { bm } from './oad_bm.js?v=0.96.2';
+import { sfx, setAudio, AUD } from './audio.js?v=0.96.2';
+import { pushBack } from './oad.js?v=0.96.2';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -80,6 +80,7 @@ export function hud() {
   <div class="sbtn" id="sHelp" style="position:absolute;right:18px;top:556px;height:64px">${ic('menu', 'ic2')}<b style="font-size:14px">하는 법</b></div>
   <div id="buffs" style="position:absolute;left:22px;top:372px;display:flex;flex-direction:column;gap:8px"></div>
   <div class="side">
+    <div class="sbtn" id="sMore">${ic('menu', 'ic2')}<b style="font-size:15px">메뉴</b></div>
     <div class="sbtn" id="sAtt">${ic('big', '')}출석</div>
     <div class="sbtn" id="sPlay">${ic('clock', 'ic2')}선물<span class="tm"></span></div>
     <div class="sbtn" id="sBuff">${ic('ribbon', 'ic2')}혜택</div>
@@ -95,6 +96,7 @@ export function hud() {
   $('#sBuff').onclick = () => openTab('shop', 'stall');
   $('#gAll').onclick = () => watch('gifts', null, n => { toast(`선물 ${n}개를 한꺼번에 받았어요!`, true); fly('coin', 160, 1300, 8); ctx.render(); });
   $('#sSnd').onclick = () => settingsPop();
+  $('#sMore').onclick = () => morePop();
   $('#goal').onclick = () => goalAct();
   $('#hudFold').onclick = ev => { ev.stopPropagation(); S.hudOpen = !hudEl.classList.contains('thin') ? false : true; hudEl.classList.toggle('thin', !S.hudOpen); sfx('tap'); ctx.save(); };   /* 위쪽 칸 접기 (대표 10-30: 왼쪽 위 비싼 자리를 가림) */
   $('#sHelp').onclick = () => loopPop(true);
@@ -103,6 +105,10 @@ export function hud() {
 const TABS = [{ id: 'fac', name: '시설', img: 'fac/tent' }, { id: 'menu', name: '메뉴', img: 'food/bagel' }, { id: 'staff', name: '직원', img: 'deco/heart' }, { id: 'mission', name: '미션', img: 'ui/mission' }, { id: 'shop', name: '매점', img: 'deco/gift' }];
 function setDot(el, n) { if (!el) return; let d = el.querySelector(':scope > .dot'); if (!n) { if (d) d.remove(); return; } if (!d) { d = document.createElement('i'); d.className = 'dot'; el.appendChild(d); } if (typeof n === 'number' && n > 1) { d.classList.add('n'); d.textContent = n > 9 ? '9+' : n; } else { d.classList.remove('n'); d.textContent = ''; } }
 /* 빨간 점 규칙 (docs/ux_notes.md 4장) */
+/* 오른쪽 단추 덜어내기 (대표 11-02): 평소엔 [메뉴] 하나 · 출석 · 머문 시간 선물은 받을 수 있을 때만 잠깐 · 혜택 · 소리 · 하는 법은 메뉴 안 */
+function morePop() { const items = [['att', 'big', '출석', () => attendPop()], ['play', 'clock', '머문 시간 선물', () => openTab('mission', 'play')], ['buff', 'ribbon', '혜택 · 매점', () => openTab('shop', 'stall')], ['set', 'sound', '소리 · 설정', () => settingsPop()], ['help', 'menu', '하는 법', () => loopPop(true)]];
+  const me = dlg(`<h3>메뉴</h3><div class="morel">${items.map(([k, i, n]) => `<div class="btn sky" data-m="${k}">${ic(i, 'ic2')}${n}</div>`).join('')}</div><div class="row">${btn('ok', '닫기', 'go')}</div>`);
+  me.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { me.close(); setTimeout(items.find(x => x[0] === b.dataset.m)[3], 200); }); me.el.querySelector('[data-a="ok"]').onclick = () => me.close(); }
 export function dots() {
   if (popEl && !popEl.querySelector('.dlg') && popEl.style.pointerEvents !== 'none') popEl.style.pointerEvents = 'none';   /* 창이 없는데 빈 창 층이 누름을 먹지 않게 (덮인 버튼 0 · 구조적) */
   if (hudEl) hudEl.classList.toggle('thin', !tutOn() && S.hudOpen !== true);   /* 처음 안내가 끝나면 위쪽 칸은 얇게(목표 한 줄) · 접기 단추로 펼침 */
@@ -116,8 +122,10 @@ export function dots() {
   const shop = (bm.info.ok && G.adLeft('box') > 0 && bm.info.ads.reward) || S.gem >= D.BOX.cost;
   const T = barEl.querySelectorAll('.tab');
   if (tutOn()) { const tab = tutTab(); TABS.forEach((t, i) => setDot(T[i], t.id === tab)); setDot($('#sAtt'), false); setDot($('#sPlay'), false); return; }   /* 안내 중에는 안내가 가리키는 한 곳만 (퀄리티 A2) */
-  setDot(T[0], fac); setDot(T[1], menuNew || menuUp); setDot(T[2], staff); setDot(T[3], mis); setDot(T[4], shop);
-  setDot($('#sAtt'), G.attendReady()); setDot($('#sPlay'), G.playReady().some(p => p.ready));
+  /* 알림 점은 하나만 (대표 11-02) — 원작처럼 '지금 가장 할 만한 곳' 한 곳: 받을 보상 → 지을 것 → 메뉴 → 직원 → 매점 순 */
+  const att = G.attendReady(), play = G.playReady().some(p => p.ready), one = [[T[3], mis], [T[0], fac], [T[1], menuNew || menuUp], [T[2], staff], [T[4], shop]].find(([, on]) => on);
+  TABS.forEach((t, i) => setDot(T[i], one && one[0] === T[i])); setDot($('#sAtt'), false); setDot($('#sPlay'), false);
+  for (const [id, on] of [['#sAtt', att], ['#sPlay', play], ['#sBuff', false], ['#sSnd', false], ['#sHelp', false]]) { const el = $(id); if (el) el.style.display = on ? '' : 'none'; }
 }
 export const lineReady = line => { const st = D.LINES.find(l => l.id === line).st; return G.built(st) && !!G.R.cooks[st]; };
 let tAcc = 0;
@@ -226,8 +234,8 @@ async function act(a, v, w, b, me, repeat) {
     if (!err) { sfx('up', { up: Math.min(8, (v === 'oven' ? S.oven : S.pads[v]).lv % 9) }); ctx.fx('sparkle', v); if (!repeat) numPop(at[0], at[1] - 30, praise()); } }
   else if (a === 'build') { err = G.build(v); if (!err) { closeSheet(); toast(`${D.FAC[D.PADS.find(p => p.id === v).fac].name}${josa(D.FAC[D.PADS.find(p => p.id === v).fac].name)} 생겼어요! ${praise()}`, true); } }
   else if (a === 'amen') { err = G.buildAmen(v); if (!err) { closeSheet(); sfx('build'); toast(`${D.AMEN[v].name} 완성! ${D.AMEN[v].desc}`, true); } }
-  else if (a === 'zone') { err = G.expand(v); if (!err) { sfx('build'); toast(`${D.ZONES.find(z => z.id === v).name} 정리를 시작했어요`, true); } }
-  else if (a === 'inst') return instDialog(v);
+  else if (a === 'zone') { closeSheet(); return zoneDialog(v); }   /* 메뉴 · 지도 표지 모두 같은 열기 흐름 (확인 → 비용 → 연출) */
+  else if (a === 'inst') return instDialog(w ? v + ':' + w : v);   /* 'inst:zone:forest' 처럼 키에 ':' 가 있는 경우 (zonecheck 로 찾음) */
   else if (a === 'menu') { const m = D.MENU.find(x => x.id === v), lv = G.menuLv(m); err = G.menuUp(v); if (!err) { sfx(lv ? 'up' : 'unlock'); if (!lv) { toast(`새 메뉴 '${m.name}' 출시! 손님들이 궁금해해요`, true); confetti(20); } else numPop(at[0], at[1] - 30, '맛있어졌어요!'); } }
   else if (a === 'hire') { err = G.hire(v); if (!err) { const s = D.STAFF.find(x => x.id === v); sfx('unlock'); confetti(24); toast(`${s.name}${josa(s.name, '이/가')} 캠프에 왔어요! "${s.line}"`, true); } }
   else if (a === 'feed') { const lvB = S.staff[v].fav; err = G.feed(v, w === 'big'); if (!err) { sfx('heart'); fly('heart', at[0], at[1], 0); numPop(at[0], at[1] - 40, S.staff[v].fav > lvB ? '더 친해졌어요!' : '맛있어요!'); } }
@@ -432,9 +440,12 @@ const PANELS = {
   } },
 };
 const AMEN_E = Object.fromEntries(Object.entries(AMEN_IMG).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:80px;height:80px;object-fit:contain">`]));
-const ZONE_E = Object.fromEntries(Object.entries({ lawn: 'fac/table', forest: 'fac/tent', pine: 'deco/pup_sit', valley: 'fac/playpool', stay: 'fac/bbq' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:84px;height:84px;object-fit:contain">`]));
-const ZONE_BG = { lawn: '#DDF2E8', forest: '#CFE6C2', pine: '#FDE7D4', valley: '#DCEBF8', stay: '#FCEFF2' };
-const ZONE_TXT = { lawn: '아이들이 뛰노는 잔디 · 웰컴센터와 공용 키친', forest: '소나무 · 잣나무 숲 사이 가족 캠핑 자리', pine: '반려견과 함께하는 울타리 존 · 어른만의 조용한 솔숲', valley: '아이들 물놀이 계곡 · 산책길과 폭포', stay: '바비큐 데크가 있는 숲속 스테이 · 루프탑' };
+/* 존 정보는 한 곳에서 (대표 제보 11-02 '열 수 있어요 표지를 눌러도 안 열림': 새 존 4곳의 그림 · 글이 이 표에 없어 표지 → 창이 오류로 멈췄음 · 메뉴는 다른 길로 바로 열어서 됐음) */
+const ZONE_INFO = { lawn: ['fac/table', '#DDF2E8'], forest: ['fac/tent', '#CFE6C2'], pine: ['deco/pup_sit', '#FDE7D4'], valley: ['fac/playpool', '#DCEBF8'], stay: ['fac/bbq', '#FCEFF2'], lake: ['deco/canoe', '#DCEBF8'], star: ['deco/telescope', '#E6E2F4'], cabin: ['deco/woodshed', '#F3E6D2'], deck: ['deco/rocker', '#DDEFE8'] };
+const ZONE_E = new Proxy({}, { get: (_, k) => `<img src="${IMG((ZONE_INFO[k] || ['fac/tent'])[0])}" style="width:84px;height:84px;object-fit:contain">` });
+const ZONE_BG = new Proxy({}, { get: (_, k) => (ZONE_INFO[k] || [0, '#EEF4E8'])[1] });
+const ZONE_TXT0 = { lawn: '아이들이 뛰노는 잔디 · 웰컴센터와 공용 키친', forest: '소나무 · 잣나무 숲 사이 가족 캠핑 자리', pine: '반려견과 함께하는 울타리 존 · 어른만의 조용한 솔숲', valley: '아이들 물놀이 계곡 · 산책길과 폭포', stay: '바비큐 데크가 있는 숲속 스테이 · 루프탑' };
+const ZONE_TXT = new Proxy(ZONE_TXT0, { get: (o, k) => o[k] || ({ lake: '맑은 호수와 나무 부두 · 카누와 낚시 의자', star: '숲 언덕 위 별 관측대 · 밤하늘 텐트', cabin: '소나무 사이 오두막 마을 · 장작 마당', deck: '계곡을 따라 놓인 긴 나무 데크 · 작은 폭포' })[k] || '' });
 const MIS_E = Object.fromEntries(Object.entries({ serve: 'ui/serve', upgrade: 'ui/hammer', gift: 'deco/gift', treat: 'ui/cookie', crit: 'ui/sparkle', cat: 'deco/cat_sit', menu: 'ui/menu', box: 'deco/gift_open', tapsell: 'food/bagel', cloud: 'deco/sheep', giftpick: 'deco/gift', rserve: 'ui/serve', rup: 'ui/hammer', rcrit: 'ui/sparkle', play: 'ui/clock' }).map(([k, v]) => [k, `<img src="${IMG(v)}" style="width:76px;height:76px;object-fit:contain">`]));
 
 /* ── 지도에서 누른 시설 (작은 창 · 길게 눌러 계속 강화) ── */
@@ -612,10 +623,17 @@ export function stageUp(t, st) { const kind = t === 'oven' ? 'oven' : S.pads[t].
 let lastCele = 0; function celebrate(title, sub, img) { const now = performance.now(); if (now - lastCele < 1500) { toast(`${title} ${sub}`, true); return; } lastCele = now; flyEl.querySelectorAll('.celebrate').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'celebrate'; d.innerHTML = `<div class="rays"></div><div class="cc"><img src="${IMG(img)}" alt=""><b>${title}</b><span>${sub}</span></div>`; flyEl.appendChild(d); confetti(60); setTimeout(() => d.classList.add('out'), 2200); setTimeout(() => d.remove(), 2700); }
 /* 설정: 효과음 · 배경음 · 진동 (출퇴근길 무음 · 사업 의견 7) */
 function settingsPop() {
-  const draw = d => { d.querySelector('.body2').mhtml = `<h3>설정</h3>${[['sfx', '효과음', AUD.sfx], ['bgm', '배경음', AUD.bgm], ['vib', '진동', S.vib !== false]].map(([k, n, on]) => `<div class="tog">${n}${btn('set:' + k, on ? '켜짐' : '꺼짐', on ? 'go' : '', false, 'style="min-width:110px;padding:10px 14px"')}</div>`).join('')}<div class="row" style="margin-top:16px">${btn('ok', '닫기', 'yl')}</div>`;
-    d.querySelectorAll('[data-a^="set:"]').forEach(b => b.onclick = () => { const k = b.dataset.a.slice(4); if (k === 'vib') S.vib = S.vib === false; else setAudio({ [k]: !AUD[k] }); S.muted = !(AUD.sfx || AUD.bgm); S.audio = { sfx: AUD.sfx, bgm: AUD.bgm }; ctx.save(); draw(d); }); d.querySelector('[data-a="ok"]').onclick = () => me.close(); };
+  const draw = d => { d.querySelector('.body2').mhtml = `<h3>설정</h3>${[['sfx', '효과음', AUD.sfx], ['bgm', '배경음', AUD.bgm], ['vib', '진동', S.vib !== false]].map(([k, n, on]) => `<div class="tog">${n}${btn('set:' + k, on ? '켜짐' : '꺼짐', on ? 'go' : '', false, 'style="min-width:110px;padding:10px 14px"')}</div>`).join('')}${testBuild() ? `<div class="row" style="margin-top:10px">${btn('testreset', '처음부터 다시 (테스트)', 'sky')}</div>` : ''}<div class="row" style="margin-top:16px">${btn('ok', '닫기', 'yl')}</div>`;
+    d.querySelectorAll('[data-a^="set:"]').forEach(b => b.onclick = () => { const k = b.dataset.a.slice(4); if (k === 'vib') S.vib = S.vib === false; else setAudio({ [k]: !AUD[k] }); S.muted = !(AUD.sfx || AUD.bgm); S.audio = { sfx: AUD.sfx, bgm: AUD.bgm }; ctx.save(); draw(d); }); d.querySelector('[data-a="ok"]').onclick = () => me.close();
+    const rb = d.querySelector('[data-a="testreset"]'); if (rb) rb.onclick = () => { me.close(); testReset(); }; };
   const me = dlg('<div class="body2"></div>'); draw(me.el);
 }
+/* 처음부터 다시 (테스트 빌드 · 개발 서버에서만 · 대표 11-02 '재화 밸런스를 처음부터 다시 확인') — camp_v1 만 지우고 새로 시작
+   계정 클라우드(소장): 지운 뒤 새 판이 곧 저장되고, 게임을 닫을 때 셸이 새 판을 계정에 올림(셸 cloud.js: 기기 쪽만 바뀌면 push) → 옛 기록이 다시 덮어쓰지 않음 */
+export const testBuild = () => window.OAD_ENV === 'test' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+function testReset() { const me = dlg(`<h3>처음부터 다시 (테스트)</h3><p>이 기기의 캠프 기록(camp_v1)을 지우고 레벨 1부터 다시 시작해요.<br>되돌릴 수 없어요 · 테스트 빌드에서만 보여요</p><div class="row">${btn('go', '다시 시작', 'pk')}${btn('no', '그만두기', 'sky')}</div>`);
+  me.el.querySelector('[data-a="no"]').onclick = () => me.close();
+  me.el.querySelector('[data-a="go"]').onclick = () => { window.__noSave = true; try { localStorage.removeItem(D.GAME.save); } catch { /* */ } location.reload(); }; }
 /* 선물 바구니: 셋 중 하나 고르기 → 나머지는 광고로 (광고 자리 1) */
 let giftDlg = null;
 export function giftPop() {
