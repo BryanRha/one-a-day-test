@@ -1,22 +1,22 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.95.4';
-import * as R from './rules.js?v=0.95.4';
-import * as I from './install.js?v=0.95.4';
-import * as T from './track.js?v=0.95.4';
-import * as P from './pay.js?v=0.95.4';
-import * as A from './account.js?v=0.95.4';
-import * as C from './cloud.js?v=0.95.4';
-import * as BM from './bm.js?v=0.95.4';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.95.5';
+import * as R from './rules.js?v=0.95.5';
+import * as I from './install.js?v=0.95.5';
+import * as T from './track.js?v=0.95.5';
+import * as P from './pay.js?v=0.95.5';
+import * as A from './account.js?v=0.95.5';
+import * as C from './cloud.js?v=0.95.5';
+import * as BM from './bm.js?v=0.95.5';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.95.4').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.95.5').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.95.4'), import('./fortune/types.js?v=0.95.4'), import('./fortune/chat.js?v=0.95.4')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.95.5'), import('./fortune/types.js?v=0.95.5'), import('./fortune/chat.js?v=0.95.5')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.95.4';
+const VERSION = '0.95.5';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -116,7 +116,7 @@ function header(title) {
   if (title) return `<div class="top tt"><h1 class="ttl">${title}</h1><span class="tchips">${goldChip()}${gearBtn()}</span></div>`;
   const s = R.state();
   const streak = s.streak.count && (s.streak.last === R.keyOf(R.now()) || isYesterday(s.streak.last)) ? s.streak.count : 0;
-  return `<div class="top"><div class="brand">🌙 <b>One a Day</b></div><span class="tchips"><span class="chip hot">${streak ? `🔥 ${streak}일 연속` : '✨ 오늘 시작!'}</span>${goldChip()}${gearBtn()}</span></div>`;   /* 골드는 폰에서 숨김(시안) · PC 넓은 창 위쪽 메뉴에서만 (app.css) */
+  return `<div class="top"><div class="brand" data-home role="link" tabindex="0" aria-label="원어데이 메인으로">🌙 <b>One a Day</b></div><span class="tchips"><span class="chip hot">${streak ? `🔥 ${streak}일 연속` : '✨ 오늘 시작!'}</span>${goldChip()}${gearBtn()}</span></div>`;   /* 골드는 폰에서 숨김(시안) · PC 넓은 창 위쪽 메뉴에서만 (app.css) */
 }
 function isYesterday(k) { const y = R.now(); y.setDate(y.getDate() - 1); return k === R.keyOf(y); }
 
@@ -611,7 +611,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.95.4')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.95.5')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -1112,7 +1112,7 @@ function stampAd() {
   }, 1000);
 }
 function intro() {
-  openSheet(`<div class="intro"><h2>🌙 One a Day</h2><p style="color:var(--sub);margin:4px 0 6px">하루에 하나, 새로운 게임을 만나요</p>
+  openSheet(`<div class="intro"><h2 data-home role="link" style="cursor:pointer">🌙 One a Day</h2><p style="color:var(--sub);margin:4px 0 6px">하루에 하나, 새로운 게임을 만나요</p>
     <div class="step"><div class="num">1</div><div><b>매일 자정, 새 게임 공개</b><p>모든 플레이어에게 같은 게임이 열려요. 친구와 오늘 기록을 겨뤄 보세요.</p></div></div>
     <div class="step"><div class="num">2</div><div><b>플레이하면 보관함에</b><p>한 번 만난 게임은 내 보관함에 차곡차곡 모여요.</p></div></div>
     <div class="step"><div class="num">3</div><div><b>또 하고 싶다면</b><p>오늘의 게임이 아닌 날엔 광고를 보거나 소장해서 다시 즐길 수 있어요.</p></div></div>
@@ -1212,6 +1212,7 @@ setInterval(() => { if (!player.hidden && (needArm || !cw && 'CloseWatcher' in w
 // 게임 닫기: 받침 정리 · 남은 게임 기록을 되돌려 원어데이 첫 기록으로
 function leaveGame() { const g = gDepth(); if (cw) { const c = cw; cw = null; c.onclose = null; try { c.destroy(); } catch { /* */ } } needArm = false; closeGame(); if (g) history.go(-g); }
 function exitGame() { leaveGame(); }
+function goHome() { if (!sheet.hidden) closeSheet(); if (!player.hidden) exitGame(); go('today', 'tab'); try { window.scrollTo(0, 0); } catch { /* */ } }
 // 뒤로가기 한 번: 확인 창 → 게임에게 묻기(팝업 닫기 · 이전 화면) → 게임 첫 화면이면 원어데이로
 function askGame() {
   if (player.hidden) return;
@@ -1311,7 +1312,7 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg],[data-lab],[data-settings],[data-bseg]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg],[data-lab],[data-settings],[data-bseg],[data-home]');
   if (!t) return;
   const d = t.dataset;
   /* 메인 기록: 어느 칸에서 무엇을 눌렀나 + 게임 · 운세로 넘어갈 때 붙일 from */
@@ -1368,6 +1369,7 @@ document.addEventListener('click', e => {
   else if (d.open) detail(d.open);
   else if (d.ad) watchAd(d.ad);
   else if ('close' in d) closeSheet();
+  else if ('home' in d) { e.preventDefault(); goHome(); }   /* 원어데이 로고 = 어디서든 메인(게임 탭 맨 위) */
   else if ('exit' in d) { closeSheet(); if (!player.hidden) exitGame(); else history.back(); }
   else if ('intro' in d) intro();
   else if ('install' in d) { closeSheet(); doInstall(iwhere); }
