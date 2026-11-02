@@ -1,11 +1,12 @@
 // 원어데이 BM 연결 (oad_bm.js 는 공통 파일 — 고치지 않음). 게이트 시험판: hello 와 일시정지 연동만
-import { bm } from './oad_bm.js?v=0.95.2';
+import { bm } from './oad_bm.js?v=0.95.3';
 export { bm };
 let helloP = null;
 export function helloOnce() { if (!helloP) helloP = bm.hello().catch(() => ({ ok: false })); return helloP; }
 export function initBM(game) {
   helloOnce();
-  bm.onPause = on => { try { if (on) { game.sound.pauseAll(); game.loop.sleep(); } else { game.loop.wake(); game.sound.resumeAll(); } } catch { /* */ } };
+  // 광고 · 확인 창: 루프를 재우고, 판 안이면 전략 정지로 들어간다 (돌아와도 스스로 재개하지 않음 — 사용자가 ▶ 를 누른다)
+  bm.onPause = on => { try { if (on) { const p = game.scene.isActive('Play') && game.scene.getScene('Play'); if (p && p.pause) p.pause({ auto: true }); game.sound.pauseAll(); game.loop.sleep(); } else { game.loop.wake(); game.sound.resumeAll(); } } catch { /* */ } };
 }
 export const oadOn = () => !!(bm.info && bm.info.ok);
 export const owned = () => !!(bm.info && bm.info.ok && bm.info.owned);

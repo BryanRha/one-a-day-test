@@ -16,39 +16,27 @@ function rows(z, y0, widths, cx) {
 }
 
 const stack = spec => spec.flatMap(([w, h], z) => { const o = []; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) o.push({ x: 3 - (w - 1) / 2 + i, y: 3.5 - (h - 1) / 2 + j, z }); return o; });
-/* 엇갈림 판 (2026-10-30 대표: "아래 블록의 일부만 보이게"): 위층을 반 칸씩 어긋나게 쌓아 아래 타일이 위 타일 2~4장에 부분적으로 덮임
-   · 층마다 엇갈림 방향(가로 · 세로 · 대각)을 바꾸고, 일부 층은 줄마다 반 칸 띄운 '벽돌' 줄
-   · 반 칸 단위라 타일을 4칸(2×2)으로 나눠 가려진 칸을 셈 → 판을 만들 때 모든 타일이 4칸 중 2칸 이상(50%) 보이도록 위 타일을 넣지 않음 (최소 30% 규칙 충족) */
+/* 층마다 꽉 채운 판 (2026-10-30 대표 "엇갈리게 층별로 꽉 채워야"): 층마다 직사각형을 빈자리 없이 채우고, 위층은 아래층에 대해 반 칸 엇갈리게 놓음
+   · 가로 · 세로 칸 수의 홀짝이 바뀌면 가운데 맞춤만으로 반 칸 어긋남(7×8 → 6×7 대각 · 6×8 가로 · 7×7 세로) · dx · dy 로 더 밀 수 있음 · brick 은 홀수 줄만 반 칸 더(벽돌)
+   · 아래 타일은 위 타일 2~4장에 거의 다 가려지고 가장자리 반 칸만 보임(두툼한 더미) · 위층 타일은 반드시 아래층 타일 위에 놓임 · 장 수가 3의 배수가 아니면 맨 위층 바깥쪽부터 뺌 */
 const quarters = t => [[t.x - .25, t.y - .25], [t.x + .25, t.y - .25], [t.x - .25, t.y + .25], [t.x + .25, t.y + .25]];
 const coversPt = (b, [px, py]) => Math.abs(b.x - px) < 0.5 && Math.abs(b.y - py) < 0.5;
+/* 타일을 2×2 칸으로 나눠 위에 안 덮인 칸 수 (0 = 완전히 숨음 · 봇이 '보이는 그림'을 셀 때 씀) */
 export function visibleQuarters(t, list) { return quarters(t).filter(q => !list.some(b => b.z > t.z && coversPt(b, q))).length; }
-/* 층마다 반 칸 격자 위의 자리를 가운데부터 채움 (같은 층끼리는 겹치지 않게) · 아래 타일이 2칸(50%) 미만만 보이게 되는 자리는 건너뜀
-   spec: [가로 칸 수, 세로 칸 수, 선호 어긋남 x, 선호 어긋남 y, 벽돌(줄마다 반 칸)] — 층마다 다르게 주면 가로 · 세로 · 대각 엇갈림이 섞임 */
-function weave(spec, piles = 0, minVis = 2) {
+function pile(spec) {
   const out = [];
-  spec.forEach(([w, h, dx, dy, brick], z) => {
-    const cand = [];
-    for (let y2 = 0; y2 <= (h - 1) * 2; y2++) for (let x2 = 0; x2 <= (w - 1) * 2; x2++) {
-      const x = 3 - (w - 1) / 2 + x2 / 2 + dx, y = 3.5 - (h - 1) / 2 + y2 / 2 + dy;
-      const row = Math.round(y2 / 2), want = brick ? (x2 % 2) === (row % 2) && y2 % 2 === 0 : x2 % 2 === 0 && y2 % 2 === 0;
-      cand.push({ x, y, z, pri: (want ? 0 : 10) + Math.hypot(x - 3, (y - 3.5) * 0.9) });
-    }
-    cand.sort((p, q) => p.pri - q.pri);
-    for (const t of cand) {
-      if (t.x < -0.01 || t.x > 6.01 || t.y < -0.01 || t.y > 7.01) continue;
-      if (out.some(b => b.z === z && Math.abs(b.x - t.x) < 1 && Math.abs(b.y - t.y) < 1)) continue;
-      const under = out.filter(b => b.z < z && Math.abs(b.x - t.x) < 1 && Math.abs(b.y - t.y) < 1);
-      if (z > 0 && !under.length) continue;
-      if (under.some(b => visibleQuarters(b, [...out, t]) < minVis)) continue;
-      out.push({ x: t.x, y: t.y, z });
+  spec.forEach(([w, h, dx = 0, dy = 0, brick = 0], z) => {
+    for (let j = 0; j < h; j++) for (let i = 0; i < (brick && j % 2 ? w - 1 : w); i++) {
+      const x = 3 - (w - 1) / 2 + i + dx + (brick && j % 2 ? .5 : 0), y = 3.5 - (h - 1) / 2 + j + dy;
+      if (x < -0.01 || x > 6.01 || y < -0.01 || y > 7.01) continue;
+      if (z > 0 && !out.some(b => b.z === z - 1 && Math.abs(b.x - x) < 1 && Math.abs(b.y - y) < 1)) continue;
+      out.push({ x, y, z });
     }
   });
-  /* 더미(pile): 맨 위로 드러난 타일 바로 위에 똑같이 한 장 더 → 아래 장은 완전히 숨음(부분 가림은 늘지 않음 · 쌓인 옆면으로 장 수가 보임) */
-  for (let n = 0; n < piles; n++) {
-    const top = out.filter(a => !out.some(b => b.z > a.z && Math.abs(b.x - a.x) < 1 && Math.abs(b.y - a.y) < 1));
-    top.sort((p, q) => Math.hypot(p.x - 3, p.y - 3.5) - Math.hypot(q.x - 3, q.y - 3.5) + (n % 3) * 0.01 * (p.x - q.x));
-    const t = top[n % Math.max(1, Math.min(top.length, 18))]; if (!t) break;
-    out.push({ x: t.x, y: t.y, z: t.z + 1 });
+  const zTop = out.length ? out[out.length - 1].z : 0;
+  for (let n = out.length % 3; n > 0; n--) {
+    const top = out.filter(t => t.z === zTop).sort((p, q) => Math.hypot(q.x - 3, q.y - 3.5) - Math.hypot(p.x - 3, p.y - 3.5));
+    out.splice(out.indexOf(top[0]), 1);
   }
   return out;
 }
@@ -63,13 +51,16 @@ export const LAYOUTS = {
   /* 81장 (4층) */
   tower: () => [...rows(0, 0, [5, 5, 5, 5, 5, 5, 5], 3), ...rows(1, 0.5, [4, 4, 4, 4, 4, 4], 3), ...rows(2, 1, [3, 3, 3, 3, 3], 3), ...rows(3, 1.5, [1, 2, 2, 2], 3)],
   /* 아래부터 직사각형을 쌓은 판 (가장자리가 고리처럼 드러나 고를 거리가 넉넉함 · 같은 크기를 두 번 쌓으면 아래가 완전히 가려져 어려워짐) */
-  /* 엇갈림 판: [폭, 높이, 가로 어긋남, 세로 어긋남, 벽돌 줄] */
-  e39: () => weave([[5, 6, 0, 0], [4, 5, .5, .5]]),
-  e81: () => weave([[7, 8, 0, 0], [6, 7, .5, .5], [5, 6, 0, 0], [4, 5, .5, 0], [3, 4, 0, .5], [2, 2, .5, .5]]),
-  e90: () => weave([[7, 8, 0, 0], [6, 7, .5, .5], [5, 6, 0, 0], [4, 5, .5, 0], [3, 4, 0, .5], [2, 2, .5, .5]], 9),
-  e108: () => weave([[7, 8, 0, 0], [6, 7, .5, .5], [7, 6, 0, 0, 1], [5, 6, .5, 0], [4, 5, 0, .5], [3, 4, .5, .5], [2, 3, 0, 0]], 24),
-  e126: () => weave([[7, 8, 0, 0], [6, 8, .5, 0], [7, 7, 0, .5], [6, 7, .5, .5], [6, 6, 0, 0, 1], [4, 6, .5, 0], [4, 4, 0, .5], [2, 3, .5, .5]], 39),
-  e144: () => weave([[7, 8, 0, 0], [6, 7, .5, .5], [7, 7, 0, .5, 1], [6, 8, .5, 0], [7, 6, 0, 0], [5, 6, .5, .5], [6, 5, 0, .5, 1], [4, 5, .5, 0], [3, 4, 0, .5], [2, 2, .5, .5]], 54),
+  /* 꽉 채운 엇갈림 판: 층마다 [가로, 세로, (dx, dy, 벽돌)] · 이름의 숫자 = 장 수 (3의 배수가 되게 층 크기를 골랐고, 홀짝이 같은 층은 dx · dy 로 반 칸 밀어 엇갈림 유지) */
+  p39: () => pile([[4, 6], [3, 5]]),
+  p48: () => pile([[5, 6], [4, 5]]),
+  p72: () => pile([[6, 7], [5, 6]]),
+  p96: () => pile([[7, 8], [6, 7]]),
+  p126: () => pile([[7, 8], [6, 7], [4, 7, .5, .5]]),
+  p138: () => pile([[7, 8], [6, 7], [5, 8]]),
+  p144: () => pile([[7, 8], [6, 7], [5, 6], [4, 4]]),
+  p150: () => pile([[7, 8], [6, 8], [7, 7, 0, 0, 1]]),
+  p156: () => pile([[7, 8], [6, 7], [5, 6], [4, 4], [3, 4, 0, .5]]),
   a42: () => stack([[5, 6], [3, 4], [1, 2]]),
   a69: () => stack([[7, 6], [5, 4], [3, 2], [1, 2]]),
   a99: () => stack([[7, 8], [5, 6], [3, 4], [1, 2]]),

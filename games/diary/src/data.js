@@ -90,19 +90,19 @@ export function pickTypes(key, n, must = []) {
   return out.slice(0, n);
 }
 export function stageKind(n) { return n <= 5 ? 'practice' : n % 10 === 0 ? 'boss' : n % 5 === 0 ? 'hard' : 'normal'; }
-/* 단계 표 (tools/difficulty.mjs 로 맞춘 값) — 연습 1~5 · 일반 · 어려움 15 · 25 · 보스 10 · 20 · 30 */
+/* 단계 표 [판 모양, 그림 종류, cap, pNew, (zw)] (tools/difficulty.mjs 로 맞춘 값) — 연습 1~5 · 일반 · 어려움 15 · 25 · 보스 10 · 20 · 30 */
 const STAGE = {
-  1: ['e39', 5, 1, .2], 2: ['e39', 6, 1, .2], 3: ['e39', 7, 1, .3], 4: ['e39', 9, 2, .3], 5: ['e81', 5, 1, .2],
-  6: ['e90', 6, 1, .3], 7: ['e81', 8, 2, .3], 8: ['e90', 6, 1, .3], 9: ['e81', 8, 2, .3], 10: ['e126', 7, 1, .3],
-  11: ['e90', 6, 1, .3], 12: ['e90', 6, 1, .3], 13: ['e81', 7, 2, .3], 14: ['e90', 6, 1, .3], 15: ['e81', 10, 2, .5],
-  16: ['e90', 6, 1, .3], 17: ['e90', 6, 1, .3], 18: ['e81', 7, 2, .3], 19: ['e90', 6, 1, .3], 20: ['e126', 7, 1, .3],
-  21: ['e90', 6, 1, .3], 22: ['e90', 6, 1, .3], 23: ['e90', 6, 1, .3], 24: ['e90', 6, 1, .3], 25: ['e81', 9, 2, .3],
-  26: ['e90', 6, 1, .3], 27: ['e81', 7, 2, .5], 28: ['e81', 7, 1, .3], 29: ['e81', 7, 2, .3], 30: ['e144', 7, 1, .3],
+  1: ['p39', 5, 1, .3], 2: ['p39', 7, 1, .3], 3: ['p39', 8, 1, .3], 4: ['p48', 5, 2, .5], 5: ['p72', 6, 1, .3],
+  6: ['p96', 8, 1, .3], 7: ['p72', 8, 2, .5], 8: ['p96', 8, 2, .5], 9: ['p72', 8, 2, .3], 10: ['p150', 9, 1, .3],
+  11: ['p96', 8, 1, .3], 12: ['p72', 9, 2, .5], 13: ['p96', 8, 2, .5], 14: ['p72', 8, 2, .5], 15: ['p126', 7, 1, .3],
+  16: ['p96', 8, 1, .3], 17: ['p72', 9, 2, .5], 18: ['p96', 8, 2, .5], 19: ['p72', 8, 2, .5], 20: ['p150', 9, 2, .5],
+  21: ['p96', 8, 1, .3], 22: ['p72', 8, 2, .5], 23: ['p96', 8, 2, .5], 24: ['p72', 8, 2, .5], 25: ['p138', 7, 1, .3],
+  26: ['p96', 8, 2, .5], 27: ['p72', 8, 2, .3], 28: ['p96', 8, 2, .5], 29: ['p72', 7, 2, .5], 30: ['p156', 6, 1, .3, .6],
 };
 export function stageCfg(n) {
-  const kind = stageKind(n), tier = Math.floor((n - 1) / 10), [layout, nt, cap, pNew] = STAGE[n];
+  const kind = stageKind(n), tier = Math.floor((n - 1) / 10), [layout, nt, cap, pNew, zw = 1.5] = STAGE[n];
   return {
-    layout, types: pickTypes('stage' + n, nt), cap, pNew, zw: 1.5, kind,
+    layout, types: pickTypes('stage' + n, nt), cap, pNew, zw, kind,
     ice: tier >= 1 ? 2 + Math.floor(((n - 1) % 10) / 3) + (tier - 1) : 0, chain: tier >= 2 ? 2 + Math.floor(((n - 1) % 10) / 4) : 0,
     reward: n % 10 === 0 ? 'note' : 'sticker',
   };
@@ -110,16 +110,16 @@ export function stageCfg(n) {
 export const OBSTACLE_AT = { 11: 'ice', 21: 'chain' };
 
 export const LEVEL = {
-  easy: { layout: 'e39', n: 7, cap: 1, pNew: 0.2 },
-  normal: { layout: 'e90', n: 6, cap: 1, pNew: 0.3 },
-  hard: { layout: 'e90', n: 7, cap: 1, pNew: 0.3 },
+  easy: { layout: 'p39', n: 7, cap: 1, pNew: 0.3 },
+  normal: { layout: 'p96', n: 8, cap: 2, pNew: 0.5 },
+  hard: { layout: 'p126', n: 7, cap: 1, pNew: 0.3 },
 };
 /* 자유 다꾸: 판마다 고르는 난이도 · 보상(스티커 장수 · 금박 확률) */
 /* 자유 다꾸 어려움은 칸 관리(cap 2)로 더 어렵게 */
-export const FREE_HARD = { n: 10, cap: 2, layout: 'e81' };
+export const FREE_HARD = { n: 7, cap: 2, layout: 'p126' };
 export const FREE_REWARD = { easy: { n: 2, foil: 0.03 }, normal: { n: 3, foil: 0.08 }, hard: { n: 5, foil: 0.2 } };
 export function freeCfg(i, mapCleared, diff = 'normal') {
-  const L = LEVEL[diff], lays = { easy: ['e39', 'e39', 'e39'], normal: ['e90', 'e90', 'e90'], hard: ['e81', 'e81', 'e81'] }[diff];
+  const L = LEVEL[diff], lays = { easy: ['p39', 'p39', 'p48'], normal: ['p96', 'p72', 'p96'], hard: ['p126', 'p138', 'p126'] }[diff];
   return { layout: lays[i % 3], types: pickTypes('free' + i, diff === 'hard' ? FREE_HARD.n : L.n), cap: diff === 'hard' ? FREE_HARD.cap : L.cap, pNew: L.pNew, zw: 1.5, ice: mapCleared >= 10 && i % 2 ? 3 : 0, chain: mapCleared >= 20 && i % 3 === 2 ? 2 : 0, kind: diff };
 }
 

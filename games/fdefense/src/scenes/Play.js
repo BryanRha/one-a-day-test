@@ -1,16 +1,16 @@
 // 판 화면 (세로): 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 HUD · 아래 엄지 조작 칸
-import { W, H, C, SCALE } from '../config.js?v=0.95.2';
-import { T, A, CHAR_NAMES, HERO_NAMES, SPECIAL_NAMES, STAGE_NAMES, CHAPTERS } from '../core/data.js?v=0.95.2';
-import { Sim, TICK, BUY_ROWS, DETAIL_SPRITE, HERO_SPRITE, CHAR, runSummary } from '../core/sim.js?v=0.95.2';
-import * as M from '../core/meta.js?v=0.95.2';
-import { BUNDLE } from '../core/balance.js?v=0.95.2';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.2';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.95.2';
-import { audio, S } from '../audio.js?v=0.95.2';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.95.2';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.2';
-import { pushBack } from '../oad.js?v=0.95.2';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.2';
+import { W, H, C, SCALE } from '../config.js?v=0.95.3';
+import { T, A, CHAR_NAMES, HERO_NAMES, SPECIAL_NAMES, STAGE_NAMES, CHAPTERS } from '../core/data.js?v=0.95.3';
+import { Sim, TICK, BUY_ROWS, DETAIL_SPRITE, HERO_SPRITE, CHAR, runSummary } from '../core/sim.js?v=0.95.3';
+import * as M from '../core/meta.js?v=0.95.3';
+import { BUNDLE } from '../core/balance.js?v=0.95.3';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.3';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.95.3';
+import { audio, S } from '../audio.js?v=0.95.3';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.95.3';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.3';
+import { pushBack } from '../oad.js?v=0.95.3';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.3';
 
 const HUD_H = 176, TRAY_MIN = 520;
 // 효과 번호 → 그림 묶음 (원작 렌더러 표)
@@ -41,7 +41,7 @@ export class PlayScene extends Phaser.Scene {
     this.views = new Map(); this.fxs = []; this.pops = []; this.acc = 0; this.paused = false; this.menu = null; this.drag = null; this.armed = null;
     this.speed = dd.speed || 1; this.ended = false; this.cutin = null; this.lastTap = 0; this.contUsed = 0; this.contAd = false; this.offer = null;
     this.hintStep = dd.tips.place ? 9 : 0; this.tipsShown = {};
-    this.coachOn = false; this.coachTick = 0; this.arrowViews = new Map(); this.hint = null; this.pauseUI = null; this.pauseBack = null; this.menuBack = null;
+    this.coachOn = false; this.coachTick = 0; this.arrowViews = new Map(); this.hint = null; this.pauseUI = null; this.pauseGlow = null; this.menuUI = null; this.menuUIBack = null; this.menuBack = null; this.pendingSpecial = null; this.menuWasRunning = false;
     dd.tries[this.stageNo] = (dd.tries[this.stageNo] || 0) + 1; save();
     this.layout();
     this.drawBoard();
@@ -56,7 +56,10 @@ export class PlayScene extends Phaser.Scene {
     else this.hintStep = 9;
     if (this.giftGold > 0) this.time.delayedCall(600, () => toast(this, `응원 선물 · 시작 골드 +${this.giftGold}`, this.trayTop - 80, C.gold));
     this.stageBanner();
-    this.events.once('shutdown', () => { this.input.off('pointerdown', this.onDown, this); this.input.off('pointermove', this.onMove, this); this.input.off('pointerup', this.onUp, this); });
+    // 앱이 뒤로 가면(탭 숨김 · 다른 앱) 전략 정지로 들어가고, 돌아와도 스스로 재개하지 않는다
+    this.onHide = () => { if (document.hidden) this.pause({ auto: true }); };
+    document.addEventListener('visibilitychange', this.onHide);
+    this.events.once('shutdown', () => { this.input.off('pointerdown', this.onDown, this); this.input.off('pointermove', this.onMove, this); this.input.off('pointerup', this.onUp, this); document.removeEventListener('visibilitychange', this.onHide); });
   }
 
   // ---------- 배치 계산 ----------
@@ -158,8 +161,13 @@ export class PlayScene extends Phaser.Scene {
     this.tMana = text(this, 512, 58, '0', 46, C.mana, { ox: 0 }).setDepth(6001);
     this.tWave = text(this, 36, 132, '', 32, C.mute, { ox: 0, weight: '700' }).setDepth(6001);
     this.waveBar = this.add.graphics().setDepth(6001);
-    this.pauseBtn = button(this, W - 82, 88, 120, 120, 'II', () => this.pause(), { size: 44, r: 30 });
+    this.pauseBtn = button(this, W - 82, 88, 120, 120, 'II', () => this.togglePause(), { size: 44, r: 30 });
     this.pauseBtn.setDepth(6002);
+    // ☰ 메뉴 (설정 · 다시 · 홈) — 일시정지와 분리 (글꼴 부분집합에 ☰ 가 없어 줄 셋을 그림)
+    this.menuBtn = button(this, W - 222, 88, 120, 120, '', () => this.openMenuUI(), { size: 44, r: 30 });
+    this.menuBtn.setDepth(6002);
+    const mg = this.add.graphics().setDepth(6003); for (let i = -1; i <= 1; i++) mg.fillStyle(0xE8E4D8, 1).fillRoundedRect(W - 222 - 26, 88 + i * 18 - 4, 52, 8, 4);
+    this.menuBtn.bars = mg;
   }
   updateHud() {
     const s = this.sim;
@@ -168,7 +176,7 @@ export class PlayScene extends Phaser.Scene {
     else if (s.mode === 2) { const gs = s.objects.filter(o => o.role === 'start'), hp = gs.reduce((a, o) => a + Math.max(0, o.hp), 0), mx = gs.reduce((a, o) => a + o.maxHp, 0); this.tWave.setText(`성문 ${Math.ceil(hp / mx * 100)}% · 웨이브 ${Math.min(s.wave + 1, s.waveTotal)}/${s.waveTotal}`); }
     else this.tWave.setText(`웨이브 ${Math.min(s.wave + 1, s.waveTotal)} / ${s.waveTotal}`);
     const g = this.waveBar; g.clear();
-    const bx = Math.max(300, 36 + this.tWave.width + 30), bw = 890 - bx;
+    const bx = Math.max(300, 36 + this.tWave.width + 30), bw = 760 - bx;
     g.fillStyle(0x2A3142, 1).fillRoundedRect(bx, 124, bw, 16, 8);
     g.fillStyle(0xFFC94A, 1).fillRoundedRect(bx, 124, Math.max(16, bw * s.progress()), 16, 8);
     if (s.mode === 2) { const gs = s.objects.filter(o => o.role === 'start'), hp = gs.reduce((a, o) => a + Math.max(0, o.hp), 0), mx = gs.reduce((a, o) => a + o.maxHp, 0); g.fillStyle(0xFF6B4A, 1).fillRoundedRect(bx, 148, Math.max(10, bw * hp / mx), 10, 5); }
@@ -181,7 +189,9 @@ export class PlayScene extends Phaser.Scene {
     g.fillStyle(0x0C0F16, 0.97).fillRect(0, top, W, h);
     g.lineStyle(3, 0x2A3142, 1).lineBetween(0, top, W, top);
     const cw = 242, gap = (W - cw * 4) / 5, cardH = Math.min(270, h - 210);
-    this.cards = CARDS.map((cd, i) => {
+    // 카드 표는 복사해서 쓴다 — heroCard() 가 kind 를 'hero0' 처럼 바꾸므로, 모듈 상수를 고치면 다음 판부터 영웅 카드가 전사로 취급된다(끌기 미리보기 · 값)
+    this.cards = CARDS.map((cd0, i) => {
+      const cd = { ...cd0 };
       const x = gap + i * (cw + gap), y = top + 22;
       const c = this.add.container(x, y).setDepth(6001);
       const bg = this.add.graphics(); c.add(bg);
@@ -251,14 +261,14 @@ export class PlayScene extends Phaser.Scene {
 
   // ---------- 입력 ----------
   cardDown(i, p) {
-    if (this.paused || this.ended || this.cutin) return;
+    if (this.menuUI || this.ended || this.cutin) return;
     const c = this.cards[i];
     this.closeMenu();
     this.drag = { i, sx: p.x, sy: p.y, moved: false, ghost: null };
     c.draw(true);
   }
   onDown(p) {
-    if (this.paused || this.ended || this.cutin || this.drag) return;
+    if (this.menuUI || this.ended || this.cutin || this.drag) return;
     if (p.y < this.by || p.y > this.trayTop) return;
     const tl = this.tileAt(p.x, p.y);
     if (this.armed != null && tl) { this.tryPlace(this.armed, tl); return; }
@@ -388,9 +398,14 @@ export class PlayScene extends Phaser.Scene {
 
   // ---------- 매 프레임 ----------
   update(time, dt) {
-    if (this.paused) return;
     dt = Math.min(dt, 100);
     this.flush();
+    if (this.paused) {
+      // 전략 정지: 판 시간은 멈추고(sim.step 없음) 배치 · 판매 같은 입력 결과와 연출만 그린다
+      this.acc += dt * TICK / 1000; let n = 0;
+      while (this.acc >= 1 && n < 8) { this.acc -= 1; n++; for (const f of this.fxs) f.t++; }
+      this.render(); return;
+    }
     this.acc += dt * TICK / 1000 * (this.cutin ? 1 : this.speed);
     let n = 0;
     while (this.acc >= 1 && n < 8) { this.acc -= 1; n++; this.tick(); }
@@ -421,12 +436,15 @@ export class PlayScene extends Phaser.Scene {
       case 'obreak': { const [x, y] = this.rot(e.o.x, e.o.y); this.addFx(13, e.o.x, e.o.y); const v = this.views.get(e.o); if (v) { v.img.destroy(); v.bar?.destroy(); this.views.delete(e.o); }
         this.popText(x, y - 60, e.gold ? `+${e.gold} 골드` : `+${e.mana} 마나`, e.gold ? C.gold : C.mana, 42); audio.id(S.LEVELUP, { volume: 0.4 }); this.cameras.main.shake(120, 0.004); break; }
       case 'leak': this.leakFx(e); break;
-      case 'levelup': this.addFx(14, e.t.ox, e.t.oy); audio.id(S.LEVELUP, { volume: 0.5 }); break;
+      case 'levelup': { this.addFx(14, e.t.ox, e.t.oy); audio.id(S.LEVELUP, { volume: 0.5 });
+        // 전직: 원작은 효과 14 + etc_4 + 메뉴 이름이 바뀌는 연출(upgradeCount) → 새 직업 이름을 띄움
+        if (e.cls) { const [x, y] = this.rot(e.t.ox, e.t.oy); this.popText(x, y - 70 * this.k, `${CHAR_NAMES[e.t.detail]}!`, C.gold, 40); }
+        break; }
       case 'place': { const [x, y] = this.rot(e.t.ox, e.t.oy); this.addFx(14, e.t.ox, e.t.oy); audio.id(S.LEVELUP, { volume: 0.35 }); this.cameras.main.shake(60, 0.002); this.dust(x, y + 18 * this.k); break; }
       case 'sell': { const v = this.views.get(e.t); if (v) { this.clearParts(v); v.sh?.destroy(); v.pip?.destroy(); this.views.delete(e.t); } audio.id(S.BACK, { volume: 0.5 }); break; }
       case 'wave': this.waveBanner(e.n, e.boss); if (this.sim.snap && this.sim.mode !== 1) saveResume(this.sim.snap); break;
       case 'gatebreak': { const [x, y] = this.rot(e.o.x, e.o.y); this.addFx(36, e.o.x, e.o.y); this.cameras.main.shake(400, 0.016); this.popText(x, y - 60, '성문 파괴!', C.gold, 56); audio.id(S.BLADE, { volume: 0.8 }); const v = this.views.get(e.o); if (v) { this.tweens.add({ targets: v.img, alpha: 0, scaleY: 0.2, duration: 500 }); } break; }
-      case 'special': this.startCutin(e.hero); break;
+      case 'special': if (this.paused) { this.pendingSpecial = e.hero; toast(this, '재개하면 필살기가 터집니다', this.trayTop - 80, C.gold); } else this.startCutin(e.hero); break;
       case 'specialHit': audio.id(S.BLADE, { volume: 0.7 }); this.cameras.main.shake(320, 0.012); break;
       case 'early': audio.id(S.TAP, { volume: 0.6 }); break;
       case 'clear': this.time.delayedCall(900, () => this.showResult(true)); break;
@@ -510,10 +528,21 @@ export class PlayScene extends Phaser.Scene {
     // 물건 체력 · 노리기 표시
     for (const [o, v] of this.views) if (o.role && v.bar) { v.bar.clear(); if (o.hp < o.maxHp) { const [x, y] = this.rot(o.x, o.y); v.bar.fillStyle(0x000000, 0.6).fillRoundedRect(x - 42, y - 70 * this.k, 84, 12, 4).fillStyle(0xFFC94A, 1).fillRoundedRect(x - 40, y - 70 * this.k + 2, 80 * o.hp / o.maxHp, 8, 3); } }
     const mg = this.markG; mg.clear();
-    if (s.focus && s.focus.alive) { const [x, y] = this.rot(s.focus.x, s.focus.y); const r = 34 + Math.sin(s.time * 0.3) * 4; mg.lineStyle(5, 0xFF5A5A, 0.9).strokeCircle(x, y - (s.focus.monster ? 18 : 30) * this.k, r); mg.lineBetween(x - r - 10, y - (s.focus.monster ? 18 : 30) * this.k, x - r + 8, y - (s.focus.monster ? 18 : 30) * this.k); mg.lineBetween(x + r - 8, y - (s.focus.monster ? 18 : 30) * this.k, x + r + 10, y - (s.focus.monster ? 18 : 30) * this.k); }
+    if (s.focus && s.focus.alive) { const { x, y, r: r0 } = this.focusCenter(s.focus); const r = r0 + Math.sin((this.paused ? this.time.now / 50 : s.time) * 0.3) * 4; mg.lineStyle(5, 0xFF5A5A, 0.9).strokeCircle(x, y, r); mg.lineBetween(x - r - 10, y, x - r + 8, y); mg.lineBetween(x + r - 8, y, x + r + 10, y); }
     this.updateHud(); this.updateTray();
     if (this.cutin) this.renderCutin();
     if ((this.coachTick = (this.coachTick || 0) + 1) % 30 === 0) this.coachCheck();
+  }
+  // 노리기 원의 중심 · 반지름 = 지금 그려진 그림(물건 이미지 · 몬스터 조각들)의 테두리 중심
+  //   물건은 크기(1×2 · 2×2)마다 원점이 다르고 그림 아래 끝을 칸에 맞추므로, 원작 좌표를 돌리기만 하면 원이 그림을 벗어난다
+  focusCenter(f) {
+    const v = this.views.get(f); let b = null;
+    const acc = im => { if (!im || !im.visible || im.alpha <= 0) return; const r = im.getBounds(); b = b ? Phaser.Geom.Rectangle.Union(b, r) : r; };
+    if (v) { acc(v.img); for (const p of v.parts || []) acc(p); }
+    if (!b || b.width < 2) { const [x, y] = this.rot(f.x, f.y); return { x, y: y - 18 * this.k, r: 34 }; }
+    const r = Math.max(34, Math.min(b.width, b.height) / 2 + 6);
+    // 판 가장자리의 큰 물건은 그림 일부가 HUD · 조작 칸 밑에 숨으므로 원은 보이는 판 안으로 당긴다
+    return { x: Phaser.Math.Clamp(b.centerX, this.bx + r, this.bx + this.bw - r), y: Phaser.Math.Clamp(b.centerY, this.by + r, this.trayTop - r), r };
   }
   addFx(kind, x, y) { const set = FX_SET[kind] ?? 500; this.fxs.push({ kind, set, x, y, t: 0, parts: [] }); }
   popText(x, y, s, color, size = 34) {
@@ -633,27 +662,78 @@ export class PlayScene extends Phaser.Scene {
   }
 
   // ---------- 일시정지 · 결과 ----------
-  onBack() { if (this.offer) { this.offerClose ? this.offerClose() : this.offer.destroy(); this.offer = null; this.showResult(false); return true; } if (this.ended) return false; if (this.paused) { this.resume(); return true; } this.pause(); return true; }
-  pause() {
+  // 뒤로가기: 이어하기 창 → 메뉴 창 → (정지 중이면) 메뉴 열기 → 전략 정지
+  onBack() {
+    if (this.offer) { this.offerClose ? this.offerClose() : this.offer.destroy(); this.offer = null; this.showResult(false); return true; }
+    if (this.ended) return false;
+    if (this.menuUI) { this.closeMenuUI(); return true; }
+    if (this.paused) { this.openMenuUI(); return true; }
+    this.pause(); return true;
+  }
+  // 전략 정지 (대표 2026-10-30 · 원작 myWaveRunFlag 와 같음): 시간만 멈추고 판은 그대로 보인다.
+  //   정지 중에도 배치 · 강화 · 전직 · 판매 · 노리기 · 필살기 조준(발동은 재개 때)이 된다. 팝업은 띄우지 않는다.
+  //   auto: 백그라운드 · 광고 · 확인 창 때 — 끌던 카드는 놓고, 돌아와도 자동 재개하지 않는다.
+  pause(opt = {}) {
     if (this.paused || this.ended) return;
-    this.paused = true; this.closeMenu(); this.cancelDrag();
+    this.paused = true;
+    if (opt.auto) this.cancelDrag();
+    audio.id(S.TAP, { volume: 0.3 });
+    this.pauseBtn.label.setText('▶');
+    const c = this.add.container(0, 0).setDepth(5500);
+    // 판 가장자리: 금빛 테두리 + 아주 옅은 비네트 (판을 어둡게 하지 않음)
+    const g = this.add.graphics();
+    for (let i = 0; i < 6; i++) { g.lineStyle(10, 0xFFC94A, 0.045 * (6 - i)); g.strokeRect(this.bx + 5 + i * 10, this.by + 5 + i * 10, this.bw - 10 - i * 20, this.bh - 10 - i * 20); }
+    g.lineStyle(6, 0xFFC94A, 0.85).strokeRect(this.bx + 3, this.by + 3, this.bw - 6, this.bh - 6);
+    c.add(g);
+    // 위쪽 얇은 띠
+    const band = this.add.graphics();
+    band.fillStyle(0x0C0F16, 0.82).fillRoundedRect(W / 2 - 400, this.by + 14, 800, 64, 32);
+    band.lineStyle(3, 0xFFC94A, 0.9).strokeRoundedRect(W / 2 - 400, this.by + 14, 800, 64, 32);
+    band.fillStyle(C.gold, 1).fillRoundedRect(W / 2 - 362, this.by + 30, 10, 32, 3).fillRoundedRect(W / 2 - 346, this.by + 30, 10, 32, 3);
+    c.add(band);
+    c.add(text(this, W / 2 + 14, this.by + 46, '일시정지 · 판을 보며 작전을 짜세요', 34, C.gold));
+    c.setAlpha(0); this.tweens.add({ targets: c, alpha: 1, duration: 180 });
+    this.pauseGlow = this.tweens.add({ targets: g, alpha: { from: 1, to: 0.55 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.pauseUI = c;
+    track('pause', { auto: !!opt.auto, wave: this.sim.wave });
+  }
+  resume() {
+    if (!this.paused) return;
+    this.paused = false;
+    this.pauseBtn.label.setText('II');
+    this.pauseGlow?.stop(); this.pauseGlow = null;
+    this.pauseUI?.destroy(); this.pauseUI = null;
+    if (this.pendingSpecial) { const h = this.pendingSpecial; this.pendingSpecial = null; this.startCutin(h); }
+  }
+  togglePause() { if (this.menuUI) return; if (this.paused) this.resume(); else this.pause(); }
+  // ☰ 메뉴 (설정 · 다시 · 홈) — 이것만 화면을 가리는 팝업. 열면 시간도 멈추고, 열기 전에 흐르고 있었으면 닫을 때 다시 흐른다.
+  openMenuUI() {
+    if (this.menuUI || this.ended) return;
+    this.menuWasRunning = !this.paused;
+    this.pause({ auto: true });
+    this.closeMenu();
     const c = this.add.container(0, 0).setDepth(9900);
     c.add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.62).setInteractive());
     c.add(panel(this, 140, H / 2 - 430, W - 280, 860, { r: 40 }));
-    c.add(text(this, W / 2, H / 2 - 340, '잠깐 쉬기', 64, C.ink));
+    c.add(text(this, W / 2, H / 2 - 340, '메뉴', 64, C.ink));
     const d = load();
     const rows = [
-      ['계속하기', () => this.resume(), { fill: 0x5A3B12, edge: C.accent, color: C.gold }],
-      [`배경음 ${d.music ? '켬' : '끔'}`, (b) => { const on = audio.toggleMusic(); this.pauseBtns[1].label.setText(`배경음 ${on ? '켬' : '끔'}`); if (on) audio.music('bgm_3', this); }],
-      [`효과음 ${d.sfx ? '켬' : '끔'}`, () => { const on = audio.toggleSfx(); this.pauseBtns[2].label.setText(`효과음 ${on ? '켬' : '끔'}`); }],
-      ['처음부터 다시', () => { this.paused = false; this.scene.restart({ stage: this.stageNo }); }],
-      ['홈으로 (이어하기 저장)', () => { this.paused = false; this.scene.start('Home'); }],
+      [this.menuWasRunning ? '닫고 계속하기' : '닫기 (정지 유지)', () => this.closeMenuUI(), { fill: 0x5A3B12, edge: C.accent, color: C.gold }],
+      [`배경음 ${d.music ? '켬' : '끔'}`, () => { const on = audio.toggleMusic(); this.menuBtns[1].label.setText(`배경음 ${on ? '켬' : '끔'}`); if (on) audio.music('bgm_3', this); }],
+      [`효과음 ${d.sfx ? '켬' : '끔'}`, () => { const on = audio.toggleSfx(); this.menuBtns[2].label.setText(`효과음 ${on ? '켬' : '끔'}`); }],
+      ['처음부터 다시', () => { this.closeMenuUI(true); this.paused = false; this.scene.restart({ stage: this.stageNo }); }],
+      ['홈으로 (이어하기 저장)', () => { this.closeMenuUI(true); this.paused = false; this.scene.start('Home'); }],
     ];
-    this.pauseBtns = rows.map((r, i) => { const b = button(this, W / 2, H / 2 - 200 + i * 145, 600, 118, r[0], r[1], { size: 44, ...(r[2] || {}) }); c.add(b); return b; });
-    this.pauseUI = c;
-    this.pauseBack = pushBack(() => { this.resume(); return true; });
+    this.menuBtns = rows.map((r, i) => { const b = button(this, W / 2, H / 2 - 200 + i * 145, 600, 118, r[0], r[1], { size: 44, ...(r[2] || {}) }); c.add(b); return b; });
+    this.menuUI = c;
+    this.menuUIBack = pushBack(() => { this.closeMenuUI(); return true; });
   }
-  resume() { if (!this.paused) return; this.paused = false; this.pauseUI?.destroy(); this.pauseUI = null; if (this.pauseBack) { this.pauseBack(); this.pauseBack = null; } }
+  closeMenuUI(keepPaused = false) {
+    if (!this.menuUI) return;
+    this.menuUI.destroy(); this.menuUI = null;
+    if (this.menuUIBack) { this.menuUIBack(); this.menuUIBack = null; }
+    if (this.menuWasRunning && !keepPaused) this.resume();
+  }
   // ---------- 이어하기 (아까운 순간에만 · docs/bm-policy.md 5장) ----------
   maybeContinue() {
     const s = this.sim, d = load();
