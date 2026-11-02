@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.95.10';
-import * as G from './sim.js?v=0.95.10';
-import * as C from './chars.js?v=0.95.10';
-import * as C2 from './chars2d.js?v=0.95.10';
-import * as UI from './ui.js?v=0.95.10';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.95.10';
-import { bm } from './oad_bm.js?v=0.95.10';
-import { installBack } from './oad.js?v=0.95.10';
+import * as D from './data.js?v=0.95.11';
+import * as G from './sim.js?v=0.95.11';
+import * as C from './chars.js?v=0.95.11';
+import * as C2 from './chars2d.js?v=0.95.11';
+import * as UI from './ui.js?v=0.95.11';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.95.11';
+import { bm } from './oad_bm.js?v=0.95.11';
+import { installBack } from './oad.js?v=0.95.11';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
@@ -23,13 +23,15 @@ const frame = document.getElementById('frame'), board = document.getElementById(
 const bootBar = document.querySelector('#boot .ld i'); const setBoot = p => { if (bootBar) bootBar.style.width = Math.round(p * 100) + '%'; };
 /* 화면 맞추기: 더 길쭉한 화면(폴드 등)은 판을 가운데 두고 프레임만 길게 → HUD 는 화면 끝 (퀄리티 B5) */
 /* ── 넓은 세계 + 움직이는 카메라 (대표 피드백 10-30: 화면이 고정돼 좌우가 잘려 보임) ──
-   세계 = 판 좌표 x −420 ~ 1140 (가운데 720 은 캠프 · 양옆은 이어 그린 숲 · 잔디) · 화면 비율에 맞춰 보이는 폭이 정해짐 · UI 는 화면에 고정된 720 폭 기둥 */
-const WX0 = -420, WX1 = 1140, uiEl = document.getElementById('ui'), board2 = document.getElementById('board2');
+   세계 = 판 좌표 x −60 ~ 780 (퀄리티 v2: 가운데 720 은 캠프 · 양옆 60 은 한 장짜리 그림 + 비네트) · 화면 비율에 맞춰 보이는 폭이 정해짐 · UI 는 화면에 고정된 720 폭 기둥 */
+const WX0 = -760, WX1 = 1640,   /* v0.3: 양옆에 레벨 문으로 여는 새 존(서쪽 호숫가 · 별 관측대 / 동쪽 오두막 마을 · 계곡 데크) — 첫 화면은 가운데 캠프 */   /* 퀄리티 v2 Top 1: 넓은 세계를 캠프 그림 둘레로 좁힘 (양옆은 한 장짜리 그림 · 비네트로 닫음) */ uiEl = document.getElementById('ui'), board2 = document.getElementById('board2');
 let FS = 1, FW = 720, FH = 1560, UIX = 0;
 const CAMV = { x: 360, y: 780, z: 1, vx: 0, vy: 0, tw: null };
 const baseZ = () => Math.max(FH / H, FW / (WX1 - WX0));
 const camZ = () => baseZ() * CAMV.z;
-function camClamp() { const z = camZ(), w = FW / z, h = FH / z; const cx0 = WX0 + w / 2, cx1 = WX1 - w / 2; CAMV.x = cx0 > cx1 ? 360 : Math.max(cx0, Math.min(cx1, CAMV.x)); const cy0 = h / 2, cy1 = H - h / 2; CAMV.y = cy0 > cy1 ? H / 2 : Math.max(cy0, Math.min(cy1, CAMV.y)); }
+/* 위 · 아래로 조금 더 (대표 10-30: 왼쪽 위 비싼 자리가 위쪽 UI 밑에 숨음) — 화면 고정 UI 높이만큼 세계 위 · 아래를 더 끌어 내릴 수 있음 · 넘친 곳은 하늘 · 숲 색 */
+const TOPPAD = 250, BOTPAD = 110;
+function camClamp() { const z = camZ(), w = FW / z, h = FH / z; const cx0 = WX0 + w / 2, cx1 = WX1 - w / 2; CAMV.x = cx0 > cx1 ? 360 : Math.max(cx0, Math.min(cx1, CAMV.x)); const tp = TOPPAD / z, bp = BOTPAD / z, cy0 = h / 2 - tp, cy1 = H - h / 2 + bp; CAMV.y = cy0 > cy1 ? H / 2 : Math.max(cy0, Math.min(cy1, CAMV.y)); }
 let VIEW = { l: 0, t: 0, z: 1, w: 720, h: 1560 };
 function camApply() { camClamp(); const z = camZ(), w = FW / z, h = FH / z, l = CAMV.x - w / 2, t = CAMV.y - h / 2; VIEW = { l, t, z, w, h };
   const tf = `translate(${(-l * z).toFixed(2)}px, ${(-t * z).toFixed(2)}px) scale(${z.toFixed(4)})`; board.style.transform = tf; board2.style.transform = tf;
@@ -37,10 +39,10 @@ function camApply() { camClamp(); const z = camZ(), w = FW / z, h = FH / z, l = 
 /* 판 좌표 → UI 기둥 좌표 (날아가는 코인 · 손가락 안내) */
 const F = (x, y) => [(x - VIEW.l) * VIEW.z - UIX, (y - VIEW.t) * VIEW.z];
 let camInit = false;
-function fit() { FS = Math.min(innerWidth / W, innerHeight / H); FW = innerWidth / FS; FH = innerHeight / FS; UIX = (FW - W) / 2;
+function fit() { FS = Math.min(innerWidth / W, innerHeight / H); FW = innerWidth / FS; FH = innerHeight / FS; UIX = (FW - W) / 2; frame.classList.toggle('wide', FW > 760);
   frame.style.width = FW + 'px'; frame.style.height = FH + 'px'; frame.style.transform = `scale(${FS})`; uiEl.style.left = UIX + 'px';
   if (typeof renderer !== 'undefined') { renderer.setPixelRatio(Math.min(2, devicePixelRatio) * FS); renderer.setSize(FW, FH); renderer.domElement.style.width = FW + 'px'; renderer.domElement.style.height = FH + 'px'; }
-  if (!camInit) { camInit = true; const h = FH / camZ(); if (h < H) CAMV.y = H - h / 2 - 70; }   /* 넓은 화면은 처음에 키친 · 잔디 쪽이 보이게 */
+  if (!camInit) { camInit = true; const h = FH / camZ(); if (h < H) CAMV.y = Math.max(h / 2, Math.min(H - h / 2 - 70, 1080)); }   /* 첫 화면은 세계 안에서만 (위로 넘친 하늘 띠 X) */   /* 넓은 화면은 처음에 키친 · 잔디 쪽이 보이게 */
   camApply(); }
 setBoot(0.15);
 
@@ -94,6 +96,10 @@ const facEl = {};
 function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img'); im.className = cls; im.src = IMG('fac/' + (kind || /^[ap]_/.test(s) ? G.facDir() : 'st') + '/' + (kind ? kind + '_' + s : s));   /* 시설 단계 · 소품은 계절판(st = 봄 · sta = 가을), 편의 설비는 공통 */ im.draggable = false; im.decoding = 'async'; Object.assign(im.style, { left: x + 'px', top: y + 'px', width: Math.round(w) + 'px' }); return im; }
 /* 짝수 레벨마다 시설 둘레에 작은 소품 (화분 · 등불 · 상자 …) — 이 단계 안에서 0~3개 · 자리마다 고정된 종류 (시설 id 로 골라 매번 같음) */
 const PROP_SLOT = [[-0.56, 0.06], [0.56, 0.1], [-0.42, -0.3]];
+/* 10단계 꾸밈 (v0.3): 3단계 등불 빛 · 5단계 나무 간판 · 7단계 반짝이 줄 조명 · 9단계 금빛 마감 */
+function stepDeco(im, name, sp, x, y, w, pk) { if (sp >= 3) im.classList.add('lit'); if (sp >= 9) im.classList.add('gold');
+  if (sp >= 5) { const sg = document.createElement('div'); sg.className = 'fsign'; sg.textContent = name; sg.style.left = (x - w * 0.5) + 'px'; sg.style.top = (y - w * 0.22) + 'px'; sg.style.fontSize = Math.round(15 * pk) + 'px'; layer.fac.append(sg); }
+  if (sp >= 7) { const gl = document.createElement('div'); gl.className = 'garland'; gl.style.left = x + 'px'; gl.style.top = (y - w * 0.78) + 'px'; for (let i = 0; i < 7; i++) { const d = document.createElement('i'); d.style.left = (i - 3) * w * 0.12 - 5 + 'px'; d.style.top = Math.abs(i - 3) ** 1.6 * 3 + 'px'; d.style.animationDelay = -i * 0.3 + 's'; gl.append(d); } layer.fac.append(gl); } }
 function propsAt(id, lv, x, y, w, pk, back) { const n = G.facDir() === 'sta' ? Math.min(3, D.propsOf(lv) + 1) : D.propsOf(lv);   /* 가을은 호박 · 담요 · 낙엽 하나를 기본으로 */ let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
   for (let i = 0; i < n; i++) { const [dx, dy] = PROP_SLOT[i], PL = G.facDir() === 'sta' ? D.SEASONS.autumn.props : D.STAGE.props, k = PL[(h + i * 3) % PL.length], im = stImg(null, k, x + dx * w, y + dy * w * 0.5 + (back ? -8 : 0), ((G.facDir() === 'sta' ? D.SEASONS.autumn.propM : D.STAGE.propM)[k] || 0.5) * D.PX_M * pk, 'fac prop'); im.dataset.p = id + i; if (i === 2 || back) layer.fac.prepend(im); else layer.fac.append(im); } }
 let roofEl = null;   /* 키친 지붕 · 기둥 (배경 조각) — 오븐 단계 그림 앞에 */
@@ -106,7 +112,7 @@ export function render() {
   layer.fac.innerHTML = ''; layer.front.innerHTML = ''; layer.ui.innerHTML = '';
   /* 장식 (뽑기 · 스탬프 · 골드 세트 · 소장자) */
   const decoOn = new Set(Object.keys(S.deco).filter(k => S.deco[k] > 0)), setOn = S.shop.deco || performance.now() < decoUntil;
-  for (const d of D.DECO) if (decoOn.has(d.id) && !(setOn && D.DECO_SHOP.deco.items.includes(d.id))) layer.fac.append(facImg(IMG(d.img), d.pos[0], d.pos[1], D.DECO_K * D.PERSP(d.pos[1])));
+  for (const d of D.DECO) if (decoOn.has(d.id) && (!d.season || d.season === SEASON) && !(setOn && D.DECO_SHOP.deco.items.includes(d.id))) { const im = facImg(IMG(d.img), d.pos[0], d.pos[1], D.DECO_K * D.PERSP(d.pos[1])); layer.fac.append(im); facEl['deco_' + d.id] = im; }
   if (setOn) { const im = facImg(IMG('deco/set_sakura'), D.SET_POS[0], D.SET_POS[1] + 40, 0.44 * D.PERSP(D.SET_POS[1])); if (!S.shop.deco) im.style.filter = 'drop-shadow(0 0 10px #FFE38A)'; layer.fac.append(im); }   /* 벚꽃 정원 세트 전용 그림 (퀄리티 A4) */
   if (SEASON === 'autumn') {   /* 가을 장식: 길 밖 작은 장식 5 + 7일 미션 보상 '수확 축제 장식' (걷는 곳에서는 막힘으로 빠져 있음 · data.js WALKMAP.autumn) */
     for (const [k, [ax, ay], m] of D.AUTUMN_DECO) layer.fac.append(stImg(null, k, ax, ay, m * D.PX_M * D.PERSP(ay), 'fac prop'));
@@ -115,18 +121,18 @@ export function render() {
   /* 시설 */
   for (const p of D.PADS) {
     const b = S.pads[p.id], [x, y] = p.pos; let pk = D.PERSP(y);
-    if (b && b.lv > 0) { const f = D.FAC[p.fac], vl = G.working(p.id) ? b.lv - 1 : b.lv, st = D.stageOf(vl), w = D.STAGE.w(p.fac, st) * pk, im = stImg(p.fac, st, x, y + 12 * pk, w, 'fac s' + st); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im;
+    if (b && b.lv > 0) { const f = D.FAC[p.fac], vl = G.working(p.id) ? b.lv - 1 : b.lv, st = D.stageOf(vl), sp = D.stepOf(vl), w = D.STAGE.ws(p.fac, sp) * pk, im = stImg(p.fac, st, x, y + 12 * pk, w, 'fac s' + st); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im; stepDeco(im, f.name, sp, x, y + 12 * pk, w, pk);
       propsAt(p.id, vl, x, y + 12 * pk, w, pk);
       tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
     else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.style.left = x + 'px'; pd.style.top = y + 'px'; pd.innerHTML = `<span>+ ${D.FAC[p.fac].name}</span>`; pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
   }
   /* 공용 키친 빵 오븐 (배경 그림 속 화덕) */
-  { const vl = G.working('oven') ? S.oven.lv - 1 : S.oven.lv, st = D.stageOf(vl), [ox, oy] = D.OVEN_AT, im = stImg('oven', st, ox, oy, D.STAGE.w('oven', st) * D.PERSP(oy), 'fac s' + st); layer.fac.append(im); facEl.oven = im; propsAt('oven', vl, ox - 6, oy + 4, 70, 0.8, true); if (roofEl) layer.fac.append(roofEl); }
+  { const vl = G.working('oven') ? S.oven.lv - 1 : S.oven.lv, st = D.stageOf(vl), sp = D.stepOf(vl), [ox, oy] = D.OVEN_AT, im = stImg('oven', st, ox, oy, D.STAGE.ws('oven', sp) * D.PERSP(oy), 'fac s' + st); layer.fac.append(im); facEl.oven = im; if (sp >= 3) im.classList.add('lit'); if (sp >= 9) im.classList.add('gold'); propsAt('oven', vl, ox - 6, oy + 4, 70, 0.8, true); if (roofEl) layer.fac.append(roofEl); }
   tag('oven', ...D.P(772, 932)); hit(D.KITCHEN.pos[0], D.KITCHEN.pos[1] + 10, 210, 150, () => stationTap('oven', () => UI.facDialog('oven')), 'oven');
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
   const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
-  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
+  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; if (S.amenAt && S.t - (S.amenAt[a] || -1e9) < 86400) { const nt = document.createElement('div'); nt.className = 'newtag'; nt.textContent = 'NEW'; nt.style.left = ax + 'px'; nt.style.top = (ay - aw * D.PX_M * D.PERSP(ay) * 1.15) + 'px'; layer.ui.append(nt); }   /* 작은 설비는 들인 뒤 하루 동안 NEW 리본 */ (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
   /* 잠긴 구역 안개 · 공사 */
   /* 안개 = 배경 화풍으로 그린 구름 여러 겹이 천천히 흐름 · 큰 라벨은 '다음에 열릴 구역' 하나만, 나머지는 작은 자물쇠 (퀄리티 A3) */
   const nextZ = (D.ZONES.find(z => S.zones[z.id].st !== 'open') || {}).id;
@@ -140,7 +146,7 @@ export function render() {
     const ok = G.zoneNeedOk(z.id), short = z.name.split(' · ')[0], lab = document.createElement('div');
     if (o.st === 'building') { lab.className = 'work2'; lab.innerHTML = `<img src="${IMG('ui/hammer')}" alt=""><span class="zt"></span>`; }
     else if (z.id === nextZ) { lab.className = 'lock'; lab.innerHTML = `<b><img src="${IMG(ok ? 'ui/sparkle' : 'ui/lock')}" alt="">${short}</b><small>${ok ? '지금 열 수 있어요!' : `레벨 ${z.need.lv} · 시설 ${z.need.built}개`}</small>`; if (ok) lab.style.animation = 'dotHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite'; }
-    else { lab.className = 'mini'; lab.innerHTML = `<img src="${IMG('ui/lock')}" alt="">`; }
+    else { lab.className = 'mini'; lab.innerHTML = `<img src="${IMG('ui/lock')}" alt=""><span>${short} · 레벨 ${z.need.lv}에 열림</span>`; }   /* 잠긴 존은 '레벨 N에 열림'을 늘 보여 줌 (대표 10-30) */
     f.append(lab);
     if (r[2] >= 700) f.style.paddingRight = '130px'; if (r[1] < 100) f.style.paddingTop = '150px';
     f.onclick = () => { sfx('tap'); UI.zoneDialog(z.id); }; layer.ui.append(f); }
@@ -169,7 +175,7 @@ frame.addEventListener('pointerdown', e => { if (onUI(e)) return; ptrs.set(e.poi
 addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; lastTouch = performance.now(); const p = fxy(e); ptrs.set(e.pointerId, p);
   if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; zoomAt(mid, Math.max(0.85, Math.min(1.4, pinch.z * d / pinch.d))); return; }
   if (!drag) return; const dx = p[0] - drag.last[0], dy = p[1] - drag.last[1]; if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) * FS < 8) return;
-  drag.moved = true; const z = camZ(), now = performance.now(), dt = Math.max(1, now - drag.t); CAMV.x -= dx / z; CAMV.y -= dy * 0.6 / z; drag.vx = drag.vx * 0.6 + (-dx / z) / dt * 1000 * 0.4; drag.vy = drag.vy * 0.6 + (-dy * 0.6 / z) / dt * 1000 * 0.4; drag.last = p; drag.t = now; camApply(); });
+  drag.moved = true; const z = camZ(), now = performance.now(), dt = Math.max(1, now - drag.t); CAMV.x -= dx / z; CAMV.y -= dy / z; drag.vx = drag.vx * 0.6 + (-dx / z) / dt * 1000 * 0.4; drag.vy = drag.vy * 0.6 + (-dy / z) / dt * 1000 * 0.4; drag.last = p; drag.t = now; camApply(); });
 const endPtr = e => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); lastTouch = performance.now(); if (ptrs.size < 2) pinch = null; if (!ptrs.size && drag) { if (drag.moved) { eatClick = true; CAMV.vx = drag.vx; CAMV.vy = drag.vy; setTimeout(() => { eatClick = false; }, 60); } drag = null; } };
 addEventListener('pointerup', endPtr); addEventListener('pointercancel', endPtr);
 addEventListener('click', e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);   /* 끈 다음의 '누름'은 무시 */
@@ -180,6 +186,22 @@ function zoomAt(mid, nz) { const z0 = camZ(), wx = VIEW.l + mid[0] / z0, wy = VI
    · 강화 단계 업은 4초에 한 번만 · 시작 6초 안(쉬는 동안 끝난 공사가 한꺼번에 옴)엔 카메라를 안 움직임 */
 let lastTouch = -1e9; const touching = () => ptrs.size > 0 || performance.now() - lastTouch < 1200;
 export function camTo(x, y, z, auto) { if (auto && touching()) return false; CAMV.tw = { x0: CAMV.x, y0: CAMV.y, z0: CAMV.z, x1: x, y1: y, z1: z ?? CAMV.z, t: 0 }; CAMV.vx = CAMV.vy = 0; return true; }
+/* 지도 라벨을 화면 안전 영역 안으로 (퀄리티 v2 Top 5): 좌우 16px 안 · 위는 상단 HUD(목표 카드 · 다음 해금 줄) 아래 — 화면 밖으로 반쯤 나간 라벨은 안쪽으로 밀어 넣음 */
+let clampT = 0;
+function clampLabels() {
+  const vw = innerWidth, k = FS * camZ(), hudEls = [...uiEl.querySelectorAll('#hud > *')].filter(e => e.offsetParent && e.getBoundingClientRect().top < innerHeight * 0.4 && e.getBoundingClientRect().width < vw * 0.9); let top = 0;
+  for (const e of hudEls) { const r = e.getBoundingClientRect(); if (r.left < vw * 0.75 && r.right > vw * 0.25) top = Math.max(top, r.bottom); }   /* 가운데 위를 덮는 HUD 만 (옆 버튼 기둥은 빼고) */
+  for (const el of layer.ui.querySelectorAll('.pad > span, .fog > .lock, .fog > .work2, .fog > .mini')) {
+    el.style.translate = ''; const r = el.getBoundingClientRect(); if (!r.width) continue; let dx = 0, dy = 0;
+    if (r.left < 16) dx = 16 - r.left; else if (r.right > vw - 16) dx = vw - 16 - r.right;
+    if (el.closest('.fog') && r.top < top + 8 && r.bottom > 0) dy = top + 8 - r.top;
+    if (dx || dy) el.style.translate = `${(dx / k).toFixed(1)}px ${(dy / k).toFixed(1)}px`; }
+  /* 누를 것(다 된 접시 · 팁 · 큰 말풍선)이 화면 고정 UI(옆 버튼 기둥 · 재화 칩 · 목표 카드 · 아래 탭) 밑에 깔리면 옆으로 비켜 냄 — 폴드 펼침처럼 카메라가 더 못 가는 화면에서도 늘 눌리게 (대표 제보 10-30) */
+  const fixed = [...uiEl.querySelectorAll('#hud > *, #bar')].filter(e => e.offsetParent).map(e => e.getBoundingClientRect()).filter(r => r.width && r.width < vw * 0.95 || r.top > innerHeight * 0.7);
+  for (const el of layer.ui.querySelectorAll('.dishrdy, .tipb, .bubble.big')) { el.style.translate = ''; const r = el.getBoundingClientRect(); if (!r.width) continue; let dx = 0, dy = 0;
+    if (r.left < 12 && r.right > 0) dx = 12 - r.left; else if (r.right > vw - 12 && r.left < vw) dx = vw - 12 - r.right;   /* 화면 끝에 반쯤 걸린 접시도 안쪽으로 */
+    for (const f of fixed) if (r.right > f.left && r.left < f.right && r.bottom > f.top && r.top < f.bottom) { if (f.top > innerHeight * 0.7) dy = Math.min(dy, f.top - r.bottom - 6); else if (f.left > vw / 2) dx = Math.min(dx, f.left - r.right - 6); else dx = Math.max(dx, f.right - r.left + 6); }
+    if (dx || dy) el.style.translate = `${(dx / k).toFixed(1)}px ${(dy / k).toFixed(1)}px`; } }
 function camStep(dt) {
   if (CAMV.tw) { const w = CAMV.tw; w.t += dt / 0.9; const k = w.t >= 1 ? 1 : 1 - (1 - w.t) ** 3; CAMV.x = w.x0 + (w.x1 - w.x0) * k; CAMV.y = w.y0 + (w.y1 - w.y0) * k; CAMV.z = w.z0 + (w.z1 - w.z0) * k; if (w.t >= 1) CAMV.tw = null; camApply(); return; }
   if (!drag && (Math.abs(CAMV.vx) > 2 || Math.abs(CAMV.vy) > 2)) { const x0 = CAMV.x, y0 = CAMV.y; CAMV.x += CAMV.vx * dt; CAMV.y += CAMV.vy * dt; const f = Math.exp(-dt * 4.2); CAMV.vx *= f; CAMV.vy *= f; camApply(); if (Math.abs(CAMV.x - (x0 + CAMV.vx * 0)) < 0.01 && CAMV.x !== x0 + 0) {} if (CAMV.x === x0) CAMV.vx = 0; if (CAMV.y === y0) CAMV.vy = 0; }   /* 관성 · 끝(카메라 한계)에 닿으면 멈춤 */
@@ -250,18 +272,32 @@ function puff(x, y, n = 1) { for (let i = 0; i < n; i++) parts.push({ k: 'steam'
 export function burst(x, y, k = 'sparkle', n = 12) { for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(60, 200); parts.push({ k, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - (k === 'heart' ? 80 : 40), life: rnd(0.6, 1.1) * (k === 'heart' ? 1.5 : 1), t: 0, r: rnd(4, 8), c: pick(['#FFE38A', '#FFF6D0', '#F9D4DC', '#BFE6D6']) }); } }
 /* 강화 연출 (대표 10-30) — 레벨마다: 통통 + 반짝 · 짝수 레벨: 소품 하나가 톡 · 단계(Lv5 · 10 · 20): 카메라가 다가가 먼지 → 옛 모습이 작아지고 새 모습이 튀어나옴 + 크게 축하 */
 let lastStageCam = -1e9; const bootT = performance.now();
+/* 새 단장 리본 (축하 카드 대신 · 시설 바로 위 · 2.4초) */
+function ribbon(t, st, pos, sub) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, name = t === 'oven' ? '빵 오븐' : D.FAC[kind].name, d = document.createElement('div'); d.className = 'ribbon';
+  const h = D.STAGE.ws(kind, D.stepOf(t === 'oven' ? S.oven.lv : S.pads[t].lv)) * D.PERSP(pos[1]) * 0.95; d.style.left = pos[0] + 'px'; d.style.top = (pos[1] - h - 20) + 'px'; d.dataset.keep = 1; d.innerHTML = `<b>${name} ${sub ? '단계 업!' : '새 단장!'}</b><small>${sub || ['', '조금 더 아늑해졌어요', '훨씬 근사해졌어요', '숲속 최고 명소가 됐어요'][st]}</small>`; if (sub) d.classList.add('small'); taps.append(d); setTimeout(() => d.classList.add('out'), 2200); setTimeout(() => d.remove(), 2700); }
+/* 어디 놓였는지 보여 주기 (대표 질문 10-30 '공용 냉장고는 어디에?'): 창이 닫힌 뒤 카메라가 그 자리로 → 0.8초 반짝 + '…가 들어왔어요' 말풍선 → 손을 안 댔으면 원래 자리로 · 손가락이 닿아 있으면 카메라는 안 움직임 */
+const placeOf = id => id.startsWith('deco_') ? D.DECO.find(d => d.id === id.slice(5)).pos : id.startsWith('amen_') ? (a => { const [[x, y], m] = D.AMEN_AT[a]; return [x, y - m * D.PX_M * 0.5]; })(id.slice(5)) : id === 'oven' ? D.OVEN_AT : D.PADS.find(p => p.id === id).pos;
+const nameOf = id => id.startsWith('deco_') ? D.DECO.find(d => d.id === id.slice(5)).name : id.startsWith('amen_') ? D.AMEN[id.slice(5)].name : id === 'oven' ? '빵 오븐' : D.FAC[D.PADS.find(p => p.id === id).fac].name;
+function blink(id) { const el = facEl[id]; if (!el) return; el.classList.remove('blink'); void el.offsetWidth; el.classList.add('blink'); setTimeout(() => el.classList.remove('blink'), 2400); }
+function bubbleAt(pos, text, ms = 2400) { const d = document.createElement('div'); d.className = 'placed'; d.style.left = pos[0] + 'px'; d.style.top = (pos[1] - 54) + 'px'; d.innerHTML = text; taps.append(d); setTimeout(() => d.classList.add('out'), ms - 400); setTimeout(() => d.remove(), ms); }
+function showPlaced(id) { setTimeout(() => { const pos = placeOf(id), back = { x: CAMV.x, y: CAMV.y, z: CAMV.z }, now = performance.now();
+  if (camTo(pos[0], pos[1] - 30, Math.min(1.6, Math.max(CAMV.z, 1.35)), true)) setTimeout(() => { if (lastTouch < now && !ptrs.size && !CAMV.tw) camTo(back.x, back.y, back.z, true); }, 3000);
+  setTimeout(() => { burst(pos[0], pos[1] - 20, 'sparkle', 16); blink(id); const n = nameOf(id); bubbleAt(pos, `<b>${n}${D.josa(n, '이/가').slice(n.length)} 들어왔어요</b>`); }, 650); }, 380); }
+export function locate(id, placed) { const pos = placeOf(id); CAMV.tw = null; camTo(pos[0], pos[1] - 30, Math.min(1.6, Math.max(CAMV.z, 1.35))); setTimeout(() => { blink(id); burst(pos[0], pos[1] - 20, 'sparkle', placed ? 20 : 8); bubbleAt(pos, `<i class="pin"></i><b>${nameOf(id)}${placed ? D.josa(nameOf(id), '이/가').slice(nameOf(id).length) + ' 놓였어요' : ''}</b>`, placed ? 2600 : 1800); }, 700); }
 const facPos = t => t === 'oven' ? D.OVEN_AT : D.PADS.find(x => x.id === t).pos;
 function stageFx(t, prevLv, afterWork) {
   const o = t === 'oven' ? S.oven : S.pads[t]; if (!o) return; const lv = o.lv, pos = facPos(t), ps = D.stageOf(prevLv), ns = D.stageOf(lv), old = facEl[t];
   if (ns !== ps) {
     /* 카메라는 '내가 누른 강화'일 때만 · 4초에 한 번만 · 확대는 손가락 확대 범위(≤1.4) 안 · 돌아오기는 그 사이 손을 안 댔을 때만 (공사 끝 여러 개가 한꺼번에 와도 카메라가 날아다니지 않게) */
     const now = performance.now(), back = { x: CAMV.x, y: CAMV.y, z: CAMV.z };
-    if (now - lastStageCam > 4000 && now - bootT > 6000 && camTo(pos[0], pos[1] - 50, Math.min(1.4, Math.max(CAMV.z, 1.25)), true)) { lastStageCam = now;
+    if (now - lastStageCam > 4000 && now - bootT > 6000 && camTo(pos[0], pos[1] - 40, Math.min(1.6, Math.max(CAMV.z * 1.25, 1.45)), true)) { lastStageCam = now;
       setTimeout(() => { if (lastTouch < now && !ptrs.size && !CAMV.tw) camTo(back.x, back.y, back.z, true); }, 3400); }
     if (old) old.classList.add('old'); dust(pos[0], pos[1]); burst(pos[0], pos[1] - 40, 'sparkle', 10); sfx('stageup');
-    setTimeout(() => { render(); const im = facEl[t]; if (im) im.classList.add('grow'); burst(pos[0], pos[1] - 50, 'sparkle', 30); dust(pos[0], pos[1]); UI.stageUp(t, ns); }, 480);
+    setTimeout(() => { render(); const im = facEl[t]; if (im) im.classList.add('grow'); burst(pos[0], pos[1] - 50, 'sparkle', 30); dust(pos[0], pos[1]); ribbon(t, ns, pos); }, 480);
     return; }
   if (afterWork) { render(); burst(pos[0], pos[1] - 40, 'sparkle', 16); return; }
+  const s0 = D.stepOf(prevLv), s1 = D.stepOf(lv); if (s1 !== s0) { render(); const im = facEl[t]; if (im) { im.classList.remove('bump'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 22); dust(pos[0], pos[1]); sfx('tier');   /* 작은 단계 업 (10단계 · 그림은 그대로, 소품 · 등불 · 간판 · 조명이 붙음) */
+    ribbon(t, ns, pos, `${s1 + 1}단계 · ${D.STAGE.look[s1]}`); UI.toast(`${t === 'oven' ? '빵 오븐' : D.FAC[S.pads[t].fac].name} ${s1 + 1}단계 · ${D.STAGE.look[s1]}`, true); return; }
   if (D.propsOf(lv) > D.propsOf(prevLv)) { render(); const pe = layer.fac.querySelector(`[data-p="${t}${D.propsOf(lv) - 1}"]`); if (pe) { pe.classList.add('grow'); burst(+pe.style.left.slice(0, -2), +pe.style.top.slice(0, -2) - 10, 'sparkle', 5); } }
   const im = facEl[t]; if (im && im.isConnected) { im.classList.remove('bump', 'grow'); void im.offsetWidth; im.classList.add('bump'); } burst(pos[0], pos[1] - 50, 'sparkle', 6); }
 function dust(x, y) { for (let i = 0; i < 14; i++) { const a = rnd(Math.PI * 0.9, Math.PI * 2.1); parts.push({ k: 'dust', x: x + rnd(-40, 40), y: y + rnd(-6, 6), vx: Math.cos(a) * rnd(30, 90), vy: rnd(-40, -10), life: rnd(0.6, 1), t: 0, r: rnd(8, 16) }); } }
@@ -302,8 +338,8 @@ function draw2d(dt, now) {
 /* ── 직접 누르기 화면 (대표 피드백) ── 다 된 음식이 통통 튀며 반짝 → 누르면 '퐁' 손님에게 · 조리 중 연타 = 응원 · 머리 위 하트 팁 · 콤보 */
 const dishEls = new Map(), tipEls = new Map(); let lastTap = [360, 900];
 const dishSpot = (st, i) => { const b = st === 'oven' ? [D.OVEN_PICK[0] + 6, D.OVEN_PICK[1] - 34] : (() => { const p = G.stationPos(st) || [360, 900]; return [p[0] + (p[0] < 200 ? 62 : -62), p[1] - 46]; })(); return [b[0] + (i % 3) * 22 - (i > 2 ? 11 : 0), b[1] - Math.floor(i / 3) * 18 - (i % 3) * 4]; };
-function dishEl(o) { const d = document.createElement('div'); d.className = 'dishrdy'; d.innerHTML = `<img src="${IMG(D.MENU.find(m => m.id === o.menu).img)}" alt=""><i></i>`;
-  d.onclick = ev => { ev.stopPropagation(); pressFx(d); const g = G.tapDish(o.st); if (!g) { d.classList.remove('no'); void d.offsetWidth; d.classList.add('no'); return; } lastTap = [parseFloat(d.style.left), parseFloat(d.style.top)]; };
+function dishEl(o) { const d = document.createElement('div'); d.className = 'dishrdy'; d.dataset.st = o.st; d.dataset.menu = o.menu; d.innerHTML = `<img src="${IMG(D.MENU.find(m => m.id === o.menu).img)}" alt=""><i></i>`;
+  d.onclick = ev => { ev.stopPropagation(); pressFx(d); const g = G.tapDish(o.st, o); if (!g) { d.classList.remove('no'); void d.offsetWidth; d.classList.add('no'); return; } lastTap = [parseFloat(d.style.left), parseFloat(d.style.top)]; };
   dishEls.set(o, d); layer.ui.append(d); restack(o.st); sfx('ding'); }
 function restack(st) { let i = 0; for (const [o, el] of dishEls) if (o.st === st) { const [x, y] = dishSpot(st, i++); el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.zIndex = 10 + i; } }
 function flyFood(from, to, src) { const f = document.createElement('img'); f.src = src; f.className = 'flyfood'; layer.ui.append(f); const mx = (from[0] + to[0]) / 2, my = Math.min(from[1], to[1]) - 120;
@@ -341,6 +377,7 @@ function onEvent(e) {
     case 'reroute': { const v = guests.get(e.g.id); if (!v) break; const end = e.g.st === 'leave'; v.p.root.position.copy(toWorld(...e.path[0])); walkPath(v.p, e.path, e.dur, () => { if (end) endGuest(e.g.id, v); else if (!v.gone && guests.get(e.g.id) === v) sitDown(v); }); break; }
     case 'order': { const v = guests.get(e.g.id); if (v) { if (!v.seated) sitDown(v); bubble(v, e.m); } break; }
     case 'cook': { const pr = e.st === 'oven' ? hero : cooks[e.st] && cooks[e.st].p; if (pr) { pr.play('stir'); pr.face(...(e.st === 'oven' ? D.KITCHEN.oven : G.stationPos(e.st)), 0.3); } break; }
+    case 'dishGone': { const de = dishEls.get(e.o); if (de) { de.remove(); dishEls.delete(e.o); restack(e.o.st); } break; }
     case 'cooked': { dishEl(e.o); const pr = e.st === 'oven' ? hero : cooks[e.st] && cooks[e.st].p; if (pr) { pr.play('taste'); const home = pr === hero ? [D.KITCHEN.stand[0] + 30, D.KITCHEN.stand[1] + 90] : null; if (home) pr.face(...home); setTimeout(() => { if (pr.act === 'taste') pr.play('idle'); }, 1400); } const at = e.st === 'oven' ? D.KITCHEN.oven : G.stationPos(e.st); if (at) puff(at[0], at[1] - 50, 4); break; }
     case 'deliver': { const de = dishEls.get(e.o); if (de) { de.remove(); dishEls.delete(e.o); restack(e.o.st); } const s = servers[e.sv]; if (!s) break; const p = s.p, cur = toScreen(p.root.position), line = D.MENU.find(m => m.id === e.o.menu).line;
       const p1 = G.walkMap.route(cur, e.from); walkPath(p, p1, e.dur1, () => { p.hold(dishOf(p, line, e.o.menu)); walkPath(p, e.path2, e.dur2 - 0.5, () => { const v = guests.get(e.o.gid); if (v) p.face(v.g.seat.x, v.g.seat.y); p.play('serve'); }); }); s.to = e.to; break; }
@@ -366,10 +403,10 @@ function onEvent(e) {
     case 'giftBoxGone': giftLeave(); UI.giftClose(); break;
     case 'visitor': visArrive(e.v, e.path); break;
     case 'visitorGone': visLeave(e.path); break;
-    case 'build': { render(); const p = D.PADS.find(x => x.id === e.pid); const im = facEl[e.pid]; if (im) im.classList.add('pop'); dust(p.pos[0], p.pos[1] + 20); burst(p.pos[0], p.pos[1] - 40, 'sparkle', 18); sfx('build'); syncStaff(); break; }
+    case 'build': { render(); const p = D.PADS.find(x => x.id === e.pid); const im = facEl[e.pid]; if (im) im.classList.add('pop'); dust(p.pos[0], p.pos[1] + 20); burst(p.pos[0], p.pos[1] - 40, 'sparkle', 18); sfx('build'); syncStaff(); showPlaced(e.pid); break; }
     case 'upgrade': { const t = e.target; if (e.tier && G.working(t)) { render(); const pos = facPos(t); burst(pos[0], pos[1] - 40, 'sparkle', 12); dust(pos[0], pos[1]); } else stageFx(t, e.lv - 1); break; }
     case 'workDone': stageFx(e.target, (e.target === 'oven' ? S.oven : S.pads[e.target]).lv - 1, true); break;
-    case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2, undefined, true); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') { const at = D.AMEN[e.id].at === 'kitchen' ? D.KITCHEN.pos : D.WELCOME.pos; burst(at[0], at[1], 'sparkle', 16); } break; }
+    case 'zoneOpen': case 'amen': case 'hire': case 'menuNew': case 'box': { if (e.type === 'zoneOpen') { const r = D.ZONE_FOG[e.z]; if (r) camTo((r[0] + r[2]) / 2, (r[1] + r[3]) / 2, undefined, true); const f = layer.ui.querySelector(`.fog[data-z="${e.z}"]`); if (f) { f.classList.add('lifting'); setTimeout(render, 1500); } else render(); } else render(); if (e.type === 'hire') syncStaff(); if (e.type === 'amen') showPlaced('amen_' + e.id); break; }
     case 'zoneWork': render(); break;
     case 'levelup': hero && hero.play('wave'); break;
   }
@@ -400,9 +437,9 @@ const walkStat = { frames: 0, checks: 0, bad: 0, samples: [] }; const recentPath
 function walkCheck() { walkStat.frames++; for (const p of people) { const [x, y] = toScreen(p.root.position); if (y > 1640) continue; walkStat.checks++; const WK = G.walkMap; if (!(WK.walkable(x, y) && (WK.pathDist(x, y) <= 14 || WK.branchDist(x, y) <= 14))) { walkStat.bad++; if (walkStat.samples.length < 10) walkStat.samples.push([Math.round(x), Math.round(y), p.look.cut || p.look.name, p.act, JSON.stringify((p.__path || []).map(q => q.map(Math.round))), p.target ? toScreen(p.target).map(Math.round) : null]); } } }
 let dbg = null;
 function drawDebug() {
-  if (!dbg) { dbg = document.createElement('canvas'); dbg.width = 720; dbg.height = 1560; dbg.style.cssText = 'position:absolute;left:0;top:0;width:720px;height:1560px;z-index:8;pointer-events:none'; board2.append(dbg); }
-  const x = dbg.getContext('2d'), WK = G.walkMap, C8 = WK.G.CELL, grid = WK.G.grid(); x.clearRect(0, 0, 720, 1560);
-  for (let gy = 0; gy < WK.G.GH; gy++) for (let gx = 0; gx < WK.G.GW; gx++) { x.fillStyle = grid[gy * WK.G.GW + gx] ? 'rgba(80,200,120,.22)' : 'rgba(220,60,60,.10)'; x.fillRect(gx * C8, gy * C8, C8, C8); }
+  if (!dbg) { dbg = document.createElement('canvas'); dbg.width = 2560; dbg.height = 1560; dbg.style.cssText = 'position:absolute;left:-800px;top:0;width:2560px;height:1560px;z-index:8;pointer-events:none'; board2.append(dbg); }
+  const x = dbg.getContext('2d'), WK = G.walkMap, C8 = WK.G.CELL, grid = WK.G.grid(); x.setTransform(1, 0, 0, 1, 800, 0); x.clearRect(-800, 0, 2560, 1560);
+  for (let gy = 0; gy < WK.G.GH; gy++) for (let gx = 0; gx < WK.G.GW; gx++) { x.fillStyle = grid[gy * WK.G.GW + gx] ? 'rgba(80,200,120,.22)' : 'rgba(220,60,60,.10)'; x.fillRect(WK.G.GX0 + gx * C8, gy * C8, C8, C8); }
   x.lineWidth = 2; for (const o of D.OCCLUDE) { x.strokeStyle = '#7A4AE0'; x.beginPath(); o.poly.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.stroke(); x.setLineDash([6, 4]); x.beginPath(); x.moveTo(0, o.base); x.lineTo(720, o.base); x.stroke(); x.setLineDash([]); }
   { const g = G.walkMap.G.graph(); if (g) { x.strokeStyle = 'rgba(255,140,0,.9)'; x.lineWidth = 3; for (const [a, b] of G.walkMap.activeEdges()) { x.beginPath(); x.moveTo(...g.nodes[a]); x.lineTo(...g.nodes[b]); x.stroke(); } for (const [, n] of Object.entries(g.nodes)) { x.fillStyle = '#FF8C00'; x.beginPath(); x.arc(n[0], n[1], 4, 0, Math.PI * 2); x.fill(); } x.strokeStyle = 'rgba(255,60,160,.8)'; x.lineWidth = 2; for (const [a, b] of G.walkMap.branchList()) { x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); } } }
   for (const [p, t] of recentPaths) { x.strokeStyle = `rgba(30,90,220,${Math.max(0.15, 1 - (performance.now() - t) / 12000)})`; x.beginPath(); p.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); }
@@ -431,6 +468,23 @@ function fullBody(cut) {
   return bodies[cut];
 }
 const lookArts = {};
+/* 피팅룸 (퀄리티 v2 Top 4 · 사업): 같은 3D 셰프 · 몽이를 창 안에서 크게 · 정면 · 천천히 돌며 손 흔들기 · 몽이는 옆에서 꼬리 — 창이 닫히면 렌더러 정리 */
+function fitView(host, id) {
+  let r; try { r = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { host.innerHTML = `<img src="${id === 'pet' ? petArt() : body3d(LOOK_OF[id] || id)}" style="width:100%">`; return () => {}; }
+  const w = host.clientWidth || 420, h = host.clientHeight || 460; r.setPixelRatio(Math.min(2, devicePixelRatio) * FS); r.setSize(w, h); r.setClearColor(0, 0); host.append(r.domElement);
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xFFF4E2, 0xC8B0D0, 1.25)); sc.add(new THREE.AmbientLight(0xE8D4E6, 0.5)); const l = new THREE.DirectionalLight(0xFFF0D8, 1.05); l.position.set(160, 260, 220); sc.add(l);
+  const keep = C.sceneRef.scene; C.sceneRef.scene = sc; const pet = id === 'pet' || S.pet;
+  const p = C.create('person', { ...(C.LOOKS[LOOK_OF[id] || id] || curLook()), h: 165 }, W / 2, H / 2, 1); p.root.position.set(id === 'pet' ? -55 : -14, 0, -30);
+  const d = pet ? new C.Pet(W / 2, H / 2, { h: id === 'pet' ? 260 : 165, collar: 0xF3A9BA }) : null; if (d) d.root.position.set(id === 'pet' ? 38 : 66, 0, 40); C.sceneRef.scene = keep;
+  const ar = w / h, top = 215, bot = -12, half = (top - bot) * ar / 2; const cam = new THREE.OrthographicCamera(-half, half, top, bot, -800, 800); cam.position.set(0, 60, 400); cam.lookAt(0, 60, 0); cam.position.y = 0; cam.lookAt(0, 0, 0);
+  let alive = true, t0 = performance.now(), last = t0, wv = 0;
+  const loop = now => { if (!alive) return; const dt = Math.min(0.05, (now - last) / 1000), t = (now - t0) / 1000; last = now;
+    if (t > wv) { p.play(Math.floor(t / 3.5) % 2 ? 'happy' : 'wave'); wv = t + 3.5; } p.yawT = undefined; p.update(dt, t); p.root.scale.setScalar(1); p.root.rotation.y = Math.sin(t * 0.55) * 0.75;
+    if (d) { if (t % 4 < dt) d.cheer(W / 2, H / 2 + 200); d.update(dt, t); d.root.scale.setScalar(id === 'pet' ? 2.1 : 1.15); d.root.rotation.y = -0.5 + Math.sin(t * 0.8) * 0.3; }
+    r.render(sc, cam); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  return () => { alive = false; r.dispose(); r.domElement.remove(); };
+}
 function petArt() {   /* 비숑 몽이 카드 그림 (3D 그대로) */
   try { const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(240, 280); r.setClearColor(0, 0); const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xFFF4E2, 0xC8B0D0, 1.25)); sc.add(new THREE.AmbientLight(0xE8D4E6, 0.55)); const l = new THREE.DirectionalLight(0xFFF0D8, 1.0); l.position.set(120, 200, 160); sc.add(l);
     const keep = C.sceneRef.scene; C.sceneRef.scene = sc; const p = new C.Pet(W / 2, H / 2, { h: 165, collar: 0xF3A9BA }); C.sceneRef.scene = keep; p.root.position.set(0, 0, 0); p.excite = 1; p.update(0.016, 0.3); p.root.scale.setScalar(1.9); p.root.rotation.y = 0.6;
@@ -462,6 +516,8 @@ const ctx = { portrait, save, render, fullBody, pressFx: el => pressFx(el), camT
     setTimeout(() => { if (performance.now() >= tryUntil - 50) { tryLook = null; tryPet = false; makeHero(); syncPet(); UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점 꾸미기에서 만나요'); } }, sec * 1000); },
   wearNow: () => { makeHero(); syncPet(); render(); },
   lookArt: id => lookArts[id] ||= body3d(LOOK_OF[id] || id),
+  fitView: (host, id) => fitView(host, id),
+  locate: (id, placed) => locate(id, placed),
   petArt: () => lookArts.pet ||= petArt(),
   previewDeco: sec => { decoUntil = performance.now() + sec * 1000; render(); UI.closeSheet(); burst(...D.SET_POS, 'sparkle', 24); setTimeout(() => { render(); if (!S.shop.deco) UI.toast('미리 보기가 끝났어요'); }, sec * 1000); },
   fx: (k, t) => { const pos = t === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === t) || {}).pos; if (pos) burst(pos[0], pos[1] - 40, 'sparkle', 8); } };
@@ -508,7 +564,7 @@ function loop(t) {
   const dt = Math.min(0.1, rdt) * SPEED; let left = dt; while (left > 0) { const s = Math.min(0.25, left); G.step(s); left -= s; }
   for (const e of G.drain()) onEvent(e);
   for (const p of people) p.update(Math.min(0.05, rdt), t / 1000); petStep(Math.min(0.05, rdt), t / 1000);
-  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove();
+  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove(); clampT -= rdt; if (clampT <= 0) { clampT = 0.15; clampLabels(); }
   for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); if (v.p.act === 'eat' && Math.random() < rdt * 0.6) burst(x, y - (v.p.look.h || 60) * D.PERSP(y) - 6, 'heart', 1); }   /* 먹으면서 '맛있다' 하트 */
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 40; const cur = toScreen(s.p.root.position), dst = [h[0] + rnd(-8, 8), h[1] + rnd(-3, 3)]; G.walkMap.addAnchor(dst); walkPath(s.p, G.walkMap.route(cur, dst), G.walkMap.pathLen(G.walkMap.route(cur, dst)) / 40 + 0.3, () => s.p.face(360, 1000, 0.5)); }
   if (hero.act === 'idle' && Math.random() < rdt * 0.05) { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1600); }

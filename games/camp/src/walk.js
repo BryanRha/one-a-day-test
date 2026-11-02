@@ -3,7 +3,7 @@
 //   A* 로 길을 찾은 뒤 보이는 곳끼리 이어 붙여(줄 당기기) 꺾인 점만 남김 → sim(시간 계산) · 화면(걷기)이 같은 길을 씀
 //   구역마다 다각형에 zone 이 붙어 있어, 구역이 열리면 그 구역의 걷는 곳이 함께 붙음 (rebuild)
 //   화면 없이도 돎 (봇이 같이 씀)
-const CELL = 8, GW = 90, GH = 210;   /* 판 720 × 1680 (화면 아래 입구 길까지) */
+const CELL = 8, GX0 = -800, GW = 320, GH = 210;   /* 판 x −800 ~ 1760 (양옆 존 · v0.3) × y 0 ~ 1680 (화면 아래 입구 길까지) */
 let grid = new Uint8Array(GW * GH), pgrid = new Uint8Array(GW * GH), MAP = null, openZones = new Set(['lawn']), extraBlocks = [];
 const inPoly = (x, y, p) => { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
 const segD = (x, y, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy, t = L ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L)) : 0; return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy); };
@@ -49,20 +49,20 @@ export function setExtra(blocks) { extraBlocks = blocks; rebuild(); }
 export function rebuild() {
   if (!MAP) return; grid = new Uint8Array(GW * GH); cache.clear();
   const walks = MAP.walk.filter(s => !s.zone || openZones.has(s.zone)), blocks = [...MAP.block, ...extraBlocks];
-  for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { const x = gx * CELL + CELL / 2, y = gy * CELL + CELL / 2;
+  for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { const x = GX0 + gx * CELL + CELL / 2, y = gy * CELL + CELL / 2;
     if (walks.some(s => inShape(x, y, s)) && !blocks.some(s => inShape(x, y, s))) grid[gy * GW + gx] = 1; }
   /* 길 찾기용 격자: 막힌 곳에서 한 칸 떨어진 칸만 (걷는 그림이 살짝 흔들려도 막힌 곳에 안 닿게) */
   pgrid = new Uint8Array(GW * GH); for (let gy = 1; gy < GH - 1; gy++) for (let gx = 1; gx < GW - 1; gx++) { let ok = 1; for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1; dx++) if (!grid[(gy + dy) * GW + gx + dx]) { ok = 0; break; } pgrid[gy * GW + gx] = ok; }
 }
-const cellOf = (x, y) => [Math.max(0, Math.min(GW - 1, Math.floor(x / CELL))), Math.max(0, Math.min(GH - 1, Math.floor(y / CELL)))];
-export const walkable = (x, y) => { if (x < 0 || x >= GW * CELL || y < 0 || y >= GH * CELL) return false; const [gx, gy] = cellOf(x, y); return grid[gy * GW + gx] === 1; };
+const cellOf = (x, y) => [Math.max(0, Math.min(GW - 1, Math.floor((x - GX0) / CELL))), Math.max(0, Math.min(GH - 1, Math.floor(y / CELL)))];
+export const walkable = (x, y) => { if (x < GX0 || x >= GX0 + GW * CELL || y < 0 || y >= GH * CELL) return false; const [gx, gy] = cellOf(x, y); return grid[gy * GW + gx] === 1; };
 /* 가장 가까운 걷는 칸 (목표가 막힌 칸이면) */
 export function nearest(x, y, gr = grid) { const [cx0, cy0] = cellOf(x, y); if (gr[cy0 * GW + cx0]) return [x, y]; const [cx, cy] = [cx0, cy0];
-  for (let r = 1; r < 40; r++) { let best = null, bd = 1e9; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const gx = cx + dx, gy = cy + dy; if (gx < 0 || gy < 0 || gx >= GW || gy >= GH || !gr[gy * GW + gx]) continue; const px = gx * CELL + CELL / 2, py = gy * CELL + CELL / 2, d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = [px, py]; } } if (best) return best; }
+  for (let r = 1; r < 40; r++) { let best = null, bd = 1e9; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const gx = cx + dx, gy = cy + dy; if (gx < 0 || gy < 0 || gx >= GW || gy >= GH || !gr[gy * GW + gx]) continue; const px = GX0 + gx * CELL + CELL / 2, py = gy * CELL + CELL / 2, d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = [px, py]; } } if (best) return best; }
   return [x, y]; }
 /* 두 점 사이가 걷는 칸만 지나는가 (줄 당기기 · 검사) */
 export function clear(a, b, gr = grid) {   /* 선이 지나는 모든 칸을 빠짐없이 (격자 따라 걷기 · 모서리만 스쳐도 검사) */
-  let x = a[0] / CELL, y = a[1] / CELL; const x1 = b[0] / CELL, y1 = b[1] / CELL, dx = x1 - x, dy = y1 - y;
+  let x = (a[0] - GX0) / CELL, y = a[1] / CELL; const x1 = (b[0] - GX0) / CELL, y1 = b[1] / CELL, dx = x1 - x, dy = y1 - y;
   let cx = Math.floor(x), cy = Math.floor(y); const ex = Math.floor(x1), ey = Math.floor(y1), sx = Math.sign(dx), sy = Math.sign(dy);
   const tdx = dx ? Math.abs(1 / dx) : Infinity, tdy = dy ? Math.abs(1 / dy) : Infinity; let tx = dx ? (sx > 0 ? (cx + 1 - x) : (x - cx)) * tdx : Infinity, ty = dy ? (sy > 0 ? (cy + 1 - y) : (y - cy)) * tdy : Infinity;
   const ok = (gx, gy) => gx >= 0 && gy >= 0 && gx < GW && gy < GH && gr[gy * GW + gx] === 1;
@@ -93,11 +93,11 @@ function plan(a, b, gr) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue; const ni = ny * GW + nx; if (!gr[ni] || done[ni]) continue;
       if (dx && dy && (!gr[cy * GW + nx] || !gr[ny * GW + cx])) continue; const ng = g[cur] + (dx && dy ? 1.414 : 1); if (ng < g[ni]) { g[ni] = ng; from[ni] = cur; hpush(open, [ng + h(ni), ni]); } } }
   if (!found) return null;
-  const cells = []; for (let i = T; i !== -1; i = from[i]) cells.push([(i % GW) * CELL + CELL / 2, ((i / GW) | 0) * CELL + CELL / 2]); cells.reverse(); cells[0] = A; cells[cells.length - 1] = B;
+  const cells = []; for (let i = T; i !== -1; i = from[i]) cells.push([GX0 + (i % GW) * CELL + CELL / 2, ((i / GW) | 0) * CELL + CELL / 2]); cells.reverse(); cells[0] = A; cells[cells.length - 1] = B;
   const out = [A]; let k = 0; while (k < cells.length - 1) { let j = cells.length - 1; while (j > k + 1 && !clear(cells[k], cells[j], gr)) j--; out.push(cells[j]); k = j; } return out;
 }
 /* 여러 점을 차례로 (경유지) */
 export function routeVia(pts) { let out = [pts[0]]; for (let i = 1; i < pts.length; i++) { const r = route(out[out.length - 1], pts[i]); out = out.concat(r.slice(1)); } return out; }
 export const pathLen = p => { let L = 0; for (let i = 1; i < p.length; i++) L += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return L; };
 export function pointAt(p, d) { for (let i = 1; i < p.length; i++) { const L = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (d <= L) { const t = L ? d / L : 0; return [p[i - 1][0] + (p[i][0] - p[i - 1][0]) * t, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * t]; } d -= L; } return [...p[p.length - 1]]; }
-export const G = { CELL, GW, GH, graph: () => GRAPH, grid: () => grid, extra: () => extraBlocks, open: () => [...openZones] };
+export const G = { CELL, GX0, GW, GH, graph: () => GRAPH, grid: () => grid, extra: () => extraBlocks, open: () => [...openZones] };

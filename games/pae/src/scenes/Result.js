@@ -1,13 +1,13 @@
 // 판 끝: 이번 판에 얻은 것부터(꽃잎 · 도감) → 기록 → 독설 한 줄 → 꽃잎 2배(광고/골드) → 다시
-import { W, H, C } from '../config.js?v=0.95.10';
-import { load, save } from '../save.js?v=0.95.10';
-import { audio } from '../audio.js?v=0.95.10';
-import { txt, button, toast, boxTex, fmt } from '../ui.js?v=0.95.10';
-import { burst } from '../fx.js?v=0.95.10';
-import { endLine, tipLine, rules } from '../meta.js?v=0.95.10';
-import { Run } from '../core/run.js?v=0.95.10';
-import { GOD } from '../core/gods.js?v=0.95.10';
-import { bm, bmOn, owned, price, adLeft, dblUsed, noteDbl, afterRound, track } from '../bmflow.js?v=0.95.10';
+import { W, H, C } from '../config.js?v=0.95.11';
+import { load, save } from '../save.js?v=0.95.11';
+import { audio } from '../audio.js?v=0.95.11';
+import { txt, button, toast, boxTex, fmt } from '../ui.js?v=0.95.11';
+import { burst } from '../fx.js?v=0.95.11';
+import { endLine, tipLine, rules } from '../meta.js?v=0.95.11';
+import { Run } from '../core/run.js?v=0.95.11';
+import { GOD } from '../core/gods.js?v=0.95.11';
+import { bm, bmOn, owned, price, adLeft, dblUsed, noteDbl, afterRound, track } from '../bmflow.js?v=0.95.11';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }

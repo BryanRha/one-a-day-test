@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.2.1' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.3.0' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -17,10 +17,15 @@ export const ZONES = [
   { id: 'pine', name: '애견 동반 존 · 조용한 솔숲', need: { lv: 6, built: 6 }, reward: 150, build: 300 },
   { id: 'valley', name: '계곡 · 놀이터와 폭포', need: { lv: 10, built: 10 }, reward: 200, build: 900 },
   { id: "stay", name: "스테이 · 루프탑", need: { lv: 15, built: 12 }, reward: 300, build: 1800 },
+  /* 레벨 문으로 여는 새 존 (대표 10-30 '끌어서 둘러볼 수 있는 만큼 열리는 공간을 더') — 캠프 양옆 한 장 그림(서쪽 호숫가 · 별 관측대 / 동쪽 오두막 마을 · 계곡 데크) */
+  { id: 'lake', name: '호숫가 · 나무 부두', need: { lv: 12, built: 12 }, reward: 300, build: 1200, side: 'w' },
+  { id: 'star', name: '별 관측대', need: { lv: 14, built: 13 }, reward: 350, build: 1800, side: 'w' },
+  { id: 'cabin', name: '숲속 오두막 마을', need: { lv: 16, built: 14 }, reward: 400, build: 2400, side: 'e' },
+  { id: 'deck', name: '계곡 데크', need: { lv: 18, built: 15 }, reward: 500, build: 3000, side: 'e' },
 ];
 /* 잠긴 구역을 가리는 안개 영역 (판 좌표 · 위쪽 y 부터) */
 const FOG = (a, b, c, d) => [...P(a, b), ...P(c, d)];
-export const ZONE_FOG = { forest: FOG(40, 380, 455, 705), pine: FOG(505, 450, 864, 775), valley: FOG(430, 40, 864, 440), stay: FOG(0, 40, 430, 330) };
+export const ZONE_FOG = { forest: FOG(40, 380, 455, 705), pine: FOG(505, 450, 864, 775), valley: FOG(430, 40, 864, 440), stay: FOG(0, 40, 430, 330), lake: [-740, 880, -20, 1320], star: [-740, 40, -40, 870], cabin: [800, 40, 1620, 760], deck: [810, 880, 1620, 1360] };   /* 옆 존은 판 좌표 */
 
 /* ── 고정 건물 ── */
 export const WELCOME = { pos: P(340, 820), door: P(300, 905), deck: P(372, 914) };   /* 데크 벤치는 고양이 자리(왼쪽 끝)와 떨어뜨림 */   /* 웰컴센터: 체크인 · 매점 · 꾸미기 */
@@ -44,9 +49,16 @@ export const STAGE = {
   props: ['p_tulip', 'p_lamp', 'p_crate', 'p_mush', 'p_shrub', 'p_flower', 'p_logs', 'p_fern'],
   propM: { p_tulip: 0.42, p_lamp: 0.3, p_crate: 0.62, p_mush: 0.42, p_shrub: 0.8, p_flower: 0.7, p_logs: 0.78, p_fern: 0.55 },   /* 소품 실제 폭(m) */
 };
-export const stageOf = lv => lv >= 20 ? 3 : lv >= 10 ? 2 : lv >= 5 ? 1 : 0;
+/* v0.3 (대표 10-30 '업그레이드 외형 변화를 더 촘촘하게'): 10단계 — 그림 4장 사이마다 소품 · 등불 · 나무 간판 · 반짝이 조명 · 금빛 마감 · 크기가 붙음
+   단계 레벨 1 · 3 · 5 · 8 · 10 · 14 · 20 · 25 · 30 · 40 · 그림이 바뀌는 단계(5 · 10 · 20)는 큰 연출, 나머지는 작은 연출 */
+STAGE.steps = [1, 3, 5, 8, 10, 14, 20, 25, 30, 40]; STAGE.art = [0, 0, 1, 1, 2, 2, 3, 3, 3, 3]; STAGE.grow10 = [0.9, 0.95, 1, 1.05, 1.12, 1.16, 1.26, 1.29, 1.32, 1.36];
+STAGE.look = ['처음 모습', '화분이 놓였어요', '새 모습!', '등불이 켜졌어요', '새 모습!', '나무 간판이 달렸어요', '새 모습!', '반짝이 조명이 걸렸어요', '꽃 장식이 늘었어요', '금빛 마감 · 최고 단계'];
+STAGE.props10 = [0, 1, 0, 1, 1, 2, 1, 2, 3, 3];
+STAGE.ws = (kind, step) => (kind === 'oven' ? STAGE.ovenW[STAGE.art[step]] : STAGE.k[kind] * STAGE.grow10[step] / STAGE.grow[STAGE.art[step]] * STAGE.grow[STAGE.art[step]]);
+export const stepOf = lv => Math.max(0, STAGE.steps.filter(x => lv >= x).length - 1);
+export const stageOf = lv => STAGE.art[stepOf(lv)];
 /* 짝수 레벨 소품: 이 단계 안에서 늘어난 짝수 레벨 수 (단계가 바뀌면 새 그림이 소품을 품으니 다시 0부터 · 최대 3개) */
-export const propsOf = lv => Math.min(3, Math.floor(lv / 2) - Math.floor(STAGE.at[stageOf(lv)] / 2));
+export const propsOf = lv => STAGE.props10[stepOf(lv)];
 
 /* ── 걷는 곳 (배경 '봄' 기준 · 배경 그림 좌표 → 판) · 가을 배경을 새로 그리면 같은 꼴로 WALKMAP.autumn 을 만든다 ──
    walk: 길 · 잔디 · 마당 · 데크 다각형 + 길 띠(line · r) · zone 이 열려야 걸을 수 있음
@@ -96,6 +108,18 @@ export const WALKGRAPH = { spring: {
     ['T4', 'T5'], ['T5', 'T6'], ['T6', 'PN1'], ['PN1', 'PN1b'], ['PN1', 'PG'], ['PG', 'PN2'], ['PN2', 'PN3w'], ['PN3w', 'PN3'], ['PN3', 'PS'],
     ['T4', 'V1'], ['V1', 'V2'], ['V2', 'V3'], ['V3', 'LKa'], ['LKa', 'LKe'], ['LKa', 'LKb'], ['LKb', 'LKc'], ['LKc', 'LKd'], ['LKd', 'STa'], ['STa', 'STb'], ['STa', 'STn'], ['STn', 'STw']],
 } };
+/* 옆 존 걷는 길 (판 좌표 · 그림 속 오솔길 · 부두 잔디 · 데크 위) */
+const SIDE_NODES = {
+  WL0: [40, 1182, 'lake'], WL1: [-62, 1046, 'lake'], WL2: [-300, 1012, 'lake'], WL3: [-460, 1004, 'lake'], WL4: [-140, 1146, 'lake'],
+  WS0: [-98, 894, 'star'], WS1: [-87, 782, 'star'], WS2: [-189, 711, 'star'], WS3: [-270, 650, 'star'], WS4: [-331, 569, 'star'], WS5: [-372, 508, 'star'], WS6: [-443, 406, 'star'], WS7: [-352, 325, 'star'], WS8: [-330, 284, 'star'],
+  EA1: [761, 975, 'cabin'], EA2: [954, 894, 'cabin'], EA3: [1127, 812, 'cabin'], EA4: [1177, 691, 'cabin'], EA5: [1147, 569, 'cabin'], EA6: [1137, 447, 'cabin'], EA7: [1210, 380, 'cabin'], EA8: [1238, 352, 'cabin'],
+  ED0: [802, 1016, 'deck'], ED1: [1005, 1056, 'deck'], ED2: [1150, 1150, 'deck'], ED3: [1330, 1229, 'deck'], ED4: [1560, 1262, 'deck'], ED5: [1262, 1074, 'deck'], ED6: [1572, 1166, 'deck'],
+};
+const SIDE_EDGES = [['LWp', 'WL0'], ['WL0', 'WL1'], ['WL1', 'WL2'], ['WL2', 'WL3'], ['WL0', 'WL4'], ['WL1', 'WS0'], ['WS0', 'WS1'], ['WS1', 'WS2'], ['WS2', 'WS3'], ['WS3', 'WS4'], ['WS4', 'WS5'], ['WS5', 'WS6'], ['WS6', 'WS7'], ['WS7', 'WS8'],
+  ['KE', 'EA1'], ['EA1', 'EA2'], ['EA2', 'EA3'], ['EA3', 'EA4'], ['EA4', 'EA5'], ['EA5', 'EA6'], ['EA6', 'EA7'], ['EA7', 'EA8'], ['EA1', 'ED0'], ['ED0', 'ED1'], ['ED1', 'ED2'], ['ED2', 'ED3'], ['ED3', 'ED4'], ['ED1', 'ED5'], ['ED3', 'ED6']];
+Object.assign(WALKGRAPH.spring.nodes, SIDE_NODES); WALKGRAPH.spring.edges.push(...SIDE_EDGES);
+for (const [a, b] of SIDE_EDGES) { const A = WALKGRAPH.spring.nodes[a], B = WALKGRAPH.spring.nodes[b], z = SIDE_NODES[b] ? SIDE_NODES[b][2] : SIDE_NODES[a][2]; WALKMAP.spring.walk.push({ zone: z, line: [[A[0], A[1]], [B[0], B[1]]], r: 30 }); }   /* 길 띠 (반지름 30) */
+WALKMAP.spring.walk.push({ zone: 'lake', poly: [[-560, 940], [-20, 990], [60, 1140], [80, 1240], [-120, 1150], [-560, 1060]] }, { zone: 'deck', poly: [[790, 980], [1340, 1060], [1360, 1170], [1500, 1140], [1640, 1140], [1620, 1280], [1300, 1270], [1000, 1110], [790, 1060]] }, { zone: 'cabin', poly: [[1150, 270], [1380, 270], [1380, 380], [1150, 400]] });   /* 부두 잔디 · 데크 · 오두막 마당 */
 /* 가을: 가을 배경은 봄 배경과 같은 배치를 계절색으로 다시 칠한 그림(tools/autumnize.py · 길 · 건물 자리가 같음)
    → 걷는 곳 · 길 그래프는 봄 꼴을 복사한 뒤 가을에만 놓이는 것(수확 축제 장식 · 볏짚 · 호박)을 막힘으로 더함 · 모든 길 토막이 막힘을 비켜 가는지 봇 · 화면 걷기 검사로 확인 */
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -155,6 +179,11 @@ export const PADS = [
   { id: 'V1', zone: 'valley', pos: P(650, 335), fac: 'playpool' },
   { id: 'V2', zone: 'valley', pos: P(530, 420), fac: 'footwash' },
   { id: 'S1', zone: 'stay', pos: P(236, 272), fac: 'bbq' },
+  /* 옆 존 (판 좌표 · 그림 src_art/zones/side_*.png 의 빈 자리) */
+  { id: 'W1', zone: 'lake', pos: [-122, 1080], fac: 'table' }, { id: 'W2', zone: 'lake', pos: [-514, 990], fac: 'hammock' },
+  { id: 'W3', zone: 'star', pos: [-311, 236], fac: 'tent' },
+  { id: 'E1', zone: 'cabin', pos: [1269, 310], fac: 'tent' },
+  { id: 'E2', zone: 'deck', pos: [1220, 1124], fac: 'bbq' }, { id: 'E3', zone: 'deck', pos: [1572, 1222], fac: 'table' },
 ];
 /* 공용 키친 설비 = 재료 손질 (명세서: 레시피마다 대응하는 손질 시설이 있어야 열림) · 웰컴센터 설비 = 휴식 · 방치 상한 */
 export const AMEN = {
@@ -171,7 +200,20 @@ const DIG = [1, 2, 2, 3, 3, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const COEF = [1, 2, 6, 1, 4, 1, 1, 5, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 export const buildCost = k => COEF[Math.min(k, 17)] * 10 ** DIG[Math.min(k, 17)] * 5;   /* k = 지금까지 지은 시설 · 설비 수 */
 /* 강화: 레벨당 비용 ×1.16 (명세서는 코드 상수라 미확정 · 질문 1 — 우리 가정) · 효과 ×1.11 · 10/20/30 마다 '단계' (공사 시간 · 그림이 바뀜) */
-export const UP = { max: 40, costK: 1.16, effK: 1.11, tiers: [10, 20, 30], tierBuild: [60, 240, 900] };
+export const UP = { max: 40, costK: 1.16, effK: 1.11, stageK: 0.005, tiers: [10, 20, 30], tierBuild: [60, 240, 900] };
+/* ── 가격 곡선 v0.3 (대표 10-30: '레벨 16 에 토스터 500억') ──
+   예전: 짓기 · 설비가 '지금까지 지은 수'로 자릿수가 하나씩 커져(×10/개) 수입보다 훨씬 빨리 커짐 → 설비(새 메뉴 단계의 문)를 못 사면 수입도 멈추는 막힘
+   지금: 값 = 그 무렵 '기대 수입 × 목표 분' · 기대 수입 = 그 무렵 열려 있을 메뉴 단계의 한 접시 값 × 기대 배율(시설 · 메뉴 강화) × 분당 접시
+   짓기는 '시설을 몇 개 지었나', 설비는 '어느 단계의 문인가'로 정함 (서로 값을 밀어 올리지 않음) · tools/bot.mjs ECON=1 로 레벨별 표 */
+const incAt = (step, mult, dpm) => (10 + 10 * step) * 10 ** (step - 1) * 0.6 * 1.6 * mult * dpm;
+const PAD_COST = [[1, 1, 4, 0.5], [1, 1.5, 5, 1], [1, 2, 6, 2], [2, 3, 8, 3], [2, 5, 9, 4], [3, 8, 11, 5], [3, 15, 12, 7], [4, 25, 14, 10], [4, 40, 16, 12], [5, 60, 18, 15], [5, 90, 20, 18], [5, 130, 22, 20], [6, 180, 24, 22], [6, 250, 26, 25], [6, 350, 28, 28], [6, 450, 30, 30]];   /* [메뉴 단계, 기대 배율, 분당 접시, 목표 분] · p = 지은 자리 수 */
+export const AMEN_COST = { fridge: [1, 3, 8, 6], shower: [2, 6, 10, 8], sink: [2, 10, 12, 10], laundry: [3, 12, 12, 10], toaster: [3, 30, 16, 15], micro: [4, 50, 18, 18] };
+const nice = v => { const d = 10 ** Math.max(0, Math.floor(Math.log10(v)) - 1); return Math.max(10, Math.round(v / d) * d); };   /* 앞 두 자리로 반올림 */
+/* 봇(보통 플레이 · 누르지 않음)의 '그 무렵 수입'에 목표 분(2~25분)을 곱해 맞춘 값 — tools/bot.mjs ECON=1 표로 확인 (PROJECT_STATUS 24장) */
+const PAD_ABS = [40, 150, 500, 3000, 2.5e4, 1e5, 4e5, 1.5e6, 5e6, 2e7, 2e8, 1e9, 5e9, 2e10, 8e10, 2.5e11];
+export const padCostOf = p => PAD_ABS[Math.min(p, PAD_ABS.length - 1)];
+export const AMEN_ABS = { fridge: 3000, shower: 3e4, sink: 4e5, laundry: 1e8, toaster: 1.5e7, micro: 1.5e8 };
+export const amenCostOf = id => AMEN_ABS[id];
 export const upCost = (base, lv) => Math.ceil(base * 0.3 * UP.costK ** lv);
 export const tierOf = lv => UP.tiers.filter(t => lv >= t).length;
 
@@ -190,6 +232,7 @@ export const menuCost = (m, lv) => Math.ceil((2 + m.step) * 10 ** (1 + Math.floo
 export const restRate = (fac, lv) => 5 * 1.25 ** (lv - 1) * fac.rp;   /* 1분마다 쉼 포인트 (명세서 휴식 60초 주기) */
 
 /* ── 치명 요리 (명세서 4-6): 판매가 3배 · 기본 확률 + 상품/패스 +5~10%p · 광고 10분 30% ── */
+export const FIRST_FAST = { sec: 600, k: 0.5 };   /* 처음 10분 굽기 시간 배율 */
 export const TAP = { autoWait: 5, autoK: 0.5, priceK: 1.6, shelf: 8, cheerSec: 0.4, cheerMax: 10, cheerRegen: 0.6, tipP: 0.25, tipSec: 6, tipLife: 6, comboGap: 1.5, comboK: 0.03 };
 /* 누르기 크기 사다리 (보상 = 현재 수입 N초치 · 명세서 13-1): 요리 = 한 접시 정가 · 팁 6초치 · 구름 양 1번 12초치(최대 12번 = 2분 24초치) · 선물 바구니 30/60/120초치 · 떠돌이 손님 1시간치
    틀: 직접 누르면 정가, 두면 5초 뒤 도우미가 반값으로 자동 판매 → 화면에는 "직접 팔면 2배!" (보너스 말투) · 진열은 처음 8칸 (꽉 차면 더 굽지 않음) */
@@ -274,7 +317,33 @@ export const DECO = [
   { id: 'rabbit', name: '토끼 석상', rar: 'r', img: 'deco/rabbit', appeal: 5, pos: P(90, 1420) },
   { id: 'treats', name: '강아지 간식 바구니', rar: 's', img: 'deco/treats', appeal: 12, pos: P(640, 760) },
   { id: 'lanternpost', name: '꽃바구니 가로등', rar: 's', img: 'fac/lantern', appeal: 12, pos: P(560, 1180) },
+  /* v0.3 (대표 10-30 '가짓수가 너무 적다'): 9 → 33종 · 존마다 · 계절 한정 · 희귀도별 — 그 존이 열려 있어야 상자에서 나옴 · 자리는 길에서 45~110px 떨어진 빈 곳(tools 계산) */
+  { id: 'picnic', name: '피크닉 담요 세트', rar: 'n', img: 'deco/picnic', appeal: 2, pos: [278, 1300] },
+  { id: 'signpost', name: '길 안내 표지판', rar: 'n', img: 'deco/signpost', appeal: 2, pos: [470, 1300] },
+  { id: 'flowercart', name: '꽃 수레', rar: 'r', img: 'deco/flowercart', appeal: 5, pos: [134, 1336] },
+  { id: 'mushstool', name: '버섯 의자', rar: 'n', img: 'deco/mushstool', appeal: 2, pos: [602, 1372] },
+  { id: 'birdhouse', name: '새집 기둥', rar: 'n', img: 'deco/birdhouse', appeal: 2, pos: [184, 438], zone: 'forest' },
+  { id: 'beehive', name: '꿀벌 상자', rar: 'r', img: 'deco/beehive', appeal: 5, pos: [292, 426], zone: 'forest' },
+  { id: 'lanterntree', name: '등불 나무', rar: 's', img: 'deco/lanterntree', appeal: 12, pos: [16, 690], zone: 'forest' },
+  { id: 'readnook', name: '숲속 책 읽는 자리', rar: 'r', img: 'deco/readnook', appeal: 5, pos: [352, 498], zone: 'forest' },
+  { id: 'eggswing', name: '달걀 그네 의자', rar: 'r', img: 'deco/eggswing', appeal: 5, pos: [668, 509], zone: 'pine' },
+  { id: 'arch', name: '장미 아치', rar: 's', img: 'deco/arch', appeal: 12, pos: [548, 509], zone: 'pine' },
+  { id: 'mailbox', name: '나무 우체통', rar: 'n', img: 'deco/mailbox', appeal: 2, pos: [464, 665], zone: 'pine' },
+  { id: 'duckpond', name: '오리 연못', rar: 'r', img: 'deco/duckpond', appeal: 5, pos: [640, 405], zone: 'valley' },
+  { id: 'well', name: '소원 우물', rar: 'r', img: 'deco/well', appeal: 5, pos: [448, 345], zone: 'valley' },
+  { id: 'sofa', name: '담요 소파', rar: 's', img: 'deco/sofa', appeal: 12, pos: [40, 300], zone: 'stay' },
+  { id: 'canoe', name: '카누 거치대', rar: 'r', img: 'deco/canoe', appeal: 5, pos: [-278, 944], zone: 'lake' },
+  { id: 'fishing', name: '낚시 의자', rar: 'n', img: 'deco/fishing', appeal: 2, pos: [-386, 932], zone: 'lake' },
+  { id: 'telescope', name: '놋쇠 망원경', rar: 's', img: 'deco/telescope', appeal: 12, pos: [-398, 596], zone: 'star' },
+  { id: 'starlights', name: '별 등불 기둥', rar: 'r', img: 'deco/starlights', appeal: 5, pos: [-410, 284], zone: 'star' },
+  { id: 'woodshed', name: '장작 헛간', rar: 'n', img: 'deco/woodshed', appeal: 2, pos: [1214, 524], zone: 'cabin' },
+  { id: 'bear', name: '나무 곰 조각', rar: 'r', img: 'deco/bear', appeal: 5, pos: [1238, 644], zone: 'cabin' },
+  { id: 'applebarrel', name: '사과 통', rar: 'n', img: 'deco/applebarrel', appeal: 2, pos: [1250, 440], zone: 'cabin' },
+  { id: 'rocker', name: '흔들의자', rar: 'n', img: 'deco/rocker', appeal: 2, pos: [1188, 1244], zone: 'deck' },
+  { id: 'scarecrow', name: '허수아비 (가을 한정)', rar: 's', img: 'deco/scarecrow', appeal: 12, pos: [662, 1216], season: 'autumn' },
+  { id: 'leafpile', name: '낙엽 더미 (가을 한정)', rar: 'n', img: 'deco/leafpile', appeal: 2, pos: [330, 1420], season: 'autumn' },
 ];
+export const decoZone = d => d.zone || (d.id === 'treats' ? 'pine' : 'lawn');
 /* 꾸미기 상품 (골드 item) · 소장자 전용 */
 /* ── 시즌 (명세서 8장 재해석 · 원작은 중앙값 27일 · 시즌 재화 · 미션 · 상점 · 패스 · 한정 시설/코스튬) ──
    v0.1: 원어데이 서버 달력이 생기기 전 → 기기 날짜(한국) + 시험 옵션 ?season=autumn|spring · index.html 머리 스크립트와 같은 날짜를 씀
@@ -345,6 +414,10 @@ const down = g => INST.reduce((a, v) => (v <= g ? v : a), INST[0]);
 export const instBase = T => down(Math.min(Math.ceil(T / 300), (TIER.find(([s]) => T <= s) || [0, 25])[1]));
 export function instGold(baseT, durS, leftS) { if (!(leftS >= INST_MIN)) return 0; const p = Math.max(1, Math.ceil(instBase(baseT) * Math.min(1, leftS / Math.max(1, durS)))); return down(Math.min(p, speedCost(leftS))); }
 
+/* ── 모자란 숲 코인을 솔방울로 채우기 (대표 승인 10-30 · 매출) — 모자란 양을 지금 '쉬는 동안 수입' 속도로 버는 시간 → 즉시 완성과 같은 비율(약 5분 = 솔방울 1, 최소 1) · 등급은 INST 로 내림(원어데이 골드 경로는 inst1~25 SKU 재사용)
+   숨김: 모자란 양이 지금 코인의 10% 미만 · 1분치 미만(조금만 기다리면 됨) · 한 번 상한 2시간치(inst 최고 등급 25 안 · 진행 보호) */
+export const FILL = { minFrac: 0.1, minSec: 60, capSec: 7200 };
+export const fillGem = sec => down(speedCost(sec));
 /* ── 큰 수 (한국식 단위) ── */
 const UNITS = ['', '만', '억', '조', '경', '해', '자', '양', '구', '간', '정', '재', '극'];
 export function fmt(n) {

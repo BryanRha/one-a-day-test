@@ -10,9 +10,10 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <title>숲속 힐링 캠프</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="src/style.css">
+<!-- importmap 은 modulepreload 보다 먼저 (사이에 다른 스크립트가 끼면 "three" 를 못 찾음 · 10-30) -->
+<script type="importmap">{ "imports": { "three": "./lib/three-r160.module.min.js" } }</script>
 <link rel="modulepreload" href="lib/three-r160.module.min.js"><link rel="modulepreload" href="src/main.js"><link rel="modulepreload" href="src/data.js"><link rel="modulepreload" href="src/sim.js"><link rel="modulepreload" href="src/chars.js"><link rel="modulepreload" href="src/chars2d.js"><link rel="modulepreload" href="src/ui.js"><link rel="modulepreload" href="src/audio.js"><link rel="modulepreload" href="src/oad_bm.js"><link rel="modulepreload" href="src/oad.js">
 <script>/* 시즌 (data.js SEASONS 와 같은 날짜 · 한국 날짜) — 배경을 처음부터 그 계절 것으로 받음 (4G 첫 화면) */(function(){var q=new URLSearchParams(location.search).get('season'),d=new Date(Date.now()+324e5).toISOString().slice(0,10),s=q==='autumn'||q==='spring'?q:(d>='2026-11-09'&&d<'2026-12-07'?'autumn':'spring');window.CAMP_SEASON=s;document.documentElement.setAttribute('data-season',s);var l=document.createElement('link');l.rel='preload';l.as='image';l.href='assets/bg_'+s+'.webp';document.head.appendChild(l)})();</script>
-<script type="importmap">{ "imports": { "three": "./lib/three-r160.module.min.js" } }</script>
 </head>
 <body>
 <div id="backdrop"></div>
@@ -36,8 +37,10 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
   <div id="fly"></div>
   <div id="toast"></div>
   </div>
-  <div id="boot"><div class="logo">숲속 힐링 캠프</div><div class="sub">고원 숲에서 하루 쉬어 가요</div><div class="ld"><i></i></div></div>
 </div>
-<script type="module" src="src/main.js?v=0.95.10"></script>
+<!-- 로딩 화면: 세계 카메라 · 판 배율과 상관없이 화면 기준(fixed · 가운데) · 화면 크기가 자리 잡을 때까지 글자는 숨겼다가 페이드인 (대표 제보 10-30: 처음에 오른쪽으로 치우쳐 잘림) -->
+<div id="boot"><div class="logo">숲속 힐링 캠프</div><div class="sub">고원 숲에서 하루 쉬어 가요</div><div class="ld"><i></i></div></div>
+<script>(function(){var b=document.getElementById('boot'),w=innerWidth,h=innerHeight,n=0;function ok(){if(b)b.classList.add('show')}function chk(){n++;if(innerWidth===w&&innerHeight===h&&n>2)return ok();w=innerWidth;h=innerHeight;if(n>20)return ok();requestAnimationFrame(chk)}requestAnimationFrame(chk)})();</script>
+<script type="module" src="src/main.js?v=0.95.11"></script>
 </body>
 </html>
