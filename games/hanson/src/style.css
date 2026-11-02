@@ -389,3 +389,5 @@ body.reduce * { animation-duration: .01s !important; transition-duration: .01s !
 .lvcard { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
 .lvcard .tools { display: grid; gap: 6px; margin-top: 10px; }
 .lvcard .tools div { font-size: 12.5px; color: var(--ink2); display: flex; gap: 8px; } .lvcard .tools b { color: var(--ink); min-width: 70px; }
+/* 다시 온 손님 · 골목 인연 한 줄 (2026-11-02) */
+.recall { font: 700 12px/1.4 var(--sf); color: var(--gold); margin: 0 0 4px; letter-spacing: .01em; }

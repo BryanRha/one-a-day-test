@@ -1,7 +1,7 @@
 // 첫 화면 리소스만 먼저 받고(타이틀), 판 그림은 타이틀에서 이어 받는다 → 4G 첫 화면 3초
-import { setData, T } from '../core/data.js?v=0.96.2';
-import { audio, SFX } from '../audio.js?v=0.96.2';
-import { load } from '../save.js?v=0.96.2';
+import { setData, T } from '../core/data.js?v=0.96.3';
+import { audio, SFX } from '../audio.js?v=0.96.3';
+import { load } from '../save.js?v=0.96.3';
 
 export const PLAY_ATLAS = ['icons', 'mon', 'tower', 'fx', 'obj', 'tile', 'sword', 'spx', 'boss', 'ui', 'face', 'mface'];
 export const FRAME_ATLAS = {};   // 그림 이름 → 아틀라스 키

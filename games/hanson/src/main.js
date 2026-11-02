@@ -1,18 +1,19 @@
 // 오랜상회 Olden & Co. v0.2 — 하루 영업 감정 가게 (2026-11-02 첫 화면 게이트 뒤 구조: 하루 무료 손님 4명)
 //   아침 · 낮 · 오후 = 골목 손님(짧은 퍼즐 · 동전 · 도감 · 경험치) → 저녁 = 오늘의 주인공(모두 같은 손님 · 주간 이야기 · 평판 · 통계)
 //   → 하루 결산(등급 도장 · 동전 · 평판 · 경험치) → 영업 연장(광고 3 · 골드 6) · 장부 · 도감 · 꾸미기
-//   데이터: data/*.json (사람이 쓴 4주 뼈대 + 예비 손님 + 골목 손님 풀 — content/*.mjs 에서 tools/build_data.mjs 로 만듦)
-import { D, H, cur, loadData, tagOf } from './state.js?v=0.96.2';
-import { S, load, save, today, setDay, week } from './save.js?v=0.96.2';
-import * as A from './audio.js?v=0.96.2';
-import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.96.2';
-import { sceneHTML, layout, setFace } from './scene.js?v=0.96.2';
-import { openInspect, resizeInspect } from './inspect.js?v=0.96.2';
-import { openTalk } from './talk.js?v=0.96.2';
-import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.96.2';
-import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.96.2';
-import { bm } from './oad_bm.js?v=0.96.2';
-import { installBack, inOAD, exitToOAD } from './oad.js?v=0.96.2';
+//   데이터: data/*.json (사람이 쓴 8주 뼈대 + 예비 손님 + 골목 손님 풀 — content/*.mjs 에서 tools/build_data.mjs 로 만듦)
+import { D, H, cur, loadData, tagOf } from './state.js?v=0.96.3';
+import { S, load, save, today, setDay, week } from './save.js?v=0.96.3';
+import * as A from './audio.js?v=0.96.3';
+import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.96.3';
+import { sceneHTML, layout, setFace } from './scene.js?v=0.96.3';
+import { openInspect, resizeInspect } from './inspect.js?v=0.96.3';
+import { openTalk } from './talk.js?v=0.96.3';
+import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.96.3';
+import { WHY } from './check.js?v=0.96.3';
+import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.96.3';
+import { bm } from './oad_bm.js?v=0.96.3';
+import { installBack, inOAD, exitToOAD } from './oad.js?v=0.96.3';
 
 window.__errs = [];
 addEventListener('error', e => window.__errs.push(String(e.message)));
@@ -134,6 +135,17 @@ async function startSlot(i) {
   renderVisit(true);
 }
 /* 손님 입장 · 첫 마디 */
+/* 을/를 — 끝 글자 받침으로 */
+const eulReul = w => { const ch = (w || '').trim().slice(-1).charCodeAt(0); return ch >= 0xAC00 && ch <= 0xD7A3 && (ch - 0xAC00) % 28 ? '을' : '를'; };
+/* 다시 온 손님 · 골목 인연 한 줄 (대표 2026-11-02 "이야기도 다양하게") */
+function recallOf(g, replay) {
+  if (replay) return '';
+  const last = (S.last || {})[g.cast];
+  if (S.met[g.cast] && last && last !== g.itemName) return `<div class="recall">지난번엔 「${esc(last)}」${eulReul(last)} 들고 왔던 분이에요</div>`;
+  const rel = (D.cast[g.cast].rel || []).find(([o]) => S.met[o]);
+  if (rel) return `<div class="recall">${esc(D.cast[rel[0]].name)} 씨와 아는 사이 · ${esc(rel[1])}</div>`;
+  return '';
+}
 async function renderVisit(entering = false) {
   const c = cur.v, g = c.g, el = $('#shop');
   if (c.stage !== 'enter') { if (c.stage === 'inspect') return goInspect(); if (c.stage === 'talk') return goTalk(); }
@@ -143,7 +155,7 @@ async function renderVisit(entering = false) {
   const sub = alley ? `골목 손님 · ${lab}` : replay ? `다시 감정 · ${dateLine(c.key)}` : null;
   box.insertAdjacentHTML('beforeend', hud(sub) + `<div class="bell" style="top:${Math.round(el.clientHeight * 0.28)}px">딸랑—</div>
     <div class="dayband"><small>${alley ? `${lab} · 골목에서 온` : replay ? dateLine(c.key) : `${dateLine(k)} · 저녁`}</small><div>${alley ? '골목 손님' : replay ? '그날의 손님' : '오늘의 주인공'}</div></div>
-    <div class="talkbox"><div class="nameplate">${esc(tagOf(g))}</div><div class="dbox"><p id="say"></p><div class="meta"><span class="tag">${esc(g.itemName)}</span><span class="tag">${S.met[g.cast] ? `${S.met[g.cast] + 1}번째 방문` : '첫 방문'}</span><span class="tag">${alley ? '약 2분' : '약 5분'}</span>${c.helped ? '<span class="tag hi">먼지의 응원</span>' : ''}</div></div>
+    <div class="talkbox"><div class="nameplate">${esc(tagOf(g))}</div><div class="dbox">${recallOf(g, replay)}<p id="say"></p><div class="meta"><span class="tag">${esc(g.itemName)}</span><span class="tag">${S.met[g.cast] ? `${S.met[g.cast] + 1}번째 방문` : '첫 방문'}</span><span class="tag">${alley ? '약 2분' : '약 5분'}</span>${c.helped ? '<span class="tag hi">먼지의 응원</span>' : ''}</div></div>
     <button class="btn pri" data-k="unwrap" id="unwrap" style="visibility:hidden">보따리 풀어 보기 <span class="arr">→</span></button></div>`);
   show('shop'); bindShop();
   requestAnimationFrame(() => { const tb = $('.talkbox', el), dbd = $('.dayband', el); if (tb && dbd) dbd.style.bottom = (tb.offsetHeight + 24) + 'px'; });
@@ -236,7 +248,7 @@ async function decide() {
   if (!alley) S.days[c.key] = { ...rec, found: c.found, asked: c.asked, ledger: c.ledger, replay };
   else S.alleySeen[g.id] = c.key;
   if (c.si != null && S.shop[c.key] && S.shop[c.key].slots[c.si]) S.shop[c.key].slots[c.si].rec = rec;
-  S.xp += xp; S.met[g.cast] = (S.met[g.cast] || 0) + 1; S.plays++; S.tut = 1; S.prog = null;
+  S.xp += xp; S.met[g.cast] = (S.met[g.cast] || 0) + 1; if (!replay) (S.last || (S.last = {}))[g.cast] = g.itemName; S.plays++; S.tut = 1; S.prog = null;
   c.stage = 'done'; c.res = res; c.coins = coins; c.xp = xp; c.before = before; c.lvUp = levelOf(S.xp).i > lv0 ? levelOf(S.xp).i : 0;
   save(true);
   track(alley ? 'alley_done' : replay ? 'replay_done' : 'guest_done', { id: g.id, ch: c.choice, gr: res.grade });
@@ -286,7 +298,7 @@ function renderResult() {
       <div class="praise">${chips.join('')}</div>
       <div class="yay">${esc(line)}${res.note ? `<br><small style="font:500 12px var(--sf);color:var(--ink2)">${esc(res.note)}</small>` : ''}</div>
       <div class="truth"><span class="k">그 뒤 이야기</span>${esc(ch.after)}</div>
-      <div class="truth"><span class="k">그날의 진실</span>${esc(g.truth.story)}</div>
+      <div class="truth"><span class="k">그날의 진실${WHY[g.truth.why] ? ` · ${esc(WHY[g.truth.why])}` : ''}</span>${esc(g.truth.story)}</div>
       ${missH}${repH}${others}${tmr}
     </div><div class="rbtns">
       <button class="btn pri" data-k="done">${primary}</button>

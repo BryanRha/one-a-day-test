@@ -12,7 +12,7 @@ export const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.g
 export const parse = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d, 12); };
 export const addDays = (k, n) => { const d = parse(k); d.setDate(d.getDate() + n); return keyOf(d); };
 export const dayNo = k => Math.round((parse(k) - parse(EPOCH)) / 864e5);
-/* 그날 자리: 몇째 주 · 요일(월 0 ~ 일 6) · 저장된 주간 이야기 중 몇 번째(4주 뒤엔 다시 처음부터 = 재방송) */
+/* 그날 자리: 몇째 주 · 요일(월 0 ~ 일 6) · 저장된 주간 이야기 중 몇 번째(8주 뒤엔 다시 처음부터 = 재방송) */
 export function slot(k, nWeeks) {
   const n = dayNo(k), wk = Math.floor(n / 7), wd = ((n % 7) + 7) % 7;
   return { n, wk, wd, wi: ((wk % nWeeks) + nWeeks) % nWeeks, rerun: wk >= nWeeks };
@@ -20,7 +20,7 @@ export function slot(k, nWeeks) {
 export const weekStart = k => addDays(k, -slot(k, 1).wd);
 export const WD = ['월', '화', '수', '목', '금', '토', '일'];
 
-/* 그날 본 손님 (서버 주간 묶음이 있으면 그것 · 없으면 저장된 4주 뼈대) */
+/* 그날 본 손님 (서버 주간 묶음이 있으면 그것 · 없으면 저장된 8주 뼈대) */
 export function mainGuest(D, k) { const s = slot(k, D.weeks.length); const w = D.weeks[s.wi]; return { g: w.days[s.wd], w, s }; }
 
 export const realClues = g => g.clues.filter(c => c.kind !== 'trap');

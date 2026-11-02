@@ -1,7 +1,7 @@
 // 진실표 ↔ 단서 ↔ 대사 일관성 검사기 — 게임 · 도구(tools/check.mjs) · 서버 생성 검증(server/hanson.js)이 같은 함수를 씀
 //   손님 한 명(guest) 형식 (값 단위 만 원)
 //   { id, cast, item, itemName, diff, intro: [1~2줄], ask(부른 값), ref(장부 시세), fair(이 물건의 제값), pay?(제값 쳐 주기 값),
-//     truth: { auth: genuine|repaired|fake|reissue, owner: own|family_ok|family_noperm|found|lost, lie: none|small|big, story },
+//     truth: { auth: genuine|repaired|fake|reissue, owner: own|family_ok|family_noperm|found|lost, lie: none|small|big, why: face|cover|scam|mistake|unknown|none, story },
 //     clues: [{ spot, kind: auth|cond|origin|fact|plus|trap, title, note, cut?, add?, ok? }] (주인공 · 예비 5~6개 · 골목 손님 3~4개 — 2026-11-02 하루 영업 구조),
 //     talk: [{ q, a, face: 0|1|2, contra?: spot, why?, press?: { q, a, face } }] (주인공 · 예비 3개 + 모순 질문엔 되묻기 press · 골목 손님 0~1개),
 //     choices: { buy|haggle|back|report: { sub, line, face, rep: [단골, 골목, 파출소], after, label? } },
@@ -11,6 +11,8 @@ export const KINDS = ['auth', 'cond', 'origin', 'fact', 'plus', 'trap'];
 export const AUTH = ['genuine', 'repaired', 'fake', 'reissue'];
 export const OWNER = ['own', 'family_ok', 'family_noperm', 'found', 'lost'];
 export const LIE = ['none', 'small', 'big'];
+/* 거짓말의 종류 (2026-11-02 대표 "이야기 다양하게"): 체면 · 남을 감싸는 거짓말 · 속이기 / 거짓말 아님: 착각 · 정말 모름 · 없음 */
+export const WHY = { face: '체면 때문에 한 거짓말', cover: '누군가를 감싸는 거짓말', scam: '속이려던 거짓말', mistake: '거짓말이 아니라 착각', unknown: '정말 몰랐던 손님', none: '' };
 /* 금지: 무기 · 약물 · 폭력 · 옛 가게 이름 (게임 안 문구는 '오랜상회 Olden & Co.') */
 export const BANNED = /(총기|권총|칼부림|마약|필로폰|대마|살해|살인|폭행|흉기|자살|오래상회)/;
 const LIM = { intro: 60, line: 60, a: 80, q: 30, after: 120, story: 160, title: 22, note: 40, sub: 22, diary: 34, next: 34, later: 90, ending: 160 };
@@ -33,6 +35,9 @@ export function checkGuest(g, items, cast, { kind = 'main' } = {}) {
   if (!AUTH.includes(t.auth)) e(`truth.auth ${t.auth}`);
   if (!OWNER.includes(t.owner)) e(`truth.owner ${t.owner}`);
   if (!LIE.includes(t.lie)) e(`truth.lie ${t.lie}`);
+  if (kind === 'main' && !(t.why in WHY)) e(`truth.why ${t.why} (face|cover|scam|mistake|unknown|none)`);
+  if (t.why && t.lie !== 'none' && !['face', 'cover', 'scam'].includes(t.why)) e(`거짓말(${t.lie})인데 종류가 ${t.why}`);
+  if (t.why && t.lie === 'none' && ['face', 'cover', 'scam'].includes(t.why)) e(`거짓말이 없는데 종류가 ${t.why}`);
   for (const k of ['ask', 'ref', 'fair']) if (!(Number.isFinite(g[k]) && g[k] > 0 && g[k] < 10000)) e(`${k} 값 ${g[k]}`);
   const clues = g.clues || [], spots = new Set();
   const want = kind === 'extra' ? [3, 4] : [5, 6];
@@ -72,7 +77,7 @@ export function checkGuest(g, items, cast, { kind = 'main' } = {}) {
     if (!x.why) e(`모순 ${x.contra} 설명(why) 없음`);
     if (kind !== 'extra') { if (!x.press || !x.press.q || !x.press.a || ![0, 1, 2].includes(x.press.face)) e(`모순 ${x.contra} 되묻기(press) 없음`); else { L0(x.press.q, 'q'); L0(x.press.a, 'a'); } }
   }
-  if (t.lie === 'none' && contras.length) e('거짓말이 없는데 모순 대사가 있음');
+  if (t.lie === 'none' && t.why !== 'mistake' && contras.length) e('거짓말이 없는데 모순 대사가 있음 (착각이면 why: mistake)');
   if (t.lie !== 'none' && kind !== 'extra' && !contras.length) e(`거짓말(${t.lie})인데 모순 대사가 없음`);
   for (const x of talk) { if (!x.q || !x.a) e('질문 · 대답 빈칸'); if (![0, 1, 2].includes(x.face)) e(`표정 ${x.face}`); }
   /* 선택 4개 · 평판 한 번에 ±2 · 정답 */

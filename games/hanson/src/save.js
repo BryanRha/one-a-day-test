@@ -1,5 +1,5 @@
 // 저장 — 기기(localStorage) 한 덩어리 · 원어데이 소장자는 같은 키를 계정 클라우드로 (catalog.js SAVES: hanson: ['hanson_v1'])
-import { keyOf, parse } from './engine.js?v=0.96.2';
+import { keyOf, parse } from './engine.js?v=0.96.3';
 export const KEY = 'hanson_v1';
 const Q = new URLSearchParams(location.search);
 const NOSAVE = Q.get('nosave') === '1';
@@ -17,6 +17,7 @@ function fresh() {
     alleySeen: {},   /* 골목 손님 id: 만난 날 (2주 안 다시 안 옴) */
     xp: 0,           /* 감정사 경험치 → 등급 · 도구 */
     met: {},         /* 얼굴: 만난 횟수 */
+    last: {},        /* 얼굴: 지난번 들고 온 물건 이름 (다시 오면 한 줄) */
     deco: { own: {}, on: { sign: 'wood', fur: 'base' } },
     set: { sfx: true, bgm: true, haptic: true },
     tut: 0, warm: 0, helpDay: null, plays: 0, prog: null,
