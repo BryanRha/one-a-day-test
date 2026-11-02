@@ -1,6 +1,6 @@
 // 업적 62 (원작 칭호 목록 · 한국어로 다시 씀) · 오늘의 작전 3
-import { T } from './data.js?v=0.95.6';
-import { unitMax, heroMax } from './meta.js?v=0.95.6';
+import { T } from './data.js?v=0.95.7';
+import { unitMax, heroMax } from './meta.js?v=0.95.7';
 
 const ch = c => [...Array(10)].map((_, i) => c * 10 + i);
 const allCleared = (d, list) => list.every(s => d.cleared[s]);
@@ -17,9 +17,9 @@ export const AWARDS = [
   ['크라스토의 수호자', '모든 스테이지를 깼어요', 15, d => allCleared(d, [...Array(50).keys()])],
   ['전능한 자', '모든 스테이지를 별 3개로', 20, d => [...Array(50).keys()].every(s => d.stars[s] >= 3)],
   ['성문 파괴자', '성문 부수기를 모두 깼어요', 20, d => [...Array(50).keys()].every(s => d.gateCleared[s])],
-  ['챔피언', '영웅 챔피언과 함께', 10, d => d.meta.owned[0]],
-  ['보우 마스터', '영웅 보우 마스터와 함께', 10, d => d.meta.owned[1]],
-  ['아크메이지', '영웅 아크메이지와 함께', 10, d => d.meta.owned[2]],
+  ['Champion', '영웅 Champion 과 함께', 10, d => d.meta.owned[0]],
+  ['Bowmaster', '영웅 Bowmaster 와 함께', 10, d => d.meta.owned[1]],
+  ['Archmage', '영웅 Archmage 와 함께', 10, d => d.meta.owned[2]],
   ['강화 입문', '강화를 3번 넘게', 5, d => d.meta.unit.reduce((a, b) => a + b, 0) + d.meta.hero.flat().reduce((a, b) => a + b, 0) >= 3],
   ['완벽한 강화', '강화 하나를 끝까지', 15, d => d.meta.unit.some(v => v >= unitMax(d.meta))],
   ['투사', '전사 강화를 모두 끝까지', 20, d => maxed(d.meta, [0, 1, 2, 3, 4, 5])],
@@ -44,7 +44,7 @@ export const AWARDS = [
   ['칭호 30개', '업적 30개 달성', 20, d => Object.keys(d.awards).length >= 30],
   ...[100, 500, 1000, 2000, 5000, 10000].map((n, i) => [`${n.toLocaleString()} 처치`, `몬스터 ${n.toLocaleString()}마리 물리치기`, [5, 5, 10, 10, 15, 20][i], d => d.kills >= n]),
   ...[['전장의 수호자', 3], ['전장의 저격수', 7], ['전장의 빛', 11], ['공포의 철퇴', 1], ['공포의 눈길', 5], ['얼음 여왕', 9]].map(([t, det]) => [t, `${['전사', '철퇴병', '기사', '대장군', '궁수', '성안 궁수', '연사수', '천궁수', '마법사', '얼음 마법사', '마녀', '폭염술사'][det]} 최고 레벨`, 5, (d, r) => r && r.maxLv && r.maxLv[det] >= 3]),
-  ...['챔피언', '보우 마스터', '아크메이지'].map((n, g) => [`${n} 최고 레벨`, `${n}을(를) 5레벨까지`, 5, (d, r) => r && r.heroLv && r.heroLv[g] >= 5]),
+  ...['Champion', 'Bowmaster', 'Archmage'].map((n, g) => [`${n} 최고 레벨`, `${n}을(를) 5레벨까지`, 5, (d, r) => r && r.heroLv && r.heroLv[g] >= 5]),
   ...['칼날의 연회', '죽음의 화살비', '얼어붙은 심장'].map((t, g) => [t, '필살기로 5마리 넘게 한 번에', 10, (d, r) => r && r.specialBest && r.specialBest[g] >= 5]),
   ['운명의 갈림길', '갈림길이 있는 맵에 처음 들어감', 10, (d, r) => { CROSS ||= crossMaps(); return r && CROSS.includes(r.stage); }],
   ['꺾이지 않는 마음', '한 스테이지에 3번 넘게 도전', 10, d => Object.values(d.tries).some(n => n >= 3)],

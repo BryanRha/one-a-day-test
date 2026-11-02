@@ -1,9 +1,9 @@
 // 타이틀: 원작 전쟁 일러스트를 천천히 훑으며 로고 · 불씨 · 출정 버튼. 판 그림은 여기서 이어 받는다
-import { W, H, C } from '../config.js?v=0.95.6';
-import { text, button } from '../ui.js?v=0.95.6';
-import { audio } from '../audio.js?v=0.95.6';
-import { queue, queueCore, queueHome, indexFrames } from './Boot.js?v=0.95.6';
-import { load } from '../save.js?v=0.95.6';
+import { W, H, C } from '../config.js?v=0.95.7';
+import { text, button } from '../ui.js?v=0.95.7';
+import { audio } from '../audio.js?v=0.95.7';
+import { queueCore, queueHome, indexFrames } from './Boot.js?v=0.95.7';
+import { load } from '../save.js?v=0.95.7';
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
@@ -41,8 +41,9 @@ export class TitleScene extends Phaser.Scene {
     this.load.on('progress', p => { if (!this.ready) this.go.label.setText(`준비 중 ${Math.round(p * 100)}%`); });
     this.load.once('complete', () => {
       indexFrames(this); this.ready = true;
-      // 판 메뉴 일러스트(병사 · 영웅 전신)와 몬스터 얼굴은 타이틀을 보는 동안 미리 받는다 (처음 온 사람도)
-      queue(this, { atlas: ['face', 'mface'] });
+      // 판 메뉴 일러스트(병사 · 영웅 전신)와 몬스터 얼굴은 타이틀을 보는 동안 브라우저 캐시로 미리 받아 둔다 (처음 온 사람도)
+      //   텍스처로 올리는 건 판 화면이 한다 — 여기서 올리면 판 화면 로더와 같은 키가 겹친다
+      for (const a of ['face', 'mface']) fetch(`assets/atlas/${a}.json`).then(r => r.json()).then(j => j.textures.forEach(t => fetch(`assets/atlas/${t.image}`))).catch(() => {});
       if (!this.first) queueHome(this);
       this.load.once('complete', () => indexFrames(this)); this.load.start();
       this.go.label.setText(this.first ? '▶  출정' : '▶  시작'); this.go.setEnabled(true);

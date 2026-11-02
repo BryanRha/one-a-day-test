@@ -1,5 +1,5 @@
 // 저장 (localStorage) · 원어데이 catalog SAVES: fdefense_v1 (진행) · fdefense_resume_v1 (판 중간 이어하기)
-import { freshMeta } from './core/meta.js?v=0.95.6';
+import { freshMeta } from './core/meta.js?v=0.95.7';
 const KEY = 'fdefense_v1', RESUME = 'fdefense_resume_v1';
 let data = null;
 export const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
@@ -15,6 +15,7 @@ function fresh() {
     ads: { date: '', x2: 0 },
     help: { stage: -1, fails: 0, date: '', used: 0 },
     look: { gate: 'normal' },
+    hi: {},   // 원작 최고 점수 (스테이지_모드)
   };
 }
 export function load() {

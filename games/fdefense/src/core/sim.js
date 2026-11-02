@@ -1,8 +1,8 @@
 // 판 로직 (화면과 분리 · Node 에서 봇으로도 돌림)
 // 원작 좌표계 그대로: 판 675×450px(15×10칸, 칸 45px), 위치 단위 = px×50, 1틱 = 1/41초
 // 화면은 이 좌표를 시계 방향 90° 돌려 세로로 그린다 (view.js)
-import { T, nameOfChar } from './data.js?v=0.95.6';
-import { HPS } from './balance.js?v=0.95.6';
+import { T, nameOfChar } from './data.js?v=0.95.7';
+import { HPS } from './balance.js?v=0.95.7';
 
 export const TICK = 41;
 const TILE = 45, U = 50;
@@ -304,7 +304,7 @@ export class Sim {
     this.monsters = this.monsters.filter(m => m.alive);
     this.stats.minLife = Math.min(this.stats.minLife, this.life); if (this.money > this.stats.maxGold) this.stats.maxGold = this.money;
     if (this.waveDelay === 0 && this.monsters.length === 0 && this.spawnDone()) {
-      if (this.wavePerfect) this.perfectWaves++;
+      if (this.wavePerfect) { this.perfectWaves++; this.destroyScore = (this.destroyScore || 0) + (this.wave * 0.1 + 1) * 600; }   /* 원작 점수: 목숨을 잃지 않은 웨이브마다 (웨이브×0.1+1)×600 */
       this.wave++;
       if (this.wave >= this.waveTotal && this.mode === 0) { this.finish(true); return; }
       if (this.wave >= this.waveTotal && this.mode === 2) { this.finish(false); return; }
@@ -330,12 +330,12 @@ export class Sim {
   }
   // 웨이브 시작 때 판 상태 저장 (판 중간 이어하기)
   snapshot() {
-    return { v: 1, stage: this.stage, mode: this.mode, wave: this.wave, money: this.money, mana: this.mana, life: this.life, kills: this.kills, leaks: this.leaks, perfectWaves: this.perfectWaves, time: this.time,
+    return { v: 1, stage: this.stage, mode: this.mode, wave: this.wave, money: this.money, mana: this.mana, life: this.life, kills: this.kills, leaks: this.leaks, perfectWaves: this.perfectWaves, time: this.time, destroyScore: this.destroyScore || 0,
       towers: this.towers.map(t => [t.row, t.hero ? 1 : 0, t.bx, t.by, t.spent, t.specialCool]),
       objects: this.objects.map(o => [o.alive ? 1 : 0, o.hp]), details: [...this.stats.details], heroUsed: this.stats.heroUsed };
   }
   restore(sn) {
-    Object.assign(this, { wave: sn.wave, money: sn.money, mana: sn.mana, life: sn.life, kills: sn.kills, leaks: sn.leaks, perfectWaves: sn.perfectWaves, time: sn.time });
+    Object.assign(this, { wave: sn.wave, money: sn.money, mana: sn.mana, life: sn.life, kills: sn.kills, leaks: sn.leaks, perfectWaves: sn.perfectWaves, time: sn.time, destroyScore: sn.destroyScore || 0 });
     this.objects.forEach((o, i) => { const r = sn.objects[i]; if (r) { o.alive = !!r[0]; o.hp = r[1]; } });
     for (const [row, hero, bx, by, spent, sc] of sn.towers) { const t = this.newTower(bx, by, row, !!hero); t.spent = spent; t.specialCool = sc || 0; }
     for (const d of sn.details || []) this.stats.details.add(d);
@@ -515,6 +515,8 @@ export class Sim {
   progress() { return this.mode === 1 ? (this.wave % this.waveTotal) / this.waveTotal : Math.min(1, this.wave / this.waveTotal); }
 }
 
+// 원작 결과 점수 (setClearPointAndHighscore): 완벽 웨이브 점수(목숨이 다 있으면 ×1.5) + 목숨×1000 + 골드×10 + 마나×30
+export function clearScore(s) { let d = Math.floor((s.destroyScore || 0) * (s.life === s.maxLife ? 1.5 : 1)); return { destroy: d, total: d + s.life * 1000 + s.money * 10 + s.mana * 30 }; }
 // 판 결과 요약 (업적 · 작전 · 명예 계산용)
 export function runSummary(s) {
   const st = s.stats, cls = [...st.classes];

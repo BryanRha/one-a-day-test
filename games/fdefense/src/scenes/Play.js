@@ -3,19 +3,19 @@
 //   · 세로: 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 띠는 원작 그림 그대로 · 카드 줄(HERO + 병사 6)은 아래 엄지 자리
 //   · 병사 · 영웅을 누르면 원작 메뉴: 전신 일러스트 · 이름 · lv · 능력치 4줄 · 판매 · 전직(다음 직업 미리보기) · 레벨 업 · 필살기 → 확인 창(예/아니오) → 전직 컷인(일러스트 바뀜)
 //   · 메뉴가 열려 있으면 판 시간이 멈춘다 (원작 update_GAME_PLAYING: 메뉴 상태에선 효과만 움직임)
-import { W, H, C, SCALE } from '../config.js?v=0.95.6';
-import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.95.6';
-import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary } from '../core/sim.js?v=0.95.6';
-import * as M from '../core/meta.js?v=0.95.6';
-import { BUNDLE } from '../core/balance.js?v=0.95.6';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.6';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.95.6';
-import { audio, S } from '../audio.js?v=0.95.6';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.95.6';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.6';
-import { T0, img, num, label, inRect } from './orig.js?v=0.95.6';
-import { pushBack } from '../oad.js?v=0.95.6';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.6';
+import { W, H, C, SCALE } from '../config.js?v=0.95.7';
+import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.95.7';
+import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.95.7';
+import * as M from '../core/meta.js?v=0.95.7';
+import { BUNDLE } from '../core/balance.js?v=0.95.7';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.95.7';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.95.7';
+import { audio, S } from '../audio.js?v=0.95.7';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.95.7';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.95.7';
+import { T0, img, num, label, inRect } from './orig.js?v=0.95.7';
+import { pushBack } from '../oad.js?v=0.95.7';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.95.7';
 
 const US = 2.25;                 // 원작 UI 배율 (가로 화면 480 → 1080)
 const HUD_H = 196, TRAY_MIN = 250, CS = 2.4;   // 세로 화면: 위 띠 높이 · 아래 카드 칸 최소 높이 · 카드 배율
@@ -141,10 +141,11 @@ export class PlayScene extends Phaser.Scene {
       this.add.rectangle(SW / 2, SH / 2, SW, SH, 0x000000).setDepth(-10);
       if (this.ox > 0) {
         const big = this.ox >= 13 * US;
-        img(this, this.TL, big ? 'etc_outl' : 'etc_out', 0, 0, 20).setDepth(7000);
-        img(this, this.TL, big ? 'etc_outr' : 'etc_out', 800, 0, 18).setDepth(7000);
+        // 원작은 바깥 테두리를 맨 마지막에 그림 (필살기 그림이 넘쳐도 테두리가 위)
+        img(this, this.TL, big ? 'etc_outl' : 'etc_out', 0, 0, 20).setDepth(9700);
+        img(this, this.TL, big ? 'etc_outr' : 'etc_out', 800, 0, 18).setDepth(9700);
       }
-      if (this.oy > 0) { img(this, this.TL, 'etc_outu', 0, 0, 34).setDepth(7000); img(this, this.TL, 'etc_outu', 0, 480, 18).setDepth(7000); }
+      if (this.oy > 0) { img(this, this.TL, 'etc_outu', 0, 0, 34).setDepth(9700); img(this, this.TL, 'etc_outu', 0, 480, 18).setDepth(9700); }
       const key = this.textures.exists(`bgl${ch}`) ? `bgl${ch}` : null;
       if (key) this.add.image(this.ox, this.oy, key).setOrigin(0).setDisplaySize(800 * US, 480 * US).setDepth(-5);
       if (this.textures.exists('shadow_l')) this.add.image(this.ox, this.oy, 'shadow_l').setOrigin(0).setDisplaySize(800 * US, 480 * US).setDepth(-4);
@@ -934,6 +935,8 @@ export class PlayScene extends Phaser.Scene {
     const g = h.group, kind = ['sword', 'arrow', 'ice'][g], SW = this.scale.width;
     const T = this.land ? this.TL : T0(0, this.by + this.bh / 2 - 240 * (SW / 800), SW / 800);
     const c = this.add.container(0, 0).setDepth(9500), fx = this.add.container(0, 0).setDepth(9400);
+    // 세로 화면: 칼날 · 화살 · 얼음은 판 안에서만 (돌린 판 밖 카드 줄을 가리지 않게)
+    if (!this.land) { const mk = this.make.graphics({}).fillStyle(0xffffff).fillRect(this.bx, this.by, this.bw, this.bh); fx.setMask(mk.createGeometryMask()); fx.mk = mk; }
     const k = { c, fx, T, g, kind, h, t: 0, end: [150, 195, 170][g], lines: [], items: [] };
     const big = (key, sc) => { if (!this.textures.exists(key)) return null; const im = this.add.image(0, 0, key).setOrigin(0).setScale(T.s / sc); c.add(im); return im; };
     if (g === 0) { k.bands = [img(this, T, 'special_sword_background', 0, 0, 18), img(this, T, 'special_sword_background', 0, 480, 34).setFlipY(true)]; k.body = big('hero_cut_sword', 1.6); }
@@ -953,7 +956,7 @@ export class PlayScene extends Phaser.Scene {
   // 원작 좌표 그대로인 판 위 점 → 화면 (원작 위치 단위 = px)
   bpt(x, y) { return this.rot(x * 50, y * 50); }
   renderCutin() {
-    const k = this.cutin, t = k.t, T = k.T, g = k.g;
+    const k = this.cutin, t = k.t, T = k.T, g = k.g, c = k.c;
     if (this.sim.special && this.sim.special.t > t) k.t = this.sim.special.t;
     const a = t < 50 ? Math.min(1, t * 0.1) : Math.max(0, 1 - (t - 50) * 0.1);
     for (const b of k.bands) b.setAlpha(t < 60 ? a : 0);
@@ -1005,7 +1008,7 @@ export class PlayScene extends Phaser.Scene {
       if (t >= 150) { const f8 = Math.min(1, 2 - (t - 150) * 0.1); if (!k.white) { k.white = this.add.rectangle(this.land ? this.ox : 0, this.land ? this.oy : this.by, this.land ? 800 * US : this.scale.width, this.land ? 480 * US : this.bh, 0xFFFFFF, 1).setOrigin(0); c.add(k.white); } k.white.setAlpha(Math.max(0, f8)); }
     }
     for (let i = n; i < pool.length; i++) pool[i].setVisible(false);
-    if (t >= k.end || !this.sim.special) { k.c.destroy(); k.fx.destroy(); this.cutin = null; }
+    if (t >= k.end || !this.sim.special) { k.c.destroy(); k.fx.destroy(); k.fx.mk?.destroy(); this.cutin = null; }
   }
 
   // ---------- 안내 (첫 판) ----------
@@ -1100,30 +1103,40 @@ export class PlayScene extends Phaser.Scene {
     c.add(this.add.rectangle(540, 960, SW / sc + 4, SH / sc + 4, 0x000000, dimA).setInteractive());
     return c;
   }
-  // ☰ 메뉴 (원작 톱니 = 게임 메뉴 창) — 이것만 화면을 가리는 팝업
+  // 원작 톱니 = 게임 메뉴 창 (paint_GAME_INGAME_MENU): 'PAUSED' 띠 + 계속하기 · 다시 시작 · 스테이지 선택 (원작 그림 · 한국어 글씨)
+  //   원어데이 규칙으로 배경음 · 효과음 켜고 끄기를 아래에 더함 (원작은 따로 설정 화면)
+  popT() { const SW = this.scale.width, SH = this.scale.height; if (this.land) return this.TL; const s = Math.min(1.6, SW / 700); return T0(SW / 2 - 400 * s, SH / 2 - 240 * s, s); }
   openMenuUI() {
     if (this.menuUI || this.ended) return;
     this.menuWasRunning = !this.paused;
     this.pause({ auto: true });
     this.closeConfirm(); this.closeMenu(true); this.showHeroRow(false);
-    const c = this.vbox(9900), CX = 540, CY = 960;
-    c.add(panel(this, 140, CY - 430, 800, 860, { r: 40 }));
-    c.add(text(this, CX, CY - 340, '메뉴', 64, C.ink));
+    const SW = this.scale.width, SH = this.scale.height, T = this.popT();
+    const c = this.add.container(0, 0).setDepth(9900);
+    c.add(this.add.rectangle(SW / 2, SH / 2, SW, SH, 0x000000, 0.5).setInteractive());
+    c.add(img(this, T, 'ui_ingame_paused', 400, 6, 17));
+    c.add(label(this, T, '일시정지', 400, 40, 26, '#FFFFFF', 9, { stroke: '#1A1040', st: 5 }));
     const d = load();
-    const rows = [
-      [this.menuWasRunning ? '닫고 계속하기' : '닫기 (정지 유지)', () => this.closeMenuUI(), { fill: 0x5A3B12, edge: C.accent, color: C.gold }],
-      [`배경음 ${d.music ? '켬' : '끔'}`, () => { const on = audio.toggleMusic(); this.menuBtns[1].label.setText(`배경음 ${on ? '켬' : '끔'}`); if (on) audio.music('bgm_3', this); }],
-      [`효과음 ${d.sfx ? '켬' : '끔'}`, () => { const on = audio.toggleSfx(); this.menuBtns[2].label.setText(`효과음 ${on ? '켬' : '끔'}`); }],
-      ['처음부터 다시', () => { this.closeMenuUI(true); this.paused = false; this.scene.restart({ stage: this.stageNo, mode: this.mode }); }],
-      ['홈으로 (이어하기 저장)', () => { this.closeMenuUI(true); this.paused = false; this.scene.start('Home'); }],
-    ];
-    this.menuBtns = rows.map((r, i) => { const b = button(this, CX, CY - 200 + i * 145, 600, 118, r[0], r[1], { size: 44, ...(r[2] || {}) }); c.add(b); return b; });
-    this.menuUI = c; this.syncButtons();
+    const obtn = (y, key, txt, fn) => {
+      const im = img(this, T, `ui_ingame_${key}off`, 400, y, 17); c.add(im);
+      c.add(label(this, T, txt, 400, y + 29, 22, '#FFFFFF', 9, { stroke: '#0A1A3A', st: 5 }));
+      const z = this.add.zone(T.x(300), T.y(y), 201 * T.s, 61 * T.s).setOrigin(0).setInteractive({ useHandCursor: true }); c.add(z);
+      const sw = on => { const f = this.frame(`ui_ingame_${key}${on ? 'on' : 'off'}`); if (f) im.setTexture(f[0], f[1]); };
+      z.on('pointerdown', () => sw(true)); z.on('pointerout', () => sw(false)); z.on('pointerup', () => { sw(false); audio.id(14, { volume: 0.5 }); fn(); });
+    };
+    obtn(136, 'resume', '계속하기', () => this.closeMenuUI());
+    obtn(236, 'restart', '다시 시작', () => { this.closeMenuUI(true); this.paused = false; this.scene.restart({ stage: this.stageNo, mode: this.mode }); });
+    obtn(336, 'stage', '스테이지 선택', () => { this.closeMenuUI(true); this.paused = false; this.scene.start('Home'); });
+    const tog = (x, txt, fn) => { const t = label(this, T, txt, x, 425, 15, '#E8E4D8', 9, { stroke: '#000000', st: 4 }); c.add(t); const z = this.add.zone(t.x, t.y, Math.max(t.width, 120) + 30, t.height + 24).setInteractive({ useHandCursor: true }); c.add(z); z.on('pointerup', () => fn(t)); return t; };
+    this.menuBtns = [null,
+      { label: tog(330, `배경음 ${d.music ? '켬' : '끔'}`, t => { const on = audio.toggleMusic(); t.setText(`배경음 ${on ? '켬' : '끔'}`); if (on) audio.music('bgm_3', this); }) },
+      { label: tog(470, `효과음 ${d.sfx ? '켬' : '끔'}`, t => { const on = audio.toggleSfx(); t.setText(`효과음 ${on ? '켬' : '끔'}`); }) }];
+    this.menuUI = c; this.syncButtons(); this.pauseUI?.setVisible(false);
     this.menuUIBack = pushBack(() => { this.closeMenuUI(); return true; });
   }
   closeMenuUI(keepPaused = false) {
     if (!this.menuUI) return;
-    this.menuUI.destroy(); this.menuUI = null;
+    this.menuUI.destroy(); this.menuUI = null; this.pauseUI?.setVisible(true);
     if (this.menuUIBack) { this.menuUIBack(); this.menuUIBack = null; }
     this.syncButtons();
     if (this.menuWasRunning && !keepPaused) this.resume();
@@ -1172,7 +1185,10 @@ export class PlayScene extends Phaser.Scene {
     if (this.needRelayout) this.time.delayedCall(10, () => this.relayout());
   }
 
-  // ---------- 결과 · 보상 ----------
+  // ---------- 결과 · 보상 (원작 paint_GAME_STAGE_CLEAR · GAME_OVER) ----------
+  //   판 위에 어둡게 → 'Stage Cleared!!'(한국어) → RESULT 판: 점수 · 목숨(Perfect!!) · 골드 · 마나 → 총점 → 얻은 명예 → 최고 점수가 차례로
+  //   아래 단추: 스테이지 선택 · 강화 · 다음 스테이지 (실패면 다시 하기) — 원작 그림 · 한국어 글씨
+  //   원어데이 BM: '광고 보고 명예 2배'(하루 3번)와 업적 · 작전 알림은 결과 판 안에 작게 더함
   showResult(win) {
     if (this.ended) return; this.ended = true; this.closeConfirm(); this.closeMenu(true); this.showHeroRow(false);
     const s = this.sim, d = load(), r = runSummary(s), day = dayKey();
@@ -1186,45 +1202,67 @@ export class PlayScene extends Phaser.Scene {
     let newBest = false;
     if (this.mode === 1 && s.wave > (d.infBest[this.stageNo] || 0)) { d.infBest[this.stageNo] = s.wave; newBest = true; }
     if (this.mode === 0) { if (win) d.help.fails = 0; else if (s.progress() >= 0.3) { if (d.help.stage !== this.stageNo) { d.help.stage = this.stageNo; d.help.fails = 0; } d.help.fails++; } }
+    const sc = clearScore(s), hk = `${this.stageNo}_${this.mode}`;
+    d.hi ||= {}; if (win || this.mode === 1) d.hi[hk] = Math.max(d.hi[hk] || 0, sc.total);
     const ms = M.claimMilestones(d);
     const aw = checkAwards(d, r);
     const missionDone = noteMissions(d, day, r);
     save();
     track('round_end', { stage: this.stageNo, mode: this.mode, win: win ? 1 : 0, wave: s.wave, sec: r.sec, cont: this.contUsed });
     audio.id(win ? S.CLEAR : S.OVER, { volume: 0.8 });
-    const c = this.vbox(9900, 0.66), CX = 540, CY = 960; this.result = c;
-    const ph = 1180, py = CY - ph / 2;
-    c.add(panel(this, 70, py, 940, ph, { r: 44, line: win ? 0xFFC94A : 0x5A6278 }));
-    const nm = `${Math.floor(this.stageNo / 10) + 1}-${this.stageNo % 10 + 1}`;
-    const title = this.mode === 1 ? (newBest ? '신기록!' : `웨이브 ${s.wave}`) : win ? (this.mode === 2 ? `${nm} 성문을 부쉈다!` : `${nm} 지켜냈다!`) : '성문이 무너졌어요';
-    c.add(text(this, CX, py + 100, title, 68, win || newBest ? C.gold : C.ink));
-    if (this.mode !== 1 && win) {
-      for (let i = 0; i < 3; i++) {
-        const st = text(this, CX + (i - 1) * 160, py + 250, '★', 140, i < stars ? C.gold : '#3A3F4C', { st: 10 }).setScale(0); c.add(st);
-        this.tweens.add({ targets: st, scale: 1, duration: 360, delay: 300 + i * 240, ease: 'Back.out', onStart: () => i < stars && audio.id(S.LEVELUP, { volume: 0.6 }) });
+    const SW = this.scale.width, SH = this.scale.height, T = this.popT();
+    const c = this.add.container(0, 0).setDepth(9900); this.result = c;
+    const dim = this.add.rectangle(SW / 2, SH / 2, SW, SH, 0x000000, 0).setInteractive(); c.add(dim);
+    this.tweens.add({ targets: dim, fillAlpha: 0.48, duration: 700 });
+    // 1) 큰 글씨 (원작 ui_clear_clear / ui_clear_fail 그림 글씨 → 한국어)
+    const big = label(this, T, win || newBest ? (this.mode === 2 ? '성문을 부쉈다!!' : this.mode === 1 ? '신기록!!' : '스테이지 클리어!!') : this.mode === 1 ? '여기까지!!' : '스테이지 실패!!', 400, 242, 62, win || newBest ? '#FFFFFF' : '#FF4A3A', 9, { stroke: win || newBest ? '#1A3AA8' : '#FFFFFF', st: 10, shadow: true });
+    big.setScale(big.scaleX * 1.4).setAlpha(0); c.add(big);
+    this.tweens.add({ targets: big, alpha: 1, scale: big.scaleX / 1.4, duration: 260, ease: 'Back.out' });
+    const panelC = this.add.container(0, 0).setAlpha(0); c.add(panelC);
+    let shown = false;
+    const showPanel = () => {
+      if (shown) return; shown = true;
+      this.tweens.add({ targets: big, alpha: 0, duration: 200 });
+      this.tweens.add({ targets: panelC, alpha: 1, duration: 300 });
+      const step = (i, objs) => { objs.forEach(o => { o.setAlpha(0); panelC.add(o); }); this.tweens.add({ targets: objs, alpha: 1, duration: 350, delay: 250 + i * 330 }); };
+      panelC.add(img(this, T, 'ui_clear_background', 400, 6, 17));
+      panelC.add(label(this, T, '결과', 400, 30, 24, '#FFFFFF', 9, { stroke: '#10204A', st: 5 }));
+      const L = (t, y) => label(this, T, t, 259, y, 18, '#FFFFFF', 18, { stroke: '#000000', st: 3 }), V = (t, y, col = '#FFFFFF') => label(this, T, t, 540, y, 18, col, 20, { stroke: '#000000', st: 3 });
+      step(0, [L('점수', 108), V(String(sc.destroy), 108)]);
+      const lifeRow = [L('목숨', 140), V(`${s.life}/${s.maxLife}`, 140)]; if (s.life === s.maxLife) lifeRow.push(img(this, T, 'ui_clear_perfect', 553, 131)); step(1, lifeRow);
+      step(2, [L('골드', 172), V(String(s.money), 172)]);
+      step(3, [L('마나', 206), V(String(s.mana), 206)]);
+      const tot = num(this, T, 'num_total', 530, 257, 0, 20, 1); tot.set(sc.total);
+      step(4, [label(this, T, '총점', 270, 255, 20, '#7FE7FF', 18, { stroke: '#062030', st: 4 }), tot.c]);
+      const hn = num(this, T, 'num_clear', 513, 288, 0, 20, 1); hn.set(hero);
+      step(5, [label(this, T, '얻은 명예', 287, 288, 16, '#FFC94A', 18, { stroke: '#2A1500', st: 4 }), hn.c]);
+      step(6, [label(this, T, '최고 점수', 290, 326, 16, '#FFFFFF', 18, { stroke: '#000000', st: 3 }), label(this, T, String(d.hi[hk] || 0), 508, 326, 16, '#FFFFFF', 20, { stroke: '#000000', st: 3 })]);
+      // 업적 · 작전 알림 (원어데이) — 한 줄
+      const notes = [...ms.map(m => m.text), ...aw.slice(0, 2).map(i => `업적 「${AWARDS[i][0]}」 +${AWARDS[i][2] * 5}`), missionDone ? `오늘의 작전 ${missionDone}개 완료` : null, first ? '처음 클리어!' : null].filter(Boolean).slice(0, 2);
+      if (notes.length) step(7, [label(this, T, notes.join('  ·  '), 400, 352, 12, '#BFE59A', 9, { stroke: '#000000', st: 3 })]);
+      // 광고 보고 명예 2배 (하루 3번 · 소장자는 광고 없이)
+      const ads = (d.ads.date === day ? d.ads : (d.ads = { date: day, x2: 0 }));
+      if (hero > 0 && adReady() && ads.x2 < 3) {
+        const at = label(this, T, `▷ 광고 보고 명예 2배 (${3 - ads.x2})`, 640, 288, 12, '#DFF5C6', 9, { stroke: '#1A2A10', st: 4 });
+        const z = this.add.zone(at.x, at.y, at.width + 40, at.height + 30).setInteractive({ useHandCursor: true });
+        step(5, [at]); panelC.add(z);
+        z.on('pointerup', async () => { z.disableInteractive(); const rr = await bm.rewardedAd('reward2x'); if (rr && rr.ok) { ads.x2++; d.heroism += hero; save(); hn.set(hero * 2); at.setText('2배로 받았어요'); } else z.setInteractive(); });
       }
-    } else c.add(text(this, CX, py + 240, this.mode === 1 ? `최고 ${d.infBest[this.stageNo]} · 처치 ${s.kills}` : `웨이브 ${s.wave + 1}까지 버텼어요 · 잘했어요`, 42, C.ink, { weight: '700' }));
-    c.add(panel(this, 130, py + 360, 820, 200, { r: 30, fill: 0x1B1810 }));
-    c.add(icon(this, 'medal', 230, py + 440, 1.6));
-    const ht = text(this, 290, py + 440, '명예 +0', 60, C.gold, { ox: 0 }); c.add(ht);
-    const parts = this.mode === 1 ? `웨이브 ${s.wave} 보상` : win ? [first && '처음 클리어', `별 ${stars}개`, this.mode === 2 && '성문 부수기'].filter(Boolean).join(' · ') : '도전 보상 (진행한 만큼)';
-    c.add(text(this, CX, py + 520, parts, 28, C.mute, { weight: '700' }));
-    this.tweens.addCounter({ from: 0, to: hero, duration: 900, delay: 500, onUpdate: tw => ht.setText(`명예 +${Math.round(tw.getValue())}`) });
-    let y = py + 610;
-    const notes = [...ms.map(m => m.text), ...aw.slice(0, 2).map(i => `업적 「${AWARDS[i][0]}」 +${AWARDS[i][2] * 5}`), missionDone ? `오늘의 작전 ${missionDone}개 완료 · 홈에서 받기` : null].filter(Boolean).slice(0, 3);
-    for (const n of notes) { c.add(text(this, CX, y, n, 32, '#BFE59A', { weight: '700' })); y += 50; }
-    const ads = (d.ads.date === day ? d.ads : (d.ads = { date: day, x2: 0 }));
-    const by = py + ph - 380;
-    if (hero > 0 && adReady() && ads.x2 < 3) {
-      const ab = button(this, CX, by, 660, 110, `▷ 광고 보고 명예 2배 (오늘 ${3 - ads.x2}번)`, async () => { ab.setEnabled(false); const rr = await bm.rewardedAd('reward2x'); if (rr && rr.ok) { ads.x2++; d.heroism += hero; save(); ht.setText(`명예 +${hero * 2}`); ab.label.setText('2배로 받았어요'); } else ab.setEnabled(true); }, { size: 36, fill: 0x2B3A1E, edge: 0x9BD56A, color: '#DFF5C6' });
-      c.add(ab);
-    }
-    const next = win && this.mode === 0 && this.stageNo < 49;
-    const b1 = button(this, CX, py + ph - 240, 660, 130, next ? `▶  다음 판 ${Math.floor((this.stageNo + 1) / 10) + 1}-${(this.stageNo + 1) % 10 + 1}` : '▶  다시 하기', () => this.leave(() => next ? this.scene.start('Play', { stage: this.stageNo + 1, mode: 0 }) : this.scene.restart({ stage: this.stageNo, mode: this.mode })), { fill: 0x5A3B12, edge: C.accent, size: 50, color: C.gold });
-    const b2 = button(this, CX - 170, py + ph - 95, 320, 104, next ? '다시 하기' : '강화하러', () => this.leave(() => next ? this.scene.restart({ stage: this.stageNo, mode: this.mode }) : this.scene.start('Home', { tab: 'up' })), { size: 38 });
-    const b3 = button(this, CX + 170, py + ph - 95, 320, 104, '홈으로', () => this.leave(() => this.scene.start('Home')), { size: 38 });
-    c.add(b1); c.add(b2); c.add(b3);
-    c.setAlpha(0); this.tweens.add({ targets: c, alpha: 1, duration: 300 });
+      // 아래 단추 (원작 y 382)
+      const next = win && this.mode === 0 && this.stageNo < 49;
+      const go = { stage: () => this.leave(() => this.scene.start('Home')), up: () => this.leave(() => this.scene.start('Home', { tab: 'up' })), next: () => this.leave(() => this.scene.start('Play', { stage: this.stageNo + 1, mode: 0 })), retry: () => this.leave(() => this.scene.restart({ stage: this.stageNo, mode: this.mode })) };
+      const btns = next ? [['stageselect', '스테이지\n선택', go.stage], ['upgrade', '강화', go.up], ['nextstage', '다음\n스테이지', go.next]] : [['retry', '다시 하기', go.retry], ['upgrade', '강화', go.up], ['stageselect', '스테이지\n선택', go.stage]];
+      this.resultBtns = btns.map(([key, txt, fn], i) => {
+        const x = [156, 338, 520][i], im = img(this, T, `ui_clear_${key}off`, x, 382), tl = label(this, T, txt, x + 62, 382 + 29, 15, '#FFFFFF', 9, { stroke: '#0A1A3A', st: 4, align: 'center' });
+        const z = this.add.zone(T.x(x), T.y(382), 125 * T.s, 58 * T.s).setOrigin(0).setInteractive({ useHandCursor: true });
+        const sw = on => { const f = this.frame(`ui_clear_${key}${on ? 'on' : 'off'}`); if (f) im.setTexture(f[0], f[1]); };
+        z.on('pointerdown', () => sw(true)); z.on('pointerout', () => sw(false)); z.on('pointerup', () => { sw(false); audio.id(14, { volume: 0.5 }); fn(); });
+        step(8, [im, tl]); panelC.add(z); return { key, z, fn };
+      });
+    };
+    dim.on('pointerup', showPanel);
+    this.time.delayedCall(1300, showPanel);
+    this.resultShow = showPanel;
   }
   async leave(go) { try { if (oadOn()) await bm.interstitial('round_end'); } catch { /* 늘 넘어감 */ } go(); }
   stageBanner() {

@@ -1,15 +1,15 @@
 // 오늘의 다꾸 v0.1 — 시작 · 화면 잇기 · 판 끝 보상
 //   오늘의 페이지(하루 3판 → 날짜 도장 페이지 한 장) · 자유 다꾸(무제한 · 스티커 서랍 · 테마 노트) · 진행 맵 30단계
-import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.95.6';
-import { S, load, save, day, dayKey, give } from './save.js?v=0.95.6';
-import * as A from './audio.js?v=0.95.6';
-import * as Game from './game.js?v=0.95.6';
-import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.95.6';
-import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.95.6';
-import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.95.6';
-import { bm } from './oad_bm.js?v=0.95.6';
-import { installBack } from './oad.js?v=0.95.6';
-import { cur, closeSheets } from './screens.js?v=0.95.6';
+import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.95.7';
+import { S, load, save, day, dayKey, give } from './save.js?v=0.95.7';
+import * as A from './audio.js?v=0.95.7';
+import * as Game from './game.js?v=0.95.7';
+import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.95.7';
+import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.95.7';
+import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.95.7';
+import { bm } from './oad_bm.js?v=0.95.7';
+import { installBack } from './oad.js?v=0.95.7';
+import { cur, closeSheets } from './screens.js?v=0.95.7';
 
 const Q = new URLSearchParams(location.search);
 window.__errs = [];
@@ -32,12 +32,12 @@ const go = {
     const dd = day(); if (dd.done) return openDay(dayKey());
     const w = dd.wins; dd.tries = (dd.tries || 0) + 1;
     const tag = ['쉬움', '보통', '<span class="hardtag">어려움</span>'][w];
-    play({ kind: 'daily', w }, dailyCfg(dayKey(), w), hash(dayKey()) + w * 101 + dd.tries * 7, `오늘 페이지 <b>${w + 1}/3</b> · ${tag}`, 'daily' + w, dailySet(dayKey()).lucky, !S.tut && w === 0);
+    play({ kind: 'daily', w }, dailyCfg(dayKey(), w, S.fails['daily' + w] || 0), hash(dayKey()) + w * 101 + dd.tries * 7, `오늘 페이지 <b>${w + 1}/3</b> · ${tag}`, 'daily' + w, dailySet(dayKey()).lucky, !S.tut && w === 0);
   },
   map(n) {
     const intro = { 11: ['얼음이 나와요', '얼음에 싸인 스티커는 칸에 스티커를 몇 장 더 담으면 녹아요. 숫자가 남은 장 수예요.'], 21: ['사슬이 나와요', '사슬에 묶인 스티커는 같은 줄 바로 옆 스티커를 먼저 떼면 풀려요.'] }[n];
     const k = stageKind(n), tag = k === 'hard' ? ' · <span class="hardtag">어려운 판 · 보상 2배</span>' : k === 'boss' ? ' · <span class="hardtag boss">최고 난도</span>' : '';
-    const run = () => { S.mapTry = (S.mapTry || 0) + 1; play({ kind: 'map', n, diff: k }, stageCfg(n), n * 7919 + S.mapTry * 31, `진행 맵 <b>${n}단계</b>${tag}`, 'map' + n); };
+    const run = () => { S.mapTry = (S.mapTry || 0) + 1; play({ kind: 'map', n, diff: k }, stageCfg(n, S.fails['map' + n] || 0), n * 7919 + S.mapTry * 31, `진행 맵 <b>${n}단계</b>${tag}`, 'map' + n); };
     if (intro && S.map < n) modal(`<h3>새로운 재미 · ${intro[0]}</h3><p>${intro[1]}</p><p class="sub">막힐 것 같으면 원어데이가 하나 풀어 드려요.</p><button class="btn main" data-a="go">알겠어요</button>`, a => { if (a === 'go') { closeModal(); run(); } });
     else run();
   },
@@ -48,7 +48,7 @@ const go = {
       return modal(`<h3>자유 다꾸 · 난이도 고르기</h3><p>어려울수록 스티커를 더 많이 받아요.</p>${row('easy', '쉬움', '편하게 한 판')}${row('normal', '보통', '적당히 아슬아슬')}${row('hard', '어려움', '아슬아슬하게 깨는 맛')}<button class="btn ghost" data-a="close">그만두기</button>`, (a, e) => { if (a === 'close') return closeModal(); if (a === 'diff') { closeModal(); S.freeDiff = e.target.closest('[data-d]').dataset.d; go.free(S.freeDiff); } });
     }
     const name = { easy: '쉬움', normal: '보통', hard: '<span class="hardtag">어려움</span>' }[diff];
-    play({ kind: 'free', diff }, freeCfg(S.free, S.map, diff), S.free * 104729 + 7 + (S.freeTry = (S.freeTry || 0) + 1) * 13, `자유 다꾸 <b>${S.free + 1}판</b> · ${name}`, 'free' + diff);
+    play({ kind: 'free', diff }, freeCfg(S.free, S.map, diff, S.fails['free' + diff] || 0), S.free * 104729 + 7 + (S.freeTry = (S.freeTry || 0) + 1) * 13, `자유 다꾸 <b>${S.free + 1}판</b> · ${name}`, 'free' + diff);
   },
 };
 bind(go);

@@ -8,71 +8,136 @@ export function rng(seed) {
   return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
 }
 
-/* 줄 너비 목록 → 가운데 맞춘 칸 좌표 */
-function rows(z, y0, widths, cx) {
-  const out = [];
-  widths.forEach((w, r) => { for (let i = 0; i < w; i++) out.push({ x: cx - (w - 1) / 2 + i, y: y0 + r, z }); });
-  return out;
-}
-
-const stack = spec => spec.flatMap(([w, h], z) => { const o = []; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) o.push({ x: 3 - (w - 1) / 2 + i, y: 3.5 - (h - 1) / 2 + j, z }); return o; });
-/* 층마다 꽉 채운 판 (2026-10-30 대표 "엇갈리게 층별로 꽉 채워야"): 층마다 직사각형을 빈자리 없이 채우고, 위층은 아래층에 대해 반 칸 엇갈리게 놓음
-   · 가로 · 세로 칸 수의 홀짝이 바뀌면 가운데 맞춤만으로 반 칸 어긋남(7×8 → 6×7 대각 · 6×8 가로 · 7×7 세로) · dx · dy 로 더 밀 수 있음 · brick 은 홀수 줄만 반 칸 더(벽돌)
-   · 아래 타일은 위 타일 2~4장에 거의 다 가려지고 가장자리 반 칸만 보임(두툼한 더미) · 위층 타일은 반드시 아래층 타일 위에 놓임 · 장 수가 3의 배수가 아니면 맨 위층 바깥쪽부터 뺌 */
+/* 타일을 2×2 칸으로 나눠 위에 안 덮인 칸 수 (0 = 완전히 숨음 · 봇 · 판 통계가 '보이는 그림'을 셀 때 씀) */
 const quarters = t => [[t.x - .25, t.y - .25], [t.x + .25, t.y - .25], [t.x - .25, t.y + .25], [t.x + .25, t.y + .25]];
 const coversPt = (b, [px, py]) => Math.abs(b.x - px) < 0.5 && Math.abs(b.y - py) < 0.5;
-/* 타일을 2×2 칸으로 나눠 위에 안 덮인 칸 수 (0 = 완전히 숨음 · 봇이 '보이는 그림'을 셀 때 씀) */
 export function visibleQuarters(t, list) { return quarters(t).filter(q => !list.some(b => b.z > t.z && coversPt(b, q))).length; }
-function pile(spec) {
-  const out = [];
-  spec.forEach(([w, h, dx = 0, dy = 0, brick = 0], z) => {
-    for (let j = 0; j < h; j++) for (let i = 0; i < (brick && j % 2 ? w - 1 : w); i++) {
-      const x = 3 - (w - 1) / 2 + i + dx + (brick && j % 2 ? .5 : 0), y = 3.5 - (h - 1) / 2 + j + dy;
-      if (x < -0.01 || x > 6.01 || y < -0.01 || y > 7.01) continue;
-      if (z > 0 && !out.some(b => b.z === z - 1 && Math.abs(b.x - x) < 1 && Math.abs(b.y - y) < 1)) continue;
-      out.push({ x, y, z });
+/* ---------- 판 모양 라이브러리 (2026-11-02 대표 "원작의 타일 배치를 제대로 벤치마킹") ----------
+   장르 히트작 판 30여 장을 해부한 원리(team/dev/tasks/261102-diary-balance/research.md '배치 해부')를 우리 식으로 새로 만든 판 · 원작 좌표 복제 없음
+   · 외곽: 대칭 실루엣(마름모 · 하트 · 고리 · 십자 · 나비 · 모래시계 · 섬 · 계단 …)을 아래층 글자 그림(SIL)으로 정함
+   · 층: 아래층 위에 '받침이 넉넉한 자리'에만 올림 → 층마다 크기가 줄어드는 더미(위가 좁고 아래가 넓음 · 맨 위 노출 타일 6~16장)
+   · 어긋남: half(반 칸 대각) · quarter(1/4 칸) · col(세로 반 칸) · row(가로 반 칸) · same(통칸 — 테두리만 남기고 그대로 쌓음)
+   · 맨 위층 성기게(top: 'checker') · 측면 더미(decks: 한자리에 여러 장을 비스듬히 포갠 줄 — 맨 위 한 장만 누를 수 있음)
+   · 장 수는 3의 배수: 완전히 가려진 맨 아래 타일을 가운데부터 뺌(보이는 모양은 그대로) */
+const SIL = {
+  rect: ['#######', '#######', '#######', '#######', '#######', '#######', '#######', '#######'],
+  rect5: ['.#####.', '.#####.', '.#####.', '.#####.', '.#####.', '.#####.'],
+  diamond: ['...#...', '..###..', '.#####.', '#######', '#######', '.#####.', '..###..', '...#...'],
+  heart: ['.##.##.', '#######', '#######', '#######', '.#####.', '..###..', '...#...'],
+  ring: ['#######', '#######', '##...##', '##...##', '##...##', '##...##', '#######', '#######'],
+  cross: ['..###..', '..###..', '#######', '#######', '#######', '..###..', '..###..', '..###..'],
+  xshape: ['##...##', '###.###', '.#####.', '..###..', '..###..', '.#####.', '###.###', '##...##'],
+  butterfly: ['##...##', '###.###', '#######', '.#####.', '.#####.', '#######', '###.###', '##...##'],
+  hourglass: ['#######', '#######', '.#####.', '..###..', '..###..', '.#####.', '#######', '#######'],
+  ibeam: ['#######', '#######', '..###..', '..###..', '..###..', '..###..', '#######', '#######'],
+  arch: ['##...##', '##...##', '##...##', '##...##', '#######', '#######', '#######', '.#####.'],
+  circle: ['..###..', '.#####.', '#######', '#######', '#######', '#######', '.#####.', '..###..'],
+  islands: ['###.###', '###.###', '###.###', '.......', '.......', '###.###', '###.###', '###.###'],
+  twins: ['###.###', '###.###', '###.###', '###.###', '###.###', '###.###', '###.###', '###.###'],
+  stairs: ['###....', '####...', '#####..', '.#####.', '..#####', '...####', '....###'],
+  house: ['...#...', '..###..', '.#####.', '#######', '#######', '##.#.##', '##.#.##', '#######'],
+  crown: ['#..#..#', '##.#.##', '#######', '#######', '#######', '.#####.', '.#####.'],
+  bowtie: ['##...##', '###.###', '#######', '#######', '#######', '#######', '###.###', '##...##'],
+  frame: ['#######', '#######', '##...##', '##.#.##', '##.#.##', '##...##', '#######', '#######'],
+  flower: ['..###..', '.#####.', '###.###', '##...##', '###.###', '.#####.', '..###..'],
+  tower: ['..###..', '..###..', '.#####.', '.#####.', '#######', '#######', '#######', '#######'],
+  vase: ['.#####.', '..###..', '.#####.', '#######', '#######', '#######', '.#####.', '..###..'],
+  leaf: ['....###', '...####', '..#####', '.######', '######.', '#####..', '####...', '###....'],
+  pillars: ['##.#.##', '##.#.##', '#######', '#######', '#######', '#######', '##.#.##', '##.#.##'],
+  star: ['...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '##...##'],
+  wide: ['#######', '#######', '#######', '#######', '#######', '#######'],
+  small: ['.#####.', '.#####.', '.#####.', '.#####.', '.#####.'],
+  tiny: ['..###..', '.#####.', '.#####.', '.#####.', '..###..'],
+};
+const OFF = { half: [0.5, 0.5], quarter: [0.25, 0.25], col: [0, 0.5], row: [0.5, 0], same: [0, 0] };
+/* 판 짓기: sil 실루엣 · layers 층 수 · mode 어긋남 · top 맨 위층 모양 · decks [[x, y, 장수, 방향 l|r|d]] · y0 세로 위치 */
+export function build(sil, { layers = 3, mode = 'half', top = 'full', decks = [], y0 = 0 } = {}) {
+  const rows = SIL[sil], out = [], H = rows.length, oy = y0 + (8 - H) / 2;
+  rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') out.push({ x: i, y: oy + j, z: 0 }); }));
+  let below = out.slice();
+  for (let z = 1; z < layers; z++) {
+    const [ox, oy2] = OFF[mode], s = z % 2 ? 1 : -1, cur = [];
+    const at = (x, y) => below.some(b => Math.abs(b.x - x) < 0.01 && Math.abs(b.y - y) < 0.01);
+    for (const b of below) {
+      const x = b.x + ox * s, y = b.y + oy2 * s;
+      /* 받침: 이 자리와 겹치는 아래 타일이 모두 있어야 함(가장자리에서 공중에 뜨지 않게) — 통칸은 상하좌우 이웃이 모두 있어야 함 */
+      let ok;
+      if (mode === 'same') ok = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => at(b.x + dx, b.y + dy));
+      else {
+        const xs = ox ? [b.x, b.x + s] : [b.x], ys = oy2 ? [b.y, b.y + s] : [b.y];
+        ok = xs.every(xx => ys.every(yy => at(xx, yy)));
+      }
+      if (ok && !cur.some(c => Math.abs(c.x - x) < 0.01 && Math.abs(c.y - y) < 0.01)) cur.push({ x, y, z });
     }
-  });
-  const zTop = out.length ? out[out.length - 1].z : 0;
+    if (!cur.length) break;
+    let layer = cur;
+    /* 맨 위층 성기게: 바둑판 무늬로 한 칸 건너 하나 (아래층이 더 많이 드러나 미리 읽을 거리가 생김) */
+    if (z === layers - 1 && top === 'checker') layer = cur.filter(c => (Math.floor(c.x + 0.01) + Math.floor(c.y + 0.01)) % 2 === 0);
+    out.push(...layer); below = cur;
+  }
+  /* 측면 더미: 한자리에 n장을 비스듬히 포갬 (맨 위만 누를 수 있음 · 나머지는 옆면만 보임) */
+  for (const [x, y, n, dir = 'd'] of decks) {
+    const st = { l: [-0.13, 0], r: [0.13, 0], d: [0, 0.16], u: [0, -0.16] }[dir];
+    for (let k = 0; k < n; k++) {
+      const p = { x: x + st[0] * k, y: oy + y + st[1] * k, z: k, deck: 1 };
+      if (out.some(b => !b.deck && Math.abs(b.x - p.x) < 1 && Math.abs(b.y - p.y) < 1)) break;
+      out.push(p);
+    }
+  }
+  /* 3의 배수: 위가 덮인 맨 아래 타일을 가운데부터 뺌 → 없으면 맨 위층 바깥쪽 */
+  const cov = t => out.some(b => b.z > t.z && Math.abs(b.x - t.x) < 1 && Math.abs(b.y - t.y) < 1);
+  const holds = t => out.filter(u => u.z === t.z + 1 && Math.abs(u.x - t.x) < 1 && Math.abs(u.y - t.y) < 1).every(u => out.some(v => v !== t && v.z === t.z && Math.abs(u.x - v.x) < 1 && Math.abs(u.y - v.y) < 1));
+  const cx = 3, cy = 3.5 + y0;
   for (let n = out.length % 3; n > 0; n--) {
-    const top = out.filter(t => t.z === zTop).sort((p, q) => Math.hypot(q.x - 3, q.y - 3.5) - Math.hypot(p.x - 3, p.y - 3.5));
-    out.splice(out.indexOf(top[0]), 1);
+    const hid = out.filter(t => t.z === 0 && !t.deck && cov(t) && holds(t)).sort((p, q) => Math.hypot(p.x - cx, p.y - cy) - Math.hypot(q.x - cx, q.y - cy));
+    const zt = Math.max(...out.map(t => t.z)), alt = out.filter(t => t.z === zt).sort((p, q) => Math.hypot(q.x - cx, q.y - cy) - Math.hypot(p.x - cx, p.y - cy));
+    const kill = hid[0] || alt[0]; out.splice(out.indexOf(kill), 1);
   }
   return out;
 }
-/* 판 모양 (장 수는 3의 배수로 맞춤) · 홀수 층은 반 칸 어긋나 아래층이 반쯤 보임 */
+/* 판 이름 = 모양_어긋남층수(장 수는 tools/board_stats.mjs 로 확인) · 쉬움 → 어려움 순 */
 export const LAYOUTS = {
-  /* 연습 36장 (3층) */
-  small: () => [...rows(0, 0, [3, 5, 5, 5, 3], 3), ...rows(1, 0.5, [2, 4, 4, 2], 3), ...rows(2, 1.5, [1, 1, 1], 3)],
-  /* 66장 (3층) */
-  diamond: () => [...rows(0, 0, [3, 5, 7, 7, 7, 7, 5, 3], 3), ...rows(1, 1.5, [2, 4, 4, 4, 4, 2], 3), ...rows(2, 3, [1, 1], 3)],
-  /* 72장 (2층 · 넓음) */
-  wide: () => [...rows(0, 0, [7, 7, 7, 7, 7, 7], 3), ...rows(1, 0.5, [6, 6, 6, 6, 6], 3)],
-  /* 81장 (4층) */
-  tower: () => [...rows(0, 0, [5, 5, 5, 5, 5, 5, 5], 3), ...rows(1, 0.5, [4, 4, 4, 4, 4, 4], 3), ...rows(2, 1, [3, 3, 3, 3, 3], 3), ...rows(3, 1.5, [1, 2, 2, 2], 3)],
-  /* 아래부터 직사각형을 쌓은 판 (가장자리가 고리처럼 드러나 고를 거리가 넉넉함 · 같은 크기를 두 번 쌓으면 아래가 완전히 가려져 어려워짐) */
-  /* 꽉 채운 엇갈림 판: 층마다 [가로, 세로, (dx, dy, 벽돌)] · 이름의 숫자 = 장 수 (3의 배수가 되게 층 크기를 골랐고, 홀짝이 같은 층은 dx · dy 로 반 칸 밀어 엇갈림 유지) */
-  p39: () => pile([[4, 6], [3, 5]]),
-  p48: () => pile([[5, 6], [4, 5]]),
-  p72: () => pile([[6, 7], [5, 6]]),
-  p96: () => pile([[7, 8], [6, 7]]),
-  p126: () => pile([[7, 8], [6, 7], [4, 7, .5, .5]]),
-  p138: () => pile([[7, 8], [6, 7], [5, 8]]),
-  p144: () => pile([[7, 8], [6, 7], [5, 6], [4, 4]]),
-  p150: () => pile([[7, 8], [6, 8], [7, 7, 0, 0, 1]]),
-  p156: () => pile([[7, 8], [6, 7], [5, 6], [4, 4], [3, 4, 0, .5]]),
-  a42: () => stack([[5, 6], [3, 4], [1, 2]]),
-  a69: () => stack([[7, 6], [5, 4], [3, 2], [1, 2]]),
-  a99: () => stack([[7, 8], [5, 6], [3, 4], [1, 2]]),
-  m117: () => stack([[7, 8], [5, 6], [3, 6], [3, 4], [1, 2]]),
-  h114: () => stack([[7, 8], [5, 6], [3, 4], [3, 4], [1, 2], [1, 2]]),
-  j129: () => stack([[7, 8], [5, 6], [5, 6], [3, 4], [1, 2]]),
-  k147: () => stack([[7, 8], [7, 6], [5, 6], [3, 4], [3, 2], [1, 2]]),
+  /* 연습 · 쉬움 (2층 · 33~66장 · 처음 노출 12~22장 · 바로 셋 맞는 그림이 2~4개 보여 규칙을 익힘) */
+  tiny_h2: () => build('tiny', { layers: 2 }),
+  small_h2: () => build('small', { layers: 2 }),
+  heart_q2: () => build('heart', { layers: 2, mode: 'quarter', top: 'checker' }),
+  diamond_h2: () => build('diamond', { layers: 2 }),
+  islands_h2: () => build('islands', { layers: 2 }),
+  flower_h3: () => build('flower', { layers: 3 }),
+  star_h3: () => build('star', { layers: 3 }),
+  ring_h2: () => build('ring', { layers: 2 }),
+  /* 일반 (3~4층 · 48~99장 · 처음 노출 5~18장) */
+  diamond_h3: () => build('diamond', { layers: 3 }),
+  heart_h3: () => build('heart', { layers: 3 }),
+  xshape_q3: () => build('xshape', { layers: 3, mode: 'quarter' }),
+  butterfly_h3: () => build('butterfly', { layers: 3, top: 'checker' }),
+  ibeam_h3: () => build('ibeam', { layers: 3 }),
+  arch_q3: () => build('arch', { layers: 3, mode: 'quarter' }),
+  circle_h3: () => build('circle', { layers: 3, top: 'checker' }),
+  islands_q3: () => build('islands', { layers: 3, mode: 'quarter', decks: [[3, 3.4, 4, 'r']] }),
+  stairs_q3: () => build('stairs', { layers: 3, mode: 'quarter' }),
+  house_h3: () => build('house', { layers: 3 }),
+  leaf_q3: () => build('leaf', { layers: 3, mode: 'quarter' }),
+  rect5_d3: () => build('rect5', { layers: 3, decks: [[0, 1, 4], [6, 1, 4]] }),
+  cross_h3: () => build('cross', { layers: 3 }),
+  crown_h4: () => build('crown', { layers: 4 }),
+  tower_h3: () => build('tower', { layers: 3, top: 'checker' }),
+  /* 어려움 (4~5층 · 75~111장 · 처음 노출 10~16장 · 측면 더미) */
+  vase_h4: () => build('vase', { layers: 4 }),
+  bowtie_h4: () => build('bowtie', { layers: 4, top: 'checker' }),
+  pillars_q4: () => build('pillars', { layers: 4, mode: 'quarter' }),
+  tower_h4: () => build('tower', { layers: 4 }),
+  wide_h4: () => build('wide', { layers: 4, decks: [[0, 6.6, 4, 'r'], [6, 6.6, 4, 'l']] }),
+  twins_q4: () => build('twins', { layers: 4, mode: 'quarter', decks: [[3, 1, 5], [3, 5.5, 5]] }),
+  circle_h4: () => build('circle', { layers: 4 }),
+  butterfly_h4: () => build('butterfly', { layers: 4 }),
+  /* 보스 (4~5층 · 138~159장 · 처음 노출 8~12장) */
+  rect_h4: () => build('rect', { layers: 4, top: 'checker' }),
+  rect_h5: () => build('rect', { layers: 5 }),
+  rect_q5: () => build('rect', { layers: 5, mode: 'quarter', top: 'checker' }),
 };
-export function layout(name = 'diamond') {
-  let t = LAYOUTS[name]();
-  t = t.slice(0, t.length - (t.length % 3));
-  return t.map((p, i) => ({ ...p, id: i, iceAt: 0, chain: false }));
+export function layout(name = 'diamond_h3') {
+  return LAYOUTS[name]().map((p, i) => ({ x: p.x, y: p.y, z: p.z, id: i, iceAt: 0, chain: false }));
 }
 
 export const covers = (top, low) => top.z > low.z && Math.abs(top.x - low.x) < 0.999 && Math.abs(top.y - low.y) < 0.999;
@@ -120,25 +185,35 @@ export function assign(tiles, typesPool, rand, pre = [], mix = 0.4, taps0 = 0) {
   return order.map(t => t.id);
 }
 
-/* 흩어 붙이기 (난이도용): 벗기는 순서를 따라가며 묶음(같은 그림 3장)을 동시에 최대 cap 개까지 열어 둠
-   열린 묶음은 칸에 2장까지만 남으므로 정답 순서의 칸은 2 × cap 장을 넘지 않음 (cap ≤ 3 → 6장 ≤ 7칸 → 반드시 풀림)
-   cap · pNew 가 클수록 같은 그림이 깊은 층까지 흩어져 칸 관리가 어려워짐 */
-export function assignSpread(tiles, typesPool, rand, { cap = 2, pNew = 0.5, zw = 0.35, taps0 = 0 } = {}) {
+/* 깊이로 흩어 붙이기 (2026-11-02 원작 해부: '같은 그림 세 장이 멀리 떨어져 있을수록 칸이 빨리 막힘' · 맨 위에 셋이 같이 드러나는 일은 드묾)
+   벗기는 순서를 따라가며 묶음(같은 그림 3장)을 여는데, 동시에 열린 묶음 수가 아니라 '정답대로 두었을 때 칸에 남는 장 수'(hold ≤ 6)로 묶음
+   → 열린 묶음이 칸에 1장씩만 있으면 4~6묶음까지 동시에 열림(원작처럼 넓게 흩어짐) · 그래도 정답 순서의 칸은 hold 장을 넘지 않아 반드시 풀림
+   spread: 새 묶음을 열 확률(클수록 세 장이 멀리 · 깊이 흩어짐) · old: 이어 붙일 때 가장 오래된 묶음을 고를 확률(한 묶음이 끝없이 늘어지지 않게) */
+export function assignDepth(tiles, typesPool, rand, { hold = 6, spread = 0.55, old = 0.5, zw = 0.6, taps0 = 0 } = {}) {
   const order = peel(tiles, rand, zw, taps0); if (!order) return null;
   const groups = typesPool.slice();
   for (let i = groups.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [groups[i], groups[j]] = [groups[j], groups[i]]; }
-  const open = []; let gi = 0;
+  const open = []; let gi = 0, inTray = 0;
   for (let i = 0; i < order.length; i++) {
     const R = order.length - i, need = open.reduce((a, g) => a + 3 - g.c, 0);
-    const canNew = gi < groups.length && open.length < cap && R - need >= 3;
+    /* 칸이 hold 장으로 꽉 찰 때는 셋째 장을 기다리는 묶음(2장)이 있어야 다음 수가 생김 → 그런 묶음이 없으면 새 묶음을 열지 않음 */
+    const canNew = gi < groups.length && (inTray + 1 < hold || (inTray + 1 === hold && open.some(g => g.c === 2))) && R - need >= 3;
+    const grow = open.filter(g => g.c === 2 || inTray + 1 <= hold);
     let g;
-    if (canNew && (!open.length || rand() < pNew)) { g = { type: groups[gi++], c: 0 }; open.push(g); }
-    else if (open.length) g = open[Math.floor(rand() * open.length)];
+    if (canNew && (!grow.length || rand() < spread)) { g = { type: groups[gi++], c: 0 }; open.push(g); }
+    else if (grow.length) g = rand() < old ? grow[0] : grow[Math.floor(rand() * grow.length)];
     else return null;
-    order[i].type = g.type; g.c++;
-    if (g.c === 3) open.splice(open.indexOf(g), 1);
+    order[i].type = g.type; g.c++; inTray++;
+    if (g.c === 3) { open.splice(open.indexOf(g), 1); inTray -= 3; }
   }
   return open.length ? null : order.map(t => t.id);
+}
+/* 그림 묶음 나누기: 장 수 / 3 묶음을 종류에 나눠 줌 · skew > 0 이면 어떤 그림은 2~3묶음, 어떤 그림은 1묶음 (원작의 '고르지 않은 분포' — 고르면 쉬움) */
+function pool(types, groups, rand, skew = 0) {
+  const n = Math.min(types.length, groups), cnt = Array(n).fill(1);
+  for (let g = n; g < groups; g++) cnt[rand() < skew ? Math.floor(rand() * rand() * n) : g % n]++;
+  const out = []; cnt.forEach((c, i) => { for (let k = 0; k < c; k++) out.push(types[i]); });
+  return out;
 }
 
 /* 얼음 · 사슬 붙이기: 정답 순서에서 '그때 이미 풀려 있을' 타일에만 → 풀리는 판이 그대로 유지됨 */
@@ -164,21 +239,31 @@ export function verify(tiles, order, slots = 7, tray0 = [], taps0 = 0) {
     left.splice(left.indexOf(t), 1); tray.push(t.type); taps++; peak = Math.max(peak, tray.length);
     if (tray.length > slots) return { ok: false, why: '칸 넘침', peak };
     if (tray.filter(x => x === t.type).length === 3) for (let i = 0; i < 3; i++) tray.splice(tray.indexOf(t.type), 1);
+    /* 셋이 안 맞은 채 칸이 다 차면 실제 게임에선 실패 */
+    if (tray.length >= slots) return { ok: false, why: '칸 가득', peak };
   }
   return { ok: left.length === 0 && tray.length === 0, peak };
 }
 
-/* 판 만들기: cfg = { layout, types(그림 번호 목록), cap · pNew(흩어 붙이기) 또는 mix(옛 방식), ice, chain } */
+/* 판 만들기: cfg = { layout, types(그림 번호 목록), hold · spread · old · zw · skew(깊이로 흩어 붙이기), top(처음 노출 중 바로 셋 맞는 그림 최대 수) · same(처음 노출에 같은 그림 최대 장 수), ice, chain, ease(같은 판 실패 횟수) }
+   ease: 원작처럼 다시 할수록 조금씩 쉬워짐(새 묶음 확률 ↓ · 바로 셋 허용 ↑ · 최대 3번까지) — 판 모양은 그대로 */
 export function makeLevel(seed, cfg = {}) {
-  const { layout: lname = 'diamond', types = [0, 1, 2, 3, 4, 5, 6, 7, 8], mix = 0.4, cap = 0, pNew = 0.5, zw = 0.35, ice = 0, chain = 0 } = cfg;
+  const { layout: lname = 'diamond_h3', types = [0, 1, 2, 3, 4, 5, 6, 7, 8], hold = 6, spread = 0.55, old = 0.5, zw = 0.6, skew = 0, top = 9, same = 9, ice = 0, chain = 0, ease = 0 } = cfg;
+  const e = Math.min(3, ease || 0), sp = spread * (1 - 0.15 * e), tp = top + e;
   const rand = rng(seed);
-  for (let tries = 0; tries < 120; tries++) {
+  let best = null;
+  for (let tries = 0; tries < 160; tries++) {
     const tiles = layout(lname);
-    const groups = tiles.length / 3, pool = []; for (let g = 0; g < groups; g++) pool.push(types[g % types.length]);
-    const order = cap ? assignSpread(tiles, pool, rand, { cap, pNew, zw }) : assign(tiles, pool, rand, [], mix); if (!order) continue;
+    const order = assignDepth(tiles, pool(types, tiles.length / 3, rand, skew), rand, { hold, spread: sp, old, zw }); if (!order) continue;
     if (ice || chain) obstacles(tiles, order, rand, { ice, chain });
-    const v = verify(tiles, order);
-    if (v.ok) return { tiles, solution: order, peak: v.peak };
+    const v = verify(tiles, order); if (!v.ok) continue;
+    /* 처음 화면: 누를 수 있는 타일 중 셋이 바로 맞는 그림 수 ≤ tp · 둘이 보이는 그림(미끼 · 실마리)은 하나 이상 */
+    const f = freeOf(tiles), c = {}; f.forEach(t => { c[t.type] = (c[t.type] || 0) + 1; });
+    const t3 = Object.values(c).filter(n => n >= 3).length, t2 = Object.values(c).filter(n => n === 2).length;
+    const lv = { tiles, solution: order, peak: v.peak };
+    if (t3 <= tp && t2 + t3 >= 1 && Math.max(...Object.values(c)) <= same + e) return lv;
+    if (!best || t3 < best.t3) best = { ...lv, t3 };
   }
+  if (best) { delete best.t3; return best; }
   throw new Error('판 만들기 실패');
 }

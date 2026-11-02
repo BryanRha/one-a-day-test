@@ -51,10 +51,11 @@ export function dailySet(dayKey) {
   const ord = Math.round(Date.UTC(y, m - 1, d) / 86400000);
   return { set, lucky, tpl: ((ord % PAGE_TPL.length) + PAGE_TPL.length) % PAGE_TPL.length };
 }
-/* 오늘의 3판: 쉬움 → 보통 → 어려움 (오늘의 세트 9종 + 다른 계열로 채움) */
-export function dailyCfg(dayKey, w) {
-  const { set } = dailySet(dayKey), L = LEVEL[['easy', 'normal', 'hard'][w]];
-  return { layout: L.layout, types: pickTypes('day' + dayKey, L.n, set), cap: L.cap, pNew: L.pNew, zw: 1.5, kind: ['easy', 'normal', 'hard'][w] };
+/* 오늘의 3판: 쉬움 → 보통 → 어려움 (오늘의 세트 9종 + 다른 계열로 채움) · 판 모양은 요일마다 바뀜 (LEVEL 의 7종을 날짜 순서로) */
+export function dailyCfg(dayKey, w, ease = 0) {
+  const { set } = dailySet(dayKey), kind = ['easy', 'normal', 'hard'][w], L = LEVEL[kind], [y, m, d] = dayKey.split('-').map(Number);
+  const ord = Math.round(Date.UTC(y, m - 1, d) / 86400000), lay = L.lays[((ord % 7) + 7) % 7];
+  return { layout: lay, types: pickTypes('day' + dayKey, L.n, set), ...KIND[kind], kind, ease };
 }
 
 /* 페이지 틀 7종: 스티커 자리(비율 x · y · 크기 · 기울기) · 속지 · 마테 테이프 색 */
@@ -78,10 +79,12 @@ export const linesFor = dayKey => { const r = seeded('line' + dayKey); return [.
 export const TAPES = ['#9db39a', '#d9a5a0', '#e3c98d', '#b9c9d6', '#c9a97c', '#b4473a'];
 export const PAPERS = [{ id: 'dot', name: '점' }, { id: 'line', name: '줄' }, { id: 'grid', name: '격자' }, { id: 'kraft', name: '크라프트' }];
 
-/* ---------- 난이도 (2026-10-29 대표 "너무 쉬워서 게임 같지 않아") ----------
-   판 재료: 그림 12~16종 · 4~6층 · 90~138장 · 같은 그림을 깊은 층에 흩어 붙임(cap · pNew) · 칸 7 그대로
-   톱니 곡선: 1~5 연습 · 일반 · 15 · 25 어려운 판(붉은 표시 · 보상 2배) · 10 · 20 · 30 보스 · 11~ 얼음 · 21~ 사슬
-   측정: tools/difficulty.mjs (사람 같은 봇 · 시드 200) → PROJECT_STATUS.md 표 */
+/* ---------- 난이도 (2026-11-02 대표 "원작을 찾아 난이도를 다시" → 장르 히트작 판 30여 장 해부 기준) ----------
+   근거: team/dev/tasks/261102-diary-balance/research.md · 원작과 우리 레벨 대응 표는 PROJECT_STATUS.md '난이도' 절
+   · 판 모양: level.js LAYOUTS (대칭 실루엣 · 층마다 줄어드는 더미 · 반/1/4 칸 어긋남 · 측면 더미) — 처음 누를 수 있는 타일 6~20장(원작 4~16장)
+   · 그림 배정: 같은 그림 세 장을 깊이로 흩음(hold · spread) · 처음 노출에 셋이 바로 맞는 그림은 일반 1 · 어려움 1 · 보스 0 이하(top) · 묶음 수를 고르지 않게(skew)
+   · 톱니: 1~5 연습 · 일반 · 15 · 25 어려움(붉은 표시 · 보상 2배) · 10 · 20 · 30 보스 · 11~ 얼음 · 21~ 사슬 (원작: 5~10판마다 어려운 판)
+   · 다시 할수록 쉬워짐(ease = 같은 판 실패 횟수 · 최대 3) — 원작의 시도별 난이도 낮추기를 판 모양은 그대로 두고 배정만 */
 export const ALL = [...Array(COUNT).keys()];
 /* n종 고르기: 계열마다 한 장씩 먼저(비슷한 그림 최소) → 그다음 둘째 장 */
 export function pickTypes(key, n, must = []) {
@@ -90,37 +93,44 @@ export function pickTypes(key, n, must = []) {
   return out.slice(0, n);
 }
 export function stageKind(n) { return n <= 5 ? 'practice' : n % 10 === 0 ? 'boss' : n % 5 === 0 ? 'hard' : 'normal'; }
-/* 단계 표 [판 모양, 그림 종류, cap, pNew, (zw)] (tools/difficulty.mjs 로 맞춘 값) — 연습 1~5 · 일반 · 어려움 15 · 25 · 보스 10 · 20 · 30 */
-const STAGE = {
-  1: ['p39', 5, 1, .3], 2: ['p39', 7, 1, .3], 3: ['p39', 8, 1, .3], 4: ['p48', 5, 2, .5], 5: ['p72', 6, 1, .3],
-  6: ['p96', 8, 1, .3], 7: ['p72', 8, 2, .5], 8: ['p96', 8, 2, .5], 9: ['p72', 8, 2, .3], 10: ['p150', 9, 1, .3],
-  11: ['p96', 8, 1, .3], 12: ['p72', 9, 2, .5], 13: ['p96', 8, 2, .5], 14: ['p72', 8, 2, .5], 15: ['p126', 7, 1, .3],
-  16: ['p96', 8, 1, .3], 17: ['p72', 9, 2, .5], 18: ['p96', 8, 2, .5], 19: ['p72', 8, 2, .5], 20: ['p150', 9, 2, .5],
-  21: ['p96', 8, 1, .3], 22: ['p72', 8, 2, .5], 23: ['p96', 8, 2, .5], 24: ['p72', 8, 2, .5], 25: ['p138', 7, 1, .3],
-  26: ['p96', 8, 2, .5], 27: ['p72', 8, 2, .3], 28: ['p96', 8, 2, .5], 29: ['p72', 7, 2, .5], 30: ['p156', 6, 1, .3, .6],
+/* 구분별 배정 손잡이: hold 정답 순서의 칸 최대 장 수 · spread 새 묶음 여는 확률(셋을 깊이로 흩음) · top 처음 노출에 바로 셋 맞는 그림 최대 수 · skew 그림별 묶음 수 치우침 · same 처음 노출에 같은 그림 최대 장 수 */
+export const KIND = {
+  practice: { hold: 4, spread: 0.25, top: 9, skew: 0 },
+  easy: { hold: 5, spread: 0.35, top: 3, skew: 0 },
+  normal: { same: 3, hold: 6, spread: 0.45, top: 1, skew: 0.3 },
+  hard: { same: 3, hold: 6, spread: 0.5, top: 1, skew: 0.3 },
+  boss: { same: 3, hold: 6, spread: 0.35, top: 2, skew: 0.3 },
 };
-export function stageCfg(n) {
-  const kind = stageKind(n), tier = Math.floor((n - 1) / 10), [layout, nt, cap, pNew, zw = 1.5] = STAGE[n];
+/* 단계 표 [판 모양, 그림 종류] — 장 수 · 층은 판 모양이 정함 (원작 레벨 대응은 PROJECT_STATUS.md) */
+const STAGE = {
+  1: ['tiny_h2', 5], 2: ['small_h2', 6], 3: ['heart_q2', 6], 4: ['diamond_h2', 7], 5: ['islands_h2', 7],
+  6: ['diamond_h3', 8], 7: ['xshape_q3', 8], 8: ['heart_h3', 8], 9: ['ibeam_h3', 8], 10: ['rect_h4', 9],
+  11: ['butterfly_h3', 8], 12: ['crown_h4', 8], 13: ['arch_q3', 8], 14: ['house_h3', 8], 15: ['vase_h4', 9],
+  16: ['leaf_q3', 8], 17: ['circle_h3', 8], 18: ['stairs_q3', 8], 19: ['islands_q3', 8], 20: ['rect_h5', 9],
+  21: ['rect5_d3', 8], 22: ['cross_h3', 9], 23: ['tower_h3', 9], 24: ['butterfly_h4', 9], 25: ['twins_q4', 9],
+  26: ['pillars_q4', 9], 27: ['arch_q3', 9], 28: ['heart_h3', 9], 29: ['bowtie_h4', 9], 30: ['rect_q5', 9],
+};
+export function stageCfg(n, ease = 0) {
+  const kind = stageKind(n), tier = Math.floor((n - 1) / 10), [layout, nt] = STAGE[n];
   return {
-    layout, types: pickTypes('stage' + n, nt), cap, pNew, zw, kind,
+    layout, types: pickTypes('stage' + n, nt), ...KIND[kind], kind, ease,
     ice: tier >= 1 ? 2 + Math.floor(((n - 1) % 10) / 3) + (tier - 1) : 0, chain: tier >= 2 ? 2 + Math.floor(((n - 1) % 10) / 4) : 0,
     reward: n % 10 === 0 ? 'note' : 'sticker',
   };
 }
 export const OBSTACLE_AT = { 11: 'ice', 21: 'chain' };
 
+/* 오늘의 판 · 자유 다꾸 난이도별 판 모양 7종(돌아가며) · 그림 종류 */
 export const LEVEL = {
-  easy: { layout: 'p39', n: 7, cap: 1, pNew: 0.3 },
-  normal: { layout: 'p96', n: 8, cap: 2, pNew: 0.5 },
-  hard: { layout: 'p126', n: 7, cap: 1, pNew: 0.3 },
+  easy: { n: 7, lays: ['small_h2', 'heart_q2', 'flower_h3', 'diamond_h2', 'star_h3', 'islands_h2', 'tiny_h2'] },
+  normal: { n: 8, lays: ['diamond_h3', 'heart_h3', 'butterfly_h3', 'arch_q3', 'ibeam_h3', 'leaf_q3', 'house_h3'] },
+  hard: { n: 9, lays: ['vase_h4', 'bowtie_h4', 'tower_h4', 'twins_q4', 'pillars_q4', 'circle_h4', 'butterfly_h4'] },
 };
 /* 자유 다꾸: 판마다 고르는 난이도 · 보상(스티커 장수 · 금박 확률) */
-/* 자유 다꾸 어려움은 칸 관리(cap 2)로 더 어렵게 */
-export const FREE_HARD = { n: 7, cap: 2, layout: 'p126' };
 export const FREE_REWARD = { easy: { n: 2, foil: 0.03 }, normal: { n: 3, foil: 0.08 }, hard: { n: 5, foil: 0.2 } };
-export function freeCfg(i, mapCleared, diff = 'normal') {
-  const L = LEVEL[diff], lays = { easy: ['p39', 'p39', 'p48'], normal: ['p96', 'p72', 'p96'], hard: ['p126', 'p138', 'p126'] }[diff];
-  return { layout: lays[i % 3], types: pickTypes('free' + i, diff === 'hard' ? FREE_HARD.n : L.n), cap: diff === 'hard' ? FREE_HARD.cap : L.cap, pNew: L.pNew, zw: 1.5, ice: mapCleared >= 10 && i % 2 ? 3 : 0, chain: mapCleared >= 20 && i % 3 === 2 ? 2 : 0, kind: diff };
+export function freeCfg(i, mapCleared, diff = 'normal', ease = 0) {
+  const L = LEVEL[diff];
+  return { layout: L.lays[i % 7], types: pickTypes('free' + i, L.n), ...KIND[diff], kind: diff, ease, ice: mapCleared >= 10 && i % 2 ? 3 : 0, chain: mapCleared >= 20 && i % 3 === 2 ? 2 : 0 };
 }
 
 /* 상점 (서버 SKU 요청 목록 — 가격은 docs/bm-policy.md · biz.md) */
@@ -141,3 +151,8 @@ export const PACKS = {
 /* 입문 묶음 = 노트 1 + 금박 묶음 (낱개 400 → 250 · 처음 한 번만 · 둘 중 하나라도 가지고 있으면 안 보임) */
 export const BUNDLE = { starter: ['note_picnic', 'pack_foil'] };
 export const TOOLS_DAILY = { undo: 2, magnet: 1, shuffle: 1 };
+/* 도움 장치 (판 구분별 · 원작 기준): rescue = 칸이 찼을 때 무료 '세 장 돌려받기' 횟수
+   원작은 칸이 차면 바로 유료 이어하기(코인 · 광고)뿐 → 무료 돌려받기는 배우는 판(연습 · 쉬움)에만 · 나머지는 광고 · 골드 이어하기 + 다시 할수록 쉬워짐(ease) + 응원 선물
+   막힘 자동 풀기(얼음 · 사슬)는 난이도 장치가 아니라 버그 방지라 그대로 둠 */
+export const HELP = { practice: { rescue: 1 }, easy: { rescue: 1 }, normal: { rescue: 0 }, hard: { rescue: 0 }, boss: { rescue: 0 } };
+export const helpOf = kind => HELP[kind] || HELP.normal;

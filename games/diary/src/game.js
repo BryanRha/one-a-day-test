@@ -1,11 +1,11 @@
 // 판 플레이 — 7칸 · 도구 3 · 얼음 · 사슬 · 실패 → 무료 돌려받기 → 이어하기(광고 · 골드) · 응원 선물
 //   한 판마다 start() 가 상태를 처음부터 다시 만듦 (지난 판의 상태가 남지 않게 — 씬 재사용 주의)
-import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.95.6';
-import { img } from './data.js?v=0.95.6';
-import * as A from './audio.js?v=0.95.6';
-import { S, save } from './save.js?v=0.95.6';
-import { bm } from './oad_bm.js?v=0.95.6';
-import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.95.6';
+import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.95.7';
+import { img, helpOf } from './data.js?v=0.95.7';
+import * as A from './audio.js?v=0.95.7';
+import { S, save } from './save.js?v=0.95.7';
+import { bm } from './oad_bm.js?v=0.95.7';
+import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.95.7';
 
 const SLOTS = 7;
 const stage = $('#stage');
@@ -47,7 +47,7 @@ export const canTap = (t, list = onBoard()) => t.where === 'board' && !isCovered
 export function start(opts) {
   stage.innerHTML = ''; closeModal(); $('#big').style.opacity = 0; $('#tray').classList.remove('tight'); $('#game').classList.remove('won'); $('#tutor')?.remove();
   const lv = makeLevel(opts.seed, opts.cfg);
-  G = { opts, tiles: lv.tiles, solution: lv.solution, tray: [], pend: new Set(), hist: [], combo: 0, lastPop: 0, cleared: [], rescue: 1, cont: 0, over: false, taps: 0, used: 0, warned: false, gift: 0, fails: 0 };
+  G = { opts, tiles: lv.tiles, solution: lv.solution, tray: [], pend: new Set(), hist: [], combo: 0, lastPop: 0, cleared: [], rescue: helpOf(opts.cfg.kind).rescue, cont: 0, over: false, taps: 0, used: 0, warned: false, gift: 0, fails: 0 };
   $('#glabel').innerHTML = opts.label;
   measure();
   for (const t of G.tiles) {
@@ -201,7 +201,7 @@ async function onModal(a) {
   if (a === 'rescue') { G.rescue--; resume(); }
   if (a === 'contAd') { const r = await bm.rewardedAd('continue'); if (r.ok) { G.cont++; resume(); } else toast('광고를 불러오지 못했어요'); }
   if (a === 'contGold') { const r = await bm.spend(G.cont === 0 ? 'continue' : 'continue2'); if (r.ok) { G.cont++; resume(); } else if (r.reason !== 'cancel') toast(r.reason === 'short' ? '골드가 모자라요' : '지금은 이어하기를 할 수 없어요'); }
-  if (a === 'again') { failCount(); closeModal(); start(G.opts); }
+  if (a === 'again') { failCount(); closeModal(); const o = G.opts; start({ ...o, seed: (o.seed + 7919) >>> 0, cfg: { ...o.cfg, ease: S.fails[o.key] || 0 } }); }
   if (a === 'quit') { failCount(); closeModal(); const q = G.opts.onQuit; G.over = true; q && q(); }
   if (a === 'close') closeModal();
   if (a === 'giftYes') { S.help++; G.gift++; G.tools_bonus = 1; S.tools.undo++; save(); toolBadges(); closeModal(); toast('응원 선물 · 되돌리기 1개를 챙겨 드렸어요'); }

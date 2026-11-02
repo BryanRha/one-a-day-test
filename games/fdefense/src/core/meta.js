@@ -1,6 +1,6 @@
 // 판 밖 성장 (명예 · 강화 · 장비 · 해금 · 보상 공식) — 게임과 봇이 같이 쓴다
 // 원어데이판 경제 (plan.md 7장 #3 #4): 이기면 늘 더 받고, 스테이지가 뒤일수록 더 받는다 · 다 키우는 데 무과금 150~200판
-import { T } from './data.js?v=0.95.6';
+import { T } from './data.js?v=0.95.7';
 
 export const COST_SCALE = 0.25;          // 원작 강화 · 장비 값 × 0.25
 export const HERO_PRICE = [0, 750, 1250]; // 원작 3000 · 5000 × 0.25
@@ -8,10 +8,10 @@ export const MODES = ['일반', '무한', '성문 부수기'];
 // 스테이지 첫 클리어 보상 (원작 순서 · 1부터 센 번호)
 export const MILESTONES = {
   5: { kind: 'special', text: '영웅 필살기가 열렸어요' },
-  10: { kind: 'hero', hero: 1, text: '영웅 보우 마스터를 만날 수 있어요' },
+  10: { kind: 'hero', hero: 1, text: '영웅 Bowmaster 를 만날 수 있어요' },
   15: { kind: 'heroism', value: 400, text: '명예 +400' },
   20: { kind: 'limit', text: '강화 한계가 10단계로 늘었어요' },
-  25: { kind: 'hero', hero: 2, text: '영웅 아크메이지를 만날 수 있어요' },
+  25: { kind: 'hero', hero: 2, text: '영웅 Archmage 를 만날 수 있어요' },
   30: { kind: 'skill', text: '영웅 공격이 강해졌어요 (광역 · 연사)' },
   35: { kind: 'heroism', value: 600, text: '명예 +600' },
   40: { kind: 'item', item: 15, text: '장비 제퓌로스 목걸이' },
