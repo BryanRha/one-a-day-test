@@ -1,8 +1,10 @@
 // 화면: 가로 1080 고정, 세로는 기기 비율대로 늘어남 (최소 1920) · 390×844 폰이면 1080×2337
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 export const TITLE = '판타지 디펜스';
 export const TITLE_EN = 'Fantasy Defense';
-export const W = 1080;
+export const PW = 1080;   // 세로 화면 기준 폭
+export let W = 1080;      // 지금 화면 폭 (판 화면 가로 모드면 넓어짐)
+export function setW(w) { W = Math.round(w); }
 export const BASE_H = 1920;
 export let H = BASE_H;
 export function setH(h) { H = Math.round(h); }

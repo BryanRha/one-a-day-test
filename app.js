@@ -1,22 +1,24 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.95.5';
-import * as R from './rules.js?v=0.95.5';
-import * as I from './install.js?v=0.95.5';
-import * as T from './track.js?v=0.95.5';
-import * as P from './pay.js?v=0.95.5';
-import * as A from './account.js?v=0.95.5';
-import * as C from './cloud.js?v=0.95.5';
-import * as BM from './bm.js?v=0.95.5';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.95.6';
+import * as R from './rules.js?v=0.95.6';
+import * as I from './install.js?v=0.95.6';
+import * as T from './track.js?v=0.95.6';
+import * as P from './pay.js?v=0.95.6';
+import * as A from './account.js?v=0.95.6';
+import * as C from './cloud.js?v=0.95.6';
+import * as BM from './bm.js?v=0.95.6';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.95.5').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.95.6').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.95.5'), import('./fortune/types.js?v=0.95.5'), import('./fortune/chat.js?v=0.95.5')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
-const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm });
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.95.6'), import('./fortune/types.js?v=0.95.6'), import('./fortune/chat.js?v=0.95.6')]).then(([, tarot, types, chat]) => (EX = { tarot, types, chat }));
+const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase });
+/* 공유 링크로 들어온 사람 (2026-11-02): ?type=<유형>[&from=share] · ?from=compat — 첫 화면에서 그 안내를 먼저 띄우고 소개 · 설치 제안은 이번엔 쉼 */
+const LAND = (() => { const q = new URLSearchParams(location.search), type = q.get('type'), from = q.get('from'); return type || from === 'share' || from === 'compat' ? { type, from: from || 'link', g: q.get('g') || '' } : null; })();
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.95.5';
+const VERSION = '0.95.6';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -530,7 +532,7 @@ function fortuneBody(m, me, f, date, past) {
     <section><h3>행운</h3><div class="sluck"><div><small>색</small><b><i style="background:${f.color.hex}"></i>${f.color.name}</b></div><div><small>숫자 · 재미로</small><b>${f.numbers.join(' · ')}</b></div><div><small>방향</small><b>${f.dir}</b></div></div>
       ${!past && lucky ? `<div class="sdgame" data-play="${lg}" ${KB}><img src="${lucky.icon}" alt=""><div><small>오늘 어울리는 게임 · 지금 바로 할 수 있어요</small><b>${lucky.title}</b></div><span>플레이 →</span></div>` : ''}
       <button class="sdbtn ghost" data-fcal style="margin-top:10px">📅 운세 달력 · 지난 날 다시 보기</button></section>
-    <section><h3>${me.name}의 사주 여덟 글자</h3><button class="sdbtn ghost" data-type style="margin:0 0 10px">🧩 내 사주 유형 카드 · 친구와 궁합</button><div class="pils">${pil(S.hour, '시')}${pil(S.day, '일')}${pil(S.month, '월')}${pil(S.year, '년')}</div>
+    <section><h3>${me.name}의 사주 여덟 글자</h3><button class="typecta" data-type><span class="ti">🧩</span><span class="tx"><b>내 사주 유형 카드 · 친구와 궁합</b><small>카드로 저장하고 친구에게 보내 궁합 보기</small></span><span class="ar">›</span></button><div class="pils">${pil(S.hour, '시')}${pil(S.day, '일')}${pil(S.month, '월')}${pil(S.year, '년')}</div>
       <div class="fel">${EL.map(e => `<div><b class="e-${e}">${EN[e]}</b><s style="height:${S.elementCount[e] * 14 + 4}px" class="b-${e}"></s><small>${S.elementCount[e]}</small></div>`).join('')}</div></section>
     <section><h3>점쟁이들의 <em>깊은 풀이</em></h3><p class="sdsub">무료 미리보기를 먼저 보고, 마음에 들면 열어 보세요. 가격은 처음부터 다 보여 드려요.</p>${paid}</section>
     <p class="sdfoot">명리학(사주팔자) 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요. 행운 숫자는 복권 당첨을 예측하지 않아요. 특정인을 단정하지 않아요. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>`;
@@ -611,7 +613,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.95.5')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.95.6')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -629,7 +631,7 @@ async function paidPage(id = 'cheating') {
       <div class="gauge"><div class="gv" style="--p:${rp.score};--c:${lvlCol}"><b>${rp.score}</b><small>${rp.gauge || '바람기 지수'}</small></div><div class="gl" style="color:${lvlCol}">${rp.grade.label}</div></div></div><span class="seal lg">${C.seal}</span></div>
     ${paid ? '' : `<div class="pcbuy"><div><b>전체 풀이 · 잠긴 ${locked}장</b><small>아래 목차와 무료 미리보기를 먼저 읽어 보세요</small></div><button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button></div>`}
     <section><blockquote>“${rp.grade.summary}”</blockquote>${rp.factors.length ? `<div class="factors">${rp.factors.map(f => `<span${f.points < 0 ? ' style="opacity:.6"' : ''}>${f.points < 0 ? '−' : ''}${f.label}</span>`).join('')}</div>` : ''}</section>
-    ${teas}${rp.share ? `<div class="shbtn"><button class="sdbtn ghost" data-share="${id}">💌 궁합 결과 카드 공유하기 (점수 · 한 줄만)</button></div>` : ''}
+    ${teas}${rp.share ? `<div class="shbtn"><button class="sdbtn ghost" data-share="${id}">💌 궁합 결과 링크 보내기 (점수 · 한 줄만)</button><button class="sdbtn ghost" data-sharecard="${id}">🖼 카드 이미지 저장</button></div>` : ''}
     ${paid ? '' : `<section class="ptoc"><h3>이 풀이에 들어 있는 것 <small>${rp.sections.length}장 중 ${rp.sections.length - locked}장 무료</small></h3><ol>${rp.sections.map(s => `<li class="${s.free ? 'fr' : 'lk'}"><i>${s.free ? '무료' : '🔒'}</i><div><b>${s.title}</b>${!s.free && pk.sub[s.id] ? `<small>${pk.sub[s.id]}</small>` : ''}</div></li>`).join('')}</ol></section>`}
     ${rp.sections.filter(s => s.free).map(sec).join('')}
     ${paid ? '' : `<div class="pcliff"><small>${pk.who}</small><p>${pk.cliff}</p></div>`}
@@ -700,22 +702,50 @@ async function freebieClaim(id, b) {
   try { const r = await A.call({ act: 'freebie', what: id, me, partner: pt }); P.keepReceipt(r.receipt, me, pt); localStorage.setItem('oad_freebie', '1'); T.track('freebie', { what: id }); closeSheet(); toast('출석 선물이 열렸어요 🎁'); paidPage(id); }
   catch (e) { if (e.used) { try { localStorage.setItem('oad_freebie', '1'); } catch { /* */ } } closeSheet(); toast(e.message); go(tab); }
 }
-// 궁합 결과 공유 카드: 점수 · 등급 · 한 줄만 그린 그림 (이름 · 생년월일 없음) → 공유 시트 또는 저장
+/* 링크 공유 (2026-11-02 대표 제보): 그림 파일을 같이 보내면 안드로이드 카카오톡 · 인스타가 글 · 주소를 버리고 그림만 보냄 → 받은 사람이 들어올 길이 없었음
+   그래서 공유 단추는 주소만 보냄 — 주소의 공유 페이지(s/…, tools/share_og.mjs)가 메신저 미리보기에 카드 그림을 크게 띄움 · 공유 창이 없으면 복사 */
+const shareBase = () => location.origin + location.pathname.replace(/[^/]*$/, '');
+async function shareLink(title, text, url) {
+  if (navigator.share) { try { await navigator.share({ title, text, url }); return 'link'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; } }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast('링크를 복사했어요 · 친구에게 붙여 넣어 보내 주세요'); return 'copy'; } catch { toast('주소: ' + url); return 'shown'; }
+}
+/* 카드 그림 저장 (보조 단추): 그림 파일 공유 창 또는 내려받기 — 그림 맨 아래에 oneaday.kr 가 적혀 있어 그림만 퍼져도 찾아올 수 있음 */
+async function saveImage(blob, name) {
+  const file = new File([blob], name, { type: blob.type || 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return 'file'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('카드 그림을 저장했어요'); return 'download';
+}
+/* 궁합 결과 공유: 점수 · 등급 · 한 줄만 (이름 · 생년월일 없음) — 링크는 등급별 공유 페이지 s/c/<등급>.html → /?from=compat (친구도 무료 운세 · 유형 테스트로) */
+const CGRADE = ['effort', 'tune', 'good', 'best'];   /* grade.level 0~3 (life.ts GRADES.compat: 노력형 · 맞춰 가는 · 잘 맞는 · 찰떡) */
+async function compatShare(id) {
+  const m = await ft(), me = m.loadMe(), pt = me && m.pairOf(id, me); if (!pt) return null;
+  const rp = await m.paidPreview(id, me, pt); return rp.share ? { sh: rp.share, g: CGRADE[rp.grade.level] || 'tune' } : null;
+}
 async function shareCompat(id) {
-  const m = await ft(), me = m.loadMe(), pt = me && m.pairOf(id, me); if (!pt) return;
-  const rp = await m.paidPreview(id, me, pt), sh = rp.share; if (!sh) return;
+  const c = await compatShare(id); if (!c) return;
+  const how = await shareLink(`우리 궁합 ${c.sh.score}점 · ${c.sh.label}`, `우리 궁합 ${c.sh.score}점 · ${c.sh.label} — 원어데이에서 내 오늘의 운세도 무료로 봐요 →`, `${shareBase()}s/c/${c.g}.html`);
+  T.track('share_card', { product: id, score: c.sh.score, how });
+}
+async function saveCompatCard(id) {
+  const c = await compatShare(id); if (!c) return; const sh = c.sh;
   const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350; const x = cv.getContext('2d');
   const g = x.createLinearGradient(0, 0, 0, 1350); g.addColorStop(0, '#2a0f1c'); g.addColorStop(1, '#0d0b0c'); x.fillStyle = g; x.fillRect(0, 0, 1080, 1350);
   x.textAlign = 'center'; x.fillStyle = '#E8C98A'; x.font = '600 44px serif'; x.fillText('해솔선녀의 우리 궁합', 540, 220);
   x.fillStyle = '#FF6FA0'; x.font = '900 300px serif'; x.fillText(String(sh.score), 540, 640);
   x.fillStyle = '#fff'; x.font = '800 72px serif'; x.fillText(sh.label, 540, 790);
   x.fillStyle = '#ddd'; x.font = '44px sans-serif'; const words = sh.line.split(' '); let ln = '', y = 900; for (const w of words) { if (x.measureText(ln + w).width > 880) { x.fillText(ln, 540, y); ln = ''; y += 62; } ln += w + ' '; } x.fillText(ln, 540, y);
-  x.fillStyle = '#E8C98A'; x.font = '600 40px sans-serif'; x.fillText('원어데이 · oneaday.kr · 재미로 보는 궁합', 540, 1240);
-  const blob = await new Promise(r => cv.toBlob(r, 'image/png')), file = new File([blob], 'oneaday-compat.png', { type: 'image/png' });
-  const text = `우리 궁합 ${sh.score}점 · ${sh.label} — 원어데이에서 내 오늘의 운세도 무료로 봐요`, url = location.origin + '/?from=compat';
-  T.track('share_card', { product: id, score: sh.score });
-  try { if (navigator.canShare && navigator.canShare({ files: [file] })) return await navigator.share({ files: [file], text, url }); if (navigator.share) return await navigator.share({ text, url }); } catch { return; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'oneaday-compat.png'; a.click(); toast('궁합 카드를 저장했어요');
+  x.strokeStyle = 'rgba(232,201,138,.35)'; x.lineWidth = 2; x.beginPath(); x.moveTo(340, 1170); x.lineTo(740, 1170); x.stroke();
+  x.fillStyle = '#E8C98A'; x.font = '700 64px sans-serif'; x.fillText('oneaday.kr', 540, 1248);
+  x.fillStyle = '#aaa'; x.font = '34px sans-serif'; x.fillText('원어데이 · 오늘의 운세 · 사주 유형 테스트 무료', 540, 1302);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  const how = await saveImage(blob, 'oneaday-compat.png');
+  T.track('share_card', { product: id, score: sh.score, how: 'image_' + how });
+}
+/* 궁합 공유 링크로 들어온 친구: 나도 무료로 (유형 테스트 · 오늘의 운세) */
+function compatLanding() {
+  openSheet(`<div class="intro"><h2>💞 친구가 궁합 결과를 보냈어요</h2><p class="fsub">원어데이에선 오늘의 운세와 사주 유형 테스트가 무료예요. 생년월일만 넣으면 30초, 이 폰에서만 계산해요.</p>
+    <div class="stack"><button class="sdbtn" data-type>🔮 내 사주 유형 보기 (무료)</button><button class="sdbtn ghost" data-tab-go="fortune">🌙 오늘의 운세 무료로 보기</button><button class="btn ghost" data-close>나중에</button></div></div>`);
 }
 // 결제: 토스 키가 있으면 토스 결제창, 테스트 서버는 모의 결제, 그 밖에는 '곧 열려요'
 async function buy(product) {
@@ -809,7 +839,7 @@ async function offerInstall(kind) {
   return true;
 }
 function maybeOffer() {
-  if (tab !== 'today' || I.installed()) return;
+  if (LAND || tab !== 'today' || I.installed()) return;   /* 공유 링크로 들어온 판엔 설치 제안을 겹치지 않음 */
   const st = R.state().streak, k = todayKey();
   if (st && st.last === k && st.count >= 3) offerInstall('day3');
   else if (visitAgain()) offerInstall('day2');
@@ -1312,7 +1342,7 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg],[data-lab],[data-settings],[data-bseg],[data-home]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-tycard],[data-sharecard],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg],[data-lab],[data-settings],[data-bseg],[data-home]');
   if (!t) return;
   const d = t.dataset;
   /* 메인 기록: 어느 칸에서 무엇을 눌렀나 + 게임 · 운세로 넘어갈 때 붙일 from */
@@ -1336,12 +1366,14 @@ document.addEventListener('click', e => {
   else if ('tarot' in d) ex().then(E => E.tarot.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
   else if ('type' in d) ex().then(E => E.types.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
   else if (d.tyshare) ex().then(E => E.types.share(XC(), d.tyshare)).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
+  else if (d.tycard) ex().then(E => E.types.saveCard(XC(), d.tycard)).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
   else if ('chat' in d) ex().then(E => E.chat.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
   else if (d.recap) recapAnswer(d.recap);
   else if ('fcal' in d) fortuneCalendar(d.fcal || '');
   else if (d.fday) { FFROM = 'cal'; closeSheet(); fortuneDetail(d.fday); }
   else if ('stampfill' in d) stampAd();
   else if (d.share) shareCompat(d.share);
+  else if (d.sharecard) saveCompatCard(d.sharecard);
   else if (d.paidEdit) partnerForm(d.paidEdit);
   else if (d.helpg) { BM.setHelp(d.helpg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0, home: LAY }); go('settings'); toast(`응원 선물 ${d.helpg === 'on' ? '켜짐' : '꺼짐'}`); }
   else if (d.bmg) { BM.setGroup(d.bmg); T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0, home: LAY }); go('settings'); toast(`BM 그룹 ${d.bmg}`); }
@@ -1428,11 +1460,13 @@ const keepMany = rcs => { const m = FT, me = m && m.loadMe(); if (!me) return; f
 P.setPackKeeper(keepMany);
 /* 테스트 서버 시험용: /?ai=1 이면 이 기기를 AI 상담 실험군으로 (?ai=0 해제) — 실서버는 상담 자체가 꺼져 있음 */
 { const a = new URLSearchParams(location.search).get('ai'); if (a === '1' || a === '0') { try { a === '1' ? localStorage.setItem('oad_ai', '1') : localStorage.removeItem('oad_ai'); } catch { /* */ } history.replaceState(null, '', location.pathname); toast(a === '1' ? 'AI 상담 시험 모드를 켰어요' : 'AI 상담 시험 모드를 껐어요'); } }
-/* 사주 유형 공유 링크로 들어온 사람: /?type=<유형> */
-{ const tp = new URLSearchParams(location.search).get('type'); if (tp) { history.replaceState(null, '', location.pathname); ex().then(E => setTimeout(() => E.types.landing(XC(), tp), 600)); } }
+/* 공유 링크로 들어온 사람 (LAND): /?type=<유형>&from=share → 친구 유형 화면 · /?from=compat → 나도 무료로 — 기록(share_landing)하고 주소는 깨끗이 */
+if (LAND) { history.replaceState(null, '', location.pathname); T.track('share_landing', { from: LAND.from, type: LAND.type || '', g: LAND.g });
+  if (LAND.type) ex().then(E => setTimeout(() => E.types.landing(XC(), LAND.type), 300)).catch(er => console.error(er));
+  else if (LAND.from === 'compat') setTimeout(compatLanding, 300); }
 ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) payDone(r.product, r); else toast(r.msg); });
 if (R.PROD) A.remote().then(c => BM.keepHomeRemote(c && c.home));   /* 실서버 메인 원격 스위치: 받아 두고 다음에 열 때부터 (ops.md 4-4) */
 /* 처음 열 때: 주소(#fortune · #box … · 옛 #library · #collection · #settings)대로 · 없으면 게임 탭 */
 { const r = parseRoute(location.hash) || { tab: 'today' }; go(r.tab, 'open', r.seg); if (r.settings) setTimeout(openSettings, 300); setTimeout(() => moveNote(r.moved), 1200); }
-if (!R.state().intro) setTimeout(intro, 400);
+if (!R.state().intro && !LAND) setTimeout(intro, 400);   /* 공유 링크로 온 첫 방문은 친구 화면 먼저 · 소개는 다음에 */
 window.__oad = { R, go, play };

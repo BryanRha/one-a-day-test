@@ -19,7 +19,7 @@ export const TYPES = {
 const STEM_ID = { 甲: 'gap', 乙: 'eul', 丙: 'byeong', 丁: 'jeong', 戊: 'mu', 己: 'gi', 庚: 'gyeong', 辛: 'sin', 壬: 'im', 癸: 'gye' };
 const COMBINE = { gap: 'gi', gi: 'gap', eul: 'gyeong', gyeong: 'eul', byeong: 'sin', sin: 'byeong', jeong: 'im', im: 'jeong', mu: 'gye', gye: 'mu' };
 const FEEDS = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' };
-const COLOR = { wood: ['#1E5A34', '#6EDC8A'], fire: ['#6A1A12', '#FF7A6A'], earth: ['#5A4210', '#F2C14E'], metal: ['#3A3A48', '#E8E8F0'], water: ['#142450', '#6A9AFF'] };
+export const COLOR = { wood: ['#1E5A34', '#6EDC8A'], fire: ['#6A1A12', '#FF7A6A'], earth: ['#5A4210', '#F2C14E'], metal: ['#3A3A48', '#E8E8F0'], water: ['#142450', '#6A9AFF'] };
 export const typeOf = me => STEM_ID[myChart(me).dayMaster.stem];
 
 /* 두 유형 궁합 요약 (일간 관계만 · 무료 · '나쁨' 단정 없음) */
@@ -42,11 +42,19 @@ export async function open(X) {
   X.openSheet(`<div class="intro tyw">${card(id, '나의 사주 유형')}
     <section><p><b>성격</b> ${t[4]}</p><p><b>일</b> ${t[5]}</p><p><b>연애</b> ${t[6]}</p><p><b>찰떡 유형</b> ${TYPES[best][0]}${({ wood: '목', fire: '화', earth: '토', metal: '금', water: '수' })[TYPES[best][7]]} · ${TYPES[best][2]} (천간합)</p></section>
     <p class="fsub">태어난 날의 천간(일간) 하나로 정한 유형이에요. 생년월일은 이 폰에서만 계산했고, 공유 카드에는 유형만 들어가요.</p>
-    <div class="stack"><button class="sdbtn" data-tyshare="${id}">💌 친구에게 보내고 궁합 보기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
+    <div class="stack"><button class="sdbtn" data-tyshare="${id}">💌 친구에게 링크 보내고 궁합 보기</button><button class="sdbtn ghost" data-tycard="${id}">🖼 카드 이미지 저장</button><button class="btn ghost" data-close>닫기</button></div></div>`);
   X.T.track('type_view', { type: id });
 }
-/* 공유: 유형 카드 그림 + 링크 (?type=) */
+/* 공유 (2026-11-02 대표 제보): 그림 파일을 같이 보내면 안드로이드 카카오톡 · 인스타가 글 · 주소를 버리고 그림만 보냄 → 받은 친구가 들어올 길이 없었음
+   그래서 공유 단추는 링크만 보냄: s/t/<유형>.html(tools/share_og.mjs 가 만듦)이 메신저 미리보기에 유형 카드 그림을 크게 띄우고, 누르면 /?type=<유형>&from=share 로 */
+export const shareUrl = (X, id) => `${X.shareBase()}s/t/${id}.html`;
 export async function share(X, id) {
+  const t = TYPES[id]; if (!t) return;
+  const how = await X.shareLink(`나는 ${t[2]}! 너는 무슨 유형이야?`, `나는 ${t[2]}(${t[0]}${t[1]})! 너는 무슨 유형이야? 우리 궁합도 봐 줘 →`, shareUrl(X, id));
+  X.T.track('type_share', { type: id, how });
+}
+/* 카드 이미지 저장 (보조): 1080×1350 그림 · 맨 아래에 oneaday.kr 와 짧은 주소 → 그림만 퍼져도 찾아올 수 있게 */
+export function cardCanvas(id) {
   const t = TYPES[id], [bg, fg] = COLOR[t[7]];
   const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350; const x = cv.getContext('2d');
   const g = x.createLinearGradient(0, 0, 0, 1350); g.addColorStop(0, bg); g.addColorStop(1, '#0d0b0c'); x.fillStyle = g; x.fillRect(0, 0, 1080, 1350);
@@ -54,12 +62,17 @@ export async function share(X, id) {
   x.fillStyle = fg; x.font = '900 360px serif'; x.fillText(t[1], 540, 610);
   x.fillStyle = '#fff'; x.font = '800 84px serif'; x.fillText(t[2], 540, 780);
   x.fillStyle = '#ddd'; x.font = '46px sans-serif'; x.fillText(`“${t[3]}”`, 540, 880);
-  x.fillStyle = '#E8C98A'; x.font = '600 40px sans-serif'; x.fillText('너는 무슨 유형? 우리 궁합은? · oneaday.kr', 540, 1230);
-  const blob = await new Promise(r => cv.toBlob(r, 'image/png')), file = new File([blob], `oneaday-type-${id}.png`, { type: 'image/png' });
-  const url = `${location.origin}/?type=${id}`, text = `나는 ${t[2]}(${t[0]}${t[1]})! 너는 무슨 유형이야? 우리 궁합도 봐 줘 →`;
-  X.T.track('type_share', { type: id });
-  try { if (navigator.canShare && navigator.canShare({ files: [file] })) return await navigator.share({ files: [file], text, url }); if (navigator.share) return await navigator.share({ text, url }); } catch { return; }
-  try { await navigator.clipboard.writeText(`${text} ${url}`); X.toast('링크를 복사했어요 · 친구에게 붙여 넣어 보내 주세요'); } catch { X.toast('주소: ' + url); }
+  x.fillStyle = '#ccc'; x.font = '40px sans-serif'; x.fillText('너는 무슨 유형? 우리 궁합은?', 540, 1130);
+  x.strokeStyle = 'rgba(232,201,138,.35)'; x.lineWidth = 2; x.beginPath(); x.moveTo(340, 1170); x.lineTo(740, 1170); x.stroke();
+  x.fillStyle = '#E8C98A'; x.font = '700 64px sans-serif'; x.fillText('oneaday.kr', 540, 1248);
+  x.fillStyle = '#aaa'; x.font = '34px sans-serif'; x.fillText(`oneaday.kr/?type=${id} 에서 30초 무료 테스트`, 540, 1302);
+  return cv;
+}
+export async function saveCard(X, id) {
+  if (!TYPES[id]) return;
+  const blob = await new Promise(r => cardCanvas(id).toBlob(r, 'image/png'));
+  const how = await X.saveImage(blob, `oneaday-type-${id}.png`);
+  X.T.track('type_share', { type: id, how: 'image_' + how });
 }
 /* 받은 사람 화면: 친구 유형 → 내 유형(30초) → 두 유형 궁합(무료) → 실제 궁합(유료) */
 export async function landing(X, from) {

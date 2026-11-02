@@ -1,6 +1,6 @@
 // 공용 UI: 판 · 버튼 · 글자 (세련된 어두운 유리판 + 금빛 강조)
-import { FONT, C } from './config.js?v=0.95.5';
-import { audio, S } from './audio.js?v=0.95.5';
+import { FONT, C } from './config.js?v=0.95.6';
+import { audio, S } from './audio.js?v=0.95.6';
 
 export function text(sc, x, y, s, size = 40, color = C.ink, opt = {}) {
   const t = sc.add.text(x, y, s, { fontFamily: FONT, fontSize: `${size}px`, fontStyle: opt.weight || '800', color, align: opt.align || 'center', stroke: opt.stroke || '#0B0D12', strokeThickness: opt.st ?? Math.round(size / 9), wordWrap: opt.wrap ? { width: opt.wrap } : undefined, lineSpacing: opt.ls ?? 4 });
@@ -55,7 +55,7 @@ export function button(sc, x, y, w, h, label, onTap, opt = {}) {
 }
 // 화면 위에 잠깐 뜨는 안내 한 줄
 export function toast(sc, s, y, color = C.ink) {
-  const t = text(sc, 540, y, s, 40, color).setDepth(9000).setAlpha(0);
+  const t = text(sc, sc.scale.width / 2, y, s, 40, color).setDepth(9000).setAlpha(0);
   sc.tweens.add({ targets: t, alpha: 1, y: y - 20, duration: 180, ease: 'Quad.out', yoyo: false, onComplete: () => sc.tweens.add({ targets: t, alpha: 0, delay: 1100, duration: 300, onComplete: () => t.destroy() }) });
   return t;
 }

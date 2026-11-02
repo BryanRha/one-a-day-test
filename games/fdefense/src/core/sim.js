@@ -1,8 +1,8 @@
 // 판 로직 (화면과 분리 · Node 에서 봇으로도 돌림)
 // 원작 좌표계 그대로: 판 675×450px(15×10칸, 칸 45px), 위치 단위 = px×50, 1틱 = 1/41초
 // 화면은 이 좌표를 시계 방향 90° 돌려 세로로 그린다 (view.js)
-import { T, nameOfChar } from './data.js?v=0.95.5';
-import { HPS } from './balance.js?v=0.95.5';
+import { T, nameOfChar } from './data.js?v=0.95.6';
+import { HPS } from './balance.js?v=0.95.6';
 
 export const TICK = 41;
 const TILE = 45, U = 50;
@@ -16,8 +16,17 @@ export const CHAR = { PRICE: 0, UP_PRICE: 1, PWR: 2, RATE: 3, RANGE: 4, TARGET: 
 // 직업(0~11) → 그림 묶음 번호 (원작 렌더러 표)
 export const DETAIL_SPRITE = [200, 203, 201, 202, 204, 207, 205, 206, 208, 211, 209, 210];
 export const HERO_SPRITE = [300, 301, 302];
-// 처음 살 수 있는 병사 (계열마다 기본 직업 1레벨 행)
-export const BUY_ROWS = { warrior: 0, archer: 12, wizard: 24 };
+// 처음 살 수 있는 병사 6종 (원작 카드 열 순서: Warrior 300 · Brandisher 500 · Archer 300 · Holy Eye 500 · Wizard 300 · Ice Mage 500)
+export const BUY_ROWS = { warrior: 0, brandisher: 3, archer: 12, holyeye: 15, wizard: 24, icemage: 27 };
+export const BUY_ORDER = ['warrior', 'brandisher', 'archer', 'holyeye', 'wizard', 'icemage'];
+// 전직 (원작 getUpgradeType · getDowngradeType): Warrior → Knight → War Lord · Archer → Splatter → Sky Arrow · Wizard → Sorceress → Blaster
+export const UPGRADE_ROW = { 0: 6, 2: 9, 4: 18, 6: 21, 8: 30, 10: 33 };
+export const DOWNGRADE_DETAIL = { 2: 0, 3: 2, 6: 4, 7: 6, 10: 8, 11: 10 };
+// 메뉴 '특수' 칸 (원작 effectTypeString: Stun · Splash · DoT · Slow · Pierce · Slow Mud · Dot Fire · Multi Shot · Double Shot · None)
+export const EFFECT_NAMES = ['기절', '광역', '지속 피해', '둔화', '관통', '진흙 둔화', '화염 지속', '다중 발사', '연속 발사', '없음'];
+export const effectName = e => EFFECT_NAMES[e == null || e < 0 || e > 9 ? 9 : e];
+// 원작 getAttackSpeed: 쿨타임 → 표시 속도
+export const attackSpeed = cool => cool === 1 ? 'MAX' : String(Math.max(0, 60 - cool) * 5 + 70);
 // 공격 소리 / 맞는 소리 (직업별, 원작 표)
 const VOICE = [21, 23, 21, 22, 24, 26, 24, 25, 27, 29, 28, 28];
 const HITSND = [1, 2, 1, 1, 3, 4, 3, 3, 5, 7, 6, 6];
@@ -117,9 +126,10 @@ export class Sim {
       const row = g * 5, cost = this.heroCost(row);
       if (this.mana < cost) return { ok: false, why: `마나 ${cost} 필요` };
       this.mana -= cost; this.stats.heroUsed = true;
-      const t = this.newTower(i, j, row, true); this.emit('place', { t, hero: true }); return { ok: true, t };
+      const t = this.newTower(i, j, row, true); t.paid = cost; this.emit('place', { t, hero: true }); return { ok: true, t };
     }
-    const row = BUY_ROWS[kind], cost = this.buyPrice(row);
+    const row = BUY_ROWS[kind]; if (row === undefined) return { ok: false, why: '없는 병사' };
+    const cost = this.buyPrice(row);
     if (this.money < cost) return { ok: false, why: `골드 ${cost} 필요` };
     this.money -= cost;
     const t = this.newTower(i, j, row, false); t.spent = cost; t.placedAt = this.time; this.stats.details.add(t.detail); this.emit('place', { t }); return { ok: true, t };
@@ -158,16 +168,23 @@ export class Sim {
     }
     t.dist = ((t.range * TILE / 100) + 22) * U; t.dist2 = t.dist * t.dist;
   }
+  // 레벨 업 값 (원작 getLevelupPrice = 다음 행 가격 그대로 · 영웅은 getLevelupHeroPrice = 마나 + 장비 할인)
   levelInfo(t) {
-    if (t.hero) { const nx = t.row % 5 < 4 ? t.row + 1 : -1; return nx < 0 ? null : { cost: this.heroCost(nx), cur: 'mana', next: nx }; }
-    const nx = t.row % 3 < 2 ? t.row + 1 : -1; return nx < 0 ? null : { cost: this.buyPrice(nx), cur: 'money', next: nx };
+    if (t.hero) { const nx = t.row % 5 < 4 ? t.row + 1 : -1; if (nx < 0) return null; const p = T.hero[nx][0]; return { cost: Math.max(1, p + Math.floor(p * this.itemRate(t.group, 1) / 100)), cur: 'mana', next: nx }; }
+    const nx = t.row % 3 < 2 ? t.row + 1 : -1; return nx < 0 ? null : { cost: T.char[nx][CHAR.PRICE], cur: 'money', next: nx };
   }
+  // 전직 (원작 getUpgradePrice = 지금 행의 전직값 + 강화 할인(0, 5))
   classInfo(t) {
     if (t.hero) return null;
-    const to = { 0: 6, 2: 9, 4: 18, 6: 21, 8: 30, 10: 33 }[t.detail];
+    const to = UPGRADE_ROW[t.detail];
     if (to === undefined) return null;
-    return { cost: T.char[t.row][CHAR.UP_PRICE], next: to, name: nameOfChar(T.char[to][CHAR.DETAIL]) };
+    const up = T.char[t.row][CHAR.UP_PRICE];
+    return { cost: up + Math.floor(up * this.unitRate(0, 5) / 100), next: to, detail: T.char[to][CHAR.DETAIL], name: nameOfChar(T.char[to][CHAR.DETAIL]) };
   }
+  // 원작 getHitPower (강화 · 장비 포함 공격력)
+  hitPower(t) { return t.power + Math.floor(t.power * (t.dmgUp || 0) / 100); }
+  // 비교용: 이 행으로 바뀌면 능력치가 어떻게 되나 (원작 compareTowerUnit)
+  preview(t, row) { const c = { ...t, row, lock: [] }; this.restat(c); return c; }
   levelUp(t) {
     const li = this.levelInfo(t); if (!li) return false;
     if (li.cur === 'money') { if (this.money < li.cost) return false; this.money -= li.cost; t.spent += li.cost; }
@@ -178,7 +195,10 @@ export class Sim {
     const ci = this.classInfo(t); if (!ci || this.money < ci.cost) return false;
     this.money -= ci.cost; t.spent += ci.cost; t.row = ci.next; this.restat(t); this.noteLv(t); this.stats.details.add(t.detail); this.emit('levelup', { t, cls: true }); return true;
   }
-  sellValue(t) { return t.hero ? 0 : (this.time - (t.placedAt ?? -1e9) < 3 * TICK ? t.spent : Math.floor(t.spent / 2)); }
+  // 판매값: 원작 getSellPrice = 총값(행 13번) × 50% · 원어데이 추가: 놓은 뒤 3초 안이면 낸 돈 전부 (실수는 부드럽게)
+  sellValue(t) { return t.hero ? 0 : (this.time - (t.placedAt ?? -1e9) < 3 * TICK ? t.spent : Math.floor(T.char[t.row][13] * 50 / 100)); }
+  // 영웅 세우기 취소 (원작: 세운 뒤 O.K. 를 눌러야 마나가 나감 → 다른 곳을 누르면 취소)
+  unplaceHero(t) { if (!t || !t.hero || !this.towers.includes(t)) return false; this.mana += t.paid || 0; this.towers.splice(this.towers.indexOf(t), 1); this.emit('sell', { t, cancel: true }); return true; }
   sell(t) {
     if (t.hero) return false;
     this.money += this.sellValue(t); this.towers.splice(this.towers.indexOf(t), 1); this.emit('sell', { t }); return true;
@@ -186,11 +206,14 @@ export class Sim {
   heroes() { return this.towers.filter(t => t.hero); }
   readyHero() { return this.heroes().find(h => h.specialCool <= 0 && this.mana >= h.specialMana) || null; }
   canSpecial() { return !!this.meta.special && !this.special && this.state === 'play' && !!this.readyHero(); }
-  useSpecial() {
+  // h: 메뉴에서 누른 영웅 (원작은 영웅 메뉴의 필살기 단추) · 없으면 준비된 첫 영웅
+  useSpecial(h0) {
     if (!this.canSpecial()) return false;
-    const h = this.readyHero();
+    const h = h0 && h0.hero && h0.specialCool <= 0 && this.mana >= h0.specialMana ? h0 : this.readyHero();
     this.mana -= h.specialMana; h.specialCool = h.specialCoolMax;
-    this.special = { hero: h, t: 0, hitAt: 65, end: 150, kills: 0 }; this.stats.specials = (this.stats.specials || 0) + 1;
+    // 원작 길이: 칼춤 150 · 화살비 195 · 얼음 지진 170 틱, 피해는 끝날 때 한 번에 (hitSpecial*Attack)
+    const end = [150, 195, 170][h.specialType] ?? 150;
+    this.special = { hero: h, t: 0, hitAt: end, end, kills: 0 }; this.stats.specials = (this.stats.specials || 0) + 1;
     this.emit('special', { hero: h });
     return true;
   }
@@ -228,6 +251,14 @@ export class Sim {
     const w = T.wave[Math.min(wave, 59)]; if (wave < 60) return w;
     const inf = T.wave[60], n = wave - 59; return w.map((v, k) => v + inf[k] * n);
   }
+  // 다음 웨이브 미리보기용 (원작 drawMonsterViewMenu 의 HP · SPEED) — 실제로 나올 값과 같은 공식
+  monStat(type, boss, wave = this.wave) {
+    const w = this.curve(wave), st = T.stage[this.stage], md = T.monster[type];
+    let hp = boss ? Math.floor(Math.floor(md[1] * w[8] / 100) * st[3] / 100) : Math.floor(Math.floor(md[1] * w[0] / 100) * st[2] / 100);
+    hp = Math.max(1, Math.round(hp * HP_SCALE * (this.hpScale ?? HPS[this.stage] ?? 1)));
+    if (this.mode === 1 && wave >= this.waveTotal) hp = Math.round(hp * 1.06 ** (wave - this.waveTotal + 1));
+    return { hp, speed: Math.floor(Math.floor(150 * md[4] * (boss ? w[10] : w[2]) / 100) / 100) };
+  }
   addMonster(type, boss) {
     const w = this.curve(this.wave), st = T.stage[this.stage], md = T.monster[type];
     let hp = md[1];
@@ -245,6 +276,7 @@ export class Sim {
     m.dir = this.randomDir(sx, sy); if (m.dir < 0) m.dir = 2;
     m.tx = sx + DIR[m.dir][0]; m.ty = sy + DIR[m.dir][1];
     this.monsters.push(m);
+    this.openTime = 12;   /* 원작 monsterOpenTime = 12: 출발 성문 불꽃 */
     this.emit('spawn', { m });
   }
   randomDir(x, y) {
@@ -258,6 +290,7 @@ export class Sim {
     this.events.length = 0;
     if (this.state === 'clear' || this.state === 'over') return;
     this.time++;
+    if (this.openTime > 0) this.openTime--;
     if (this.special) { this.stepSpecial(); return; }
     if (this.state === 'ready') { if (--this.startDelay <= 0) { this.state = 'play'; this.setWave(); } return; }
     if (this.waveDelay > 0) { if (--this.waveDelay === 0) { const r = this.setWave(); if (r !== 'ok') { this.finish(r === 'clear'); return; } } }
@@ -476,6 +509,8 @@ export class Sim {
     }
     if (s.t >= s.end) { this.stats.specialBest = Math.max(this.stats.specialBest, s.kills); this.stats.spBest[s.hero.group] = Math.max(this.stats.spBest[s.hero.group], s.kills); this.special = null; this.monsters = this.monsters.filter(m => m.alive); }
   }
+  // 필살기 연출 건너뛰기 (원작: 연출 중 화면을 누르면 specialAttackSkipFlag → 바로 끝)
+  skipSpecial() { if (this.special && this.special.t < this.special.end - 1) this.special.t = this.special.end - 1; }
   // 웨이브 진행 정도 (0~1)
   progress() { return this.mode === 1 ? (this.wave % this.waveTotal) / this.waveTotal : Math.min(1, this.wave / this.waveTotal); }
 }

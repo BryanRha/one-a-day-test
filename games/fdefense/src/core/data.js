@@ -3,11 +3,19 @@ export const T = {};
 export const A = {};   // 애니메이션 프레임
 export function setData(tables, anims) { Object.assign(T, tables); Object.assign(A, anims); }
 
-// 한국어 이름 (원어데이판)
-export const CHAR_NAMES = ['전사', '철퇴병', '기사', '대장군', '궁수', '성안 궁수', '연사수', '천궁수', '마법사', '얼음 마법사', '마녀', '폭염술사'];
+// 이름: 고유명사(병사 직업 · 영웅 · 필살기 · 몬스터)는 원작 표기 그대로 (대표 2026-11-02 '원작과 100%') · 일반 낱말만 한국어
+export const CHAR_NAMES = ['Warrior', 'Brandisher', 'Knight', 'War Lord', 'Archer', 'Holy Eye', 'Splatter', 'Sky Arrow', 'Wizard', 'Ice Mage', 'Sorceress', 'Blaster'];
 export const CLASS_NAMES = ['전사', '궁수', '마법사'];
-export const HERO_NAMES = ['챔피언', '보우 마스터', '아크메이지'];
-export const SPECIAL_NAMES = ['칼춤', '화살비', '얼음 지진'];
+export const HERO_NAMES = ['Champion', 'Bowmaster', 'Archmage'];
+export const SPECIAL_NAMES = ['Dancing Blade', 'Million Arrow', 'Ice Quake'];
+// 원작 그림 이름 (직업 0~11 · 영웅 12~14): 전신 일러스트 ui_char_face_* · 이름 그림 ui_char_name_* · 카드 ui_addunit_*
+export const FACE_KEY = ['warrior', 'manatarms', 'knight', 'warlord', 'archer', 'holyeye', 'splatter', 'skybeholder', 'wizard', 'colddiviner', 'warlock', 'magmablaster', 'hero0', 'hero1', 'hero2'];
+export const NAME_KEY = ['warrior', 'manatarms', 'knight', 'warlord', 'archer', 'holyeye', 'splatter', 'skybeholder', 'wizard', 'colddiviner', 'warlock', 'blaster', 'hero0', 'hero1', 'hero2'];
+export const UPFACE_KEY = { 2: 'knight', 3: 'warlord', 6: 'splatter', 7: 'skybeholder', 10: 'warlock', 11: 'magmablaster' };   // 전직 미리보기 그림 (다음 직업)
+export const CARD_KEY = ['warrior', 'manatarms', 'archer', 'holyeye', 'wizard', 'colddiviner'];
+// 몬스터 그림 순서 (원작 getMonsterImageOrder · uiMonsterFaceResource)
+export const MON_KEY = ['_0skulldog', '_1zombie', '_2lamia', '_3imp', '_4wraith', '_5hollowskull', '_6zombieturtle', '_7ninetail', '_8vampire', '_9swordwraith', '_10boneworm', '_11zombieknight', '_12ukiona', '_13succubus', '_14wraithbishop', 'a1ogrezombie', 'a2deviltiger', 'b1mudman', 'b2swampwoman', 'c1spinx', 'c2mummy', 'd1salamander', 'd2magmarock', 'e1demon', 'e2grimdevil', 'boss1skullgiant', 'boss2rich', 'boss3fallenangel', 'boss4lilis', 'boss5wraithking', 'ex1zombiegirl'];
+export const monOrder = t => t >= 100 ? 25 + ((t - 100) % 5) : (t % 25);
 export const nameOfChar = d => CHAR_NAMES[d] || '';
 export const CHAPTERS = ['숲', '늪', '사막', '화산', '마계'];
 
