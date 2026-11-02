@@ -1,13 +1,13 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.95.8';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.95.8';
-import { audio } from '../audio.js?v=0.95.8';
-import { load } from '../save.js?v=0.95.8';
-import * as M from '../meta.js?v=0.95.8';
-import { bm } from '../oad_bm.js?v=0.95.8';
-import { canDouble } from '../core/cont.js?v=0.95.8';
-import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.95.8';
-import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.95.8';
+import { W, H } from '../config.js?v=0.95.9';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.95.9';
+import { audio } from '../audio.js?v=0.95.9';
+import { load } from '../save.js?v=0.95.9';
+import * as M from '../meta.js?v=0.95.9';
+import { bm } from '../oad_bm.js?v=0.95.9';
+import { canDouble } from '../core/cont.js?v=0.95.9';
+import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.95.9';
+import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.95.9';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
