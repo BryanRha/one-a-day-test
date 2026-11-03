@@ -1,18 +1,18 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.97.10';
-import * as R from './rules.js?v=0.97.10';
-import * as I from './install.js?v=0.97.10';
-import * as T from './track.js?v=0.97.10';
-import * as P from './pay.js?v=0.97.10';
-import * as A from './account.js?v=0.97.10';
-import * as C from './cloud.js?v=0.97.10';
-import * as BM from './bm.js?v=0.97.10';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.97.11';
+import * as R from './rules.js?v=0.97.11';
+import * as I from './install.js?v=0.97.11';
+import * as T from './track.js?v=0.97.11';
+import * as P from './pay.js?v=0.97.11';
+import * as A from './account.js?v=0.97.11';
+import * as C from './cloud.js?v=0.97.11';
+import * as BM from './bm.js?v=0.97.11';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.97.10').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.97.11').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.97.10'), import('./fortune/types.js?v=0.97.10'), import('./fortune/chat.js?v=0.97.10'), import('./fortune/oneword-ui.js?v=0.97.10')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
-const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.97.11'), import('./fortune/types.js?v=0.97.11'), import('./fortune/chat.js?v=0.97.11'), import('./fortune/oneword-ui.js?v=0.97.11')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
 const owOpen = (from, pair = null) => ex().then(E => E.ow.open({ ...XC(), onClose: () => { const el = $('.owentry'); if (el && tab === 'fortune') el.outerHTML = E.ow.entry(XC(), owF); } }, from, pair)).catch(er => { console.error(er); toast('잠시 뒤 다시 열어 주세요'); });
@@ -21,7 +21,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.97.10';
+const VERSION = '0.97.11';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -65,10 +65,12 @@ function go(t, via, seg) {
   if (t === 'settings') return openSettings();   /* 옛 '설정 탭' 부르기 → 설정 시트 */
   if (t === 'library' || t === 'collection') { seg = t === 'collection' ? 'coll' : 'game'; t = 'box'; }
   if (!RENDER[t]) t = 'today';
-  if (via !== 'back' && !tbSkip && player.hidden && tab !== 'today' && t !== tab) {   /* 받침 · 너랑 시안 안 칸을 먼저 되돌림 (탭 뒤로가기 아래 설명) */
-    const k = (tab === 'neorang' ? nrDepth() : 0) + (t === 'today' && tbPushed ? 1 : 0), sp = spare && (k > 0) ? 1 : 0;
-    if (k + sp > 0) { spare = spare && !sp; return tbLeave(k + sp, t, via, seg); }
+  if (via !== 'back' && via !== 'oneword' && via !== 'open' && !tbSkip && player.hidden && t !== tab) {   /* open: 앱을 처음 열 때(새로 고침 — 지금 칸 그대로) */   /* 탭을 옮길 때: 이 탭에 쌓인 칸(시트 · 접어 둔 단계 · 한 단어 · 너랑 시안 안 · 받침)을 먼저 한 번에 되돌림 (탭 뒤로가기 아래 설명) */
+    const goal = tab === 'today' ? tabLvl : t === 'today' ? (tbPushed ? tbLvl - 1 : tabLvl) : tbBase() || tabLvl, sp = spare && tab === 'today' ? 1 : 0;   /* 게임 탭의 막 닫은 시트 칸은 받침 칸으로 다시 씀 */
+    const k = (tab === 'neorang' ? nrDepth() : 0) + Math.max(0, lvl() - goal - sp);
+    if (k > 0) { layersOff(); return tbLeave(k, t, via, seg); }
   }
+  if (t !== tab && via !== 'back' && via !== 'oneword') layersOff(true);
   if (t === 'neorang' && tab === 'neorang' && $('#nrframe')) return;   /* 너랑 시안은 다시 그리지 않음 (안에서 보던 화면 유지) */
   const re = !via && t === tab && t === 'today' && HM.live;   /* 같은 메인을 다시 그리기만(설치 가능 · 로그인 반영 등) = 노출 기록은 이어 감 */
   if (!re) homeLeave();
@@ -79,6 +81,7 @@ function go(t, via, seg) {
   document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.tab === t); if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   clearInterval(timer);
   if (t === 'today') { tbPushed = false; tbNeed = false; unwatchTab(); } else if (!tbPushed) tbEnter(); else if (!tcw) watchTab();
+  if (from !== t) tabLvl = tbPushed ? tbLvl : lvl() - (spare ? 1 : 0);   /* 이 탭 맨 아래 칸 (탭을 옮길 때 여기까지 되돌림) */
   FVIA = via || '';
   if (t !== 'today') R.checkIn();   /* 🔥 출석은 어느 탭으로 들어와도 (게임 탭은 그리면서 함) */
   view.innerHTML = RENDER[t]();
@@ -86,6 +89,7 @@ function go(t, via, seg) {
   window.scrollTo(0, 0);
   setHash(); tabDot();
   if (t === 'neorang') nrSetup();
+  if (via === 'oneword') { hpush({ nrw: 1 }); watchTab(); }   /* 한 단어에서 너랑으로: 그 위에 한 칸 → 너랑에서 뒤로가기 = 한 단어(재하 미리보기)로 */
   if (t === 'today') { tick(); timer = setInterval(tick, 1000); homeEnter(via || 're', re); if (via !== 'game') setTimeout(maybeOffer, 900); }
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => go(b.dataset.tab, 'tab'));
@@ -477,7 +481,7 @@ async function fortuneCalendar(ym) {
     cells.push(`<i class="c-${col}${k === todayK ? ' now' : ''}" data-fday="${k}" ${KB}><small>${d}</small><b>${f.total}</b><em>${f.key}</em><s>${st}</s></i>`);
   }
   const pm = new Date(y, mo - 2, 1), nm = new Date(y, mo, 1), ymOf = x => `${x.getFullYear()}-${x.getMonth() + 1}`, canNext = nm <= t;
-  sdClose(); openSheet(`<div class="intro fcalw"><h2>📅 ${y}년 ${mo}월 운세 달력</h2><p class="fsub">이번 달 도장 ${stamps}개 · 내가 '맞았다' 누른 날 ${yes}일 · 지난 날을 누르면 그날 운세를 다시 볼 수 있어요</p>
+  sdOff(); openSheet(`<div class="intro fcalw"><h2>📅 ${y}년 ${mo}월 운세 달력</h2><p class="fsub">이번 달 도장 ${stamps}개 · 내가 '맞았다' 누른 날 ${yes}일 · 지난 날을 누르면 그날 운세를 다시 볼 수 있어요</p>
     <div class="fcalnav"><button class="btn ghost small" data-fcal="${ymOf(pm)}">◀ 지난달</button>${canNext ? `<button class="btn ghost small" data-fcal="${ymOf(nm)}">다음 달 ▶</button>` : ''}</div>
     <div class="fcal"><u>일</u><u>월</u><u>화</u><u>수</u><u>목</u><u>금</u><u>토</u>${cells.join('')}</div>
     <p class="fsub">👣 들어온 날 · 🔮 운세 본 날 · 🃏 타로 · 💬 AI 상담 · 🎮 오늘의 게임 · ⭕🔺✖ 저녁 회고 — 기록은 이 기기에만 있어요</p>
@@ -485,16 +489,24 @@ async function fortuneCalendar(ym) {
   T.track('fortune_calendar', { ym: `${y}-${mo}` });
 }
 let sdOpen = false;
-function sdClose() { const el = $('#sd'); if (el) el.remove(); sdOpen = false; document.body.style.overflow = ''; }
+/* how: 'pop'(뒤로가기로 닫힘) · 'keep'(같은 칸에 다시 그림) · 없으면 버튼 · 다른 화면으로 넘어가며 닫힘 → 남은 칸은 다음 화면이 다시 쓰거나 바로 되돌림(markSpare) */
+function sdClose(how) { const el = $('#sd'); if (el) el.remove(); const was = sdOpen; sdOpen = false; sdOver = 0; document.body.style.overflow = ''; if (was && how !== 'pop' && how !== 'keep') markSpare(); }
+/* 운세 전체 화면에서 시트로 넘어갈 때(사주 고치기 · 그 사람 정보 · 달력 · 결제 확인 등): 전체 화면은 그 칸에 접어 두고 시트는 새 칸 → 뒤로가기 = 전체 화면 */
+function sdOff() { if (sdOpen && $('#sd')) park(); else sdClose(); }
+/* 뒤로가기 한 번 = 맨 위 한 단계 (2026-11-04 대표 '뒤로가기는 모든 곳에서 바로 전 단계로')
+   순서: 앱이 스스로 되돌린 칸(eat) → 탭 옮기기 중 → 시트 → 한 단어 겹 화면(oneword-ui onPop) → 운세 전체 화면(#sd) → 접어 둔 단계 되살리기 → 받침 아래면 게임 탭 */
 addEventListener('popstate', () => {
-  if (EX && EX.ow.onPop && EX.ow.onPop()) return;   /* 한 단어 겹 화면: 뒤로가기 = 이전 단계 (fortune/oneword-ui.js onPop) */
+  if (eatN) { eatN--; if (!eatN) { if ($('#player').hidden) unparkHere(); const f = eatAfter.splice(0); f.forEach(x => { try { x(); } catch (er) { console.error(er); } }); } if ($('#player').hidden) setHash(); return; }
   if (tbGoing) { tbArrive(); return; }   /* 다른 탭 · 게임 탭으로: 쌓인 기록을 다 되돌림 */
-  if (!sheet.hidden) { closeSheet(true); if ($('#player').hidden) setHash(); return; }
-  if (sdOpen) { spare = false; sdClose(); setHash(); return; }
-  if (spare && $('#player').hidden) { spare = false; if (tab === 'today' || isTb(history.state)) { setHash(); return; } }   /* 받침 아래까지 왔으면 남은 칸 처리가 아니라 게임 탭으로 (아래) */
+  if (!sheet.hidden) { closeSheet(true); if ($('#player').hidden) { unparkHere(); setHash(); } return; }
+  if (!$('#player').hidden) return;   /* 게임 중: 아래 게임 뒤로가기(askGame)가 받음 */
+  spare = false; clearTimeout(spareT);
+  if (EX && EX.ow.onPop && EX.ow.onPop()) return;   /* 한 단어 겹 화면: 뒤로가기 = 이전 단계 (fortune/oneword-ui.js onPop) */
+  if (sdOpen) { sdClose('pop'); unparkHere(); setHash(); return; }
+  if (unparkHere()) { setHash(); return; }
   /* 게임 탭이 아닌 탭: 받침까지 되돌아오면(받침 아래 칸) 게임 탭으로 · 너랑 시안 안 이동(#hash)은 시안이 받음 */
-  if (tab !== 'today' && $('#player').hidden && !isTb(history.state)) { tbPushed = false; go('today', 'back'); return; }
-  if ($('#player').hidden) setHash();   /* 되돌아간 칸의 주소를 지금 탭에 맞춤 */
+  if (tab !== 'today' && (tbPushed ? lvl() < tbLvl : !isTb(history.state) && !lvl())) { tbPushed = false; go('today', 'back'); return; }
+  setHash();   /* 되돌아간 칸의 주소를 지금 탭에 맞춤 */
 });
 /* 주소의 # 만 바꿔 들어온 경우(같은 페이지에서 옛 주소 #library 등): 지금 탭과 다르면 그 탭으로 · 뒤로가기로 바뀐 주소는 popstate 가 먼저 지금 탭에 맞춰 둠 */
 addEventListener('hashchange', () => {
@@ -512,7 +524,7 @@ async function fortuneDetail(dayKey) {
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
     ${fortuneBody(m, me, f, date, true)}
     <div class="sdbtns"><button class="sdbtn ghost" data-fortune-edit>내 정보 고치기</button><button class="sdbtn" data-sd-close>닫기</button></div></div>`;
-  document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
+  document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; sdOver = takePark(); hpush({ sd: 1 }); }
   T.track('fortune_view', { ch: f.ch, score: f.total, past: 1, from: FFROM || 'cal' }); FFROM = '';
 }
 function fortuneBody(m, me, f, date, past) {
@@ -567,13 +579,13 @@ function birthFields(v, who) {
 const readBirth = fd => { const n = k => fd.get(k) === '' || fd.get(k) == null ? null : Number(fd.get(k)); return { name: String(fd.get('name')).trim().slice(0, 10) || '그 사람', y: n('y'), m: n('m'), d: n('d'), h: n('h'), mi: n('h') == null ? 0 : n('mi'), cal: fd.get('cal'), leap: !!fd.get('leap'), lon: n('lon') || null, sex: fd.get('sex') }; };
 /* 연애 독설 5종에 만 19세 미만이 들어왔을 때(공유 링크 · 바로가기 · 카드 어디서든): 막지 않고 다른 길 — 이미 산 풀이는 그대로 보여 줌 */
 function adultOnly() {
-  sdClose(); openSheet(`<div class="intro"><h2>이 운세는 만 19세 이상만 볼 수 있어요</h2><p class="fsub">연애 · 외도 같은 어른 주제를 다뤄서 나이를 확인하고 있어요.<br>친구가 보낸 궁합은 같이 볼 수 있어요!</p>
+  sdOff(); openSheet(`<div class="intro"><h2>이 운세는 만 19세 이상만 볼 수 있어요</h2><p class="fsub">연애 · 외도 같은 어른 주제를 다뤄서 나이를 확인하고 있어요.<br>친구가 보낸 궁합은 같이 볼 수 있어요!</p>
     <div class="stack"><button class="sdbtn" data-paid="compat">우리 궁합 보기</button><button class="btn ghost" data-fortune>오늘의 운세로</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel'); T.track('adult_block');
 }
 /* 결제 직전 확인 한 줄 (카드 · 골드 공통): 미리 체크하지 않음 · 체크해야 진행 · 체크하면 기록(adult_ok, 기기번호만) → true / 닫으면 false */
 function adultCheck(id, label) {
-  sdClose();   /* 풀이 화면 위가 아니라 시트로 (취소하면 부른 쪽이 풀이 화면을 다시 엶) */
+  sdOff();   /* 풀이 화면은 접어 두고 시트로 — 취소하면 그 칸으로 돌아가 풀이 화면이 다시 보임 (park) */
   return new Promise(res => {
     let done = false; const fin = v => { if (done) return; done = true; onSheetClose = null; if (v) closeSheet(); res(v); };
     openSheet(`<div class="intro paysheet"><h2>🔞 결제 전에 확인해 주세요</h2>
@@ -592,9 +604,9 @@ async function partnerForm(id = 'cheating') {
   if (m.isAdultFortune(id) && m.isUnder19(me) && !boughtFn(m, me)(id) && !acctHas(id)) return adultOnly();
   if (PR.solo) { T.track('paid_open', { product: id }); return paidPage(id); }   /* 내 사주만 보는 상품은 입력 없이 바로 미리보기 */
   const p = m.loadPartner(id) || { sex: me.sex === 'm' ? 'f' : 'm' }, [ttl, sub, who] = PR.form;
-  sdClose(); openSheet(`<form class="fform sdform" id="pForm"><h2>${ttl}</h2><p class="fsub">${sub}</p>${birthFields(p, who)}<div class="stack"><button class="sdbtn" type="submit">${PR.title} 무료 미리보기</button></div></form>`);
+  sdOff(); openSheet(`<form class="fform sdform" id="pForm"><h2>${ttl}</h2><p class="fsub">${sub}</p>${birthFields(p, who)}<div class="stack"><button class="sdbtn" type="submit">${PR.title} 무료 미리보기</button></div></form>`);
   $('#sheet .panel').classList.add('sdpanel');
-  $('#pForm').onsubmit = async e => { e.preventDefault(); const v = readBirth(new FormData(e.target)); try { await m.paidPreview(id, me, v); m.savePartner(v, id); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('partner_form', { product: id, hour: v.h == null ? 0 : 1 }); closeSheet(); paidPage(id); };
+  $('#pForm').onsubmit = async e => { e.preventDefault(); const v = readBirth(new FormData(e.target)); try { await m.paidPreview(id, me, v); m.savePartner(v, id); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('partner_form', { product: id, hour: v.h == null ? 0 : 1 }); park(); paidPage(id); };   /* 입력 시트는 접어 둠 → 풀이에서 뒤로가기 = 입력 */
 }
 const acctHas = id => { const me = A.current(); return !!(me && (me.items || []).some(x => x.startsWith(`fortune:${id}:`))); };
 /* 카드 결제 완료: 주문번호 + 복원 코드 (로그인했으면 '계정에 저장됨') → 전체 풀이 */
@@ -618,7 +630,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.97.10')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.97.11')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -629,7 +641,7 @@ async function paidPage(id = 'cheating') {
     : `<section class="rsec lock"><small>${s.chapter} · 🔒 잠긴 장</small><h3>${s.title}</h3>${pk && pk.sub[s.id] ? `<p class="psub">${pk.sub[s.id]}</p>` : ''}<p class="plead">${pk && pk.lead[s.id] ? pk.lead[s.id] : ''} <span class="blur">${life ? '이 흐름은 ██월 무렵 가장 또렷해지는데, 그때 ████ 쪽을 먼저 챙기면 한 해의 결이 달라져요. 자세한 날짜와 이유는 ██에서 이어져요.' : '이 부분은 두 사람 원국이 만나는 자리에서 갈라지는데, ██월 무렵의 흐름과 ████의 기운이 겹치는 지점에서 결이 달라져요. 그 이유와 대처는 ██에서 이어져요.'}</span></p></section>`
       + (++lk % 3 === 0 && lk < locked ? `<div class="pinbuy"><span>잠긴 ${locked - lk}장이 더 있어요</span><button class="sdbtn ghost" data-buy="${id}">🔓 이어서 전부 읽기 · ${won(PR.price)}</button></div>` : '');
   const q = PR.q.replace('{p}', pt.name).replace('{me}', me.name).replace('{m}', rp.ym ? Number(rp.ym.slice(5)) : '');
-  const wasOpen = sdOpen; sdClose(); sdOpen = wasOpen;   /* 운세 상세 위에서 바로 열 때(solo) 화면이 두 겹 되지 않게 */
+  const wasOpen = sdOpen; sdClose('keep'); sdOpen = wasOpen;   /* 운세 상세 위에서 바로 열 때(solo) 화면이 두 겹 되지 않게 */
   const el = document.createElement('div'); el.id = 'sd'; el.innerHTML = `<div class="sdpage">
     <button class="sdx" data-sd-close aria-label="닫기">✕</button>
     <div class="sdhero">${face(m, PR.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${C.name}의 ${PR.title} · ${paid ? '전체 풀이 · 결제 완료' : '무료 미리보기'}</div><h1>${q}</h1>
@@ -647,7 +659,7 @@ async function paidPage(id = 'cheating') {
     ${paid ? '' : `<div class="paywall"><button class="sdbtn" data-buy="${id}">🔓 ${won(PR.price)}에 전부 열기</button></div>`}
     <p class="sdfoot">${life ? `명리학 규칙으로 계산한 전통 풀이이며 재미로 참고해 주세요.${id === 'wealth' ? ' 복권 번호를 알려 주지 않고, 복권 · 투자 결과를 예측하거나 보장하지 않아요.' : ''}${id === 'newyear' ? ' 건강 · 시험 결과를 단정하지 않아요.' : ''} 생년월일 원본은 내 폰에만 저장돼요.` : `사주 원국의 경향을 풀이한 것으로 특정인의 실제 행동이나 마음을 단정하지 않아요. 재미로 참고해 주세요.${id === 'after' ? ' 법률 · 상담이 필요한 일은 전문가와 상의해 주세요.' : ''} 두 사람 정보는 이 기기에만 저장돼요.`}${m.isAdultFortune(id) ? (paid ? ' 사주는 사실 확인이 아니에요. 궁금한 건 대화로 확인하세요.' : ' 만 19세 이상 · 연애 · 외도 등 성인 주제를 다뤄요. 사주는 재미로 보는 참고용이에요.') : ''}</p>
     <div class="sdbtns">${PR.solo ? '<button class="sdbtn ghost" data-fortune-edit>내 정보 고치기</button>' : `<button class="sdbtn ghost" data-paid-edit="${id}">그 사람 정보 고치기</button>`}<button class="sdbtn" data-sd-close>닫기</button></div></div>`;
-  document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; history.pushState({ sd: 1 }, ''); }
+  document.body.append(el); document.body.style.overflow = 'hidden'; if (!sdOpen) { sdOpen = true; sdOver = takePark(); hpush({ sd: 1 }); }
   T.track(paid ? 'report_view' : 'paywall_view', { product: id, score: rp.score, level: rp.grade.level, from: FFROM || 'other' }); FFROM = '';
 }
 /* ── 신년 패키지: 신년운세 + 2개 고르기 (이미 산 건 빼고 표시 · 가격 먼저) ── */
@@ -657,7 +669,7 @@ async function fortunePack() {
   if (has(PK.base)) return toast('신년운세를 이미 가지고 있어요 · 나머지는 낱개로 골라 보세요');
   const row = id => { const p = m.paidOf(id), owned = has(id), needPt = id === 'compat' && !m.loadPartner('compat');
     return `<label class="pkrow${owned ? ' off' : ''}"><input type="checkbox" name="pk" value="${id}" ${owned ? 'disabled' : ''}><b>${p.title}</b><span>${owned ? '이미 있어요' : `낱개 ${won(p.price)}${needPt ? ' · 상대 정보 필요' : ''}`}</span></label>`; };
-  sdClose(); openSheet(`<form class="intro paysheet" id="pkForm"><h2>🎁 ${PK.title}</h2><p class="fsub">${won(PK.price)} · 충전 골드 ${gold} — 신년운세(${won(m.paidOf(PK.base).price)})에 아래에서 <b>2개</b>를 더해요</p>
+  sdOff(); openSheet(`<form class="intro paysheet" id="pkForm"><h2>🎁 ${PK.title}</h2><p class="fsub">${won(PK.price)} · 충전 골드 ${gold} — 신년운세(${won(m.paidOf(PK.base).price)})에 아래에서 <b>2개</b>를 더해요</p>
     <div class="pkrow on"><b>2027 정미년 신년운세</b><span>기본 포함</span></div>${PK.picks.map(row).join('')}
     <p class="paynote">이번 달 운세 · 합격운은 지금 팔리는 달(${Number(m.curYm().slice(5))}월) 기준이에요. 결제 후 고른 풀이가 모두 바로 열려요.</p>
     <div class="stack"><button class="sdbtn" type="submit" data-how="won" disabled>${won(PK.price)}로 결제하기</button>${A.ON ? `<button class="sdbtn ghost" type="submit" data-how="gold" disabled>🪙 충전 골드 ${gold}로 열기</button>` : ''}<button class="btn ghost" type="button" data-close>닫기</button></div></form>`);
@@ -695,7 +707,7 @@ function freebieOk() { try { return R.state().streak.count >= 7 && localStorage.
 async function freebieOpen() {
   const m = await ft(), me = m.loadMe(); if (!me) return fortuneForm();
   const has = boughtFn(m, me), ids = m.PAID.filter(p => p.entry);
-  sdClose(); openSheet(`<div class="intro paysheet"><h2>🔥 ${R.state().streak.count}일 연속 출석 선물</h2><p class="fsub">입문 운세 하나를 무료로 열어 드려요 (계정당 한 번 · 로그인 필요)</p>
+  sdOff(); openSheet(`<div class="intro paysheet"><h2>🔥 ${R.state().streak.count}일 연속 출석 선물</h2><p class="fsub">입문 운세 하나를 무료로 열어 드려요 (계정당 한 번 · 로그인 필요)</p>
     ${ids.map(p => `<button class="sdbtn ${has(p.id) ? 'ghost' : ''}" data-fbclaim="${p.id}" ${has(p.id) ? 'disabled' : ''}>${p.title} (${won(p.price)}) ${has(p.id) ? '· 이미 있어요' : '무료로 열기'}</button>`).join('')}
     <div class="stack"><button class="btn ghost" data-close>나중에</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel');
@@ -761,13 +773,13 @@ async function buy(product) {
   const tk = A.current() ? await A.token().catch(() => '') : '';   /* 로그인 상태면 주문을 계정에 연결 */
   let o; try { o = await P.order(product, me, pt, adult ? { adult: true } : null, tk); } catch (e) { return toast(e.message); }
   if (c.mode === 'toss') { try { await P.toss(o, me, pt); } catch { toast('결제창을 열지 못했어요'); } return; }
-  sdClose();
+  sdOff();
   openSheet(`<div class="intro paysheet"><h2>🔓 ${PR.title} 전체 풀이</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
     <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div>
     <p class="paynote">결제 후 풀이가 바로 제공되어 단순 변심 환불은 제한돼요 (오류 · 중복 결제는 전액 환불). <a href="legal.html#refund" target="_blank">결제·환불 규정</a> · <a href="legal.html#terms" target="_blank">이용약관</a></p>
     <div class="stack"><button class="sdbtn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" id="payCancel">취소</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel');
-  $('#payCancel').onclick = () => { closeSheet(); paidPage(product); };
+  $('#payCancel').onclick = () => { if (!closeSheet()) paidPage(product); };   /* 접어 둔 풀이 화면이 있으면 그대로 돌아옴 */
   $('#mockPay').onclick = async e => {
     const b = e.target; b.disabled = true; b.textContent = '결제 중…';
     try { const r = await P.confirm(o, 'mock_' + Date.now(), o.amount, me, pt); closeSheet(); payDone(product, r); }
@@ -777,7 +789,7 @@ async function buy(product) {
 function fortuneForm() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ } me ||= { name: '', y: 1995, m: 1, d: 1, cal: 'solar', sex: 'f', h: null, mi: 0, lon: 126.98 };
   const opt = (a, b, v) => Array.from({ length: b - a + 1 }, (_, i) => a + i).map(n => `<option ${n === v ? 'selected' : ''}>${n}</option>`).join('');
-  sdClose(); openSheet(`<form class="fform sdform" id="fForm"><h2>사주를 내놔라</h2><p class="fsub">태어난 시까지 넣어야 제대로 읽는다. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>
+  sdOff(); openSheet(`<form class="fform sdform" id="fForm"><h2>사주를 내놔라</h2><p class="fsub">태어난 시까지 넣어야 제대로 읽는다. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>
     <label>이름<input name="name" maxlength="10" placeholder="이름 또는 별명" value="${me.name}" required></label>
     <div class="seg"><label><input type="radio" name="cal" value="solar" ${me.cal !== 'lunar' ? 'checked' : ''}>양력</label><label><input type="radio" name="cal" value="lunar" ${me.cal === 'lunar' ? 'checked' : ''}>음력</label><label class="lp"><input type="checkbox" name="leap" ${me.leap ? 'checked' : ''}>윤달</label></div>
     <div class="row3"><label>년<select name="y">${opt(1930, R.now().getFullYear(), me.y)}</select></label><label>월<select name="m">${opt(1, 12, me.m)}</select></label><label>일<select name="d">${opt(1, 31, me.d)}</select></label></div>
@@ -957,29 +969,36 @@ function nrDepth() {
 //      다른 탭끼리 옮길 때는 받침 그대로 · 터치가 없으면(새로 고침 · 새 버전 · #fortune 로 바로 열림) 첫 터치 때 채움(게임 rearm 과 같은 방식)
 //   ② CloseWatcher (안드로이드 크롬 120+ · PC 는 Esc 와 겹쳐 안 씀): 기록보다 먼저 뒤로가기를 받음 → 시트 · 운세 풀이 · 너랑 시안 안 칸이 있으면 history.back(그쪽이 처리), 없으면 게임 탭으로
 //   너랑: 시안 안 이동(#hash)은 받침 위에 쌓임 → 뒤로가기는 시안 안에서 먼저 → 받침까지 오면 게임 탭 · 다른 탭을 누르면 시안 안 칸(+ 게임 탭이면 받침)을 한 번에 되돌림
-let tbPushed = false, tbNeed = false, tbGoing = null, tbTimer = 0, tbSkip = false, tcw = null;
+let tbPushed = false, tbNeed = false, tbGoing = null, tbTimer = 0, tbSkip = false, tcw = null, tbLvl = 0, tabLvl = 0;
 const isTb = st => !!(st && (st.tb || st.nr));   /* nr: 0.93.0 의 너랑 받침 (새로 고침해도 이어 씀) */
+const tbBase = () => tbPushed ? tbLvl : 0;   /* 이 탭 맨 아래 칸 (받침) */
 function tbEnter() {
   if (!player.hidden || tab === 'today') return;
-  if (isTb(history.state)) { tbPushed = true; tbNeed = false; return watchTab(); }   /* 새로 고침: 이미 있는 받침을 그대로 씀 */
-  if (!active()) { tbNeed = true; return; }   /* 터치 없이 만들면 폰 크롬이 건너뜀 → 첫 터치 때 */
+  if (isTb(history.state)) { tbPushed = true; tbNeed = false; tbLvl = lvl(); return watchTab(); }   /* 새로 고침: 이미 있는 받침을 그대로 씀 */
+  if (!spare && !canPush()) { tbNeed = true; return watchTab(); }   /* 터치 없이 만들면 폰 크롬이 건너뜀 → 첫 터치 때 (그 전 뒤로가기는 CloseWatcher 로 → 게임 탭) */
   tbNeed = false;
-  if (spare) { spare = false; history.replaceState({ tb: 1 }, ''); } else history.pushState({ tb: 1 }, '');   /* 버튼으로 닫은 시트의 남은 한 칸이 있으면 그 칸을 씀 */
+  hpush({ tb: 1 }); tabLvl = tbLvl = lvl();   /* 버튼으로 닫은 시트의 남은 한 칸이 있으면 그 칸을 씀 */
   tbPushed = true; watchTab();
 }
-/* 첫 터치 · 키 누름 때 받침 채우기 (너랑 시안 안 터치는 위 창으로 이벤트가 안 오므로 사용자 활성 상태도 살핌) */
-const tbArm = () => { if (tbNeed && tab !== 'today' && player.hidden && navigator.userActivation && navigator.userActivation.isActive) tbEnter(); };
+/* 첫 터치 · 키 누름 때 받침 · 터치 없이 열린 시트 칸 채우기 (너랑 시안 안 터치는 위 창으로 이벤트가 안 오므로 사용자 활성 상태도 살핌) */
+const tbArm = () => {
+  if (!player.hidden || !navigator.userActivation || !navigator.userActivation.isActive) return;
+  if (tbNeed && tab !== 'today') tbEnter();
+  if (sheetNeed && !sheet.hidden && !sheetPushed) { sheetNeed = false; hpush({ sheet: 1 }); sheetPushed = true; }
+};
 ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'].forEach(ev => addEventListener(ev, tbArm, true));
 setInterval(tbArm, 300);
 function unwatchTab() { if (tcw) { const c = tcw; tcw = null; c.onclose = null; try { c.destroy(); } catch { /* */ } } }
 function watchTab() {
-  unwatchTab(); if (tab === 'today' || !player.hidden || !('CloseWatcher' in window) || isPC()) return;
+  unwatchTab(); if ((tab === 'today' && !(sheetNeed && !sheet.hidden)) || !player.hidden || !('CloseWatcher' in window) || isPC()) return;
   try { tcw = new CloseWatcher(); tcw.onclose = () => { tcw = null; tabBack(); }; } catch { tcw = null; }
 }
 /* 뒤로가기 한 번 (CloseWatcher 로 받은 것): 열린 것부터 닫고, 없으면 게임 탭으로 */
 function tabBack() {
-  if (!player.hidden || tab === 'today') return;
-  if (!sheet.hidden || sdOpen || (tab === 'neorang' && nrDepth() > 0)) { history.back(); setTimeout(watchTab, 0); return; }
+  if (!player.hidden) return;
+  if (!sheet.hidden && !sheetPushed) { closeSheet(true); setTimeout(watchTab, 0); return; }   /* 칸 없이 열린 시트(터치 전 공유 링크) */
+  if (!sheet.hidden || sdOpen || $('#ow') || (tab === 'neorang' && nrDepth() > 0) || lvl() > tbBase()) { history.back(); setTimeout(watchTab, 0); return; }   /* 쌓인 칸이 있으면 기록 한 칸 (popstate 가 한 단계) */
+  if (tab === 'today') return;
   if (tbPushed) go('today', 'cw'); else go('today', 'back');
 }
 /* 기록 k 칸을 한 번에 되돌린 뒤 그 탭으로 (popstate 에서 tbArrive · 안 오면 0.8초 뒤) */
@@ -1097,16 +1116,67 @@ function refreshSettings() { if (settingsOpen()) openSettings(); }
 const setCount = () => R.ORDER.filter(id => !R.isBrand(id)).length;
 // ── 시트(상세 · 광고 · 소개) ─────────────────────────
 const sheet = $('#sheet'), panel = $('#sheet .panel');
-function openSheet(html) { panel.classList.remove('sdpanel', 'setpanel'); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
+function openSheet(html) {
+  if (stepNext && Date.now() - stepNext < 3000 && !sheet.hidden && sheetPushed && $('#player').hidden) park();   /* 시트 안에서 다음 화면(설정 → 내 구매 등): 앞 화면은 그 칸에 접어 두고 새 칸 */
+  stepNext = 0;
+  panel.classList.remove('sdpanel', 'setpanel'); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
   panel.innerHTML = `<div class="grab"></div>${html}`;
-  /* 폰 '뒤로'가 앱을 나가지 않고 이 창만 닫게: 게임 밖에서 처음 열 때 기록 한 칸 (2026-10-29 대표 — 상담 창에서 뒤로 누르면 나가 버림) */
-  if (sheet.hidden && !sheetPushed && $('#player').hidden) { if (spare) { spare = false; sheetPushed = true; } else { sheetPushed = true; history.pushState({ sheet: 1 }, ''); } }
+  /* 폰 '뒤로'가 앱을 나가지 않고 이 창만 닫게: 게임 밖에서 처음 열 때 기록 한 칸 (2026-10-29 대표 — 상담 창에서 뒤로 누르면 나가 버림)
+     터치 없이 열린 시트(공유 링크로 들어옴 등)는 지금 칸을 넣으면 폰 크롬이 그 아래 칸을 건너뜀 → 첫 터치 때 넣고(tbArm), 그 전엔 CloseWatcher 로 받음 */
+  if (sheet.hidden && !sheetPushed && $('#player').hidden) {
+    if (spare || canPush()) { sheetOver = takePark(); hpush({ sheet: 1 }); sheetPushed = true; } else { sheetNeed = true; sheet.hidden = false; watchTab(); }
+  }
   sheet.hidden = false; }
-let onSheetClose = null, sheetPushed = false, spare = false;
-/* 버튼으로 닫을 때는 history.back() 을 부르지 않음 — 닫자마자 게임 · 상세를 여는 흐름(광고 보고 열기 → play 등)에서
-   늦게 도착한 '뒤로'가 막 연 화면을 닫아 버림(0.87.1 버그 · 2026-10-29). 남은 기록 한 칸은 다음 '뒤로' 한 번이 조용히 먹음 */
-function closeSheet(fromPop) { sheet.hidden = true; if (sheetPushed) { sheetPushed = false; if (fromPop !== true) spare = true; } const f = onSheetClose; onSheetClose = null; if (f) f(); }
-$('#sheet .dim').onclick = closeSheet;
+let onSheetClose = null, sheetPushed = false, spare = false, sheetNeed = false, sheetOver = 0, sdOver = 0, stepNext = 0;
+/* 버튼으로 닫을 때는 그 자리에서 history.back() 을 부르지 않음 — 닫자마자 게임 · 상세를 여는 흐름(광고 보고 열기 → play 등)에서
+   늦게 도착한 '뒤로'가 막 연 화면을 닫아 버림(0.87.1 버그 · 2026-10-29) → 남은 칸(spare)은 같은 순간에 열리는 다음 화면이 다시 쓰고, 아무것도 안 열리면 바로 되돌림(markSpare)
+   접어 둔 앞 단계 위에서 열린 시트면 닫는 순간 앞 단계를 되살림 (돌려주는 값 true) */
+function closeSheet(fromPop) {
+  const was = !sheet.hidden; sheet.hidden = true; sheetNeed = false;
+  let back = false;
+  if (sheetPushed) { sheetPushed = false; if (fromPop !== true) { markSpare(); if (sheetOver && PARK.has(sheetOver)) { unpark(sheetOver); back = true; } } }
+  sheetOver = 0;
+  const f = onSheetClose; onSheetClose = null; if (f) f();
+  if (was && tab === 'today' && !$('#sd')) unwatchTab();
+  return back;
+}
+$('#sheet .dim').onclick = () => closeSheet();
+
+// ── 기록 칸 (뒤로가기) ──────────────────────────────
+//   칸마다 state.n = 몇 번째 칸(페이지 첫 칸 0) → 탭을 옮길 때 이 탭에 쌓인 칸 수를 정확히 셈(go) · 받침(tb) 아래로 내려갔는지 앎(popstate)
+//   hpush: 누른 순간 한 칸 (막 닫은 화면의 남은 칸이 있으면 그 칸을 다시 씀) · hdrop: n 칸 되돌리고 그 popstate 는 앱이 먹음
+//   park: 맨 위 화면(시트 → 없으면 운세 전체 화면)을 그 칸째 접어 둠(DOM 그대로 보관) → 새 화면은 위 칸 · 뒤로가기로 그 칸에 오면 그대로 되살림(unpark)
+const lvl = () => (history.state && history.state.n) || 0;
+let eatN = 0, spareT = 0; const eatAfter = [], PARK = new Map(); let parkSeq = 0, parkTop = 0;
+function hpush(st) { if (spare) { spare = false; clearTimeout(spareT); if (!eatN) eatAfter.length = 0; history.replaceState({ ...st, n: lvl() }, ''); } else history.pushState({ ...st, n: lvl() + 1 }, ''); }
+function hrep(st) { if (eatN || spare) eatAfter.push(() => history.replaceState({ ...st, n: lvl() }, '')); else history.replaceState({ ...st, n: lvl() }, ''); }   /* 되돌리는 중이면 도착한 칸에 */
+function hdrop(k, after) { if (after) eatAfter.push(after); if (k <= 0) { if (!eatN) eatAfter.splice(0).forEach(x => x()); return; } eatN++; history.go(-k); }
+function markSpare() { spare = true; clearTimeout(spareT); spareT = setTimeout(() => { if (spare && $('#player').hidden) { spare = false; hdrop(1); } }, 0); }
+function park() {
+  let it = null;
+  if (!sheet.hidden && sheetPushed) { it = { sheet: [...panel.childNodes], cls: panel.className, over: sheet.classList.contains('over'), onClose: onSheetClose, under: sheetOver }; onSheetClose = null; sheet.hidden = true; sheetPushed = false; sheetOver = 0; }
+  else if (sdOpen && $('#sd')) { it = { sd: $('#sd'), under: sdOver }; it.sd.remove(); sdOpen = false; sdOver = 0; document.body.style.overflow = ''; }
+  else { if (!sheet.hidden) closeSheet(); return 0; }
+  const id = ++parkSeq; PARK.set(id, it); if (PARK.size > 12) PARK.delete(PARK.keys().next().value);
+  history.replaceState({ ...(history.state || {}), re: id }, ''); parkTop = id; return id;
+}
+const takePark = () => { const id = parkTop; parkTop = 0; return id; };
+function unpark(id) {
+  const it = PARK.get(id); if (!it) return false; PARK.delete(id);
+  if (it.sd) { document.body.append(it.sd); sdOpen = true; sdOver = it.under; document.body.style.overflow = 'hidden'; }
+  if (it.sheet) { panel.className = it.cls; panel.replaceChildren(...it.sheet); sheet.classList.toggle('over', it.over); sheet.hidden = false; sheetPushed = true; onSheetClose = it.onClose; sheetOver = it.under; }
+  return true;
+}
+const unparkHere = () => { const st = history.state; return !!(st && st.re && unpark(st.re)); };
+const H = { push: hpush, rep: hrep, drop: hdrop, lvl };
+/* 탭을 옮길 때: 열린 화면 · 접어 둔 단계 · 한 단어(접어 둔 것 포함)를 기록 없이 치움 (soft: 막 닫은 시트의 남은 칸은 다음 화면이 쓰게 둠) */
+function layersOff(soft) {
+  if (!sheet.hidden) { sheetPushed = false; closeSheet(true); }
+  if ($('#sd')) sdClose('pop');
+  PARK.clear(); parkTop = 0;
+  if (EX && EX.ow.discard) EX.ow.discard();
+  if (!soft) { spare = false; clearTimeout(spareT); }
+}
 
 function detail(id) {
   const g = G(id), a = R.access(id), lib = R.state().library[id];
@@ -1187,7 +1257,7 @@ function play(id, synced) {
   // 게임용 기록 여러 칸을 '누른 순간', 게임 화면(iframe)을 넣기 '전에' 만들어 둠
   //   · 폰 크롬은 터치 없이 만든 기록을 뒤로가기 때 건너뛰어 앱이 꺼짐 → 터치 순간에 미리 쌓고, 하나씩 씀
   //   · iframe 을 먼저 넣으면 게임이 불러와지면서 방금 만든 기록이 사라질 수 있음
-  if (spare) { spare = false; history.replaceState({ game: id, g: 1 }, ''); } else history.pushState({ game: id, g: 1 }, '');   /* 막 닫은 시트(계정 기록 확인 등)의 남은 칸을 게임 칸으로 — 게임을 닫은 뒤 헛도는 칸이 남지 않게 */
+  hpush({ game: id, g: 1 });   /* 막 닫은 시트(계정 기록 확인 등)의 남은 칸을 게임 칸으로 — 게임을 닫은 뒤 헛도는 칸이 남지 않게 */
   frame = document.createElement('iframe'); backReady = false;
   frame.id = 'frame'; frame.title = G(id).title; frame.allow = 'autoplay; fullscreen; vibrate';
   frame.src = `${G(id).path}${G(id).path.includes('?') ? '&' : '?'}v=${VERSION}`;
@@ -1229,6 +1299,7 @@ function closeGame() {
   if (frame) { frame.remove(); frame = null; }
   document.body.style.overflow = '';
   go(tab, 'game');
+  setTimeout(() => { if (player.hidden) unparkHere(); }, 0);   /* 접어 둔 앞 단계 위에서 연 게임이면 닫은 뒤 그 단계로 */
   // 소장 게임: 닫은 뒤 계정에 올림 · 아니면 (조건 맞을 때) 소장 권유
   if (was && C.alwaysOn(was)) setTimeout(() => C.syncAlways(was, 'after'), 300);
   if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('☁ 계정에 저장됐어요'); }), 300);
@@ -1245,12 +1316,15 @@ let backWait = null, backReady = false;   // backReady: 게임이 뒤로가기�
 const DEPTH = 1, gDepth = () => (history.state && history.state.game ? history.state.g || 1 : 0);
 let cw = null, needArm = false;
 const active = () => !navigator.userActivation || navigator.userActivation.isActive;
+/* 칸을 지금 넣어도 되나: 터치 중이거나, 크롬 계열이 아님 (터치 없이 넣은 칸의 아래 칸을 건너뛰는 건 크롬 · 삼성 인터넷 · 앱 속 브라우저(WebView) — 사파리 · 아이폰은 그대로 넣는 게 나음) */
+const CHROMIUM = /Chrome\/\d/.test(navigator.userAgent) && !/CriOS|EdgiOS|FxiOS/.test(navigator.userAgent);
+const canPush = () => active() || !CHROMIUM;
 function watch() { if (!('CloseWatcher' in window) || player.hidden) return; try { if (cw) cw.destroy(); cw = new CloseWatcher(); cw.onclose = () => { cw = null; askGame(); }; } catch { cw = null; } }
-function rearm() { if (player.hidden) return; if (!active()) { needArm = true; return; } needArm = false; if (!cw) watch(); if (gDepth() < DEPTH) history.pushState({ game: true, g: gDepth() + 1 }, ''); }
+function rearm() { if (player.hidden) return; if (!active()) { needArm = true; return; } needArm = false; if (!cw) watch(); if (gDepth() < DEPTH) hpush({ game: true, g: gDepth() + 1 }); }
 // 게임을 만지면(터치 활성) 비어 있던 받침을 다시 채움
 setInterval(() => { if (!player.hidden && (needArm || !cw && 'CloseWatcher' in window) && navigator.userActivation && navigator.userActivation.isActive) rearm(); }, 250);
 // 게임 닫기: 받침 정리 · 남은 게임 기록을 되돌려 원어데이 첫 기록으로
-function leaveGame() { const g = gDepth(); if (cw) { const c = cw; cw = null; c.onclose = null; try { c.destroy(); } catch { /* */ } } needArm = false; closeGame(); if (g) history.go(-g); }
+function leaveGame() { const g = gDepth(); if (cw) { const c = cw; cw = null; c.onclose = null; try { c.destroy(); } catch { /* */ } } needArm = false; closeGame(); if (g) hdrop(g); }
 function exitGame() { leaveGame(); }
 function goHome() { if (!sheet.hidden) closeSheet(); if (!player.hidden) exitGame(); go('today', 'tab'); try { window.scrollTo(0, 0); } catch { /* */ } }
 // 뒤로가기 한 번: 확인 창 → 게임에게 묻기(팝업 닫기 · 이전 화면) → 게임 첫 화면이면 원어데이로
@@ -1352,6 +1426,8 @@ function fakeAd(label, reward) {
 }
 
 // ── 공통 클릭 처리 ─────────────────────────────────
+/* 시트 안에서 눌러 다른 시트 화면으로 넘어가는 것 = 한 단계 (뒤로가기 = 앞 시트 화면) */
+const STEP_KEYS = ['mybuy', 'restoreCode', 'delacctOpen', 'shop', 'ghist', 'fortuneEdit', 'paid', 'paidEdit', 'type', 'chat', 'fpack', 'freebie', 'login'];
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-tycard],[data-sharecard],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-homeg],[data-lab],[data-settings],[data-bseg],[data-home]');
   if (!t) return;
@@ -1364,9 +1440,10 @@ document.addEventListener('click', e => {
   if ('fortune' in d || d.paid) FFROM = home ? (HM.via === 'game' ? 'after_game' : d.paid ? 'home_hook' : 'home_card') : inF ? 'detail' : !sheet.hidden ? 'sheet' : tab === 'today' ? 'home' : tab;
   const iwhere = d.where || (home ? (bk.dataset.blk === 'install' ? 'banner' : bk.dataset.blk) : !sheet.hidden ? 'sheet' : tab);
   if ('install' in d || 'ext' in d || 'hideInstall' in d) T.track('install_click', { where: iwhere, how: I.how(), what: 'install' in d ? 'install' : 'ext' in d ? 'ext' : 'hide' });
+  if (!sheet.hidden && t.closest('#sheet') && STEP_KEYS.some(k => k in d)) stepNext = Date.now();   /* 시트 안에서 다음 화면 → 한 단계 (openSheet) */
   if ('settings' in d) { T.track('tab', { tab: 'settings' }); openSettings(); }
   else if (d.bseg) { if (d.bseg !== boxSeg) { boxSeg = d.bseg; T.track('tab', { tab: 'box', what: d.bseg }); } go('box', 'seg', d.bseg); }
-  else if (d.mypaid) { closeSheet(); paidPage(d.mypaid); }
+  else if (d.mypaid) { park(); paidPage(d.mypaid); }   /* 내 구매 → 풀이: 내 구매는 접어 둠 */
   else if ('mybuy' in d) myBuys();
   else if ('restoreCode' in d) restoreForm();
   else if ('delacctOpen' in d) deleteAccount();
@@ -1381,7 +1458,7 @@ document.addEventListener('click', e => {
   else if ('chat' in d) ex().then(E => E.chat.open(XC())).catch(er => { console.error(er); toast('잠시 뒤 다시 해 주세요'); });
   else if (d.recap) recapAnswer(d.recap);
   else if ('fcal' in d) fortuneCalendar(d.fcal || '');
-  else if (d.fday) { FFROM = 'cal'; closeSheet(); fortuneDetail(d.fday); }
+  else if (d.fday) { FFROM = 'cal'; park(); fortuneDetail(d.fday); }   /* 달력 → 지난 날: 달력은 접어 둠 → 뒤로가기 = 달력 */
   else if ('stampfill' in d) stampAd();
   else if (d.share) shareCompat(d.share);
   else if (d.sharecard) saveCompatCard(d.sharecard);

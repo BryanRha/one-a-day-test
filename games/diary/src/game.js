@@ -1,11 +1,11 @@
 // 판 플레이 — 7칸 · 도구 3 · 얼음 · 사슬 · 실패 → 무료 돌려받기 → 이어하기(광고 · 골드) · 응원 선물
 //   한 판마다 start() 가 상태를 처음부터 다시 만듦 (지난 판의 상태가 남지 않게 — 씬 재사용 주의)
-import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.97.10';
-import { img, helpOf } from './data.js?v=0.97.10';
-import * as A from './audio.js?v=0.97.10';
-import { S, save } from './save.js?v=0.97.10';
-import { bm } from './oad_bm.js?v=0.97.10';
-import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.97.10';
+import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.97.11';
+import { img, helpOf } from './data.js?v=0.97.11';
+import * as A from './audio.js?v=0.97.11';
+import { S, save } from './save.js?v=0.97.11';
+import { bm } from './oad_bm.js?v=0.97.11';
+import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.97.11';
 
 const SLOTS = 7;
 const stage = $('#stage');

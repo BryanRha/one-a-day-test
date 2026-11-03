@@ -156,43 +156,58 @@ export function entry(c, f) {
 /* ── 겹 화면 ── */
 function host() {
   let el = document.getElementById('ow');
-  if (!el) { el = document.createElement('div'); el.id = 'ow'; document.body.append(el); el.addEventListener('click', onClick); el.addEventListener('input', onInput); push(); }
+  if (!el) { el = document.createElement('div'); el.id = 'ow'; document.body.append(el); el.addEventListener('click', onClick); el.addEventListener('input', onInput); }
   document.body.style.overflow = 'hidden';
   return el;
 }
+/* how: 없음(✕ 버튼 — 겹 화면이 쌓은 칸을 한 번에 되돌림) · 'pop'(뒤로가기로 맨 아래 칸이 빠짐) */
 export function close(how) {
   const el = document.getElementById('ow'); if (el) el.remove(); document.body.style.overflow = ''; S = null;
-  if (pushed && how !== 'pop') { pushed = false; if (how === 'nav') history.replaceState(null, ''); else { skip = true; history.back(); } }   /* 버튼으로 닫으면 넣어 둔 기록 한 칸을 되돌림 */
-  pushed = false; if (C && C.onClose) C.onClose();
+  const n = stk.length; stk = [];
+  if (n && how !== 'pop') C.H.drop(n);
+  if (C && C.onClose) C.onClose();
 }
-/* 폰 뒤로가기 (2026-11-04 대표: 결과 화면에서 뒤로가기 = 이전 단계) — 겹 화면이 열릴 때 기록 한 칸을 넣고, 뒤로가기마다 한 단계씩 되돌린 뒤 다시 한 칸 넣음
-   단계: 아래 시트 닫기 → 도감 · 비교 · 너랑 미리보기는 결과로 → 다른 주제 보기는 원래 카드로 → 질문 n은 n-1 (첫 질문은 나이 고르기가 있었으면 그리로) → 그 밖(결과 · 첫 화면)은 닫기 */
-let pushed = false, skip = false;
-function push() { if (!pushed) { pushed = true; history.pushState({ ow: 1 }, ''); } }
+/* 폰 뒤로가기 (2026-11-04 대표: 뒤로가기는 모든 곳에서 바로 전 단계로)
+   단계가 하나 생길 때마다(누른 순간) 기록 한 칸 { ow: '단계' } — 폰 크롬은 터치 없이 넣은 칸의 아래 칸을 건너뛰므로 뒤로가기 처리 중에는 칸을 넣지 않음
+   뒤로가기 = 맨 위 칸이 빠짐 → 아래 칸에 적힌 단계를 그림 (맨 아래 칸까지 빠지면 닫기) · ← 버튼 = 바로 아래 칸이 그 단계면 history.back() (뒤로가기와 같은 길)
+   단계 이름: age · q1~q5 · reveal · result · result:more(다른 주제 카드) · dex · cmp · nr(재하 미리보기) · 끝에 '+sh' = 다른 주제 시트 열림
+   질문 → 카드 나오기: 질문 칸들을 접어 한 칸만 남김 (결과에서 뒤로가기 = 닫기 · 답은 이미 확정)
+   너랑에서 이어 가기: 겹 화면을 접어 두고(칸은 그대로 · parked) 앱이 너랑 칸을 위에 → 너랑에서 뒤로가기 = 그 칸으로 와서 재하 미리보기를 다시 펼침 */
+let stk = [], parked = null;
+const snap = () => S.scr + (S.scr === 'result' && S.view === 'more' && S.more ? ':more' : '');
+function step(k = snap()) { C.H.push({ ow: k }); stk.push(k); }
+function apply(k) { const [b, sh] = k.split('+'), [scr, v] = b.split(':'); S.scr = scr; if (scr === 'result') S.view = v === 'more' && S.more ? 'more' : ''; draw(); if (sh) { S.arm = ''; host().insertAdjacentHTML('beforeend', moreSheet()); } }
+/* 버튼으로 다른 단계로: 바로 아래 칸이 그 단계면 뒤로 (같은 길) · 아니면 새 칸 */
+function stepTo(k) { if (stk.length > 1 && stk[stk.length - 2] === k) return history.back(); apply(k); step(k); }
 export function onPop() {
-  if (skip) { skip = false; return true; }
+  const st = history.state;
+  if (parked && !document.getElementById('ow')) {   /* 너랑에서 돌아옴 */
+    if (!(st && st.owp)) return false;
+    S = parked.S; C = parked.C; stk = parked.stk; parked = null;
+    C.H.rep({ ow: stk[stk.length - 1] }); C.go('fortune', 'back'); apply(stk[stk.length - 1]); return true;
+  }
   if (!document.getElementById('ow') || !S) return false;
-  pushed = false;
-  const sh = document.querySelector('#ow .owsheet');
-  if (sh) { sheetClose(); push(); return true; }
-  const s = S.scr;
-  if (s === 'dex' || s === 'cmp' || s === 'nr') { S.scr = 'result'; draw(); push(); return true; }
-  if (s === 'result' && S.view === 'more') { S.view = ''; draw(); push(); return true; }
-  if (/^q\d$/.test(s) && (+s.slice(1) > 1 || S.picked)) { S.scr = +s.slice(1) > 1 ? 'q' + (+s.slice(1) - 1) : 'age'; draw(); push(); return true; }
-  if (s === 'reveal') { push(); return true; }   /* 카드가 나오는 중엔 그대로 */
-  close('pop'); return true;
+  if (S.scr === 'reveal') { if (!(st && st.ow)) { stk = []; step('reveal'); } return true; }   /* 카드가 나오는 중엔 그대로 */
+  if (!(st && st.ow)) { close('pop'); return true; }
+  stk.pop(); const k = st.ow; if (stk[stk.length - 1] !== k) stk = [k];
+  document.querySelectorAll('#ow .owdim,#ow .owsheet').forEach(x => x.remove());
+  apply(k); return true;
 }
+/* 탭을 옮기면(너랑에서 다른 탭 등) 접어 둔 겹 화면은 버림 — 칸은 앱이 되돌림 */
+export function discard() { parked = null; if (document.getElementById('ow')) { const c = C; document.getElementById('ow').remove(); document.body.style.overflow = ''; S = null; stk = []; if (c && c.onClose) c.onClose(); } }
 /* how: 'tab' · 'land' · 'pair'(친구 비교 링크) · pair = { r, a, g, m, q } */
 export function open(c, how = 'tab', pair = null) {
   C = c; const day = dayOf(c), rec = todayRec(c);
-  if (rec) { S = { ...rec, scr: pair ? 'cmp' : 'result', pair }; if (rec.v1) dexAdd(rec.res, rec.day); draw(); return; }
+  if (rec) { S = { ...rec, scr: pair ? 'cmp' : 'result', pair }; if (rec.v1) dexAdd(rec.res, rec.day); draw(); return first(); }
   const age = myAge(c);
   S = { day, age: age || 'all', qa: pair && V.okAge(pair.q) ? pair.q : age || 'all', th: V.dayTheme(day), a: [], scr: age ? 'q1' : 'age', pair, how };
   S.qs = V.dayQuestions(day, S.qa);
   c.T.track('oneword_start', { from: how, th: S.th });
   if (age) { c.T.track('oneword_age', { src: birthAge(c) ? 'fortune' : 'pick', age }); stats(); }
-  draw();
+  draw(); first();
 }
+/* 첫 칸: 새로 열면 한 칸 · 이미 열린 겹 화면에서 다시 시작(오늘 카드 다시 받기)이면 쌓인 칸을 첫 칸만 남기고 되돌림 */
+function first() { parked = null; if (!stk.length) return step(); const n = stk.length - 1, k = snap(); stk = [k]; C.H.drop(n, () => C.H.rep({ ow: k })); }
 function stats() {   /* 밸런스 '오늘 같은 쪽 n%' (표본 50 이상일 때만 보임) */
   fetch(`/api/oneword?st=1&day=${S.day}&qa=${S.qa}`).then(r => r.ok ? r.json() : null).then(j => { if (S && j && j.n >= V.STAT_MIN) S.st = j; }).catch(() => {});
 }
@@ -363,7 +378,7 @@ function flip() {
   const r = document.querySelector('.owrv'); if (!r) return;
   r.classList.remove('ph0'); r.classList.add('ph1'); r.querySelector('.rvhint').textContent = '오늘의 당신이 나오는 중…';
   setTimeout(() => r.classList.replace('ph1', 'ph2'), 650);
-  setTimeout(() => { if (S && S.scr === 'reveal') { S.scr = S.pair ? 'cmp' : 'result'; draw(); } }, 2100);
+  setTimeout(() => { if (S && S.scr === 'reveal') { S.scr = S.pair ? 'cmp' : 'result'; draw(); stk = [snap()]; C.H.rep({ ow: snap() }); } }, 2100);
 }
 
 /* ── 저장 그림 (1080×1920 · 결과 카드와 같은 배치) ── */
@@ -474,6 +489,7 @@ function gotMore(th, via) {
   const r = { ...V.pickRule(moreCand(th)), by: 'rule', via };
   S.more = r; S.view = 'more'; if (via === 'credit') S.credit = 0; dexAdd(r, S.day);
   persist(); sheetClose(); draw();
+  const k = snap(); if (stk.length && /\+sh$/.test(stk[stk.length - 1])) { stk[stk.length - 1] = k; C.H.rep({ ow: k }); } else step(k);   /* 시트 칸 → 다른 주제 카드 칸 (뒤로가기 = 원래 카드) */
 }
 /* 광고: 앱 테스트 광고 시트(#sheet)는 겹 화면(#ow)보다 아래라 .over 로 올림 (2026-11-03 대표 제보: 광고가 가려져 '진행 없음') */
 async function showAd() {
@@ -507,7 +523,10 @@ async function buyMore0(th, via) {
     sheetDraw(); C.toast((e && e.message) || '다시 시도해 주세요');
   }
 }
-function next(n) { setTimeout(() => { if (!S) return; S.scr = n < 5 ? 'q' + (n + 1) : 'reveal'; S.ph = 0; draw(); }, S.qs[n - 1].k === 'bal' && S.st ? 900 : 320); }
+function next(n) { setTimeout(() => { if (!S) return; S.scr = n < 5 ? 'q' + (n + 1) : 'reveal'; S.ph = 0; draw();
+  if (n < 5) return step();
+  const k = stk.length - 1; stk = ['reveal']; C.H.drop(k, () => C.H.rep({ ow: S && S.scr !== 'reveal' ? snap() : 'reveal' }));   /* 질문 칸들을 접어 한 칸만 */
+}, S.qs[n - 1].k === 'bal' && S.st ? 900 : 320); }
 function onInput(e) {
   const s = e.target.closest('[data-slide]'); if (!s) return;
   const n = +s.dataset.slide, v = +s.value; S.a = S.a.slice(0, n - 1); S.a[n - 1] = v;
@@ -516,7 +535,7 @@ function onInput(e) {
 }
 async function onClick(e) {
   const ag = e.target.closest('[data-age]');
-  if (ag) { const k = ag.dataset.age; sset(AKEY, k); S.age = k; S.picked = 1; S.qa = S.pair && V.okAge(S.pair.q) ? S.pair.q : k; S.qs = V.dayQuestions(S.day, S.qa); S.scr = 'q1'; C.T.track('oneword_age', { src: k === 'all' ? 'common' : 'pick', age: k }); stats(); return draw(); }
+  if (ag) { const k = ag.dataset.age; sset(AKEY, k); S.age = k; S.picked = 1; S.qa = S.pair && V.okAge(S.pair.q) ? S.pair.q : k; S.qs = V.dayQuestions(S.day, S.qa); S.scr = 'q1'; C.T.track('oneword_age', { src: k === 'all' ? 'common' : 'pick', age: k }); stats(); draw(); return step(); }
   const a = e.target.closest('[data-ans]');
   if (a) {
     const [n, i] = a.dataset.ans.split(':'), k = +n;
@@ -530,16 +549,19 @@ async function onClick(e) {
   const k = g.dataset.ow;
   if (k === 'close') return close();
   if (k === 'flip') return flip();
-  if (/^q\d$/.test(k) || k === 'result') { S.scr = k; return draw(); }
-  if (k === 'v-main' || k === 'v-more') { S.view = k === 'v-more' ? 'more' : ''; return draw(); }
-  if (k === 'dex') { S.scr = 'dex'; C.T.track('oneword_dex'); return draw(); }
-  if (k === 'cmp') { S.scr = 'cmp'; C.T.track('oneword_pair', { what: 'open' }); return draw(); }
-  if (k === 'more') { S.arm = ''; host().insertAdjacentHTML('beforeend', moreSheet()); C.T.track('oneword_more_open'); return; }
-  if (k === 'sheet-close') return sheetClose();
-  if (k === 'v1keep') { S.v1seen = 1; persist(); sheetClose(); return; }
+  if (/^q\d$/.test(k) || k === 'result') return stepTo(k);
+  if (k === 'v-main' || k === 'v-more') return stepTo(k === 'v-more' ? 'result:more' : 'result');
+  if (k === 'dex') { C.T.track('oneword_dex'); return stepTo('dex'); }
+  if (k === 'cmp') { C.T.track('oneword_pair', { what: 'open' }); return stepTo('cmp'); }
+  if (k === 'more') { if (document.querySelector('#ow .owsheet')) return; C.T.track('oneword_more_open'); return stepTo(snap() + '+sh'); }
+  if (k === 'sheet-close' || k === 'v1keep') { if (k === 'v1keep') { S.v1seen = 1; persist(); } if (stk.length && /\+sh$/.test(stk[stk.length - 1])) return history.back(); return sheetClose(); }
   if (k === 'reset') return resetToday();
-  if (k === 'nr') { S.scr = 'nr'; C.T.track('oneword_nr'); return draw(); }
-  if (k === 'nrgo') { close('nav'); return C.go('neorang', 'oneword'); }
+  if (k === 'nr') { C.T.track('oneword_nr'); return stepTo('nr'); }
+  if (k === 'nrgo') {   /* 겹 화면은 접어 두고(칸 그대로 · owp 표시) 너랑으로 — 너랑에서 뒤로가기 = 재하 미리보기 (onPop) */
+    parked = { S, C, stk }; C.H.rep({ ow: stk[stk.length - 1], owp: 1 });
+    const el = document.getElementById('ow'); if (el) el.remove(); document.body.style.overflow = ''; S = null;
+    return C.go('neorang', 'oneword');
+  }
   const view = S.view === 'more' && S.more ? S.more : S.res;
   if (k === 'save') { g.disabled = true; try { const how = await C.saveImage(await cardBlob(S, view), `oneaday-${S.day}-oneword.png`); C.T.track('oneword_save', { how, th: view.th }); } finally { g.disabled = false; } return; }
   if (k === 'cmpsave') { g.disabled = true; try { const how = await C.saveImage(await pairBlob(), `oneaday-${S.day}-pair.png`); C.T.track('oneword_pair', { what: 'save', how }); } finally { g.disabled = false; } return; }
