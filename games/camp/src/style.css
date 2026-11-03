@@ -387,3 +387,5 @@ html[data-look="autumn"] #frame { background: #C9B26A; }
 .pad.aim { border-color: #FFE38Aee; box-shadow: 0 0 22px #FFE38A99; opacity: 1; } .pad.aim span { animation: dotHop 1.6s cubic-bezier(.34,1.56,.64,1) infinite; }   /* 목표가 가리키는 빈자리: 반짝 테두리 + 이름표 */
 
 html[data-look="autumn"] #backdrop { background-image: url(../assets/bg_autumn.webp); }   /* 보이는 계절 = 가을 (시즌 또는 가을 외형 켬) */
+.newtag.inl { position: relative; display: inline-block; transform: none; vertical-align: 2px; margin-right: 6px; animation: none; font-size: 13px; width: 42px; height: 20px; line-height: 16px; }   /* 목록 안 NEW (같은 모양 · 글자 앞) */
+@keyframes lvBump { 0% { transform: scale(1); } 30% { transform: scale(1.18); color: #C9861E; } 100% { transform: scale(1); } } .dlg h3.lvbump { animation: lvBump .6s cubic-bezier(.34,1.56,.64,1); }   /* 강화 뒤 레벨 숫자 통통 (11-03) */

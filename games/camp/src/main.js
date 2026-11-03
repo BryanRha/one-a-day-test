@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.97.1';
-import * as G from './sim.js?v=0.97.1';
-import * as C from './chars.js?v=0.97.1';
-import * as C2 from './chars2d.js?v=0.97.1';
-import * as UI from './ui.js?v=0.97.1';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.97.1';
-import { bm } from './oad_bm.js?v=0.97.1';
-import { installBack } from './oad.js?v=0.97.1';
+import * as D from './data.js?v=0.97.2';
+import * as G from './sim.js?v=0.97.2';
+import * as C from './chars.js?v=0.97.2';
+import * as C2 from './chars2d.js?v=0.97.2';
+import * as UI from './ui.js?v=0.97.2';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.97.2';
+import { bm } from './oad_bm.js?v=0.97.2';
+import { installBack } from './oad.js?v=0.97.2';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
@@ -105,6 +105,10 @@ function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img')
 const PROP_SLOT = [[-0.56, 0.06], [0.56, 0.1], [-0.42, -0.3]];
 /* 10단계 꾸밈 (v0.3): 3단계 등불 빛 · 5단계 나무 간판 · 7단계 반짝이 줄 조명 · 9단계 금빛 마감 */
 /* NEW 리본은 이 하나로 (대표 제보 11-03: 화면 끝에서 'N E W' 세로로 접힘 → 글자 줄바꿈 금지 · 고정 크기 · 화면 끝 라벨 밀어 넣기 대상 아님) */
+const newEls = new Map();   /* 보이는 NEW: 대상 키 → { el, 가운데에 보인 시간 } */
+function seen(k) { if (G.seeNew(k)) { save(); render(); } }   /* 확인 → NEW 지움 · 저장 */
+/* 화면 가운데(가로 · 세로 가운데 절반)에 2초 이상 보이면 확인으로 침 · 창이 떠 있으면 세지 않음 */
+function newTick(dt) { if (!newEls.size || document.querySelector('#pop .dlg')) return; const vw = innerWidth, vh = innerHeight; for (const [k, o] of newEls) { const r = o.el.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; if (r.width && cx > vw * 0.25 && cx < vw * 0.75 && cy > vh * 0.25 && cy < vh * 0.75) { o.t += dt; if (o.t >= 2) { seen(k); return; } } else o.t = 0; } }
 export function newTag() { const d = document.createElement('div'); d.className = 'newtag'; d.textContent = 'NEW'; return d; }
 function stepDeco(im, name, sp, x, y, w, pk) { if (sp >= 3) im.classList.add('lit'); if (sp >= 9) im.classList.add('gold');
   if (sp >= 5) { const sg = document.createElement('div'); sg.className = 'fsign'; sg.textContent = name; sg.style.left = (x - w * 0.5) + 'px'; sg.style.top = (y - w * 0.22) + 'px'; sg.style.fontSize = Math.round(15 * pk) + 'px'; layer.fac.append(sg); }
@@ -133,7 +137,7 @@ export function render() {
     const b = S.pads[p.id], [x, y] = p.pos; let pk = D.PERSP(y);
     if (b && b.lv > 0) { const f = D.FAC[p.fac], vl = G.working(p.id) ? b.lv - 1 : b.lv, st = D.stageOf(vl), sp = D.stepOf(vl), w = D.STAGE.ws(p.fac, sp) * pk, im = stImg(p.fac, st, x, y + 12 * pk, w, 'fac s' + st); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im; stepDeco(im, f.name, sp, x, y + 12 * pk, w, pk);
       propsAt(p.id, vl, x, y + 12 * pk, w, pk);
-      fname(f.name, x, y + 46 * pk); tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
+      fname(f.name, x, y + 46 * pk); tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => { seen(p.id); stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)); }, p.id); }   /* 누르면 확인 */
     else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.dataset.pid = p.id; pd.style.left = x + 'px'; pd.style.top = y + 'px'; const aim = UI.tutPad() === p.id || (gt.k === 'build' && gt.v === p.id); if (aim) pd.classList.add('aim'); pd.innerHTML = (S.coin >= G.padCost() && p === D.PADS.find(q => G.canBuild(q.id))) || aim ? `<i class="ham"></i>${aim ? `<span>+ ${D.FAC[p.fac].name}</span>` : ''}` : '';   /* 지을 수 있을 때만 작은 망치 + 빛 · 빈자리 이름표는 목표 · 처음 안내가 그 자리를 가리킬 때만 (대표 11-03 · 세계 안 제자리 고정) */ pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
   }
   /* 공용 키친 빵 오븐 (배경 그림 속 화덕) */
@@ -142,7 +146,7 @@ export function render() {
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
   const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
-  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; if (S.amenAt && S.t - (S.amenAt[a] || -1e9) < 86400) { const nt = newTag(); nt.style.left = ax + 'px'; nt.style.top = (ay - aw * D.PX_M * D.PERSP(ay) * 1.15) + 'px'; layer.ui.append(nt); }   /* 작은 설비는 들인 뒤 하루 동안 NEW 리본 */ (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
+  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
   /* 잠긴 구역 안개 · 공사 */
   /* 안개 = 배경 화풍으로 그린 구름 여러 겹이 천천히 흐름 · 큰 라벨은 '다음에 열릴 구역' 하나만, 나머지는 작은 자물쇠 (퀄리티 A3) */
   const nextZ = (D.ZONES.find(z => S.zones[z.id].st !== 'open') || {}).id;
@@ -160,6 +164,8 @@ export function render() {
     f.append(lab);
     if (r[2] >= 700) f.style.paddingRight = '130px'; if (r[1] < 100) f.style.paddingTop = '150px';
     f.onclick = () => { sfx('tap'); UI.zoneDialog(z.id); }; layer.ui.append(f); }
+  /* NEW 리본: 확인 안 한 새 것 중 최근 3개만 (화면 밀도) · 확인하면 지움 (newTick · locate · 누르기) */
+  newEls.clear(); for (const k of G.newKeys().filter(k => facEl[k]).slice(0, 3)) { const el = facEl[k], [x, y] = placeOf(k), w = parseFloat(el.style.width) || 80, nt = newTag(); nt.dataset.k = k; nt.style.left = x + 'px'; nt.style.top = (k.startsWith('amen_') ? y - w * 0.7 : y - w * 0.85) + 'px'; layer.ui.append(nt); newEls.set(k, { el: nt, t: 0 }); }
   for (const g of R.gifts) giftEl(g);
   for (const v of guests.values()) if (v.bub && v.bub.style.display !== 'none') layer.ui.append(v.bub);
   catEl && layer.ui.append(catEl);
@@ -247,7 +253,7 @@ function prop(p, id) { if (p.is2d || !p.J) return; const M = c => new THREE.Mesh
   else if (id === 'haru') { const pc = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 16, 6), M(0xFFD24A)); pc.rotation.z = 1.2; g.add(pc); p.J.head.add(g); g.position.set(-30, 8, 4); }
   p.refreshMeshes && p.refreshMeshes(); }
 const servers = {};   /* staff id → { p } */
-let staffT = 1;
+let staffT = 1, newT = 0.25;
 /* 보이는 직원 (검사용 · staffcheck.mjs): 고용 id → 장면에 살아 있는 사람이 있는지 */
 export function staffSeen() { const shown = []; for (const [st, c] of Object.entries(cooks)) if (R.cooks[st] === c.id && alive(c.p)) shown.push(c.id); for (const [id, s] of Object.entries(servers)) if (alive(s.p)) shown.push(id); for (const [id, s] of Object.entries(idlers)) if (alive(s.p)) shown.push(id);
   const hired = D.STAFF.filter(s => S.staff[s.id]).map(s => s.id); return { hired, shown, ok: hired.length === shown.length && hired.every(id => shown.includes(id)) }; }
@@ -307,7 +313,7 @@ function bubbleAt(pos, text, ms = 2400) { const d = document.createElement('div'
 function showPlaced(id) { setTimeout(() => { const pos = placeOf(id), back = { x: CAMV.x, y: CAMV.y, z: CAMV.z }, now = performance.now();
   if (camTo(pos[0], pos[1] - 30, Math.min(1.6, Math.max(CAMV.z, 1.35)), true)) setTimeout(() => { if (lastTouch < now && !ptrs.size && !CAMV.tw) camTo(back.x, back.y, back.z, true); }, 3000);
   setTimeout(() => { burst(pos[0], pos[1] - 20, 'sparkle', 16); blink(id); const n = nameOf(id); bubbleAt(pos, `<b>${n}${D.josa(n, '이/가').slice(n.length)} 들어왔어요</b>`); }, 650); }, 380); }
-export function locate(id, placed) { const pos = placeOf(id); CAMV.tw = null; camTo(pos[0], pos[1] - 30, Math.min(1.6, Math.max(CAMV.z, 1.35))); setTimeout(() => { blink(id); burst(pos[0], pos[1] - 20, 'sparkle', placed ? 20 : 8); bubbleAt(pos, `<i class="pin"></i><b>${nameOf(id)}${placed ? D.josa(nameOf(id), '이/가').slice(nameOf(id).length) + ' 놓였어요' : ''}</b>`, placed ? 2600 : 1800); }, 700); }
+export function locate(id, placed) { const pos = placeOf(id); CAMV.tw = null; camTo(pos[0], pos[1] - 30, Math.min(1.6, Math.max(CAMV.z, 1.35))); setTimeout(() => { seen(id);   /* [놓인 자리 보기] = 확인 */ blink(id); burst(pos[0], pos[1] - 20, 'sparkle', placed ? 20 : 8); bubbleAt(pos, `<i class="pin"></i><b>${nameOf(id)}${placed ? D.josa(nameOf(id), '이/가').slice(nameOf(id).length) + ' 놓였어요' : ''}</b>`, placed ? 2600 : 1800); }, 700); }
 const facPos = t => t === 'oven' ? D.OVEN_AT : D.PADS.find(x => x.id === t).pos;
 function stageFx(t, prevLv, afterWork) {
   const o = t === 'oven' ? S.oven : S.pads[t]; if (!o) return; const lv = o.lv, pos = facPos(t), ps = D.stageOf(prevLv), ns = D.stageOf(lv), old = facEl[t];
@@ -577,7 +583,7 @@ if (Q.get('demo') === 'behind') {   /* 확인용: 건물 뒤를 지나는 손님
   const loop = (look, a, b) => { const p = mk(C.LOOKS[look], ...a, 3); const go = (x, y) => { const r = G.walkMap.route(toScreen(p.root.position), [x, y]); walkPath(p, r, G.walkMap.pathLen(r) / 55, () => go(...(x === a[0] ? b : a))); }; go(...b); };
   loop('hiker', D.P(120, 760), D.P(470, 620)); loop('couple', D.P(560, 700), D.P(830, 700)); loop('grandma', D.P(300, 690), D.P(130, 750));
 }
-window.__camp = { staffSeen, staffHealN: () => staffHeal, ctx, C, THREE, sfx, music, setAudio, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
+window.__camp = { newShown: () => [...newEls.keys()], locate, staffSeen, staffHealN: () => staffHeal, ctx, C, THREE, sfx, music, setAudio, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
 
 /* ── 반복 ── */
 const SPEED = Math.max(0.1, +(Q.get('speed') || 1));
@@ -590,7 +596,7 @@ function loop(t) {
   const dt = Math.min(0.1, rdt) * SPEED; let left = dt; while (left > 0) { const s = Math.min(0.25, left); G.step(s); left -= s; }
   for (const e of G.drain()) onEvent(e);
   for (const p of people) p.update(Math.min(0.05, rdt), t / 1000); petStep(Math.min(0.05, rdt), t / 1000);
-  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove(); clampT -= rdt; if (clampT <= 0) { clampT = 0.15; clampLabels(); } staffT -= rdt; if (staffT <= 0) { staffT = 1; staffTick(); }
+  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove(); clampT -= rdt; if (clampT <= 0) { clampT = 0.15; clampLabels(); } staffT -= rdt; if (staffT <= 0) { staffT = 1; staffTick(); } newT -= rdt; if (newT <= 0) { newT = 0.25; newTick(0.25); }
   for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); if (v.p.act === 'eat' && Math.random() < rdt * 0.6) burst(x, y - (v.p.look.h || 60) * D.PERSP(y) - 6, 'heart', 1); }   /* 먹으면서 '맛있다' 하트 */
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 40; const cur = toScreen(s.p.root.position), dst = [h[0] + rnd(-8, 8), h[1] + rnd(-3, 3)]; G.walkMap.addAnchor(dst); walkPath(s.p, G.walkMap.route(cur, dst), G.walkMap.pathLen(G.walkMap.route(cur, dst)) / 40 + 0.3, () => s.p.face(360, 1000, 0.5)); }
   if (hero.act === 'idle' && Math.random() < rdt * 0.05) { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1600); }

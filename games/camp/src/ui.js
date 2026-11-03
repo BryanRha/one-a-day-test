@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.97.1';
-import * as G from './sim.js?v=0.97.1';
-import { bm } from './oad_bm.js?v=0.97.1';
-import { sfx, setAudio, AUD } from './audio.js?v=0.97.1';
-import { pushBack } from './oad.js?v=0.97.1';
+import * as D from './data.js?v=0.97.2';
+import * as G from './sim.js?v=0.97.2';
+import { bm } from './oad_bm.js?v=0.97.2';
+import { sfx, setAudio, AUD } from './audio.js?v=0.97.2';
+import { pushBack } from './oad.js?v=0.97.2';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -156,14 +156,15 @@ export function tick(dt) {
 }
 
 /* ── 가운데 창 (튀어나옴 · 줄어들며 닫힘 · 뒤로가기) ── */
-const queue = []; let curDlg = null;
+const queue = []; let curDlg = null; const dlgStack = [];   /* 창 위에 창(확인 창)이 떠도 닫히면 아래 창이 다시 '지금 창'이 됨 (대표 제보 11-03: 솔방울로 지금 하기 뒤 강화 창이 옛 값으로 멈춤) */
 export function dlg(html, o = {}) {
   const shade = document.createElement('div'); shade.className = 'shade'; const d = document.createElement('div'); d.className = 'dlg'; d.innerHTML = (o.rays ? '<div class="rays"></div>' : '') + html; popEl.append(shade, d);
   popEl.style.pointerEvents = 'auto'; requestAnimationFrame(() => { shade.classList.add('open'); d.classList.add('open'); }); sfx('open');
   let done = false; const unBack = pushBack(() => { if (o.lock) return true; close(); return true; });
-  const close = () => { if (done) return; done = true; unBack(); d.classList.add('closing'); shade.classList.remove('open'); sfx('close'); setTimeout(() => { d.remove(); shade.remove(); if (!popEl.querySelector('.dlg')) popEl.style.pointerEvents = 'none'; curDlg = null; o.onClose && o.onClose(); next(); }, 220); };
+  const close = () => { if (done) return; done = true; unBack(); d.classList.add('closing'); shade.classList.remove('open'); sfx('close'); const i = dlgStack.indexOf(me); if (i >= 0) dlgStack.splice(i, 1); curDlg = dlgStack[dlgStack.length - 1] || null; if (curDlg && curDlg.live) curDlg.live();   /* 아래 창을 바로 새 값으로 */
+    setTimeout(() => { d.remove(); shade.remove(); if (!popEl.querySelector('.dlg')) popEl.style.pointerEvents = 'none'; o.onClose && o.onClose(); next(); }, 220); };
   if (!o.lock) shade.onclick = close;
-  const me = { el: d, close, live: o.live ? () => o.live(d) : null }; curDlg = me; return me;
+  const me = { el: d, close, live: o.live ? () => o.live(d) : null }; dlgStack.push(me); curDlg = me; return me;
 }
 function next() { if (curDlg || !queue.length) return; queue.sort((a, b) => a.p - b.p); const q = queue.shift(); q.f(); }
 export function enqueue(p, f) { queue.push({ p, f }); next(); }
@@ -189,7 +190,7 @@ export function openTab(id, sub) {
 }
 function stagger(body) { body.querySelectorAll('.card').forEach((c, i) => c.style.animationDelay = Math.min(i, 10) * 0.045 + 's'); }
 export function closeSheet(instant) {
-  if (!cur) return; const c = cur; cur = null; c.unBack(); barEl.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  if (!cur) return; const c = cur; cur = null; c.unBack(); sheetSeen.clear(); barEl.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
   c.sh.classList.add('closing'); c.shade.classList.remove('open'); if (!instant) sfx('close');
   setTimeout(() => { c.sh.remove(); c.shade.remove(); if (!sheetEl.querySelector('.sh')) sheetEl.style.pointerEvents = 'none'; }, instant ? 0 : 300);
 }
@@ -206,7 +207,10 @@ function morphNode(x, y) { if (x.nodeType !== y.nodeType || x.nodeName !== y.nod
 Object.defineProperty(HTMLElement.prototype, 'mhtml', { configurable: true, set(v) { if (this.dataset.drawn && this.childNodes.length) morph(this, v); else { this.innerHTML = v; this.dataset.drawn = 1; } } });
 let stageBusy = false; export const busy = () => stageBusy;   /* 검사용 (paycheck: 새 단장 연출이 끝난 뒤 다음 경우) */
 /* 모자란 숲 코인 채우기 확인 창 → 채운 뒤 원래 하려던 일을 바로 */
-async function fillFlow(a, v, b, me, after) { const act0 = a === 'b' ? 'build' : a, cost = G.coinCostOf(act0, v);   /* 값은 단추에 적힌 data-cost 가 아니라 지금 그 일의 값으로 (화면이 늦게 다시 그려져도 같은 값) */
+/* 결제 · 일 끝난 뒤 열린 창 · 판을 새 값으로 (대표 제보 11-03) */
+export function refreshOpen() { if (curDlg && curDlg.live && curDlg.el.isConnected) curDlg.live(); if (cur) cur.refresh(true); }
+let payBusy = false;   /* 솔방울 · 골드로 채우기 창이 떠 있는 동안 같은 단추를 또 눌러도 창이 또 뜨지 않음 (중복 결제 방지) */
+async function fillFlow(a, v, b, me, after) { if (payBusy) return; const act0 = a === 'b' ? 'build' : a, cost = G.coinCostOf(act0, v);   /* 값은 단추에 적힌 data-cost 가 아니라 지금 그 일의 값으로 (화면이 늦게 다시 그려져도 같은 값) */
   if (cost == null) return; const blocked = () => (act0 === 'up' && (stageBusy || G.working(v) || (v === 'oven' ? S.oven : S.pads[v]).lv >= D.UP.max)) || (act0 === 'build' && !G.canBuild(v)) || (act0 === 'amen' && S.amen[v]) || (act0 === 'hire' && S.staff[v]);   /* 대가를 받기 전에 그 일을 지금 할 수 있는지 먼저 (대가 일치 검사로 찾음: 새 단장 연출 중 강화가 막혀 솔방울만 빠짐) */
   if (blocked()) return toast(stageBusy ? '잠깐만요 · 새 단장 중이에요' : '지금은 할 수 없어요');
   if (S.coin >= cost) { if (act0 === 'build' && after) { const err = G.build(v); if (!err) after(); return; } return act(act0, v, null, b, me); }   /* 그새 숲 코인이 모였으면 그냥 함 */
@@ -215,10 +219,12 @@ async function fillFlow(a, v, b, me, after) { const act0 = a === 'b' ? 'build' :
   const gold = S.gem < f0.gem, gp = gold && bm.info.ok && f0.gem <= D.GOLD_MAX ? bm.price('inst' + f0.gem) : null; if (gold && gp !== f0.gem) return toast('솔방울이 조금 모자라요');
   const f = { ...f0, gold };
   const what = { up: '강화할까요', build: '지을까요', amen: '들일까요', menu: '출시할까요', hire: '고용할까요' }[act0] || '할까요', pay = f.gold ? `${ic('gold')}원어데이 골드 ${f.gem}` : `${ic('gem')}솔방울 ${f.gem}`;
-  const d = dlg(`<h3>숲 코인이 조금 모자라요</h3><p>${f.gold ? '원어데이 골드' : '솔방울'}로 바로 ${what}?</p><div class="fillx">모자란 ${cn(f.short)}<i>=</i>${pay}</div><p style="font-size:17px;color:#8A7A6E">기다리면 약 ${tm(f.sec)} 뒤에 모여요</p><div class="row">${btn('go', `${ic('inst')} ${pay}로 하기`, 'yl')}${btn('no', '기다릴게요', 'sky')}</div>`);
+  payBusy = true; let goBusy = false;
+  const d = dlg(`<h3>숲 코인이 조금 모자라요</h3><p>${f.gold ? '원어데이 골드' : '솔방울'}로 바로 ${what}?</p><div class="fillx">모자란 ${cn(f.short)}<i>=</i>${pay}</div><p style="font-size:17px;color:#8A7A6E">기다리면 약 ${tm(f.sec)} 뒤에 모여요</p><div class="row">${btn('go', `${ic('inst')} ${pay}로 하기`, 'yl')}${btn('no', '기다릴게요', 'sky')}</div>`, { onClose: () => { payBusy = false; } });
   d.el.dataset.pay = f.gem; d.el.dataset.payk = f.gold ? 'gold' : 'gem';
   d.el.querySelector('[data-a="no"]').onclick = () => d.close();
-  d.el.querySelector('[data-a="go"]').onclick = async () => { if (blocked()) { d.close(); return toast('지금은 할 수 없어요 · 솔방울은 그대로예요'); } const c2 = G.coinCostOf(act0, v), f2 = G.fillCost(c2, true);   /* 확인 창에 적힌 값과 실제 차감이 같아야 함 */
+  d.el.querySelector('[data-a="go"]').onclick = async ev => { if (goBusy) return; goBusy = true; ev.currentTarget.classList.add('off');   /* 한 번 누르면 한 번만 */
+    if (blocked()) { d.close(); return toast('지금은 할 수 없어요 · 솔방울은 그대로예요'); } const c2 = G.coinCostOf(act0, v), f2 = G.fillCost(c2, true);   /* 확인 창에 적힌 값과 실제 차감이 같아야 함 */
     if (f2 && f2.gem > f.gem && S.coin < c2) { d.close(); toast('값이 바뀌었어요 · 다시 눌러 주세요'); return; }   /* 더 모자라진 때만 (적힌 값보다 더 받지 않음) */
     if (!f.gold) { const e = S.coin >= c2 ? null : G.fillByGem(c2, f.gem); if (e) { d.close(); return toast(e); } } else { const r = await bm.spend('inst' + f.gem); if (!r.ok) { d.close(); if (r.reason === 'short') soft('원어데이 골드가 조금 모자라요'); return; } G.fillByGold(c2); }
     d.close(); sfx('unlock'); ctx.save(); if (act0 === 'build' && after) { const err = G.build(v); if (!err) { after(); toast(`${D.FAC[D.PADS.find(p => p.id === v).fac].name}${josa(D.FAC[D.PADS.find(p => p.id === v).fac].name)} 생겼어요! ${praise()}`, true); } } else act(act0, v, null, b, me); }; }
@@ -246,7 +252,7 @@ async function act(a, v, w, b, me, repeat) {
   if (a === 'up') { err = G.upgrade(v); if (!err && (() => { const lv = (v === 'oven' ? S.oven : S.pads[v]).lv; return D.stageOf(lv) !== D.stageOf(lv - 1) && !G.working(v); })()) {   /* 새 단장: 창을 먼저 내리고 → 시설을 화면 가운데서 크게 → 리본 → 2.9초 뒤 창을 다시 (퀄리티 v2 Top 3) */
       stageBusy = true; const fromDlg = !me; if (curDlg) curDlg.close(); closeSheet(); sfx('up', { up: 8 });
       setTimeout(() => { stageBusy = false; if (fromDlg) facDialog(v); else openTab('fac'); }, 2900); return; }
-    if (!err) { sfx('up', { up: Math.min(8, (v === 'oven' ? S.oven : S.pads[v]).lv % 9) }); ctx.fx('sparkle', v); if (!repeat) numPop(at[0], at[1] - 30, praise()); } }
+    if (!err) { const nl = (v === 'oven' ? S.oven : S.pads[v]).lv; sfx('up', { up: Math.min(8, nl % 9) }); ctx.fx('sparkle', v); if (!repeat) numPop(at[0], at[1] - 30, `강화 완료 · Lv.${nl}`); } }   /* 성공 연출은 결제 길과 상관없이 같음 */
   else if (a === 'build') { err = G.build(v); if (!err) { closeSheet(); toast(`${D.FAC[D.PADS.find(p => p.id === v).fac].name}${josa(D.FAC[D.PADS.find(p => p.id === v).fac].name)} 생겼어요! ${praise()}`, true); } }
   else if (a === 'amen') { err = G.buildAmen(v); if (!err) { closeSheet(); sfx('build'); toast(`${D.AMEN[v].name} 완성! ${D.AMEN[v].desc}`, true); } }
   else if (a === 'zone') { closeSheet(); return zoneDialog(v); }   /* 메뉴 · 지도 표지 모두 같은 열기 흐름 (확인 → 비용 → 연출) */
@@ -280,6 +286,7 @@ async function act(a, v, w, b, me, repeat) {
   else if (a === 'try') { if (v === 'skin') ctx.tryOn(15, 'skin'); else ctx.previewDeco(15); return toast(v === 'skin' ? '15초 동안 입어 볼게요 · 셰프를 봐 주세요!' : '15초 동안 잔디 왼쪽에 놓아 볼게요', true); }
   else if (a === 'charge') { const r = G.claimCharge(v); if (r) { flyR(r, at); sfx('gift'); ctx.render(); } }
   if (err) return nope(b, err);
+  refreshOpen();   /* 어떤 길로 했든(숲 코인 · 솔방울 · 골드 · 광고 · 즉시 완성) 같은 함수로 창을 새 값으로 */
   ctx.save(); if (me) { me.refresh(true); bump(me, b.closest('[data-k]') && b.closest('[data-k]').dataset.k); }
 }
 const josa = (w, p = '이/가') => D.josa(w, p).slice(w.length);
@@ -315,11 +322,16 @@ const GOLD = {
 async function buyGold(sku) {
   const g = GOLD[sku]; if (g.item && g.own()) return toast('이미 가지고 있어요');
   const r = await bm.spend(sku); if (!r.ok) { if (r.reason === 'short') soft('원어데이 골드가 조금 모자라요'); else if (r.reason !== 'cancel') soft('지금은 살 수 없어요'); return; }
-  g.give(); sfx('unlock'); confetti(24); toast(`${g.name} · 고마워요!`, true); ctx.render(); ctx.save(); if (cur) cur.refresh(true);
+  G.payLog('gold', sku, bm.price(sku) || 0); g.give(); sfx('unlock'); confetti(24); toast(`${g.name} · 고마워요!`, true); ctx.render(); ctx.save(); if (cur) cur.refresh(true);
 }
 
 /* ── 판 내용 ── */
-const card = (k, img, title, sub, right, o = {}) => `<div class="card${o.cls ? ' ' + o.cls : ''}" data-k="${k}"><div class="im"${o.bg ? ` style="background:${o.bg}"` : ''}>${img ? `<img src="${img}" alt="">` : ''}</div><div class="tx"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}${o.bar != null ? `<div class="bar"><i style="width:${Math.round(o.bar * 100)}%"></i></div>` : ''}</div>${right || ''}</div>`;
+/* 목록 NEW (대표 11-03): 목록에서 한 번 보면 지움 · 이 판을 닫을 때까지는 보여 줌 */
+const sheetSeen = new Set();
+const listNew = key => { if (curDlg && curDlg.el && curDlg.el.isConnected) return sheetSeen.has(key) || !!(S.newsL && key in S.newsL);   /* 창(상자 연출 등)이 목록을 덮고 있으면 아직 '본' 게 아님 */
+  if (G.seeNewList(key)) { sheetSeen.add(key); ctx.save(); } return sheetSeen.has(key); };
+const NEWI = '<i class="newtag inl">NEW</i>';
+const card = (k, img, title, sub, right, o = {}) => `<div class="card${o.cls ? ' ' + o.cls : ''}" data-k="${k}"><div class="im"${o.bg ? ` style="background:${o.bg}"` : ''}>${img ? `<img src="${img}" alt="">` : ''}</div><div class="tx"><b>${o.nw ? NEWI : ''}${title}</b>${sub ? `<span>${sub}</span>` : ''}${o.bar != null ? `<div class="bar"><i style="width:${Math.round(o.bar * 100)}%"></i></div>` : ''}</div>${right || ''}</div>`;
 const btn = (a, label, cls = 'go', off = false, extra = '') => `<div class="btn ${cls}${off ? ' off' : ''}" data-a="${a}" ${extra}>${label}</div>`;
 /* 숲 코인 비용 버튼: 모자라면 같은 자리에 [⚡ 지금 하기 · 솔방울 N] (솔방울이 모자라면 같은 버튼이 원어데이 골드 · 즉시 완성 2버튼 규칙과 같음 · 대표 승인 10-30) */
 const fillOf = cost => { const f = G.fillCost(cost); if (!f) return null; const gold = S.gem < f.gem; const gp = gold && bm.info.ok && f.gem <= D.GOLD_MAX ? bm.price('inst' + f.gem) : null; return gold && gp !== f.gem ? null : { ...f, gold }; };
@@ -342,7 +354,7 @@ function facCard(t) {
   else if (lv >= D.UP.max) right = '<b style="color:#5E9E82">최고 단계</b>';
   else right = costBtn('up:' + t, `강화<small>${cn(cost)}</small>`, cost, nextT === lv + 1 ? 'yl' : 'go', 'style="flex-direction:column;min-width:150px"');
   const extra = fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : fac.kind === 'special' && adOk('charge') && adOn('charge') ? btn('ad:charge:' + t, `${ic('ad')} 바로 채우기`, 'sky') : '';
-  return card(t, img, `${fac.name} <small style="font-size:18px">Lv.${lv}</small> ${stars(tier)}`, `${eff}${nextT ? `<br>Lv.${nextT}에 단계가 올라 모습이 바뀌어요` : ''}`, `<div style="display:flex;flex-direction:column;gap:8px">${right}${extra}${btn('loc:' + t, '<i class="pin"></i>위치 보기', 'sky locb')}</div>`);
+  return card(t, img, `${fac.name} <small style="font-size:18px">Lv.${lv}</small> ${stars(tier)}`, `${eff}${nextT ? `<br>Lv.${nextT}에 단계가 올라 모습이 바뀌어요` : ''}`, `<div style="display:flex;flex-direction:column;gap:8px">${right}${extra}${btn('loc:' + t, '<i class="pin"></i>위치 보기', 'sky locb')}</div>`, { nw: listNew(t) });
 }
 const PANELS = {
   fac: { title: '시설', subs: [['fac', '시설'], ['amen', '편의 설비'], ['zone', '구역']], render(sub) {
@@ -355,7 +367,7 @@ const PANELS = {
       return h;
     }
     if (sub === 'amen') { let h = `<div class="sec">공용 키친 설비는 새 메뉴를, 웰컴센터 설비는 휴식을 늘려요</div>`;
-      for (const [id, a] of Object.entries(D.AMEN)) { const c = G.amenCost(id); h += card(id, null, a.name, `<b style="color:#8A6A4A">${a.at === 'kitchen' ? '공용 키친 안' : '웰컴센터 옆'}</b> · ${a.desc}`, S.amen[id] ? `<div style="display:flex;flex-direction:column;gap:8px;align-items:center"><b style="color:#5E9E82">있어요 ✓</b>${btn('loc:amen_' + id, '<i class="pin"></i>위치 보기', 'sky locb')}</div>` : costBtn('amen:' + id, `짓기<small>${cn(c)}</small>`, c, 'go', 'style="flex-direction:column;min-width:150px"'), { bg: a.at === 'kitchen' ? '#FDE7D4' : '#DCEBF8', cls: S.amen[id] ? 'done' : '' }).replace('</div><div class="tx">', `${AMEN_E[id]}</div><div class="tx">`); }
+      for (const [id, a] of Object.entries(D.AMEN)) { const c = G.amenCost(id); h += card(id, null, a.name, `<b style="color:#8A6A4A">${a.at === 'kitchen' ? '공용 키친 안' : '웰컴센터 옆'}</b> · ${a.desc}`, S.amen[id] ? `<div style="display:flex;flex-direction:column;gap:8px;align-items:center"><b style="color:#5E9E82">있어요 ✓</b>${btn('loc:amen_' + id, '<i class="pin"></i>위치 보기', 'sky locb')}</div>` : costBtn('amen:' + id, `짓기<small>${cn(c)}</small>`, c, 'go', 'style="flex-direction:column;min-width:150px"'), { bg: a.at === 'kitchen' ? '#FDE7D4' : '#DCEBF8', cls: S.amen[id] ? 'done' : '', nw: listNew('amen_' + id) }).replace('</div><div class="tx">', `${AMEN_E[id]}</div><div class="tx">`); }
       return h; }
     let h = `<div class="sec">고원 숲 캠핑장 · 웰컴센터를 가운데 두고 길을 따라 넓어져요</div>`;
     for (const z of D.ZONES) { const o = S.zones[z.id]; let right = '';
@@ -431,7 +443,7 @@ const PANELS = {
       h += `<div class="fair"><div>${left}번 안에<br>특별 장식 확정<small>30번째는 꼭 특별</small></div><div>확률 모두 공개<small>보통 ${D.RARITY.n.p * 100} · 희귀 ${D.RARITY.r.p * 100} · 특별 ${D.RARITY.s.p * 100}%</small></div><div>겹치면 돌려받기<small>솔방울 ${D.BOX.dupGem.n}~${D.BOX.dupGem.s}개</small></div></div>`;
       h += `<div class="card" data-k="box" style="flex-direction:column;text-align:center"><img src="${IMG('deco/gift')}" style="width:150px;animation:giftHop 1.4s cubic-bezier(.34,1.56,.64,1) infinite"><b style="font:900 30px/1.3 var(--ff)">숲 선물 상자</b><span style="font:700 19px/1.5 var(--ff);color:#7A645A">캠프를 꾸밀 장식이 나와요 · 솔방울은 레벨업 · 미션 · 출석으로 모여요</span>
         <div style="display:flex;gap:12px;margin-top:14px">${btn('box:gem', `${ic('gem')} ${D.BOX.cost} 열기`, 'pk', S.gem < D.BOX.cost)}${adOn('box') ? btn('box:ad', `${ic('ad')} 광고로 열기 <small>(${G.adLeft('box')})</small>`, 'sky', !adOk('box')) : ''}</div></div>`;
-      for (const r of ['s', 'r', 'n']) h += `<div class="sec">${D.RARITY[r].name} · ${D.RARITY[r].p * 100}%</div>` + D.DECO.filter(d => d.rar === r && (!d.season || d.season === G.season() || S.deco[d.id])).map(d => { const zn = D.ZONES.find(z => z.id === D.decoZone(d)).name.split(' · ')[0], zo = G.zoneOpen(D.decoZone(d)); return card(d.id, IMG(d.img), d.name, `${zn}${d.season ? ' · 가을 한정' : ''} · 매력 +${d.appeal}${S.deco[d.id] ? ` · ${S.deco[d.id]}개` : zo ? '' : ' · 존이 열리면 나와요'}`, S.deco[d.id] ? btn('loc:deco_' + d.id, '<i class="pin"></i>위치', 'sky locb') : '', { cls: S.deco[d.id] ? 'done' : 'lock' }); }).join('');
+      for (const r of ['s', 'r', 'n']) h += `<div class="sec">${D.RARITY[r].name} · ${D.RARITY[r].p * 100}%</div>` + D.DECO.filter(d => d.rar === r && (!d.season || d.season === G.season() || S.deco[d.id])).map(d => { const zn = D.ZONES.find(z => z.id === D.decoZone(d)).name.split(' · ')[0], zo = G.zoneOpen(D.decoZone(d)); return card(d.id, IMG(d.img), d.name, `${zn}${d.season ? ' · 가을 한정' : ''} · 매력 +${d.appeal}${S.deco[d.id] ? ` · ${S.deco[d.id]}개` : zo ? '' : ' · 존이 열리면 나와요'}`, S.deco[d.id] ? btn('loc:deco_' + d.id, '<i class="pin"></i>위치', 'sky locb') : '', { cls: S.deco[d.id] ? 'done' : 'lock', nw: listNew('deco_' + d.id) }); }).join('');
       return h; }
     /* 꾸미기: 특별 상품(전용 그림 · 미리 보기) → 스탬프 교환 */
     /* 옷장 · 동행 · 시설 외형 (능력치 0 · 입어 보기 · 무료 길 = 스탬프) */
@@ -473,7 +485,8 @@ function stageArt(t, lv) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, v
   return `<div class="art stg">${cur}<span class="arr">▶</span><span class="nx"><img src="${IMG(`fac/${G.facDir()}/${kind}_${st + 1}`)}" style="animation:none;width:${nw}px;height:auto;max-height:none"><small>Lv.${nx} 새 단장</small></span></div><div class="stnext">${stepTxt}<br>${nx - vl}번 더 강화하면 새 모습</div>`; }
 export function facDialog(t) {
   const draw = d => { const { fac, lv, tier, nextT, eff } = facInfo(t), w = G.working(t), cost = G.upCostOf(t);
-    d.querySelector('.body2').mhtml = `${stageArt(t, lv)}<h3>${fac.name} Lv.${lv} ${stars(tier)}</h3><p>${eff}${nextT ? `<br>Lv.${nextT}에 공사로 효율이 올라요` : ''}</p>
+    const bump = d.dataset.lv && +d.dataset.lv < lv; d.dataset.lv = lv;
+    d.querySelector('.body2').mhtml = `${stageArt(t, lv)}<h3${bump ? ' class="lvbump"' : ''}>${fac.name} Lv.${lv} ${stars(tier)}</h3><p>${eff}${nextT ? `<br>Lv.${nextT}에 공사로 효율이 올라요` : ''}</p>
       <div class="row">${w ? `${instBtns('up:' + t)}` : lv >= D.UP.max ? '<b>최고 단계예요!</b>' : costBtn('up:' + t, `강화 · ${cn(cost)}`, cost, nextT === lv + 1 ? 'yl' : 'go')}${fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : ''}</div>`;
     d.querySelectorAll('[data-a]').forEach(b => { const [a, v, x] = b.dataset.a.split(':'); if (a === 'up') { b.onclick = () => act('up', v, null, b, null); hold(b, () => act('up', v, null, b, null, true)); } else if (a === 'instad' || a === 'instgo') b.onclick = () => instAct(a, v + ':' + x, b); else b.onclick = () => act(a, v, x, b, null); }); };
   const me = dlg(`<div class="body2"></div>`, { live: d => draw(d) }); draw(me.el);
@@ -490,7 +503,9 @@ function instBtns(key) {
   else h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl', true);
   return h;
 }
-async function instAct(a, key, b) {
+let instBusy = false;
+async function instAct(a, key, b) { if (instBusy) return; instBusy = true; if (b) b.classList.add('off'); try { await instAct0(a, key, b); } finally { instBusy = false; refreshOpen(); } }   /* 즉시 완성도 한 번 누르면 한 번만 · 끝나면 같은 함수로 창 새로 */
+async function instAct0(a, key, b) {
   const w = G.workList().find(x => x.key === key); if (!w) return;
   if (a === 'instad') { await watch('inst', key, () => { G.finishWork(key, 'ad'); }); return; }
   const n = Math.max(G.instGem(w), +(b && b.dataset.n) || 0);   /* 단추에 적힌 값 */
@@ -498,7 +513,7 @@ async function instAct(a, key, b) {
   if (b && b.dataset.n && n > +b.dataset.n) return nope(b, '값이 바뀌었어요 · 다시 눌러 주세요');   /* 적힌 값보다 더 받지 않음 */
   if (S.gem >= n && (!b || b.dataset.k !== 'gold')) { const e = G.instByGem(key, n); if (e) return nope(b, e); sfx('unlock'); ctx.save(); return; }
   const r = await bm.spend('inst' + n); if (!r.ok) { if (r.reason === 'short') soft('원어데이 골드가 조금 모자라요'); else if (r.reason !== 'cancel') soft('솔방울이 조금 모자라요 · 레벨업 · 미션에서 모여요'); return; }
-  const w2 = G.workList().find(x => x.key === key); if (w2) G.finishWork(key, 'gold'); sfx('unlock'); ctx.save();
+  const w2 = G.workList().find(x => x.key === key); G.payLog('gold', 'inst:' + key, n); if (w2) G.finishWork(key, 'gold'); sfx('unlock'); ctx.save();
 }
 export function instDialog(key) {
   const draw = d => { const w = G.workList().find(x => x.key === key); if (!w) { d.querySelector('.body2').mhtml = `<h3>다 됐어요!</h3><p>${praise()}</p><div class="row"><div class="btn go" data-c>좋아요</div></div>`; d.querySelector('[data-c]').onclick = () => me.close(); return; }

@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.97.1';
-import * as W from './walk.js?v=0.97.1';
+import * as D from './data.js?v=0.97.2';
+import * as W from './walk.js?v=0.97.2';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -146,6 +146,14 @@ export const repAvg = () => (S.rep && S.rep.avg) || 4.5;   /* 캠프 평판 (별
 export const spawnGap = () => Math.max(D.SPAWN.min, D.SPAWN.base / (1 + R.seats.length * 0.08 + appeal() * 0.01) / (1 + (repAvg() - 4.5) * 0.12));   /* 평판이 좋으면 손님이 조금 더 자주 */
 
 /* ── 재화 · 경험치 ── */
+/* NEW (대표 11-03 '배치된 위치가 확인되면 지워도 되겠다'): 새로 생긴 시설 · 설비 · 꾸미기 → 확인(놓인 자리 보기 · 누르기 · 화면 가운데 2초 · 목록에서 보기)하면 지움 · 다시 안 나옴
+   키 = 화면의 대상 이름(시설 자리 id · 'amen_' · 'deco_') */
+/* 결제 기록 (대표 제보 11-03 '솔방울 단추를 연타') — 최근 100건 [시각, 솔방울|골드, 무엇, 값] · 운영실 · 환불 확인용 */
+export function payLog(kind, what, n) { S.payLog = S.payLog || []; S.payLog.push([Math.round(S.t), kind, what, n]); if (S.payLog.length > 100) S.payLog.splice(0, S.payLog.length - 100); }
+export function markNew(key) { S.news = S.news || {}; S.newsL = S.newsL || {}; S.seenNew = S.seenNew || {}; if (S.seenNew[key]) return; S.news[key] = S.t; S.newsL[key] = S.t; }   /* news = 세계 위 · newsL = 목록 (따로 지움) */
+export function seeNew(key) { if (!S.news || !(key in S.news)) return false; delete S.news[key]; (S.seenNew = S.seenNew || {})[key] = 1; return true; }
+export function seeNewList(key) { if (!S.newsL || !(key in S.newsL)) return false; delete S.newsL[key]; return true; }
+export const newKeys = () => Object.entries(S.news || {}).sort((a, b) => b[1] - a[1]).map(x => x[0]);   /* 최근 것부터 */
 /* 수입 출처 기록 (경제 표 · 대표 11-03 '보상이 파는 것보다 큼') — S.stats.src[출처] = { coin, gem } */
 export function src(why, k, v) { if (!v) return; const o = (S.stats.src = S.stats.src || {}), e = (o[why] = o[why] || { coin: 0, gem: 0 }); e[k] = (e[k] || 0) + v; }
 export function gain(r, why = '') {
@@ -167,7 +175,7 @@ export const padCost = () => D.padCostOf(Math.max(0, Object.keys(S.pads).length 
 export function canBuild(pid) { const p = D.PADS.find(x => x.id === pid); return p && zoneOpen(p.zone) && !(S.pads[pid] && S.pads[pid].lv > 0); }
 export function build(pid) {
   if (!canBuild(pid)) return '아직 지을 수 없는 자리예요'; const c = padCost(); if (!spend('coin', c)) return '숲 코인이 조금 모자라요';
-  const p = D.PADS.find(x => x.id === pid); S.pads[pid] = { fac: p.fac, lv: 1, base: c }; S.builds++; S.stats.builds++;
+  const p = D.PADS.find(x => x.id === pid); S.pads[pid] = { fac: p.fac, lv: 1, base: c }; markNew(pid); S.builds++; S.stats.builds++;
   syncWalk(); reroute(); buildSeats(); buildWorkers(); addXp(10); count('build'); on('build', { pid, fac: p.fac }); return null;
 }
 /* 옷장 · 펫 (무료 길: 스탬프 교환 · 골드 구매는 ui 가 bm.spend 뒤 own() 호출) */
@@ -181,12 +189,12 @@ export function fillCost(cost, click) { const short = Math.ceil(cost - S.coin); 
   const sec = short / rate; if (sec > D.FILL.capSec) return null; if (!click && (short < S.coin * D.FILL.minFrac || sec < D.FILL.minSec)) return null; return { short, sec, gem: D.fillGem(sec) }; }   /* click: 이미 단추를 본 사람이 누른 때 — '숨김' 기준(10% · 1분)은 보일 때만 적용 (대표 제보 11-03: 단추는 보이는데 누르면 '조금만 기다려') */
 /* 숲 코인 값은 한 곳에서 (단추 · 실행 · 검사가 같은 값을 씀) */
 export const coinCostOf = (a, v) => a === 'up' ? upCostOf(v) : a === 'build' || a === 'b' ? padCost() : a === 'amen' ? amenCost(v) : a === 'menu' ? menuNewCost(D.MENU.find(m => m.id === v)) : a === 'hire' ? (D.STAFF.find(s => s.id === v) || {}).cost : null;
-export function fillByGem(cost, shown) { const f = fillCost(cost, true); if (!f) return '지금은 채울 수 없어요'; const g = shown && shown >= f.gem ? shown : f.gem;   /* 확인 창에 적힌 값 그대로 뺌 (대가 일치) */ if (!spend('gem', g)) return '솔방울이 조금 모자라요'; f.gem = g; S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; count('fill'); return null; }
-export function fillByGold(cost) { const f = fillCost(cost, true); if (!f) return null; S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; return f; }   /* ui 가 bm.spend('inst' + gem) 성공 뒤 */
+export function fillByGem(cost, shown) { const f = fillCost(cost, true); if (!f) return '지금은 채울 수 없어요'; const g = shown && shown >= f.gem ? shown : f.gem;   /* 확인 창에 적힌 값 그대로 뺌 (대가 일치) */ if (!spend('gem', g)) return '솔방울이 조금 모자라요'; f.gem = g; payLog('gem', 'fill', g); S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; count('fill'); return null; }
+export function fillByGold(cost) { const f = fillCost(cost, true); if (!f) return null; payLog('gold', 'fill', f.gem); S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; return f; }   /* ui 가 bm.spend('inst' + gem) 성공 뒤 */
 export const amenCost = id => id ? D.amenCostOf(id) : Math.min(...Object.keys(D.AMEN).filter(a => !S.amen[a]).map(D.amenCostOf), Infinity);
 export function buildAmen(id) {
   if ((S.amen[id] || 0) > 0) return '이미 있어요'; const c = amenCost(id); if (!spend('coin', c)) return '숲 코인이 조금 모자라요';
-  S.amen[id] = 1; S.amenAt = S.amenAt || {}; S.amenAt[id] = S.t; S.builds++; S.stats.builds++; addXp(10); on('amen', { id }); return null;
+  S.amen[id] = 1; markNew('amen_' + id); S.builds++; S.stats.builds++; addXp(10); on('amen', { id }); return null;
 }
 export function upCostOf(target) { const o = target === 'oven' ? S.oven : S.pads[target]; return D.upCost(Math.max(target === 'oven' ? 60 : o.base, padCost() * D.UP.stageK), o.lv); }   /* v0.3: 강화 바탕값 = max(지을 때 값, 지금 캠프 단계 값 × stageK) → 옛 시설도 캠프가 커지면 함께 비싸짐 (몇 분 ~ 수십 분) */
 export function upgrade(target) {
@@ -239,14 +247,14 @@ export function finishWork(key, via) {
   else { const o = id === 'oven' ? S.oven : S.pads[id]; if (!o || !o.work) return false; o.work = null; on('workDone', { target: id }); }
   on('inst', { key, via }); return true;
 }
-export function instByGem(key, shown) { const w = workList().find(x => x.key === key); if (!w) return '이미 끝났어요'; const g = shown && shown >= instGem(w) ? shown : instGem(w);   /* 단추에 적힌 값 그대로 (시간이 지나 값이 내려가도 적힌 값 · 대가 일치) */ if (!spend('gem', g)) return '솔방울이 모자라요'; finishWork(key, 'gem'); return null; }
+export function instByGem(key, shown) { const w = workList().find(x => x.key === key); if (!w) return '이미 끝났어요'; const g = shown && shown >= instGem(w) ? shown : instGem(w);   /* 단추에 적힌 값 그대로 (시간이 지나 값이 내려가도 적힌 값 · 대가 일치) */ if (!spend('gem', g)) return '솔방울이 모자라요'; payLog('gem', 'inst:' + key, g); finishWork(key, 'gem'); return null; }
 
 /* ── 숲 선물 상자 (확률 공개 · 30회 천장 · 중복 = 솔방울 돌려받기) ── */
 export function openBox(via = 'gem') {
   if (via === 'gem' && !spend('gem', D.BOX.cost)) return { err: '솔방울이 모자라요' };
   S.box.n++; S.box.pity++; let rar = RNG() < D.RARITY.s.p ? 's' : RNG() < D.RARITY.r.p / (1 - D.RARITY.s.p) ? 'r' : 'n';
   if (S.box.pity >= D.BOX.pity) rar = 's'; if (rar === 's') S.box.pity = 0;
-  const pool = D.DECO.filter(d => d.rar === rar && zoneOpen(D.decoZone(d)) && (!d.season || d.season === SEASON)), it = pick(pool.length ? pool : D.DECO.filter(d => d.rar === rar && D.decoZone(d) === 'lawn' && !d.season)), dup = (S.deco[it.id] || 0) > 0;   /* 열린 존 · 그 계절 것만 (v0.3) */ S.deco[it.id] = (S.deco[it.id] || 0) + 1;
+  const pool = D.DECO.filter(d => d.rar === rar && zoneOpen(D.decoZone(d)) && (!d.season || d.season === SEASON)), it = pick(pool.length ? pool : D.DECO.filter(d => d.rar === rar && D.decoZone(d) === 'lawn' && !d.season)), dup = (S.deco[it.id] || 0) > 0;   /* 열린 존 · 그 계절 것만 (v0.3) */ S.deco[it.id] = (S.deco[it.id] || 0) + 1; if (!dup) markNew('deco_' + it.id);
   if (dup) gain({ gem: D.BOX.dupGem[rar] }, 'dup'); count('box'); on('box', { id: it.id, rar, dup }); return { id: it.id, rar, dup };
 }
 /* ── 선물 · 놀이터 · 고양이 ── */
@@ -284,7 +292,7 @@ export function buyStall(i) {
   return null;
 }
 export const stallPrice = i => { const it = D.STALL.find(x => x[0] === stall().items[i]); return Math.ceil(minsOf(it[2].min)); };
-export function buyStamp(id) { const o = D.STAMP_SHOP.find(x => x.id === id); if (!o) return '없어요'; if (!spend('stamp', o.cost)) return '스탬프가 모자라요'; S.deco[id] = (S.deco[id] || 0) + 1; on('box', { id, rar: 'stamp', dup: false }); return null; }
+export function buyStamp(id) { const o = D.STAMP_SHOP.find(x => x.id === id); if (!o) return '없어요'; if (!spend('stamp', o.cost)) return '스탬프가 모자라요'; S.deco[id] = (S.deco[id] || 0) + 1; markNew('deco_' + id); on('box', { id, rar: 'stamp', dup: false }); return null; }
 /* 광고 하루 횟수 (게임 쪽 · 앱 한도와 둘 다) */
 export function adUsed(k) { const d = dayNo(S.t); if (S.ads.day !== d) S.ads = { day: d, used: {} }; return S.ads.used[k] || 0; }
 export const adLeft = k => Math.max(0, (D.ADS[k] || { limit: 0 }).limit - adUsed(k));
