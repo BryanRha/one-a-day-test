@@ -145,14 +145,120 @@ export const EXTRA_KEYS = ['season', 'animal', 'scent'];
 export const LIST = { flower: FLOWERS, color: COLORS, weather: WEATHERS };
 export const flowerById = id => FLOWERS.find(x => x.id === id) || null;
 
-/* ── 질문 5개 (가볍게 · 한 화면에 하나) — 고른 답의 꼬리표 · 오행 힌트 ── */
-export const QUESTIONS = [
-  { q: '지금 손에 쥐고 싶은 건?', sub: '첫 느낌으로 골라요', o: [['따뜻한 머그', 'warm tender'], ['차가운 캔커피', 'bold bright'], ['펜 한 자루', 'firm deep'], ['아무것도 — 빈손', 'free calm']] },
-  { q: '오늘 하늘을 하나 고른다면?', sub: '색만 보고 골라도 돼요', sw: true, o: [['새벽 남색', 'deep calm', 'water', '#2C3A63'], ['정오 하늘', 'bright free', 'wood', '#9CC3E6'], ['노을 살구', 'warm tender', 'fire', '#EFA58A'], ['한밤 먹색', 'deep firm', 'metal', '#17151A']] },
-  { q: '누가 먼저 말을 걸면?', sub: '평소의 나 말고, 오늘의 나', o: [['먼저 웃는다', 'bright warm'], ['일단 듣는다', 'calm tender'], ['한 박자 늦게 답한다', 'shy deep'], ['이어폰부터 뺀다', 'free spark']] },
-  { q: '오늘 하나만 내려놓는다면?', sub: '', o: [['미련', 'free bright'], ['눈치', 'bold free'], ['피곤', 'calm warm'], ['계획', 'spark free']] },
-  { q: '지금 듣고 싶은 소리는?', sub: '마지막 질문이에요', o: [['빗소리', 'calm deep', 'water'], ['파도', 'free bold', 'water'], ['카페 소음', 'warm bright', 'fire'], ['완전한 고요', 'calm shy', 'metal']] },
+/* ── 질문 풀 (2026-11-03 대표: "질문이 매번 똑같은 건 아니지?") — 칸 5개 × 12개 + 계절 질문
+   칸: 1 감각 · 2 하늘/색(색 칩) · 3 사람 대하는 태도 · 4 내려놓을 것 · 5 소리/분위기
+   보기: [글, 꼬리표 두 개, 오행 힌트?, 색?] · m: 그 달에만 나오는 계절 질문 · id 는 바꾸지 않음(서버 캐시 키 · 지난 기록)
+   하루에 칸마다 하나 → 같은 날은 모두 같은 질문(친구끼리 비교) · 최근 7일 안에 같은 질문 다시 안 나옴 (dayQuestions) */
+const Q1 = [
+  ['q1-01', '지금 손에 쥐고 싶은 건?', '첫 느낌으로 골라요', [['따뜻한 머그', 'warm tender'], ['차가운 캔커피', 'bold bright'], ['펜 한 자루', 'firm deep'], ['아무것도 — 빈손', 'free calm']]],
+  ['q1-02', '지금 입에 넣고 싶은 맛은?', '배고픈 거 말고, 기분으로', [['달콤한 초콜릿 한 조각', 'warm shy'], ['새콤한 귤', 'bright spark'], ['쌉쌀한 커피', 'deep firm'], ['미지근한 물 한 잔', 'calm free']]],
+  ['q1-03', '지금 덮고 싶은 건?', '', [['포근한 담요', 'warm tender'], ['바삭한 이불', 'bright calm'], ['남의 외투', 'shy spark'], ['아무것도, 바람', 'free bold']]],
+  ['q1-04', '오늘 신고 나가고 싶은 신발은?', '', [['낡은 운동화', 'free warm'], ['굽 있는 구두', 'bold firm'], ['슬리퍼', 'calm free'], ['새로 산 신발', 'spark bright']]],
+  ['q1-05', '지금 손끝에 닿았으면 하는 건?', '', [['고양이 털', 'tender shy'], ['차가운 유리잔', 'calm firm'], ['종이책 모서리', 'deep calm'], ['누군가의 손', 'warm spark']]],
+  ['q1-06', '지금 맡고 싶은 냄새는?', '', [['갓 구운 빵', 'warm bright'], ['비 온 뒤 흙', 'calm deep'], ['새 책', 'firm shy'], ['바다 바람', 'free bold']]],
+  ['q1-07', '오늘 마시고 싶은 한 잔은?', '', [['따뜻한 라테', 'warm tender'], ['탄산수', 'bright free'], ['진한 에스프레소', 'bold deep'], ['보리차', 'calm shy']]],
+  ['q1-08', '지금 앉고 싶은 자리는?', '', [['창가 구석', 'shy calm'], ['한가운데', 'bold bright'], ['계단 끝', 'free deep'], ['푹신한 소파', 'warm tender']]],
+  ['q1-09', '가방에 하나만 넣는다면?', '', [['이어폰', 'free calm'], ['작은 수첩', 'firm deep'], ['립밤', 'tender shy'], ['간식', 'warm bright']]],
+  ['q1-10', '지금 걷고 싶은 길은?', '', [['낙엽 깔린 길', 'deep warm'], ['바닷가 모래', 'free bright'], ['조용한 골목', 'calm shy'], ['불 켜진 번화가', 'spark bold']]],
+  ['q1-11', '오늘 머리를 어떻게 하고 싶어?', '', [['질끈 묶기', 'firm bold'], ['자연스럽게 풀기', 'free tender'], ['모자로 덮기', 'shy calm'], ['새로 잘라 버리기', 'spark bold']]],
+  ['q1-12', '지금 손에 쥔 게 꽃이라면?', '', [['한 송이', 'deep firm'], ['한 아름', 'bright warm'], ['말린 꽃', 'calm shy'], ['길가에서 꺾은 들꽃', 'free spark']]],
+  ['q1-s1', '첫눈이 오면 제일 먼저 할 일은?', '11월의 질문', [['사진 찍어 누구에게 보내기', 'warm spark'], ['창밖 보며 가만히', 'calm deep'], ['밖으로 뛰어나가기', 'bold free'], ['붕어빵 사러 가기', 'tender bright']], [11, 12, 1]],
+  ['q1-s2', '가을 저녁 산책길, 손에 들고 싶은 건?', '이맘때의 질문', [['군고구마 봉지', 'warm tender'], ['줍다 만 낙엽', 'shy deep'], ['따뜻한 캔커피', 'calm bright'], ['아무것도, 주머니에 손', 'free firm']], [9, 10, 11]],
+  ['q1-s3', '벚꽃이 피면 제일 먼저 하고 싶은 건?', '이맘때의 질문', [['혼자 걷기', 'calm free'], ['누군가 불러내기', 'spark warm'], ['사진 한 장', 'shy tender'], ['돗자리 펴기', 'bright bold']], [3, 4]],
+  ['q1-s4', '한여름 밤, 손에 들고 싶은 건?', '이맘때의 질문', [['얼음 동동 음료', 'bright free'], ['부채', 'calm tender'], ['수박 한 조각', 'warm bright'], ['폭죽', 'bold spark']], [6, 7, 8]],
 ];
+const Q2 = [
+  ['q2-01', '오늘 하늘을 하나 고른다면?', '색만 보고 골라도 돼요', [['새벽 남색', 'deep calm', 'water', '#2C3A63'], ['정오 하늘', 'bright free', 'wood', '#9CC3E6'], ['노을 살구', 'warm tender', 'fire', '#EFA58A'], ['한밤 먹색', 'deep firm', 'metal', '#17151A']]],
+  ['q2-02', '오늘 입고 싶은 색은?', '', [['크림', 'tender calm', 'metal', '#F2EAD6'], ['버건디', 'bold deep', 'fire', '#7A1F33'], ['올리브', 'firm calm', 'wood', '#8A8B3E'], ['하늘색', 'free bright', 'water', '#9CC9EE']]],
+  ['q2-03', '방 벽을 칠한다면?', '', [['연두', 'bright spark', 'wood', '#B6D86B'], ['라벤더', 'shy tender', 'water', '#B9A7DA'], ['테라코타', 'warm firm', 'earth', '#C46A47'], ['먹색', 'deep bold', 'water', '#1A1A1E']]],
+  ['q2-04', '지금 마음 색은?', '고민 말고 손이 가는 쪽', [['연분홍', 'shy tender', 'fire', '#F7D7DF'], ['겨자', 'warm bold', 'earth', '#D3A02A'], ['청록', 'calm deep', 'wood', '#1E7C7A'], ['은회색', 'calm firm', 'metal', '#B7B8BC']]],
+  ['q2-05', '오늘의 노을 색은?', '', [['복숭아', 'tender warm', 'fire', '#F6B7A0'], ['다홍', 'bold spark', 'fire', '#E0473A'], ['보라', 'deep shy', 'water', '#8A82B8'], ['금빛', 'bright warm', 'earth', '#D4A84A']]],
+  ['q2-06', '편지지를 고른다면?', '', [['백자', 'calm firm', 'metal', '#F1EFE7'], ['하늘', 'free bright', 'water', '#AFCBEA'], ['살구', 'warm shy', 'fire', '#F3C6B8'], ['숲', 'deep firm', 'wood', '#2F5D3A']]],
+  ['q2-07', '오늘 바다 색은?', '', [['에메랄드', 'bright spark', 'wood', '#1F9E77'], ['코발트', 'bold deep', 'water', '#1F4FA8'], ['물빛', 'calm tender', 'water', '#A6D8E6'], ['잿빛', 'calm deep', 'metal', '#8E8C8A']]],
+  ['q2-08', '우산을 하나 고른다면?', '', [['노랑', 'bright warm', 'earth', '#F3CD32'], ['투명', 'free calm', 'metal', '#E9ECEF'], ['검정', 'firm deep', 'water', '#1A1A1E'], ['체크무늬 빨강', 'bold spark', 'fire', '#C21E4A']]],
+  ['q2-09', '책 표지를 고른다면?', '', [['초록 천', 'calm firm', 'wood', '#275B47'], ['분홍 종이', 'tender spark', 'fire', '#F2C6C8'], ['남색 가죽', 'deep firm', 'water', '#1E2A5C'], ['베이지 리넨', 'calm warm', 'earth', '#DCC9A8']]],
+  ['q2-10', '오늘 손톱 색은?', '', [['투명', 'calm shy', 'metal', '#F5F1E8'], ['체리', 'bold spark', 'fire', '#C21E4A'], ['민트', 'free bright', 'wood', '#9EDCC6'], ['모브', 'deep tender', 'water', '#B48AA6']]],
+  ['q2-11', '꽃다발 포장지 색은?', '', [['크라프트', 'warm calm', 'earth', '#C9A784'], ['연보라', 'shy tender', 'water', '#CDBDE8'], ['흰 종이', 'calm firm', 'metal', '#F7F8FA'], ['레몬', 'bright spark', 'earth', '#F4E04D']]],
+  ['q2-12', '지금 창밖이 이런 색이면 좋겠다', '', [['새벽 보라', 'deep shy', 'water', '#8A82B8'], ['초록 잎', 'bright free', 'wood', '#6DAA4A'], ['오후 볕', 'warm tender', 'earth', '#F3E3B5'], ['비 오는 회색', 'calm deep', 'metal', '#8E8C8A']]],
+  ['q2-s1', '첫눈 오는 날, 하늘은 어떤 색?', '11월의 질문', [['우윳빛', 'tender calm', 'metal', '#F5F1E8'], ['새벽 남색', 'deep shy', 'water', '#2C3A63'], ['분홍 노을', 'warm spark', 'fire', '#F5CFD8'], ['은회색', 'firm calm', 'metal', '#B7B8BC']], [11, 12, 1]],
+  ['q2-s2', '단풍 길에서 고르는 잎 하나', '이맘때의 질문', [['빨강', 'bold warm', 'fire', '#C8452D'], ['노랑', 'bright tender', 'earth', '#F2B92B'], ['갈색', 'calm deep', 'earth', '#7E5A3C'], ['아직 초록', 'free firm', 'wood', '#6DAA4A']], [10, 11]],
+  ['q2-s3', '봄 아침 하늘을 고른다면?', '이맘때의 질문', [['연두빛 안개', 'tender calm', 'wood', '#CFE29A'], ['벚꽃 분홍', 'shy spark', 'fire', '#F5CFD8'], ['맑은 하늘', 'bright free', 'water', '#9CC9EE'], ['흐린 회색', 'calm deep', 'metal', '#B7B8BC']], [3, 4, 5]],
+];
+const Q3 = [
+  ['q3-01', '누가 먼저 말을 걸면?', '평소의 나 말고, 오늘의 나', [['먼저 웃는다', 'bright warm'], ['일단 듣는다', 'calm tender'], ['한 박자 늦게 답한다', 'shy deep'], ['이어폰부터 뺀다', 'free spark']]],
+  ['q3-02', '친구가 늦는다고 하면?', '', [['괜찮아, 천천히 와', 'tender calm'], ['그럼 먼저 시킨다', 'bold free'], ['근처를 한 바퀴', 'free bright'], ['조금 서운한 티 내기', 'shy warm']]],
+  ['q3-03', '모르는 사람이 길을 물으면?', '', [['같이 걸어가 준다', 'warm tender'], ['지도 앱을 켜 준다', 'firm bright'], ['손가락으로 가리킨다', 'calm free'], ['나도 처음이라 웃는다', 'shy spark']]],
+  ['q3-04', '단톡방에 내가 할 말은?', '', [['ㅋㅋㅋ', 'bright free'], ['읽고 나서 하트', 'tender shy'], ['정리 한 줄', 'firm calm'], ['갑자기 사진 투척', 'spark bold']]],
+  ['q3-05', '오늘 칭찬을 들으면?', '', [['고맙다고 크게', 'bright bold'], ['아니라고 손사래', 'shy tender'], ['속으로 오래 곱씹기', 'deep calm'], ['칭찬으로 돌려주기', 'warm spark']]],
+  ['q3-06', '부탁을 받으면 오늘의 나는?', '', [['일단 해 준다', 'warm tender'], ['솔직하게 거절', 'bold firm'], ['조건을 붙인다', 'firm spark'], ['하루만 생각해 볼게', 'calm deep']]],
+  ['q3-07', '처음 보는 자리에 가면?', '', [['먼저 인사', 'bright bold'], ['아는 얼굴 찾기', 'shy warm'], ['음식 쪽으로', 'free calm'], ['분위기부터 읽기', 'deep firm']]],
+  ['q3-08', '누가 울고 있으면?', '', [['말없이 휴지', 'tender calm'], ['안아 준다', 'warm bold'], ['이유를 묻는다', 'deep firm'], ['자리를 비켜 준다', 'shy free']]],
+  ['q3-09', '오늘 연락하고 싶은 사람은?', '', [['오래 못 본 친구', 'deep warm'], ['방금 헤어진 사람', 'spark tender'], ['가족', 'warm calm'], ['아무에게도', 'free shy']]],
+  ['q3-10', '말다툼이 생기면?', '', [['바로 풀기', 'bold warm'], ['하룻밤 자고', 'calm deep'], ['편지로 쓰기', 'shy tender'], ['맛있는 걸 사 들고', 'bright free']]],
+  ['q3-11', '선물을 고를 때 나는?', '', [['쓸모 있는 것', 'firm calm'], ['예쁜 것', 'spark tender'], ['손으로 만든 것', 'warm deep'], ['그날 끌린 것', 'free bold']]],
+  ['q3-12', '오늘 누가 내 얘기를 들어 준다면?', '', [['길게 털어놓기', 'deep warm'], ['웃긴 얘기만', 'bright free'], ['결론만 짧게', 'firm bold'], ['그냥 옆에 있어 줘', 'calm shy']]],
+  ['q3-s1', '연말 모임에 초대받으면?', '이맘때의 질문', [['제일 먼저 간다', 'bright bold'], ['선물 하나 챙긴다', 'tender warm'], ['조금 늦게 조용히', 'shy calm'], ['아는 사람만 만난다', 'firm deep']], [11, 12]],
+];
+const Q4 = [
+  ['q4-01', '오늘 하나만 내려놓는다면?', '', [['미련', 'free bright'], ['눈치', 'bold free'], ['피곤', 'calm warm'], ['계획', 'spark free']]],
+  ['q4-02', '오늘 안 해도 되는 일 하나는?', '', [['답장', 'free calm'], ['설거지', 'warm bright'], ['운동', 'tender shy'], ['비교', 'firm deep']]],
+  ['q4-03', '가방에서 하나 빼고 나간다면?', '', [['보조배터리', 'free bold'], ['화장품 파우치', 'calm bright'], ['우산', 'spark free'], ['걱정', 'warm tender']]],
+  ['q4-04', '오늘 꺼 두고 싶은 건?', '', [['알림', 'calm free'], ['불', 'deep shy'], ['생각', 'calm tender'], ['자존심', 'warm bold']]],
+  ['q4-05', '지금 지우고 싶은 건?', '', [['보낸 메시지 하나', 'shy spark'], ['사진첩 정리', 'firm bright'], ['어제 실수', 'tender calm'], ['할 일 목록', 'free bold']]],
+  ['q4-06', '오늘 미뤄도 되는 건?', '', [['결정', 'calm deep'], ['약속', 'free shy'], ['청소', 'warm free'], ['다이어트', 'bright bold']]],
+  ['q4-07', '내려놓으면 가벼워질 것 같은 말은?', '', [['괜찮아', 'tender deep'], ['미안해', 'shy warm'], ['나중에', 'firm bold'], ['어쩌지', 'calm bright']]],
+  ['q4-08', '오늘 버리고 싶은 습관은?', '', [['새벽 스크롤', 'calm firm'], ['한숨', 'bright warm'], ['혼잣말 자책', 'tender deep'], ['늦장', 'bold spark']]],
+  ['q4-09', '오늘 놓아주고 싶은 사람(마음)은?', '이름 말고 마음만', [['서운한 마음', 'tender calm'], ['잘 보이고 싶은 마음', 'free shy'], ['이기고 싶은 마음', 'calm warm'], ['기다리는 마음', 'free spark']]],
+  ['q4-10', '오늘 내려놓을 숫자는?', '', [['체중계 숫자', 'bright free'], ['통장 잔고', 'calm deep'], ['좋아요 수', 'firm tender'], ['나이', 'spark bold']]],
+  ['q4-11', '마음속 서랍에서 하나 비운다면?', '', [['오래된 영수증', 'firm calm'], ['못 보낸 편지', 'shy deep'], ['남의 기대', 'free bold'], ['어릴 적 걱정', 'tender warm']]],
+  ['q4-12', '오늘은 이것만 빼고 다 할래', '', [['일찍 일어나기', 'warm free'], ['참기', 'bold spark'], ['정리하기', 'free bright'], ['꾸미기', 'calm tender']]],
+  ['q4-s1', '올해가 가기 전에 내려놓을 것', '이맘때의 질문', [['못다 한 계획', 'calm free'], ['묵은 서운함', 'tender warm'], ['완벽하려는 마음', 'free bright'], ['미뤄 둔 연락', 'bold spark']], [11, 12]],
+];
+const Q5 = [
+  ['q5-01', '지금 듣고 싶은 소리는?', '마지막 질문이에요', [['빗소리', 'calm deep', 'water'], ['파도', 'free bold', 'water'], ['카페 소음', 'warm bright', 'fire'], ['완전한 고요', 'calm shy', 'metal']]],
+  ['q5-02', '오늘 하루의 배경음악은?', '마지막 질문이에요', [['피아노 한 곡', 'calm deep', 'metal'], ['신나는 팝', 'bright spark', 'fire'], ['오래된 가요', 'warm tender', 'earth'], ['아무 노래나 셔플', 'free bold', 'wood']]],
+  ['q5-03', '지금 있고 싶은 곳의 분위기는?', '마지막 질문이에요', [['도서관', 'calm firm', 'metal'], ['포장마차', 'warm bold', 'fire'], ['숲속', 'free calm', 'wood'], ['바닷가 벤치', 'deep free', 'water']]],
+  ['q5-04', '창문을 열면 들렸으면 하는 건?', '마지막 질문이에요', [['새소리', 'bright tender', 'wood'], ['자동차 소리 없음', 'calm shy', 'metal'], ['멀리 기차 소리', 'deep free', 'earth'], ['아이들 웃음', 'warm bright', 'fire']]],
+  ['q5-05', '잠들기 전 듣고 싶은 소리는?', '마지막 질문이에요', [['장작 타는 소리', 'warm calm', 'fire'], ['선풍기 소리', 'calm free', 'metal'], ['좋아하는 목소리', 'tender spark', 'fire'], ['비 오는 창', 'deep shy', 'water']]],
+  ['q5-06', '오늘을 영화로 찍는다면 장르는?', '마지막 질문이에요', [['잔잔한 일상물', 'calm tender', 'earth'], ['로맨스', 'spark warm', 'fire'], ['로드 무비', 'free bold', 'wood'], ['미스터리', 'deep firm', 'water']]],
+  ['q5-07', '지금 켜 두고 싶은 불빛은?', '마지막 질문이에요', [['작은 스탠드', 'warm shy', 'fire'], ['초 한 자루', 'deep calm', 'fire'], ['형광등 환하게', 'bright firm', 'metal'], ['창밖 달빛만', 'calm free', 'water']]],
+  ['q5-08', '오늘 들어가 보고 싶은 가게는?', '마지막 질문이에요', [['레코드 가게', 'deep spark', 'water'], ['꽃집', 'tender bright', 'wood'], ['오래된 서점', 'calm firm', 'earth'], ['문 연 지 하루 된 곳', 'bold free', 'fire']]],
+  ['q5-09', '지금 들리는 소리 중 하나만 남긴다면?', '마지막 질문이에요', [['내 숨소리', 'calm deep', 'metal'], ['시계 초침', 'firm shy', 'metal'], ['멀리 대화 소리', 'warm free', 'earth'], ['바람 소리', 'free bright', 'wood']]],
+  ['q5-10', '오늘 저녁 분위기는?', '마지막 질문이에요', [['혼자 라면', 'calm free', 'water'], ['둘이 와인', 'spark tender', 'fire'], ['여럿이 시끌벅적', 'bright bold', 'fire'], ['일찍 불 끄기', 'deep shy', 'water']]],
+  ['q5-11', '지금 걸린 노래 제목이 이렇다면?', '마지막 질문이에요', [['그대로 있어 줘', 'tender calm', 'earth'], ['어디든 가자', 'free spark', 'wood'], ['오늘은 내가', 'bold bright', 'fire'], ['밤의 끝에서', 'deep shy', 'water']]],
+  ['q5-12', '지금 방 안 공기는?', '마지막 질문이에요', [['따뜻하고 노랗다', 'warm bright', 'earth'], ['서늘하고 맑다', 'calm firm', 'metal'], ['촉촉하고 낮다', 'deep tender', 'water'], ['환기가 필요하다', 'free bold', 'wood']]],
+  ['q5-s1', '겨울밤 창밖에서 들렸으면 하는 소리는?', '이맘때의 질문', [['눈 밟는 소리', 'calm shy', 'metal'], ['멀리 캐럴', 'warm spark', 'fire'], ['바람 소리', 'deep free', 'water'], ['군밤 장수 목소리', 'bright warm', 'earth']], [11, 12, 1, 2]],
+  ['q5-s2', '크리스마스 거리에서 듣고 싶은 소리는?', '이맘때의 질문', [['종소리', 'bright spark', 'metal'], ['캐럴 합창', 'warm bold', 'fire'], ['조용한 눈', 'calm deep', 'water'], ['친구 웃음', 'tender bright', 'fire']], [12]],
+];
+const mkQ = ([id, q, sub, o, m]) => ({ id, q, sub, o, ...(m ? { m } : {}), sw: id.startsWith('q2') });
+export const QPOOL = [Q1, Q2, Q3, Q4, Q5].map(L => L.map(mkQ));
+export const QUESTION_BY_ID = Object.fromEntries(QPOOL.flat().map(x => [x.id, x]));
+export const QUESTIONS = QPOOL.map(L => L[0]);   /* 지금 화면에 나오는 고정 질문 5개 */
+/* 매일 바뀌는 질문: 2026-11-03 대표 지시로 재미 설계를 사업 · 분석과 다시 협의 중 → 꺼 둠 (화면 · 서버 연결도 아직)
+   켜면 profile 이 그날 질문(dayQuestions)으로 계산함 — 화면(oneword-ui.js question) · 서버(qa 문구 · 캐시 키) 를 같이 바꿔야 함 */
+export const DAILY_Q = false;
+
+/* 그날의 질문 5개: 칸마다 날짜 씨앗으로 하나 · 그 달의 계절 질문은 두 배 자주 · 최근 7일(앞 6일) 안에 나온 건 빼고
+   2026-10-01 부터 하루씩 차례로 정해 나가므로 누구에게나 같음 (계산은 한 번 · 캐시) */
+const QEPOCH = '2026-10-01', QMEMO = new Map();
+const dayAdd = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+function pickQ(day, slot, recent) {
+  const mon = Number(day.slice(5, 7)), ok = QPOOL[slot].filter(x => (!x.m || x.m.includes(mon)) && !recent.includes(x.id));
+  const bag = ok.flatMap(x => (x.m ? [x, x] : [x]));
+  return bag[fnv(`q|${day}|${slot}`) % bag.length];
+}
+export function dayQuestions(day) {
+  if (QMEMO.has(day)) return QMEMO.get(day);
+  if (day < QEPOCH) { const v = QPOOL.map((_, s) => pickQ(day, s, [])); QMEMO.set(day, v); return v; }
+  let d = QMEMO.size ? [...QMEMO.keys()].filter(k => k >= QEPOCH && k < day).sort().pop() : null;
+  if (!d) { d = QEPOCH; QMEMO.set(d, QPOOL.map((_, s) => pickQ(d, s, []))); }
+  while (d < day) {
+    const nd = dayAdd(d, 1), past = [1, 2, 3, 4, 5, 6].map(k => QMEMO.get(dayAdd(nd, -k))).filter(Boolean);
+    QMEMO.set(nd, QPOOL.map((_, s) => pickQ(nd, s, past.map(v => v[s].id)))); d = nd;
+  }
+  return QMEMO.get(day);
+}
+export const dayQids = day => dayQuestions(day).map(x => x.id);
 export const validAnswers = a => Array.isArray(a) && a.length === 5 && a.every(x => Number.isInteger(x) && x >= 0 && x < 4);
 
 /* ── 씨앗 · 해시 (서버 api/oneword.js 의 fnv · ruleIndex 와 같은 식) ── */
@@ -161,12 +267,12 @@ export const seedOf = (day, il, a) => `${day}|${il}|${a.join('')}`;
 export const ruleIndex = (seed, cat, n) => fnv(seed + '|' + cat) % Math.min(3, n);   /* 서버가 안 될 때: 위 3개 중 하나 */
 
 /* 답 → 꼬리표 무게 · 오행 힌트 */
-export function profile(a) {
-  const w = Object.fromEntries(TAGS.map(t => [t, 0])), el = Object.fromEntries(ELS.map(e => [e, 0]));
-  a.forEach((x, i) => { const o = QUESTIONS[i].o[x]; o[1].split(' ').forEach(t => { w[t] += 1; }); if (o[2]) el[o[2]] += 1; });
+export function profile(a, day) {
+  const qs = DAILY_Q && day ? dayQuestions(day) : QUESTIONS, w = Object.fromEntries(TAGS.map(t => [t, 0])), el = Object.fromEntries(ELS.map(e => [e, 0]));
+  a.forEach((x, i) => { const o = qs[i].o[x]; o[1].split(' ').forEach(t => { w[t] += 1; }); if (o[2]) el[o[2]] += 1; });
   return { w, el };
 }
-export const topTags = (a, n = 2) => { const { w } = profile(a); return TAGS.slice().sort((x, y) => w[y] - w[x] || TAGS.indexOf(x) - TAGS.indexOf(y)).slice(0, n); };
+export const topTags = (a, n = 2, day) => { const { w } = profile(a, day); return TAGS.slice().sort((x, y) => w[y] - w[x] || TAGS.indexOf(x) - TAGS.indexOf(y)).slice(0, n); };
 
 /* 점수: 꼬리표 겹침 + 오늘 일진 오행(같으면 +1.6 · 일진이 낳는 오행 +.8) + 답의 오행 힌트 + 씨앗 흔들기(0~.9 · 같은 날 같은 답이면 같음) */
 function score(item, P, il, seed) {
@@ -176,13 +282,19 @@ function score(item, P, il, seed) {
 }
 /* 후보 좁히기: 꽃 · 색 · 날씨마다 n개(3~5, 기본 4) — 순서는 점수 높은 순 */
 export function candidates(a, il, day, n = 4) {
-  const P = profile(a), seed = seedOf(day, il, a), k = Math.max(3, Math.min(5, n)), out = {};
+  const P = profile(a, day), seed = seedOf(day, il, a), k = Math.max(3, Math.min(5, n)), out = {};
   for (const [cat, list] of Object.entries(LIST)) out[cat] = list.map(x => [x, score(x, P, il, seed)]).sort((p, q) => q[1] - p[1]).slice(0, k).map(p => p[0]);
+  return out;
+}
+/* v2 '자연' 주제 (2026-11-03): 꽃 · 색 · 날씨 카드를 그대로 쓰되 꼬리표 무게는 v2 질문 답에서 (oneword-v2.js) */
+export function natureCand(w, il, seed, n = 4) {
+  const P = { w, el: Object.fromEntries(ELS.map(e => [e, 0])) }, out = {};
+  for (const [cat, list] of Object.entries(LIST)) out[cat] = list.map(x => [x, score(x, P, il, seed)]).sort((p, q) => q[1] - p[1]).slice(0, n).map(p => p[0]);
   return out;
 }
 /* 추가 단어: 꼬리표 점수 1등 (같은 날 같은 답 = 같은 단어 · 확률 아님) */
 export function extraWord(key, a, il, day) {
-  const P = profile(a), seed = seedOf(day, il, a);
+  const P = profile(a, day), seed = seedOf(day, il, a);
   return EXTRA[key].list.map(x => [x, score(x, P, il, seed)]).sort((p, q) => q[1] - p[1])[0][0];
 }
 /* 서버로 보낼 후보 (단어 · 꼬리표 · 꽃말만) */
@@ -202,7 +314,7 @@ export const LINES = {
   bold: ['망설임보다 한 걸음이 먼저인 사람.', '{c}처럼 선명하게 자기 색을 내는 사람.'],
 };
 export function ruleLine(a, seed, pick) {
-  const t = topTags(a, 1)[0], arr = LINES[t];
+  const t = topTags(a, 1, String(seed).split('|')[0])[0], arr = LINES[t];
   return arr[fnv(seed + '|line') % arr.length].replace('{f}', pick.flower.w).replace('{c}', pick.color.w).replace('{w}', pick.weather.w);
 }
 /* 규칙으로 고르기 (서버 실패 · 꺼짐) */

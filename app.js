@@ -1,27 +1,27 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.96.3';
-import * as R from './rules.js?v=0.96.3';
-import * as I from './install.js?v=0.96.3';
-import * as T from './track.js?v=0.96.3';
-import * as P from './pay.js?v=0.96.3';
-import * as A from './account.js?v=0.96.3';
-import * as C from './cloud.js?v=0.96.3';
-import * as BM from './bm.js?v=0.96.3';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.96.4';
+import * as R from './rules.js?v=0.96.4';
+import * as I from './install.js?v=0.96.4';
+import * as T from './track.js?v=0.96.4';
+import * as P from './pay.js?v=0.96.4';
+import * as A from './account.js?v=0.96.4';
+import * as C from './cloud.js?v=0.96.4';
+import * as BM from './bm.js?v=0.96.4';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.96.3').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.96.4').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.96.3'), import('./fortune/types.js?v=0.96.3'), import('./fortune/chat.js?v=0.96.3'), import('./fortune/oneword-ui.js?v=0.96.3')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
-const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum });
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.96.4'), import('./fortune/types.js?v=0.96.4'), import('./fortune/chat.js?v=0.96.4'), import('./fortune/oneword-ui.js?v=0.96.4')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
-const owOpen = from => ex().then(E => E.ow.open({ ...XC(), onClose: () => { const el = $('.owentry'); if (el && tab === 'fortune') el.outerHTML = E.ow.entry(XC(), owF); } }, from)).catch(er => { console.error(er); toast('잠시 뒤 다시 열어 주세요'); });
+const owOpen = (from, pair = null) => ex().then(E => E.ow.open({ ...XC(), onClose: () => { const el = $('.owentry'); if (el && tab === 'fortune') el.outerHTML = E.ow.entry(XC(), owF); } }, from, pair)).catch(er => { console.error(er); toast('잠시 뒤 다시 열어 주세요'); });
 /* 공유 링크로 들어온 사람 (2026-11-02): ?type=<유형>[&from=share] · ?from=compat — 첫 화면에서 그 안내를 먼저 띄우고 소개 · 설치 제안은 이번엔 쉼 */
-const LAND = (() => { const q = new URLSearchParams(location.search), type = q.get('type'), from = q.get('from'); return type || from === 'share' || from === 'compat' || from === 'oneword' ? { type, from: from || 'link', g: q.get('g') || '', f: /^f\d{3}$/.test(q.get('f') || '') ? q.get('f') : '' } : null; })();
+const LAND = (() => { const q = new URLSearchParams(location.search), type = q.get('type'), from = q.get('from'); return type || from === 'share' || from === 'compat' || from === 'oneword' ? { type, from: from || 'link', g: q.get('g') || '', f: /^f\d{3}$/.test(q.get('f') || '') ? q.get('f') : '', sp: q } : null; })();   /* 한 단어 v2(2026-11-03): sp 에 친구 비교 정보(r · d · q · a · g · m) */
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.96.3';
+const VERSION = '0.96.4';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -617,7 +617,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.96.3')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.96.4')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -1043,6 +1043,10 @@ async function deleteAccountGo(b) {
   catch (e) { toast(e.message); b.disabled = false; b.textContent = '다시 시도'; }
 }
 /* 설정 시트 (2026-10-30 A안 · 시안 shots/oad/05): 머리줄 톱니로 엶 · 뒤 화면은 그대로 · 폰 '뒤로'는 시트만 닫음(openSheet 기록 한 칸) */
+const OWT = ['ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP', 'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ'];
+function owTypeRow() { let t = ''; try { t = localStorage.getItem('oad_ow_type') || ''; } catch { /* */ }
+  return `<h4 class="sgh">운세 · 한 단어 카드</h4><div class="group"><div><span>내 성격 유형 (선택)<br><small style="color:var(--mute)">한 단어 카드에 작은 칩 · 친구 비교에 한 줄 · 이 기기에만 저장 · AI 엔 보내지 않아요</small></span>
+    <select class="owtsel" data-owtype aria-label="내 성격 유형"><option value="">안 씀</option>${OWT.map(x => `<option${x === t ? ' selected' : ''}>${x}</option>`).join('')}</select></div></div>`; }
 function settingsHTML() {
   const s = R.state();
   return `<div class="sethead"><h2>설정</h2><button class="setx" data-close aria-label="닫기">✕</button></div>
@@ -1055,6 +1059,7 @@ function settingsHTML() {
       <div><span>이용 방법 다시 보기</span><button data-intro>보기</button></div>
       <div><span>버전</span><span class="badge">v${VERSION}</span></div>
     </div>
+    ${R.PROD ? '' : owTypeRow()}
     <h4 class="sgh">개인정보 · 결제</h4>
     <div class="group">
       <div><span>이용 기록 보내지 않기<br><small style="color:var(--mute)">이름 없는 통계만 모아요 · 끄면 서비스 개선에 쓰지 않아요</small></span><button data-track-off>${T.optedOut() ? '켜기' : '끄기'}</button></div>
@@ -1468,9 +1473,11 @@ P.setPackKeeper(keepMany);
 if (LAND) { history.replaceState(null, '', location.pathname); T.track('share_landing', { from: LAND.from, type: LAND.type || '', g: LAND.g });
   if (LAND.type) ex().then(E => setTimeout(() => E.types.landing(XC(), LAND.type), 300)).catch(er => console.error(er));
   else if (LAND.from === 'compat') setTimeout(compatLanding, 300);
-  else if (LAND.from === 'oneword') ex().then(E => setTimeout(() => { go('fortune', 'share'); E.ow.landing(XC(), LAND.f); }, 300)).catch(er => console.error(er)); }
+  else if (LAND.from === 'oneword') ex().then(E => setTimeout(() => { go('fortune', 'share'); E.ow.landing(XC(), LAND.sp); }, 300)).catch(er => console.error(er)); }
 /* 한 단어: 운세 탭 진입 카드 · 공유 랜딩 시트의 '받기' */
-document.addEventListener('click', e => { const o = e.target.closest('[data-ow-open]'); if (!o) return; if (!sheet.hidden) closeSheet(); owOpen(o.closest('.owentry') ? 'tab' : 'land'); });
+document.addEventListener('click', e => { const o = e.target.closest('[data-ow-open]'); if (!o) return; if (!sheet.hidden) closeSheet(); let pair = null; try { pair = o.dataset.owPair ? JSON.parse(o.dataset.owPair) : null; } catch { /* */ } owOpen(o.closest('.owentry') ? 'tab' : pair ? 'pair' : 'land', pair); });
+/* 한 단어 카드 '내 유형'(설정 · 선택 · 이 기기에만 — 카드 작은 칩 · 친구 비교 한 줄에만 쓰고 AI 엔 안 보냄, 2026-11-03 대표) */
+document.addEventListener('change', e => { const s = e.target.closest && e.target.closest('[data-owtype]'); if (!s) return; try { if (s.value) localStorage.setItem('oad_ow_type', s.value); else localStorage.removeItem('oad_ow_type'); } catch { /* */ } T.track('oneword_type', { set: s.value ? 1 : 0 }); toast(s.value ? '한 단어 카드에 작게 붙여 둘게요' : '유형 칩을 뺐어요'); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches && e.target.matches('.owentry[data-ow-open]')) owOpen('tab'); });
 ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) payDone(r.product, r); else toast(r.msg); });
 if (R.PROD) A.remote().then(c => BM.keepHomeRemote(c && c.home));   /* 실서버 메인 원격 스위치: 받아 두고 다음에 열 때부터 (ops.md 4-4) */

@@ -1,13 +1,13 @@
 // 탭 화면 — 장부(주간 이야기 · 정산 · 지난 주) · 단골 도감 · 꾸미기 · 설정 · 공유 카드
-import { D, H, DECO, FUR, face, tagOf } from './state.js?v=0.96.3';
-import { S, save, today, week, reset } from './save.js?v=0.96.3';
-import * as A from './audio.js?v=0.96.3';
-import { $, $$, esc, I, toast, modal, closeModal, sp, praise, fmt, setHaptic, coinFly, center, sparks } from './ui.js?v=0.96.3';
-import { mainGuest, slot, addDays, WD, GRADE, CHN, won, topAxis, AXN, weekTitle, COIN, nextTease, dayNo, EPOCH, levelOf, LEVELS, TOOLS, toolOn } from './engine.js?v=0.96.3';
-import { show, openShop, hud, refreshCoins, replayDay, findGuest, track } from './main.js?v=0.96.3';
-import { sceneHTML, layout } from './scene.js?v=0.96.3';
-import { bm } from './oad_bm.js?v=0.96.3';
-import { inOAD, exitToOAD } from './oad.js?v=0.96.3';
+import { D, H, DECO, FUR, face, tagOf } from './state.js?v=0.96.4';
+import { S, save, today, week, reset } from './save.js?v=0.96.4';
+import * as A from './audio.js?v=0.96.4';
+import { $, $$, esc, I, toast, modal, closeModal, sp, praise, fmt, setHaptic, coinFly, center, sparks } from './ui.js?v=0.96.4';
+import { mainGuest, slot, addDays, WD, GRADE, CHN, won, topAxis, AXN, weekTitle, COIN, nextTease, dayNo, EPOCH, levelOf, LEVELS, TOOLS, toolOn } from './engine.js?v=0.96.4';
+import { show, openShop, hud, refreshCoins, replayDay, findGuest, track } from './main.js?v=0.96.4';
+import { sceneHTML, layout } from './scene.js?v=0.96.4';
+import { bm } from './oad_bm.js?v=0.96.4';
+import { inOAD, exitToOAD } from './oad.js?v=0.96.4';
 
 export function refreshTabs(id) {
   const t = $('#tabs'), on = id === 'shop' ? 'shop' : id;
@@ -114,13 +114,13 @@ function relsOf(id) {
   return `<div class="truth"><span class="k">골목 인연</span>${seen.map(([, t]) => t).join('<br>')}${hid ? `${seen.length ? '<br>' : ''}<span style="opacity:.7">아직 모르는 인연 ${hid}개</span>` : ''}</div>`;
 }
 export function openBook() {
-  const el = $('#book'), ids = Object.keys(D.cast), met = ids.filter(id => S.met[id]).length;
+  const el = $('#book'), ids = Object.keys(D.cast).filter(id => id[0] !== 'v' || S.met[id]), met = ids.filter(id => S.met[id]).length;
   const card = id => { const c = D.cast[id], n = S.met[id] || 0; return `<button class="bk${n ? '' : ' no'}" data-k="c" data-id="${id}"><div class="ph"><img src="${n ? face(id, 2) : `assets/g/${id}_s.webp`}" alt=""></div><b>${n ? esc(c.name) : '???'}</b><small>${n ? `${esc(c.tag)} · ${n}번` : '아직 못 만났어요'}</small></button>`; };
   const lv = levelOf(S.xp), pct = lv.to > lv.from ? Math.round((lv.xp - lv.from) / (lv.to - lv.from) * 100) : 100;
   const lvH = `<div class="lvcard"><div class="xpbar" style="margin:0;padding:0;background:none"><div><b>${esc(lv.name)}</b><small>${lv.next ? `다음 ${esc(lv.next)}까지 ${lv.to - lv.xp}` : '가장 높은 등급'}</small></div><i><u style="width:${pct}%"></u></i></div>
     <div class="tools"><div><b>돋보기 · 장부</b>처음부터</div>${Object.entries(TOOLS).map(([k, t]) => `<div><b>${esc(t.name)}</b>${toolOn(S.xp, k) ? esc(t.desc) : `${esc(LEVELS.find(l => l.tool === k).name)}에 열려요`}</div>`).join('')}</div></div>`;
   el.innerHTML = `<div class="scrollv"><div class="phead"><div class="ttl" style="font-size:20px">단골 도감<small>만난 손님 ${met} / ${ids.length} · 감정사 수첩</small></div></div>${lvH}
-    <div class="sect">주간 이야기 손님<small>본 손님 · 예비 손님</small></div><div class="bookgrid">${ids.filter(i => i[0] === 'g').map(card).join('')}</div>
+    <div class="sect">주간 이야기 손님<small>본 손님 · 예비 손님</small></div><div class="bookgrid">${ids.filter(i => i[0] === 'g' || i[0] === 'v').map(card).join('')}</div>
     <div class="sect">이웃들<small>주간 이야기에도 골목에도 와요 · 숨은 인연</small></div><div class="bookgrid">${ids.filter(i => i[0] === 'c').map(card).join('')}</div>
     <div class="sect">골목 사람들<small>골목 손님으로 자주 와요</small></div><div class="bookgrid">${ids.filter(i => i[0] === 'n').map(card).join('')}</div></div>`;
   show('book');

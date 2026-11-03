@@ -1,6 +1,6 @@
 // 화면 도우미 — 고르기 · 토스트 · 모달 · 타이핑 · 반짝이 · 칭찬 띠 · 진동
-import * as A from './audio.js?v=0.96.3';
-import { pushBack } from './oad.js?v=0.96.3';
+import * as A from './audio.js?v=0.96.4';
+import { pushBack } from './oad.js?v=0.96.4';
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export const app = $('#app');

@@ -9,9 +9,19 @@ export const nameOf = g => (D.cast[g.cast] || {}).name || '';
 export const tagOf = g => g.tag || (D.cast[g.cast] || {}).tag || '';
 export async function loadData() {
   const get = f => fetch(`data/${f}.json`).then(r => { if (!r.ok) throw new Error(f + ' ' + r.status); return r.json(); });
-  const [items, cast, weeks, reserve, extras, specials] = await Promise.all(['items', 'cast', 'weeks', 'reserve', 'extras', 'specials'].map(get));
-  Object.assign(D, { items, cast, weeks, reserve, extras, specials });
+  /* 첫 화면에 필요한 것만 기다림 · 예비 손님 · 특별 단편은 뒤에서 (4G 첫 화면 2026-11-03) */
+  const [items, cast, weeks, extras] = await Promise.all(['items', 'cast', 'weeks', 'extras'].map(get));
+  Object.assign(D, { items, cast, weeks, extras });
+  D.later = Promise.all(['reserve', 'specials'].map(f => get(f).catch(() => []))).then(([reserve, specials]) => Object.assign(D, { reserve, specials }));
   return D;
+}
+/* 뒤에서 미리 받기: 첫 화면이 뜬 뒤 쉬는 틈에 하나씩(한 번에 2개) · 이미 받은 건 건너뜀 */
+const fetched = new Set();
+export function prefetch(urls) {
+  const q = urls.filter(u => u && !fetched.has(u)); q.forEach(u => fetched.add(u));
+  const idle = window.requestIdleCallback || (f => setTimeout(f, 200));
+  const one = () => { const u = q.shift(); if (!u) return; const im = new Image(); im.decoding = 'async'; im.onload = im.onerror = () => idle(one); im.src = u; };
+  idle(one); idle(one);
 }
 /* 꾸미기 — 겉모습만(능력치 0) · 골목 동전(플레이) 또는 원어데이 골드(gold.js SHOP.hanson 고정 ID) */
 export const DECO = [

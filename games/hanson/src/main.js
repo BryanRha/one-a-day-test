@@ -2,18 +2,18 @@
 //   아침 · 낮 · 오후 = 골목 손님(짧은 퍼즐 · 동전 · 도감 · 경험치) → 저녁 = 오늘의 주인공(모두 같은 손님 · 주간 이야기 · 평판 · 통계)
 //   → 하루 결산(등급 도장 · 동전 · 평판 · 경험치) → 영업 연장(광고 3 · 골드 6) · 장부 · 도감 · 꾸미기
 //   데이터: data/*.json (사람이 쓴 8주 뼈대 + 예비 손님 + 골목 손님 풀 — content/*.mjs 에서 tools/build_data.mjs 로 만듦)
-import { D, H, cur, loadData, tagOf } from './state.js?v=0.96.3';
-import { S, load, save, today, setDay, week } from './save.js?v=0.96.3';
-import * as A from './audio.js?v=0.96.3';
-import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.96.3';
-import { sceneHTML, layout, setFace } from './scene.js?v=0.96.3';
-import { openInspect, resizeInspect } from './inspect.js?v=0.96.3';
-import { openTalk } from './talk.js?v=0.96.3';
-import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.96.3';
-import { WHY } from './check.js?v=0.96.3';
-import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.96.3';
-import { bm } from './oad_bm.js?v=0.96.3';
-import { installBack, inOAD, exitToOAD } from './oad.js?v=0.96.3';
+import { D, H, cur, loadData, tagOf, prefetch, face, sil, itemImg } from './state.js?v=0.96.4';
+import { S, load, save, today, setDay, week } from './save.js?v=0.96.4';
+import * as A from './audio.js?v=0.96.4';
+import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.96.4';
+import { sceneHTML, layout, setFace } from './scene.js?v=0.96.4';
+import { openInspect, resizeInspect } from './inspect.js?v=0.96.4';
+import { openTalk } from './talk.js?v=0.96.4';
+import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.96.4';
+import { WHY } from './check.js?v=0.96.4';
+import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.96.4';
+import { bm } from './oad_bm.js?v=0.96.4';
+import { installBack, inOAD, exitToOAD } from './oad.js?v=0.96.4';
 
 window.__errs = [];
 addEventListener('error', e => window.__errs.push(String(e.message)));
@@ -389,9 +389,23 @@ async function boot() {
   resumeVisit();
   openShop();
   setTimeout(() => $('#boot').classList.add('off'), sp(350));
+  setTimeout(warmToday, 600);
   if (!visiting() && !S.shop[today()]) setTimeout(() => settleIfDue(), sp(900));
+  window.__hanson.ready = true;   /* 시험 도구는 고정 대기 대신 이 신호를 기다림 (2026-11-03 이어하기 검사 실패 원인) */
+}
+/* 4G: 첫 화면 뒤 쉬는 틈에 오늘 손님(얼굴 3표정 · 물건) → 내일 실루엣 → 먼지 · 소품 순서로 미리 받음
+   전체 그림(약 26MB)을 다 받진 않음 — 오늘 쓸 것만(약 1.5MB) · 나머지는 그날 그때 받음 */
+function warmToday() {
+  try {
+    const k = today(), d = S.shop[k], ids = d ? d.slots.map(x => x.id) : [...pickAlley(D, k, S.alleySeen, FREE_ALLEY), mainGuest(D, k).g.id];
+    const gs = ids.map(findGuest).filter(Boolean), urls = [];
+    if (cur.v && cur.v.g) gs.unshift(cur.v.g);
+    for (const g of gs) urls.push(face(g.cast, 0), itemImg(g.item), face(g.cast, 1), face(g.cast, 2));
+    urls.push(sil(mainGuest(D, addDays(k, 1)).g.cast), 'assets/cat_2.webp', 'assets/cat_1.webp');
+    prefetch(urls);
+  } catch (e) { console.warn(e); }
 }
 /* 시험 · 봇 연결 */
-window.__hanson = { S: () => S, D, cur, setDay: k => { setDay(k); cur.v = null; S.prog = null; closeModal(); openShop(); }, today, openShop, mainGuest: k => mainGuest(D, k), dayOf, pastWeeks, A, exitToOAD };
+window.__hanson = { ready: false, S: () => S, D, cur, setDay: k => { setDay(k); cur.v = null; S.prog = null; closeModal(); openShop(); }, today, openShop, mainGuest: k => mainGuest(D, k), dayOf, pastWeeks, A, exitToOAD };
 boot();
 void judge;
