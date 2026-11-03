@@ -196,11 +196,12 @@ export function natureLine(w, seed, p) {
 /* ── 카드 문구: 나이대 맥락 · 통계 한 줄 (표본 50 이상이면 실제 비율) ── */
 export const STAT_MIN = 50;
 export function context(rec) {
-  const age = rec.age || 'all', ak = AGE_KO[age];
-  if (age === 'all') return rec.rare ? '오늘 같은 질문에 답한 사람 중 1%만 나온 결과' : '오늘 모두가 같은 질문으로 받은 결과';
-  if (rec.rare) return `${ak}가 고른 답에서 1%만 나온 결과`;
+  const age = rec.age || 'all';
+  /* 카드에 나이는 드러내지 않음 (대표 2026-11-04) — 나이대는 질문 고르기 · 결과 고르기에만 씀 */
+  if (rec.rare) return '오늘 답한 사람 중 1%만 나온 결과';
+  if (age === 'all') return '오늘 모두가 같은 질문으로 받은 결과';
   const x = rec.r && resultById(rec.r), aw = x ? ageW(x.ages, age) : 2;
-  return aw >= 3 ? `요즘 ${ak}가 많이 받는 결과` : aw === 2 ? `${ak} 답에서 자주 나오는 결과` : `${ak} 중엔 드문 결과`;
+  return aw >= 3 ? '요즘 많이 받는 결과' : aw === 2 ? '오늘 답에서 자주 나오는 결과' : '드물게 나오는 결과';
 }
 export function statLine(rec) {
   const s = rec.stat, ak = AGE_SHORT[rec.age || 'all'];

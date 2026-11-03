@@ -121,7 +121,7 @@ function natureCard(rec, I) {
 function card(rec, res = rec.res, opt = {}) {
   const I = info(rec, res); if (!I) return '';
   if (I.nature) return natureCard(rec, I);
-  const age = rec.age || 'all', ctx = res.via ? (rec.v1 ? '오늘 꽃 카드 답으로 받은 다른 주제 카드' : '오늘 답으로 받은 다른 주제 카드') : V.context({ ...rec, r: I.id, rare: I.rare }), st = V.statLine({ ...rec, rare: I.rare, stat: res.stat }), ty = opt.type ?? myType();
+  const ctx = res.via ? (rec.v1 ? '오늘 꽃 카드 답으로 받은 다른 주제 카드' : '오늘 답으로 받은 다른 주제 카드') : V.context({ ...rec, r: I.id, rare: I.rare }), st = V.statLine({ ...rec, rare: I.rare, stat: res.stat }), ty = opt.type ?? myType();
   return `<div class="owcard v2${I.rare ? ' rare' : ''}${opt.mini ? ' mini' : ''}" style="--c:${I.col}"><div class="cin"><div class="mesh"></div><div class="grain"></div>
     <div class="ctop"><span>HOW AI SEES ME — TODAY</span><span>${dateDot(rec.day)}</span></div>
     <div class="theme">${res.via ? `${V.THEMES[I.th].e} 다른 주제 · ${V.THEMES[I.th].ko}` : thChip(I.th)}</div>
@@ -130,7 +130,7 @@ function card(rec, res = rec.res, opt = {}) {
     <div class="pre">오늘의 당신은</div>
     <div class="name">${esc(I.name)}</div>
     <p class="line">${esc(I.line)}</p>
-    <div class="ctx"><b>${V.AGE_KO[age] === '모두' ? '공통' : V.AGE_KO[age]}</b><span>${esc(ctx)}</span></div>
+    <div class="ctx"><span>${esc(ctx)}</span></div>
     <div class="stat">${esc(st)}</div>
     <div class="cfoot"><span class="lg">One a Day</span><span>oneaday.kr — 너도 물어봐</span></div></div></div>`;
 }
@@ -156,11 +156,32 @@ export function entry(c, f) {
 /* ── 겹 화면 ── */
 function host() {
   let el = document.getElementById('ow');
-  if (!el) { el = document.createElement('div'); el.id = 'ow'; document.body.append(el); el.addEventListener('click', onClick); el.addEventListener('input', onInput); }
+  if (!el) { el = document.createElement('div'); el.id = 'ow'; document.body.append(el); el.addEventListener('click', onClick); el.addEventListener('input', onInput); push(); }
   document.body.style.overflow = 'hidden';
   return el;
 }
-export function close() { const el = document.getElementById('ow'); if (el) el.remove(); document.body.style.overflow = ''; S = null; if (C && C.onClose) C.onClose(); }
+export function close(how) {
+  const el = document.getElementById('ow'); if (el) el.remove(); document.body.style.overflow = ''; S = null;
+  if (pushed && how !== 'pop') { pushed = false; if (how === 'nav') history.replaceState(null, ''); else { skip = true; history.back(); } }   /* 버튼으로 닫으면 넣어 둔 기록 한 칸을 되돌림 */
+  pushed = false; if (C && C.onClose) C.onClose();
+}
+/* 폰 뒤로가기 (2026-11-04 대표: 결과 화면에서 뒤로가기 = 이전 단계) — 겹 화면이 열릴 때 기록 한 칸을 넣고, 뒤로가기마다 한 단계씩 되돌린 뒤 다시 한 칸 넣음
+   단계: 아래 시트 닫기 → 도감 · 비교 · 너랑 미리보기는 결과로 → 다른 주제 보기는 원래 카드로 → 질문 n은 n-1 (첫 질문은 나이 고르기가 있었으면 그리로) → 그 밖(결과 · 첫 화면)은 닫기 */
+let pushed = false, skip = false;
+function push() { if (!pushed) { pushed = true; history.pushState({ ow: 1 }, ''); } }
+export function onPop() {
+  if (skip) { skip = false; return true; }
+  if (!document.getElementById('ow') || !S) return false;
+  pushed = false;
+  const sh = document.querySelector('#ow .owsheet');
+  if (sh) { sheetClose(); push(); return true; }
+  const s = S.scr;
+  if (s === 'dex' || s === 'cmp' || s === 'nr') { S.scr = 'result'; draw(); push(); return true; }
+  if (s === 'result' && S.view === 'more') { S.view = ''; draw(); push(); return true; }
+  if (/^q\d$/.test(s) && (+s.slice(1) > 1 || S.picked)) { S.scr = +s.slice(1) > 1 ? 'q' + (+s.slice(1) - 1) : 'age'; draw(); push(); return true; }
+  if (s === 'reveal') { push(); return true; }   /* 카드가 나오는 중엔 그대로 */
+  close('pop'); return true;
+}
 /* how: 'tab' · 'land' · 'pair'(친구 비교 링크) · pair = { r, a, g, m, q } */
 export function open(c, how = 'tab', pair = null) {
   C = c; const day = dayOf(c), rec = todayRec(c);
@@ -370,10 +391,8 @@ function drawV2(x, rec, res, u, W, H) {
   lines.forEach((l, i) => x.fillText(l, 50 * u, 85 * u + fs * .95 + i * fs * 1.18));
   x.font = `700 ${4.4 * u}px ${SERIF}`; wrap(x, I.line, 82 * u).slice(0, 3).forEach((l, i) => x.fillText(l, 50 * u, 122 * u + i * 7 * u));
   x.strokeStyle = 'rgba(35,32,29,.3)'; x.lineWidth = 2; [140, 149.5].forEach(y => { x.beginPath(); x.moveTo(8 * u, y * u); x.lineTo(92 * u, y * u); x.stroke(); });
-  const ak = age === 'all' ? '공통' : V.AGE_KO[age], ctx = res.via ? (rec.v1 ? '오늘 꽃 카드 답으로 받은 다른 주제 카드' : '오늘 답으로 받은 다른 주제 카드') : V.context({ ...rec, r: I.id, rare: I.rare });
-  x.font = `${3.1 * u}px ${SANS}`; const cw = x.measureText(ctx).width; x.font = `${2.8 * u}px ${SANS}`; const aw = x.measureText(ak).width + 4.8 * u, tw = aw + 2 * u + cw, l0 = 50 * u - tw / 2;
-  x.fillStyle = '#23201D'; x.beginPath(); x.roundRect(l0, 142 * u, aw, 5.4 * u, 2.7 * u); x.fill(); x.fillStyle = '#F4EFE8'; x.textAlign = 'left'; x.fillText(ak, l0 + 2.4 * u, 145.8 * u);
-  x.fillStyle = '#23201D'; x.font = `${3.1 * u}px ${SANS}`; x.fillText(ctx, l0 + aw + 2 * u, 146 * u);
+  const ctx = res.via ? (rec.v1 ? '오늘 꽃 카드 답으로 받은 다른 주제 카드' : '오늘 답으로 받은 다른 주제 카드') : V.context({ ...rec, r: I.id, rare: I.rare });   /* 나이 표시는 뺌 (대표 11-04) */
+  x.fillStyle = '#23201D'; x.font = `${3.1 * u}px ${SANS}`; x.textAlign = 'center'; x.fillText(ctx, 50 * u, 146 * u);
   const st = V.statLine({ ...rec, rare: I.rare, stat: res.stat }); if (st) { x.font = `500 ${2.8 * u}px ${MONO}`; x.fillStyle = '#6F6760'; x.textAlign = 'center'; x.fillText(st, 50 * u, 155 * u); }
   if (I.rare) { x.strokeStyle = '#C9A45C'; x.lineWidth = .8 * u; x.beginPath(); x.roundRect(2.4 * u, 2.4 * u, W - 4.8 * u, H - 4.8 * u, 2.4 * u); x.stroke(); }
   x.fillStyle = '#23201D'; x.textAlign = 'left'; x.font = `${4.2 * u}px Jua, ${SANS}`; x.fillText('One a Day', 8 * u, H - 7 * u); x.font = `500 ${2.6 * u}px ${MONO}`; x.textAlign = 'right'; x.fillText('oneaday.kr — 너도 물어봐', 92 * u, H - 7 * u);
@@ -497,7 +516,7 @@ function onInput(e) {
 }
 async function onClick(e) {
   const ag = e.target.closest('[data-age]');
-  if (ag) { const k = ag.dataset.age; sset(AKEY, k); S.age = k; S.qa = S.pair && V.okAge(S.pair.q) ? S.pair.q : k; S.qs = V.dayQuestions(S.day, S.qa); S.scr = 'q1'; C.T.track('oneword_age', { src: k === 'all' ? 'common' : 'pick', age: k }); stats(); return draw(); }
+  if (ag) { const k = ag.dataset.age; sset(AKEY, k); S.age = k; S.picked = 1; S.qa = S.pair && V.okAge(S.pair.q) ? S.pair.q : k; S.qs = V.dayQuestions(S.day, S.qa); S.scr = 'q1'; C.T.track('oneword_age', { src: k === 'all' ? 'common' : 'pick', age: k }); stats(); return draw(); }
   const a = e.target.closest('[data-ans]');
   if (a) {
     const [n, i] = a.dataset.ans.split(':'), k = +n;
@@ -520,7 +539,7 @@ async function onClick(e) {
   if (k === 'v1keep') { S.v1seen = 1; persist(); sheetClose(); return; }
   if (k === 'reset') return resetToday();
   if (k === 'nr') { S.scr = 'nr'; C.T.track('oneword_nr'); return draw(); }
-  if (k === 'nrgo') { close(); return C.go('neorang', 'oneword'); }
+  if (k === 'nrgo') { close('nav'); return C.go('neorang', 'oneword'); }
   const view = S.view === 'more' && S.more ? S.more : S.res;
   if (k === 'save') { g.disabled = true; try { const how = await C.saveImage(await cardBlob(S, view), `oneaday-${S.day}-oneword.png`); C.T.track('oneword_save', { how, th: view.th }); } finally { g.disabled = false; } return; }
   if (k === 'cmpsave') { g.disabled = true; try { const how = await C.saveImage(await pairBlob(), `oneaday-${S.day}-pair.png`); C.T.track('oneword_pair', { what: 'save', how }); } finally { g.disabled = false; } return; }
