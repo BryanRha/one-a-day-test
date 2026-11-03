@@ -31,7 +31,8 @@ function todayRec(c) {
   const v = load(), day = dayOf(c);
   if (!v || v.day !== day || !v.res) return null;
   if (v.v === 2) return v;
-  if (v.res.f) return { v: 2, day, age: 'all', qa: 'all', th: 'nature', a: [], res: { th: 'nature', f: v.res.f, c: v.res.c, w: v.res.w, line: v.res.line, by: v.res.by }, credit: v.bought && Object.keys(v.bought).length ? 1 : 0 };
+  /* v1 꽃 카드(2026-11-02 형식): 자연 카드로 읽고, v1 답(v1a)을 남겨 다른 주제도 받을 수 있게 · v1 에서 산 단어가 있으면 오늘 1회 무료(지난 구매 혜택) */
+  if (v.res.f) return { v: 2, v1: 1, day, age: 'all', qa: 'all', th: 'nature', a: [], v1a: Array.isArray(v.a) ? v.a : [], res: { th: 'nature', f: v.res.f, c: v.res.c, w: v.res.w, line: v.res.line, by: v.res.by }, credit: v.bought && Object.keys(v.bought).length ? 1 : 0 };
   return null;
 }
 /* 도감 { id: 처음 받은 날 } · 연속 */
@@ -120,10 +121,10 @@ function natureCard(rec, I) {
 function card(rec, res = rec.res, opt = {}) {
   const I = info(rec, res); if (!I) return '';
   if (I.nature) return natureCard(rec, I);
-  const age = rec.age || 'all', ctx = V.context({ ...rec, r: I.id, rare: I.rare }), st = V.statLine({ ...rec, rare: I.rare, stat: res.stat }), ty = opt.type ?? myType();
+  const age = rec.age || 'all', ctx = res.via ? (rec.v1 ? '오늘 꽃 카드 답으로 받은 다른 주제 카드' : '오늘 답으로 받은 다른 주제 카드') : V.context({ ...rec, r: I.id, rare: I.rare }), st = V.statLine({ ...rec, rare: I.rare, stat: res.stat }), ty = opt.type ?? myType();
   return `<div class="owcard v2${I.rare ? ' rare' : ''}${opt.mini ? ' mini' : ''}" style="--c:${I.col}"><div class="cin"><div class="mesh"></div><div class="grain"></div>
     <div class="ctop"><span>HOW AI SEES ME — TODAY</span><span>${dateDot(rec.day)}</span></div>
-    <div class="theme">${thChip(I.th)}</div>
+    <div class="theme">${res.via ? `${V.THEMES[I.th].e} 다른 주제 · ${V.THEMES[I.th].ko}` : thChip(I.th)}</div>
     ${I.rare ? '<div class="rarebadge">✦ 희귀 1%</div>' : ''}${ty ? `<div class="tychip${I.rare ? ' low' : ''}">${ty}</div>` : ''}
     <div class="emo"><span>${I.e}</span></div>
     <div class="pre">오늘의 당신은</div>
@@ -163,7 +164,7 @@ export function close() { const el = document.getElementById('ow'); if (el) el.r
 /* how: 'tab' · 'land' · 'pair'(친구 비교 링크) · pair = { r, a, g, m, q } */
 export function open(c, how = 'tab', pair = null) {
   C = c; const day = dayOf(c), rec = todayRec(c);
-  if (rec) { S = { ...rec, scr: pair ? 'cmp' : 'result', pair }; draw(); return; }
+  if (rec) { S = { ...rec, scr: pair ? 'cmp' : 'result', pair }; if (rec.v1) dexAdd(rec.res, rec.day); draw(); return; }
   const age = myAge(c);
   S = { day, age: age || 'all', qa: pair && V.okAge(pair.q) ? pair.q : age || 'all', th: V.dayTheme(day), a: [], scr: age ? 'q1' : 'age', pair, how };
   S.qs = V.dayQuestions(day, S.qa);
@@ -226,7 +227,7 @@ function result() {
   const thL = V.dexList(I.th), thGot = thL.filter(x => d[x.id]).length;
   const tabs = S.more ? `<div class="owtabs"><button class="${S.view !== 'more' ? 'on' : ''}" data-ow="v-main">${V.THEMES[S.res.th].e} ${V.THEMES[S.res.th].ko}</button><button class="${S.view === 'more' ? 'on' : ''}" data-ow="v-more">${V.THEMES[S.more.th].e} ${V.THEMES[S.more.th].ko}</button></div>` : '';
   const open = tintsOpen();
-  return `<div class="owres"><div class="rhdr"><button class="ib" data-ow="close" aria-label="닫기">${ic('x')}</button><b>오늘의 한 단어</b><span class="aipill"><b>AI</b> ${view.by === 'ai' || view.by === 'cache' ? '선택' : '규칙'}</span></div>
+  return `<div class="owres"><div class="rhdr"><button class="ib" data-ow="close" aria-label="닫기">${ic('x')}</button><b>오늘의 한 단어</b><span class="aipill">${view.by === 'ai' || view.by === 'cache' ? '<b>AI</b> 선택' : '규칙으로 고름'}</span></div>
     ${tabs}<div class="preview">${card(S, view)}</div>
     <div class="share"><button class="sb main" data-ow="save">${ic('dl')}<span>그림 저장</span></button><button class="sb" data-ow="link">${ic('link')}<span>친구랑 비교하기</span></button></div>
     ${S.pair ? `<button class="morerow pairrow" data-ow="cmp"><span class="mt"><b>친구 카드와 나란히 보기</b><small>오늘의 합 · 같은 답 격자</small></span>${ic('arrow')}</button>` : ''}
@@ -235,15 +236,19 @@ function result() {
       : `<button class="morerow" data-ow="more"><span class="ri">🪙</span><span class="mt"><b>오늘의 다른 주제 하나 더</b><small>${rest.map(t => V.THEMES[t].ko).join(' · ')} 중 하나 — ${PRICE} 골드 또는 광고 1번</small></span><span class="mp"><i class="coin"></i>${PRICE}</span></button>`}
     ${I.nature ? '' : `<div class="tints"><span>카드 색</span>${V.TINTS.map((t, i) => i < open ? `<button class="${(S.tint || V.THEMES[view.th].c) === t ? 'on' : ''}" style="background:${t}" data-tint="${t}" aria-label="카드 색 ${i + 1}"></button>` : `<i title="도감 ${(i) * 5}칸이면 열려요">${ic('lock')}</i>`).join('')}</div>`}
     ${C.R.PROD ? '' : `<button class="nrrow" data-ow="nr"><img src="fortune/char/ow-jaeha.webp" alt=""><span class="mt"><b>재하에게 이 카드 보여 주기</b><small>너랑 캐릭터가 '${esc(info(S, view).name)}'로 먼저 인사해요</small></span>${ic('arrow')}</button>`}
-    <p class="ownote">${NOTE} · 같은 날 같은 답이면 같은 결과 · 희귀 1%는 답 조합으로 정해져요(판매 X)</p></div>`;
+    ${C.R.PROD ? '' : '<button class="owreset" data-ow="reset">오늘 카드 다시 받기 (테스트)</button>'}
+    <p class="ownote">${NOTE} · 같은 날 같은 답이면 같은 결과 · 희귀 1%는 답 조합으로 정해져요(판매 X)</p></div>
+    ${S.v1 && !S.v1seen ? `<div class="owdim" data-ow="v1keep"></div><div class="owsheet"><div class="grab"></div><div class="shd"><b>새 버전 카드가 나왔어요</b></div>
+      <p class="shs">이 꽃 카드는 예전 버전이에요. 새 버전은 오늘의 주제(${V.THEMES[V.dayTheme(S.day)].ko}) 질문 다섯 개로 캐릭터 · 장면 카드를 만들어요. 꽃 카드는 지워져요.</p>
+      <button class="shdone" data-ow="reset">새 버전 카드로 다시 받기</button><button class="shkeep" data-ow="v1keep">꽃 카드 그대로 둘게요</button></div>` : ''}`;
 }
 function moreSheet() {
   const rest = V.moreThemes(S.day), A = acct(), gold = A.current() ? ((A.current().gold || {}).total || 0) : null, arm = S.arm || '';
   const rows = rest.map(t => `<div class="mrow th"><span class="mk">${V.THEMES[t].e}</span><span class="mw"><b>${V.THEMES[t].ko}</b><small>오늘 답 그대로 · ${V.THEMES[t].ko} 덱에서 한 장</small></span>
-    <span class="mbs"><button class="buy ad" data-owmore="${t}:ad">광고 보고</button><button class="buy${arm === t ? ' arm' : ''}" data-owmore="${t}:gold">${arm === t ? `${PRICE} 골드 쓰기` : S.credit ? '받기 (이미 산 것)' : `${PRICE} 골드`}</button></span></div>`).join('');
+    <span class="mbs"><button class="buy ad" data-owmore="${t}:ad">광고 보고 무료로</button><button class="buy${arm === t ? ' arm' : ''}${S.credit ? ' credit' : ''}" data-owmore="${t}:gold">${S.credit ? '오늘 1회 무료로 받기<small>지난 구매 혜택</small>' : arm === t ? `${PRICE}골드 쓰기` : `${PRICE}골드로 받기`}</button></span></div>`).join('');
   return `<div class="owdim" data-ow="sheet-close"></div><div class="owsheet"><div class="grab"></div>
     <div class="shd"><b>오늘의 다른 주제 하나 더</b>${gold != null ? `<span class="gold"><i class="coin"></i>${C.gnum(gold)}</span>` : ''}</div>
-    <p class="shs">같은 답으로 다른 주제 덱에서 한 장 더. 하루 한 번 · 광고 1번이면 무료예요.</p>${rows}
+    <p class="shs">${S.v1 ? '오늘 꽃 카드의 답으로 다른 주제 덱에서 한 장 더.' : '같은 답으로 다른 주제 덱에서 한 장 더.'} 하루 한 번 · 광고 1번이면 무료예요.${S.credit ? '<br><b>오늘 계절 · 동물 · 향 단어를 산 기록이 있어 한 번은 골드 없이 받아요 (지난 구매 혜택).</b>' : ''}</p>${rows}
     <p class="shn">확률 없이 오늘 답에 맞는 카드를 그대로 보여 줘요 · 희귀 1%도 같은 규칙 · 오늘 카드에만</p></div>`;
 }
 function sheetDraw() { document.querySelectorAll('#ow .owdim,#ow .owsheet').forEach(x => x.remove()); host().insertAdjacentHTML('beforeend', moreSheet()); const sh = document.querySelector('#ow .owsheet'); if (sh) sh.style.animation = 'none'; }
@@ -292,6 +297,14 @@ function neorang() {
       <div class="say"><b>재하</b><p>…'${esc(I.name)}' 씨. 오늘은 그렇게 불러도 돼요?</p></div>
       <div class="say"><p>${say2} 사연 하나만 보내 줘요 — 오늘 생긴 일이든, 아직 못 꺼낸 일이든.</p></div></div>
     <button class="nrgo" data-ow="nrgo">너랑에서 재하와 이어 가기 ${ic('arrow')}</button></div>`;
+}
+
+/* 오늘 카드 다시 받기: 이 기기의 오늘 기록 · 지난 구매 혜택 · 오늘 도감 칸을 지우고 v2 질문부터 (테스트 단추 · v1 카드 안내) — 서버 골드 기록은 그대로라 같은 날 골드로 다시 받으면 차감 없이 열림 */
+function resetToday() {
+  const day = S.day, d = dex(); for (const [id, dd] of Object.entries(d)) if (dd === day) delete d[id]; jset(DKEY, d);
+  try { localStorage.removeItem(KEY); } catch { /* */ }
+  C.T.track('oneword_reset', { v1: S.v1 ? 1 : 0 });
+  const c = C; S = null; open(c, 'reset');
 }
 
 /* ── 서버 · 규칙 ── */
@@ -346,7 +359,7 @@ function drawV2(x, rec, res, u, W, H) {
   blobs(x, I.col, W, H);
   x.fillStyle = '#23201D'; x.textBaseline = 'alphabetic';
   x.font = `500 ${2.7 * u}px ${MONO}`; x.textAlign = 'left'; x.fillText('HOW AI SEES ME — TODAY', 8 * u, 11 * u); x.textAlign = 'right'; x.fillText(dateDot(rec.day), 92 * u, 11 * u);
-  pill(x, thChip(I.th), 8 * u, 16 * u, u, 'rgba(255,255,255,.65)', '#23201D', `700 ${3.4 * u}px ${SANS}`);
+  pill(x, res.via ? `${V.THEMES[I.th].e} 다른 주제 · ${V.THEMES[I.th].ko}` : thChip(I.th), 8 * u, 16 * u, u, 'rgba(255,255,255,.65)', '#23201D', `700 ${3.4 * u}px ${SANS}`);
   if (I.rare) pill(x, '✦ 희귀 1%', 92 * u, 16 * u, u, '#E4C27A', '#3A2600', `800 ${3.4 * u}px ${SANS}`, true);
   if (ty) pill(x, ty, 92 * u, (I.rare ? 25 : 16) * u, u, 'rgba(35,32,29,.08)', '#6F6760', `600 ${2.8 * u}px ${MONO}`, true);
   x.fillStyle = 'rgba(255,255,255,.7)'; x.beginPath(); x.arc(50 * u, 50 * u, 20 * u, 0, 7); x.fill();
@@ -357,7 +370,7 @@ function drawV2(x, rec, res, u, W, H) {
   lines.forEach((l, i) => x.fillText(l, 50 * u, 85 * u + fs * .95 + i * fs * 1.18));
   x.font = `700 ${4.4 * u}px ${SERIF}`; wrap(x, I.line, 82 * u).slice(0, 3).forEach((l, i) => x.fillText(l, 50 * u, 122 * u + i * 7 * u));
   x.strokeStyle = 'rgba(35,32,29,.3)'; x.lineWidth = 2; [140, 149.5].forEach(y => { x.beginPath(); x.moveTo(8 * u, y * u); x.lineTo(92 * u, y * u); x.stroke(); });
-  const ak = age === 'all' ? '공통' : V.AGE_KO[age], ctx = V.context({ ...rec, r: I.id, rare: I.rare });
+  const ak = age === 'all' ? '공통' : V.AGE_KO[age], ctx = res.via ? (rec.v1 ? '오늘 꽃 카드 답으로 받은 다른 주제 카드' : '오늘 답으로 받은 다른 주제 카드') : V.context({ ...rec, r: I.id, rare: I.rare });
   x.font = `${3.1 * u}px ${SANS}`; const cw = x.measureText(ctx).width; x.font = `${2.8 * u}px ${SANS}`; const aw = x.measureText(ak).width + 4.8 * u, tw = aw + 2 * u + cw, l0 = 50 * u - tw / 2;
   x.fillStyle = '#23201D'; x.beginPath(); x.roundRect(l0, 142 * u, aw, 5.4 * u, 2.7 * u); x.fill(); x.fillStyle = '#F4EFE8'; x.textAlign = 'left'; x.fillText(ak, l0 + 2.4 * u, 145.8 * u);
   x.fillStyle = '#23201D'; x.font = `${3.1 * u}px ${SANS}`; x.fillText(ctx, l0 + aw + 2 * u, 146 * u);
@@ -430,19 +443,36 @@ export function parsePair(sp) {
 let armT = 0;
 /* 폰 시험만: 가짜 계정(로그인 · 골드 차감 흐름) — 테스트 빌드에서만 */
 const acct = () => (!C.R.PROD && window.__owTestA) || C.A;
-function gotMore(th) {
-  const Cd = V.candidates({ day: S.day, age: S.age, qa: S.qa, theme: th, a: S.a, qs: S.qs }), r = { ...V.pickRule(Cd), by: 'rule' };
-  S.more = r; S.view = 'more'; S.credit = 0; dexAdd(r, S.day);
-  const v = load(); save({ ...v, more: r, credit: 0 });
-  sheetClose(); draw();
+/* 지금 기록을 v2 모양으로 저장 (v1 기록도 이때 v2 로 바뀜 — 다시 읽어도 받은 것 · 혜택 쓴 것이 그대로) */
+const persist = () => save({ v: 2, day: S.day, age: S.age, qa: S.qa, th: S.th, a: S.a, res: S.res, ...(S.v1 ? { v1: 1, v1a: S.v1a } : {}), ...(S.more ? { more: S.more } : {}), credit: S.credit || 0, ...(S.tint ? { tint: S.tint } : {}), ...(S.pair ? { pair: S.pair } : {}), ...(S.v1seen ? { v1seen: 1 } : {}) });
+function moreCand(th) {
+  if (S.a && S.a.length === 5) return V.candidates({ day: S.day, age: S.age, qa: S.qa, theme: th, a: S.a, qs: S.qs || V.dayQuestions(S.day, S.qa) });
+  /* v1 꽃 카드: v1 답의 꼬리표 무게로 (v1 답도 없으면 0) */
+  const a1 = (S.v1a || []).filter(x => Number.isInteger(x) && x >= 0 && x < 4), w = a1.length === 5 ? OW.profile(a1).w : Object.fromEntries(V.TAGS.map(t => [t, 0]));
+  return V.candidates({ day: S.day, age: S.age, theme: th, w, seed: `${S.day}|v1|${a1.join('')}|${th}` });
+}
+function gotMore(th, via) {
+  const r = { ...V.pickRule(moreCand(th)), by: 'rule', via };
+  S.more = r; S.view = 'more'; if (via === 'credit') S.credit = 0; dexAdd(r, S.day);
+  persist(); sheetClose(); draw();
+}
+/* 광고: 앱 테스트 광고 시트(#sheet)는 겹 화면(#ow)보다 아래라 .over 로 올림 (2026-11-03 대표 제보: 광고가 가려져 '진행 없음') */
+async function showAd() {
+  const fn = (!C.R.PROD && window.__owTestAd) || C.rewardAd; if (!fn) return false;
+  const p = fn('보상형 광고 (테스트) · 다른 주제 하나 더'), sh = document.getElementById('sheet'); if (sh) sh.classList.add('over');
+  try { return await p; } finally { if (sh) sh.classList.remove('over'); }
 }
 async function buyMore(th, via) {
+  try { await buyMore0(th, via); } catch (e) { console.warn('oneword more', e); C.toast('다시 시도해 주세요'); C.T.track('oneword_more_err', { via, msg: String(e && e.message || e).slice(0, 60) }); }
+}
+async function buyMore0(th, via) {
   if (via === 'ad') {
-    const ok = C.rewardAd ? await C.rewardAd('보상형 광고 (테스트) · 다른 주제 하나 더') : true;
-    if (!ok) return C.toast('광고를 끝까지 보면 받아요');
-    C.T.track('oneword_more', { via: 'ad', th }); return gotMore(th);
+    let ok = false;
+    try { ok = await showAd(); } catch { C.T.track('oneword_more', { via: 'ad', th, fail: 1 }); return C.toast('광고를 불러오지 못했어요 · 잠시 뒤 다시 해 주세요'); }
+    if (!ok) { C.T.track('oneword_more', { via: 'ad', th, cancel: 1 }); return C.toast('광고를 끝까지 보면 받아요'); }
+    C.T.track('oneword_more', { via: 'ad', th }); return gotMore(th, 'ad');
   }
-  if (S.credit) { C.T.track('oneword_more', { via: 'credit', th }); return gotMore(th); }   /* v1 에서 오늘 이미 산 단어가 있으면 한 번은 그걸로 */
+  if (S.credit) { C.T.track('oneword_more', { via: 'credit', th }); return gotMore(th, 'credit'); }   /* v1 에서 오늘 산 단어가 있으면 오늘 1회 무료 (지난 구매 혜택) */
   const A = acct();
   if (!A.ON) return C.toast('골드는 곧 열려요 · 광고로 받아 보세요');
   if (!A.current()) { C.needLogin('골드로 받으려면 로그인해 주세요'); const sh = document.getElementById('sheet'); if (sh) sh.classList.add('over'); return; }
@@ -452,9 +482,9 @@ async function buyMore(th, via) {
   clearTimeout(armT); S.arm = '';
   try {
     await A.call({ act: 'use', game: 'oneword', item: 'theme2', ref: `ow-${S.day.replace(/-/g, '')}-theme2` });
-    C.T.track('oneword_more', { via: 'gold', th, gold: PRICE }); gotMore(th);
+    C.T.track('oneword_more', { via: 'gold', th, gold: PRICE }); gotMore(th, 'gold');
   } catch (e) {
-    if (e && e.reason === 'limit') { C.T.track('oneword_more', { via: 'gold', th, gold: 0, again: 1 }); return gotMore(th); }   /* 오늘 이미 산 기록(앞 요청 답만 놓침)이면 받은 것으로 */
+    if (e && e.reason === 'limit') { C.T.track('oneword_more', { via: 'gold', th, gold: 0, again: 1 }); return gotMore(th, 'gold'); }   /* 오늘 이미 산 기록(앞 요청 답만 놓침)이면 받은 것으로 */
     sheetDraw(); C.toast((e && e.message) || '다시 시도해 주세요');
   }
 }
@@ -487,6 +517,8 @@ async function onClick(e) {
   if (k === 'cmp') { S.scr = 'cmp'; C.T.track('oneword_pair', { what: 'open' }); return draw(); }
   if (k === 'more') { S.arm = ''; host().insertAdjacentHTML('beforeend', moreSheet()); C.T.track('oneword_more_open'); return; }
   if (k === 'sheet-close') return sheetClose();
+  if (k === 'v1keep') { S.v1seen = 1; persist(); sheetClose(); return; }
+  if (k === 'reset') return resetToday();
   if (k === 'nr') { S.scr = 'nr'; C.T.track('oneword_nr'); return draw(); }
   if (k === 'nrgo') { close(); return C.go('neorang', 'oneword'); }
   const view = S.view === 'more' && S.more ? S.more : S.res;

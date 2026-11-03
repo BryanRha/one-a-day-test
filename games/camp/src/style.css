@@ -14,7 +14,7 @@ html, body { word-break: keep-all; overflow-wrap: anywhere; -webkit-text-size-ad
 #frame .wside.on.l { background: #8FB46E url(../assets/side_spring_l.webp) 0 0 / 1040px 1560px no-repeat; } #frame .wside.on.r { background: #8FB46E url(../assets/side_spring_r.webp) 0 0 / 1040px 1560px no-repeat; }
 html[data-season="autumn"] #frame .wside { background-color: #A89A52; } html[data-season="autumn"] #frame .wside.on.l { background-image: url(../assets/side_autumn_l.webp); } html[data-season="autumn"] #frame .wside.on.r { background-image: url(../assets/side_autumn_r.webp); }
 #frame.wide::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; background: linear-gradient(90deg, rgba(255,240,214,.55), rgba(255,240,214,0) 9%, rgba(255,240,214,0) 91%, rgba(255,240,214,.55)), radial-gradient(130% 100% at 50% 55%, rgba(120,90,60,0) 70%, rgba(120,90,60,.16)); }
-#frame .bg { -webkit-mask-image: linear-gradient(90deg, #0000, #000 90px, #000 calc(100% - 90px), #0000); mask-image: linear-gradient(90deg, #0000, #000 90px, #000 calc(100% - 90px), #0000); }
+#frame .bg { -webkit-mask-image: linear-gradient(90deg, #0000, #000 110px, #000 calc(100% - 110px), #0000); mask-image: linear-gradient(90deg, #0000, #000 110px, #000 calc(100% - 110px), #0000); }   /* 옆 존과 넓게 섞임 (11-03) */
 /* 세로로 긴 화면(폴드 등): 판은 가운데, 위아래는 같은 그림을 흐리게 늘여 이어 붙임 · HUD 는 화면 끝에 (퀄리티 B5) */
 #frame .bgx { position: absolute; left: -20%; top: -10%; width: 140%; height: 120%; object-fit: cover; filter: blur(22px) saturate(1.05); opacity: .95; }
 #board::before, #board::after { content: ''; position: absolute; left: -10px; right: -10px; height: 60px; z-index: 0; pointer-events: none; }
@@ -381,3 +381,4 @@ html[data-season="autumn"] #frame { background: #C9B26A; }
 .fog .zready { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 22px; background: #FFFBF2ee; border: 3px solid #E8C25A; box-shadow: 0 0 18px #FFE38A; cursor: pointer; animation: dotHop 1.6s cubic-bezier(.34,1.56,.64,1) infinite; } .fog .zready img { width: 30px; height: 30px; } .fog .zready span { font: 800 20px/1.2 var(--ff); color: #5E4A42; white-space: nowrap; }
 .fog .quiet { display: none; }
 .morel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 14px; } .morel .btn { justify-content: flex-start; gap: 8px; }
+.newtag { white-space: nowrap; width: 46px; height: 22px; line-height: 18px; padding: 2px 0 !important; text-align: center; box-sizing: border-box; flex: none; writing-mode: horizontal-tb; transform-origin: 50% 100%; }

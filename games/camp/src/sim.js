@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.96.5';
-import * as W from './walk.js?v=0.96.5';
+import * as D from './data.js?v=0.96.6';
+import * as W from './walk.js?v=0.96.6';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -19,15 +19,20 @@ export function fresh(now) {
     oven: { lv: 1 }, pads: { L2: { fac: 'table', lv: 1, base: 50 } }, amen: {},   /* 첫 화면 잔디에 피크닉 식탁 하나는 처음부터 (퀄리티 A3) */ builds: 0, zones: { lawn: { st: 'open' } }, menu: { bagel: 1 }, staff: { haru: { fav: 1, exp: 0 } },
     regs: {}, deco: {}, shop: {}, box: { pity: 0, n: 0 }, daily: {}, repeat: {}, stats: { served: 0, ups: 0, crits: 0, builds: 0, earned: 0 },
     attend: { last: -1, idx: 0 }, play: { day: -1, sec: 0, got: [] }, ads: { day: -1, used: {} }, buff: {}, charge: {}, stall: { day: -1, items: [], bought: [] },
-    tut: 0, catPet: 0, owner: false, skin: false, rate: 0, muted: false });
+    tut: 0, catPet: 0, owner: false, skin: false, rate: 0, muted: false, eco: D.ECO.v });
   for (const z of D.ZONES) if (!S.zones[z.id]) S.zones[z.id] = { st: 'locked' };
   resetRun(); return S;
 }
 export function load(obj, now) {
   fresh(now); if (!obj || obj.v !== 1) return { fresh: true };
-  Object.assign(S, obj); S.t = now; for (const z of D.ZONES) if (!S.zones[z.id]) S.zones[z.id] = { st: 'locked' };
-  resetRun(); return { fresh: false };
+  Object.assign(S, obj); S.eco = obj.eco || 1; S.t = now; for (const z of D.ZONES) if (!S.zones[z.id]) S.zones[z.id] = { st: 'locked' };
+  resetRun(); migrateEco(); return { fresh: false };
 }
+/* camp_v1 경제 바꾸기 (경제 v2 · 11-03): 숲 코인 · 쉼 포인트를 '지금 수입 몇 분치'가 같게 바꿈 — 옛 공식으로 잰 수입 대비 새 공식 수입 비율을 곱함 */
+export function migrateEco() { if ((S.eco || 1) >= D.ECO.v) return null; const E = D.ECO, keep = { ...E, effK: D.UP.effK };
+  const inc = () => { R.seats.length || buildSeats(); return Math.max(1e-9, incomeRate()); }, rest = () => Math.max(1e-9, restPerMin());
+  const nI = inc(), nR = rest(); Object.assign(E, { stepK: 10, menuK: 1.22, restK: 1.25 }); D.UP.effK = 1.11; const oI = inc(), oR = rest(); Object.assign(E, { stepK: keep.stepK, menuK: keep.menuK, restK: keep.restK }); D.UP.effK = keep.effK;
+  const kc = nI / oI, kr = nR / oR, before = { coin: S.coin, rp: S.rp }; S.coin = Math.floor(S.coin * kc); S.rp = Math.floor(S.rp * kr); for (const o of Object.values(S.pads)) o.base = Math.max(10, Math.round((o.base || 50) * kc));   /* 강화 바탕값도 같은 비율 */ S.rate = 0; S.eco = D.ECO.v; return { kc, kr, before }; }
 export function resetRun() {   /* 저장 안 되는 진행 초기화 (연속으로 여러 판 해도 남지 않게) */
   R.guests = []; R.orders = []; R.ready = []; R.tips = []; R.cheer = {}; R.combo = { n: 0, t: -9 }; R.tapStats = { dish: 0, cheer: 0, tip: 0, bonus: 0, cloud: 0, gift: 0, visit: 0 }; R.cloud = null; R.giftBox = null; R.visitor = null; R.nextCloud = null; R.nextGift = null; R.nextVisitor = null; R.gifts = []; R.ev = []; R.rateWin = []; R.nextSpawn = 2; R.earned = 0; R.regToday = null; R.gid = 0; R.seats = []; R.servers = []; R.stations = null;
   W.setMap(D.WALKMAP[SEASON] || D.WALKMAP.spring); W.setGraph(D.WALKGRAPH[SEASON] || D.WALKGRAPH.spring); seaState(); syncWalk(); buildSeats(); buildWorkers();
@@ -166,10 +171,12 @@ export function wear(id) { if (!hasLook(id)) return '아직 없는 옷이에요'
 export function stampLook(id) { const w = D.WARDROBE.find(x => x.id === id); if (!w || !w.stamp || hasLook(id)) return '바꿀 수 없어요'; if (!spend('stamp', w.stamp)) return '스탬프가 모자라요'; ownLook(id); S.wear = id; return null; }
 export function stampPet() { if (S.pet) return '이미 함께해요'; if (!spend('stamp', D.PET.stamp)) return '스탬프가 모자라요'; S.pet = true; S.petOn = true; return null; }
 /* 모자란 숲 코인 채우기 (data.js FILL) */
-export function fillCost(cost) { const short = Math.ceil(cost - S.coin); if (!(short > 0)) return null; const rate = (S.rate || incomeRate()) * D.TAP.autoK * D.OFFLINE.eff; if (!(rate > 0)) return null;
-  const sec = short / rate; if (short < S.coin * D.FILL.minFrac || sec < D.FILL.minSec || sec > D.FILL.capSec) return null; return { short, sec, gem: D.fillGem(sec) }; }
-export function fillByGem(cost) { const f = fillCost(cost); if (!f) return '지금은 채울 수 없어요'; if (!spend('gem', f.gem)) return '솔방울이 조금 모자라요'; S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; count('fill'); return null; }
-export function fillByGold(cost) { const f = fillCost(cost); if (!f) return null; S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; return f; }   /* ui 가 bm.spend('inst' + gem) 성공 뒤 */
+export function fillCost(cost, click) { const short = Math.ceil(cost - S.coin); if (!(short > 0)) return null; const rate = (S.rate || incomeRate()) * D.TAP.autoK * D.OFFLINE.eff; if (!(rate > 0)) return null;
+  const sec = short / rate; if (sec > D.FILL.capSec) return null; if (!click && (short < S.coin * D.FILL.minFrac || sec < D.FILL.minSec)) return null; return { short, sec, gem: D.fillGem(sec) }; }   /* click: 이미 단추를 본 사람이 누른 때 — '숨김' 기준(10% · 1분)은 보일 때만 적용 (대표 제보 11-03: 단추는 보이는데 누르면 '조금만 기다려') */
+/* 숲 코인 값은 한 곳에서 (단추 · 실행 · 검사가 같은 값을 씀) */
+export const coinCostOf = (a, v) => a === 'up' ? upCostOf(v) : a === 'build' || a === 'b' ? padCost() : a === 'amen' ? amenCost(v) : a === 'menu' ? menuNewCost(D.MENU.find(m => m.id === v)) : a === 'hire' ? (D.STAFF.find(s => s.id === v) || {}).cost : null;
+export function fillByGem(cost, shown) { const f = fillCost(cost, true); if (!f) return '지금은 채울 수 없어요'; const g = shown && shown >= f.gem ? shown : f.gem;   /* 확인 창에 적힌 값 그대로 뺌 (대가 일치) */ if (!spend('gem', g)) return '솔방울이 조금 모자라요'; f.gem = g; S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; count('fill'); return null; }
+export function fillByGold(cost) { const f = fillCost(cost, true); if (!f) return null; S.coin += f.short; S.stats.fill = (S.stats.fill || 0) + f.gem; return f; }   /* ui 가 bm.spend('inst' + gem) 성공 뒤 */
 export const amenCost = id => id ? D.amenCostOf(id) : Math.min(...Object.keys(D.AMEN).filter(a => !S.amen[a]).map(D.amenCostOf), Infinity);
 export function buildAmen(id) {
   if ((S.amen[id] || 0) > 0) return '이미 있어요'; const c = amenCost(id); if (!spend('coin', c)) return '숲 코인이 조금 모자라요';
@@ -226,7 +233,7 @@ export function finishWork(key, via) {
   else { const o = id === 'oven' ? S.oven : S.pads[id]; if (!o || !o.work) return false; o.work = null; on('workDone', { target: id }); }
   on('inst', { key, via }); return true;
 }
-export function instByGem(key) { const w = workList().find(x => x.key === key); if (!w) return '이미 끝났어요'; const g = instGem(w); if (!spend('gem', g)) return '솔방울이 모자라요'; finishWork(key, 'gem'); return null; }
+export function instByGem(key, shown) { const w = workList().find(x => x.key === key); if (!w) return '이미 끝났어요'; const g = shown && shown >= instGem(w) ? shown : instGem(w);   /* 단추에 적힌 값 그대로 (시간이 지나 값이 내려가도 적힌 값 · 대가 일치) */ if (!spend('gem', g)) return '솔방울이 모자라요'; finishWork(key, 'gem'); return null; }
 
 /* ── 숲 선물 상자 (확률 공개 · 30회 천장 · 중복 = 솔방울 돌려받기) ── */
 export function openBox(via = 'gem') {

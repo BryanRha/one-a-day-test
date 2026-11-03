@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.96.5';
-import * as G from './sim.js?v=0.96.5';
-import * as C from './chars.js?v=0.96.5';
-import * as C2 from './chars2d.js?v=0.96.5';
-import * as UI from './ui.js?v=0.96.5';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.96.5';
-import { bm } from './oad_bm.js?v=0.96.5';
-import { installBack } from './oad.js?v=0.96.5';
+import * as D from './data.js?v=0.96.6';
+import * as G from './sim.js?v=0.96.6';
+import * as C from './chars.js?v=0.96.6';
+import * as C2 from './chars2d.js?v=0.96.6';
+import * as UI from './ui.js?v=0.96.6';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.96.6';
+import { bm } from './oad_bm.js?v=0.96.6';
+import { installBack } from './oad.js?v=0.96.6';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
@@ -97,6 +97,8 @@ function stImg(kind, s, x, y, w, cls) { const im = document.createElement('img')
 /* 짝수 레벨마다 시설 둘레에 작은 소품 (화분 · 등불 · 상자 …) — 이 단계 안에서 0~3개 · 자리마다 고정된 종류 (시설 id 로 골라 매번 같음) */
 const PROP_SLOT = [[-0.56, 0.06], [0.56, 0.1], [-0.42, -0.3]];
 /* 10단계 꾸밈 (v0.3): 3단계 등불 빛 · 5단계 나무 간판 · 7단계 반짝이 줄 조명 · 9단계 금빛 마감 */
+/* NEW 리본은 이 하나로 (대표 제보 11-03: 화면 끝에서 'N E W' 세로로 접힘 → 글자 줄바꿈 금지 · 고정 크기 · 화면 끝 라벨 밀어 넣기 대상 아님) */
+export function newTag() { const d = document.createElement('div'); d.className = 'newtag'; d.textContent = 'NEW'; return d; }
 function stepDeco(im, name, sp, x, y, w, pk) { if (sp >= 3) im.classList.add('lit'); if (sp >= 9) im.classList.add('gold');
   if (sp >= 5) { const sg = document.createElement('div'); sg.className = 'fsign'; sg.textContent = name; sg.style.left = (x - w * 0.5) + 'px'; sg.style.top = (y - w * 0.22) + 'px'; sg.style.fontSize = Math.round(15 * pk) + 'px'; layer.fac.append(sg); }
   if (sp >= 7) { const gl = document.createElement('div'); gl.className = 'garland'; gl.style.left = x + 'px'; gl.style.top = (y - w * 0.78) + 'px'; for (let i = 0; i < 7; i++) { const d = document.createElement('i'); d.style.left = (i - 3) * w * 0.12 - 5 + 'px'; d.style.top = Math.abs(i - 3) ** 1.6 * 3 + 'px'; d.style.animationDelay = -i * 0.3 + 's'; gl.append(d); } layer.fac.append(gl); } }
@@ -132,7 +134,7 @@ export function render() {
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
   const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
-  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; if (S.amenAt && S.t - (S.amenAt[a] || -1e9) < 86400) { const nt = document.createElement('div'); nt.className = 'newtag'; nt.textContent = 'NEW'; nt.style.left = ax + 'px'; nt.style.top = (ay - aw * D.PX_M * D.PERSP(ay) * 1.15) + 'px'; layer.ui.append(nt); }   /* 작은 설비는 들인 뒤 하루 동안 NEW 리본 */ (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
+  for (const a of am) { const [[ax, ay], aw] = D.AMEN_AT[a], im = stImg(null, a, ax, ay, aw * D.PX_M * D.PERSP(ay), 'fac amen'); im.title = D.AMEN[a].name; if (S.amenAt && S.t - (S.amenAt[a] || -1e9) < 86400) { const nt = newTag(); nt.style.left = ax + 'px'; nt.style.top = (ay - aw * D.PX_M * D.PERSP(ay) * 1.15) + 'px'; layer.ui.append(nt); }   /* 작은 설비는 들인 뒤 하루 동안 NEW 리본 */ (a === 'fridge' || a === 'shower' || a === 'laundry' ? layer.fac : layer.fac).append(im); facEl['amen_' + a] = im; }
   /* 잠긴 구역 안개 · 공사 */
   /* 안개 = 배경 화풍으로 그린 구름 여러 겹이 천천히 흐름 · 큰 라벨은 '다음에 열릴 구역' 하나만, 나머지는 작은 자물쇠 (퀄리티 A3) */
   const nextZ = (D.ZONES.find(z => S.zones[z.id].st !== 'open') || {}).id;

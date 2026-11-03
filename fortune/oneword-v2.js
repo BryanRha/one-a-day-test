@@ -170,9 +170,11 @@ function score(x, w, age, il, seed) {
   return x.t.reduce((s, t) => s + (w[t] || 0), 0) + (aw >= 3 ? .7 : aw === 2 ? .35 : 0) + (x.t.some(t => TAG_EL[t] === il) ? .3 : 0) + (fnv(seed + '#' + x.id) % 1000) / 1000 * JITTER;
 }
 /* 후보: { theme, rare, list:[결과 4개] } · 자연이면 { theme:'nature', cand:{ flower, color, weather } } */
-export function candidates({ day, age, qa, theme, a, qs }, n = 4) {
-  qs = qs || dayQuestions(day, qa); theme = theme || dayTheme(day);
-  const w = centered(qs, profile(qs, a)), il = ilgin(day), seed = seedOf(day, age, qa, theme, a);
+/* w · seed 를 주면 그걸로 (v1 꽃 카드 기록에서 다른 주제를 받을 때 — v1 답의 꼬리표 무게, 2026-11-03 대표 제보) */
+export function candidates({ day, age, qa, theme, a, qs, w: w0, seed: s0 }, n = 4) {
+  theme = theme || dayTheme(day);
+  if (!w0) qs = qs || dayQuestions(day, qa);
+  const w = w0 || centered(qs, profile(qs, a)), il = ilgin(day), seed = s0 || seedOf(day, age, qa, theme, a);
   if (theme === 'nature') return { theme, seed, w, rare: false, cand: V1.natureCand(w, il, seed, n) };
   if (isRare(seed)) { const L = pool(theme, day, age, true); if (L.length) return { theme, seed, w, rare: true, list: [L[fnv(seed + '|rk') % L.length]] }; }
   let L = pool(theme, day, age);

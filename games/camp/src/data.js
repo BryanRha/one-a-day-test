@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.3.1' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.3.2' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -200,7 +200,7 @@ const DIG = [1, 2, 2, 3, 3, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const COEF = [1, 2, 6, 1, 4, 1, 1, 5, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 export const buildCost = k => COEF[Math.min(k, 17)] * 10 ** DIG[Math.min(k, 17)] * 5;   /* k = 지금까지 지은 시설 · 설비 수 */
 /* 강화: 레벨당 비용 ×1.16 (명세서는 코드 상수라 미확정 · 질문 1 — 우리 가정) · 효과 ×1.11 · 10/20/30 마다 '단계' (공사 시간 · 그림이 바뀜) */
-export const UP = { max: 40, costK: 1.16, effK: 1.11, stageK: 0.3, tiers: [10, 20, 30], tierBuild: [60, 240, 900] };
+export const UP = { max: 40, costK: 1.09, effK: 1.05, stageK: 0.3, tiers: [10, 20, 30], tierBuild: [60, 240, 900] };
 /* ── 가격 곡선 v0.3 (대표 10-30: '레벨 16 에 토스터 500억') ──
    예전: 짓기 · 설비가 '지금까지 지은 수'로 자릿수가 하나씩 커져(×10/개) 수입보다 훨씬 빨리 커짐 → 설비(새 메뉴 단계의 문)를 못 사면 수입도 멈추는 막힘
    지금: 값 = 그 무렵 '기대 수입 × 목표 분' · 기대 수입 = 그 무렵 열려 있을 메뉴 단계의 한 접시 값 × 기대 배율(시설 · 메뉴 강화) × 분당 접시
@@ -210,9 +210,9 @@ const PAD_COST = [[1, 1, 4, 0.5], [1, 1.5, 5, 1], [1, 2, 6, 2], [2, 3, 8, 3], [2
 export const AMEN_COST = { fridge: [1, 3, 8, 6], shower: [2, 6, 10, 8], sink: [2, 10, 12, 10], laundry: [3, 12, 12, 10], toaster: [3, 30, 16, 15], micro: [4, 50, 18, 18] };
 const nice = v => { const d = 10 ** Math.max(0, Math.floor(Math.log10(v)) - 1); return Math.max(10, Math.round(v / d) * d); };   /* 앞 두 자리로 반올림 */
 /* 봇(보통 플레이 · 누르지 않음)의 '그 무렵 수입'에 목표 분(2~25분)을 곱해 맞춘 값 — tools/bot.mjs ECON=1 표로 확인 (PROJECT_STATUS 24장) */
-const PAD_ABS = [40, 150, 500, 3000, 2.5e4, 1e5, 4e5, 1.5e6, 5e6, 2e7, 2e8, 1e9, 5e9, 2e10, 8e10, 2.5e11];
+const PAD_ABS = [40, 150, 400, 1200, 3000, 7000, 1.5e4, 3.2e4, 6.5e4, 1.4e5, 2.8e5, 5.5e5, 1e6, 1.8e6, 3.2e6, 5.5e6];
 export const padCostOf = p => PAD_ABS[Math.min(p, PAD_ABS.length - 1)];
-export const AMEN_ABS = { fridge: 3000, shower: 3e4, sink: 4e5, laundry: 1e8, toaster: 1.5e7, micro: 1.5e8 };
+export const AMEN_ABS = { fridge: 2000, shower: 1e4, sink: 3.5e4, laundry: 3.5e5, toaster: 1.2e5, micro: 6.5e5 };
 export const amenCostOf = id => AMEN_ABS[id];
 export const upCost = (base, lv) => Math.ceil(base * 0.3 * UP.costK ** lv);
 export const tierOf = lv => UP.tiers.filter(t => lv >= t).length;
@@ -225,11 +225,13 @@ export const MENU = [
   ['drink', 1, '마시멜로 코코아', 'cocoa'], ['drink', 2, '레모네이드', 'lemonade'], ['drink', 3, '딸기 우유', 'strawmilk'], ['drink', 4, '허브차', 'herbtea'], ['drink', 5, '아이스 커피', 'icedcoffee'],
   ['soup', 3, '호박씨 포타주', 'kabocha', 'autumn'], ['bread', 3, '군밤 베이글', 'chestnut_bagel', 'autumn'], ['drink', 3, '시나몬 사과 사이다', 'cider', 'autumn'],   /* 가을 시즌 한정 (시즌이 끝나면 숨김 · 맛 레벨은 남아 내년에 이어짐) */
 ].map(([line, step, name, img, season]) => ({ id: img, line, step, name, img: 'food/' + img, start: { bread: 10, soup: 14, drink: 8 }[line], ...(season ? { season } : {}) }));
-export const price0 = m => (m.start + 10 * m.step) * 10 ** (m.step - 1) * 0.6;   /* 판매가: 단계 안에서 선형 + 단계마다 자릿수 (v0.1 이 12시간 안에 끝나도록) */
+export const price0 = m => (m.start + 10 * m.step) * ECO.stepK ** (m.step - 1) * 0.6;   /* 판매가: 단계 안에서 선형 + 단계마다 자릿수 (v0.1 이 12시간 안에 끝나도록) */
 export const MENU_MAX = 10;
-export const menuMult = lv => 1.22 ** Math.max(0, lv - 1);
-export const menuCost = (m, lv) => Math.ceil((2 + m.step) * 10 ** (1 + Math.floor((lv * (lv - 1) / 2) / 9)) * (1 + 0.25 * lv));   /* 쉼 포인트 · 자릿수 = 삼각수 n(n−1)/2 의 1/9 */
-export const restRate = (fac, lv) => 5 * 1.25 ** (lv - 1) * fac.rp;   /* 1분마다 쉼 포인트 (명세서 휴식 60초 주기) */
+export const menuMult = lv => ECO.menuK ** Math.max(0, lv - 1);
+export const menuCost = (m, lv) => Math.ceil((2 + m.step) * 20 * ECO.menuCostK ** lv * (1 + 0.25 * lv));   /* 쉼 포인트 · 자릿수 = 삼각수 n(n−1)/2 의 1/9 */
+export const restRate = (fac, lv) => 5 * ECO.restK ** (lv - 1) * fac.rp;
+/* 경제 v2 (대표 11-03 '천억 단위는 위화감'): 성장 배율을 낮춰 레벨 1~20 동안 숫자가 수천 ~ 수천만에 머묾 (원작 비교 · PROJECT_STATUS 26장) — 예전: 메뉴 단계 ×10 · 맛 ×1.22 · 강화 효과 ×1.11 · 쉼 ×1.25 */
+export const ECO = { v: 2, stepK: 1.75, menuK: 1.08, menuCostK: 1.55, restK: 1.08 };   /* 1분마다 쉼 포인트 (명세서 휴식 60초 주기) */
 
 /* ── 치명 요리 (명세서 4-6): 판매가 3배 · 기본 확률 + 상품/패스 +5~10%p · 광고 10분 30% ── */
 export const FIRST_FAST = { sec: 600, k: 0.5 };   /* 처음 10분 굽기 시간 배율 */
@@ -247,7 +249,7 @@ export const STAFF = [
   { id: 'haru', name: '하루', role: 'serve', look: 'helper', cost: 0, skill: { line: 'bread', k: 0.1 }, line: '오늘도 반짝이는 캠프로!' },
   { id: 'sol', name: '솔', role: 'cook', look: 'cook1', cost: 300, skill: { line: 'soup', k: 0.15 }, line: '수프는 천천히 끓여야 맛있어요.' },
   { id: 'bada', name: '바다', role: 'cook', look: 'cook2', cost: 4e3, skill: { line: 'drink', k: 0.15 }, line: '오늘의 음료는 뭐로 할까요?' },
-  { id: 'byeol', name: '별', role: 'serve', look: 'helper2', cost: 8e5, skill: { line: 'all', k: 0.05 }, line: '손님 자리까지 쏜살같이!' },
+  { id: 'byeol', name: '별', role: 'serve', look: 'helper2', cost: 3e5, skill: { line: 'all', k: 0.05 }, line: '손님 자리까지 쏜살같이!' },
 ];
 export const FAV_EXP = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];             /* 다음 레벨까지 (명세서 1·2·5×10^k · 10 → 5000) */
 export const FAV_BONUS = [0, 0.1, 0.3, 0.6, 1.0, 1.6, 2.5, 4.0, 6.0, 10.0];       /* 판매가 +배 (명세서 재료 계열 10·30·60·100·160·250·400·600·1000%) */

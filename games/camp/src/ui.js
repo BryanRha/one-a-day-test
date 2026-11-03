@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.96.5';
-import * as G from './sim.js?v=0.96.5';
-import { bm } from './oad_bm.js?v=0.96.5';
-import { sfx, setAudio, AUD } from './audio.js?v=0.96.5';
-import { pushBack } from './oad.js?v=0.96.5';
+import * as D from './data.js?v=0.96.6';
+import * as G from './sim.js?v=0.96.6';
+import { bm } from './oad_bm.js?v=0.96.6';
+import { sfx, setAudio, AUD } from './audio.js?v=0.96.6';
+import { pushBack } from './oad.js?v=0.96.6';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -199,14 +199,24 @@ function morphNode(x, y) { if (x.nodeType !== y.nodeType || x.nodeName !== y.nod
   morphKids(x, y); }
 /* 창 안을 다시 그릴 때: 처음엔 통째로, 그 뒤로는 맞추기만 (el.mhtml = '...') */
 Object.defineProperty(HTMLElement.prototype, 'mhtml', { configurable: true, set(v) { if (this.dataset.drawn && this.childNodes.length) morph(this, v); else { this.innerHTML = v; this.dataset.drawn = 1; } } });
-let stageBusy = false;
+let stageBusy = false; export const busy = () => stageBusy;   /* 검사용 (paycheck: 새 단장 연출이 끝난 뒤 다음 경우) */
 /* 모자란 숲 코인 채우기 확인 창 → 채운 뒤 원래 하려던 일을 바로 */
-async function fillFlow(a, v, b, me, after) { const cost = +b.dataset.cost, f = fillOf(cost); if (!f) return toast('숲 코인이 조금 모자라요 · 조금만 기다려 주세요');
-  const what = { up: '강화할까요', build: '지을까요', amen: '들일까요', menu: '출시할까요', hire: '고용할까요' }[a] || '할까요', pay = f.gold ? `${ic('gold')}원어데이 골드 ${f.gem}` : `${ic('gem')}솔방울 ${f.gem}`;
+async function fillFlow(a, v, b, me, after) { const act0 = a === 'b' ? 'build' : a, cost = G.coinCostOf(act0, v);   /* 값은 단추에 적힌 data-cost 가 아니라 지금 그 일의 값으로 (화면이 늦게 다시 그려져도 같은 값) */
+  if (cost == null) return; const blocked = () => (act0 === 'up' && (stageBusy || G.working(v) || (v === 'oven' ? S.oven : S.pads[v]).lv >= D.UP.max)) || (act0 === 'build' && !G.canBuild(v)) || (act0 === 'amen' && S.amen[v]) || (act0 === 'hire' && S.staff[v]);   /* 대가를 받기 전에 그 일을 지금 할 수 있는지 먼저 (대가 일치 검사로 찾음: 새 단장 연출 중 강화가 막혀 솔방울만 빠짐) */
+  if (blocked()) return toast(stageBusy ? '잠깐만요 · 새 단장 중이에요' : '지금은 할 수 없어요');
+  if (S.coin >= cost) { if (act0 === 'build' && after) { const err = G.build(v); if (!err) after(); return; } return act(act0, v, null, b, me); }   /* 그새 숲 코인이 모였으면 그냥 함 */
+  const f00 = G.fillCost(cost, true); if (!f00) return toast('지금은 솔방울로 채울 수 없어요 · 너무 많이 모자라요');
+  const shown = +(b && b.dataset.gem) || 0, f0 = { ...f00, gem: shown >= f00.gem ? shown : f00.gem };   /* 단추에 적힌 값 그대로 (그새 조금 모였어도 적힌 값 · 더 모자라졌으면 새 값을 확인 창에서 보여 줌) */
+  const gold = S.gem < f0.gem, gp = gold && bm.info.ok ? bm.price('inst' + f0.gem) : null; if (gold && gp !== f0.gem) return toast('솔방울이 조금 모자라요');
+  const f = { ...f0, gold };
+  const what = { up: '강화할까요', build: '지을까요', amen: '들일까요', menu: '출시할까요', hire: '고용할까요' }[act0] || '할까요', pay = f.gold ? `${ic('gold')}원어데이 골드 ${f.gem}` : `${ic('gem')}솔방울 ${f.gem}`;
   const d = dlg(`<h3>숲 코인이 조금 모자라요</h3><p>${f.gold ? '원어데이 골드' : '솔방울'}로 바로 ${what}?</p><div class="fillx">모자란 ${cn(f.short)}<i>=</i>${pay}</div><p style="font-size:17px;color:#8A7A6E">기다리면 약 ${tm(f.sec)} 뒤에 모여요</p><div class="row">${btn('go', `${ic('inst')} ${pay}로 하기`, 'yl')}${btn('no', '기다릴게요', 'sky')}</div>`);
+  d.el.dataset.pay = f.gem; d.el.dataset.payk = f.gold ? 'gold' : 'gem';
   d.el.querySelector('[data-a="no"]').onclick = () => d.close();
-  d.el.querySelector('[data-a="go"]').onclick = async () => { if (!f.gold) { const e = G.fillByGem(cost); if (e) { d.close(); return toast(e); } } else { const r = await bm.spend('inst' + f.gem); if (!r.ok) { d.close(); if (r.reason === 'short') soft('원어데이 골드가 조금 모자라요'); return; } G.fillByGold(cost); }
-    d.close(); sfx('unlock'); ctx.save(); if (a === 'build' && after) { const err = G.build(v); if (!err) { after(); toast(`${D.FAC[D.PADS.find(p => p.id === v).fac].name}${josa(D.FAC[D.PADS.find(p => p.id === v).fac].name)} 생겼어요! ${praise()}`, true); } } else act(a, v, null, b, me); }; }
+  d.el.querySelector('[data-a="go"]').onclick = async () => { if (blocked()) { d.close(); return toast('지금은 할 수 없어요 · 솔방울은 그대로예요'); } const c2 = G.coinCostOf(act0, v), f2 = G.fillCost(c2, true);   /* 확인 창에 적힌 값과 실제 차감이 같아야 함 */
+    if (f2 && f2.gem > f.gem && S.coin < c2) { d.close(); toast('값이 바뀌었어요 · 다시 눌러 주세요'); return; }   /* 더 모자라진 때만 (적힌 값보다 더 받지 않음) */
+    if (!f.gold) { const e = S.coin >= c2 ? null : G.fillByGem(c2, f.gem); if (e) { d.close(); return toast(e); } } else { const r = await bm.spend('inst' + f.gem); if (!r.ok) { d.close(); if (r.reason === 'short') soft('원어데이 골드가 조금 모자라요'); return; } G.fillByGold(c2); }
+    d.close(); sfx('unlock'); ctx.save(); if (act0 === 'build' && after) { const err = G.build(v); if (!err) { after(); toast(`${D.FAC[D.PADS.find(p => p.id === v).fac].name}${josa(D.FAC[D.PADS.find(p => p.id === v).fac].name)} 생겼어요! ${praise()}`, true); } } else act(act0, v, null, b, me); }; }
 /* 피팅룸 (퀄리티 v2 Top 4 · 사업): 같은 3D 셰프 · 몽이를 크게 보여 주고 그 자리에서 산다 · 가을 시설 외형은 봄 ↔ 가을 나란히 */
 export function fittingRoom(id) {
   const isPet = id === 'pet', isF = id === 'fskin', w = isPet ? D.PET : isF ? D.FAC_SKIN : D.WARDROBE.find(x => x.id === id); if (!w) return;
@@ -309,7 +319,7 @@ const btn = (a, label, cls = 'go', off = false, extra = '') => `<div class="btn 
 /* 숲 코인 비용 버튼: 모자라면 같은 자리에 [⚡ 지금 하기 · 솔방울 N] (솔방울이 모자라면 같은 버튼이 원어데이 골드 · 즉시 완성 2버튼 규칙과 같음 · 대표 승인 10-30) */
 const fillOf = cost => { const f = G.fillCost(cost); if (!f) return null; const gold = S.gem < f.gem; const gp = gold && bm.info.ok ? bm.price('inst' + f.gem) : null; return gold && gp !== f.gem ? null : { ...f, gold }; };
 const costBtn = (a, label, cost, cls = 'go', extra = '') => { if (S.coin >= cost) return btn(a, label, cls, false, extra); const f = fillOf(cost); if (!f) return btn(a, label, cls, true, extra);
-  return `<div class="btn yl fillb" data-a="fill:${a}" data-cost="${cost}" ${extra}>${ic('inst')} 지금 하기<small>${f.gold ? `${ic('gold')}원어데이 골드 ${f.gem}` : `${ic('gem')}솔방울 ${f.gem}`}</small></div>`; };
+  return `<div class="btn yl fillb" data-a="fill:${a}" data-cost="${cost}" data-gem="${f.gem}" ${extra}>${ic('inst')} 지금 하기<small>${f.gold ? `${ic('gold')}원어데이 골드 ${f.gem}` : `${ic('gem')}솔방울 ${f.gem}`}</small></div>`; };
 const stars = t => `<span class="stars">${'★'.repeat(t)}${'☆'.repeat(3 - t)}</span>`;
 function facInfo(t) {
   const o = t === 'oven' ? S.oven : S.pads[t], fac = t === 'oven' ? D.FAC.oven : D.FAC[o.fac], lv = o.lv, tier = D.tierOf(lv), nextT = D.UP.tiers.find(x => x > lv);
@@ -469,16 +479,17 @@ function instBtns(key) {
   const n = G.instGem(w), gp = bm.price('inst' + n);
   let h = `<div style="width:100%;font:800 24px/1 var(--ff);margin-bottom:6px">${ic('clock')} ${clock(left)}</div>`;
   if (adOn('inst')) h += btn('instad:' + key, `${ic('ad')} 광고로 즉시 완성 <small>(${G.adLeft('inst')}번)</small>`, 'sky', !adOk('inst'));
-  if (S.gem >= n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl');
-  else if (bm.info.ok && gp === n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gold')}${n}`, 'yl');
+  if (S.gem >= n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl', false, `data-n="${n}"`);
+  else if (bm.info.ok && gp === n) h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gold')}${n}`, 'yl', false, `data-n="${n}" data-k="gold"`);
   else h += btn('instgo:' + key, `${ic('inst')} 즉시 완성 · ${ic('gem')}${n}`, 'yl', true);
   return h;
 }
 async function instAct(a, key, b) {
   const w = G.workList().find(x => x.key === key); if (!w) return;
   if (a === 'instad') { await watch('inst', key, () => { G.finishWork(key, 'ad'); }); return; }
-  const n = G.instGem(w);
-  if (S.gem >= n) { const e = G.instByGem(key); if (e) return nope(b, e); sfx('unlock'); ctx.save(); return; }
+  const n = Math.max(G.instGem(w), +(b && b.dataset.n) || 0);   /* 단추에 적힌 값 */
+  if (b && b.dataset.n && n > +b.dataset.n) return nope(b, '값이 바뀌었어요 · 다시 눌러 주세요');   /* 적힌 값보다 더 받지 않음 */
+  if (S.gem >= n && (!b || b.dataset.k !== 'gold')) { const e = G.instByGem(key, n); if (e) return nope(b, e); sfx('unlock'); ctx.save(); return; }
   const r = await bm.spend('inst' + n); if (!r.ok) { if (r.reason === 'short') soft('원어데이 골드가 조금 모자라요'); else if (r.reason !== 'cancel') soft('솔방울이 조금 모자라요 · 레벨업 · 미션에서 모여요'); return; }
   const w2 = G.workList().find(x => x.key === key); if (w2) G.finishWork(key, 'gold'); sfx('unlock'); ctx.save();
 }
