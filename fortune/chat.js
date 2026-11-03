@@ -82,8 +82,7 @@ export async function open(X) {
   const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   const render = () => {
     const done = s.left <= 0 || s.stop;
-    X.openSheet(`<div class="aichat"><div class="aihead">${X.face(m, f.ch, 'sm')}<div><b>${C.name}</b><small>🤖 AI와 대화 중 · 실험판 · 오늘 무료 ${Math.max(0, s.left)}마디</small></div></div>
-      <p class="ainote">AI가 만든 답이에요. 실제 명리 계산 결과(해석 요약)를 바탕으로 말투와 대화를 만들어요. 생년월일 원본은 보내지 않고, 대화는 서버에 저장하지 않아요. 의료 · 투자 · 법률 판단은 전문가와 상의해 주세요.</p>
+    X.openSheet(`<div class="aichat"><div class="aihead">${X.face(m, f.ch, 'sm')}<div><b>${C.name}</b><small>오늘 무료 ${Math.max(0, s.left)}마디</small></div></div>
       <div class="aimsgs" id="aiMsgs">${s.msgs.map((x, i) => `<div class="aim ${x.r}${x.s ? ' ' + x.s : ''}">${esc(x.t)}${x.h ? `<p class="aihook">${esc(x.h)}</p>` : ''}${x.p ? `<div class="aipaid" data-paid="${x.p}">${esc(paidLine(x.p))} →</div>` : ''}${x.r === 'a' && i > 0 && !x.s ? `<span class="airate"><button data-airate="up" data-i="${i}">👍</button><button data-airate="down" data-i="${i}">👎</button></span>` : ''}</div>`).join('')}</div>
       ${done ? `<div class="aidone">${s.stop ? '오늘 상담은 여기까지예요.' : '오늘 무료 이야기는 여기까지 · 내일 다시 무료로 이어서 들을 수 있어요'}${s.stop ? '' : `<button class="sdbtn ghost" data-aimore>더 묻기</button>`}</div>`
         : `<div class="aichips">${nextChips().map(q => `<button data-aiq="${esc(q)}">${esc(q)}</button>`).join('')}</div>
