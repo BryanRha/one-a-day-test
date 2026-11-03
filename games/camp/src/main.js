@@ -3,20 +3,27 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.97.0';
-import * as G from './sim.js?v=0.97.0';
-import * as C from './chars.js?v=0.97.0';
-import * as C2 from './chars2d.js?v=0.97.0';
-import * as UI from './ui.js?v=0.97.0';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.97.0';
-import { bm } from './oad_bm.js?v=0.97.0';
-import { installBack } from './oad.js?v=0.97.0';
+import * as D from './data.js?v=0.97.1';
+import * as G from './sim.js?v=0.97.1';
+import * as C from './chars.js?v=0.97.1';
+import * as C2 from './chars2d.js?v=0.97.1';
+import * as UI from './ui.js?v=0.97.1';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.97.1';
+import { bm } from './oad_bm.js?v=0.97.1';
+import { installBack } from './oad.js?v=0.97.1';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
-const SEASON = D.SEASONS[window.CAMP_SEASON] ? window.CAMP_SEASON : D.seasonOf(Date.now(), Q.get('season')), SZ = D.SEASONS[SEASON]; G.setSeason(SEASON); setSong(SEASON); document.documentElement.dataset.season = SEASON;
+const SEASON = D.SEASONS[window.CAMP_SEASON] ? window.CAMP_SEASON : D.seasonOf(Date.now(), Q.get('season')), SZ = D.SEASONS[SEASON]; G.setSeason(SEASON); setSong(SEASON); document.documentElement.dataset.season = SEASON; document.documentElement.dataset.look = SEASON;
 { const want = `assets/${SZ.bg}.webp`; for (const im of document.querySelectorAll('#frame .bgx, #bg')) if (!im.getAttribute('src') || !im.getAttribute('src').endsWith(want)) im.src = want; }
 const W = 720, H = 1560, EL = 30 * Math.PI / 180, TAU = Math.PI * 2;
+/* 보이는 계절 (대표 제보 11-03 '가을로 바꾸려고 결제했는데 안 바뀜'): 가을 시즌이거나 '가을 외형'을 가진 사람이 켜 두면 캠프 전체(배경 · 옆 존 · 시설 · 꽃잎)가 가을
+   게임 규칙의 계절(SEASON: 시즌 메뉴 · 미션 · 길 지도)은 날짜대로 · 보이는 것만 LOOK */
+let LOOK = SEASON;
+export const lookNow = () => SEASON === 'autumn' || (S.fskin && S.fskinOn !== false) ? 'autumn' : 'spring';
+export function applyLook(force) { const look = lookNow(); if (look === LOOK && !force) return; LOOK = look; const LZ = D.SEASONS[look]; document.documentElement.dataset.look = look;
+  const want = `assets/${LZ.bg}.webp`; for (const im of document.querySelectorAll('#frame .bgx, #bg')) if (!(im.getAttribute('src') || '').endsWith(want)) im.src = want;
+  for (const l of petals) l.c = pick(LZ.petals); if (typeof scene !== 'undefined') makeOccluders(); if (typeof layer !== 'undefined') render(); }
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)], clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const S = G.S, R = G.R, IMG = UI.IMG;
 const frame = document.getElementById('frame'), board = document.getElementById('board'), world = document.getElementById('world'), taps = document.getElementById('taps');
@@ -121,13 +128,13 @@ export function render() {
     if (S.deco.harvest) { const [hx, hy] = D.HARVEST_POS; const im = document.createElement('img'); im.className = 'fac'; im.src = IMG('deco/set_harvest'); im.draggable = false; Object.assign(im.style, { left: hx + 'px', top: hy + 10 + 'px', width: Math.round(3.4 * D.PX_M * D.PERSP(hy)) + 'px' }); layer.fac.append(im); } }
   if (S.owner) { const im = facImg(IMG('fac/lantern'), ...D.P(110, 1180), D.DECO_K * D.PERSP(D.P(110, 1180)[1])); im.style.filter = 'sepia(.6) saturate(1.8) hue-rotate(-12deg) drop-shadow(0 0 8px #FFE38A)'; layer.fac.append(im); }
   /* 시설 */
-  const gt = UI.goalTarget(); lastGoalKey = gt.k + ':' + gt.v;
+  const gt = UI.goalTarget(); lastGoalKey = gt.k + ':' + gt.v; UI.goalCard && UI.goalCard();   /* 반짝임과 목표 문구를 같은 틀에서 */
   for (const p of D.PADS) {
     const b = S.pads[p.id], [x, y] = p.pos; let pk = D.PERSP(y);
     if (b && b.lv > 0) { const f = D.FAC[p.fac], vl = G.working(p.id) ? b.lv - 1 : b.lv, st = D.stageOf(vl), sp = D.stepOf(vl), w = D.STAGE.ws(p.fac, sp) * pk, im = stImg(p.fac, st, x, y + 12 * pk, w, 'fac s' + st); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im; stepDeco(im, f.name, sp, x, y + 12 * pk, w, pk);
       propsAt(p.id, vl, x, y + 12 * pk, w, pk);
       fname(f.name, x, y + 46 * pk); tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
-    else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.style.left = x + 'px'; pd.style.top = y + 'px'; const aim = UI.tutPad() === p.id || (gt.k === 'build' && gt.v === p.id); if (aim) pd.classList.add('aim'); pd.innerHTML = (S.coin >= G.padCost() && p === D.PADS.find(q => G.canBuild(q.id))) || aim ? `<i class="ham"></i>${aim ? `<span>+ ${D.FAC[p.fac].name}</span>` : ''}` : '';   /* 지을 수 있을 때만 작은 망치 + 빛 · 빈자리 이름표는 목표 · 처음 안내가 그 자리를 가리킬 때만 (대표 11-03 · 세계 안 제자리 고정) */ pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
+    else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.dataset.pid = p.id; pd.style.left = x + 'px'; pd.style.top = y + 'px'; const aim = UI.tutPad() === p.id || (gt.k === 'build' && gt.v === p.id); if (aim) pd.classList.add('aim'); pd.innerHTML = (S.coin >= G.padCost() && p === D.PADS.find(q => G.canBuild(q.id))) || aim ? `<i class="ham"></i>${aim ? `<span>+ ${D.FAC[p.fac].name}</span>` : ''}` : '';   /* 지을 수 있을 때만 작은 망치 + 빛 · 빈자리 이름표는 목표 · 처음 안내가 그 자리를 가리킬 때만 (대표 11-03 · 세계 안 제자리 고정) */ pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
   }
   /* 공용 키친 빵 오븐 (배경 그림 속 화덕) */
   { const vl = G.working('oven') ? S.oven.lv - 1 : S.oven.lv, st = D.stageOf(vl), sp = D.stepOf(vl), [ox, oy] = D.OVEN_AT, im = stImg('oven', st, ox, oy, D.STAGE.ws('oven', sp) * D.PERSP(oy), 'fac s' + st); layer.fac.append(im); facEl.oven = im; if (sp >= 3) im.classList.add('lit'); if (sp >= 9) im.classList.add('gold'); propsAt('oven', vl, ox - 6, oy + 4, 70, 0.8, true); if (roofEl) layer.fac.append(roofEl); }
@@ -197,7 +204,7 @@ export function camTo(x, y, z, auto) { if (auto && touching()) return false; CAM
 let clampT = 0;
 function clampLabels() {
   zoneArrow(); frame.classList.toggle('far', CAMV.z < 0.95);   /* 많이 줄이면 시설 이름표 숨김 */
-  { const gt = UI.goalTarget(), k = gt.k + ':' + gt.v; if (k !== lastGoalKey) render(); }   /* 목표가 바뀌면 빈자리 이름표를 다시 */
+  { const gt = UI.goalTarget(), k = gt.k + ':' + gt.v; if (k !== lastGoalKey) { render(); UI.goalCard(); } }   /* 목표가 바뀌면 빈자리 이름표를 다시 */
 }
 /* 열 수 있는 존이 화면 밖이면 그쪽 가장자리에 작은 화살표 하나 (6초 뒤 사라짐 · 누르면 그 존으로) */
 let arrowEl = null; const arrowSeen = {};
@@ -337,7 +344,7 @@ function draw2d(dt, now) {
   for (const p of D.PADS) { const b = S.pads[p.id]; if (b && D.tierOf(b.lv) >= 1 && Math.random() < dt * 0.5 * D.tierOf(b.lv)) parts.push({ k: 'twinkle', x: p.pos[0] + rnd(-60, 60), y: p.pos[1] - rnd(10, 100), life: 0.9, t: 0, r: rnd(5, 9) }); }
   /* 꽃잎 · 나비 */
   for (const l of petals) { l.y += l.v * dt; l.ph += dt * 1.6; const x = l.x + Math.sin(l.ph) * 26; if (l.y > 1200) { l.y = rnd(-80, -10); l.x = rnd(0, W); }
-    fx.save(); fx.translate(x, l.y); fx.rotate(Math.sin(l.ph * 1.3) * 0.9); fx.fillStyle = l.c; fx.strokeStyle = SEASON === 'autumn' ? '#9A4A26' : '#C98A9A'; fx.lineWidth = 1.5; const r = l.s * 0.8; fx.beginPath(); fx.moveTo(0, -r); fx.quadraticCurveTo(r, -r * 0.2, 0, r); fx.quadraticCurveTo(-r, -r * 0.2, 0, -r); fx.fill(); fx.stroke(); fx.restore(); }
+    fx.save(); fx.translate(x, l.y); fx.rotate(Math.sin(l.ph * 1.3) * 0.9); fx.fillStyle = l.c; fx.strokeStyle = LOOK === 'autumn' ? '#9A4A26' : '#C98A9A'; fx.lineWidth = 1.5; const r = l.s * 0.8; fx.beginPath(); fx.moveTo(0, -r); fx.quadraticCurveTo(r, -r * 0.2, 0, r); fx.quadraticCurveTo(-r, -r * 0.2, 0, -r); fx.fill(); fx.stroke(); fx.restore(); }
   for (const b of flies) { b.ph += dt; b.x += Math.cos(b.ph * 0.7) * 40 * dt; b.y += Math.sin(b.ph * 1.1) * 30 * dt; b.x = clamp(b.x, 40, W - 40); b.y = clamp(b.y, 380, 1150); const f = Math.abs(Math.sin(b.ph * 14));
     fx.save(); fx.translate(b.x, b.y + Math.sin(b.ph * 3) * 6); fx.fillStyle = b.c; fx.strokeStyle = '#7A6A7A'; fx.lineWidth = 1.5; for (const s of [-1, 1]) { fx.beginPath(); fx.ellipse(s * 7 * f, -3, 8 * f + 1, 7, s * 0.4, 0, TAU); fx.fill(); fx.stroke(); fx.beginPath(); fx.ellipse(s * 5 * f, 5, 5 * f + 1, 5, -s * 0.3, 0, TAU); fx.fill(); fx.stroke(); } fx.fillStyle = '#7A6A7A'; fx.fillRect(-1.2, -6, 2.4, 13); fx.restore(); }
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -432,8 +439,10 @@ function onEvent(e) {
 function endGuest(id, v) { if (guests.get(id) !== v) return; drop(v.p); if (v.pup) v.pup.remove(); if (v.bub) v.bub.remove(); guests.delete(id); }
 
 /* ── 건물이 사람을 가림 (배경을 건물 모양대로 잘라 3D 장면 속 판으로 · 바닥선보다 뒤에 선 사람만 가려짐) ── */
+const occl = [];
 function makeOccluders() {
   const img = document.getElementById('bg'); if (!img.complete || !img.naturalWidth) { img.addEventListener('load', makeOccluders, { once: true }); return; }
+  for (const g of occl.splice(0)) scene.remove(g);   /* 배경이 바뀌면(가을 외형) 다시 오려 냄 */
   const kx = img.naturalWidth / 878, ky = img.naturalHeight / 1560;   /* 판 좌표 → 원본 그림 (배경은 left -79 · 878×1560 으로 깔림) */
   for (const o of D.OCCLUDE) {
     const xs = o.poly.map(p => p[0]), ys = o.poly.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), w = x1 - x0, h = y1 - y0, R = 2;
@@ -442,7 +451,7 @@ function makeOccluders() {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const g = new THREE.PlaneGeometry(w, h); g.translate(0, o.base - (y0 + y1) / 2, 0);
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: t, alphaTest: 0.5, depthTest: false, depthWrite: false }));   /* 불투명 목록에서 사람과 같이 순서를 정함 */
-    const grp = new THREE.Group(); grp.position.copy(toWorld((x0 + x1) / 2, o.base)); grp.rotation.x = -EL; grp.add(m); m.renderOrder = Math.round((o.base + 220) * 10) + 5; scene.add(grp);
+    const grp = new THREE.Group(); grp.position.copy(toWorld((x0 + x1) / 2, o.base)); grp.rotation.x = -EL; grp.add(m); m.renderOrder = Math.round((o.base + 220) * 10) + 5; scene.add(grp); occl.push(grp);
   }
 }
 /* ── 걷는 곳 검사 (매 프레임: 모든 사람 발이 걷는 영역 안인가) · ?debug=walk 오버레이 ── */
@@ -528,7 +537,7 @@ let offlineRes = null;
 }
 if (S.audio) setAudio(S.audio); else if (S.muted) setAudio({ sfx: false, bgm: false });
 setBoot(0.4);
-const ctx = { portrait, save, render, fullBody, pressFx: el => pressFx(el), camTo: (x, y) => camTo(x, y), padWorld: id => id === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === id) || {}).pos, reskin: () => makeHero(), padPos: id => { if (id === 'ovenBody') return F(D.KITCHEN.oven[0] - 20, D.KITCHEN.oven[1] - 30); if (id === 'dish') { const el = [...dishEls.values()][0]; return el ? F(parseFloat(el.style.left), parseFloat(el.style.top)) : null; } const p = id === 'oven' ? D.P(772, 945) : (D.PADS.find(x => x.id === id) || {}).pos; return p && F(...p); },
+const ctx = { applyLook: () => applyLook(), lookNow: () => lookNow(), portrait, save, render, fullBody, pressFx: el => pressFx(el), camTo: (x, y) => camTo(x, y), padWorld: id => id === 'oven' ? D.KITCHEN.oven : (D.PADS.find(p => p.id === id) || {}).pos, reskin: () => makeHero(), padPos: id => { if (id === 'ovenBody') return F(D.KITCHEN.oven[0] - 20, D.KITCHEN.oven[1] - 30); if (id === 'dish') { const el = [...dishEls.values()][0]; return el ? F(parseFloat(el.style.left), parseFloat(el.style.top)) : null; } const p = id === 'oven' ? D.P(772, 945) : (D.PADS.find(x => x.id === id) || {}).pos; return p && F(...p); },
   tryOn: (sec, id = 'skin') => { tryUntil = performance.now() + sec * 1000; tryLook = id === 'pet' ? null : id; tryPet = id === 'pet'; makeHero(); syncPet(); UI.closeSheet(); if (camTo(hero ? toScreen(hero.root.position)[0] : 640, (hero ? toScreen(hero.root.position)[1] : 930) - 40, 1.35, true)) {}
     setTimeout(() => { if (performance.now() >= tryUntil - 50) { tryLook = null; tryPet = false; makeHero(); syncPet(); UI.toast('입어 보기가 끝났어요 · 마음에 들면 매점 꾸미기에서 만나요'); } }, sec * 1000); },
   wearNow: () => { makeHero(); syncPet(); render(); },
@@ -544,12 +553,12 @@ const FIRST = ['chef', 'helper', 'hiker'];
 await Promise.all(FIRST.map(n => C2.preload(n).catch(() => null)));
 setTimeout(() => { for (const n of new Set(Object.values(C.LOOKS).map(l => l.cut).filter(Boolean))) C2.preload(n).catch(() => null); }, 1200);
 setBoot(0.6);
-makeHero(); syncPet(); syncStaff(); makeCat(); render(); makeOccluders();
+makeHero(); syncPet(); syncStaff(); makeCat(); render(); makeOccluders(); applyLook();
 /* 첫 30초 (퀄리티 A2): 새 판이면 첫 손님이 이미 데크에서 먹는 중 → 3초 안에 첫 코인 · 다음 손님은 1.2초 뒤 */
 if (!G.quickStart()) R.nextSpawn = 0.3;
 setBoot(0.7);
 bm.hello().then(h => {
-  if (h.ok) { const items = h.items || []; if (items.includes('deco')) S.shop.deco = true; if (items.includes('skin') && !S.skin) { S.skin = true; makeHero(); } for (const w of D.WARDROBE) if (w.sku && w.id !== 'skin' && items.includes(w.sku)) G.ownLook(w.id); if (items.includes(D.PET.sku) && !S.pet) { S.pet = true; syncPet(); } if (items.includes(D.FAC_SKIN.sku)) S.fskin = true;   /* 계정에 남은 꾸미기 되살림 */ S.owner = !!h.owned; render(); }
+  if (h.ok) { const items = h.items || []; if (items.includes('deco')) S.shop.deco = true; if (items.includes('skin') && !S.skin) { S.skin = true; makeHero(); } for (const w of D.WARDROBE) if (w.sku && w.id !== 'skin' && items.includes(w.sku)) G.ownLook(w.id); if (items.includes(D.PET.sku) && !S.pet) { S.pet = true; syncPet(); } if (items.includes(D.FAC_SKIN.sku)) S.fskin = true;   /* 계정에 남은 꾸미기 되살림 */ S.owner = !!h.owned; render(); applyLook(); save(); }
 });
 installBack({ back: () => false });
 bm.hello().then(() => { if (offlineRes) UI.offlinePop(offlineRes); });   /* 광고 2배 버튼은 원어데이 응답 뒤에 */

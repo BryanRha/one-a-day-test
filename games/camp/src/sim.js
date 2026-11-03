@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.97.0';
-import * as W from './walk.js?v=0.97.0';
+import * as D from './data.js?v=0.97.1';
+import * as W from './walk.js?v=0.97.1';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -464,14 +464,30 @@ const GOALS = [
   ['tent', '캠핑 텐트 짓기', () => [S.pads.F1 ? 1 : 0, 1], 20, () => padCost()],
   ['bada', '요리사 바다 데려오기', () => [S.staff.bada ? 1 : 0, 1], 20, () => D.STAFF[2].cost],
   ['cocoa', '코코아 출시', () => [S.menu.cocoa ? 1 : 0, 1], 20, () => menuNewCost(D.MENU.find(m => m.id === 'cocoa'))],
-  ['ftable', '숲속 식탁 짓기', () => [S.pads.F2 ? 1 : 0, 1], 20, () => padCost()],
+  ['ftable', '숲속 피크닉 식탁 짓기', () => [S.pads.F2 ? 1 : 0, 1], 20, () => padCost()],
   ['fridge', '공용 냉장고 들이기', () => [S.amen.fridge ? 1 : 0, 1], 20, () => amenCost('fridge')],
   ['oven10', '빵 오븐 Lv10 (단계 업!)', () => [S.oven.lv, 10], 30, () => upCostOf('oven')],
   ['pine', '애견 · 솔숲 존 열기', () => [S.zones.pine.st === 'open' ? 1 : 0, 1], 30],
-  ['dtable', '애견 존 식탁 짓기', () => [S.pads.D1 ? 1 : 0, 1], 30, () => padCost()],
+  ['dtable', '애견 존 피크닉 식탁 짓기', () => [S.pads.D1 ? 1 : 0, 1], 30, () => padCost()],
   ['valley', '계곡 열기', () => [S.zones.valley.st === 'open' ? 1 : 0, 1], 40],
   ['stay', '스테이 · 루프탑 열기', () => [S.zones.stay.st === 'open' ? 1 : 0, 1], 50],
 ];
+/* 목표가 막힌 이유를 푸는 바로 그 일 (대표 · 총괄 11-03 '목표는 코코아인데 반짝이는 곳은 해먹') — 없으면 stepGoal */
+function needStep(id) {
+  const hire = sid => { const st = D.STAFF.find(x => x.id === sid); return { id: 'step', text: `요리사 ${st.name} 데려오기`, cost: st.cost, act: { k: 'tab', v: 'staff', name: st.name } }; };
+  const pad = pid => { const p = D.PADS.find(x => x.id === pid); return { id: 'step', text: `${D.FAC[p.fac].name} 짓기`, cost: padCost(), act: { k: 'build', v: pid } }; };
+  if (id === 'pot' && !S.staff.sol) return hire('sol');
+  { const a = GOAL_ACT[id]; if (a && a.k === 'build') { const z = D.PADS.find(p => p.id === a.v).zone; if (!zoneOpen(z)) return { id: 'step', text: `${D.ZONES.find(q => q.id === z).name.split(' · ')[0]} 열기`, cost: 0, act: { k: 'zone', v: z } }; } }   /* 지을 자리의 존이 아직 닫혀 있으면 존부터 */
+  if (id === 'stew' && !lineReady('soup')) return !built('pot') ? pad('L1') : hire('sol');
+  if (id === 'cocoa' && !lineReady('drink')) return !built('drink') ? pad('L3') : hire(S.staff.sol && built('pot') ? 'bada' : 'sol');
+  return null; }
+/* 목표가 가리키는 곳 (목표 카드 누르기 · 반짝이는 빈자리 · 목표 문구가 모두 같은 것을 씀) */
+const GOAL_ACT = { oven3: { k: 'up', v: 'oven' }, oven10: { k: 'up', v: 'oven' }, sol: { k: 'tab', v: 'staff', name: '솔' }, bada: { k: 'tab', v: 'staff', name: '바다' }, stew: { k: 'tab', v: 'menu', w: 'soup', name: '수프' }, cocoa: { k: 'tab', v: 'menu', w: 'drink', name: '코코아' }, fridge: { k: 'tab', v: 'fac', w: 'amen', name: '냉장고' }, pot: { k: 'build', v: 'L1' }, drink: { k: 'build', v: 'L3' }, tent: { k: 'build', v: 'F1' }, ftable: { k: 'build', v: 'F2' }, dtable: { k: 'build', v: 'D1' }, tapsell: { k: 'tap', name: '직접 팔기' } };
+export function goalAct(g = goalNow()) { return (g.step && g.step.act) || g.act || GOAL_ACT[g.id] || (D.ZONES.find(z => z.id === g.id) ? { k: 'zone', v: g.id } : { k: 'tab', v: 'fac' }); }
+/* 목표 카드 한 줄: '코코아 출시 · 먼저 음료 바 짓기' / '계곡 열기 · 그동안 무쇠 솥 Lv5 만들기' (접힌 한 줄에도 지금 할 단계가 보임) */
+export function goalLine(g = goalNow()) { const head = g.main === false ? `다음 할 일 · ${g.text}` : `목표 · ${g.text}`; return g.step ? `${head} · ${g.step.pre ? '먼저' : '그동안'} ${g.step.text}` : head; }
+/* 그 일이 가리키는 대상의 이름 (검사용 · goalcheck): 지을 곳 · 강화할 시설 · 존 · 직원 · 메뉴 */
+export function actName(a) { if (a.name) return a.name; if (a.k === 'build') return D.FAC[D.PADS.find(p => p.id === a.v).fac].name; if (a.k === 'up') return a.v === 'oven' ? '빵 오븐' : D.FAC[S.pads[a.v].fac].name; if (a.k === 'zone') return D.ZONES.find(z => z.id === a.v).name.split(' · ')[0]; if (a.k === 'tab' && a.w === 'amen') return '편의 설비'; if (a.k === 'tab' && a.v === 'menu') return (D.MENU.find(m => m.line === a.w && m.step === 1) || {}).name || ''; if (a.k === 'tap') return '직접 팔기'; return ''; }
 /* 막히면 바로 할 수 있는 다음 걸음 (멈춰서 무엇을 할지 모르는 순간 0) */
 function stepGoal() {
   const zone = D.ZONES.find(z => S.zones[z.id].st === 'locked');
@@ -488,9 +504,9 @@ export function goalNow() {
   if (S.goal.i < GOALS.length) { const [id, text, f, gem, cf] = GOALS[S.goal.i], [have, need] = f(), cost = cf ? cf() : 0;
     const zone = D.ZONES.find(z => z.id === id); let wait = 0, blocked = false, why = '';
     if (zone) { const o = S.zones[id]; if (o.st === 'building') wait = o.end - S.t; else if (!zoneNeedOk(id)) { blocked = true; why = `레벨 ${S.lv}/${zone.need.lv} · 시설 ${S.builds}/${zone.need.built}`; } }
-    if (id === 'stew' && !lineReady('soup')) blocked = true; if (id === 'cocoa' && !lineReady('drink')) blocked = true; if (id === 'pot' && !S.staff.sol) blocked = true;
+    if (id === 'stew' && !lineReady('soup')) blocked = true; if (id === 'cocoa' && !lineReady('drink')) blocked = true; if (id === 'pot' && !S.staff.sol) blocked = true; { const ga = GOAL_ACT[id]; if (ga && ga.k === 'build' && !zoneOpen(D.PADS.find(p => p.id === ga.v).zone)) blocked = true; }
     const g = { id, text, have, need, reward: { gem }, cost, eta: cost ? eta(cost) : 0, wait, why, main: true };
-    if (blocked || g.eta > 240 || g.wait > 0) { const st = stepGoal(); return { ...g, step: { ...st, eta: st.cost ? eta(st.cost) : 0 } }; }
+    if (blocked || g.eta > 240 || g.wait > 0) { const st = needStep(id) || stepGoal(); return { ...g, step: { ...st, eta: st.cost ? eta(st.cost) : 0, pre: blocked } }; }   /* pre: 목표를 하려면 먼저 해야 하는 일 · 아니면 기다리는 동안 할 일 */
     return g; }
   const st = stepGoal(); return { ...st, have: 0, need: 1, reward: { gem: 5 }, eta: st.cost ? eta(st.cost) : 0, main: false };
 }

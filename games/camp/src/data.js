@@ -385,7 +385,7 @@ export const WARDROBE = [
   { id: 'out_fire', name: '밤 캠프파이어', sku: 'out_fire', gold: 350, stamp: 60, desc: '빨강 체크 플란넬 + 숲빛 앞치마 + 크림 목도리 · 불멍 감성' },
 ];
 export const PET = { id: 'pet_bichon', name: '비숑 동행 펫 · 몽이', sku: 'pet_bichon', gold: 500, stamp: 90, desc: '셰프 옆을 졸졸 따라다니고, 손님이 오면 꼬리를 세차게 흔들어요 · 가만히 있으면 앉아서 쉬어요' };
-export const FAC_SKIN = { id: 'skin_autumn', name: '가을 시설 외형', sku: 'skin_autumn', gold: 350, desc: '시설 10종이 1년 내내 가을 모습(단풍 · 호박 · 담요 · 따뜻한 등불)으로 · 켜고 끌 수 있어요', free: '가을 캠프 미션 7개를 다 하면 무료' };
+export const FAC_SKIN = { id: 'skin_autumn', name: '가을 캠프 외형', sku: 'skin_autumn', gold: 350, desc: '캠프 전체(배경 · 옆 존 · 시설 · 떨어지는 잎)가 1년 내내 가을 모습(단풍 · 호박 · 담요 · 따뜻한 등불)으로 · 사면 바로 바뀌고 켜고 끌 수 있어요', free: '가을 캠프 미션 7개를 다 하면 무료' };
 export const OWNER_DECO = { name: '금빛 꽃바구니 가로등', appeal: 0 };   /* 소장자 장식도 외형만 (2026-10-30 대표) */
 
 /* ── 광고 자리 (명세서 9-1 의 10곳을 같은 비중으로) · 하루 한도는 원어데이(게임당 5)와 게임 쪽 둘 다 ── */

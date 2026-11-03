@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.97.0';
-import * as G from './sim.js?v=0.97.0';
-import { bm } from './oad_bm.js?v=0.97.0';
-import { sfx, setAudio, AUD } from './audio.js?v=0.97.0';
-import { pushBack } from './oad.js?v=0.97.0';
+import * as D from './data.js?v=0.97.1';
+import * as G from './sim.js?v=0.97.1';
+import { bm } from './oad_bm.js?v=0.97.1';
+import { sfx, setAudio, AUD } from './audio.js?v=0.97.1';
+import { pushBack } from './oad.js?v=0.97.1';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -129,6 +129,12 @@ export function dots() {
   TABS.forEach((t, i) => setDot(T[i], one && one[0] === T[i])); setDot($('#sAtt'), false); setDot($('#sPlay'), false);
 }
 export const lineReady = line => { const st = D.LINES.find(l => l.id === line).st; return G.built(st) && !!G.R.cooks[st]; };
+/* 목표 카드 (tick 과 '목표 대상이 바뀐 순간' 둘 다 부름 → 문구와 반짝임이 같이 바뀜) */
+export function goalCard() {
+  { const g = G.goalNow(), st = g.step, el = $('#goal'); const t = G.goalLine(g);   /* 지금 할 단계까지 한 줄에 (11-03) */ if (el.querySelector('.gt').textContent !== t) { el.querySelector('.gt').textContent = t; el.classList.remove('new'); void el.offsetWidth; el.classList.add('new'); }
+    { const gr = `${ic('gem')}솔방울 ${g.reward.gem}<small>즉시 완성 · 선물 상자에 써요</small>`; if (el.querySelector('.gr').dataset.h !== gr) { el.querySelector('.gr').innerHTML = gr; el.querySelector('.gr').dataset.h = gr; } } el.querySelector('.gbar i').style.width = Math.round(Math.min(1, g.have / g.need) * 100) + '%';
+    el.querySelector('.gs').textContent = st ? `지금 할 일 · ${st.text}${st.cost && S.coin < st.cost ? ` (${tm(st.eta)} 뒤)` : ''}` : g.wait > 0 ? `정리 중 · ${tm(g.wait)}` : g.why || (g.cost && S.coin < g.cost ? `숲 코인이 모이면 · 약 ${tm(g.eta)}` : '지금 할 수 있어요!'); el.classList.toggle('ready', !st && (!g.cost || S.coin >= g.cost) && !g.why && !(g.wait > 0)); }
+}
 let tAcc = 0;
 export function tick(dt) {
   /* 숫자 올라감 (보이는 값이 실제 값을 따라감) */
@@ -136,9 +142,7 @@ export function tick(dt) {
   const ring = $('#lvb .ring'); if (ring) { ring.style.setProperty('--p', Math.round(G.xpPct() * 100)); const b = ring.querySelector('b'); if (b.textContent !== String(S.lv)) b.textContent = S.lv; }
   if ((tAcc += dt) < 0.5) return; tAcc = 0;
   { const rh = `<span class="rep">★ ${G.repAvg().toFixed(1)}</span> 평판 · 1분에 ${fmt(G.incomeRate() * 60)}`; if ($('#rate').dataset.h !== rh) { $('#rate').innerHTML = rh; $('#rate').dataset.h = rh; } }
-  { const g = G.goalNow(), st = g.step, el = $('#goal'); const t = g.main === false ? `다음 할 일 · ${g.text}` : `목표 · ${g.text}`; if (el.querySelector('.gt').textContent !== t) { el.querySelector('.gt').textContent = t; el.classList.remove('new'); void el.offsetWidth; el.classList.add('new'); }
-    { const gr = `${ic('gem')}솔방울 ${g.reward.gem}<small>즉시 완성 · 선물 상자에 써요</small>`; if (el.querySelector('.gr').dataset.h !== gr) { el.querySelector('.gr').innerHTML = gr; el.querySelector('.gr').dataset.h = gr; } } el.querySelector('.gbar i').style.width = Math.round(Math.min(1, g.have / g.need) * 100) + '%';
-    el.querySelector('.gs').textContent = st ? `지금 할 일 · ${st.text}${st.cost && S.coin < st.cost ? ` (${tm(st.eta)} 뒤)` : ''}` : g.wait > 0 ? `정리 중 · ${tm(g.wait)}` : g.why || (g.cost && S.coin < g.cost ? `숲 코인이 모이면 · 약 ${tm(g.eta)}` : '지금 할 수 있어요!'); el.classList.toggle('ready', !st && (!g.cost || S.coin >= g.cost) && !g.why && !(g.wait > 0)); }
+  goalCard();
   { const u = G.nextUnlock(), el = $('#unlock'); el.style.display = u ? '' : 'none'; if (u) { el.querySelector('span').textContent = u.text; el.querySelector('.ubar i').style.width = Math.round(u.k * 100) + '%'; } }
   const pl = G.playReady().find(p => !p.got); const tmEl = $('#sPlay .tm'); if (tmEl) tmEl.textContent = pl ? (pl.ready ? '받기!' : clock(pl.m * 60 - S.play.sec)) : '내일';
   $('#sPlay').classList.toggle('glow', !!(pl && pl.ready));
@@ -271,7 +275,7 @@ async function act(a, v, w, b, me, repeat) {
   else if (a === 'stampw') { err = G.stampLook(v); if (!err) { sfx('box', { rar: 's' }); confetti(24); ctx.wearNow(); toast('새 옷을 받았어요 · 바로 입었어요!', true); } }
   else if (a === 'stampp') { err = G.stampPet(); if (!err) { sfx('box', { rar: 's' }); confetti(24); ctx.wearNow(); toast('몽이가 캠프에 왔어요!', true); } }
   else if (a === 'peton') { S.petOn = S.petOn === false; ctx.wearNow(); toast(S.petOn ? '몽이와 함께해요' : '몽이는 텐트에서 쉬어요', true); }
-  else if (a === 'fskin') { S.fskinOn = S.fskinOn === false; ctx.render(); toast(S.fskinOn ? '시설이 가을 모습이 됐어요' : '시설이 봄 모습으로 돌아왔어요', true); }
+  else if (a === 'fskin') { S.fskinOn = S.fskinOn === false; ctx.applyLook(); ctx.render(); ctx.save(); toast(S.fskinOn ? '시설이 가을 모습이 됐어요' : '시설이 봄 모습으로 돌아왔어요', true); }
   else if (a === 'try' && v !== 'skin' && v !== 'deco') { ctx.tryOn(15, v); return toast(v === 'pet' ? '15초 동안 몽이와 함께해 볼게요!' : '15초 동안 입어 볼게요 · 셰프를 봐 주세요!', true); }
   else if (a === 'try') { if (v === 'skin') ctx.tryOn(15, 'skin'); else ctx.previewDeco(15); return toast(v === 'skin' ? '15초 동안 입어 볼게요 · 셰프를 봐 주세요!' : '15초 동안 잔디 왼쪽에 놓아 볼게요', true); }
   else if (a === 'charge') { const r = G.claimCharge(v); if (r) { flyR(r, at); sfx('gift'); ctx.render(); } }
@@ -305,7 +309,7 @@ const GOLD = {
   out_knit: { name: '셰프 의상 · 가을 니트', item: true, own: () => G.hasLook('out_knit'), give: () => { G.ownLook('out_knit'); S.wear = 'out_knit'; ctx.wearNow(); } },
   out_fire: { name: '셰프 의상 · 밤 캠프파이어', item: true, own: () => G.hasLook('out_fire'), give: () => { G.ownLook('out_fire'); S.wear = 'out_fire'; ctx.wearNow(); } },
   pet_bichon: { name: D.PET.name, item: true, own: () => !!S.pet, give: () => { S.pet = true; S.petOn = true; ctx.wearNow(); } },
-  skin_autumn: { name: D.FAC_SKIN.name, item: true, own: () => !!S.fskin, give: () => { S.fskin = true; S.fskinOn = true; ctx.render(); } },
+  skin_autumn: { name: D.FAC_SKIN.name, item: true, own: () => !!S.fskin, give: () => { S.fskin = true; S.fskinOn = true; ctx.applyLook(); ctx.render(); } },
   skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 모습만 바뀌어요`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
 };
 async function buyGold(sku) {
@@ -625,7 +629,7 @@ export function gemTip() { if (S.gemTip || tutOn()) return; S.gemTip = 1; ctx.sa
   const t = barEl.querySelector('[data-t="shop"]'); if (t) { const p = document.createElement('div'); p.className = 'pointer'; const at = cardPos(t); p.style.left = at[0] + 'px'; p.style.top = at[1] + 'px'; uiCol.appendChild(p); setTimeout(() => p.remove(), 5000); } }
 /* 목표를 누르면: 할 수 있는 일로 바로 데려감 (한 번에) */
 /* 목표가 가리키는 곳 (목표 카드 누르기 · 빈자리 이름표 · 대표 11-03 '목표가 가리킬 때만 이름') */
-export function goalTarget() { const g = G.goalNow(); return (g.step && g.step.act) || ({ oven3: { k: 'up', v: 'oven' }, oven10: { k: 'up', v: 'oven' }, sol: { k: 'tab', v: 'staff' }, bada: { k: 'tab', v: 'staff' }, stew: { k: 'tab', v: 'menu', w: 'soup' }, cocoa: { k: 'tab', v: 'menu', w: 'drink' }, fridge: { k: 'tab', v: 'fac', w: 'amen' }, pot: { k: 'build', v: 'L1' }, drink: { k: 'build', v: 'L3' }, tent: { k: 'build', v: 'F1' }, ftable: { k: 'build', v: 'F2' }, dtable: { k: 'build', v: 'D1' }, tapsell: { k: 'tap' } }[g.id]) || (D.ZONES.find(z => z.id === g.id) ? { k: 'zone', v: g.id } : { k: 'tab', v: 'fac' }); }
+export const goalTarget = () => G.goalAct();
 function goalAct() { const a = goalTarget();
   sfx('tap'); { const pos = a.k === 'up' || a.k === 'build' ? ctx.padWorld(a.v) : a.k === 'zone' ? (r => r && [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2])(D.ZONE_FOG[a.v]) : null; if (pos && ctx.camTo) ctx.camTo(pos[0], pos[1]); }
   if (a.k === 'up') facDialog(a.v); else if (a.k === 'build') buildDialog(a.v); else if (a.k === 'zone') zoneDialog(a.v); else if (a.k === 'tab') openTab(a.v, a.w); else toast('반짝이는 요리를 눌러 직접 팔아요 · 직접 팔면 2배!'); }
