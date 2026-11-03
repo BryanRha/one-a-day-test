@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 120" width="330" height="120">
+<defs><clipPath id="sq"><rect width="120" height="120" rx="28"/></clipPath></defs>
+<g clip-path="url(#sq)"><svg width="120" height="120" viewBox="0 0 1024 1024"><defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2468"/><stop offset=".55" stop-color="#201C4B"/><stop offset="1" stop-color="#110E2C"/></linearGradient>
+  <radialGradient id="glow" cx=".78" cy=".14" r=".7"><stop offset="0" stop-color="#7A66FF" stop-opacity=".55"/><stop offset="1" stop-color="#7A66FF" stop-opacity="0"/></radialGradient>
+  <linearGradient id="vi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9C8CFF"/><stop offset="1" stop-color="#5B48E2"/></linearGradient>
+  <linearGradient id="vis" gradientUnits="userSpaceOnUse" x1="380" y1="290" x2="680" y2="620"><stop offset="0" stop-color="#9C8CFF"/><stop offset="1" stop-color="#5B48E2"/></linearGradient>
+  <linearGradient id="pp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#F6F4F0"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#glow)"/>
+<path d="M808 204Q813.76 230.24 840 236Q813.76 241.76 808 268Q802.24 241.76 776 236Q802.24 230.24 808 204Z" fill="#E7B24A"/><circle cx="214" cy="250" r="8" fill="#F6F4F0" opacity=".6"/><circle cx="840" cy="760" r="7" fill="#F6F4F0" opacity=".5"/>
+<path d="M530 184C708 184 832 302 832 452C832 602 708 720 530 720C478 720 432 712 392 696L222 846L296 640C246 594 228 530 228 452C228 302 352 184 530 184Z" fill="#0A0820" opacity=".35" transform="translate(10 18)"/>
+<path d="M530 184C708 184 832 302 832 452C832 602 708 720 530 720C478 720 432 712 392 696L222 846L296 640C246 594 228 530 228 452C228 302 352 184 530 184Z" fill="url(#pp)"/>
+<path d="M226 842L318 714" stroke="url(#bg)" stroke-width="12" stroke-linecap="round"/><circle cx="326" cy="702" r="17" fill="#201C4B"/>
+<g fill="none" stroke="url(#vis)" stroke-width="66" stroke-linecap="round" stroke-linejoin="round"><path d="M392 318V566H528"/><path d="M660 296V610"/><path d="M548 446H660"/></g></svg></g>
+<g transform="translate(144 15) scale(.86)" fill="none" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"><g stroke="#18171D"><path d="M10 18V72H46"/><path d="M76 6V98"/><path d="M50 48H76"/>
+<path d="M104 10H146V28H106V48H148"/><path d="M170 4V62"/><path d="M170 32H190"/></g><g stroke="#5B48E2"><ellipse cx="146" cy="80" rx="25" ry="16"/></g></g>
+</svg>

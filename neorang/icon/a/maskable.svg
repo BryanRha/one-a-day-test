@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2468"/><stop offset=".55" stop-color="#201C4B"/><stop offset="1" stop-color="#110E2C"/></linearGradient>
+  <radialGradient id="glow" cx=".78" cy=".14" r=".7"><stop offset="0" stop-color="#7A66FF" stop-opacity=".55"/><stop offset="1" stop-color="#7A66FF" stop-opacity="0"/></radialGradient>
+  <linearGradient id="vi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9C8CFF"/><stop offset="1" stop-color="#5B48E2"/></linearGradient>
+  <linearGradient id="vis" gradientUnits="userSpaceOnUse" x1="380" y1="290" x2="680" y2="620"><stop offset="0" stop-color="#9C8CFF"/><stop offset="1" stop-color="#5B48E2"/></linearGradient>
+  <linearGradient id="pp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#F6F4F0"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#glow)"/>
+<g transform="translate(512 512) scale(.8) translate(-512 -512)">
+<path d="M250 266Q256.12 293.88 284 300Q256.12 306.12 250 334Q243.88 306.12 216 300Q243.88 293.88 250 266Z" fill="#E7B24A"/><circle cx="800" cy="210" r="9" fill="#F6F4F0" opacity=".7"/><circle cx="196" cy="440" r="7" fill="#F6F4F0" opacity=".5"/>
+<ellipse cx="512" cy="836" rx="300" ry="26" fill="#0A0820" opacity=".45"/>
+<path d="M506 598C436 552 330 538 226 556V786C330 770 436 782 506 826Z" fill="url(#pp)"/><path d="M518 598C588 552 694 538 798 556V786C694 770 588 782 518 826Z" fill="#E4DFF7"/>
+<g fill="none" stroke="#CBC4EA" stroke-width="13" stroke-linecap="round"><path d="M276 624C350 612 420 620 466 640" /><path d="M748 624C674 612 604 620 558 640" /><path d="M276 676C350 664 420 672 466 692" /><path d="M748 676C674 664 604 672 558 692" /><path d="M276 728C350 716 420 724 466 744" /><path d="M748 728C674 716 604 724 558 744" /></g>
+<path d="M392 196H632A122 122 0 0 1 632 440H566L512 532L458 440H392A122 122 0 0 1 392 196Z" fill="url(#vi)"/>
+<g fill="#F6F4F0"><circle cx="420" cy="318" r="30"/><circle cx="512" cy="318" r="30"/><circle cx="604" cy="318" r="30"/></g></g>
+</svg>

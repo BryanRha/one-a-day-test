@@ -1,0 +1,329 @@
+{
+ "c17": {
+  "cover": "c17/cover.webp",
+  "avatar": {
+   "cold": "c17/avatar_cold.webp",
+   "flustered": "c17/avatar_flustered.webp",
+   "jealous": "c17/avatar_jealous.webp",
+   "serious": "c17/avatar_serious.webp",
+   "smile": "c17/avatar_smile.webp",
+   "default": "c17/avatar.webp"
+  },
+  "bust": {
+   "cold": "c17/bust_cold.webp",
+   "flustered": "c17/bust_flustered.webp",
+   "jealous": "c17/bust_jealous.webp",
+   "serious": "c17/bust_serious.webp",
+   "smile": "c17/bust_smile.webp"
+  },
+  "scenes": {
+   "c17_office_cold": "c17/scenes/c17_office_cold.webp",
+   "c17_office_flustered": "c17/scenes/c17_office_flustered.webp",
+   "c17_office_jealous": "c17/scenes/c17_office_jealous.webp",
+   "c17_office_serious": "c17/scenes/c17_office_serious.webp",
+   "c17_office_smile": "c17/scenes/c17_office_smile.webp",
+   "c17_pojang_cold": "c17/scenes/c17_pojang_cold.webp",
+   "c17_pojang_flustered": "c17/scenes/c17_pojang_flustered.webp",
+   "c17_pojang_jealous": "c17/scenes/c17_pojang_jealous.webp",
+   "c17_pojang_serious": "c17/scenes/c17_pojang_serious.webp",
+   "c17_pojang_smile": "c17/scenes/c17_pojang_smile.webp",
+   "c17_rooftop_cold": "c17/scenes/c17_rooftop_cold.webp",
+   "c17_rooftop_flustered": "c17/scenes/c17_rooftop_flustered.webp",
+   "c17_rooftop_jealous": "c17/scenes/c17_rooftop_jealous.webp",
+   "c17_rooftop_serious": "c17/scenes/c17_rooftop_serious.webp",
+   "c17_rooftop_smile": "c17/scenes/c17_rooftop_smile.webp"
+  },
+  "cast": {
+   "namgicheol": {
+    "avatar": "c17/cast_namgicheol.webp",
+    "portrait": "c17/cast_namgicheol_portrait.webp"
+   },
+   "yudaon": {
+    "avatar": "c17/cast_yudaon.webp",
+    "portrait": "c17/cast_yudaon_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c17/teaser_ep4.webp"
+  },
+  "cover_s": "c17/cover_s.webp",
+  "portrait": "c17/portrait.webp",
+  "places": {
+   "office": "c17/scenes/c17_office_cold.webp",
+   "pojang": "c17/scenes/c17_pojang_cold.webp",
+   "rooftop": "c17/scenes/c17_rooftop_cold.webp"
+  }
+ },
+ "c20": {
+  "cover": "c20/cover.webp",
+  "avatar": {
+   "angry": "c20/avatar_angry.webp",
+   "flustered": "c20/avatar_flustered.webp",
+   "haughty": "c20/avatar_haughty.webp",
+   "laugh": "c20/avatar_laugh.webp",
+   "lonely": "c20/avatar_lonely.webp",
+   "default": "c20/avatar.webp"
+  },
+  "bust": {
+   "angry": "c20/bust_angry.webp",
+   "flustered": "c20/bust_flustered.webp",
+   "haughty": "c20/bust_haughty.webp",
+   "laugh": "c20/bust_laugh.webp",
+   "lonely": "c20/bust_lonely.webp"
+  },
+  "scenes": {
+   "c20_chamber_lonely": "c20/scenes/c20_chamber_lonely.webp",
+   "c20_desk_haughty": "c20/scenes/c20_desk_haughty.webp",
+   "c20_garden_laugh": "c20/scenes/c20_garden_laugh.webp"
+  },
+  "cover_s": "c20/cover_s.webp",
+  "portrait": "c20/portrait.webp",
+  "places": {
+   "chamber": "c20/scenes/c20_chamber_lonely.webp",
+   "desk": "c20/scenes/c20_desk_haughty.webp",
+   "garden": "c20/scenes/c20_garden_laugh.webp"
+  }
+ },
+ "c16": {
+  "cover": "c16/cover.webp",
+  "avatar": {
+   "demon": "c16/avatar_demon.webp",
+   "flustered": "c16/avatar_flustered.webp",
+   "gentle": "c16/avatar_gentle.webp",
+   "imposing": "c16/avatar_imposing.webp",
+   "wistful": "c16/avatar_wistful.webp",
+   "default": "c16/avatar.webp"
+  },
+  "bust": {
+   "demon": "c16/bust_demon.webp",
+   "flustered": "c16/bust_flustered.webp",
+   "gentle": "c16/bust_gentle.webp",
+   "imposing": "c16/bust_imposing.webp",
+   "wistful": "c16/bust_wistful.webp"
+  },
+  "scenes": {
+   "c16_counter_gentle": "c16/scenes/c16_counter_gentle.webp",
+   "c16_greenhouse_flustered": "c16/scenes/c16_greenhouse_flustered.webp",
+   "c16_hill_wistful": "c16/scenes/c16_hill_wistful.webp"
+  },
+  "cover_s": "c16/cover_s.webp",
+  "portrait": "c16/portrait.webp",
+  "places": {
+   "counter": "c16/scenes/c16_counter_gentle.webp",
+   "greenhouse": "c16/scenes/c16_greenhouse_flustered.webp",
+   "hill": "c16/scenes/c16_hill_wistful.webp"
+  }
+ },
+ "c03": {
+  "cover": "c03/cover.webp",
+  "avatar": {
+   "emperor": "c03/avatar_emperor.webp",
+   "flustered": "c03/avatar_flustered.webp",
+   "lonely": "c03/avatar_lonely.webp",
+   "sleepy": "c03/avatar_sleepy.webp",
+   "smug": "c03/avatar_smug.webp",
+   "default": "c03/avatar.webp"
+  },
+  "bust": {
+   "emperor": "c03/bust_emperor.webp",
+   "flustered": "c03/bust_flustered.webp",
+   "lonely": "c03/bust_lonely.webp",
+   "sleepy": "c03/bust_sleepy.webp",
+   "smug": "c03/bust_smug.webp"
+  },
+  "scenes": {
+   "c03_counter_smug": "c03/scenes/c03_counter_smug.webp",
+   "c03_parasol_lonely": "c03/scenes/c03_parasol_lonely.webp",
+   "c03_storage_emperor": "c03/scenes/c03_storage_emperor.webp"
+  },
+  "cover_s": "c03/cover_s.webp",
+  "portrait": "c03/portrait.webp",
+  "places": {
+   "counter": "c03/scenes/c03_counter_smug.webp",
+   "parasol": "c03/scenes/c03_parasol_lonely.webp",
+   "storage": "c03/scenes/c03_storage_emperor.webp"
+  }
+ },
+ "c08": {
+  "cover": "c08/cover.webp",
+  "avatar": {
+   "fury": "c08/avatar_fury.webp",
+   "menace": "c08/avatar_menace.webp",
+   "panic": "c08/avatar_panic.webp",
+   "smile": "c08/avatar_smile.webp",
+   "tired": "c08/avatar_tired.webp",
+   "default": "c08/avatar.webp"
+  },
+  "bust": {
+   "fury": "c08/bust_fury.webp",
+   "menace": "c08/bust_menace.webp",
+   "panic": "c08/bust_panic.webp",
+   "smile": "c08/bust_smile.webp",
+   "tired": "c08/bust_tired.webp"
+  },
+  "scenes": {
+   "c08_corridor_smile": "c08/scenes/c08_corridor_smile.webp",
+   "c08_office_panic": "c08/scenes/c08_office_panic.webp",
+   "c08_throne_menace": "c08/scenes/c08_throne_menace.webp"
+  },
+  "cover_s": "c08/cover_s.webp",
+  "portrait": "c08/portrait.webp",
+  "places": {
+   "corridor": "c08/scenes/c08_corridor_smile.webp",
+   "office": "c08/scenes/c08_office_panic.webp",
+   "throne": "c08/scenes/c08_throne_menace.webp"
+  }
+ },
+ "soon": {
+  "c01": {
+   "cover": "soon/c01.webp",
+   "cover_s": "soon/c01_s.webp"
+  },
+  "c02": {
+   "cover": "soon/c02.webp",
+   "cover_s": "soon/c02_s.webp"
+  },
+  "c04": {
+   "cover": "soon/c04.webp",
+   "cover_s": "soon/c04_s.webp"
+  },
+  "c05": {
+   "cover": "soon/c05.webp",
+   "cover_s": "soon/c05_s.webp"
+  },
+  "c06": {
+   "cover": "soon/c06.webp",
+   "cover_s": "soon/c06_s.webp"
+  },
+  "c07": {
+   "cover": "soon/c07.webp",
+   "cover_s": "soon/c07_s.webp"
+  },
+  "c09": {
+   "cover": "soon/c09.webp",
+   "cover_s": "soon/c09_s.webp"
+  },
+  "c10": {
+   "cover": "soon/c10.webp",
+   "cover_s": "soon/c10_s.webp"
+  },
+  "c11": {
+   "cover": "soon/c11.webp",
+   "cover_s": "soon/c11_s.webp"
+  },
+  "c12": {
+   "cover": "soon/c12.webp",
+   "cover_s": "soon/c12_s.webp"
+  },
+  "c13": {
+   "cover": "soon/c13.webp",
+   "cover_s": "soon/c13_s.webp"
+  },
+  "c14": {
+   "cover": "soon/c14.webp",
+   "cover_s": "soon/c14_s.webp"
+  },
+  "c15": {
+   "cover": "soon/c15.webp",
+   "cover_s": "soon/c15_s.webp"
+  },
+  "c18": {
+   "cover": "soon/c18.webp",
+   "cover_s": "soon/c18_s.webp"
+  },
+  "c19": {
+   "cover": "soon/c19.webp",
+   "cover_s": "soon/c19_s.webp"
+  },
+  "c21": {
+   "cover": "soon/c21.webp",
+   "cover_s": "soon/c21_s.webp"
+  },
+  "c22": {
+   "cover": "soon/c22.webp",
+   "cover_s": "soon/c22_s.webp"
+  },
+  "c23": {
+   "cover": "soon/c23.webp",
+   "cover_s": "soon/c23_s.webp"
+  },
+  "c24": {
+   "cover": "soon/c24.webp",
+   "cover_s": "soon/c24_s.webp"
+  },
+  "c25": {
+   "cover": "soon/c25.webp",
+   "cover_s": "soon/c25_s.webp"
+  },
+  "c26": {
+   "cover": "soon/c26.webp",
+   "cover_s": "soon/c26_s.webp"
+  }
+ },
+ "_meta": {
+  "base": "oneaday/shell/neorang/img/",
+  "paths": "manifest 의 모든 경로는 이 base 기준 상대 경로",
+  "sizes": {
+   "cover": "600x800 (3:4)",
+   "cover_s": "225x300 목록·카드용",
+   "avatar": "256x256 대화 아바타 (default + 감정별)",
+   "bust": "480x640 감정 표정 버스트",
+   "portrait": "640x640 기준 초상",
+   "scenes": "1080x540 (2:1, 시안 D sceneimg 342x168 비율)",
+   "teaser": "1080x540 다음 화 예고 컷",
+   "cast": "조연 avatar 256 + portrait 640"
+  },
+  "first_screen": [
+   "cover_s",
+   "cover",
+   "avatar.default"
+  ],
+  "lazy": [
+   "bust",
+   "scenes",
+   "teaser",
+   "cast",
+   "portrait",
+   "soon"
+  ],
+  "places": "아직 감정 변형이 없는 장면 태그(<작품>_<장소>_<감정>)는 places[<장소>] 로 대체",
+  "emotions": {
+   "c17": [
+    "cold",
+    "flustered",
+    "smile",
+    "jealous",
+    "serious"
+   ],
+   "c20": [
+    "haughty",
+    "flustered",
+    "laugh",
+    "lonely",
+    "angry"
+   ],
+   "c16": [
+    "imposing",
+    "flustered",
+    "gentle",
+    "wistful",
+    "demon"
+   ],
+   "c03": [
+    "smug",
+    "flustered",
+    "emperor",
+    "sleepy",
+    "lonely"
+   ],
+   "c08": [
+    "menace",
+    "panic",
+    "smile",
+    "tired",
+    "fury"
+   ]
+  },
+  "source": "원본 PNG 는 git 밖 ~/dev/neorang-art-src/<작품>/ (Figma generate_image, gpt-image-2.5-sunburst)"
+ }
+}

@@ -660,9 +660,9 @@ body[data-tab="fortune"] #view, body[data-tab="neorang"] #view { padding: 0; }
 /* 너랑: 테스트는 시안 iframe (탭 바 위 칸 전체) · 실서버는 '곧 공개' */
 body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]::before { display: none; }
 .nrtab { min-height: 70vh; background: radial-gradient(500px 300px at 85% -5%, rgba(241,215,162,.16), transparent 60%), linear-gradient(180deg, #0D1226, var(--nrink) 70%); padding: calc(18px + var(--safe-t)) 16px 24px; }
-.nrtab.live { padding: 0; background: var(--nrink); }
-.nrbox { position: fixed; left: 50%; transform: translateX(-50%); top: 0; bottom: var(--tabh, 72px); width: 100%; max-width: 480px; background: var(--nrink); }
-.nrbox iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--nrink); }
+.nrtab.live { padding: 0; background: #F6F4F0; }   /* 너랑(시안 D) 바탕 = 밝은 종이 */
+.nrbox { position: fixed; left: 50%; transform: translateX(-50%); top: 0; bottom: var(--tabh, 72px); width: 100%; max-width: 480px; background: #F6F4F0; }
+.nrbox iframe { display: block; width: 100%; height: 100%; border: 0; background: #F6F4F0; }
 .nrbox .nrfail { padding: calc(40px + var(--safe-t)) 16px; }
 .nrlogo { display: inline-flex; align-items: baseline; gap: 8px; font: 700 27px 'Nanum Myeongjo', 'AppleMyungjo', 'Noto Serif KR', serif; color: var(--moon); letter-spacing: -.5px; }
 .nrlogo small { font: 11px -apple-system, 'Noto Sans KR', sans-serif; color: var(--sub); letter-spacing: 1.5px; }

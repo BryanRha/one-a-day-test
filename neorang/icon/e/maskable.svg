@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2468"/><stop offset=".55" stop-color="#201C4B"/><stop offset="1" stop-color="#110E2C"/></linearGradient>
+  <radialGradient id="glow" cx=".78" cy=".14" r=".7"><stop offset="0" stop-color="#7A66FF" stop-opacity=".55"/><stop offset="1" stop-color="#7A66FF" stop-opacity="0"/></radialGradient>
+  <linearGradient id="vi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C69F6"/><stop offset="1" stop-color="#4E3BD4"/></linearGradient>
+  <linearGradient id="pp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#F6F4F0"/></linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBE3A4"/><stop offset=".55" stop-color="#E7B24A"/><stop offset="1" stop-color="#B9802A"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0C0A24"/><stop offset="1" stop-color="#3B2F95"/></linearGradient>
+  <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6D892" stop-opacity=".55"/><stop offset="1" stop-color="#F6D892" stop-opacity="0"/></linearGradient>
+  <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#06041A" flood-opacity=".5"/></filter>
+</defs><rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#glow)"/>
+<g transform="translate(512 512) scale(.8) translate(-512 -512)"><g fill="#F6F4F0"><circle cx="180" cy="210" r="8" opacity="0.7"/><circle cx="850" cy="250" r="6" opacity="0.6"/><circle cx="820" cy="860" r="7" opacity="0.5"/><circle cx="210" cy="850" r="6" opacity="0.5"/></g><path d="M830 136Q836.12 163.88 864 170Q836.12 176.12 830 204Q823.88 176.12 796 170Q823.88 163.88 830 136Z" fill="#E7B24A"/>
+<g transform="rotate(-7 512 540)" filter="url(#sh)">
+<rect x="196" y="318" width="632" height="430" rx="42" fill="url(#pp)"/>
+<path d="M228 736L452 548M796 736L572 548" stroke="#D9D3EF" stroke-width="10" stroke-linecap="round"/>
+<path d="M214 338Q214 330 226 338L512 566L798 338Q810 330 810 338V350L512 590L214 350Z" fill="#D9D3EF"/>
+<path d="M222 332H802L512 572Z" fill="#E4DFF7"/>
+<path d="M643 566L640.16 573.2L633.23 579.66L626 585.37L622.17 591.14L623.12 598.01L627.15 606.29L630.59 615.12L630.03 622.84L624.35 628.09L615.3 630.91L606.31 632.92L600.35 636.45L598.22 643.05L598.27 652.27L597.53 661.71L593.68 668.42L586.28 670.69L576.91 669.3L567.94 667.21L561.03 667.81L556.25 672.83L552.29 681.15L547.54 689.35L541.15 693.72L533.5 692.55L525.66 687.23L518.48 681.45L512 679L505.52 681.45L498.34 687.23L490.5 692.55L482.85 693.72L476.46 689.35L471.71 681.15L467.75 672.83L462.97 667.81L456.06 667.21L447.09 669.3L437.72 670.69L430.32 668.42L426.47 661.71L425.73 652.27L425.78 643.05L423.65 636.45L417.69 632.92L408.7 630.91L399.65 628.09L393.97 622.84L393.41 615.12L396.85 606.29L400.88 598.01L401.83 591.14L398 585.37L390.77 579.66L383.84 573.2L381 566L383.84 558.8L390.77 552.34L398 546.63L401.83 540.86L400.88 533.99L396.85 525.71L393.41 516.88L393.97 509.16L399.65 503.91L408.7 501.09L417.69 499.08L423.65 495.55L425.78 488.95L425.73 479.73L426.47 470.29L430.32 463.58L437.72 461.31L447.09 462.7L456.06 464.79L462.97 464.19L467.75 459.17L471.71 450.85L476.46 442.65L482.85 438.28L490.5 439.45L498.34 444.77L505.52 450.55L512 453L518.48 450.55L525.66 444.77L533.5 439.45L541.15 438.28L547.54 442.65L552.29 450.85L556.25 459.17L561.03 464.19L567.94 464.79L576.91 462.7L586.28 461.31L593.68 463.58L597.53 470.29L598.27 479.73L598.22 488.95L600.35 495.55L606.31 499.08L615.3 501.09L624.35 503.91L630.03 509.16L630.59 516.88L627.15 525.71L623.12 533.99L622.17 540.86L626 546.63L633.23 552.34L640.16 558.8L643 566Z" fill="url(#vi)"/>
+<circle cx="512" cy="566" r="88" fill="none" stroke="#FFFFFF" stroke-opacity=".28" stroke-width="7"/>
+<path d="M491.93 506.55A60 60 0 1 0 555.86 587.91A52 52 0 0 1 491.93 506.55Z" fill="url(#gold)"/>
+</g></g>
+</svg>

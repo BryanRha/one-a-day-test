@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>
+  <radialGradient id="glow" cx="50%" cy="58%" r="62%"><stop offset="0" stop-color="#4a0a14"/><stop offset=".55" stop-color="#1c0b0d"/><stop offset="1" stop-color="#0d0b0c"/></radialGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4d58a"/><stop offset=".55" stop-color="#c9a45c"/><stop offset="1" stop-color="#8f6d2c"/></linearGradient>
+  <linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e02440"/><stop offset="1" stop-color="#7d0c1d"/></linearGradient>
+</defs>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <g transform="translate(512 520) rotate(-6)">
+    <rect x="-300" y="-300" width="600" height="600" rx="56" fill="url(#red)"/>
+    <rect x="-252" y="-252" width="504" height="504" rx="26" fill="none" stroke="#0d0b0c" stroke-width="20"/>
+    <g fill="#0d0b0c">
+      <rect x="-30" y="-200" width="60" height="190"/>
+      <rect x="30" y="-140" width="120" height="56"/>
+      <path fill-rule="evenodd" d="M-150 30h300v180h-300z M-92 84v70h184v-70z"/>
+    </g>
+  </g>
+</svg>

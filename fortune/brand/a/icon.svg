@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>
+  <radialGradient id="glow" cx="50%" cy="58%" r="62%"><stop offset="0" stop-color="#4a0a14"/><stop offset=".55" stop-color="#1c0b0d"/><stop offset="1" stop-color="#0d0b0c"/></radialGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4d58a"/><stop offset=".55" stop-color="#c9a45c"/><stop offset="1" stop-color="#8f6d2c"/></linearGradient>
+  <linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e02440"/><stop offset="1" stop-color="#7d0c1d"/></linearGradient>
+</defs>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <g transform="translate(512 640)">
+    <path d="M0-170L360 0 0 170-360 0z" fill="url(#red)"/>
+    <path d="M0-138L292 0 0 138-292 0z" fill="url(#gold)"/>
+    <g stroke="#6e4f1c" stroke-width="14" stroke-linecap="round" opacity=".75">
+      <line x1="-223.3" y1="-13.5" x2="28.7" y2="105.5"/><line x1="-174.7" y1="-36.5" x2="77.3" y2="82.5"/><line x1="-126.0" y1="-59.5" x2="126.0" y2="59.5"/><line x1="-77.3" y1="-82.5" x2="174.7" y2="36.5"/><line x1="-28.7" y1="-105.5" x2="223.3" y2="13.5"/>
+    </g>
+    <g stroke="#f7e3ad" stroke-width="5" opacity=".35">
+      <line x1="-223.3" y1="-23.5" x2="28.7" y2="95.5"/><line x1="-174.7" y1="-46.5" x2="77.3" y2="72.5"/><line x1="-126.0" y1="-69.5" x2="126.0" y2="49.5"/><line x1="-77.3" y1="-92.5" x2="174.7" y2="26.5"/><line x1="-28.7" y1="-115.5" x2="223.3" y2="3.5"/>
+    </g>
+  </g>
+  <g transform="translate(512 360)">
+    <circle r="150" fill="url(#gold)"/>
+    <circle r="150" fill="none" stroke="#6e4f1c" stroke-width="10"/>
+    <circle r="112" fill="none" stroke="#8f6d2c" stroke-width="8"/>
+    <rect x="-42" y="-42" width="84" height="84" fill="#0d0b0c"/>
+    <rect x="-42" y="-42" width="84" height="84" fill="none" stroke="#6e4f1c" stroke-width="8"/>
+  </g>
+</svg>

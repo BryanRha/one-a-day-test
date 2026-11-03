@@ -8,6 +8,8 @@ import * as OW from './oneword.js';
 import * as V from './oneword-v2.js';
 
 const KEY = 'oad_oneword', AKEY = 'oad_ow_age', DKEY = 'oad_ow_dex', TKEY = 'oad_ow_type';
+/* 결과 화면의 '재하에게 이 카드 보여 주기'(너랑 옛 시안 캐릭터): 2026-11-04 너랑 시안 D 로 바뀌며 숨김 — 한 단어 ↔ 너랑 연결 방향이 정해지면 다시 켬 */
+const NR_LINK = false;
 const PRICE = 30;   /* 서버 gold.js SHOP.oneword.theme2 와 같은 값 (표시용 · 실제 차감은 서버 값) */
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const jget = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? d; } catch { return d; } };
@@ -271,7 +273,7 @@ function result() {
     ${S.more ? `<div class="morerow done"><span class="ri">🪙</span><span class="mt"><b>다른 주제 · ${V.THEMES[S.more.th].ko}도 받았어요</b><small>위 칸을 눌러 두 카드를 바꿔 봐요</small></span></div>`
       : `<button class="morerow" data-ow="more"><span class="ri">🪙</span><span class="mt"><b>오늘의 다른 주제 하나 더</b><small>${rest.map(t => V.THEMES[t].ko).join(' · ')} 중 하나 — ${PRICE} 골드 또는 광고 1번</small></span><span class="mp"><i class="coin"></i>${PRICE}</span></button>`}
     ${I.nature ? '' : `<div class="tints"><span>카드 색</span>${V.TINTS.map((t, i) => i < open ? `<button class="${(S.tint || V.THEMES[view.th].c) === t ? 'on' : ''}" style="background:${t}" data-tint="${t}" aria-label="카드 색 ${i + 1}"></button>` : `<i title="도감 ${(i) * 5}칸이면 열려요">${ic('lock')}</i>`).join('')}</div>`}
-    ${C.R.PROD ? '' : `<button class="nrrow" data-ow="nr"><img src="fortune/char/ow-jaeha.webp" alt=""><span class="mt"><b>재하에게 이 카드 보여 주기</b><small>너랑 캐릭터가 '${esc(info(S, view).name)}'로 먼저 인사해요</small></span>${ic('arrow')}</button>`}
+    ${C.R.PROD || !NR_LINK ? '' : `<button class="nrrow" data-ow="nr"><img src="fortune/char/ow-jaeha.webp" alt=""><span class="mt"><b>재하에게 이 카드 보여 주기</b><small>너랑 캐릭터가 '${esc(info(S, view).name)}'로 먼저 인사해요</small></span>${ic('arrow')}</button>`}
     ${C.R.PROD ? '' : '<button class="owreset" data-ow="reset">오늘 카드 다시 받기 (테스트)</button>'}
     <p class="ownote">${NOTE} · 같은 날 같은 답이면 같은 결과 · 희귀 1%는 답 조합으로 정해져요(판매 X)</p></div>
     ${S.v1 && !S.v1seen ? `<div class="owdim" data-ow="v1keep"></div><div class="owsheet"><div class="grab"></div><div class="shd"><b>새 버전 카드가 나왔어요</b></div>
