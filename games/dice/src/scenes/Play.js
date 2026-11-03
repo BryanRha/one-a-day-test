@@ -1,14 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.97.3';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.97.3';
-import { DESC } from './Deck.js?v=0.97.3';
-import { act } from '../core/ai.js?v=0.97.3';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
-import { audio } from '../audio.js?v=0.97.3';
-import { load, save } from '../save.js?v=0.97.3';
-import * as M from '../meta.js?v=0.97.3';
-import { inOAD, exitToOAD } from '../oad.js?v=0.97.3';
-import * as BM from '../bmflow.js?v=0.97.3';
+import { W, H } from '../config.js?v=0.97.4';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.97.4';
+import { DESC } from './Deck.js?v=0.97.4';
+import { act } from '../core/ai.js?v=0.97.4';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
+import { audio } from '../audio.js?v=0.97.4';
+import { load, save } from '../save.js?v=0.97.4';
+import * as M from '../meta.js?v=0.97.4';
+import { inOAD, exitToOAD } from '../oad.js?v=0.97.4';
+import * as BM from '../bmflow.js?v=0.97.4';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.97.4';
+import { guidePop } from '../guide.js?v=0.97.4';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -38,6 +40,12 @@ export class PlayScene extends Phaser.Scene {
     else this.s = new Sim({ ...base, deck: d.deck });
     this.powers = 0; this.acc = 0; this.paused = false; this.ended = false; this.awakened = false; this.leakedWave = false; this.voT = 0;
     this.quit = false; this.helped = false; this.helpPop = null;
+    /* 씬 재사용: 지난 판에서 남은 표시 · 그림 참조를 비움 (안 비우면 지운 그림을 다시 만지거나 연출이 안 나옴) */
+    this.hinted = false; this.danger = null; this.chillFx = null; this.minePool = null; this.recordSaid = false; this.bpId = null; this.bpImg = null; this.manaT = 0;
+    this.drag = null; this.drag0moved = false; this.frozen = []; this.hints = []; this.targets = []; this.powerHintObj = null; this.rarFxT = 0; this.popT = 0;
+    this.pulseQ = []; this.pick = null; this.itemBusy = false; this.autoBought = false; this.itemBar = null;
+    /* 판 안 아이템: 메인 원정 · 원어데이 안 · 서버 가격이 있을 때만 (core/items.js) */
+    this.items = itemsOn(this.mode, this.bot) ? ITEMS.filter(it => BM.itemPrice(it.sku) > 0) : [];
 
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.35);
@@ -45,6 +53,7 @@ export class PlayScene extends Phaser.Scene {
     // 조작부는 화면 아래에 붙이고, 판(+둘레 길)은 위 정보와 조작부 사이 가운데에
     this.ctrlBase = H - 120;
     this.pathBottom = this.ctrlBase - 130;
+    this.itemY = this.items.length ? this.ctrlBase - 50 - 110 : null;   /* 아이템 줄: 강화 버튼 바로 위 · 길 안쪽(입구 · 제단 이름표 사이) */
     this.BX = (W - BW) / 2; this.BY = Math.round(Math.max(410, Math.min(520, 410 + (H - 1920) * 0.3)));
     const m = 82, top = this.BY - m, left = this.BX - m, right = this.BX + BW + m, bottom = this.pathBottom;   // 길은 조작부 바로 위까지 (화면이 길면 길도 길어짐 · 진행 속도는 비율이라 난이도 같음)
     this.pathPts = [[left, bottom], [left, top], [right, top], [right, bottom]];
@@ -59,9 +68,13 @@ export class PlayScene extends Phaser.Scene {
     this.makeInput();
     audio.music('bgm_game', this);
     this.cameras.main.fadeIn(300, 5, 6, 26);
-    if (!d.tips.dice && !this.bot) this.time.delayedCall(500, () => this.tutorial());
-    else if (!this.bot && BM.helpCheck(this.mode)) { this.paused = true; this.time.delayedCall(450, () => this.helpOffer()); }
-    else { const sy = synergiesOf(this.s.deck); if (sy.length) this.time.delayedCall(700, () => this.banner('덱 조합 발동', sy.map(x => `${x.name} · ${x.desc}`).join('\n'), '#F5C451')); }
+    // 시작 순서: 처음 하는 사람 = 모드 안내 → 조작 안내 · 응원 선물이 있으면 그것 먼저(모드 안내는 다음 판) · 처음 들어온 모드 = 모드 안내 (QA 5)
+    const synergy = () => { const sy = synergiesOf(this.s.deck); if (sy.length) this.time.delayedCall(300, () => this.banner('덱 조합 발동', sy.map(x => `${x.name} · ${x.desc}`).join('\n'), '#F5C451')); };
+    if (this.bot) synergy();
+    else if (!d.tips.dice) { this.paused = true; this.time.delayedCall(450, () => this.showGuide(() => this.tutorial())); }
+    else if (BM.helpCheck(this.mode)) { this.paused = true; this.time.delayedCall(450, () => this.helpOffer()); }
+    else if (!M.guideSeen(this.mode)) { this.paused = true; this.time.delayedCall(450, () => this.showGuide(() => { this.paused = false; synergy(); })); }
+    else this.time.delayedCall(400, synergy);
     if (this.bot) this.time.addEvent({ delay: 220, loop: true, callback: () => { if (!this.paused) for (let k = 0; k < 3; k++) if (!act(this.s, 0.8)) break; this.render(); } });
     window.__play = this;
   }
@@ -154,16 +167,17 @@ export class PlayScene extends Phaser.Scene {
     const D = 50, y0 = this.ctrlBase - 50;
     this.ctrlY = y0;
     // 길 안쪽 (판 아래): SP · 소환 → 다음 보스 예고
-    const iy = this.BY + BH + 120, ix0 = this.BX - 10, ix1 = this.BX + BW + 10;
+    const iy = this.BY + BH + (this.itemY ? 112 : 120), ix0 = this.BX - 10, ix1 = this.BX + BW + 10;
     const sg = this.add.graphics().setDepth(D - 1); sg.fillStyle(0x070A1E, 0.72).fillRoundedRect(ix0, iy - 84, ix1 - ix0, 168, 30).lineStyle(2, 0xB59BFF, 0.22).strokeRoundedRect(ix0, iy - 84, ix1 - ix0, 168, 30);
     this.add.image(ix0 + 50, iy - 6, 'i_star').setDisplaySize(40, 40).setTint(0xB59BFF).setDepth(D);
     T(this, ix0 + 30, iy + 44, 'SP', 22, C.dim, { ox: 0, w: 800, ls: 3 }).setDepth(D);
     this.hSp = T(this, ix0 + 80, iy - 6, '0', 48, C.text, { ox: 0, w: 900 }).setDepth(D);
     this.sumBtn = btn(this, ix1 - 170, iy - 12, 300, 118, '소환', () => this.doSummon(), { style: 'indigo', size: 42 }).setDepth(D);
     this.sumCost = T(this, ix1 - 170, iy + 62, '', 24, C.sub, { w: 800 }).setDepth(D);
-    this.makeBossPreview(iy + 100, this.pathBottom - 60, ix0, ix1);
+    this.makeBossPreview(iy + 100, this.itemY ? this.itemY - 46 : this.pathBottom - 60, ix0, ix1);
     // 덱 강화 버튼 5개
     this.makePower();
+    if (this.items.length) this.makeItems();
   }
   // 덱 강화 버튼 (덱 종류 수만큼 · 아레나에서 룬이 늘면 다시 그림)
   makePower() {
@@ -179,12 +193,13 @@ export class PlayScene extends Phaser.Scene {
       g.fillStyle(0xFFFFFF, 0.07).fillRoundedRect(-80, -64, 160, 40, 18);                         // 위쪽 광택
       g.lineStyle(3, col, 0.85).strokeRoundedRect(-86, -70, 172, 146, 24);
       const glow = this.add.image(0, 0, 'glow').setTint(0xF5C451).setBlendMode('ADD').setScale(2.6, 2.2).setAlpha(0);
-      const ic = this.add.image(-42, -26, `rune_${t}`).setDisplaySize(58, 58);
-      const lv = T(this, 30, -40, 'Lv1', 26, C.text, { w: 900 });
-      const nm = T(this, 30, -10, RUNES[t].name, 19, C.sub, { w: 800 });
+      /* 룬 그림 크게 (QA 9): 주사위 몸통 + 룬 — 예전 룬 58 → 주사위 86 · 룬 54 */
+      const die = this.add.image(-40, -24, `die_${t}`).setDisplaySize(86, 86), ic = this.add.image(-40, -24, `rune_${t}`).setDisplaySize(54, 54);
+      const lv = T(this, 40, -40, 'Lv1', 26, C.text, { w: 900 });
+      const nm = T(this, 40, -9, RUNES[t].name, 19, C.sub, { w: 800 });
       const pill = this.add.graphics();
       const cost = T(this, 0, 42, '', 24, C.text, { w: 900, shadow: false });
-      c.add([glow, g, ic, lv, nm, pill, cost]); c.setSize(172, 150).setInteractive({ useHandCursor: true });
+      c.add([glow, g, die, ic, lv, nm, pill, cost]); c.setSize(172, 150).setInteractive({ useHandCursor: true });
       c.on('pointerdown', () => c.setScale(0.94));
       c.on('pointerout', () => c.setScale(1));
       c.on('pointerup', () => { c.setScale(1); this.doPower(t); });
@@ -251,6 +266,7 @@ export class PlayScene extends Phaser.Scene {
   // ── 끌어서 합성 ──
   makeInput() {
     this.input.on('pointerdown', p => {
+      if (this.pick) { if (p.y > this.BY - 180) this.pickSlot(this.slotAt(p.x, p.y)); return; }   /* 아이템 칸 고르기 (취소 버튼 줄 아래만) */
       if (this.paused || this.s.over || this.bot) return;
       const i = this.slotAt(p.x, p.y); if (i < 0 || !this.s.board[i]) return;
       const v = this.dieViews[i]; if (!v) return;
@@ -339,6 +355,21 @@ export class PlayScene extends Phaser.Scene {
     this.hearts.forEach((h, i) => h.setAlpha(i < s.lives ? 1 : 0.15)); this.livesT.setText(`생명 ${s.lives}`);
     this.updateBossPreview();
     for (const p of this.pw) { const lv = s.power[p.t], c = s.powerCost(p.t), st = c == null ? 'max' : s.sp >= c ? 'ok' : 'no'; p.lv.setText(`Lv${lv + 1}`); this.drawPower(p, st, c); if (st === 'ok' && s.wave >= 2) this.powerHint(p); }
+    this.drawItems();
+    if (this.pulseQ.length) this.mergePulse();
+  }
+  // 합성 짝 강조 (QA 6): 소환 직후 그 주사위와 합칠 수 있는 짝이 판에 있으면 둘 다 짧게 맥동 — 화면만, 판 로직 · 봇과 무관
+  mergePulse() {
+    const q = this.pulseQ.splice(0); if (this.bot || this.drag || this.pick) return;
+    const lit = new Set();
+    for (const i of q) { const mates = []; for (let j = 0; j < SLOTS; j++) if (this.s.canMerge(i, j)) mates.push(j); if (mates.length) { lit.add(i); mates.forEach(j => lit.add(j)); } }
+    for (const i of lit) {
+      const v = this.dieViews[i], dd = this.s.board[i]; if (!v || !dd) continue;
+      const col = RUNES[dd.type].color, gl = this.add.image(0, 0, 'glow').setTint(col).setBlendMode('ADD').setScale(2).setAlpha(0);
+      const rg = this.add.graphics(); rg.lineStyle(6, col, 1).strokeRoundedRect(-CS / 2 + 6, -CS / 2 + 6, CS - 12, CS - 12, 28); rg.setAlpha(0);
+      v.addAt(gl, 0); v.add(rg);
+      this.tweens.add({ targets: [gl, rg], alpha: { from: 0, to: 0.85 }, duration: 240, delay: 120, yoyo: true, repeat: 2, onComplete: () => { gl.destroy(); rg.destroy(); } });
+    }
   }
   // 적 그리기 + 움직임: 정령은 둥실 · 임프는 뛰어다님 · 골렘은 쿵쿵 · 보스는 숨쉬며 흔들림. 진행 방향을 바라봄
   drawEnemies() {
@@ -512,7 +543,7 @@ export class PlayScene extends Phaser.Scene {
   }
   onEvent(e) {
     switch (e.type) {
-      case 'summon': audio.play('sfx_summon', { volume: 0.55, gap: 40 }); { const [sx2, sy2] = this.slotXY(e.slot); this.rarityPop(sx2, sy2, e.die.type); } if (e.free) { const [x, y] = this.slotXY(e.slot); this.float(x, y - 70, '소환사!', '#9AA6FF'); this.spark.setParticleTint(0x6F7CFF); this.spark.emitParticleAt(x, y, 10); } break;
+      case 'summon': this.pulseQ.push(e.slot); audio.play('sfx_summon', { volume: 0.55, gap: 40 }); { const [sx2, sy2] = this.slotXY(e.slot); this.rarityPop(sx2, sy2, e.die.type); } if (e.free) { const [x, y] = this.slotXY(e.slot); this.float(x, y - 70, '소환사!', '#9AA6FF'); this.spark.setParticleTint(0x6F7CFF); this.spark.emitParticleAt(x, y, 10); } break;
       case 'shot': audio.play('sfx_pew', { volume: 0.22, gap: 55, rate: 0.85 + e.die.pips * 0.06 + Math.random() * 0.1 }); this.shotFx(e.slot, e.target, e.n, e.die.type); break;
       case 'merge': {
         const [x, y] = this.slotXY(e.to), col = RUNES[e.die.type].color;
@@ -582,6 +613,15 @@ export class PlayScene extends Phaser.Scene {
       case 'stun': { const v = this.ePool.get(e.id); if (v) { audio.play('sfx_ice', { volume: 0.35, gap: 120, rate: 1.3 }); const c = this.add.image(v.x, v.y, 'flake').setTint(0xDFF6FF).setBlendMode('ADD').setScale(0.2).setDepth(37); this.tweens.add({ targets: c, scale: 1.1, angle: 90, alpha: 0, duration: 420, onComplete: () => c.destroy() }); if (Math.random() < 0.4) this.float(v.x, v.y - 70, '얼음!', '#BFE9FF', 26); } break; }
       case 'sacrifice': { audio.play('sfx_power', { volume: 0.5, rate: 0.8 }); const [x0, y0] = this.slotXY(e.from); this.float(x0, y0 - 70, '희생!', '#FF6A75'); for (const i of e.slots) { const [x, y] = this.slotXY(i); const b = this.add.image(x0, y0, 'bolt').setTint(0xFF4050).setBlendMode('ADD').setScale(0.7).setDepth(35); this.tweens.add({ targets: b, x, y, duration: 300, ease: 'Quad.easeOut', onComplete: () => { b.destroy(); this.spark.setParticleTint(0xFF5060); this.spark.emitParticleAt(x, y, 6); } }); } break; }
       case 'summonMinion': audio.play('sfx_summon', { volume: 0.4, rate: 0.6 }); break;
+      case 'itemRemove': { const [x, y] = this.slotXY(e.slot); audio.play('sfx_pop', { volume: 0.6, rate: 0.8 }); this.spark.setParticleTint(RUNES[e.die.type].color); this.spark.emitParticleAt(x, y, 14); this.float(x, y - 60, '비웠어요', '#FF9BB0'); break; }
+      case 'itemReroll': { const [x, y] = this.slotXY(e.slot); audio.play('sfx_summon', { volume: 0.7, rate: 1.2 }); this.spark.setParticleTint(RUNES[e.die.type].color); this.spark.emitParticleAt(x, y, 14); this.float(x, y - 60, `${RUNES[e.from].name} → ${RUNES[e.die.type].name}`, '#8FE3FF', 28); this.pulseQ.push(e.slot); break; }
+      case 'itemBomb': {
+        audio.play('sfx_fire', { volume: 0.9, rate: 0.7 }); audio.play('sfx_bossdie', { volume: 0.5, rate: 1.3 }); buzz([50, 30, 80]);
+        this.cameras.main.flash(220, 255, 170, 80); this.cameras.main.shake(260, 0.01);
+        for (const h of e.hits) { const [x, y] = this.pathXY(h.d); const f = this.add.image(x, y, 'glow').setTint(0xFF8A2E).setBlendMode('ADD').setScale(0.5).setDepth(36); this.tweens.add({ targets: f, scale: 3, alpha: 0, duration: 420, onComplete: () => f.destroy() }); this.spark.setParticleTint(0xFFB24A); this.spark.emitParticleAt(x, y, 8); }
+        this.banner('폭탄!', `적 ${e.hits.length}마리에게 큰 피해`, '#FFB24A'); break;
+      }
+      case 'autoMerge': { const [x, y] = this.slotXY(e.to); this.float(x, y - 90, '자동 합성', '#7CFFB2', 26); break; }
     }
   }
   // 보스 기술 예고 (1.2초 전): 보스 위 느낌표 + 대상 쪽 경고
@@ -624,6 +664,109 @@ export class PlayScene extends Phaser.Scene {
   }
   float(x, y, str, col, size = 34) { const t = T(this, x, y, str, size, col, { w: 900, stroke: '#05061A', thick: 6 }).setDepth(70); this.tweens.add({ targets: t, y: y - 70, alpha: 0, duration: 900, onComplete: () => t.destroy() }); }
 
+  // 모드 안내 한 장 (처음 한 번) — 닫히면 next
+  showGuide(next) {
+    if (this.ended) return;
+    if (M.guideSeen(this.mode)) { next(); return; }
+    this.paused = true;
+    guidePop(this, this.mode, { onClose: () => this.time.delayedCall(60, next), extra: this.items.length ? '위기 땐 아래 아이템 줄 — 자동 합성 · 룬 제거 · 1성 교체 · 폭탄 (원어데이 골드 · 메인 원정에서만)' : null });
+  }
+
+  // ── 판 안 아이템 (메인 원정 · 원어데이 골드 · core/items.js) ──
+  //   한 번 쓸 때마다 앱 확인 창 → 골드 차감 → 효과. 제거 · 교체는 칸을 먼저 고르고(게임 멈춤) 그다음 결제
+  makeItems() {
+    const D = 50, n = this.items.length, pw = 142, gap = 10, x0 = W / 2 - ((n - 1) * (pw + gap)) / 2;
+    this.itemBar = this.items.map((it, i) => {
+      const x = x0 + i * (pw + gap), c = this.add.container(x, this.itemY).setDepth(D);
+      const glow = this.add.image(0, 0, 'glow').setTint(0xF5C451).setBlendMode('ADD').setScale(2.4, 1.1).setAlpha(0);
+      const g = this.add.graphics();
+      const ic = this.add.image(-pw / 2 + 24, 0, { auto: 'i_auto', remove: 'i_trash', reroll: 'i_swap', bomb: 'i_bomb' }[it.id]).setDisplaySize(30, 30);
+      const nm = T(this, -pw / 2 + 44, -14, it.name, 22, C.text, { ox: 0, w: 900, shadow: false });
+      const pr = T(this, -pw / 2 + 44, 16, '', 21, C.gold, { ox: 0, w: 900, shadow: false });
+      const badge = this.add.container(pw / 2 - 6, -32); const bc = this.add.circle(0, 0, 13, 0x4F5FE0).setStrokeStyle(2, 0x0B1026); const bt = T(this, 0, 0, '', 16, '#FFFFFF', { w: 900, shadow: false }); badge.add([bc, bt]);
+      c.add([glow, g, ic, nm, pr, badge]); c.setSize(pw, 72).setInteractive({ useHandCursor: true });
+      c.on('pointerdown', () => c.setScale(0.95)); c.on('pointerout', () => c.setScale(1));
+      c.on('pointerup', () => { c.setScale(1); this.useItem(it); });
+      return { it, c, g, glow, ic, nm, pr, bt, badge, state: '' };
+    });
+    this.drawItems();
+  }
+  // 상태(남은 횟수 · 켜짐 · 판이 꽉 참)가 바뀔 때만 다시 그림
+  drawItems() {
+    if (!this.itemBar) return;
+    const s = this.s, full = !s.emptySlots().length, ones = s.board.some((dd, i) => s.canReroll(i));
+    for (const b of this.itemBar) {
+      const it = b.it, rest = it.id === 'auto' ? 1 : itemLeft(it, s.items), on = it.id === 'auto' && this.autoBought && s.autoMerge;
+      const usable = it.id === 'auto' ? true : rest > 0 && (it.id === 'bomb' ? s.canBomb() : it.id === 'reroll' ? ones : s.board.some(Boolean));
+      const hot = full && rest > 0 && (it.id === 'remove' || (it.id === 'reroll' && ones));   /* 판이 꽉 차면 제거 · 교체 강조 (QA 10 · 11) */
+      const st = [rest, on, usable, hot, this.autoBought].join();
+      if (b.state === st) continue; b.state = st;
+      const pw = 142, line = on ? 0x5BE39A : hot ? 0xF5C451 : 0x7B8CFF;
+      b.g.clear().fillStyle(0x000000, 0.4).fillRoundedRect(-pw / 2 + 2, -32, pw, 72, 20).fillStyle(on ? 0x113A2A : 0x161C48, 0.95).fillRoundedRect(-pw / 2, -36, pw, 72, 20).lineStyle(hot || on ? 3 : 2, line, hot || on ? 1 : 0.55).strokeRoundedRect(-pw / 2, -36, pw, 72, 20);
+      b.pr.setText(it.id === 'auto' && this.autoBought ? (on ? '켜짐 · 끄기' : '꺼짐 · 켜기') : rest > 0 ? `🪙${BM.itemPrice(it.sku)}` : '다 씀').setColor(on ? C.green : rest > 0 ? C.gold : C.dim);
+      b.badge.setVisible(it.id !== 'auto' && rest > 0); b.bt.setText(String(rest));
+      b.c.setAlpha(usable ? 1 : 0.45);
+      if (b.pulse) { b.pulse.stop(); b.pulse = null; b.glow.setAlpha(0); }
+      if (hot) b.pulse = this.tweens.add({ targets: b.glow, alpha: { from: 0.1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
+    }
+  }
+  itemsUsed() { const u = this.s.items; return u.remove + u.reroll + u.bomb + (this.autoBought ? 1 : 0); }
+  async useItem(it) {
+    if (this.ended || this.s.over || this.itemBusy || this.pick) return;
+    if (this.paused) return;
+    const s = this.s;
+    if (it.id === 'auto' && this.autoBought) {   /* 이미 산 판: 무료로 켜고 끄기 */
+      s.autoMerge = !s.autoMerge; s.autoT = 0; audio.play('sfx_click', { volume: 0.5 }); this.drawItems();
+      toast(this, s.autoMerge ? '자동 합성 켜짐 · 판이 가득 차면 알아서 합쳐요' : '자동 합성 꺼짐', s.autoMerge ? C.green : C.sub, this.itemY - 120); return;
+    }
+    if (it.id !== 'auto' && itemLeft(it, s.items) <= 0) { const c = it.name.charCodeAt(it.name.length - 1) - 0xAC00; return toast(this, `${it.name}${c >= 0 && c < 11172 && c % 28 ? '은' : '는'} 한 판에 ${it.cap}번까지예요`, C.sub, this.itemY - 120); }
+    if (it.id === 'bomb' && !s.canBomb()) return toast(this, '길 위에 적이 없어요', C.sub, this.itemY - 120);
+    if (it.id === 'remove' || it.id === 'reroll') return this.startPick(it);
+    await this.payItem(it, () => {
+      if (it.id === 'auto') { this.autoBought = true; s.autoMerge = true; s.autoT = 0; this.banner('자동 합성', '이번 판 동안 · 판이 가득 차면 같은 짝을 알아서 합쳐요', '#7CFFB2'); return true; }
+      return s.bomb();
+    });
+  }
+  // 결제 → 성공이면 apply() (판 · 화면이 그대로일 때만) · 그동안 판 멈춤
+  async payItem(it, apply) {
+    this.itemBusy = true; const was = this.paused; this.paused = true;
+    const run = this.runId, r = await BM.buyUse(it.sku);
+    if (run !== this.runId || this.ended) return;
+    this.itemBusy = false; this.paused = was;
+    if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub, this.itemY - 120); this.drawItems(); return false; }
+    const done = apply();
+    this.render(); this.drawItems();
+    return done;
+  }
+  // 칸 고르기 (제거 · 교체): 판이 멈추고 쓸 수 있는 칸만 빛남 · 빈 곳/취소를 누르면 그만
+  startPick(it) {
+    this.cancelDrag();
+    const s = this.s, ok = i => it.id === 'remove' ? s.canRemove(i) : s.canReroll(i), slots = [];
+    for (let i = 0; i < SLOTS; i++) if (ok(i)) slots.push(i);
+    if (!slots.length) return toast(this, it.id === 'reroll' ? '1눈 룬이 없어요' : '판이 비었어요', C.sub, this.itemY - 120);
+    this.paused = true;
+    const L = this.add.container(0, 0).setDepth(60), col = it.id === 'remove' ? 0xFF7A8A : 0x8FE3FF;
+    L.add(this.add.rectangle(this.BX + BW / 2, this.BY + BH / 2, BW + 44, BH + 44, 0x05061A, 0.35));
+    for (const i of slots) { const [x, y] = this.slotXY(i); const g = this.add.graphics(); g.lineStyle(8, col, 1).strokeRoundedRect(x - CS / 2 + 4, y - CS / 2 + 4, CS - 8, CS - 8, 30); L.add(g); this.tweens.add({ targets: g, alpha: 0.35, duration: 360, yoyo: true, repeat: -1 }); }
+    this.dieViews.forEach((dv, j) => { if (dv && !slots.includes(j)) dv.setAlpha(0.3); });
+    const bar = this.add.container(W / 2, this.BY - 120); const bg = this.add.graphics(); bg.fillStyle(0x05061A, 0.9).fillRoundedRect(-430, -50, 860, 100, 30).lineStyle(3, col, 0.9).strokeRoundedRect(-430, -50, 860, 100, 30);
+    bar.add([bg, T(this, -160, 0, it.id === 'remove' ? '비울 룬을 눌러요' : '바꿀 1눈 룬을 눌러요', 34, C.text, { w: 900 })]);
+    bar.add(btn(this, 300, -2, 200, 76, '취소', () => this.endPick(), { style: 'ghost', size: 28 })); L.add(bar);
+    this.pick = { it, slots, L };
+  }
+  endPick(resume = true) {
+    if (!this.pick) return;
+    this.pick.L.destroy(); this.pick = null;
+    this.dieViews.forEach(dv => dv && dv.setAlpha(1));
+    if (resume) this.paused = false;
+  }
+  async pickSlot(i) {
+    const pk = this.pick; if (!pk || this.itemBusy || !pk.slots.includes(i)) { if (pk && !this.itemBusy) this.endPick(); return; }
+    const it = pk.it; this.endPick(false);
+    const done = await this.payItem(it, () => it.id === 'remove' ? this.s.removeDie(i) : this.s.rerollDie(i));
+    if (done !== undefined && !this.ended) this.paused = false;
+  }
+
   tutorial() {
     const c = this.add.container(W / 2, this.BY + BH / 2).setDepth(95);
     const g = this.add.graphics(); g.fillStyle(0x05061A, 0.92).fillRoundedRect(-460, -180, 920, 440, 34); c.add(g);
@@ -635,7 +778,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.97.3').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.97.4').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤
@@ -671,9 +814,11 @@ export class PlayScene extends Phaser.Scene {
   gameOver() {
     this.ended = true;
     audio.stopMusic(); this.voice('over', 5);
-    const s = this.s, r = { wave: s.wave, kills: s.kills, bossKills: s.bossKills, maxPips: s.maxPips, merges: s.merges, powers: this.powers, deck: s.deck.slice() };
+    this.endPick(false);
+    const s = this.s, r = { wave: s.wave, kills: s.kills, bossKills: s.bossKills, maxPips: s.maxPips, merges: s.merges, powers: this.powers, deck: s.deck.slice(), items: this.itemsUsed() };
     const res = M.finishRun(r, this.mode);
-    if (!this.bot) { BM.helpNote({ mode: this.mode, wave: s.wave, t: s.t, quit: this.quit, helped: this.helped }); BM.roundOver(); }
+    /* 아이템을 쓴 판은 응원 선물 연속에선 '도움 받은 판'(연속 0)으로 · AI 실력 보정에도 안 넣음 (meta.finishRun) */
+    if (!this.bot) { BM.helpNote({ mode: this.mode, wave: s.wave, t: s.t, quit: this.quit, helped: this.helped || r.items > 0 }); BM.roundOver(); }
     this.cameras.main.fadeOut(1400, 5, 6, 26);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', { ...r, ...res, mode: this.mode, bot: this.bot, helped: this.helped }));
   }
@@ -696,9 +841,11 @@ export class PlayScene extends Phaser.Scene {
     });
   }
   // 뒤로가기 (One a Day): 게임 중이면 일시정지 창
-  onBack() { if (!this.ended && !this.paused) this.pause(); return true; }
+  onBack() { if (this.pick) { this.endPick(); return true; } if (!this.ended && !this.paused) this.pause(); return true; }
   pause() {
     this.cancelDrag();
+    if (this.pick) this.endPick();
+    if (this.itemBusy) return;
     if (this.paused || this.ended) return;
     this.paused = true; this.tweens.getTweens().filter(t => t.isPlaying()).forEach(t => { t.pause(); (this.frozen ||= []).push(t); });
     audio.duck(0.1);

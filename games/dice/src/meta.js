@@ -1,7 +1,7 @@
 // 진행·재방문: 룬 해금(최고 웨이브) · 수정으로 영구 등급업(확정, 뽑기 없음) · 연속 출석 · 오늘의 미션 · 오늘의 도전
-import { load, save } from './save.js?v=0.97.3';
-import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.97.3';
-import { fieldOpen } from './bmflow.js?v=0.97.3';
+import { load, save } from './save.js?v=0.97.4';
+import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.97.4';
+import { fieldOpen } from './bmflow.js?v=0.97.4';
 
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -11,7 +11,12 @@ const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); retu
 // 과하지 않게: 게임에서 버는 수정으로만 · 확률 공개 · 천장(30회 안에 전설) · 10회는 영웅 이상 1개 보장 · 중복은 등급업 재료
 export const DRAW_COST = 50, DRAW10_COST = 450, PITY = 30;
 export const ODDS = [0.58, 0.28, 0.11, 0.03];             // 일반·희귀·영웅·전설
-export const MILESTONE = [5, 10, 15, 20, 25, 30, 40, 50];   // 처음 도달하면 제단 열쇠 1개 (무료 뽑기)
+export const MILESTONE = [5, 10, 15, 20, 25, 30, 40, 50];   // 메인 원정 최고 웨이브 이정표 — 처음 도달하면 보상 (milestoneReward)
+// 이정표 보상 (2026-11-03 QA 18: 조금 늘림) — 제단 열쇠 1개(웨이브 30부터 2개) + 수정 웨이브×2
+export const milestoneReward = w => ({ keys: w >= 30 ? 2 : 1, crystals: w * 2 });
+export const milestoneText = w => { const r = milestoneReward(w); return `열쇠 ${r.keys} · 수정 ${r.crystals}`; };
+// 다음 이정표 (아직 못 받은 것 중 가장 낮은 웨이브) — 없으면 null
+export function nextMilestone() { const d = load(); const w = MILESTONE.find(x => !d.milestones[x] && x > d.best) ?? MILESTONE.find(x => !d.milestones[x]); return w ? { wave: w, ...milestoneReward(w), text: milestoneText(w), best: d.best } : null; }
 export const MAX_TIER = 10;
 export const tierCost = t => Math.round(20 * Math.pow(t, 1.5));
 export const cardsNeed = (r, t) => Math.max(1, Math.round(t * [2, 1.5, 1, 0.5][RARITY[r]]));
@@ -130,12 +135,22 @@ export function buy(i) {
   save(); return o;
 }
 
-export function checkUnlocks() {   // 최고 웨이브 이정표 → 제단 열쇠
-  const d = load(); let got = 0;
-  for (const w of MILESTONE) if (d.best >= w && !d.milestones[w]) { d.milestones[w] = 1; d.keys++; got++; }
-  if (got) save();
-  return got;
+export function checkUnlocks() {   // 최고 웨이브 이정표 → 제단 열쇠 + 수정 → { keys, crystals, waves }
+  const d = load(), out = { keys: 0, crystals: 0, waves: [] };
+  for (const w of MILESTONE) if (d.best >= w && !d.milestones[w]) { const r = milestoneReward(w); d.milestones[w] = 1; d.keys += r.keys; d.crystals += r.crystals; out.keys += r.keys; out.crystals += r.crystals; out.waves.push(w); }
+  if (out.waves.length) save();
+  return out;
 }
+// 등급업 가능: 카드 · 수정 모두 충분 (한계 돌파 포함) — 컬렉션 '등급업 가능' 배지 · 홈 빨간 점
+export function canUpgrade(r) {
+  const d = load(); if (!d.unlocked[r]) return false;
+  const t = d.tiers[r] || 1, have = d.cards[r] || 0;
+  if (t < MAX_TIER) return have >= cardsNeed(r, t) && d.crystals >= tierCost(t);
+  const k = (d.limit || {})[r] || 0, c = limitCost(k); return k < LIMIT_MAX && have >= c.cards && d.crystals >= c.crystals;
+}
+export const upgradeReady = () => RUNE_ORDER.filter(canUpgrade).length;
+// 오늘의 상점에 아직 안 받은 무료 선물이 있으면 (홈 · 컬렉션 상점 입구 빨간 점)
+export const shopGift = () => shop().some(o => o.free && !o.sold);
 export function upgrade(r) {
   const d = load(), t = d.tiers[r] || 1, need = cardsNeed(r, t);
   if (!d.unlocked[r] || t >= MAX_TIER || d.crystals < tierCost(t) || (d.cards[r] || 0) < need) return false;
@@ -236,9 +251,22 @@ export function finishRun(r, mode) {
   d.crystals += crystals; d.plays++; d.kills += r.kills; d.bossKills += r.bossKills;
   if (mode === 'daily') { d.daily.best = Math.max(d.daily.best, r.wave); d.daily.tries++; }
   else if (!arc && r.wave > d.best) d.best = r.wave;
-  if (mode === 'run' && r.deck && d.lastPred && d.lastPred.key === r.deck.slice().sort().join()) { d.calib = [...(d.calib || []), r.wave - d.lastPred.median].slice(-6); }
+  if (mode === 'run' && !r.items && r.deck && d.lastPred && d.lastPred.key === r.deck.slice().sort().join()) { d.calib = [...(d.calib || []), r.wave - d.lastPred.median].slice(-6); }
   save();
   track('games'); track('wave', r.wave); track('kills', r.kills); track('boss', r.bossKills); track('pips', r.maxPips); track('merge', r.merges); track('power', r.powers);
   if (mode === 'daily') track('daily');
-  return { crystals, fame, score, newBest: arc ? score > prevArc : mode !== 'daily' && r.wave > prev, keys: checkUnlocks() };
+  const ms = checkUnlocks();
+  return { crystals, fame, score, newBest: arc ? score > prevArc : mode !== 'daily' && r.wave > prev, keys: ms.keys, msCrystals: ms.crystals, msWaves: ms.waves };
 }
+
+// ── 모드별 첫 실행 안내 (한 장 · 한 번 보면 다시 안 뜸 · 설정 › 도움말에서 다시 보기) — 저장 tips['g_' + 모드] ──
+export const GUIDE = {
+  run: { name: '메인 원정', en: 'MAIN EXPEDITION', what: '끝없이 몰려오는 웨이브를 막아 최고 기록을 세워요', reward: '수정 · 명성(미션 보상) · 웨이브 5·10·15… 이정표마다 열쇠와 수정', tip: '판이 차기 전에 같은 룬 · 같은 눈끼리 합성하고, 많이 깔린 룬부터 강화해요' },
+  daily: { name: '오늘의 도전', en: 'DAILY CHALLENGE', what: '오늘 하루 모두가 같은 덱 · 같은 적으로 겨뤄요 (등급 보너스 없음)', reward: '수정 +20 보너스 · 명성 +30 보너스 · 오늘의 미션', tip: '덱이 매일 바뀌어요 · 조합(덱 조합 보너스)을 먼저 살펴보세요' },
+  rush: { name: '보스 러시', en: 'BOSS RUSH', what: '일반 적 없이 보스만 연달아 와요 · 시작 SP 300', reward: '잡은 보스마다 수정 9 · 명성', tip: '강철 · 저격처럼 보스에 강한 룬을 덱에 넣어 보세요' },
+  arena: { name: '랜덤 아레나', en: 'RANDOM ARENA', what: '룬 하나로 시작 · 3웨이브마다 셋 중 하나를 골라 덱을 쌓아요', reward: '웨이브만큼 수정 · 명성', tip: '아직 없는 룬도 나와요 · 조합이 맞는 룬을 고르면 훨씬 세져요' },
+  mono: { name: '단일 룬 시련', en: 'MONO TRIAL', what: '한 가지 룬만으로 끝까지 버텨요', reward: '웨이브만큼 수정 · 명성', tip: '모두 같은 룬이라 합성이 쉬워요 · 그 룬 강화를 아끼지 마세요' },
+  abyss: { name: '심연 광산', en: 'ABYSS MINE', what: '웨이브 10부터 시작 · 주사위 12개를 깔고 출발해요 · 하루 3번', reward: '깊이 갈수록 수정이 많아요 (웨이브 10 넘긴 만큼)', tip: '시작 SP 가 넉넉해요 · 처음에 강화부터 올리면 오래 버텨요' },
+};
+export const guideSeen = mode => !GUIDE[mode] || !!load().tips['g_' + mode];
+export function markGuide(mode) { const d = load(); if (!d.tips['g_' + mode]) { d.tips['g_' + mode] = 1; save(); } }

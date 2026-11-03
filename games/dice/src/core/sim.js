@@ -159,6 +159,8 @@ export const BOSSES = [
 
 // 길: 판 밖 ㄷ자 (왼쪽 아래 → 위 → 오른쪽 → 아래). 길이는 0~1 진행도로 다룸
 export const PATH_LEN = 1;
+// 판 안 아이템 효과 크기 (가격 · 판당 횟수는 core/items.js)
+export const ITEM = { bomb: 3, bombBoss: 0.6, autoEvery: 0.4 };
 export let HP_GROW = 1.3, PIP_MULT = 1.6;
 export function setPip(m) { PIP_MULT = m; }
 export function setGrow(g) { HP_GROW = g; }
@@ -182,6 +184,7 @@ export class Sim {
     // 심연 광산: 웨이브 10부터 → 그 정도까지 키운 판을 미리 깔아 줌 (눈 2~3 주사위 12개)
     if (mode === 'abyss') { for (let i = 0; i < 12; i++) this.board[i] = this.newDie(this.randType(), 2 + (i % 3 === 0 ? 1 : 0)); this.summons = 12; this.sp = 500; this.maxPips = 3; }
     this.sp += giftSp;   /* 응원 선물: 시작 SP (보이는 선물 · 난이도는 그대로) */
+    this.items = { remove: 0, reroll: 0, bomb: 0, autoMerges: 0 }; this.autoMerge = false; this.autoT = 0;   /* 판 안 아이템 (메인 원정 · 골드) */
     this.setupWave();
   }
   ev(type, d = {}) { this.events.push({ type, ...d }); }
@@ -255,6 +258,40 @@ export class Sim {
     if (A.type === 'summoner' || B.type === 'summoner') { const empty = this.emptySlots(); if (empty.length) { const slot = empty[Math.floor(this.R() * empty.length)]; const n = this.board[slot] = this.newDie(this.randType(), Math.max(1, B.pips)); this.ev('summon', { slot, die: n, free: true }); } }
     return d;
   }
+  // ── 판 안 아이템 (메인 원정에서만 · 원어데이 골드 — 화면은 Play, 가격은 서버 SHOP.dice) ──
+  //   아이템을 안 쓰면 판은 예전과 똑같음 (난이도 · 난수 순서 그대로). 크기 측정: tools/item_bot.js
+  canRemove(i) { return !this.over && !!this.board[i]; }
+  // 룬 제거: 칸 하나 비우기 (SP 환급 없음 — 골드가 SP 로 바뀌지 않게)
+  removeDie(i) { if (!this.canRemove(i)) return false; const d = this.board[i]; this.board[i] = null; this.items.remove++; this.ev('itemRemove', { slot: i, die: d }); return true; }
+  // 1성 교체: 1눈 룬을 덱의 다른 룬 1눈으로 (덱 종류가 하나뿐이면 못 씀)
+  canReroll(i) { const d = this.board[i]; return !this.over && !!d && d.pips === 1 && this.deck.some(t => t !== d.type); }
+  rerollDie(i) {
+    if (!this.canReroll(i)) return false;
+    const old = this.board[i], pool = [...new Set(this.deck)].filter(t => t !== old.type);
+    const d = this.board[i] = this.newDie(pool[Math.floor(this.R() * pool.length)], 1);
+    this.items.reroll++; this.ev('itemReroll', { slot: i, die: d, from: old.type }); return true;
+  }
+  // 폭탄: 길 위 모든 적에게 웨이브 체력 ×3 (일반 · 빠른 적은 쓰러지고 큰 적은 크게 깎임) · 보스는 ×0.6 (보스 체력의 약 5%)
+  canBomb() { return !this.over && this.enemies.some(e => e.hp > 0); }
+  bomb() {
+    if (!this.canBomb()) return false;
+    const dm = this.waveHp() * ITEM.bomb, hit = [];
+    for (const e of this.enemies.slice()) { if (e.hp <= 0) continue; hit.push({ id: e.id, d: e.d }); this.damage(e, dm * (e.kind === 'boss' ? ITEM.bombBoss / ITEM.bomb : 1), true); }
+    this.items.bomb++; this.ev('itemBomb', { hits: hit }); return true;
+  }
+  // 자동 합성: 판이 가득 차면 같은 룬 · 같은 눈 짝을 낮은 눈부터 알아서 합성 (켜고 끄기 · 메아리 같은 만능 짝은 직접)
+  autoMergeStep() {
+    if (this.emptySlots().length) return false;
+    let best = null;
+    for (let a = 0; a < SLOTS; a++) for (let b = a + 1; b < SLOTS; b++) {
+      const A = this.board[a], B = this.board[b];
+      if (!A || !B || A.type !== B.type || A.pips !== B.pips || A.pips >= MAX_PIPS) continue;
+      if (!best || A.pips < best.p) best = { a, b, p: A.pips };
+    }
+    if (!best) return false;
+    this.merge(best.a, best.b); this.items.autoMerges++; this.ev('autoMerge', { to: best.b });
+    return true;
+  }
   powerCost(type) { const lv = this.power[type]; return lv < POWER_COST.length ? POWER_COST[lv] : null; }
   powerUp(type) {
     const c = this.powerCost(type);
@@ -279,6 +316,7 @@ export class Sim {
       }
       if (this.spawned >= this.toSpawn && !this.bossOut) { this.phase = 'boss'; this.spawnBoss(); }
     }
+    if (this.autoMerge && (this.autoT -= dt) <= 0) { this.autoT = ITEM.autoEvery; this.autoMergeStep(); }
     this.stepDice(dt);
     this.stepEnemies(dt);
     // 웨이브 끝: 보스까지 다 처치

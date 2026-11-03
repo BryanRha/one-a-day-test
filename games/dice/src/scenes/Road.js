@@ -1,9 +1,9 @@
 // 보상 길: 원정마다 명성이 쌓이고 단계마다 보상 (10단계마다 전설 확정권) — 끌어서 위아래로 보기
-import { W, H } from '../config.js?v=0.97.3';
-import { T, C, fmt, btn, iconBtn, toast } from '../pui.js?v=0.97.3';
-import { audio } from '../audio.js?v=0.97.3';
-import { load } from '../save.js?v=0.97.3';
-import * as M from '../meta.js?v=0.97.3';
+import { W, H } from '../config.js?v=0.97.4';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
+import { audio } from '../audio.js?v=0.97.4';
+import { load } from '../save.js?v=0.97.4';
+import * as M from '../meta.js?v=0.97.4';
 
 const ROW = 150;
 
@@ -39,7 +39,7 @@ export class RoadScene extends Phaser.Scene {
     T(this, W / 2, 190, r.level >= M.ROAD_MAX ? `최고 단계 ${M.ROAD_MAX}` : `${r.level}단계`, 64, C.gold, { w: 900 });
     const g = this.add.graphics(), bw = 760, k = r.level >= M.ROAD_MAX ? 1 : r.into / r.need;
     g.fillStyle(0xFFFFFF, 0.1).fillRoundedRect(W / 2 - bw / 2, 260, bw, 22, 11).fillStyle(0xF5C451, 1).fillRoundedRect(W / 2 - bw / 2, 260, Math.max(22, bw * k), 22, 11);
-    T(this, W / 2, 318, r.level >= M.ROAD_MAX ? `명성 ${fmt(r.fame)}` : `명성 ${fmt(r.into)} / ${fmt(r.need)} · 원정 한 판마다 쌓여요`, 26, C.sub, { w: 800 });
+    T(this, W / 2, 318, r.level >= M.ROAD_MAX ? `명성 ${fmt(r.fame)}` : `명성 ${fmt(r.into)} / ${fmt(r.need)} · 메인 원정 · 도전 · 아케이드 한 판마다`, 26, C.sub, { w: 800 });
     this.cameras.main.fadeIn(200, 5, 6, 26);
     if (data.msg) toast(this, data.msg, C.gold, 520);
     window.__road = this;
@@ -64,7 +64,20 @@ export class RoadScene extends Phaser.Scene {
         audio.play(res.legend ? 'sfx_awaken' : 'sfx_power', { volume: 0.7 }); if (res.legend) this.cameras.main.flash(260, 255, 210, 120);
         this.scene.restart({ y: this.list.y, msg: `${res.text} 받았어요!` });
       }, { style: big ? 'gold' : 'indigo', size: 30 }); this.list.add(b);
-    } else this.list.add(T(this, 960, y, '잠김', 26, C.dim, { ox: 1, w: 800 }));
+    } else {
+      // 아직 못 받은 칸: '잠김' 대신 '이동' — 명성을 모으러 바로 가기 (QA 14)
+      const b = btn(this, 900, y, 200, 84, '이동', () => { if (this.wasDrag) return; this.moveTo(k, r); }, { style: 'ghost', size: 30 }); this.list.add(b);
+    }
   }
-  go(k) { this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
+  // 명성 모으러 가기: 메인 원정(명성 가장 많음) · 오늘의 도전(+30 보너스) · 아케이드
+  moveTo(k, r) {
+    let need = 0; for (let j = r.level; j < k; j++) need += M.roadNeed(j); need -= r.into;
+    const p = popup(this, `${k}단계까지 명성 ${fmt(Math.max(1, need))}`, 860, 700), c = p.content;
+    c.add(T(this, 0, -195, '한 판마다 웨이브 × 10 + 보스 × 8 명성이 쌓여요', 26, C.sub, { w: 800 }));
+    const go = (k2, data) => { p.close(); this.time.delayedCall(150, () => this.go(k2, data)); };
+    c.add(btn(this, 0, -85, 560, 120, '메인 원정 출정', () => go('Play', { mode: 'run' }), { style: 'gold', icon: 'i_play', size: 36 }));
+    c.add(btn(this, 0, 45, 560, 104, '오늘의 도전 · 명성 +30', () => go('Play', { mode: 'daily' }), { style: 'indigo', size: 30 }));
+    c.add(btn(this, 0, 165, 560, 104, '아케이드', () => go('Arcade'), { style: 'ghost', size: 30 }));
+  }
+  go(k, data) { if (this.leaving) return; this.leaving = true; this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

@@ -1,11 +1,11 @@
 // 룬 컬렉션: 덱 3개(프리셋) · 칸 골라 룬 넣기 · 덱 조합 보너스 · 24룬 (희귀도) · 카드+수정으로 등급업
-import { W, H } from '../config.js?v=0.97.3';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
-import { audio } from '../audio.js?v=0.97.3';
-import { load } from '../save.js?v=0.97.3';
-import * as M from '../meta.js?v=0.97.3';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR, SYNERGY, synergiesOf } from '../core/sim.js?v=0.97.3';
-import * as P from '../core/predict.js?v=0.97.3';
+import { W, H } from '../config.js?v=0.97.4';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
+import { audio } from '../audio.js?v=0.97.4';
+import { load } from '../save.js?v=0.97.4';
+import * as M from '../meta.js?v=0.97.4';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR, SYNERGY, synergiesOf } from '../core/sim.js?v=0.97.4';
+import * as P from '../core/predict.js?v=0.97.4';
 
 export const DESC = {
   flame: '맞은 적 주변까지 불태워요', frost: '맞은 적을 느리게 해요', storm: '근처 적 둘에게 번개가 이어져요', venom: '독이 쌓여 계속 피해를 줘요',
@@ -40,8 +40,11 @@ export class DeckScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.62);
     iconBtn(this, 80, 92, 'i_home', () => this.go('Home'), 96);
     T(this, W / 2, 92, '룬 컬렉션', 44, C.text, { w: 900 });
-    this.add.image(W - 230, 92, 'i_star').setDisplaySize(44, 44).setTint(0x8FE3FF);
-    T(this, W - 198, 92, fmt(d.crystals), 34, '#8FE3FF', { ox: 0, w: 900 });
+    this.add.image(172, 92, 'i_star').setDisplaySize(40, 40).setTint(0x8FE3FF);
+    T(this, 200, 92, fmt(d.crystals), 32, '#8FE3FF', { ox: 0, w: 900 });
+    // 오늘의 상점 입구 (QA 13: 등급업 카드는 룬 제단 › 오늘의 상점에서 수정으로)
+    btn(this, W - 140, 92, 220, 76, '오늘의 상점', () => this.go('Altar', { shop: true }), { style: 'ghost', size: 24 });
+    if (M.shopGift()) { const dt = this.add.circle(W - 40, 62, 12, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: dt, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); }
     // 덱 1·2·3
     [0, 1, 2].forEach(i => btn(this, W / 2 - 290 + i * 200, 196, 180, 72, `덱 ${i + 1}`, () => { M.selectDeck(i); this.scene.restart({ slot: this.slot, filter: this.filter, y: this.grid ? this.grid.y : 0 }); }, { style: d.deckIdx === i ? 'gold' : 'ghost', size: 28 }));
     btn(this, W - 150, 196, 200, 72, '조합표', () => this.synergyList(), { style: 'ghost', size: 26 });
@@ -101,7 +104,7 @@ export class DeckScene extends Phaser.Scene {
     M.notePred(d.deck, res.raw);
     this.aiT.setText(`AI 예측 · 기록 경신 ${Math.round(res.p * 100)}%${res.p < 0.1 ? ' · 도전!' : ''}`).setColor(res.p >= 0.5 ? '#7CFFB2' : C.gold);
     const c = (d.calib || []).length;
-    this.aiS.setText(`목표 ${tgt} · 예상 웨이브 ${res.median} · ${c ? `내 실력 보정 ${adj >= 0 ? '+' : ''}${adj} (${c}판)` : '원정을 하면 내 실력에 맞춰져요'}`);
+    this.aiS.setText(`목표 ${tgt} · 예상 웨이브 ${res.median} · ${c ? `내 실력 보정 ${adj >= 0 ? '+' : ''}${adj} (${c}판)` : '메인 원정을 하면 내 실력에 맞춰져요'}`);
     this.tweens.add({ targets: this.aiT, scale: 1.06, duration: 120, yoyo: true });
   }
   // AI 추천: 보유 룬으로 후보 덱들을 만들고 실제로 돌려 보고 가장 좋은 덱을 고름
@@ -160,7 +163,12 @@ export class DeckScene extends Phaser.Scene {
       const lk = (d.limit || {})[r] || 0;
       T(this, x - cw / 2 + 14, y - ch / 2 + 30, `★${t}`, 20, inDeck || lk ? C.gold : C.sub, { ox: 0, w: 900 });
       if (lk && !d.newRunes[r]) T(this, x + cw / 2 - 14, y - ch / 2 + 30, `✦${lk}`, 20, C.gold, { ox: 1, w: 900 });
-      if (ready) { const up = T(this, x + cw / 2 - 16, y + ch * 0.38, '▲', 22, C.green, { ox: 1, w: 900 }); this.tweens.add({ targets: up, y: up.y - 6, duration: 500, yoyo: true, repeat: -1 }); }
+      // 등급업 가능(카드 · 수정 모두 충분): 글자 배지로 분명하게 (QA 12) · 카드만 모였으면 ▲
+      if (M.canUpgrade(r)) {
+        const bg = this.add.graphics(); bg.fillStyle(0x36C77B, 1).fillRoundedRect(x - cw / 2 + 14, by - 17, cw - 28, 34, 17); bg.lineStyle(2, 0xBFFFD8, 0.8).strokeRoundedRect(x - cw / 2 + 14, by - 17, cw - 28, 34, 17);
+        const bt = T(this, x, by, t < M.MAX_TIER ? '▲ 등급업 가능' : '✦ 돌파 가능', 19, '#06301B', { w: 900, shadow: false });
+        this.tweens.add({ targets: [bg, bt], alpha: 0.7, duration: 650, yoyo: true, repeat: -1 });
+      } else if (ready) { const up = T(this, x + cw / 2 - 16, y + ch * 0.38, '▲', 22, C.green, { ox: 1, w: 900 }); this.tweens.add({ targets: up, y: up.y - 6, duration: 500, yoyo: true, repeat: -1 }); }
     } else T(this, x, y + ch * 0.38, RARITY_NAME[rar], 20, hex(col), { w: 800 });
     if (d.newRunes[r]) { const tg = this.add.graphics(); tg.fillStyle(0xFF5A9A, 1).fillRoundedRect(x + cw / 2 - 76, y - ch / 2 + 16, 64, 30, 15); const nt = T(this, x + cw / 2 - 44, y - ch / 2 + 31, 'NEW', 18, '#FFFFFF', { w: 900, shadow: false }); this.tweens.add({ targets: [tg, nt], alpha: 0.55, duration: 600, yoyo: true, repeat: -1 }); }
     const z = this.add.zone(x, y, cw, ch).setInteractive({ useHandCursor: true });
@@ -206,10 +214,13 @@ export class DeckScene extends Phaser.Scene {
       return;
     }
     const ok = t < M.MAX_TIER && have >= need && d.crystals >= cost;
+    // 카드가 모자라면 등급업 자리에 '카드 사러 가기' → 룬 제단 › 오늘의 상점 (QA 13)
+    if (have < need) { c.add(btn(this, 200, by, 360, 120, '카드 사러 가기', () => { p.close(); this.go('Altar', { shop: true }); }, { style: 'indigo', size: 30 })); return; }
     const ub = btn(this, 200, by, 360, 120, '등급업', () => {
-      if (!M.upgrade(r)) return toast(this, have < need ? '카드가 부족해요 · 제단에서 같은 룬을 모아요' : '수정이 부족해요', C.sub);
+      if (!M.upgrade(r)) return toast(this, have < need ? '카드가 부족해요 · 오늘의 상점 · 제단에서 모아요' : '수정이 부족해요', C.sub);
       audio.play('sfx_awaken', { volume: 0.6 }); this.cameras.main.flash(200, 255, 230, 160); p.close(); this.scene.restart({ slot: this.slot, filter: this.filter, y: this.grid ? this.grid.y : 0 }); toast(this, `${R.name} ★${t + 1}!`, C.gold);
     }, { style: ok ? 'indigo' : 'ghost', size: 34 }); c.add(ub);
+
   }
   // 덱에 넣기: 바꿀 룬을 직접 고름 (덱 5칸 중 하나)
   swapPick(r) {
@@ -235,7 +246,7 @@ export class DeckScene extends Phaser.Scene {
       c.add(T(this, x0 + 140, y + 18, s.desc, 19, on ? '#FFE3A0' : C.sub, { ox: 0, w: 700 }));
     });
   }
-  go(k) {
-    this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k));
+  go(k, data) {
+    this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data));
   }
 }

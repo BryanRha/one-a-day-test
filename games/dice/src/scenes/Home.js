@@ -1,11 +1,12 @@
-// 홈: 생존 원정 · 오늘의 도전 · 덱 · 미션 · 연속 출석
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.97.3';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
-import { audio } from '../audio.js?v=0.97.3';
-import { load } from '../save.js?v=0.97.3';
-import * as M from '../meta.js?v=0.97.3';
-import * as BM from '../bmflow.js?v=0.97.3';
-import { RUNES } from '../core/sim.js?v=0.97.3';
+// 홈: 메인 원정 · 오늘의 도전 · 아케이드 · 덱 · 미션 · 연속 출석 (카드마다 받을 보상 한 줄)
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.97.4';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
+import { audio } from '../audio.js?v=0.97.4';
+import { load } from '../save.js?v=0.97.4';
+import * as M from '../meta.js?v=0.97.4';
+import * as BM from '../bmflow.js?v=0.97.4';
+import { guidePop } from '../guide.js?v=0.97.4';
+import { RUNES } from '../core/sim.js?v=0.97.4';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -26,13 +27,14 @@ export class HomeScene extends Phaser.Scene {
     ['flame', 'frost', 'storm'].forEach((r, i) => { const x = W / 2 + (i - 1) * 120, im = this.add.image(x, ly - 60, `die_${r}`).setDisplaySize(110, 110).setAngle((i - 1) * 10); this.add.image(x, ly - 60, `rune_${r}`).setDisplaySize(60, 60).setAngle((i - 1) * 10); this.tweens.add({ targets: im, y: ly - 72, duration: 1400 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); });
     T(this, W / 2, ly + 70, TITLE, 108, C.text, { w: 900, ls: 4 });
     T(this, W / 2, ly + 150, TITLE_EN, 28, '#B59BFF', { w: 800, ls: 14 });
-    // 생존 원정
-    const cy = 690 + sp * 1.5;
+    // 메인 원정 (2026-11-03 '생존 원정'에서 이름만 바꿈 · 내부 id 'run' 그대로) — 다음 이정표 보상 미리보기
+    const cy = 690 + sp * 1.5, nm = M.nextMilestone();
     this.add.existing(panel(this, W / 2, cy, 960, 280));
-    T(this, 110, cy - 84, 'EXPEDITION', 24, '#B59BFF', { ox: 0, w: 900, ls: 6 });
-    T(this, 110, cy - 30, '생존 원정', 58, C.text, { ox: 0, w: 900 });
-    this.add.image(126, cy + 48, 'i_crown').setDisplaySize(40, 40).setTint(0xF5C451);
-    T(this, 160, cy + 48, `최고 웨이브 ${d.best}`, 36, C.gold, { ox: 0, w: 800 });
+    T(this, 110, cy - 94, 'MAIN EXPEDITION', 24, '#B59BFF', { ox: 0, w: 900, ls: 6 });
+    T(this, 110, cy - 42, '메인 원정', 58, C.text, { ox: 0, w: 900 });
+    this.add.image(126, cy + 30, 'i_crown').setDisplaySize(40, 40).setTint(0xF5C451);
+    T(this, 160, cy + 30, `최고 웨이브 ${d.best}`, 36, C.gold, { ox: 0, w: 800 });
+    T(this, 110, cy + 88, nm ? `보상 ◆수정 · 명성 · 웨이브 ${nm.wave} 이정표 ${nm.text}` : '보상 ◆수정 · 명성 · 이정표 모두 달성!', 23, '#8FE3FF', { ox: 0, w: 800 });
     btn(this, W - 260, cy + 6, 300, 130, '출정', () => this.go('Play', { mode: 'run' }), { style: 'gold', icon: 'i_play', size: 44 });
     // 오늘의 도전
     const dc = M.dailyChallenge(), dy = cy + 320 + sp;
@@ -41,20 +43,25 @@ export class HomeScene extends Phaser.Scene {
     this.add.existing(panel(this, lx, cy2, hw, chh, { tone: 'gold' }));
     T(this, lx - hw / 2 + 36, dy - 106, 'DAILY CHALLENGE', 20, C.gold, { ox: 0, w: 900, ls: 4 });
     T(this, lx - hw / 2 + 36, dy - 60, '오늘의 도전', 42, C.text, { ox: 0, w: 900 });
+    T(this, lx + hw / 2 - 30, dy - 58, '◆+20 · 명성+30', 20, '#8FE3FF', { ox: 1, w: 800 });
     dc.deck.forEach((r, i) => { const x = lx - hw / 2 + 70 + i * 74; this.add.image(x, dy + 6, `die_${r}`).setDisplaySize(62, 62); this.add.image(x, dy + 6, `rune_${r}`).setDisplaySize(36, 36); });
     btn(this, lx, dy + 98, hw - 80, 84, dc.tries ? `도전 · 기록 ${dc.best}` : '도전', () => this.go('Play', { mode: 'daily' }), { style: 'gold', size: 30 });
     this.add.existing(panel(this, rx, cy2, hw, chh));
     T(this, rx - hw / 2 + 36, dy - 106, 'ARCADE', 20, '#B59BFF', { ox: 0, w: 900, ls: 4 });
     T(this, rx - hw / 2 + 36, dy - 60, '아케이드', 42, C.text, { ox: 0, w: 900 });
+    T(this, rx + hw / 2 - 30, dy - 58, '◆수정 · 명성', 20, '#8FE3FF', { ox: 1, w: 800 });
     T(this, rx - hw / 2 + 36, dy + 6, '보스 러시 · 랜덤 아레나\n단일 룬 시련 · 심연 광산', 22, C.sub, { ox: 0, w: 800, lh: 6, align: 'left' });
     btn(this, rx, dy + 98, hw - 80, 84, '입장', () => this.go('Arcade'), { style: 'indigo', size: 32 });
     // 덱 미리보기 + 버튼
     const ky = dy + 290 + sp;
     T(this, 110, ky - 60, '내 덱', 34, C.text, { ox: 0, w: 900 });
+    // 오늘의 상점 입구 (QA 13: 등급업용 룬 카드 · 무료 선물이 남았으면 빨간 점)
+    btn(this, 390, ky - 62, 260, 64, '오늘의 상점', () => this.go('Altar', { shop: true }), { style: 'ghost', size: 24 });
     d.deck.forEach((r, i) => { const x = 130 + i * 116; this.add.image(x, ky + 20, `die_${r}`).setDisplaySize(100, 100); this.add.image(x, ky + 20, `rune_${r}`).setDisplaySize(56, 56); T(this, x, ky + 86, `★${d.tiers[r] || 1}`, 22, C.sub, { w: 800 }); });
     const dot = (x, y) => { const c = this.add.circle(x, y, 13, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: c, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); };
     btn(this, W - 180, ky - 62, 260, 84, '룬 컬렉션', () => this.go('Deck'), { style: 'ghost', icon: 'i_grid', size: 28 });
-    if (M.hasNew()) dot(W - 62, ky - 90);
+    if (M.hasNew() || M.upgradeReady()) dot(W - 62, ky - 90);   /* 새 룬 · 등급업 가능한 룬 */
+    if (M.shopGift()) dot(512, ky - 86);
     btn(this, W - 180, ky + 30, 260, 84, '룬 제단', () => this.go('Altar'), { style: 'indigo', icon: 'i_star', size: 30 });
     if (M.freeToday() || d.keys > 0 || d.legendTix > 0) dot(W - 62, ky + 2);
     btn(this, W - 180, ky + 122, 260, 84, `미션 보상 ${M.road().level}`, () => this.go('Road'), { style: 'gold', icon: 'i_crown', size: 28 });
@@ -107,9 +114,14 @@ export class HomeScene extends Phaser.Scene {
     });
   }
   settings() {
-    const d = load(), pop = popup(this, '설정', 760, 540);
+    const d = load(), pop = popup(this, '설정', 860, 900);
     const row = (y, label, on, fn) => { pop.content.add(T(this, -260, y, label, 40, C.text, { ox: 0 })); const b = btn(this, 200, y, 220, 96, on ? '켜짐' : '꺼짐', () => { fn(); b.setLabel(b.label.text === '켜짐' ? '꺼짐' : '켜짐'); }, { style: on ? 'green' : 'ghost', size: 34 }); pop.content.add(b); };
-    row(-60, '효과음', d.sfx, () => audio.toggleSfx()); row(80, '배경음악', d.music, () => audio.toggleMusic());
+    row(-250, '효과음', d.sfx, () => audio.toggleSfx()); row(-120, '배경음악', d.music, () => audio.toggleMusic());
+    // 도움말: 모드 안내 다시 보기 (처음 들어갈 때 한 번 뜨는 그 장)
+    pop.content.add(T(this, 0, 0, '도움말 · 모드 안내 다시 보기', 30, C.sub, { w: 800 }));
+    Object.entries(M.GUIDE).forEach(([k, g], i) => pop.content.add(btn(this, (i % 2 ? 1 : -1) * 190, 100 + Math.floor(i / 2) * 104, 350, 88, g.name, () => { pop.close(); this.time.delayedCall(160, () => guidePop(this, k, { first: false, cta: '확인', extra: k === 'run' ? this.itemLine() : null })); }, { style: 'ghost', size: 28 })));
   }
+  // 메인 원정 아이템 안내 한 줄 (원어데이 안에서 가격이 있을 때만)
+  itemLine() { return BM.itemPrice('bomb') ? '위기 땐 판 아래 아이템(원어데이 골드)으로 자동 합성 · 룬 제거 · 1성 교체 · 폭탄 · 메인 원정에서만' : null; }
   go(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(220, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

@@ -1,12 +1,12 @@
 // 아케이드: 보스 러시 · 랜덤 아레나 · 단일 룬 시련 · 심연 광산 (원작 아케이드 모드를 혼자 하는 버전으로)
-import { W, H } from '../config.js?v=0.97.3';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
-import { audio } from '../audio.js?v=0.97.3';
-import { load, save } from '../save.js?v=0.97.3';
-import * as M from '../meta.js?v=0.97.3';
-import * as BM from '../bmflow.js?v=0.97.3';
-import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.3';
-import { DESC } from './Deck.js?v=0.97.3';
+import { W, H } from '../config.js?v=0.97.4';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
+import { audio } from '../audio.js?v=0.97.4';
+import { load, save } from '../save.js?v=0.97.4';
+import * as M from '../meta.js?v=0.97.4';
+import * as BM from '../bmflow.js?v=0.97.4';
+import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.4';
+import { DESC } from './Deck.js?v=0.97.4';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const LOOK = { rush: ['boss_serpent', 0xFF5A7A], arena: ['die_echo', 0xB59BFF], mono: ['die_flame', 0xFF8A3D], abyss: ['boss_statue', 0x5EE3FF] };
@@ -19,7 +19,7 @@ export class ArcadeScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.6);
     iconBtn(this, 80, 92, 'i_home', () => this.go('Home'), 96);
     T(this, W / 2, 92, '아케이드', 44, C.text, { w: 900 });
-    T(this, W / 2, 160, '원정과 다른 규칙으로 즐기는 도전 · 수정과 명성을 받아요', 26, C.sub, { w: 800 });
+    T(this, W / 2, 160, '메인 원정과 다른 규칙으로 즐기는 도전 · 수정과 명성을 받아요', 26, C.sub, { w: 800 });
     const keys = Object.keys(M.ARCADE), top = 250, ch = Math.min(400, (H - top - 40) / keys.length - 24);
     keys.forEach((k, i) => {
       const A = M.ARCADE[k], y = top + ch / 2 + i * (ch + 24), [img, col] = LOOK[k];

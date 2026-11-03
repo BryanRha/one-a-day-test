@@ -1,7 +1,7 @@
 // 프리미엄 UI 키트: 깔끔한 글자 · 유리 패널 · 그라데이션 버튼 · 선 아이콘 (모두 코드로 그림 — 선명하고 가벼움)
-import { W, H, FONT } from './config.js?v=0.97.3';
-import { audio } from './audio.js?v=0.97.3';
-import { pushBack } from './oad.js?v=0.97.3';
+import { W, H, FONT } from './config.js?v=0.97.4';
+import { audio } from './audio.js?v=0.97.4';
+import { pushBack } from './oad.js?v=0.97.4';
 
 export const C = {
   ink: '#0B1026', text: '#F4F6FF', sub: '#9AA3D6', dim: '#5E679A', gold: '#F5C451', cyan: '#5EE3FF', pink: '#FF6FAE', green: '#5BE39A',
@@ -119,6 +119,11 @@ export function makeIcons(scene) {
   ic('i_grid', g => { for (const [x, y] of [[18, 18], [52, 18], [18, 52], [52, 52]]) g.fillRect(x, y, 26, 26); });
   ic('i_land', g => { g.lineWidth = 7; g.strokeRect(14, 18, 68, 60); g.beginPath(); g.moveTo(18, 72); g.lineTo(40, 44); g.lineTo(54, 60); g.lineTo(64, 50); g.lineTo(78, 72); g.closePath(); g.fill(); g.beginPath(); g.arc(64, 34, 7, 0, Math.PI * 2); g.fill(); });
   ic('i_film', g => { g.lineWidth = 7; g.strokeRect(16, 24, 64, 48); g.beginPath(); g.moveTo(42, 38); g.lineTo(58, 48); g.lineTo(42, 58); g.closePath(); g.fill(); });
+  // 판 안 아이템 아이콘: 자동 합성(두 칸이 하나로) · 룬 제거(지우개 X 칸) · 1성 교체(돌아가는 화살표 칸) · 폭탄
+  ic('i_auto', g => { g.lineWidth = 7; g.strokeRect(12, 16, 28, 28); g.strokeRect(12, 54, 28, 28); g.beginPath(); g.moveTo(44, 30); g.lineTo(60, 48); g.lineTo(44, 66); g.stroke(); g.fillRect(62, 34, 26, 28); });
+  ic('i_trash', g => { g.lineWidth = 7; g.strokeRect(20, 20, 56, 56); g.beginPath(); g.moveTo(34, 34); g.lineTo(62, 62); g.moveTo(62, 34); g.lineTo(34, 62); g.stroke(); });
+  ic('i_swap', g => { g.lineWidth = 8; g.beginPath(); g.arc(48, 48, 26, -Math.PI * 0.85, Math.PI * 0.35); g.stroke(); g.beginPath(); g.moveTo(66, 74); g.lineTo(70, 56); g.lineTo(52, 58); g.closePath(); g.fill(); g.beginPath(); g.arc(48, 48, 7, 0, Math.PI * 2); g.fill(); });
+  ic('i_bomb', g => { g.beginPath(); g.arc(44, 56, 28, 0, Math.PI * 2); g.fill(); g.lineWidth = 6; g.beginPath(); g.moveTo(62, 34); g.quadraticCurveTo(70, 18, 82, 20); g.stroke(); g.beginPath(); g.arc(84, 16, 6, 0, Math.PI * 2); g.fill(); });
 }
 
 // 팝업: 어두운 막 + 유리 패널 + 제목

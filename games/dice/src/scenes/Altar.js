@@ -1,17 +1,17 @@
 // 룬 제단 (뽑기): 게임에서 번 수정·열쇠·매일 무료 1회로만 · 확률 공개 · 천장 · 10회 영웅 보장 · 중복은 등급업 카드
-import { W, H } from '../config.js?v=0.97.3';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
-import { audio } from '../audio.js?v=0.97.3';
-import { load, save, syncPity } from '../save.js?v=0.97.3';
-import * as BM from '../bmflow.js?v=0.97.3';
-import * as M from '../meta.js?v=0.97.3';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.3';
+import { W, H } from '../config.js?v=0.97.4';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
+import { audio } from '../audio.js?v=0.97.4';
+import { load, save, syncPity } from '../save.js?v=0.97.4';
+import * as BM from '../bmflow.js?v=0.97.4';
+import * as M from '../meta.js?v=0.97.4';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.4';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 
 export class AltarScene extends Phaser.Scene {
   constructor() { super('Altar'); }
-  create() {
+  create(data = {}) {
     this.busy = false; this.leaving = false;   /* 씬 재사용: 지난번 뽑기 연출 중에 나갔으면 busy 가 남아 있음 (main.js 에서도 초기화) */
     if (syncPity()) save();   /* 다른 기기에서 쌓은 천장 기록이 더 나중이면 그쪽으로 (save.js) */
     const d = load();
@@ -41,7 +41,10 @@ export class AltarScene extends Phaser.Scene {
     T(this, W / 2 + 200, by + 262, '영웅 이상 1개 보장 · 10% 할인', 22, C.gold, { w: 800 });
     btn(this, W / 2 - 170, by + 360, 300, 84, '확률 정보', () => this.odds(), { style: 'ghost', size: 26 });
     btn(this, W / 2 + 170, by + 360, 300, 84, '오늘의 상점', () => this.shop(), { style: 'ghost', size: 26 });
+    this.shopDot = null;
+    if (M.shopGift()) { const dt = this.add.circle(W / 2 + 306, by + 330, 13, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: dt, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); this.shopDot = dt; }
     this.refresh();
+    if (data.shop) this.time.delayedCall(260, () => { if (!this.busy) this.shop(); });   /* 홈 · 컬렉션의 '오늘의 상점' 입구 (QA 13) */
     audio.music('bgm_lobby', this);
     this.cameras.main.fadeIn(220, 5, 6, 26);
     window.__altar = this;
@@ -60,7 +63,7 @@ export class AltarScene extends Phaser.Scene {
   pull(how) {
     if (this.busy) return;
     const res = how === 'legend' ? M.drawLegend() : M.draw(how);
-    if (!res) return toast(this, BM.oadOn() ? '수정이 부족해요 · 원정 · 미션 · 오늘의 상점에서 모아요' : '수정이 부족해요 · 미션과 원정으로 모아요', C.sub);
+    if (!res) return toast(this, BM.oadOn() ? '수정이 부족해요 · 메인 원정 · 미션 · 오늘의 상점에서 모아요' : '수정이 부족해요 · 미션과 메인 원정으로 모아요', C.sub);
     this.busy = true; this.refresh();
     // 제단이 빨려 들어가듯 모였다가 터짐 → 결과
     const best = Math.max(...res.map(o => o.rar));
@@ -108,7 +111,7 @@ export class AltarScene extends Phaser.Scene {
     const oad = BM.oadOn(), items = M.shop(), extra = oad ? 2 : 0, ph = 1100 + extra * 206;
     const p = popup(this, '오늘의 상점', 900, ph), c = p.content, top = -ph / 2 + 300;
     c.add(T(this, 0, top - 146, '매일 자정에 바뀌어요 · 가진 룬의 등급업 카드', 26, C.sub, { w: 800 }));
-    const reopen = () => { p.close(); this.refresh(); this.time.delayedCall(160, () => this.shop()); };
+    const reopen = () => { p.close(); this.refresh(); if (this.shopDot && !M.shopGift()) this.shopDot.setVisible(false); this.time.delayedCall(160, () => this.shop()); };
     const card = (y, line) => { const g = this.add.graphics(); g.fillStyle(0x141A44, 0.9).fillRoundedRect(-400, y - 90, 800, 180, 28).lineStyle(2, line, 0.6).strokeRoundedRect(-400, y - 90, 800, 180, 28); c.add(g); };
     items.forEach((o, i) => {
       const y = top + i * 206;
@@ -133,7 +136,7 @@ export class AltarScene extends Phaser.Scene {
       if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
       audio.play('sfx_awaken', { volume: 0.6 }); reopen(); toast(this, `수정 +${r.crystals} · ${RUNES[r.rune].name} 카드 +1`, C.gold);
     }, { style: 'green', size: own ? 28 : 30 }));
-    // 수정 100 = 🪙100 (서버 하루 5번 · 무료 길: 원정 · 미션 · 출석 · 보상 길)
+    // 수정 100 = 🪙100 (서버 하루 5번 · 무료 길: 메인 원정 · 미션 · 출석 · 보상 길)
     y += 206; card(y, 0xF5C451);
     c.add(this.add.image(-300, y, 'i_star').setDisplaySize(80, 80).setTint(0x8FE3FF));
     c.add(T(this, -220, y - 22, '수정 100', 36, C.text, { ox: 0, w: 900 }));

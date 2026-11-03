@@ -3,9 +3,9 @@
 //   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로 뽑기를 주지 않음
 //   광고 보상: 판 보상 2배(하루 3) · 무료 상자(하루 1, 수정 + 등급업 카드) — 소장자는 광고 없이 바로(횟수 같음)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 전장 전부 숨김, 게임은 그대로
-import { bm } from './oad_bm.js?v=0.97.3';
-import { load, save } from './save.js?v=0.97.3';
-import { HELP, roll, note, eligible, used } from './core/help.js?v=0.97.3';
+import { bm } from './oad_bm.js?v=0.97.4';
+import { load, save } from './save.js?v=0.97.4';
+import { HELP, roll, note, eligible, used } from './core/help.js?v=0.97.4';
 
 export { bm };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -55,6 +55,14 @@ export async function buyCrystals() {
 export async function buyAbyss() {
   const r = await bm.spend('abyss');
   if (r && r.ok) { const d = load(); d.abyss.extra = (d.abyss.extra || 0) + 1; save(); }
+  return r || { ok: false, reason: 'error' };
+}
+// 판 안 아이템 (메인 원정 · core/items.js): 가격은 서버 표만 — 값이 없으면(원어데이 밖 · 표에 없음) 0 → 화면에서 숨김
+//   한 번 쓸 때마다 앱 확인 창 → 골드 차감 → 성공이면 게임이 효과를 줌 (효과 · 판 상한은 게임 쪽)
+export const itemPrice = sku => (oadOn() ? price(sku) : 0);
+export async function buyUse(sku) {
+  const r = await bm.spend(sku);
+  if (r && r.ok) track('item_use', { sku });
   return r || { ok: false, reason: 'error' };
 }
 // 골드 · 광고 실패 안내 (부드럽게)
@@ -110,7 +118,7 @@ export function track(name, p = {}) {
 // ── 연속 실패 응원 선물 (규칙은 core/help.js) ──
 function helpSt() { const d = load(); d.help = roll(d.help, dayKey()); return d.help; }
 export function helpNote(r) { const d = load(); d.help = note(helpSt(), r); save(); return d.help.streak; }
-// 생존 원정 시작 때: 조건이 맞으면 두 그룹 모두 help_eligible 한 번 → 켜짐이면 true (선물 창) · 꺼짐은 조건만 소모
+// 메인 원정 시작 때: 조건이 맞으면 두 그룹 모두 help_eligible 한 번 → 켜짐이면 true (선물 창) · 꺼짐은 조건만 소모
 export function helpCheck(mode) {
   if (mode !== 'run') return false;
   const h = helpSt();
