@@ -1,16 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.97.7';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.97.7';
-import { DESC } from './Deck.js?v=0.97.7';
-import { act } from '../core/ai.js?v=0.97.7';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.7';
-import { audio } from '../audio.js?v=0.97.7';
-import { load, save } from '../save.js?v=0.97.7';
-import * as M from '../meta.js?v=0.97.7';
-import { inOAD, exitToOAD } from '../oad.js?v=0.97.7';
-import * as BM from '../bmflow.js?v=0.97.7';
-import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.97.7';
-import { guidePop } from '../guide.js?v=0.97.7';
+import { W, H } from '../config.js?v=0.97.8';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.97.8';
+import { DESC } from './Deck.js?v=0.97.8';
+import { act } from '../core/ai.js?v=0.97.8';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.8';
+import { audio } from '../audio.js?v=0.97.8';
+import { load, save } from '../save.js?v=0.97.8';
+import * as M from '../meta.js?v=0.97.8';
+import { inOAD, exitToOAD } from '../oad.js?v=0.97.8';
+import * as BM from '../bmflow.js?v=0.97.8';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.97.8';
+import { guidePop } from '../guide.js?v=0.97.8';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -29,7 +29,7 @@ const buzz = ms => { try { if (load().sfx && navigator.vibrate) navigator.vibrat
    — create() 첫 줄에서 통째로 덮어씀. 새 판 상태(this.xxx)를 만들면 여기에 같이 넣을 것 (안 넣으면 지난 판 값 · 지운 그림 참조가 남음)
    item_e2e '앱 흐름' · '연속 판' 이 둘째 판부터의 아이템 줄 · 칸 고르기 · 위험 표시를 확인 */
 const RUN0 = () => ({
-  powers: 0, acc: 0, paused: false, ended: false, awakened: false, leakedWave: false, voT: 0,
+  holds: new Set(), powers: 0, acc: 0, paused: false, ended: false, awakened: false, leakedWave: false, voT: 0,
   quit: false, helped: false, helpPop: null,
   hinted: false, danger: null, chillFx: null, minePool: null, recordSaid: false, manaT: 0,
   bpId: null, bpImg: null, bpObjs: null, bpArgs: null,
@@ -39,6 +39,11 @@ const RUN0 = () => ({
 
 export class PlayScene extends Phaser.Scene {
   constructor() { super('Play'); }
+  /* 판 멈춤 = 이유 집합 (v0.10.2): 'main'(안내 · 일시정지 · 선물 창 등 예전 paused 그대로) · 'pick'(아이템 칸 고르기) · 'pay'(골드 확인 창)
+     각자 걸고 각자 풂 — 이유가 하나라도 남으면 멈춤. 예전엔 boolean 하나를 칸 고르기 · 결제가 저장/복원하며 같이 써서 겹치면 꼬일 수 있었음 */
+  get paused() { return !!(this.holds && this.holds.size); }
+  set paused(v) { this.hold('main', v); }
+  hold(why, on = true) { (this.holds ||= new Set())[on ? 'add' : 'delete'](why); }
 
   create(data = {}) {
     const d = load(), q = new URLSearchParams(location.search);
@@ -752,10 +757,10 @@ export class PlayScene extends Phaser.Scene {
   }
   // 결제 → 성공이면 apply() (판 · 화면이 그대로일 때만) · 그동안 판 멈춤
   async payItem(it, apply) {
-    this.itemBusy = true; const was = this.paused; this.paused = true;
+    this.itemBusy = true; this.hold('pay');
     const run = this.runId, r = await BM.buyUse(it.sku);
     if (run !== this.runId || this.ended) return;
-    this.itemBusy = false; this.paused = was;
+    this.itemBusy = false; this.hold('pay', false);
     if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub, this.itemY - 120); this.drawItems(); return false; }
     const done = apply();
     this.render(); this.drawItems();
@@ -767,27 +772,27 @@ export class PlayScene extends Phaser.Scene {
     const s = this.s, ok = i => it.id === 'remove' ? s.canRemove(i) : s.canReroll(i), slots = [];
     for (let i = 0; i < SLOTS; i++) if (ok(i)) slots.push(i);
     if (!slots.length) return toast(this, it.id === 'reroll' ? '1눈 룬이 없어요' : '판이 비었어요', C.sub, this.itemY - 120);
-    this.paused = true;
-    const L = this.add.container(0, 0).setDepth(60), col = it.id === 'remove' ? 0xFF7A8A : 0x8FE3FF;
+    this.hold('pick');
+    const L = this.add.container(0, 0).setDepth(60), col = it.id === 'remove' ? 0xFF7A8A : 0x8FE3FF, gs = [];
     L.add(this.add.rectangle(this.BX + BW / 2, this.BY + BH / 2, BW + 44, BH + 44, 0x05061A, 0.35));
-    for (const i of slots) { const [x, y] = this.slotXY(i); const g = this.add.graphics(); g.lineStyle(8, col, 1).strokeRoundedRect(x - CS / 2 + 4, y - CS / 2 + 4, CS - 8, CS - 8, 30); L.add(g); this.tweens.add({ targets: g, alpha: 0.35, duration: 360, yoyo: true, repeat: -1 }); }
+    for (const i of slots) { const [x, y] = this.slotXY(i); const g = this.add.graphics(); g.lineStyle(8, col, 1).strokeRoundedRect(x - CS / 2 + 4, y - CS / 2 + 4, CS - 8, CS - 8, 30); L.add(g); gs.push(g); this.tweens.add({ targets: g, alpha: 0.35, duration: 360, yoyo: true, repeat: -1 }); }
     this.dieViews.forEach((dv, j) => { if (dv && !slots.includes(j)) dv.setAlpha(0.3); });
     const bar = this.add.container(W / 2, this.BY - 120); const bg = this.add.graphics(); bg.fillStyle(0x05061A, 0.9).fillRoundedRect(-430, -50, 860, 100, 30).lineStyle(3, col, 0.9).strokeRoundedRect(-430, -50, 860, 100, 30);
     bar.add([bg, T(this, -160, 0, it.id === 'remove' ? '비울 룬을 눌러요' : '바꿀 1눈 룬을 눌러요', 34, C.text, { w: 900 })]);
     bar.add(btn(this, 300, -2, 200, 76, '취소', () => this.endPick(), { style: 'ghost', size: 28 })); L.add(bar);
-    this.pick = { it, slots, L };
+    this.pick = { it, slots, L, gs };
   }
-  endPick(resume = true) {
+  endPick() {
     if (!this.pick) return;
+    this.tweens.killTweensOf(this.pick.gs);   /* 끝없이 반복하는 깜빡임 트윈이 지운 그림에 남아 판마다 쌓이던 것 */
     this.pick.L.destroy(); this.pick = null;
     this.dieViews.forEach(dv => dv && dv.setAlpha(1));
-    if (resume) this.paused = false;
+    this.hold('pick', false);
   }
   async pickSlot(i) {
     const pk = this.pick; if (!pk || this.itemBusy || !pk.slots.includes(i)) { if (pk && !this.itemBusy) this.endPick(); return; }
-    const it = pk.it; this.endPick(false);
-    const done = await this.payItem(it, () => it.id === 'remove' ? this.s.removeDie(i) : this.s.rerollDie(i));
-    if (done !== undefined && !this.ended) this.paused = false;
+    const it = pk.it; this.hold('pay'); this.endPick();   /* 칸 고르기 → 결제 사이에 판이 한 프레임도 안 움직이게 pay 를 먼저 검 */
+    await this.payItem(it, () => it.id === 'remove' ? this.s.removeDie(i) : this.s.rerollDie(i));
   }
 
   tutorial() {
@@ -801,7 +806,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.97.7').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.97.8').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤
@@ -837,7 +842,7 @@ export class PlayScene extends Phaser.Scene {
   gameOver() {
     this.ended = true;
     audio.stopMusic(); this.voice('over', 5);
-    this.endPick(false);
+    this.endPick();
     const s = this.s, r = { wave: s.wave, kills: s.kills, bossKills: s.bossKills, maxPips: s.maxPips, merges: s.merges, powers: this.powers, deck: s.deck.slice(), items: this.itemsUsed() };
     const res = M.finishRun(r, this.mode);
     /* 아이템을 쓴 판은 응원 선물 연속에선 '도움 받은 판'(연속 0)으로 · AI 실력 보정에도 안 넣음 (meta.finishRun) */
