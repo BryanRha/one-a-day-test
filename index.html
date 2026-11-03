@@ -20,23 +20,23 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple_180.png">
 <script>/* 설치 창(beforeinstallprompt)을 가장 먼저 받아 둠 — app.js · install.js 는 모듈이라 늦게 실려 놓칠 수 있음 (2026-10-28 설치 안내 ops A4) */addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});</script>
 <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
-<link rel="stylesheet" href="app.css?v=0.98.0">
+<link rel="stylesheet" href="app.css?v=0.98.1">
 </head>
-<body><!--oad:test--><div style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:99999;background:#E02440;color:#fff;font:700 11px sans-serif;padding:2px 10px;border-radius:0 0 8px 8px;pointer-events:none">TEST 0.98.0</div><!--/oad:test-->
+<body><!--oad:test--><div style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:99999;background:#E02440;color:#fff;font:700 11px sans-serif;padding:2px 10px;border-radius:0 0 8px 8px;pointer-events:none">TEST 0.98.1</div><!--/oad:test-->
 <div id="app">
   <main id="view"></main>
   <nav id="tabs" aria-label="아래 탭">
     <a class="tlogo" href="./" data-home aria-label="원어데이 메인으로">🌙 One a Day</a>
     <!-- 아래 탭 A안 (2026-10-30 대표 · lab/story-mock/oad.html): 게임 · 운세 · 너랑 · 보관함 — 설정은 머리줄 톱니 → 시트 · data-tab 은 안쪽 이름(게임 = today) -->
     <button data-tab="today"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10a5 5 0 014.9 6l-.8 3.6a2.6 2.6 0 01-4.5 1.2L14.9 16H9.1l-1.7 1.8a2.6 2.6 0 01-4.5-1.2L2.1 13A5 5 0 017 7zm0 2.6v1.6H5.4v1.6H7v1.6h1.6v-1.6h1.6v-1.6H8.6V9.6zm9 .4a1.1 1.1 0 100 2.2 1.1 1.1 0 000-2.2zm-2 2.4a1.1 1.1 0 100 2.2 1.1 1.1 0 000-2.2z"/></svg></span><span>게임</span></button>
-    <button data-tab="fortune"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM9 6.5a3.6 3.6 0 00-2 3.2h1.6A2 2 0 0110 7.9zM5.5 18.5h13l1.5 3h-16z"/></svg></span><span>운세</span></button>
-    <button data-tab="neorang" class="nr"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 012 2v9a2 2 0 01-2 2h-8.5L7 21v-4H4a2 2 0 01-2-2V6a2 2 0 012-2zm11.5 3.2A3 3 0 1018.4 11 2.4 2.4 0 0115.5 7.2z"/></svg></span><span>너랑</span></button>
+    <button data-tab="fortune"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" transform="rotate(-7 12 12)" d="M5.4 3h13.2a2.4 2.4 0 012.4 2.4v13.2a2.4 2.4 0 01-2.4 2.4H5.4A2.4 2.4 0 013 18.6V5.4A2.4 2.4 0 015.4 3z M10.9 5.2h2.2v6.3h-2.2z M13.1 7.4h4v2h-4z M6.9 12.6h10.2v6.6H6.9z M9 14.6v2.6h6v-2.6z"/></svg></span><span>점방</span></button>
+    <button data-tab="neorang" class="nr"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="nrgt"><rect width="24" height="24" fill="#fff"/><path d="M7.2 21.6V10.4A4.8 4.8 0 0 1 16.8 10.4V21.6Z" fill="#000"/></mask></defs><path mask="url(#nrgt)" d="M4.4 21.5V10.2A7.6 7.6 0 0 1 19.6 10.2V21.5Z"/><g class="onl"><path d="M12.25 8.23A2.4 2.4 0 1 0 14.92 11.2A2 2 0 0 1 12.25 8.23Z"/><path d="M9.6 13.3Q9.83 14.37 10.9 14.6Q9.83 14.83 9.6 15.9Q9.37 14.83 8.3 14.6Q9.37 14.37 9.6 13.3Z"/></g></svg></span><span>너랑</span></button>
     <button data-tab="box"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v4H3zM4.5 10h15v9.5h-15zM9 12.5h6v1.8H9z"/></svg></span><span>보관함</span></button>
   </nav>
 </div>
 <div id="player" hidden>
 </div>
 <div id="sheet" hidden><div class="dim"></div><div class="panel"></div></div>
-<script type="module" src="app.js?v=0.98.0"></script>
+<script type="module" src="app.js?v=0.98.1"></script>
 </body>
 </html>

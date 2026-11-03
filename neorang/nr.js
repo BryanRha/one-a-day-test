@@ -138,7 +138,9 @@ const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('
 /* 비밀 글: 원고는 '이용자'로 적혀 있음 → 화면에선 '나' */
 const mine = t => String(t).replace(/이용자가/g, '내가').replace(/이용자의/g, '나의').replace(/이용자를/g, '나를').replace(/이용자에게/g, '나에게').replace(/이용자는/g, '나는').replace(/이용자/g, '나');
 const short1 = t => { const s = mine(t).split(/(?<=[.:—])\s/)[0]; return s.length > 46 ? s.slice(0, 45) + '…' : s; };
-const memText = m => String(m).replace(/\{name\}|\{호칭\}/g, nm());
+/* 기억 줄의 이용자 자리표시('{name}' · '{호칭}' · 따옴표 감싼 것) → 내 호칭 + 맞는 조사 (서버 story.js nameFill 과 같은 규칙) */
+const J2 = { 은: ['은', '는'], 는: ['은', '는'], 이: ['이', '가'], 가: ['이', '가'], 을: ['을', '를'], 를: ['을', '를'], 과: ['과', '와'], 와: ['과', '와'], 이랑: ['이랑', '랑'], 랑: ['이랑', '랑'] };
+const memText = m => String(m).replace(/['"‘’“”]?\{\{?(?:name|호칭)\}?\}['"‘’“”]?(이랑|은|는|이|가|을|를|과|와|랑)?/g, (_, j) => nm() + (j ? J2[j][josa(nm(), 0, 1)] : ''));
 const mainW = () => W(S.lastW) || W('c17');
 
 /* ── 주소 ── */
