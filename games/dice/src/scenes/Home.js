@@ -1,11 +1,11 @@
 // 홈: 생존 원정 · 오늘의 도전 · 덱 · 미션 · 연속 출석
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.97.2';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.2';
-import { audio } from '../audio.js?v=0.97.2';
-import { load } from '../save.js?v=0.97.2';
-import * as M from '../meta.js?v=0.97.2';
-import * as BM from '../bmflow.js?v=0.97.2';
-import { RUNES } from '../core/sim.js?v=0.97.2';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.97.3';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
+import { audio } from '../audio.js?v=0.97.3';
+import { load } from '../save.js?v=0.97.3';
+import * as M from '../meta.js?v=0.97.3';
+import * as BM from '../bmflow.js?v=0.97.3';
+import { RUNES } from '../core/sim.js?v=0.97.3';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -57,7 +57,7 @@ export class HomeScene extends Phaser.Scene {
     if (M.hasNew()) dot(W - 62, ky - 90);
     btn(this, W - 180, ky + 30, 260, 84, '룬 제단', () => this.go('Altar'), { style: 'indigo', icon: 'i_star', size: 30 });
     if (M.freeToday() || d.keys > 0 || d.legendTix > 0) dot(W - 62, ky + 2);
-    btn(this, W - 180, ky + 122, 260, 84, `보상 길 ${M.road().level}`, () => this.go('Road'), { style: 'gold', icon: 'i_crown', size: 28 });
+    btn(this, W - 180, ky + 122, 260, 84, `미션 보상 ${M.road().level}`, () => this.go('Road'), { style: 'gold', icon: 'i_crown', size: 28 });
     if (M.roadUnclaimed()) dot(W - 62, ky + 94);
     // 미션
     this.my = ky + 345 + sp; this.drawMissions();
@@ -98,7 +98,7 @@ export class HomeScene extends Phaser.Scene {
         if (on || this.busy) return;
         if (!own && f.owner) return toast(this, '원어데이에서 이 게임을 소장하면 무료로 열려요', C.sub);
         if (!own && f.sku) {
-          this.busy = true; const r = await BM.buyItem(f.sku); this.busy = false;
+          this.busy = true; const run = this.runId, r = await BM.buyItem(f.sku); if (run !== this.runId) return; this.busy = false;
           if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
         } else if (!own && !M.buyField(f.id)) return toast(this, '수정이 부족해요', C.sub);
         M.setField(f.id);

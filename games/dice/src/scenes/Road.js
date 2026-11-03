@@ -1,9 +1,9 @@
 // 보상 길: 원정마다 명성이 쌓이고 단계마다 보상 (10단계마다 전설 확정권) — 끌어서 위아래로 보기
-import { W, H } from '../config.js?v=0.97.2';
-import { T, C, fmt, btn, iconBtn, toast } from '../pui.js?v=0.97.2';
-import { audio } from '../audio.js?v=0.97.2';
-import { load } from '../save.js?v=0.97.2';
-import * as M from '../meta.js?v=0.97.2';
+import { W, H } from '../config.js?v=0.97.3';
+import { T, C, fmt, btn, iconBtn, toast } from '../pui.js?v=0.97.3';
+import { audio } from '../audio.js?v=0.97.3';
+import { load } from '../save.js?v=0.97.3';
+import * as M from '../meta.js?v=0.97.3';
 
 const ROW = 150;
 
@@ -35,7 +35,7 @@ export class RoadScene extends Phaser.Scene {
     // 위쪽 (고정)
     this.add.rectangle(W / 2, top / 2, W, top, 0x05061A, 0.7).setInteractive();
     iconBtn(this, 80, 92, 'i_home', () => this.go('Home'), 96);
-    T(this, W / 2, 92, '보상 길', 44, C.text, { w: 900 });
+    T(this, W / 2, 92, '미션 보상', 44, C.text, { w: 900 });
     T(this, W / 2, 190, r.level >= M.ROAD_MAX ? `최고 단계 ${M.ROAD_MAX}` : `${r.level}단계`, 64, C.gold, { w: 900 });
     const g = this.add.graphics(), bw = 760, k = r.level >= M.ROAD_MAX ? 1 : r.into / r.need;
     g.fillStyle(0xFFFFFF, 0.1).fillRoundedRect(W / 2 - bw / 2, 260, bw, 22, 11).fillStyle(0xF5C451, 1).fillRoundedRect(W / 2 - bw / 2, 260, Math.max(22, bw * k), 22, 11);

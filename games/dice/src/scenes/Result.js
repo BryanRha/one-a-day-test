@@ -1,11 +1,11 @@
 // 결과: 도달 웨이브 · 처치 · 보스 · 최고 눈 · 받은 수정 · 새 해금
-import { W, H } from '../config.js?v=0.97.2';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.97.2';
-import { audio } from '../audio.js?v=0.97.2';
-import { load } from '../save.js?v=0.97.2';
-import * as M from '../meta.js?v=0.97.2';
-import * as BM from '../bmflow.js?v=0.97.2';
-import { RUNES } from '../core/sim.js?v=0.97.2';
+import { W, H } from '../config.js?v=0.97.3';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.97.3';
+import { audio } from '../audio.js?v=0.97.3';
+import { load } from '../save.js?v=0.97.3';
+import * as M from '../meta.js?v=0.97.3';
+import * as BM from '../bmflow.js?v=0.97.3';
+import { RUNES } from '../core/sim.js?v=0.97.3';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -21,7 +21,7 @@ export class ResultScene extends Phaser.Scene {
     if (r.newBest) { audio.play('sfx_wave', { volume: 0.8 }); this.time.delayedCall(200, () => this.cameras.main.flash(260, 255, 230, 200)); }
     const cy = top + 470;
     this.add.existing(panel(this, W / 2, cy, 900, 380));
-    [['처치한 적', fmt(r.kills)], ['보스 처치', `${r.bossKills}`], ['최고 주사위', `${r.maxPips}눈${r.maxPips >= 7 ? ' · 각성' : ''}`], ['얻은 수정', `◆ ${r.crystals}`], ['명성 (보상 길)', `+${r.fame || 0}`]].forEach(([k, v], i) => {
+    [['처치한 적', fmt(r.kills)], ['보스 처치', `${r.bossKills}`], ['최고 주사위', `${r.maxPips}눈${r.maxPips >= 7 ? ' · 각성' : ''}`], ['얻은 수정', `◆ ${r.crystals}`], ['명성 (미션 보상)', `+${r.fame || 0}`]].forEach(([k, v], i) => {
       const y = cy - 150 + i * 74; T(this, 150, y, k, 36, C.sub, { ox: 0, w: 800 }); const t = T(this, W - 150, y, v, 42, i === 3 ? '#8FE3FF' : i === 4 ? C.gold : C.text, { ox: 1, w: 900 }); if (i === 3) this.cryT = t;
     });
     if (r.keys) {   // 웨이브 이정표 → 제단 열쇠
@@ -35,7 +35,7 @@ export class ResultScene extends Phaser.Scene {
     if (add > 0 && BM.oadOn() && BM.x2Left() && (BM.owned() || BM.adReady()) && !r.bot) {
       const own = BM.owned();
       this.x2 = btn(this, W / 2, by - 170, 700, 110, own ? `소장 혜택 · 수정 2배  ◆+${add}` : `광고 보고 수정 2배  ◆+${add}`, async () => {
-        if (this.busy) return; this.busy = true; const res = await BM.doubleReward(r.crystals); this.busy = false;
+        if (this.busy) return; this.busy = true; const run = this.runId, res = await BM.doubleReward(r.crystals); if (run !== this.runId) return; this.busy = false;
         if (!res.ok) { const m = BM.failMsg(res); if (m) toast(this, m, C.sub, by - 320); return; }
         this.x2.destroy(); this.cryT.setText(`◆ ${r.crystals + res.add}`); this.tweens.add({ targets: this.cryT, scale: 1.3, duration: 160, yoyo: true });
         audio.play('sfx_awaken', { volume: 0.7 }); toast(this, `수정 +${res.add}`, '#8FE3FF', by - 320);

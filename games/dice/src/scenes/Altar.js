@@ -1,17 +1,18 @@
 // 룬 제단 (뽑기): 게임에서 번 수정·열쇠·매일 무료 1회로만 · 확률 공개 · 천장 · 10회 영웅 보장 · 중복은 등급업 카드
-import { W, H } from '../config.js?v=0.97.2';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.2';
-import { audio } from '../audio.js?v=0.97.2';
-import { load, save, syncPity } from '../save.js?v=0.97.2';
-import * as BM from '../bmflow.js?v=0.97.2';
-import * as M from '../meta.js?v=0.97.2';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.2';
+import { W, H } from '../config.js?v=0.97.3';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
+import { audio } from '../audio.js?v=0.97.3';
+import { load, save, syncPity } from '../save.js?v=0.97.3';
+import * as BM from '../bmflow.js?v=0.97.3';
+import * as M from '../meta.js?v=0.97.3';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.3';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 
 export class AltarScene extends Phaser.Scene {
   constructor() { super('Altar'); }
   create() {
+    this.busy = false; this.leaving = false;   /* 씬 재사용: 지난번 뽑기 연출 중에 나갔으면 busy 가 남아 있음 (main.js 에서도 초기화) */
     if (syncPity()) save();   /* 다른 기기에서 쌓은 천장 기록이 더 나중이면 그쪽으로 (save.js) */
     const d = load();
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
@@ -99,7 +100,7 @@ export class AltarScene extends Phaser.Scene {
       if (best === 3) L.add(T(this, W / 2, ey, '전설 룬!', 56, C.gold, { w: 900, ls: 4 }));
       else if (nw) L.add(T(this, W / 2, ey, `새 룬 ${nw}개!`, 48, C.gold, { w: 900 }));
       const ok = btn(this, nw ? W / 2 - 240 : W / 2, ey + 150, 440, 130, '확인', () => { L.destroy(); this.busy = false; this.refresh(); }, { style: nw ? 'ghost' : 'gold', size: 40 }); L.add(ok);
-      if (nw) L.add(btn(this, W / 2 + 240, ey + 150, 440, 130, '덱에 넣으러', () => this.go('Deck'), { style: 'gold', icon: 'i_grid', size: 36 }));
+      if (nw) L.add(btn(this, W / 2 + 240, ey + 150, 440, 130, '덱으로 이동', () => this.go('Deck'), { style: 'gold', icon: 'i_grid', size: 36 }));
     });
   }
   shop() {
@@ -128,7 +129,7 @@ export class AltarScene extends Phaser.Scene {
     if (!boxLeft) c.add(T(this, 290, y, '내일 다시', 30, C.dim, { w: 800 }));
     else if (!own && !BM.adReady()) c.add(T(this, 290, y, '오늘 광고 끝', 28, C.dim, { w: 800 }));
     else c.add(btn(this, 290, y, 210, 96, own ? '바로 받기' : '광고 보기', async () => {
-      if (this.busy) return; this.busy = true; const r = await BM.freeBox(); this.busy = false;
+      if (this.busy) return; this.busy = true; const run = this.runId, r = await BM.freeBox(); if (run !== this.runId) return; this.busy = false;
       if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
       audio.play('sfx_awaken', { volume: 0.6 }); reopen(); toast(this, `수정 +${r.crystals} · ${RUNES[r.rune].name} 카드 +1`, C.gold);
     }, { style: 'green', size: own ? 28 : 30 }));
@@ -138,7 +139,7 @@ export class AltarScene extends Phaser.Scene {
     c.add(T(this, -220, y - 22, '수정 100', 36, C.text, { ox: 0, w: 900 }));
     c.add(T(this, -220, y + 26, '원어데이 골드로 · 뽑기 확률 · 천장은 그대로', 24, C.sub, { ox: 0, w: 800 }));
     c.add(btn(this, 290, y, 210, 96, `🪙${BM.price('crystal100')}`, async () => {
-      if (this.busy) return; this.busy = true; const r = await BM.buyCrystals(); this.busy = false;
+      if (this.busy) return; this.busy = true; const run = this.runId, r = await BM.buyCrystals(); if (run !== this.runId) return; this.busy = false;
       if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
       audio.play('sfx_power', { volume: 0.6 }); this.refresh(); toast(this, '수정 +100', '#8FE3FF');
     }, { style: 'gold', size: 32, ls: 0 }));
@@ -149,5 +150,5 @@ export class AltarScene extends Phaser.Scene {
     [0, 1, 2, 3].forEach(k => { const all = RUNE_ORDER.filter(r => RARITY[r] === k), own = all.filter(r => d.unlocked[r]).length; c.add(T(this, 0, -330 + k * 100, `${RARITY_NAME[k]}  ${Math.round(M.ODDS[k] * 100)}%   ·   ${all.length}종 (보유 ${own})`, 34, hex(RARITY_COLOR[k]), { w: 900 })); });
     c.add(T(this, 0, 220, `· ${M.PITY}회 안에 전설이 반드시 나와요\n· 10회 뽑기는 영웅 이상 1개 보장\n· 같은 등급 안에서는 아직 없는 룬이 더 잘 나와요\n· 이미 가진 룬은 등급업 카드가 돼요\n· ${BM.oadOn() ? '수정은 게임에서 얻고, 원어데이 골드로도 살 수 있어요\n  (골드로 바로 뽑지는 않아요)' : '수정은 게임 안에서만 얻어요 (구매 없음)'}`, 28, C.sub, { w: 700, lh: 14 }));
   }
-  go(k) { audio.stopMusic(); this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
+  go(k) { if (this.leaving) return; this.leaving = true; audio.stopMusic(); this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
 }

@@ -1,12 +1,12 @@
 // 아케이드: 보스 러시 · 랜덤 아레나 · 단일 룬 시련 · 심연 광산 (원작 아케이드 모드를 혼자 하는 버전으로)
-import { W, H } from '../config.js?v=0.97.2';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.2';
-import { audio } from '../audio.js?v=0.97.2';
-import { load, save } from '../save.js?v=0.97.2';
-import * as M from '../meta.js?v=0.97.2';
-import * as BM from '../bmflow.js?v=0.97.2';
-import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.2';
-import { DESC } from './Deck.js?v=0.97.2';
+import { W, H } from '../config.js?v=0.97.3';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.3';
+import { audio } from '../audio.js?v=0.97.3';
+import { load, save } from '../save.js?v=0.97.3';
+import * as M from '../meta.js?v=0.97.3';
+import * as BM from '../bmflow.js?v=0.97.3';
+import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.97.3';
+import { DESC } from './Deck.js?v=0.97.3';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const LOOK = { rush: ['boss_serpent', 0xFF5A7A], arena: ['die_echo', 0xB59BFF], mono: ['die_flame', 0xFF8A3D], abyss: ['boss_statue', 0x5EE3FF] };
@@ -52,7 +52,7 @@ export class ArcadeScene extends Phaser.Scene {
     this.pick(k);
   }
   async buyAbyss() {
-    if (this.busy) return; this.busy = true; const r = await BM.buyAbyss(); this.busy = false;
+    if (this.busy) return; this.busy = true; const run = this.runId, r = await BM.buyAbyss(); if (run !== this.runId) return; this.busy = false;
     if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); return; }
     audio.play('sfx_awaken', { volume: 0.6 }); this.start('abyss');
   }

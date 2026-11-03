@@ -1,16 +1,16 @@
-import { W, BASE_H, setH } from './config.js?v=0.97.2';
-import { audio } from './audio.js?v=0.97.2';
-import { WindFX } from './fx.js?v=0.97.2';
-import { BootScene } from './scenes/Boot.js?v=0.97.2';
-import { HomeScene } from './scenes/Home.js?v=0.97.2';
-import { AltarScene } from './scenes/Altar.js?v=0.97.2';
-import { RoadScene } from './scenes/Road.js?v=0.97.2';
-import { ArcadeScene } from './scenes/Arcade.js?v=0.97.2';
-import { DeckScene } from './scenes/Deck.js?v=0.97.2';
-import { PlayScene } from './scenes/Play.js?v=0.97.2';
-import { ResultScene } from './scenes/Result.js?v=0.97.2';
-import { installBack } from './oad.js?v=0.97.2';
-import { initBM } from './bmflow.js?v=0.97.2';
+import { W, BASE_H, setH } from './config.js?v=0.97.3';
+import { audio } from './audio.js?v=0.97.3';
+import { WindFX } from './fx.js?v=0.97.3';
+import { BootScene } from './scenes/Boot.js?v=0.97.3';
+import { HomeScene } from './scenes/Home.js?v=0.97.3';
+import { AltarScene } from './scenes/Altar.js?v=0.97.3';
+import { RoadScene } from './scenes/Road.js?v=0.97.3';
+import { ArcadeScene } from './scenes/Arcade.js?v=0.97.3';
+import { DeckScene } from './scenes/Deck.js?v=0.97.3';
+import { PlayScene } from './scenes/Play.js?v=0.97.3';
+import { ResultScene } from './scenes/Result.js?v=0.97.3';
+import { installBack } from './oad.js?v=0.97.3';
+import { initBM } from './bmflow.js?v=0.97.3';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }
@@ -23,6 +23,11 @@ async function start() {
     scene: [BootScene, HomeScene, DeckScene, AltarScene, RoadScene, ArcadeScene, PlayScene, ResultScene],
   });
   audio.attach(game);
+  // Phaser 는 화면을 다시 열 때 같은 씬 객체를 재사용 → '진행 중' 표시(busy · leaving)가 지난번 값으로 남으면 버튼이 조용히 안 먹음
+  //   (2026-11-03 제단: 뽑기 연출 중 뒤로가기 · '덱으로 이동' 뒤 다시 오면 뽑기가 안 됨). 모든 씬을 create() 전에 한곳에서 초기화
+  //   runId: 화면을 열 때마다 +1 — await 뒤에 돌아온 옛 화면의 처리(골드 구매 등)가 새 화면 상태를 건드리지 않게 비교용
+  //   씬 객체는 게임 준비(ready) 뒤에 만들어지므로 그때 붙임
+  game.events.once('ready', () => game.scene.scenes.forEach(sc => sc.sys.events.on('start', () => { sc.busy = false; sc.leaving = false; sc.runId = (sc.runId || 0) + 1; })));
   setH(game.scale.height);
   game.scale.on('resize', gs => setH(gs.height));
   // 화면이 넓어지면(폴더블 펼침 · 가로 회전) EXPAND 가 가로로 늘어나 화면이 왼쪽으로 쏠림
