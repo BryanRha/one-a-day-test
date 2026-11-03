@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.96.6';
-import * as G from './sim.js?v=0.96.6';
-import { bm } from './oad_bm.js?v=0.96.6';
-import { sfx, setAudio, AUD } from './audio.js?v=0.96.6';
-import { pushBack } from './oad.js?v=0.96.6';
+import * as D from './data.js?v=0.96.7';
+import * as G from './sim.js?v=0.96.7';
+import { bm } from './oad_bm.js?v=0.96.7';
+import { sfx, setAudio, AUD } from './audio.js?v=0.96.7';
+import { pushBack } from './oad.js?v=0.96.7';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -111,7 +111,7 @@ function morePop() { const items = [['att', 'big', '출석', () => attendPop()],
   me.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { me.close(); setTimeout(items.find(x => x[0] === b.dataset.m)[3], 200); }); me.el.querySelector('[data-a="ok"]').onclick = () => me.close(); }
 export function dots() {
   if (popEl && !popEl.querySelector('.dlg') && popEl.style.pointerEvents !== 'none') popEl.style.pointerEvents = 'none';   /* 창이 없는데 빈 창 층이 누름을 먹지 않게 (덮인 버튼 0 · 구조적) */
-  if (hudEl) hudEl.classList.toggle('thin', !tutOn() && S.hudOpen !== true);   /* 처음 안내가 끝나면 위쪽 칸은 얇게(목표 한 줄) · 접기 단추로 펼침 */
+  if (hudEl) hudEl.classList.toggle('thin', S.hudOpen !== true);   /* 위쪽 칸은 처음부터 얇게(목표 한 줄) · 접기 단추로 펼침 · 접힘 상태는 저장 (대표 11-03 '접어도 안 접혀': 예전엔 처음 안내 동안 여기서 늘 펼침으로 되돌렸음) */
   const pads = D.PADS.filter(p => G.canBuild(p.id)), zoneOk = D.ZONES.some(z => S.zones[z.id].st === 'locked' && G.zoneNeedOk(z.id));
   const amen = Object.keys(D.AMEN).some(a => !S.amen[a] && S.coin >= G.amenCost(a)) && D.PADS.every(p => !G.canBuild(p.id) || S.coin < G.padCost());
   const fac = zoneOk || (pads.length && S.coin >= G.padCost()) || amen;
@@ -121,11 +121,12 @@ export function dots() {
   const mis = G.dailyList().filter(m => !m.got && m.p >= m.n).length + (G.dailyAllReady() ? 1 : 0) + G.repeatList().filter(q => !q.done && q.have >= q.need).length + (G.attendReady() ? 1 : 0) + G.playReady().filter(p => p.ready).length + G.seasonList().filter(m => m.open && !m.got && m.p >= m.n).length;
   const shop = (bm.info.ok && G.adLeft('box') > 0 && bm.info.ads.reward) || S.gem >= D.BOX.cost;
   const T = barEl.querySelectorAll('.tab');
+  { const att = G.attendReady(), play = G.playReady().some(p => p.ready);   /* 오른쪽 단추는 처음부터 [메뉴] 하나 + 받을 게 있을 때만 출석 · 선물 (대표 11-03 처음 10분 밀도 · 예전엔 안내 중 이 줄 전에 돌아가 6개가 다 보였음) */
+    for (const [id, on] of [['#sAtt', att], ['#sPlay', play], ['#sBuff', false], ['#sSnd', false], ['#sHelp', false]]) { const el = $(id); if (el) el.style.display = on ? '' : 'none'; } }
   if (tutOn()) { const tab = tutTab(); TABS.forEach((t, i) => setDot(T[i], t.id === tab)); setDot($('#sAtt'), false); setDot($('#sPlay'), false); return; }   /* 안내 중에는 안내가 가리키는 한 곳만 (퀄리티 A2) */
   /* 알림 점은 하나만 (대표 11-02) — 원작처럼 '지금 가장 할 만한 곳' 한 곳: 받을 보상 → 지을 것 → 메뉴 → 직원 → 매점 순 */
   const att = G.attendReady(), play = G.playReady().some(p => p.ready), one = [[T[3], mis], [T[0], fac], [T[1], menuNew || menuUp], [T[2], staff], [T[4], shop]].find(([, on]) => on);
   TABS.forEach((t, i) => setDot(T[i], one && one[0] === T[i])); setDot($('#sAtt'), false); setDot($('#sPlay'), false);
-  for (const [id, on] of [['#sAtt', att], ['#sPlay', play], ['#sBuff', false], ['#sSnd', false], ['#sHelp', false]]) { const el = $(id); if (el) el.style.display = on ? '' : 'none'; }
 }
 export const lineReady = line => { const st = D.LINES.find(l => l.id === line).st; return G.built(st) && !!G.R.cooks[st]; };
 let tAcc = 0;
@@ -594,6 +595,8 @@ function tutSaw() { tut(); }
 export const tutOn = () => S.tut < TUT.length;
 const tutTab = () => { const s = TUT[S.tut]; return s && s.tab && (!s.when || s.when()) ? s.tab : null; };
 export const tutSay = () => (TUT[S.tut] || {}).say || '';
+export const tutAt = () => tutOn() ? (TUT[S.tut] || {}).at || null : null;
+export const tutPad = () => tutOn() ? (TUT[S.tut] || {}).pad || null : null;   /* 처음 안내가 지금 가리키는 빈자리 하나 (그 이름표만 보임 · 대표 11-03 '안내는 지금 할 것 하나만') */
 function tut() {
   if (S.tut >= TUT.length) { if (ptr) { ptr.remove(); ptr = null; } if (hintEl) { hintEl.remove(); hintEl = null; } return; }
   const s = TUT[S.tut]; if (s.at === 'dish' && !cur && !curDlg) G.tutDish();   /* 안내 1단계: 누를 베이글이 늘 손 밑에 (퀄리티 v2 Top 2) */
