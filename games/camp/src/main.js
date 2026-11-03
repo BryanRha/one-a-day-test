@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.96.9';
-import * as G from './sim.js?v=0.96.9';
-import * as C from './chars.js?v=0.96.9';
-import * as C2 from './chars2d.js?v=0.96.9';
-import * as UI from './ui.js?v=0.96.9';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.96.9';
-import { bm } from './oad_bm.js?v=0.96.9';
-import { installBack } from './oad.js?v=0.96.9';
+import * as D from './data.js?v=0.97.0';
+import * as G from './sim.js?v=0.97.0';
+import * as C from './chars.js?v=0.97.0';
+import * as C2 from './chars2d.js?v=0.97.0';
+import * as UI from './ui.js?v=0.97.0';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.97.0';
+import { bm } from './oad_bm.js?v=0.97.0';
+import { installBack } from './oad.js?v=0.97.0';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
@@ -121,16 +121,17 @@ export function render() {
     if (S.deco.harvest) { const [hx, hy] = D.HARVEST_POS; const im = document.createElement('img'); im.className = 'fac'; im.src = IMG('deco/set_harvest'); im.draggable = false; Object.assign(im.style, { left: hx + 'px', top: hy + 10 + 'px', width: Math.round(3.4 * D.PX_M * D.PERSP(hy)) + 'px' }); layer.fac.append(im); } }
   if (S.owner) { const im = facImg(IMG('fac/lantern'), ...D.P(110, 1180), D.DECO_K * D.PERSP(D.P(110, 1180)[1])); im.style.filter = 'sepia(.6) saturate(1.8) hue-rotate(-12deg) drop-shadow(0 0 8px #FFE38A)'; layer.fac.append(im); }
   /* 시설 */
+  const gt = UI.goalTarget(); lastGoalKey = gt.k + ':' + gt.v;
   for (const p of D.PADS) {
     const b = S.pads[p.id], [x, y] = p.pos; let pk = D.PERSP(y);
     if (b && b.lv > 0) { const f = D.FAC[p.fac], vl = G.working(p.id) ? b.lv - 1 : b.lv, st = D.stageOf(vl), sp = D.stepOf(vl), w = D.STAGE.ws(p.fac, sp) * pk, im = stImg(p.fac, st, x, y + 12 * pk, w, 'fac s' + st); (f.kind === 'seat' ? layer.front : layer.fac).append(im); facEl[p.id] = im; stepDeco(im, f.name, sp, x, y + 12 * pk, w, pk);
       propsAt(p.id, vl, x, y + 12 * pk, w, pk);
-      tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
-    else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.style.left = x + 'px'; pd.style.top = y + 'px'; pd.innerHTML = (S.coin >= G.padCost() && p === D.PADS.find(q => G.canBuild(q.id))) || UI.tutPad() === p.id ? `<i class="ham"></i>${UI.tutPad() === p.id ? `<span>+ ${D.FAC[p.fac].name}</span>` : ''}` : '';   /* 지을 수 있을 때만 작은 망치 + 빛 · 이름표는 처음 안내가 가리키는 빈자리 하나만 (세계 안 제자리 고정) */ pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
+      fname(f.name, x, y + 46 * pk); tag(p.id, x, y + 18 * pk); hit(x, y - 20 * pk, Math.max(110, w * 1.05) * pk, Math.max(90, w * 0.8) * pk, () => stationTap(f.kind === 'cook' ? p.fac : null, () => UI.facDialog(p.id)), p.id); }
+    else if (G.zoneOpen(p.zone)) { const pd = document.createElement('div'); pd.className = 'pad' + (S.coin < G.padCost() ? ' cant' : ''); pd.style.left = x + 'px'; pd.style.top = y + 'px'; const aim = UI.tutPad() === p.id || (gt.k === 'build' && gt.v === p.id); if (aim) pd.classList.add('aim'); pd.innerHTML = (S.coin >= G.padCost() && p === D.PADS.find(q => G.canBuild(q.id))) || aim ? `<i class="ham"></i>${aim ? `<span>+ ${D.FAC[p.fac].name}</span>` : ''}` : '';   /* 지을 수 있을 때만 작은 망치 + 빛 · 빈자리 이름표는 목표 · 처음 안내가 그 자리를 가리킬 때만 (대표 11-03 · 세계 안 제자리 고정) */ pd.onclick = () => { sfx('tap'); UI.buildDialog(p.id); }; layer.ui.append(pd); }
   }
   /* 공용 키친 빵 오븐 (배경 그림 속 화덕) */
   { const vl = G.working('oven') ? S.oven.lv - 1 : S.oven.lv, st = D.stageOf(vl), sp = D.stepOf(vl), [ox, oy] = D.OVEN_AT, im = stImg('oven', st, ox, oy, D.STAGE.ws('oven', sp) * D.PERSP(oy), 'fac s' + st); layer.fac.append(im); facEl.oven = im; if (sp >= 3) im.classList.add('lit'); if (sp >= 9) im.classList.add('gold'); propsAt('oven', vl, ox - 6, oy + 4, 70, 0.8, true); if (roofEl) layer.fac.append(roofEl); }
-  tag('oven', ...D.P(772, 932)); hit(D.KITCHEN.pos[0], D.KITCHEN.pos[1] + 10, 210, 150, () => stationTap('oven', () => UI.facDialog('oven')), 'oven');
+  fname('빵 오븐', D.OVEN_AT[0], D.OVEN_AT[1] + 34); tag('oven', ...D.P(772, 932)); hit(D.KITCHEN.pos[0], D.KITCHEN.pos[1] + 10, 210, 150, () => stationTap('oven', () => UI.facDialog('oven')), 'oven');
   hit(D.WELCOME.pos[0], D.WELCOME.pos[1], 240, 140, () => UI.openTab('shop'));
   /* 편의 설비 (키친 · 웰컴센터 앞 작은 표지) */
   const am = Object.keys(D.AMEN).filter(a => S.amen[a]);
@@ -157,6 +158,9 @@ export function render() {
   catEl && layer.ui.append(catEl);
   for (const el of dishEls.values()) layer.ui.append(el); for (const el of tipEls.values()) layer.ui.append(el); for (const el of [sheepEl, giftBub, visBub]) if (el) layer.ui.append(el);
 }
+/* 지어진 시설 이름표 (대표 11-03 '이름이 없으니 뭘 어디서 하는지 모르겠어'): 시설 바로 아래 · 세계 좌표 고정 · 작은 반투명 종이 띠 · 멀리 줄이면 숨김(.far) */
+function fname(t, x, y) { const d = document.createElement('div'); d.className = 'fname'; d.textContent = t; d.style.left = x + 'px'; d.style.top = y + 'px'; layer.ui.append(d); }
+let lastGoalKey = '';
 function tag(t, x, y) { const d = document.createElement('div'); d.className = 'lvtag tapz'; d.onclick = ev => { ev.stopPropagation(); sfx('tap'); UI.facDialog(t); }; d.style.left = x + 'px'; d.style.top = y + 'px'; d.dataset.t = t; layer.ui.append(d); updTag(d); }
 function updTag(d) { const t = d.dataset.t, o = t === 'oven' ? S.oven : S.pads[t]; if (!o) return; const w = G.working(t); const can = !w && o.lv < D.UP.max && S.coin >= G.upCostOf(t);
   const txt = w ? `<img src="${IMG('ui/hammer')}" alt="">${UI.clock(w.end - S.t)}` : UI.tutAt() === t ? `Lv.${o.lv}${can ? ' ▲' : ''}` : '▲'; if (d.dataset.h !== txt) { d.innerHTML = txt; d.dataset.h = txt; } d.classList.toggle('up', can); d.classList.toggle('work', !!w); d.classList.toggle('show', !!w || can || UI.tutAt() === t); }   /* 처음 안내 중에도 안내가 가리키는 표지 하나만 이름(Lv) 표시 */   /* 화면 덜어내기 (대표 11-02): Lv 표지는 강화할 수 있을 때 작은 ▲ · 공사 중일 때 시계만 · 평소엔 숨김 (Lv 는 시설을 누르면 창에서) */
@@ -192,7 +196,8 @@ export function camTo(x, y, z, auto) { if (auto && touching()) return false; CAM
    예전(퀄리티 v2 Top 5 · 10-30)엔 화면 끝 · 고정 UI 밑 라벨을 안쪽으로 밀어 넣었는데, 카메라를 끌면 라벨이 화면 가장자리에 붙어 따라왔음 → 밀어 넣기는 화면 고정 UI 에만 · 여기선 남은 밀림을 지움 */
 let clampT = 0;
 function clampLabels() {
-  zoneArrow();
+  zoneArrow(); frame.classList.toggle('far', CAMV.z < 0.95);   /* 많이 줄이면 시설 이름표 숨김 */
+  { const gt = UI.goalTarget(), k = gt.k + ':' + gt.v; if (k !== lastGoalKey) render(); }   /* 목표가 바뀌면 빈자리 이름표를 다시 */
 }
 /* 열 수 있는 존이 화면 밖이면 그쪽 가장자리에 작은 화살표 하나 (6초 뒤 사라짐 · 누르면 그 존으로) */
 let arrowEl = null; const arrowSeen = {};

@@ -409,10 +409,10 @@ export const STALL = [['treat', '캠핑 쿠키 3', { min: 15 }], ['big', '특별
 
 /* ── 즉시 완성 (docs/bm-policy.md 2-1 · farm/inst.js 와 같은 계산) ── */
 /* 즉시 완성 값 v2 (대표 11-03 '솔방울이 너무 싸다'): 남은 시간이 길수록 더 비싸지는 곡선 — 솔방울 = (남은 분 ÷ 5)^1.3 · 1분 이하는 무료
-   2분 1 · 10분 3 · 30분 12 · 1시간 25 · 2시간 60 · 4시간 150 (예전: 5분마다 1 · 최대 25) · 원어데이 골드 경로는 서버 등급(inst1~25)까지만 · 그보다 비싸면 솔방울만 (PROJECT_STATUS 28장) */
-export const INST = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200, 250, 300];
-export const INST_MIN = 10, INST_FREE = 60, GOLD_MAX = 25;
-const down = g => INST.reduce((a, v) => (v <= g ? v : a), INST[0]);
+   2분 1 · 10분 3 · 30분 12 · 1시간 30 · 2시간 70 · 4시간 150(최대) (예전: 5분마다 1 · 최대 25) · 솔방울 · 원어데이 골드 같은 값 (PROJECT_STATUS 29 · 30장) */
+export const INST = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150];   /* 서버 등급과 같은 표 (oneaday/server/api/_lib/gold.js INST · SHOP.camp inst1~150 · 대표 승인 11-03) */
+export const INST_MIN = 10, INST_FREE = 60, GOLD_MAX = 150;
+const down = g => INST.find(v => v >= g) || INST[INST.length - 1];   /* 가장 가까운 위 등급으로 올림 (이름은 예전 그대로) */
 export const speedCost = sec => sec <= INST_FREE ? 0 : down(Math.max(1, Math.round((sec / 300) ** 1.3)));
 export const instBase = T => speedCost(T);
 export function instGold(baseT, durS, leftS) { if (!(leftS >= INST_MIN)) return 0; if (leftS <= INST_FREE) return 0; const p = Math.max(1, Math.ceil(instBase(durS) * Math.min(1, leftS / Math.max(1, durS)))); return down(Math.min(p, speedCost(leftS))); }   /* 전체 값 × 남은 비율 · 남은 시간 곡선 중 싼 쪽 (bm-policy 2-1 ②) */

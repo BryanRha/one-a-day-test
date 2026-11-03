@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.96.9';
-import * as G from './sim.js?v=0.96.9';
-import { bm } from './oad_bm.js?v=0.96.9';
-import { sfx, setAudio, AUD } from './audio.js?v=0.96.9';
-import { pushBack } from './oad.js?v=0.96.9';
+import * as D from './data.js?v=0.97.0';
+import * as G from './sim.js?v=0.97.0';
+import { bm } from './oad_bm.js?v=0.97.0';
+import { sfx, setAudio, AUD } from './audio.js?v=0.97.0';
+import { pushBack } from './oad.js?v=0.97.0';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -624,7 +624,9 @@ export function curCard(k, anchor, extra) { if (curEl) curEl.remove(); const c =
 export function gemTip() { if (S.gemTip || tutOn()) return; S.gemTip = 1; ctx.save(); curCard('gem', $('#pGem'), '솔방울로 기다림을 바로 끝내거나 선물 상자를 열 수 있어요');
   const t = barEl.querySelector('[data-t="shop"]'); if (t) { const p = document.createElement('div'); p.className = 'pointer'; const at = cardPos(t); p.style.left = at[0] + 'px'; p.style.top = at[1] + 'px'; uiCol.appendChild(p); setTimeout(() => p.remove(), 5000); } }
 /* 목표를 누르면: 할 수 있는 일로 바로 데려감 (한 번에) */
-function goalAct() { const g = G.goalNow(), a = (g.step && g.step.act) || ({ oven3: { k: 'up', v: 'oven' }, oven10: { k: 'up', v: 'oven' }, sol: { k: 'tab', v: 'staff' }, bada: { k: 'tab', v: 'staff' }, stew: { k: 'tab', v: 'menu', w: 'soup' }, cocoa: { k: 'tab', v: 'menu', w: 'drink' }, fridge: { k: 'tab', v: 'fac', w: 'amen' }, pot: { k: 'build', v: 'L1' }, drink: { k: 'build', v: 'L3' }, tent: { k: 'build', v: 'F1' }, ftable: { k: 'build', v: 'F2' }, dtable: { k: 'build', v: 'D1' }, tapsell: { k: 'tap' } }[g.id]) || (D.ZONES.find(z => z.id === g.id) ? { k: 'zone', v: g.id } : { k: 'tab', v: 'fac' });
+/* 목표가 가리키는 곳 (목표 카드 누르기 · 빈자리 이름표 · 대표 11-03 '목표가 가리킬 때만 이름') */
+export function goalTarget() { const g = G.goalNow(); return (g.step && g.step.act) || ({ oven3: { k: 'up', v: 'oven' }, oven10: { k: 'up', v: 'oven' }, sol: { k: 'tab', v: 'staff' }, bada: { k: 'tab', v: 'staff' }, stew: { k: 'tab', v: 'menu', w: 'soup' }, cocoa: { k: 'tab', v: 'menu', w: 'drink' }, fridge: { k: 'tab', v: 'fac', w: 'amen' }, pot: { k: 'build', v: 'L1' }, drink: { k: 'build', v: 'L3' }, tent: { k: 'build', v: 'F1' }, ftable: { k: 'build', v: 'F2' }, dtable: { k: 'build', v: 'D1' }, tapsell: { k: 'tap' } }[g.id]) || (D.ZONES.find(z => z.id === g.id) ? { k: 'zone', v: g.id } : { k: 'tab', v: 'fac' }); }
+function goalAct() { const a = goalTarget();
   sfx('tap'); { const pos = a.k === 'up' || a.k === 'build' ? ctx.padWorld(a.v) : a.k === 'zone' ? (r => r && [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2])(D.ZONE_FOG[a.v]) : null; if (pos && ctx.camTo) ctx.camTo(pos[0], pos[1]); }
   if (a.k === 'up') facDialog(a.v); else if (a.k === 'build') buildDialog(a.v); else if (a.k === 'zone') zoneDialog(a.v); else if (a.k === 'tab') openTab(a.v, a.w); else toast('반짝이는 요리를 눌러 직접 팔아요 · 직접 팔면 2배!'); }
 /* 캠프가 돌아가는 법 (처음 1분 · '하는 법' 버튼) — 핵심 루프를 그림으로 */
