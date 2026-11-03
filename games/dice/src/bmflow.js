@@ -3,9 +3,9 @@
 //   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로 뽑기를 주지 않음
 //   광고 보상: 판 보상 2배(하루 3) · 무료 상자(하루 1, 수정 + 등급업 카드) — 소장자는 광고 없이 바로(횟수 같음)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 전장 전부 숨김, 게임은 그대로
-import { bm } from './oad_bm.js?v=0.97.4';
-import { load, save } from './save.js?v=0.97.4';
-import { HELP, roll, note, eligible, used } from './core/help.js?v=0.97.4';
+import { bm } from './oad_bm.js?v=0.97.5';
+import { load, save } from './save.js?v=0.97.5';
+import { HELP, roll, note, eligible, used } from './core/help.js?v=0.97.5';
 
 export { bm };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -24,6 +24,33 @@ export function initBM(game) {
   bm.onPause = on => { try { if (on) { game.sound.pauseAll(); game.loop.sleep(); } else { game.loop.wake(); game.sound.resumeAll(); } } catch { /* */ } };
   return helloOnce();
 }
+/* 다시 묻기 (2026-11-03 v0.10.1 · 판 안 아이템이 안 보이던 원인):
+   hello 는 iframe 이 뜨자마자 한 번만 묻고 그 답을 끝까지 씀 — 그때 앱이 아직 가격표(/api/pay/config · 로그인 정보)를 못 받았으면
+   prices 가 빈 채로(또는 800ms 넘어 ok=false 로) 굳어 그 세션 내내 아이템 · 골드 상품이 숨음.
+   → 홈 · 결과 · 판 시작 때 '필요한 가격이 비었으면' 앱에 hello 를 다시 물어 같은 캐시 객체(bm.info)를 새 답으로 채움
+     (공통 oad_bm.js 는 고치지 않음 · 원어데이 안(iframe)일 때만 · 시험용 가짜 지갑(?oadtest)은 건드리지 않음 · 동시에 한 번만 · 3초 넘으면 그대로) */
+const NEED = ['automerge', 'remove', 'reroll', 'bomb', 'crystal100'];
+let rq = null;
+export const pricesMissing = () => !bm.info.ok || NEED.some(k => !bm.price(k));
+export async function refreshHello(ms = 3000) {
+  await helloOnce();
+  if (!frameOn() || bm.info.test || !pricesMissing()) return bm.info;
+  if (rq) return rq;
+  rq = new Promise(res => {
+    const id = 'dh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const fin = r => {
+      removeEventListener('message', on); clearTimeout(t); rq = null;
+      if (r && r.ok) { const c = bm.info; Object.assign(c, r); if (!c.prices) c.prices = {}; if (!c.items) c.items = []; if (!c.ads) c.ads = {}; }
+      res(bm.info);
+    };
+    const on = e => { if (e.source === window.parent && e.data && e.data.type === 'oad:res' && e.data.id === id) fin(e.data.result); };
+    const t = setTimeout(() => fin(null), ms);
+    addEventListener('message', on);
+    try { window.parent.postMessage({ type: 'oad:req', id, fn: 'hello', args: [] }, location.origin); } catch { fin(null); }
+  });
+  return rq;
+}
+const frameOn = () => { try { return window.parent !== window; } catch { return true; } };
 export const oadOn = () => !!bm.info.ok;
 export const owned = () => !!(bm.info.ok && bm.info.owned);
 export const price = sku => bm.price(sku);

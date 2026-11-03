@@ -1,16 +1,17 @@
 // 홈: 메인 원정 · 오늘의 도전 · 아케이드 · 덱 · 미션 · 연속 출석 (카드마다 받을 보상 한 줄)
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.97.4';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
-import { audio } from '../audio.js?v=0.97.4';
-import { load } from '../save.js?v=0.97.4';
-import * as M from '../meta.js?v=0.97.4';
-import * as BM from '../bmflow.js?v=0.97.4';
-import { guidePop } from '../guide.js?v=0.97.4';
-import { RUNES } from '../core/sim.js?v=0.97.4';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.97.5';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.5';
+import { audio } from '../audio.js?v=0.97.5';
+import { load } from '../save.js?v=0.97.5';
+import * as M from '../meta.js?v=0.97.5';
+import * as BM from '../bmflow.js?v=0.97.5';
+import { guidePop } from '../guide.js?v=0.97.5';
+import { RUNES } from '../core/sim.js?v=0.97.5';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
   create() {
+    BM.refreshHello();   /* 앱 가격표가 늦게 왔으면 다시 물어 둠 (다음 판 아이템 줄 · v0.10.1) */
     const d = load();
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.45);

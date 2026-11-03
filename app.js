@@ -1,17 +1,17 @@
 // One a Day 앱 화면: 아래 탭 [게임 · 운세 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.97.4';
-import * as R from './rules.js?v=0.97.4';
-import * as I from './install.js?v=0.97.4';
-import * as T from './track.js?v=0.97.4';
-import * as P from './pay.js?v=0.97.4';
-import * as A from './account.js?v=0.97.4';
-import * as C from './cloud.js?v=0.97.4';
-import * as BM from './bm.js?v=0.97.4';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.97.5';
+import * as R from './rules.js?v=0.97.5';
+import * as I from './install.js?v=0.97.5';
+import * as T from './track.js?v=0.97.5';
+import * as P from './pay.js?v=0.97.5';
+import * as A from './account.js?v=0.97.5';
+import * as C from './cloud.js?v=0.97.5';
+import * as BM from './bm.js?v=0.97.5';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.97.4').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.97.5').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.97.4'), import('./fortune/types.js?v=0.97.4'), import('./fortune/chat.js?v=0.97.4'), import('./fortune/oneword-ui.js?v=0.97.4')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.97.5'), import('./fortune/types.js?v=0.97.5'), import('./fortune/chat.js?v=0.97.5'), import('./fortune/oneword-ui.js?v=0.97.5')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -21,7 +21,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.97.4';
+const VERSION = '0.97.5';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(게임) · 'fortune' · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -617,7 +617,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.97.4')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.97.5')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -1276,7 +1276,7 @@ addEventListener('message', e => {
 
 // ── 게임 안 BM: 게임(iframe)의 요청 → 확인 · 광고 · 골드 → 결과를 돌려줌 (게임 혼자서는 골드가 빠지지 않음) ──
 try { const k = 'oad_exp_day', t = R.keyOf(new Date()); if (localStorage.getItem(k) !== t) { localStorage.setItem(k, t); setTimeout(() => T.track('exp', { bm: BM.group(), help: BM.helpOn() ? 1 : 0, home: LAY }), 1500); } } catch { /* */ }
-let payCfg = {}; P.config().then(c => { payCfg = c || {}; if (c && c.ads) for (const k of Object.keys(BM.LIMIT)) if (Number.isFinite(c.ads[k])) BM.LIMIT[k] = c.ads[k]; });
+let payCfg = {}; const payReady = P.config().then(c => { payCfg = c || {}; if (c && c.ads) for (const k of Object.keys(BM.LIMIT)) if (Number.isFinite(c.ads[k])) BM.LIMIT[k] = c.ads[k]; });
 const reply = (id, result) => { try { frame && frame.contentWindow.postMessage({ type: 'oad:res', id, result }, location.origin); } catch { /* */ } };
 /* 그날 운세와 같은 씨앗 (오늘의 패 등 — 날짜 · 점쟁이 · 키워드 · 점수의 해시만 · 생년월일 X) · 운세 정보가 없으면 '' (게임은 날짜 씨앗) */
 function fortuneSeed() { try { const me = FT && FT.loadMe(); if (!me) return ''; const f = FT.fortune(me, R.now()); let h = 2166136261; for (const c of `${R.keyOf(R.now())}|${f.ch}|${f.key}|${f.total}`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); } catch { return ''; } }
@@ -1285,6 +1285,7 @@ async function gameReq(gid, d) {
   const shopOf = () => ((me && me.shop) || payCfg.shop || {})[gid] || {};
   const done = r => reply(d.id, r);
   if (fn === 'hello') {
+    if (!(me && me.shop) && !payCfg.shop) await Promise.race([payReady.catch(() => {}), new Promise(r => setTimeout(r, 600))]);   /* 가격표 오기 전 hello 에 빈 가격으로 답하면 게임이 그 세션 내내 골드 상품을 숨김 (룬 다이스 11-03) — 짧게 기다림 */
     const on = grp !== 'A' && A.ON;
     return done({ ok: true, v: 1, group: grp, login: !!me, owned, noAds: owned, gold: me ? (me.gold && me.gold.total) || 0 : null,
       prices: on ? Object.fromEntries(Object.entries(shopOf()).filter(([, v]) => !v.off).map(([k, v]) => [k, v.gold])) : {}, items: me ? (me.items || []).filter(x => x.startsWith('item:' + gid + ':')).map(x => x.split(':')[2]) : [],

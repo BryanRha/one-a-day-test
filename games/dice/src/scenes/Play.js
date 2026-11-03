@@ -1,16 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.97.4';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.97.4';
-import { DESC } from './Deck.js?v=0.97.4';
-import { act } from '../core/ai.js?v=0.97.4';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.4';
-import { audio } from '../audio.js?v=0.97.4';
-import { load, save } from '../save.js?v=0.97.4';
-import * as M from '../meta.js?v=0.97.4';
-import { inOAD, exitToOAD } from '../oad.js?v=0.97.4';
-import * as BM from '../bmflow.js?v=0.97.4';
-import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.97.4';
-import { guidePop } from '../guide.js?v=0.97.4';
+import { W, H } from '../config.js?v=0.97.5';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.97.5';
+import { DESC } from './Deck.js?v=0.97.5';
+import { act } from '../core/ai.js?v=0.97.5';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.97.5';
+import { audio } from '../audio.js?v=0.97.5';
+import { load, save } from '../save.js?v=0.97.5';
+import * as M from '../meta.js?v=0.97.5';
+import { inOAD, exitToOAD } from '../oad.js?v=0.97.5';
+import * as BM from '../bmflow.js?v=0.97.5';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.97.5';
+import { guidePop } from '../guide.js?v=0.97.5';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -25,6 +25,18 @@ const PIPS = {
 };
 const buzz = ms => { try { if (load().sfx && navigator.vibrate) navigator.vibrate(ms); } catch { /* */ } };
 
+/* 씬 재사용 (Phaser 는 같은 Play 씬 객체로 다음 판을 다시 create 함): 판마다 처음 값으로 돌릴 상태는 전부 여기에만 적음
+   — create() 첫 줄에서 통째로 덮어씀. 새 판 상태(this.xxx)를 만들면 여기에 같이 넣을 것 (안 넣으면 지난 판 값 · 지운 그림 참조가 남음)
+   item_e2e '앱 흐름' · '연속 판' 이 둘째 판부터의 아이템 줄 · 칸 고르기 · 위험 표시를 확인 */
+const RUN0 = () => ({
+  powers: 0, acc: 0, paused: false, ended: false, awakened: false, leakedWave: false, voT: 0,
+  quit: false, helped: false, helpPop: null,
+  hinted: false, danger: null, chillFx: null, minePool: null, recordSaid: false, manaT: 0,
+  bpId: null, bpImg: null, bpObjs: null, bpArgs: null,
+  drag: null, drag0moved: false, frozen: [], hints: [], targets: [], powerHintObj: null, rarFxT: 0, popT: 0,
+  pulseQ: [], pick: null, itemBusy: false, autoBought: false, itemBar: null, items: [], itemY: null,
+});
+
 export class PlayScene extends Phaser.Scene {
   constructor() { super('Play'); }
 
@@ -38,12 +50,7 @@ export class PlayScene extends Phaser.Scene {
     else if (this.mode === 'arena') this.s = new Sim({ ...base, deck: [data.rune] });
     else if (this.mode === 'abyss') this.s = new Sim({ ...base, deck: d.deck, startWave: 10 });
     else this.s = new Sim({ ...base, deck: d.deck });
-    this.powers = 0; this.acc = 0; this.paused = false; this.ended = false; this.awakened = false; this.leakedWave = false; this.voT = 0;
-    this.quit = false; this.helped = false; this.helpPop = null;
-    /* 씬 재사용: 지난 판에서 남은 표시 · 그림 참조를 비움 (안 비우면 지운 그림을 다시 만지거나 연출이 안 나옴) */
-    this.hinted = false; this.danger = null; this.chillFx = null; this.minePool = null; this.recordSaid = false; this.bpId = null; this.bpImg = null; this.manaT = 0;
-    this.drag = null; this.drag0moved = false; this.frozen = []; this.hints = []; this.targets = []; this.powerHintObj = null; this.rarFxT = 0; this.popT = 0;
-    this.pulseQ = []; this.pick = null; this.itemBusy = false; this.autoBought = false; this.itemBar = null;
+    Object.assign(this, RUN0());   /* 씬 재사용: 판마다 새로 시작할 값은 모두 RUN0 한 곳에서 (위) */
     /* 판 안 아이템: 메인 원정 · 원어데이 안 · 서버 가격이 있을 때만 (core/items.js) */
     this.items = itemsOn(this.mode, this.bot) ? ITEMS.filter(it => BM.itemPrice(it.sku) > 0) : [];
 
@@ -77,6 +84,19 @@ export class PlayScene extends Phaser.Scene {
     else this.time.delayedCall(400, synergy);
     if (this.bot) this.time.addEvent({ delay: 220, loop: true, callback: () => { if (!this.paused) for (let k = 0; k < 3; k++) if (!act(this.s, 0.8)) break; this.render(); } });
     window.__play = this;
+    /* 앱 가격표가 늦게 왔으면(hello 의 prices 가 비었음) 다시 묻고, 이번 판 중에 오면 그 자리에 아이템 줄을 붙임 (v0.10.1 · bmflow.refreshHello) */
+    if (!this.bot) {
+      const run = this.runId, ask = () => BM.refreshHello().then(() => { if (run === this.runId && this.scene.isActive() && !this.ended) this.lateItems(); });
+      ask();
+      if (itemsOn(this.mode, this.bot) && !this.items.length) this.time.addEvent({ delay: 3000, repeat: 9, callback: () => { if (!this.itemBar && BM.pricesMissing()) ask(); } });   /* 판 도중에도 3초마다 (최대 30초) */
+    }
+  }
+  lateItems() {
+    if (this.itemBar || !itemsOn(this.mode, this.bot)) return;
+    this.items = ITEMS.filter(it => BM.itemPrice(it.sku) > 0); if (!this.items.length) return;
+    this.itemY = this.ctrlBase - 50 - 110;
+    if (this.bpArgs) { const [y0, , x0, x1] = this.bpArgs; this.makeBossPreview(y0, this.itemY - 46, x0, x1); this.updateBossPreview(); }   /* 보스 예고를 아이템 줄 위까지로 줄여 다시 */
+    this.makeItems();
   }
 
   // ── 길 ──
@@ -230,6 +250,8 @@ export class PlayScene extends Phaser.Scene {
   }
   // 다음 보스 예고: 남은 공간에 보스 초상 · 이름 · 특징 · 웨이브 진행도
   makeBossPreview(y0, y1, x0, x1) {
+    if (this.bpObjs) { this.tweens.killTweensOf(this.bpObjs); this.bpObjs.forEach(o => o.destroy()); }   /* 아이템 줄이 판 도중에 붙을 때 다시 그림 (lateItems) */
+    this.bpObjs = []; this.bpImg = null; this.bpId = null; this.bpArgs = [y0, y1, x0, x1];
     const h = Math.min(420, y1 - y0); if (h < 180) return;
     const cy = y0 + h / 2 + 10, D = 49;
     const g = this.add.graphics().setDepth(D); g.fillStyle(0x070A1E, 0.6).fillRoundedRect(x0, cy - h / 2, x1 - x0, h, 30).lineStyle(2, 0xFF9BB0, 0.18).strokeRoundedRect(x0, cy - h / 2, x1 - x0, h, 30);
@@ -243,6 +265,7 @@ export class PlayScene extends Phaser.Scene {
     this.bpTip = T(this, tx, cy + 14, '', 26, C.sub, { ox: 0, w: 800, wrap: x1 - tx - 30 }).setDepth(D);
     this.bpBar = this.add.graphics().setDepth(D); this.bpBarX = tx; this.bpBarW = x1 - tx - 40; this.bpBarY = cy + h / 2 - 50;
     this.bpWhen = T(this, tx, this.bpBarY - 30, '', 22, C.dim, { ox: 0, w: 800 }).setDepth(D);
+    this.bpObjs = [g, this.bpImg, this.bpGlow, this.bpTag, this.bpName, this.bpTip, this.bpBar, this.bpWhen];
     this.tweens.add({ targets: this.bpGlow, alpha: 0.15, duration: 1200, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: this.bpImg, y: cy - 8, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
@@ -778,7 +801,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.97.4').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.97.5').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤
