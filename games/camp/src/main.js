@@ -3,14 +3,14 @@
    - 배경: 2D 손그림(우리 프롬프트 · 고원 숲 캠핑장 배치) · 시설: 2D 그림(DOM) · 사람: Three 툰 3D (chars.js · 몸 교체 가능) · 효과: 2D 캔버스
    - 주소 옵션: ?oadtest=1 (가짜 원어데이 지갑 · 광고) · ?speed=N (시간 N배) · ?reset=1 · ?fps=1 · ?shot=이름 (스크린샷용 상태) */
 import * as THREE from 'three';
-import * as D from './data.js?v=0.96.8';
-import * as G from './sim.js?v=0.96.8';
-import * as C from './chars.js?v=0.96.8';
-import * as C2 from './chars2d.js?v=0.96.8';
-import * as UI from './ui.js?v=0.96.8';
-import { sfx, music, setAudio, setSong } from './audio.js?v=0.96.8';
-import { bm } from './oad_bm.js?v=0.96.8';
-import { installBack } from './oad.js?v=0.96.8';
+import * as D from './data.js?v=0.96.9';
+import * as G from './sim.js?v=0.96.9';
+import * as C from './chars.js?v=0.96.9';
+import * as C2 from './chars2d.js?v=0.96.9';
+import * as UI from './ui.js?v=0.96.9';
+import { sfx, music, setAudio, setSong } from './audio.js?v=0.96.9';
+import { bm } from './oad_bm.js?v=0.96.9';
+import { installBack } from './oad.js?v=0.96.9';
 
 const Q = new URLSearchParams(location.search);
 /* 시즌: index.html 머리 스크립트가 정한 값(배경을 처음부터 그 계절로 받음) · 없으면 같은 규칙 (기기 날짜 · ?season=) */
@@ -235,9 +235,20 @@ function prop(p, id) { if (p.is2d || !p.J) return; const M = c => new THREE.Mesh
   else if (id === 'haru') { const pc = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 16, 6), M(0xFFD24A)); pc.rotation.z = 1.2; g.add(pc); p.J.head.add(g); g.position.set(-30, 8, 4); }
   p.refreshMeshes && p.refreshMeshes(); }
 const servers = {};   /* staff id → { p } */
-function syncStaff() {
-  for (const st of ['pot', 'drink']) { const id = R.cooks[st], pos = G.stationPos(st); if (cooks[st] && cooks[st].id === id) continue; if (cooks[st]) { drop(cooks[st].p); delete cooks[st]; } if (!id || !pos) continue;
+let staffT = 1;
+/* 보이는 직원 (검사용 · staffcheck.mjs): 고용 id → 장면에 살아 있는 사람이 있는지 */
+export function staffSeen() { const shown = []; for (const [st, c] of Object.entries(cooks)) if (R.cooks[st] === c.id && alive(c.p)) shown.push(c.id); for (const [id, s] of Object.entries(servers)) if (alive(s.p)) shown.push(id); for (const [id, s] of Object.entries(idlers)) if (alive(s.p)) shown.push(id);
+  const hired = D.STAFF.filter(s => S.staff[s.id]).map(s => s.id); return { hired, shown, ok: hired.length === shown.length && hired.every(id => shown.includes(id)) }; }
+let staffHeal = 0;
+function staffTick() { if (G.staffAudit()) G.buildWorkers(); const s = staffSeen(); if (!s.ok) { staffHeal++; syncStaff(); } }   /* 어긋나면 바로 다시 세움 (구조적 안전망) · 몇 번 고쳤는지는 staffHeal */
+const idlers = {};    /* 조리대가 아직 없는 요리사 id → { p } (키친 옆에서 쉼) */
+const alive = p => p && people.has(p) && p.root.parent && Number.isFinite(p.root.position.x) && Number.isFinite(p.root.position.z);
+function syncStaff() {   /* 고용한 직원 = 화면의 직원 (대표 제보 11-03): 없거나 장면에서 빠졌거나 위치가 깨진 직원은 다시 세움 · 매초 staffTick 이 부름 */
+  for (const id of Object.keys(idlers)) if (!(R.idle || []).includes(id) || !alive(idlers[id].p)) { drop(idlers[id].p); delete idlers[id]; }
+  for (const st of ['pot', 'drink']) { const id = R.cooks[st], pos = G.stationPos(st); if (cooks[st] && cooks[st].id === id && alive(cooks[st].p)) continue; if (cooks[st]) { drop(cooks[st].p); delete cooks[st]; } if (!id || !pos) continue;
     const look = C.LOOKS[D.STAFF.find(s => s.id === id).look], at = G.cookAt(st); const p = mk(look, ...at, 2 + Object.keys(cooks).length); prop(p, id); p.face(...pos, 0.55); cooks[st] = { id, p, at }; p.play('wave'); }
+  for (const id of Object.keys(servers)) if (!R.servers.find(x => x.id === id) || !alive(servers[id].p)) { drop(servers[id].p); delete servers[id]; }
+  for (const [i, id] of (R.idle || []).entries()) if (!idlers[id]) { const look = C.LOOKS[D.STAFF.find(s => s.id === id).look], at = [D.KITCHEN.pick[0] + 40 + i * 26, D.KITCHEN.pick[1] + 30]; G.walkMap.addAnchor(at); const p = mk(look, ...at, 11 + i); prop(p, id); p.face(360, 900, 0.5); idlers[id] = { p }; p.play('wave'); }
   for (const sv of R.servers) if (!servers[sv.id]) { const look = C.LOOKS[D.STAFF.find(s => s.id === sv.id).look], home = (() => { const n = Object.keys(servers).length, h = [D.KITCHEN.pick[0] - n * 14, D.KITCHEN.pick[1] + n * 4]; G.walkMap.addAnchor(h); return h; })(); const p = mk(look, ...(sv.pos || home), 5 + Object.keys(servers).length); p.face(360, 900, 0.5); servers[sv.id] = { p, home }; prop(p, sv.id); p.play('wave'); }
 }
 const guests = new Map();   /* gid → { p, bub, pup, g, gone } */
@@ -552,7 +563,7 @@ if (Q.get('demo') === 'behind') {   /* 확인용: 건물 뒤를 지나는 손님
   const loop = (look, a, b) => { const p = mk(C.LOOKS[look], ...a, 3); const go = (x, y) => { const r = G.walkMap.route(toScreen(p.root.position), [x, y]); walkPath(p, r, G.walkMap.pathLen(r) / 55, () => go(...(x === a[0] ? b : a))); }; go(...b); };
   loop('hiker', D.P(120, 760), D.P(470, 620)); loop('couple', D.P(560, 700), D.P(830, 700)); loop('grandma', D.P(300, 690), D.P(130, 750));
 }
-window.__camp = { ctx, C, THREE, sfx, music, setAudio, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
+window.__camp = { staffSeen, staffHealN: () => staffHeal, ctx, C, THREE, sfx, music, setAudio, G, D, S, R, UI, render, save, people, guests, burst, walkStat, pressFx, CAMV, camTo, camApply, VIEW: () => VIEW };
 
 /* ── 반복 ── */
 const SPEED = Math.max(0.1, +(Q.get('speed') || 1));
@@ -565,7 +576,7 @@ function loop(t) {
   const dt = Math.min(0.1, rdt) * SPEED; let left = dt; while (left > 0) { const s = Math.min(0.25, left); G.step(s); left -= s; }
   for (const e of G.drain()) onEvent(e);
   for (const p of people) p.update(Math.min(0.05, rdt), t / 1000); petStep(Math.min(0.05, rdt), t / 1000);
-  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove(); clampT -= rdt; if (clampT <= 0) { clampT = 0.15; clampLabels(); }
+  camStep(Math.min(0.05, rdt)); sidestep(); walkCheck(); floatersMove(); clampT -= rdt; if (clampT <= 0) { clampT = 0.15; clampLabels(); } staffT -= rdt; if (staffT <= 0) { staffT = 1; staffTick(); }
   for (const [id, v] of guests) { const [x, y] = toScreen(v.p.root.position); if (v.bub && v.bub.style.display !== 'none') { const k = D.PERSP(y), hh = (v.p.look.h || 60) * k; v.bub.style.left = x + 'px'; v.bub.style.top = (y - hh - 26) + 'px'; v.bub.style.scale = (0.5 * k).toFixed(2); } if (v.pup) { const k = D.PERSP(y); v.pup.src = IMG(v.seated ? 'deco/pup_sit' : 'deco/pup_walk'); v.pup.style.width = Math.round(30 * k) + 'px'; v.pup.style.left = (x + 22 * k) + 'px'; v.pup.style.top = (y + 4) + 'px'; } if (v.kill && performance.now() > v.kill) endGuest(id, v); if (v.p.act === 'eat' && Math.random() < rdt * 0.6) burst(x, y - (v.p.look.h || 60) * D.PERSP(y) - 6, 'heart', 1); }   /* 먹으면서 '맛있다' 하트 */
   for (const [, s] of Object.entries(servers)) if (!s.p.target && s.p.act === 'idle' && !R.servers.find(x => servers[x.id] === s)?.job && Math.random() < rdt * 0.08) { const h = s.home; s.p.speed = 40; const cur = toScreen(s.p.root.position), dst = [h[0] + rnd(-8, 8), h[1] + rnd(-3, 3)]; G.walkMap.addAnchor(dst); walkPath(s.p, G.walkMap.route(cur, dst), G.walkMap.pathLen(G.walkMap.route(cur, dst)) / 40 + 0.3, () => s.p.face(360, 1000, 0.5)); }
   if (hero.act === 'idle' && Math.random() < rdt * 0.05) { hero.play('wave'); setTimeout(() => hero.act === 'wave' && hero.play('idle'), 1600); }

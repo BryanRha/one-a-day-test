@@ -13,15 +13,15 @@ export const P = (x, y) => [Math.round(x * BG_S - BG_X), Math.round(y * BG_S)];
    우리: 5구역 · 조건 = 레벨 + 누적 지은/강화 단계 수(간격이 커짐) · 보상 솔방울 100 → 300(+50) · 공사 시간 있음(즉시 완성 자리) */
 export const ZONES = [
   { id: 'lawn', name: '잔디 광장 · 웰컴센터', need: { lv: 1, built: 0 }, reward: 0, build: 0 },
-  { id: 'forest', name: '숲속 존', need: { lv: 3, built: 3 }, reward: 100, build: 120 },
-  { id: 'pine', name: '애견 동반 존 · 조용한 솔숲', need: { lv: 6, built: 6 }, reward: 150, build: 300 },
-  { id: 'valley', name: '계곡 · 놀이터와 폭포', need: { lv: 10, built: 10 }, reward: 200, build: 900 },
-  { id: "stay", name: "스테이 · 루프탑", need: { lv: 15, built: 12 }, reward: 300, build: 1800 },
+  { id: 'forest', name: '숲속 존', need: { lv: 3, built: 3 }, reward: 50, build: 300 },
+  { id: 'pine', name: '애견 동반 존 · 조용한 솔숲', need: { lv: 6, built: 6 }, reward: 80, build: 900 },
+  { id: 'valley', name: '계곡 · 놀이터와 폭포', need: { lv: 10, built: 10 }, reward: 100, build: 3600 },
+  { id: "stay", name: "스테이 · 루프탑", need: { lv: 15, built: 12 }, reward: 150, build: 7200 },
   /* 레벨 문으로 여는 새 존 (대표 10-30 '끌어서 둘러볼 수 있는 만큼 열리는 공간을 더') — 캠프 양옆 한 장 그림(서쪽 호숫가 · 별 관측대 / 동쪽 오두막 마을 · 계곡 데크) */
-  { id: 'lake', name: '호숫가 · 나무 부두', need: { lv: 12, built: 12 }, reward: 300, build: 1200, side: 'w' },
-  { id: 'star', name: '별 관측대', need: { lv: 14, built: 13 }, reward: 350, build: 1800, side: 'w' },
-  { id: 'cabin', name: '숲속 오두막 마을', need: { lv: 16, built: 14 }, reward: 400, build: 2400, side: 'e' },
-  { id: 'deck', name: '계곡 데크', need: { lv: 18, built: 15 }, reward: 500, build: 3000, side: 'e' },
+  { id: 'lake', name: '호숫가 · 나무 부두', need: { lv: 12, built: 12 }, reward: 150, build: 5400, side: 'w' },
+  { id: 'star', name: '별 관측대', need: { lv: 14, built: 13 }, reward: 180, build: 7200, side: 'w' },
+  { id: 'cabin', name: '숲속 오두막 마을', need: { lv: 16, built: 14 }, reward: 200, build: 10800, side: 'e' },
+  { id: 'deck', name: '계곡 데크', need: { lv: 18, built: 15 }, reward: 250, build: 14400, side: 'e' },
 ];
 /* 잠긴 구역을 가리는 안개 영역 (판 좌표 · 위쪽 y 부터) */
 const FOG = (a, b, c, d) => [...P(a, b), ...P(c, d)];
@@ -200,7 +200,7 @@ const DIG = [1, 2, 2, 3, 3, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const COEF = [1, 2, 6, 1, 4, 1, 1, 5, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 export const buildCost = k => COEF[Math.min(k, 17)] * 10 ** DIG[Math.min(k, 17)] * 5;   /* k = 지금까지 지은 시설 · 설비 수 */
 /* 강화: 레벨당 비용 ×1.16 (명세서는 코드 상수라 미확정 · 질문 1 — 우리 가정) · 효과 ×1.11 · 10/20/30 마다 '단계' (공사 시간 · 그림이 바뀜) */
-export const UP = { max: 40, costK: 1.09, effK: 1.05, stageK: 0.3, tiers: [10, 20, 30], tierBuild: [60, 240, 900] };
+export const UP = { max: 40, costK: 1.09, effK: 1.05, stageK: 0.3, tiers: [10, 20, 30], tierBuild: [300, 1800, 7200] }   /* 단계 공사 5분 · 30분 · 2시간 (11-03 '소비가 빠름' · 예전 1 · 4 · 15분) */;
 /* ── 가격 곡선 v0.3 (대표 10-30: '레벨 16 에 토스터 500억') ──
    예전: 짓기 · 설비가 '지금까지 지은 수'로 자릿수가 하나씩 커져(×10/개) 수입보다 훨씬 빨리 커짐 → 설비(새 메뉴 단계의 문)를 못 사면 수입도 멈추는 막힘
    지금: 값 = 그 무렵 '기대 수입 × 목표 분' · 기대 수입 = 그 무렵 열려 있을 메뉴 단계의 한 접시 값 × 기대 배율(시설 · 메뉴 강화) × 분당 접시
@@ -240,7 +240,7 @@ export const TAP = { autoWait: 5, autoK: 0.5, priceK: 1.6, shelf: 8, cheerSec: 0
    틀: 직접 누르면 정가, 두면 5초 뒤 도우미가 반값으로 자동 판매 → 화면에는 "직접 팔면 2배!" (보너스 말투) · 진열은 처음 8칸 (꽉 차면 더 굽지 않음) */
 export const CLOUD = { every: [100, 170], life: 15, taps: 12, sec: 8, autoDelay: 4, autoTaps: 8, autoK: 1 }   /* 2026-10-29 대표: 자동은 직접 누를 때 이하만 (능력치 판매 금지) */;
 export const GIFTBOX = { every: [160, 280], life: 25, boxes: 3, table: [['coin', 39], ['rp', 33], ['stamp', 12], ['gem', 8], ['treat', 6], ['big', 2]], tiers: [30, 60, 120] };
-export const VISITOR = { every: [420, 720], life: 40, perDay: 1, sec: 3600, needLv: 4 };
+export const VISITOR = { every: [420, 720], life: 40, perDay: 1, sec: 600, needLv: 4 };   /* 수입 10분치 (예전 1시간) */
 export const CRIT = { base: 0.05, mult: 3, adP: 0.30, adSec: 600 };
 
 /* ── 직원 (명세서 5장 · 4-3 호감도) ── 외형 · 메인 스킬 1 · 보조 0~1 · 호감도 1~10 (경험치 1·2·5×10^k)
@@ -276,34 +276,34 @@ export const OFFLINE = { capH: 2, eff: 0.7, min: 60 };
 
 /* ── 레벨 1~20 ── 경험치: 손님 1명 +1 · 짓기 +10 · 강화 +2 · 메뉴 강화 +4 · 미션 +6 · 단골 이야기 +10 */
 export const LV_MAX = 20;
-export const lvNeed = lv => Math.round(40 * 1.25 ** (lv - 1));
+export const lvNeed = lv => Math.round(40 * 1.25 ** (lv - 1) * (1 + 0.17 * Math.max(0, lv - 6)));   /* 진행 v2 (11-03 '소비가 빠름'): 레벨 6 까지는 그대로 빠르게(첫 30분 유능감) · 그 뒤로 점점 더 길게 → 사람 템포 레벨 20 ≈ 2~3주 */
 
 /* ── 미션 · 출석 · 플레이 시간 (명세서 7장 · retention_numbers.csv) ──
    오늘의 할 일 약 10개(1~50회 · 보상 = 티켓 또는 수입 20~40분치) + 전부 하면 보너스 / 반복 퀘스트 단계형 / 플레이 시간 5·10·20·40·60분 (우리는 하루 5~15분 → 5·10·15) / 28일 출석 */
 export const DAILY = [   /* 절반(4)은 직접 누르기 (명세서 13 · 사업 의견 5) */
-  { id: 'tapsell', name: '다 된 요리 {n}번 직접 팔기', n: 20, r: { min: 20 } },
-  { id: 'cloud', name: '구름 양 {n}번 쓰다듬기', n: 10, r: { gem: 15 } },
+  { id: 'tapsell', name: '다 된 요리 {n}번 직접 팔기', n: 20, r: { min: 10 } },
+  { id: 'cloud', name: '구름 양 {n}번 쓰다듬기', n: 10, r: { gem: 10 } },
   { id: 'giftpick', name: '선물 바구니 {n}번 열기', n: 1, r: { treat: 2 } },
   { id: 'cat', name: '고양이 노을이 쓰다듬기', n: 1, r: { treat: 2 } },
-  { id: 'upgrade', name: '시설 {n}번 강화하기', n: 5, r: { min: 20 } },
-  { id: 'crit', name: '대박 요리 {n}번 만들기', n: 3, r: { gem: 15 } },
-  { id: 'menu', name: '메뉴 {n}번 맛 올리기', n: 1, r: { min: 40 } },
-  { id: 'box', name: '숲 선물 상자 열기', n: 1, r: { gem: 10 } },
+  { id: 'upgrade', name: '시설 {n}번 강화하기', n: 5, r: { min: 10 } },
+  { id: 'crit', name: '대박 요리 {n}번 만들기', n: 3, r: { gem: 10 } },
+  { id: 'menu', name: '메뉴 {n}번 맛 올리기', n: 1, r: { min: 15 } },
+  { id: 'box', name: '숲 선물 상자 열기', n: 1, r: { gem: 5 } },
 ];
-export const DAILY_BONUS = { gem: 50, treat: 3 };
+export const DAILY_BONUS = { gem: 30, treat: 3 };
 export const REPEAT = [
-  { id: 'rserve', name: '손님 대접', key: 'served', steps: [10, 30, 60, 100, 200, 400, 800, 1500, 3000, 6000], r: s => ({ gem: 10 + 5 * s }) },
-  { id: 'rup', name: '시설 강화', key: 'ups', steps: [5, 15, 30, 60, 100, 160, 250, 400, 600, 900], r: s => ({ gem: 10 + 5 * s }) },
+  { id: 'rserve', name: '손님 대접', key: 'served', steps: [10, 30, 60, 100, 200, 400, 800, 1500, 3000, 6000], r: s => ({ gem: 5 + 3 * s }) },
+  { id: 'rup', name: '시설 강화', key: 'ups', steps: [5, 15, 30, 60, 100, 160, 250, 400, 600, 900], r: s => ({ gem: 5 + 3 * s }) },
   { id: 'rcrit', name: '대박 요리', key: 'crits', steps: [3, 10, 25, 50, 100, 200, 400, 800], r: s => ({ treat: 1 + s }) },
 ];
-export const PLAYTIME = [[5, { gem: 10 }], [10, { gem: 15 }], [15, { gem: 25, treat: 1 }]];
-export const ATTEND = Array.from({ length: 28 }, (_, i) => (i % 7 === 6 ? { gem: 80 } : i % 7 === 3 ? { treat: 3 } : i % 2 ? { gem: 20 } : { min: 60 }));
+export const PLAYTIME = [[5, { gem: 5 }], [10, { gem: 10 }], [15, { gem: 15, treat: 1 }]];
+export const ATTEND = Array.from({ length: 28 }, (_, i) => (i % 7 === 6 ? { gem: 50 } : i % 7 === 3 ? { treat: 3 } : i % 2 ? { gem: 10 } : { min: 20 }));   /* 보상 v2 (11-03): 수입 20분치 · 솔방울 10 · 7일째 50 */
 
 /* ── 손님 선물 (명세서: 골드 38 · 연구 32 · 가구 코인 11 · 유료 8 · 특수 먹이 6 · 변경 티켓 2 · 한정 2 %) — 확률 공개 ── */
-export const GIFT = [['coin', 40, '숲 코인 (수입 10분치)'], ['rp', 32, '쉼 포인트'], ['treat', 15, '간식'], ['gem', 9, '솔방울 5개'], ['stamp', 2, '스탬프 1'], ['rare', 2, '특별 장식 조각']];
-export const GIFT_P = { every: 45, chance: 0.18, max: 6 };   /* 손님이 떠날 때 18% · 바닥에 최대 6개 */
+export const GIFT = [['coin', 40, '숲 코인 (수입 1분치)'], ['rp', 32, '쉼 포인트'], ['treat', 15, '간식'], ['gem', 9, '솔방울 5개'], ['stamp', 2, '스탬프 1'], ['rare', 2, '특별 장식 조각']];
+export const GIFT_P = { every: 45, chance: 0.1, max: 4 };   /* 보상 v2 (11-03): 18% · 6개 → 10% · 4개 (파는 게 주된 수입) */   /* 손님이 떠날 때 18% · 바닥에 최대 6개 */
 /* 하루 첫 접속 무작위 보상 (명세서: 먹이 41 · 골드 17 · 연구 17 · 가구 8 · 유료 7 · 채집 7 · 특수 먹이 4 %) */
-export const LOGIN_BOX = [['treat', 41, '간식 2'], ['coin', 17, '수입 1시간치'], ['rp', 17, '쉼 포인트'], ['stamp', 8, '스탬프 2'], ['gem', 7, '솔방울 20'], ['big', 10, '특별 도시락 1']];
+export const LOGIN_BOX = [['treat', 41, '간식 2'], ['coin', 17, '수입 15분치'], ['rp', 17, '쉼 포인트'], ['stamp', 8, '스탬프 2'], ['gem', 7, '솔방울 20'], ['big', 10, '특별 도시락 1']];
 
 /* ── 숲 선물 상자 = 뽑기 (명세서 9-3: 장비 상자 1회 = 유료 재화 300 또는 광고 1회 · 확률 공개 · 천장 없음)
    대표 방침: 게임 재화(솔방울)로만 · 확률 공개 · 천장 30회 · 중복 = 솔방울 돌려받기 */
@@ -408,18 +408,19 @@ export const STAMP_SHOP = [{ id: 'rabbit', cost: 15 }, { id: 'swing', cost: 15 }
 export const STALL = [['treat', '캠핑 쿠키 3', { min: 15 }], ['big', '특별 도시락 1', { min: 60 }], ['rp', '쉼 포인트 묶음', { min: 30 }], ['speed', '바쁜 시간 5분', { min: 25 }]];
 
 /* ── 즉시 완성 (docs/bm-policy.md 2-1 · farm/inst.js 와 같은 계산) ── */
-export const INST = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25];
-export const INST_MIN = 10;
-export const speedCost = sec => Math.max(1, Math.ceil(sec / 300));   /* 솔방울: 남은 5분마다 1 (최소 1) · 솔방울 1 = 원어데이 골드 1 */
-const TIER = [[300, 1], [600, 2], [900, 3], [1200, 4], [1800, 6], [2700, 8], [3600, 10], [7200, 15], [14400, 25]];
+/* 즉시 완성 값 v2 (대표 11-03 '솔방울이 너무 싸다'): 남은 시간이 길수록 더 비싸지는 곡선 — 솔방울 = (남은 분 ÷ 5)^1.3 · 1분 이하는 무료
+   2분 1 · 10분 3 · 30분 12 · 1시간 25 · 2시간 60 · 4시간 150 (예전: 5분마다 1 · 최대 25) · 원어데이 골드 경로는 서버 등급(inst1~25)까지만 · 그보다 비싸면 솔방울만 (PROJECT_STATUS 28장) */
+export const INST = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200, 250, 300];
+export const INST_MIN = 10, INST_FREE = 60, GOLD_MAX = 25;
 const down = g => INST.reduce((a, v) => (v <= g ? v : a), INST[0]);
-export const instBase = T => down(Math.min(Math.ceil(T / 300), (TIER.find(([s]) => T <= s) || [0, 25])[1]));
-export function instGold(baseT, durS, leftS) { if (!(leftS >= INST_MIN)) return 0; const p = Math.max(1, Math.ceil(instBase(baseT) * Math.min(1, leftS / Math.max(1, durS)))); return down(Math.min(p, speedCost(leftS))); }
+export const speedCost = sec => sec <= INST_FREE ? 0 : down(Math.max(1, Math.round((sec / 300) ** 1.3)));
+export const instBase = T => speedCost(T);
+export function instGold(baseT, durS, leftS) { if (!(leftS >= INST_MIN)) return 0; if (leftS <= INST_FREE) return 0; const p = Math.max(1, Math.ceil(instBase(durS) * Math.min(1, leftS / Math.max(1, durS)))); return down(Math.min(p, speedCost(leftS))); }   /* 전체 값 × 남은 비율 · 남은 시간 곡선 중 싼 쪽 (bm-policy 2-1 ②) */
 
 /* ── 모자란 숲 코인을 솔방울로 채우기 (대표 승인 10-30 · 매출) — 모자란 양을 지금 '쉬는 동안 수입' 속도로 버는 시간 → 즉시 완성과 같은 비율(약 5분 = 솔방울 1, 최소 1) · 등급은 INST 로 내림(원어데이 골드 경로는 inst1~25 SKU 재사용)
    숨김: 모자란 양이 지금 코인의 10% 미만 · 1분치 미만(조금만 기다리면 됨) · 한 번 상한 2시간치(inst 최고 등급 25 안 · 진행 보호) */
 export const FILL = { minFrac: 0.1, minSec: 60, capSec: 7200 };
-export const fillGem = sec => down(speedCost(sec));
+export const fillGem = sec => Math.max(1, speedCost(sec));   /* 즉시 완성과 같은 곡선 (최소 1) */
 /* ── 큰 수 (한국식 단위) ── */
 const UNITS = ['', '만', '억', '조', '경', '해', '자', '양', '구', '간', '정', '재', '극'];
 export function fmt(n) {
