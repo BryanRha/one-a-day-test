@@ -52,6 +52,15 @@
    "office": "c17/scenes/c17_office_cold.webp",
    "pojang": "c17/scenes/c17_pojang_cold.webp",
    "rooftop": "c17/scenes/c17_rooftop_cold.webp"
+  },
+  "cards": {
+   "c17_card_w1": "c17/cards/c17_card_w1.webp",
+   "c17_card_w2": "c17/cards/c17_card_w2.webp",
+   "c17_card_w3": "c17/cards/c17_card_w3.webp"
+  },
+  "places_s2": {
+   "boardroom": "c17/scenes/c17_boardroom.webp",
+   "bakery": "c17/scenes/c17_bakery.webp"
   }
  },
  "c20": {
@@ -72,9 +81,21 @@
    "lonely": "c20/bust_lonely.webp"
   },
   "scenes": {
+   "c20_chamber_angry": "c20/scenes/c20_chamber_angry.webp",
+   "c20_chamber_flustered": "c20/scenes/c20_chamber_flustered.webp",
+   "c20_chamber_haughty": "c20/scenes/c20_chamber_haughty.webp",
+   "c20_chamber_laugh": "c20/scenes/c20_chamber_laugh.webp",
    "c20_chamber_lonely": "c20/scenes/c20_chamber_lonely.webp",
+   "c20_desk_angry": "c20/scenes/c20_desk_angry.webp",
+   "c20_desk_flustered": "c20/scenes/c20_desk_flustered.webp",
    "c20_desk_haughty": "c20/scenes/c20_desk_haughty.webp",
-   "c20_garden_laugh": "c20/scenes/c20_garden_laugh.webp"
+   "c20_desk_laugh": "c20/scenes/c20_desk_laugh.webp",
+   "c20_desk_lonely": "c20/scenes/c20_desk_lonely.webp",
+   "c20_garden_angry": "c20/scenes/c20_garden_angry.webp",
+   "c20_garden_flustered": "c20/scenes/c20_garden_flustered.webp",
+   "c20_garden_haughty": "c20/scenes/c20_garden_haughty.webp",
+   "c20_garden_laugh": "c20/scenes/c20_garden_laugh.webp",
+   "c20_garden_lonely": "c20/scenes/c20_garden_lonely.webp"
   },
   "cover_s": "c20/cover_s.webp",
   "portrait": "c20/portrait.webp",
@@ -82,6 +103,28 @@
    "chamber": "c20/scenes/c20_chamber_lonely.webp",
    "desk": "c20/scenes/c20_desk_haughty.webp",
    "garden": "c20/scenes/c20_garden_laugh.webp"
+  },
+  "cast": {
+   "edenhowell": {
+    "avatar": "c20/cast_edenhowell.webp",
+    "portrait": "c20/cast_edenhowell_portrait.webp"
+   },
+   "nellgrey": {
+    "avatar": "c20/cast_nellgrey.webp",
+    "portrait": "c20/cast_nellgrey_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c20/teaser_ep4.webp"
+  },
+  "cards": {
+   "c20_card_w1": "c20/cards/c20_card_w1.webp",
+   "c20_card_w2": "c20/cards/c20_card_w2.webp",
+   "c20_card_w3": "c20/cards/c20_card_w3.webp"
+  },
+  "places_s2": {
+   "archive": "c20/scenes/c20_archive.webp",
+   "greenhouse": "c20/scenes/c20_greenhouse.webp"
   }
  },
  "c16": {
@@ -102,8 +145,20 @@
    "wistful": "c16/bust_wistful.webp"
   },
   "scenes": {
+   "c16_counter_demon": "c16/scenes/c16_counter_demon.webp",
+   "c16_counter_flustered": "c16/scenes/c16_counter_flustered.webp",
    "c16_counter_gentle": "c16/scenes/c16_counter_gentle.webp",
+   "c16_counter_imposing": "c16/scenes/c16_counter_imposing.webp",
+   "c16_counter_wistful": "c16/scenes/c16_counter_wistful.webp",
+   "c16_greenhouse_demon": "c16/scenes/c16_greenhouse_demon.webp",
    "c16_greenhouse_flustered": "c16/scenes/c16_greenhouse_flustered.webp",
+   "c16_greenhouse_gentle": "c16/scenes/c16_greenhouse_gentle.webp",
+   "c16_greenhouse_imposing": "c16/scenes/c16_greenhouse_imposing.webp",
+   "c16_greenhouse_wistful": "c16/scenes/c16_greenhouse_wistful.webp",
+   "c16_hill_demon": "c16/scenes/c16_hill_demon.webp",
+   "c16_hill_flustered": "c16/scenes/c16_hill_flustered.webp",
+   "c16_hill_gentle": "c16/scenes/c16_hill_gentle.webp",
+   "c16_hill_imposing": "c16/scenes/c16_hill_imposing.webp",
    "c16_hill_wistful": "c16/scenes/c16_hill_wistful.webp"
   },
   "cover_s": "c16/cover_s.webp",
@@ -112,6 +167,28 @@
    "counter": "c16/scenes/c16_counter_gentle.webp",
    "greenhouse": "c16/scenes/c16_greenhouse_flustered.webp",
    "hill": "c16/scenes/c16_hill_wistful.webp"
+  },
+  "cast": {
+   "orr": {
+    "avatar": "c16/cast_orr.webp",
+    "portrait": "c16/cast_orr_portrait.webp"
+   },
+   "silva": {
+    "avatar": "c16/cast_silva.webp",
+    "portrait": "c16/cast_silva_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c16/teaser_ep4.webp"
+  },
+  "cards": {
+   "c16_card_w1": "c16/cards/c16_card_w1.webp",
+   "c16_card_w2": "c16/cards/c16_card_w2.webp",
+   "c16_card_w3": "c16/cards/c16_card_w3.webp"
+  },
+  "places_s2": {
+   "opposite": "c16/scenes/c16_opposite.webp",
+   "castle": "c16/scenes/c16_castle.webp"
   }
  },
  "c03": {
@@ -132,9 +209,21 @@
    "smug": "c03/bust_smug.webp"
   },
   "scenes": {
+   "c03_counter_emperor": "c03/scenes/c03_counter_emperor.webp",
+   "c03_counter_flustered": "c03/scenes/c03_counter_flustered.webp",
+   "c03_counter_lonely": "c03/scenes/c03_counter_lonely.webp",
+   "c03_counter_sleepy": "c03/scenes/c03_counter_sleepy.webp",
    "c03_counter_smug": "c03/scenes/c03_counter_smug.webp",
+   "c03_parasol_emperor": "c03/scenes/c03_parasol_emperor.webp",
+   "c03_parasol_flustered": "c03/scenes/c03_parasol_flustered.webp",
    "c03_parasol_lonely": "c03/scenes/c03_parasol_lonely.webp",
-   "c03_storage_emperor": "c03/scenes/c03_storage_emperor.webp"
+   "c03_parasol_sleepy": "c03/scenes/c03_parasol_sleepy.webp",
+   "c03_parasol_smug": "c03/scenes/c03_parasol_smug.webp",
+   "c03_storage_emperor": "c03/scenes/c03_storage_emperor.webp",
+   "c03_storage_flustered": "c03/scenes/c03_storage_flustered.webp",
+   "c03_storage_lonely": "c03/scenes/c03_storage_lonely.webp",
+   "c03_storage_sleepy": "c03/scenes/c03_storage_sleepy.webp",
+   "c03_storage_smug": "c03/scenes/c03_storage_smug.webp"
   },
   "cover_s": "c03/cover_s.webp",
   "portrait": "c03/portrait.webp",
@@ -142,6 +231,28 @@
    "counter": "c03/scenes/c03_counter_smug.webp",
    "parasol": "c03/scenes/c03_parasol_lonely.webp",
    "storage": "c03/scenes/c03_storage_emperor.webp"
+  },
+  "cast": {
+   "eungyeol": {
+    "avatar": "c03/cast_eungyeol.webp",
+    "portrait": "c03/cast_eungyeol_portrait.webp"
+   },
+   "gobokhui": {
+    "avatar": "c03/cast_gobokhui.webp",
+    "portrait": "c03/cast_gobokhui_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c03/teaser_ep4.webp"
+  },
+  "cards": {
+   "c03_card_w1": "c03/cards/c03_card_w1.webp",
+   "c03_card_w2": "c03/cards/c03_card_w2.webp",
+   "c03_card_w3": "c03/cards/c03_card_w3.webp"
+  },
+  "places_s2": {
+   "rooftop": "c03/scenes/c03_rooftop.webp",
+   "market": "c03/scenes/c03_market.webp"
   }
  },
  "c08": {
@@ -162,9 +273,21 @@
    "tired": "c08/bust_tired.webp"
   },
   "scenes": {
+   "c08_corridor_fury": "c08/scenes/c08_corridor_fury.webp",
+   "c08_corridor_menace": "c08/scenes/c08_corridor_menace.webp",
+   "c08_corridor_panic": "c08/scenes/c08_corridor_panic.webp",
    "c08_corridor_smile": "c08/scenes/c08_corridor_smile.webp",
+   "c08_corridor_tired": "c08/scenes/c08_corridor_tired.webp",
+   "c08_office_fury": "c08/scenes/c08_office_fury.webp",
+   "c08_office_menace": "c08/scenes/c08_office_menace.webp",
    "c08_office_panic": "c08/scenes/c08_office_panic.webp",
-   "c08_throne_menace": "c08/scenes/c08_throne_menace.webp"
+   "c08_office_smile": "c08/scenes/c08_office_smile.webp",
+   "c08_office_tired": "c08/scenes/c08_office_tired.webp",
+   "c08_throne_fury": "c08/scenes/c08_throne_fury.webp",
+   "c08_throne_menace": "c08/scenes/c08_throne_menace.webp",
+   "c08_throne_panic": "c08/scenes/c08_throne_panic.webp",
+   "c08_throne_smile": "c08/scenes/c08_throne_smile.webp",
+   "c08_throne_tired": "c08/scenes/c08_throne_tired.webp"
   },
   "cover_s": "c08/cover_s.webp",
   "portrait": "c08/portrait.webp",
@@ -172,6 +295,28 @@
    "corridor": "c08/scenes/c08_corridor_smile.webp",
    "office": "c08/scenes/c08_office_panic.webp",
    "throne": "c08/scenes/c08_throne_menace.webp"
+  },
+  "cast": {
+   "chumaehyang": {
+    "avatar": "c08/cast_chumaehyang.webp",
+    "portrait": "c08/cast_chumaehyang_portrait.webp"
+   },
+   "guyangcheok": {
+    "avatar": "c08/cast_guyangcheok.webp",
+    "portrait": "c08/cast_guyangcheok_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c08/teaser_ep4.webp"
+  },
+  "cards": {
+   "c08_card_w1": "c08/cards/c08_card_w1.webp",
+   "c08_card_w2": "c08/cards/c08_card_w2.webp",
+   "c08_card_w3": "c08/cards/c08_card_w3.webp"
+  },
+  "places_s2": {
+   "village": "c08/scenes/c08_village.webp",
+   "retreat": "c08/scenes/c08_retreat.webp"
   }
  },
  "soon": {
@@ -271,7 +416,9 @@
    "portrait": "640x640 기준 초상",
    "scenes": "1080x540 (2:1, 시안 D sceneimg 342x168 비율)",
    "teaser": "1080x540 다음 화 예고 컷",
-   "cast": "조연 avatar 256 + portrait 640"
+   "cast": "조연 avatar 256 + portrait 640",
+   "cards": "600x800 (3:4) 7일 연속 장면 카드 — 키는 앱 태그 그대로 <작품>_card_w1~3",
+   "places_s2": "1080x540 시즌 2 새 장소 배경(사람 없음), 앱은 시즌 2 열 때 사용"
   },
   "first_screen": [
    "cover_s",
@@ -280,11 +427,13 @@
   ],
   "lazy": [
    "bust",
-   "scenes",
-   "teaser",
+   "cards",
    "cast",
+   "places_s2",
    "portrait",
-   "soon"
+   "scenes",
+   "soon",
+   "teaser"
   ],
   "places": "아직 감정 변형이 없는 장면 태그(<작품>_<장소>_<감정>)는 places[<장소>] 로 대체",
   "emotions": {
