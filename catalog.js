@@ -127,6 +127,12 @@ export const GAMES = {
     desc: '경복궁부터 제주 한라산까지, 한국 명소 32칸을 도는 여행 보드게임. 주사위를 굴려 땅을 사고 빌라·빌딩·호텔·랜드마크를 올려 통행료를 받아요. 상대 셋을 파산시키거나 한 줄·색 3개·관광지 4곳을 독점하면 우승! 성격이 다른 AI 상대와 한 판 15분.',
     path: 'games/tour/', logo: true, cover: 'covers/tour.png', icon: 'covers/tour_icon.png', time: '10~15분',
   },
+  salvage: {
+    title: '수달 인양단', en: 'Otter Salvage Crew', genre: '탈출 슈터', color: '#1F7F86',
+    tagline: '물에 잠긴 창고, 들고 나오면 내 것',
+    desc: '헤드램프를 켠 수달 대원이 물에 잠긴 창고로 내려가요. 상자를 뒤져 가방을 채우고, 드론과 해골을 작살총으로 막고, 물이 다 차기 전에 출구로! 쓰러지면 가방은 그 자리에 남아요. 건져 온 것으로 은신처 시설을 키우고, 작살총을 개조하고, 옷장에서 수달을 꾸며 보세요. 반려 수달 몽이도 함께해요.',
+    path: 'games/salvage/', cover: 'covers/salvage.png', icon: 'covers/salvage_icon.png', time: '4~6분',
+  },
 };
 // 별빛 궁수(archer)는 2026-10-22 사용자 요청으로 목록에서 내림 (CATALOG 항목·게임 소스는 남겨 둠)
 // 게임 저장 키 (소장하면 계정 클라우드에 저장 · shell/cloud.js) — 끝이 * 면 그 이름으로 시작하는 키 전부
@@ -136,7 +142,8 @@ export const SAVES = {
   dice: ['rune_dice_v1'], war: ['front_tactics_v1', 'front_tactics_maps', 'front_tactics_resume'], seek: ['his_secret_v1'],
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
   bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'], fdefense: ['fdefense_v1', 'fdefense_resume_v1'],
-  hanson: ['hanson_v1'],   /* 2026-11-02 오랜상회 (목록 노출 순서는 총괄이 정함 — DAILY 에는 아직 없음) */
+  hanson: ['hanson_v1'],
+  salvage: ['salvage_v3'],   /* 2026-11-05 수달 인양단 (v2 · v1 예전 키는 게임이 처음 열 때 v3 로 옮기므로 계정엔 v3 만) */   /* 2026-11-02 오랜상회 (목록 노출 순서는 총괄이 정함 — DAILY 에는 아직 없음) */
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
@@ -144,7 +151,7 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
 //   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드로 열기/소장은 의뢰사 계약 확인 전까지 X(광고로만)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
-export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson'];   /* 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson', 'salvage'];   /* 2026-11-05 salvage 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
 // 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:
@@ -171,6 +178,7 @@ export const TEASE = {
   fdefense: '내일 새벽, 성문 앞에 몬스터 대군이 몰려옵니다',
   camp: '솔숲 사이로 벚꽃잎, 오늘은 캠핑장이 문을 열어요',
   hanson: '골목 끝 감정소에 보따리를 든 손님이 와요',
+  salvage: '헤드램프를 켜요, 물에 잠긴 창고에 뭔가 남아 있어요',
   war: '허스키 부대, 작전 개시까지 하루 남았습니다',
   seek: '그 남자가 숨긴 물건, 내일은 찾을 수 있을까요',
   beauty: '섞고 합쳐 완성하는 나만의 K뷰티 레시피',
@@ -200,4 +208,5 @@ export const PICK = {
   fdefense: '길목 하나가 승부를 가른다. 서두르지 말고 자리를 봐.',
   camp: '서두르지 마. 쉬어 가는 손님이 복을 두고 간다.',
   hanson: '말과 물건이 어긋나는 곳, 거기에 진실이 있다.',
+  salvage: '욕심은 가방만큼만. 들고 나와야 네 것이다.',
 };
