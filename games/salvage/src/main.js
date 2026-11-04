@@ -1,16 +1,17 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.6';
-import { FX } from './fx.js?v=0.99.6';
-import { Raid } from './raid.js?v=0.99.6';
-import { UI } from './ui.js?v=0.99.6';
-import { S, load, save, stashCap } from './save.js?v=0.99.6';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.6';
-import * as E from './econ.js?v=0.99.6';
-import { installBack } from './oad.js?v=0.99.6';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.6';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.6';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.6';
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.7';
+import { FX } from './fx.js?v=0.99.7';
+import { Raid } from './raid.js?v=0.99.7';
+import { UI } from './ui.js?v=0.99.7';
+import { S, load, save, stashCap } from './save.js?v=0.99.7';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.7';
+import * as E from './econ.js?v=0.99.7';
+import { installBack } from './oad.js?v=0.99.7';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.7';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.7';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.7';
+import { Story } from './story_ui.js?v=0.99.7';
 
 const Q = new URLSearchParams(location.search);
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
@@ -29,6 +30,7 @@ Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, n
 const hud = document.getElementById('hud');
 const fx = new FX(scene, hud);
 const ui = app.ui = new UI(app);
+const story = app.story = new Story(app, ui);   /* v0.5 이야기 (튜토리얼 · 은신처 대화 · 도감 · 판 안 무전) */
 let raid = null, hide = null, last = performance.now(), camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
 
 function resize() {
@@ -126,10 +128,12 @@ function startRaidNow({ safeItems = [], carry = [], map }) {
   raid = app.raid = new Raid({ scene, camera, fx, ui, renderer, lights: { hemi, sun } });
   attachRaid(raid);   /* 원어데이: 가방 보험 · 이어하기 (bmflow) */
   raid.start({ seed, map: packReady(mk) ? mk : 'ware', corpse: S.corpse, L, safeItems: safe, carry: bring, kit: Array(L.kit).fill('med'), want, hero: resolve(lookOf(S, { both: true })) });
+  story.raidStart(raid);
   const p = raid.pl.pos; camPos.set(p.x, 30, p.z + 18); camLook.copy(p);
 }
 function endRaid() {
-  const res = raid.result(); raid.dispose(); raid = app.raid = null;
+  const res = raid.result(); story.raidEnd(); raid.dispose(); raid = app.raid = null;
+  story.afterRaid(res);   /* 이야기 물건 · 기억 조각 · 녹음기 · 이야기 걸음 (창고에 넣기 전) */
   const gained = { overflow: 0, overflowVal: 0 };
   const intoStash = keys => { for (const k of keys) { if (S.stash.length < stashCap()) S.stash.push(k); else { gained.overflow++; gained.overflowVal += ITEMS[k].val; S.shells += ITEMS[k].val; } } };
   if (res.corpseTaken || (S.corpse && res.seed === S.corpse.seed)) S.corpse = null; /* 한 번만 */
@@ -173,7 +177,7 @@ function frame(now) {
     if (app.camOverride) { const o = app.camOverride; camera.position.set(o.x, o.y, o.z + o.back); camera.lookAt(o.x, 0, o.z); } /* 시험용 전체 보기 */
     sun.position.set(p.x + 8, 22, p.z + 6); sun.target.position.set(p.x, 0, p.z);
     fx.update(rdt, camera, innerWidth, innerHeight);
-    ui.drawVeil(raid, camera);
+    ui.drawVeil(raid, camera); story.raidTick(rdt);
   } else {
     /* 은신처 카메라: 천천히 숨쉬기 */
     const t = now / 1000; camera.position.set(Math.sin(t * 0.15) * 0.8, 7.2, 9.4); camera.lookAt(0, -1.4, -1.8);
@@ -200,7 +204,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.6'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.7'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

@@ -1,5 +1,5 @@
 // 수달 인양단 — 데이터 · 숫자 (조정은 여기서만). three 없이 읽힘 → node 시뮬 · 시험에서도 씀
-export const VERSION = '0.4.0';
+export const VERSION = '0.5.0-a';
 
 /* ───── 재료 (창고 숫자로만 셈 · 분해해서 얻음) ───── */
 export const MATS = {
@@ -60,9 +60,17 @@ export const ITEMS = {
   fang:    { name: '장어 이빨',   cat: 'treasure', w: 1, h: 1, wt: 0.2, val: 120, model: 'fang', color: '#f4f1e6', desc: '터널 장어의 것.', map: 'tunnel' },
   /* 열쇠 */
   vkey:    { name: '금고 열쇠',   cat: 'key', w: 1, h: 1, wt: 0.1, val: 30, model: 'key', color: '#ffd36b', desc: '금고실 문을 연다 (쓰면 사라짐).' },
+  /* v0.5 이야기 물건 (cat memo) — 이야기 의뢰가 열려 있을 때만 그 지도 · 구역 상자 하나에 들어감 · 들고 나오면 창고 대신 기억 도감으로 (story.js) */
+  tagbox:   { name: '이름표 붙은 상자', cat: 'memo', w: 1, h: 1, wt: 0.3, val: 1, model: 'chest',    color: '#d9b47a', desc: '손글씨 이름표가 붙어 있다.' },
+  tagbundle:{ name: '이름표 묶음',   cat: 'memo', w: 1, h: 1, wt: 0.2, val: 1, model: 'ticket',   color: '#e8d9a0', desc: '찢지 않고 뗀 이름표들.' },
+  ferrytix: { name: '배표 꾸러미',   cat: 'memo', w: 1, h: 1, wt: 0.2, val: 1, model: 'ticket',   color: '#bfe0f0', desc: '젖은 배표가 끈으로 묶여 있다.' },
+  ledger:   { name: '낡은 장부',     cat: 'memo', w: 1, h: 1, wt: 0.5, val: 1, model: 'book',     color: '#6b8fb5', desc: '곰방 상회 장부.' },
+  roster:   { name: '승객 명부',     cat: 'memo', w: 1, h: 1, wt: 0.4, val: 1, model: 'book',     color: '#a0b88f', desc: '마지막 열차 승객 명부.' },
+  lboot:    { name: '고무 장화(왼쪽)', cat: 'memo', w: 1, h: 2, wt: 1.0, val: 1, model: 'bottle_b', color: '#5d6b4a', desc: '열차 좌석 밑에 있던 한 짝.' },
+  tape:     { name: '녹음기',        cat: 'memo', w: 1, h: 1, wt: 0.3, val: 1, model: 'battery',  color: '#8a9aa6', desc: '은신처에서 들어 볼 수 있다.' },
 };
 export const ITEM_KEYS = Object.keys(ITEMS);
-export const CATS = { scrap: '고철', part: '부품', treasure: '보물', med: '소모품', key: '열쇠' };
+export const CATS = { scrap: '고철', part: '부품', treasure: '보물', med: '소모품', key: '열쇠', memo: '기억' };
 
 /* 상자 종류별 나오는 것 (가중치) · n 개수 범위 */
 export const LOOT_TABLE = {
@@ -349,6 +357,14 @@ export const QUESTS = [
   { id: 'q27', name: '인양왕',        txt: '한 판에 가치 900 이상 들고 탈출',       goal: { t: 'value', n: 900 }, reward: { shells: 400, core: 1 }, tip: '깊은 지도일수록 값진 게 나와요' },
   { id: 'q28', name: '인양단장',      txt: '세 지도 보스를 모두 · 보스 합계 15번 (기록)', goal: { t: 'bosses', n: 3, total: 15 }, reward: { shells: 600, cos: 'h_brass' }, tip: '수문지기 · 갈고리 선장 · 터널 장어 · 보상: 꾸미기 "황동 잠수 헬멧"' },
 ];
+/* v0.5 의뢰인 · 종류 (docs/NARRATIVE.md 5장 대응표) — 대사 · 이야기 조각은 talk/common.js (나눠 받음)
+ *  kind: story 이야기 · char 인물 · boss 보스 · chal 도전 */
+const QMETA = {
+  q1: ['gombang', 'story'], q2: ['moru', 'story'], q3: ['gombang', 'story'], q4: ['moru', 'story'], q5: ['neuru', 'char'], q6: ['moru', 'char'], q7: ['gombang', 'char'], q8: ['moru', 'boss'], q9: ['gombang', 'char'], q10: ['gombang', 'chal'],
+  q11: ['moru', 'story'], q12: ['haedam', 'story'], q13: ['neuru', 'char'], q14: ['gombang', 'char'], q15: ['moru', 'char'], q16: ['haedam', 'chal'], q17: ['haedam', 'boss'], q18: ['gombang', 'char'],
+  q19: ['haedam', 'story'], q20: ['seori', 'story'], q21: ['haedam', 'char'], q22: ['seori', 'char'], q23: ['moru', 'char'], q24: ['haedam', 'chal'], q25: ['moru', 'boss'], q26: ['gombang', 'char'], q27: ['gombang', 'chal'], q28: ['moru', 'chal'],
+};
+for (const q of QUESTS) [q.giver, q.kind] = QMETA[q.id];
 
 /* ───── 오늘의 인양 목록 (한국 날짜마다 3개) — 창고에서 납품하면 값의 1.6배 + 재료 ───── */
 export const DAILY_POOL = [

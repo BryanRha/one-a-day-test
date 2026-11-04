@@ -143,7 +143,7 @@ export const SAVES = {
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
   bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'], fdefense: ['fdefense_v1', 'fdefense_resume_v1'],
   hanson: ['hanson_v1'],
-  salvage: ['salvage_v3'],   /* 2026-11-05 수달 인양단 (v2 · v1 예전 키는 게임이 처음 열 때 v3 로 옮기므로 계정엔 v3 만) */   /* 2026-11-02 오랜상회 (목록 노출 순서는 총괄이 정함 — DAILY 에는 아직 없음) */
+  salvage: ['salvage_v4'],   /* 2026-11-05 수달 인양단 (v3 · v2 · v1 예전 키는 게임이 처음 열 때 v4 로 옮기므로 계정엔 v4 만) */   /* 2026-11-02 오랜상회 (목록 노출 순서는 총괄이 정함 — DAILY 에는 아직 없음) */
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };

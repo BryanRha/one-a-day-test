@@ -1,10 +1,10 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.6';
-import { prop } from './assets.js?v=0.99.6';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.7';
+import { prop } from './assets.js?v=0.99.7';
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.6';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.7';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */

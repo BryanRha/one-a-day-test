@@ -1,13 +1,13 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.6';
-import { S, save, rollDay } from './save.js?v=0.99.6';
-import * as E from './econ.js?v=0.99.6';
-import { A } from './assets.js?v=0.99.6';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.6';
-import { sfx, unlock, setMuted, isMuted } from './audio.js?v=0.99.6';
-import { Wardrobe } from './wardrobe.js?v=0.99.6';
-import { grantEarned, COS } from './look.js?v=0.99.6';
-import * as BM from './bmflow.js?v=0.99.6';
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.7';
+import { S, save, rollDay } from './save.js?v=0.99.7';
+import * as E from './econ.js?v=0.99.7';
+import { A } from './assets.js?v=0.99.7';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.7';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.7';
+import { Wardrobe } from './wardrobe.js?v=0.99.7';
+import { grantEarned, COS } from './look.js?v=0.99.7';
+import * as BM from './bmflow.js?v=0.99.7';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -55,21 +55,23 @@ export class UI {
         <div class="tabbody" id="tabbody"></div>
       </section>
       <button class="btn cta" id="go">출격 준비</button>
-      <footer class="foot"><button class="lnk" id="snd">${isMuted() ? '소리 켜기' : '소리 끄기'}</button><span>v${VERSION} 시제품</span><button class="lnk" id="how">조작법</button></footer>`);
+      <footer class="foot"><button class="lnk" id="snd">${soundLabel()}</button><span>v${VERSION} 시제품</span><button class="lnk" id="how">조작법</button></footer>`);
     this.root.appendChild(el); this.el = null;
     el.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { sfx.ui(); this.tab = b.dataset.t; this.hideout(); });
     $('#qpill', el) && ($('#qpill', el).onclick = () => { this.tab = 'quest'; this.hideout(); });
     $('#go', el).onclick = () => { unlock(); sfx.ui(); this.prep(); };
     BM.bindSortie(el, () => this.hideout()); BM.refreshHello().then(ch => { if (ch) this.refresh(); });
-    $('#snd', el).onclick = () => { setMuted(!isMuted()); this.hideout(); };
+    $('#snd', el).onclick = () => { cycleSound(); this.hideout(); };
     $('#how', el).onclick = () => this.howto();
+    app.story?.decorate(el);
     $('#ward', el).onclick = () => { unlock(); sfx.ui(); this.wardrobe.open(this.tab === 'gun' ? 'weapon' : null); };
     for (const k of got) setTimeout(() => this.toast(`새 꾸미기: ${COS[k].name} — 옷장에서 입어 봐요`, 'good'), 300);
     app.lookChanged?.();
     const body = $('#tabbody', el); this[{ fac: 'tabFac', gun: 'tabGun', gear: 'tabGear', stash: 'tabStash', quest: 'tabQuest' }[this.tab]](body);
     if (this._scroll?.[this.tab]) body.scrollTop = this._scroll[this.tab]; body.onscroll = () => { (this._scroll ||= {})[this.tab] = body.scrollTop; };
     app.showHideout(true);
-    if (S.firstRun) { S.firstRun = false; save(); setTimeout(() => { if (this.root.className === 'scr-hideout' && !this.root.querySelector('.modal')) this.howto(); }, 400); }
+    if (S.firstRun && !app.story?.on) { S.firstRun = false; save(); setTimeout(() => { if (this.root.className === 'scr-hideout' && !this.root.querySelector('.modal')) this.howto(); }, 400); }
+    app.story?.onHideout();
     if (S.migrated === 1) { S.migrated = 2; save(); this.toast('v0.2 업데이트: 시설이 새로 바뀌어 v0.1 때 쓴 조개를 돌려드렸어요', 'good'); }
   }
   refresh() { if (this.root.className === 'scr-hideout') this.hideout(); }
@@ -208,7 +210,7 @@ export class UI {
   tabQuest(body) {
     const q = E.questNow(S); const qp = E.questProgress(S);
     const rw = r => Object.entries(r).map(([k, n]) => k === 'shells' ? shell(n) : k === 'cos' ? `꾸미기 <b>${COS[n]?.name || n}</b>` : k in MATS ? mat(k, n) : `${ITEMS[k].name} ${n}`).join(' ');
-    body.innerHTML = (q ? `<div class="qcard"><small>지금 의뢰 ${QUESTS.indexOf(q) + 1}/${QUESTS.length}${q.goal.map ? ` · ${MAPS[q.goal.map].icon} ${MAPS[q.goal.map].name}` : ''}</small><h3>${q.name}</h3><p>${q.txt}</p>
+    body.innerHTML = (this.app.story?.questHtml() || '') + (q ? `<div class="qcard"><small>지금 의뢰 ${QUESTS.indexOf(q) + 1}/${QUESTS.length}${q.goal.map ? ` · ${MAPS[q.goal.map].icon} ${MAPS[q.goal.map].name}` : ''}</small><h3>${q.name}</h3>${this.app.story?.giverHtml(q) || ''}<p>${q.txt}</p>
         ${qp.n > 1 ? `<div class="qbar"><i style="width:${qp.cur / qp.n * 100}%"></i><span>${qp.cur}/${qp.n}</span></div>` : ''}
         <div class="rw">보상 ${rw(q.reward)}${q.unlock ? ` · <b>${FACILITIES[q.unlock].name} 해금</b>` : ''}${q.map ? ` · <b>${MAPS[q.map].icon} ${MAPS[q.map].name} 열림</b>` : ''}</div><small class="hint">팁: ${q.tip}</small>
         ${q.goal.t === 'deliver' ? `<button class="btn cta ${qp.cur >= qp.n ? '' : 'dim'}" id="qDel">납품하기</button>` : ''}</div>` : '<div class="note good">의뢰를 모두 끝냈어요! 인양단장 인정</div>') +
@@ -251,7 +253,7 @@ export class UI {
       <div class="maprow">${mapRow}</div>
       <div class="mapcard m-${mk}"><div class="mapart"><i class="z3"></i><i class="z2"></i><i class="z1"></i></div><div><b>${MP.name} 3단</b>
         <p>${MP.blurb}<br>출구: ${exitTxt(mk)}<br>${MP.tips}${mk !== 'ware' ? `<br><em>판마다 상태가 달라요: ${Object.keys(MP.conds).map(c => CONDS[c].name).join(' · ')}</em>` : ''}</p></div></div>
-      ${corpse}
+      ${corpse}${this.app.story?.prepNote(mk) || ''}
       <div class="card"><div class="fh"><b>장비</b><span class="lv">체력 ${L.hp} · 방어 ${pct(L.armor)}</span></div>
         <div class="loadout"><span><small>주무기</small><b>${w[0].name}</b></span>${w[1] ? `<span><small>보조</small><b>${w[1].name}</b></span>` : ''}<span><small>가방</small><b>${L.bag.w}×${L.bag.h} · ${L.bag.comfy}kg</b></span>${L.pet ? `<span><small>몽이 주머니</small><b>${L.pet.w}×${L.pet.h}${L.pet.safe ? ' · 지켜 줌' : ''}</b></span>` : ''}</div>
         ${meal ? `<small class="hint good">🍲 ${meal.name}: ${meal.txt}</small>` : ''}${L.kit ? `<small class="hint">창고 보너스: 연고 ${L.kit}개 공짜로 넣고 출발</small>` : ''}</div>
@@ -410,7 +412,7 @@ export class UI {
   }
   /* ───────── 가방 · 뒤지기 ───────── */
   toggleBag(force) { this.invOpen = force ?? !this.invOpen; if (this.invOpen) this.renderInv(); else { $('#inv')?.remove(); this.loot = null; } sfx.ui(); }
-  openLoot(c) { this.loot = c; this.invOpen = true; this.renderInv(); }
+  openLoot(c) { this.app.story?.onLoot(c); this.loot = c; this.invOpen = true; this.renderInv(); }
   renderInv() {
     const R = this.R; $('#inv')?.remove(); const gw = R.bag.w + Math.max(R.safe.w, R.pet?.w || 0); const CELL = Math.min(64, Math.floor((innerWidth - 64) / (gw + 0.6)));
     const el = h('div', 'inv'); el.id = 'inv'; el.style.setProperty('--cell', CELL + 'px');
@@ -447,7 +449,7 @@ export class UI {
     const R = this.R; let sx, sy, ghost = null, moved = false;
     el.addEventListener('pointerdown', e => {
       e.preventDefault(); e.stopPropagation(); sx = e.clientX; sy = e.clientY; moved = false; el.setPointerCapture(e.pointerId);
-      const now = performance.now(); if (now - (this._lastTapAt || 0) < 320 && this._lastTapId === p.it.id) { const t = { ...p.it, rot: !p.it.rot }; if (fits(bag, t, p.x, p.y, p.it.id)) { p.it.rot = !p.it.rot; sfx.ui(); } else this.toast('그 자리에선 못 돌려요 — 끌어서 빈 곳으로', 'soft'); this._lastTapAt = 0; sx = null; this.renderInv(); return; }
+      const now = performance.now(); if (now - (this._lastTapAt || 0) < 320 && this._lastTapId === p.it.id) { const t = { ...p.it, rot: !p.it.rot }; if (fits(bag, t, p.x, p.y, p.it.id)) { p.it.rot = !p.it.rot; sfx.rotate(); } else this.toast('그 자리에선 못 돌려요 — 끌어서 빈 곳으로', 'soft'); this._lastTapAt = 0; sx = null; this.renderInv(); return; }
     });
     el.addEventListener('pointermove', e => {
       if (sx == null) return; const dx = e.clientX - sx, dy = e.clientY - sy;
@@ -484,6 +486,7 @@ export class UI {
     const el = h('div', 'result ' + (ok ? 'ok' : 'ko'), `
       <div class="rh"><small>${ok ? '탈출 성공 · ' + exitName : '인양 실패'}</small><h2>${praise}</h2><small class="sub">${MP.icon} ${MP.name}${res.map && res.map !== 'ware' ? ' · ' + CONDS[res.cond].name : ''} · 가장 깊이: ${zn}${res.power ? ' · 전원 복구' : ''}${res.vaultOpened ? ' · 금고실' : ''}${res.minO2 != null ? ` · 최저 산소 ${res.minO2}` : ''}</small></div>
       <div class="rstats"><div><b>${ok ? res.value : 0}</b><small>가져온 가치</small></div><div><b>${res.killN}</b><small>처치${res.kills.boss ? ' (보스!)' : ''}</small></div><div><b>${fmt(res.time)}</b><small>걸린 시간</small></div><div><b>${res.shots ? Math.round(res.hits / res.shots * 100) : 0}%</b><small>명중</small></div></div>
+      ${this.app.story?.resultHtml(res) || ''}
       ${res.quests?.length ? `<div class="card qdone">${res.quests.map(q => `<div><b>의뢰 완료 · ${q.name}</b><small>${q.unlock ? FACILITIES[q.unlock].name + ' 해금! ' : ''}보상을 받았어요</small></div>`).join('')}</div>` : ''}
       <div class="card"><div class="fh"><b>${ok ? '창고로 들어온 것' : '지킨 것 (안전 칸)'}</b><span class="lv">${list.length}개</span></div>
         <div class="rlist">${list.length ? list.map(k => `<div class="ri">${icon(k)}<small>${ITEMS[k].name}</small></div>`).join('') : '<small class="hint">빈손이에요. 그래도 길을 익혔어요!</small>'}</div>

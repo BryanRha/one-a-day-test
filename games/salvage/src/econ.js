@@ -1,6 +1,6 @@
 // 경제 · 성장 계산 (화면 · three 없이 — node 시뮬 · 시험에서도 그대로 씀)
 //  S = 저장 상태(save.js). 모든 함수는 S 를 직접 바꾸고 { ok, why } 를 돌려줌
-import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2 } from './data.js?v=0.99.6';
+import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2 } from './data.js?v=0.99.7';
 
 export const kstDay = (t = Date.now()) => new Date(t + 324e5).toISOString().slice(0, 10);
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
