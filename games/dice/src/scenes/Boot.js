@@ -1,10 +1,10 @@
 // 로딩 + 코드로 그리는 주사위 판 텍스처 (룬마다 어두운 유리 주사위 + 원소색 빛 테두리)
-import { W, H, TITLE } from '../config.js?v=0.99.0';
-import { SFX } from '../audio.js?v=0.99.0';
-import { makeTextures } from '../fx.js?v=0.99.0';
-import { makeIcons } from '../pui.js?v=0.99.0';
-import { RUNES } from '../core/sim.js?v=0.99.0';
-import { helloOnce } from '../bmflow.js?v=0.99.0';
+import { W, H, TITLE } from '../config.js?v=0.99.1';
+import { SFX } from '../audio.js?v=0.99.1';
+import { makeTextures } from '../fx.js?v=0.99.1';
+import { makeIcons, makeHand } from '../pui.js?v=0.99.1';
+import { RUNES } from '../core/sim.js?v=0.99.1';
+import { helloOnce } from '../bmflow.js?v=0.99.1';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 function rr(g, x, y, w, h, r) { r = Math.max(0, Math.min(r, w / 2, h / 2)); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -82,7 +82,7 @@ export class BootScene extends Phaser.Scene {
     });
   }
   create() {
-    makeTextures(this); makeIcons(this); makeDiceTextures(this); makeFieldTextures(this);
+    makeTextures(this); makeIcons(this); makeHand(this); makeDiceTextures(this); makeFieldTextures(this);
     const m = this.cache.json.get('manifest');
     for (const [n, s] of Object.entries(m.sheets)) this.anims.create({ key: n, frames: this.anims.generateFrameNumbers(n, { start: 0, end: s.frames - 1 }), frameRate: s.fps, repeat: 0 });
     const q = new URLSearchParams(location.search);

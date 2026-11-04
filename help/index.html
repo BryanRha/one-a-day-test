@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head><!--oad:test--><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
+S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return s.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};
+S.key=function(i){var a=[];for(var j=0;j<this.length;j++){var y=k.call(this,j);if(y&&y.indexOf(P)===0)a.push(y.slice(P.length))}return a[i]===undefined?null:a[i]};
+S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script><!--/oad:test--><!--oad:env--><script>window.OAD_ENV='test'</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14102E">
+<title>고객센터 · One a Day</title>
+<link rel="stylesheet" href="../policy.css">
+</head>
+<body data-page="help">
+<div class="wrap">
+<a class="home" href="../">← One a Day 열기</a>
+<nav class="pnav"><a href="../terms/">이용약관</a><a href="../privacy/">개인정보처리방침</a><a href="../refund/">환불 · 청약철회</a><a href="../paid/">유료 서비스</a><a href="../ai/">AI 콘텐츠</a><a href="../help/">고객센터</a></nav>
+<main>
+<h1>고객센터</h1>
+<div class="box">
+이메일 <b><a data-op-mail><span data-op="email">대표 확인 필요</span></a></b><br>
+전화 <b data-op="tel">대표 확인 필요</b><br>
+운영 시간 <span data-op="hours">평일 10:00~18:00</span><br>
+<small class="meta">이메일은 언제든 받고, 운영 시간에 차례로 답해요(보통 1영업일 안). 결제 · 환불 문의는 3영업일 안에 처리해요.</small>
+</div>
+<h2>문의할 때 알려 주세요</h2>
+<ul><li>결제 · 운세 풀이: <b>주문번호</b> (설정 → 내 구매) · 결제 시각 · 상품 이름</li><li>골드 · 소장: 로그인한 <b>구글 이메일</b></li><li>오류: 폰 기종 · 브라우저 · 화면 캡처</li></ul>
+<p class="meta">생년월일 · 카드번호 · 비밀번호는 보내지 마세요. 확인에 필요하지 않아요.</p>
+
+<h2>자주 묻는 질문</h2>
+<details><summary>결제했는데 풀이가 안 열려요</summary><p>설정 → 내 구매 → '주문번호로 다시 받기'에 주문번호와 복원 코드를 넣어 보세요. 그래도 안 되면 주문번호와 함께 연락 주시면 다시 열어 드리거나 전액 환불해 드려요.</p></details>
+<details><summary>운세 풀이를 환불받을 수 있나요?</summary><p>결제 즉시 열리는 콘텐츠라 단순 변심 환불은 어려워요. 오류로 못 받았거나 중복 결제했다면 전액 환불해요. <a href="../refund/">환불 · 청약철회 정책</a></p></details>
+<details><summary>충전한 골드를 환불하고 싶어요</summary><p>결제 후 7일 안이면 쓰지 않은 골드만큼 환불해요. 7일이 지나면 남은 충전 골드에서 수수료 10%를 빼고 환불해요. 보너스 골드는 환불 대상이 아니에요.</p></details>
+<details><summary>아이가 허락 없이 결제했어요</summary><p>미성년자가 법정대리인 동의 없이 한 결제는 취소할 수 있어요. 주문번호와 함께 연락 주시면 필요한 확인 서류를 안내해 드려요.</p></details>
+<details><summary>폰을 바꾸면 골드 · 소장 게임은요?</summary><p>구글로 로그인하면 골드 · 소장 · 소장 게임 저장이 계정에 남아 새 폰에서도 그대로예요. 로그인 없이 산 운세 풀이는 주문번호 + 복원 코드로 다시 받을 수 있어요.</p></details>
+<details><summary>골드 유효기간이 있나요?</summary><p>충전 골드 5년, 보너스 골드는 받은 날부터 1년이에요. 쓸 때는 보너스 골드부터 써요. <a href="../paid/">유료 서비스 안내</a></p></details>
+<details><summary>제 생년월일은 어디에 저장되나요?</summary><p>이 폰(브라우저)에만 저장돼요. 유료 풀이를 만들 때 한 번 서버로 보내고 바로 버려요. 운세 화면 '내 정보 지우기'로 언제든 지울 수 있어요.</p></details>
+<details><summary>점쟁이 · 너랑의 답은 누가 쓰나요?</summary><p>생성형 AI가 만들어요. 재미 · 참고용이고 실제 상담이 아니에요. 이상한 답은 캡처해서 알려 주세요. <a href="../ai/">AI 생성 콘텐츠 안내</a></p></details>
+<details><summary>탈퇴하고 정보를 지우고 싶어요</summary><p>설정 → '탈퇴하고 내 정보 지우기'로 바로 지울 수 있어요. 남은 충전 골드가 있다면 탈퇴 전에 환불을 먼저 요청해 주세요.</p></details>
+<details><summary>이용 기록을 보내고 싶지 않아요</summary><p>설정 → '이용 기록 보내지 않기'를 누르면 통계 수집이 꺼져요. 서비스 이용은 그대로 할 수 있어요.</p></details>
+
+<h2 id="biz">사업자 정보</h2>
+<div class="tw"><table>
+<tr><th>상호</th><td><span data-op="name">알앤지웍스</span> (<span data-op="kind">개인사업자</span>)</td></tr>
+<tr><th>대표자</th><td data-op="ceo">대표 확인 필요</td></tr>
+<tr><th>사업자등록번호</th><td><span data-op="bizNo">등록 예정</span> <a data-op-biz target="_blank" rel="noopener" hidden>사업자정보 확인</a></td></tr>
+<tr><th>통신판매업 신고</th><td data-op="mailNo">등록 예정</td></tr>
+<tr><th>사업장 주소</th><td data-op="addr">대표 확인 필요</td></tr>
+<tr><th>고객센터</th><td><span data-op="tel">대표 확인 필요</span> · <span data-op="email">대표 확인 필요</span></td></tr>
+<tr><th>개인정보 보호책임자</th><td data-op="privName">대표 확인 필요</td></tr>
+<tr><th>호스팅 제공자</th><td data-op="hosting">Vercel Inc.</td></tr>
+</table></div>
+</main>
+<footer id="opfoot"></footer>
+<!--oad:test--><p class="legalnote">초안 · 법률 검토 전 (대표 확인용 표시 — 실서버에는 나가지 않음) · 검토 지점: 처리 기한(1영업일 · 3영업일) 실제 운영 가능 여부 · 미성년자 확인 서류 범위</p><!--/oad:test-->
+</div>
+<script type="module">import { mount } from '../operator.js'; mount();</script>
+</body>
+</html>

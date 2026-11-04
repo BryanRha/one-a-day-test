@@ -1,7 +1,7 @@
 // 진행·재방문: 룬 해금(최고 웨이브) · 수정으로 영구 등급업(확정, 뽑기 없음) · 연속 출석 · 오늘의 미션 · 오늘의 도전
-import { load, save } from './save.js?v=0.99.0';
-import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.99.0';
-import { fieldOpen } from './bmflow.js?v=0.99.0';
+import { load, save } from './save.js?v=0.99.1';
+import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.99.1';
+import { fieldOpen } from './bmflow.js?v=0.99.1';
 
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -15,6 +15,18 @@ export const MILESTONE = [5, 10, 15, 20, 25, 30, 40, 50];   // 메인 원정 최
 // 이정표 보상 (2026-11-03 QA 18: 조금 늘림) — 제단 열쇠 1개(웨이브 30부터 2개) + 수정 웨이브×2
 export const milestoneReward = w => ({ keys: w >= 30 ? 2 : 1, crystals: w * 2 });
 export const milestoneText = w => { const r = milestoneReward(w); return `열쇠 ${r.keys} · 수정 ${r.crystals}`; };
+/* 모드별 받을 보상 (QA 20 · 화면 표기용 · 한 줄에 한 항목) — 실제 계산은 finishRun 과 같게 맞출 것 */
+export const REWARD = {
+  run: ['◆ 수정 · 명성 · 웨이브와 보스만큼'],
+  daily: ['◆ 수정 + 보너스 20', '명성 + 보너스 30'],
+  arcade: ['◆ 수정 · 명성', '모드마다 달라요 · 입장해서 확인'],
+  rush: ['보스 1마리마다 ◆9', '명성 · 미션 보상'],
+  arena: ['웨이브마다 ◆3 · 보스마다 ◆6', '명성 · 미션 보상'],
+  mono: ['웨이브마다 ◆3 · 보스마다 ◆6', '명성 · 미션 보상'],
+  abyss: ['웨이브 10 넘긴 만큼 ◆8씩', '명성 · 미션 보상'],
+};
+/* 다음 이정표 한 줄 (홈 · 결과 같은 문구) */
+export const milestoneLine = nm => nm ? `다음 이정표 웨이브 ${nm.wave} · 열쇠 ${nm.keys} · ◆${nm.crystals}` : '이정표 모두 달성!';
 // 다음 이정표 (아직 못 받은 것 중 가장 낮은 웨이브) — 없으면 null
 export function nextMilestone() { const d = load(); const w = MILESTONE.find(x => !d.milestones[x] && x > d.best) ?? MILESTONE.find(x => !d.milestones[x]); return w ? { wave: w, ...milestoneReward(w), text: milestoneText(w), best: d.best } : null; }
 export const MAX_TIER = 10;

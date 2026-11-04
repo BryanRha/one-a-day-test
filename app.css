@@ -995,3 +995,13 @@ body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]:
   .hub .tmr { grid-template-columns: 1fr 1fr; }
   .hgames { margin-top: 22px; }
 }
+/* 결제 동의 문구 · 설정 맨 아래 사업자 정보 (2026-11-04 PG 심사 · 전자상거래법 표시 — operator.js) */
+.paynote.agree{font-size:11.5px;color:var(--sub);line-height:1.6;margin:0 0 12px;text-align:left;overflow-wrap:anywhere}
+.paynote.agree b{font-weight:600;color:var(--text)}
+.paynote.agree a{color:var(--sub);white-space:nowrap}
+.paywall .paynote.agree{margin:10px 0 0;color:var(--paper2);text-align:center} .paywall .paynote.agree b{font:600 11.5px/1.6 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:var(--paper)} .paywall .paynote.agree a{color:var(--paper2)}
+.bizfoot{margin:18px 2px 4px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--mute);line-height:1.7;overflow-wrap:anywhere}
+.bizfoot .oplinks{display:flex;flex-wrap:wrap;gap:2px 12px;margin-bottom:6px}
+.bizfoot a{color:var(--sub);font-size:12px}
+.bizfoot .opinfo{margin:0}
+.bizfoot .optodo{color:#C9A27A}

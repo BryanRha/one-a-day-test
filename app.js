@@ -1,19 +1,20 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.0';
-import * as R from './rules.js?v=0.99.0';
-import * as I from './install.js?v=0.99.0';
-import * as T from './track.js?v=0.99.0';
-import * as P from './pay.js?v=0.99.0';
-import * as A from './account.js?v=0.99.0';
-import * as C from './cloud.js?v=0.99.0';
-import * as BM from './bm.js?v=0.99.0';
-import * as HUB from './hub.js?v=0.99.0';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.1';
+import * as R from './rules.js?v=0.99.1';
+import * as I from './install.js?v=0.99.1';
+import * as T from './track.js?v=0.99.1';
+import * as P from './pay.js?v=0.99.1';
+import * as A from './account.js?v=0.99.1';
+import * as C from './cloud.js?v=0.99.1';
+import * as BM from './bm.js?v=0.99.1';
+import * as HUB from './hub.js?v=0.99.1';
+import * as O from './operator.js?v=0.99.1';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.0').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.1').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.0'), import('./fortune/types.js?v=0.99.0'), import('./fortune/chat.js?v=0.99.0'), import('./fortune/oneword-ui.js?v=0.99.0')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.1'), import('./fortune/types.js?v=0.99.1'), import('./fortune/chat.js?v=0.99.1'), import('./fortune/oneword-ui.js?v=0.99.1')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -23,7 +24,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.0';
+const VERSION = '0.99.1';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(오늘 허브 + 게임) · 'fortune'(점방) · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -283,6 +284,9 @@ function needLogin(why) {
   openSheet(`<div class="intro"><h2>🪙 로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'} · 폰을 바꿔도 그대로 이어져요</p>
     <div class="stack"><button class="btn" data-login>구글로 로그인</button><p class="fsub" style="margin:0;font-size:12px">만 14세 이상만 가입할 수 있어요.</p><button class="btn ghost" data-close>나중에</button></div></div>`);
 }
+/* 결제 동의 문구 (PG 심사 · 전자상거래법 — 2026-11-04): 결제 버튼 가까이 · 환불 정책 · 유료 안내 링크 (정책 페이지는 새 창 — 앱 화면 그대로) */
+const NEW = 'target="_blank" rel="noopener"';
+const agreeNote = (kind = 'fortune') => `<p class="paynote agree">${kind === 'gold' ? '골드는 현금으로 바꾸거나 다른 계정에 줄 수 없어요 · 유효기간 충전 골드 5년 · 보너스 골드 1년 · ' : ''}미성년자는 법정대리인 동의 후 결제해 주세요 (동의 없는 결제는 취소 가능).<br><b>주문 내용(상품 · 가격 · 환불 조건)을 확인했으며, 구매 조건 확인 및 결제 진행에 동의합니다.</b> <a href="refund/" ${NEW}>환불 정책</a> · <a href="paid/" ${NEW}>유료 서비스 안내</a> · <a href="terms/" ${NEW}>이용약관</a></p>`;
 function shop(note) {
   const m = A.current(); if (!m) return needLogin('골드를 사려면 로그인해 주세요');
   T.track('shop_view', { first: m.first ? 1 : 0 });
@@ -291,7 +295,8 @@ function shop(note) {
     <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
     ${m.first ? `<button class="pack first" data-pack="first"><span class="tag">첫 구매 한 번만</span><span class="pc">🪙</span><b>200</b><em>2배 · 처음 산 사람 배지</em><span class="pp">${won(1000)}</span></button>` : ''}
     <div class="packs">${PACKS.map(card).join('')}</div>
-    <p class="paynote">1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 결제 후 7일 안에 쓰지 않은 골드는 환불돼요. <a href="legal.html#refund" target="_blank">결제·환불 규정</a></p>
+    <p class="paynote">1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 결제 후 7일 안에 쓰지 않은 골드는 환불돼요.</p>
+    ${agreeNote('gold')}
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
 }
 async function buyPack(id) {
@@ -302,7 +307,7 @@ async function buyPack(id) {
   if (c.mode === 'toss') { try { await P.toss(o, null, null, true); } catch { toast('결제창을 열지 못했어요'); } return; }
   openSheet(`<div class="intro paysheet"><h2>🪙 ${o.orderName}</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
     <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div>
-    <p class="paynote">결제 후 7일 안에 쓰지 않은 골드는 전액 환불돼요. <a href="legal.html#refund" target="_blank">결제·환불 규정</a></p>
+    <p class="paynote">결제 후 7일 안에 쓰지 않은 골드는 환불돼요.</p>${agreeNote('gold')}
     <div class="stack"><button class="btn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" id="payCancel">취소</button></div></div>`);
   $('#payCancel').onclick = () => shop();
   $('#mockPay').onclick = async e => { const b = e.target; b.disabled = true; b.textContent = '결제 중…';
@@ -582,7 +587,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.0')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.1')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -605,7 +610,7 @@ async function paidPage(id = 'cheating') {
     ${rp.sections.filter(s => s.free).map(sec).join('')}
     ${paid ? '' : `<div class="pcliff"><small>${pk.who}</small><p>${pk.cliff}</p></div>`}
     ${paid ? '' : `<div class="paywall"><b>${life ? '여기서부터 자세히 볼게요.' : '여기서부터 진짜다.'}</b><p>남은 ${locked}개 풀이 — ${PR.lock}${teas ? ' · 위에 가려진 시기도 실제 계산값 그대로 열려요' : ''}</p>
-      <button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button>${A.ON ? `<button class="sdbtn ghost gfort" data-gfort="${id}">🪙 ${gold}골드로 열기${paidGold ? ' (충전 골드)' : ''}${A.current() ? ` · 내 골드 ${gnum(goldOf())}` : ''}</button>` : ''}<small>한 번 결제하면 ${PR.monthly ? `${rp.ym ? Number(rp.ym.slice(5)) : ''}월 풀이는` : PR.solo ? '내 풀이는' : '이 두 사람 풀이는'} 계속 볼 수 있어요${paidGold ? ' · 보너스 골드는 입문 운세에만 쓸 수 있어요' : ' · 보너스 골드도 쓸 수 있어요'}${PR.monthly ? ' · 21일부터는 다음 달 운세로 팔아요' : ''}</small></div>`}
+      <button class="sdbtn" data-buy="${id}">전체 풀이 열기 · ${won(PR.price)}</button>${A.ON ? `<button class="sdbtn ghost gfort" data-gfort="${id}">🪙 ${gold}골드로 열기${paidGold ? ' (충전 골드)' : ''}${A.current() ? ` · 내 골드 ${gnum(goldOf())}` : ''}</button>` : ''}<small>한 번 결제하면 ${PR.monthly ? `${rp.ym ? Number(rp.ym.slice(5)) : ''}월 풀이는` : PR.solo ? '내 풀이는' : '이 두 사람 풀이는'} 계속 볼 수 있어요${paidGold ? ' · 보너스 골드는 입문 운세에만 쓸 수 있어요' : ' · 보너스 골드도 쓸 수 있어요'}${PR.monthly ? ' · 21일부터는 다음 달 운세로 팔아요' : ''}</small>${agreeNote()}</div>`}
     ${chart}${cal}
     ${rp.sections.filter(s => !s.free).map(sec).join('')}
     ${paid ? '' : `<div class="paywall"><button class="sdbtn" data-buy="${id}">🔓 ${won(PR.price)}에 전부 열기</button></div>`}
@@ -623,7 +628,7 @@ async function fortunePack() {
     return `<label class="pkrow${owned ? ' off' : ''}"><input type="checkbox" name="pk" value="${id}" ${owned ? 'disabled' : ''}><b>${p.title}</b><span>${owned ? '이미 있어요' : `낱개 ${won(p.price)}${needPt ? ' · 상대 정보 필요' : ''}`}</span></label>`; };
   sdOff(); openSheet(`<form class="intro paysheet" id="pkForm"><h2>🎁 ${PK.title}</h2><p class="fsub">${won(PK.price)} · 충전 골드 ${gold} — 신년운세(${won(m.paidOf(PK.base).price)})에 아래에서 <b>2개</b>를 더해요</p>
     <div class="pkrow on"><b>2027 정미년 신년운세</b><span>기본 포함</span></div>${PK.picks.map(row).join('')}
-    <p class="paynote">이번 달 운세 · 합격운은 지금 팔리는 달(${Number(m.curYm().slice(5))}월) 기준이에요. 결제 후 고른 풀이가 모두 바로 열려요.</p>
+    <p class="paynote">이번 달 운세 · 합격운은 지금 팔리는 달(${Number(m.curYm().slice(5))}월) 기준이에요. 결제 후 고른 풀이가 모두 바로 열려 단순 변심 환불은 제한돼요.</p>${agreeNote()}
     <div class="stack"><button class="sdbtn" type="submit" data-how="won" disabled>${won(PK.price)}로 결제하기</button>${A.ON ? `<button class="sdbtn ghost" type="submit" data-how="gold" disabled>🪙 충전 골드 ${gold}로 열기</button>` : ''}<button class="btn ghost" type="button" data-close>닫기</button></div></form>`);
   $('#sheet .panel').classList.add('sdpanel');
   const f = $('#pkForm'), picks = () => [...f.querySelectorAll('input[name=pk]:checked')].map(x => x.value);
@@ -647,7 +652,7 @@ async function packBuy(picks, how, btn) {
   let o; try { o = await P.order('pack', me, pt, extra, tk); } catch (e) { return toast(e.message); }
   if (c.mode === 'toss') { try { await P.toss(o, me, pt); } catch { toast('결제창을 열지 못했어요'); } return; }
   closeSheet(); openSheet(`<div class="intro paysheet"><h2>🎁 ${m.PACK.title}</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
-    <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div><p class="paynote">신년운세 + ${picks.map(id => m.paidOf(id).title).join(' + ')} · 결제 후 바로 열리는 콘텐츠라 단순 변심 환불은 제한돼요. <a href="legal.html#refund" target="_blank">결제·환불 규정</a></p>
+    <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div><p class="paynote">신년운세 + ${picks.map(id => m.paidOf(id).title).join(' + ')} · 결제 후 바로 열리는 콘텐츠라 단순 변심 환불은 제한돼요.</p>${agreeNote()}
     <div class="stack"><button class="sdbtn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" data-close>취소</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel');
   $('#mockPay').onclick = async e => { const b = e.target; b.disabled = true; b.textContent = '결제 중…';
@@ -728,7 +733,7 @@ async function buy(product) {
   sdOff();
   openSheet(`<div class="intro paysheet"><h2>🔓 ${PR.title} 전체 풀이</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
     <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div>
-    <p class="paynote">결제 후 풀이가 바로 제공되어 단순 변심 환불은 제한돼요 (오류 · 중복 결제는 전액 환불). <a href="legal.html#refund" target="_blank">결제·환불 규정</a> · <a href="legal.html#terms" target="_blank">이용약관</a></p>
+    <p class="paynote">결제 후 풀이가 바로 제공되어 단순 변심 환불은 제한돼요 (오류 · 중복 결제는 전액 환불).</p>${agreeNote()}
     <div class="stack"><button class="sdbtn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" id="payCancel">취소</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel');
   $('#payCancel').onclick = () => { if (!closeSheet()) paidPage(product); };   /* 접어 둔 풀이 화면이 있으면 그대로 돌아옴 */
@@ -1002,7 +1007,7 @@ function deleteAccount() {
   const m = A.current(); if (!m) return;
   const paid = (m.gold && m.gold.paid) || 0, free = (m.gold && m.gold.free) || 0;
   openSheet(`<div class="intro"><h2>탈퇴하고 내 정보 지우기</h2><p class="fsub">원어데이 계정과 계정에 저장된 것(소장 게임 · 클라우드 저장 · 명예의 전당 · 계정에 남은 운세 구매)이 모두 지워지고 되돌릴 수 없어요.</p>
-    ${paid || free ? `<div class="payrow"><span>남은 골드</span><b>🪙 ${gnum(paid + free)}</b></div><p class="fsub">${paid ? `충전한 골드 ${gnum(paid)}개(${won(paid * 10)})도 함께 사라져요. 결제 후 7일 안에 쓰지 않은 골드는 환불받을 수 있으니, 지우기 전에 <a href="legal.html#refund" target="_blank">환불 규정</a>을 확인하고 고객센터에 먼저 문의해 주세요.` : '선물로 받은 무료 골드도 함께 사라져요.'}</p>` : ''}
+    ${paid || free ? `<div class="payrow"><span>남은 골드</span><b>🪙 ${gnum(paid + free)}</b></div><p class="fsub">${paid ? `충전한 골드 ${gnum(paid)}개(${won(paid * 10)})도 함께 사라져요. 결제 후 7일 안에 쓰지 않은 골드는 환불받을 수 있으니, 지우기 전에 <a href="refund/" ${NEW}>환불 정책</a>을 확인하고 고객센터에 먼저 문의해 주세요.` : '선물로 받은 무료 골드도 함께 사라져요.'}</p>` : ''}
     <p class="fsub">결제 기록은 법에 따라 5년 보관하지만, 이 계정과의 연결은 끊어요. 이 기기의 게임 기록 · 운세 정보는 그대로예요 (지우려면 '모든 기록 지우기').</p>
     <div class="stack"><button class="btn warn" data-delacct>탈퇴하고 지우기</button><button class="btn ghost" data-close>그만두기</button></div></div>`);
 }
@@ -1033,8 +1038,10 @@ function settingsHTML() {
     <h4 class="sgh">개인정보 · 결제</h4>
     <div class="group">
       <div><span>이용 기록 보내지 않기<br><small style="color:var(--mute)">이름 없는 통계만 모아요 · 끄면 서비스 개선에 쓰지 않아요</small></span><button data-track-off>${T.optedOut() ? '켜기' : '끄기'}</button></div>
-      <div><span>이용약관 · 개인정보처리방침</span><a class="btnlink" href="legal.html">보기</a></div>
-      <div><span>결제 · 환불 규정</span><a class="btnlink" href="legal.html#refund">보기</a></div>
+      <div><span>이용약관 · 개인정보처리방침</span><span><a class="btnlink" href="terms/" ${NEW}>약관</a> <a class="btnlink" href="privacy/" ${NEW}>개인정보</a></span></div>
+      <div><span>환불 정책 · 유료 서비스 안내</span><span><a class="btnlink" href="refund/" ${NEW}>환불</a> <a class="btnlink" href="paid/" ${NEW}>유료</a></span></div>
+      <div><span>AI 생성 콘텐츠 안내<br><small style="color:var(--mute)">점쟁이 대화 · 너랑 · 한 단어는 AI가 만들어요 · 재미 · 참고용</small></span><a class="btnlink" href="ai/" ${NEW}>보기</a></div>
+      <div><span>고객센터<br><small style="color:var(--mute)">문의 · 자주 묻는 질문 · 환불은 주문번호와 함께</small></span><a class="btnlink" href="help/" ${NEW}>열기</a></div>
       ${purchasesRow()}
       ${A.current() ? '<div><span>탈퇴하고 내 정보 지우기<br><small style="color:var(--mute)">계정과 계정에 저장된 것을 지워요</small></span><button data-delacct-open>탈퇴</button></div>' : ''}
     </div>
@@ -1054,7 +1061,8 @@ function settingsHTML() {
       <li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요 (지금은 테스트 광고)</li>
       <li>골드로 하루 열기 10골드 · 소장 300골드 · 전체 소장 2,500골드 (로그인 필요)</li></ul>
       ${A.current() && setCount() ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button></div>` : ''}</div>
-    <div class="stack"><button class="btn ghost" data-close>닫기</button></div>`;
+    <div class="stack"><button class="btn ghost" data-close>닫기</button></div>
+    <div class="bizfoot">${O.footerHTML()}</div>`;
 }
 const settingsOpen = () => !sheet.hidden && panel.classList.contains('setpanel');
 function openSettings() { openSheet(settingsHTML()); panel.classList.add('setpanel'); }
@@ -1488,6 +1496,7 @@ T.start(VERSION, { br: I.env.br, osv: I.env.osv });
 // 계정: 로그인돼 있으면 불러오기 · 구글에서 막 돌아왔으면 환영
 /* 운세 탭은 다시 그리면 읽던 자리가 맨 위로 가므로 머리줄 골드만 새로 · 너랑 시안은 그대로 */
 A.onChange(m => { if (m) R.syncItems(m.items); if (tab === 'fortune' || tab === 'neorang') view.querySelectorAll('.ftop .tchips, .top.tt .tchips').forEach(e => { e.innerHTML = goldChip() + gearBtn(); }); else go(tab); refreshSettings(); });
+A.remote().then(c => { O.apply(c && c.op); refreshSettings(); }).catch(() => {});   /* 운영자(사업자) 정보: 서버 환경변수 값으로 설정 아래 푸터를 채움 */
 A.init().then(m => { if (I.standalone() && localStorage.getItem(GIFT) === 'pending') setTimeout(showInstalled, new URLSearchParams(location.search).has('login') ? 1200 : 300); if (new URLSearchParams(location.search).has('login')) { history.replaceState(null, '', location.pathname); if (m) { T.track('login', { new: m.isNew ? 1 : 0 }); toast(m.isNew ? `${m.name || ''}님, 원어데이에 오신 걸 환영해요!` : `${m.name || ''}님, 다시 오셨네요`); go('settings'); } } });
 // 토스 결제창에서 돌아온 경우
 /* 신년 패키지 영수증 여러 장 → 상품별 '두 사람'(solo 는 나 · 달 상품은 그 달 · 궁합은 상대)으로 보관 */

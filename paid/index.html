@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head><!--oad:test--><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
+S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return s.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};
+S.key=function(i){var a=[];for(var j=0;j<this.length;j++){var y=k.call(this,j);if(y&&y.indexOf(P)===0)a.push(y.slice(P.length))}return a[i]===undefined?null:a[i]};
+S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script><!--/oad:test--><!--oad:env--><script>window.OAD_ENV='test'</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14102E">
+<title>유료 서비스 이용 안내 · One a Day</title>
+<link rel="stylesheet" href="../policy.css">
+</head>
+<body data-page="paid">
+<div class="wrap">
+<a class="home" href="../">← One a Day 열기</a>
+<nav class="pnav"><a href="../terms/">이용약관</a><a href="../privacy/">개인정보처리방침</a><a href="../refund/">환불 · 청약철회</a><a href="../paid/">유료 서비스</a><a href="../ai/">AI 콘텐츠</a><a href="../help/">고객센터</a></nav>
+<main>
+<h1>유료 서비스 이용 안내</h1>
+<p class="meta">판매자 <span data-op="name">알앤지웍스</span> · 가격은 부가세 포함 · 결제는 카드(토스페이먼츠 결제창)</p>
+
+<h2>1. 유료 운세 풀이 (건별 결제)</h2>
+<p>점방에서 무료 미리보기(목차 · 일부 풀이)를 먼저 보고, 원하면 그 풀이 하나를 원화로 결제합니다. <b>결제하는 즉시 화면에 전체 풀이가 열리며</b>, 한 번 결제하면 같은 입력 정보의 풀이를 계속 다시 볼 수 있습니다(이 기기 · 로그인했다면 계정 · 주문번호와 복원 코드로 다른 기기에서도).</p>
+<div class="tw"><table id="fortuneTable">
+<tr><th>상품</th><th>내용</th><th>가격</th><th>골드로</th></tr>
+</table></div>
+<p class="meta">입문 운세(3,900원)는 보너스 골드도 쓸 수 있고, 그보다 비싼 운세는 충전 골드로만 열 수 있어요. 이번 달 운세 · 합격운은 결제한 달 기준이며 매월 21일부터는 다음 달 운세로 판매합니다.</p>
+
+<h2>2. 골드 (원어데이 공용 재화)</h2>
+<ul>
+<li><b>1골드 = 10원.</b> 로그인한 계정에 저장되어 기기를 바꿔도 이어집니다.</li>
+<li>유효기간: 충전 골드(유상) 5년 · 보너스 골드(무상) 받은 날부터 1년.</li>
+<li>골드는 현금으로 바꾸거나 다른 계정에 줄 수 없습니다.</li>
+<li>환불: 결제 후 7일 안에 쓰지 않은 골드는 환불 — 자세한 기준은 <a href="../refund/">환불 · 청약철회 정책</a>.</li>
+</ul>
+<div class="tw"><table id="goldTable">
+<tr><th>묶음</th><th>가격</th><th>충전 골드</th><th>보너스 골드</th></tr>
+<tr data-pack="first"><td>첫 구매 (계정당 한 번)</td><td class="n">1,000원</td><td class="n">100</td><td class="n">100</td></tr>
+<tr data-pack="g100"><td>골드 100</td><td class="n">1,000원</td><td class="n">100</td><td class="n">0</td></tr>
+<tr data-pack="g315"><td>골드 315</td><td class="n">3,000원</td><td class="n">300</td><td class="n">15</td></tr>
+<tr data-pack="g550"><td>골드 550</td><td class="n">5,000원</td><td class="n">500</td><td class="n">50</td></tr>
+<tr data-pack="g1100"><td>골드 1,100</td><td class="n">10,000원</td><td class="n">1,000</td><td class="n">100</td></tr>
+<tr data-pack="g2300"><td>골드 2,300</td><td class="n">20,000원</td><td class="n">2,000</td><td class="n">300</td></tr>
+<tr data-pack="g6000"><td>골드 6,000</td><td class="n">50,000원</td><td class="n">5,000</td><td class="n">1,000</td></tr>
+</table></div>
+<h3>골드를 쓰는 곳</h3>
+<div class="tw"><table>
+<tr><th>쓰는 곳</th><th>골드</th><th>제공</th></tr>
+<tr><td>지난 게임 하루 열기</td><td class="n">10</td><td>그날 하루 (한국 시간 자정까지)</td></tr>
+<tr><td>게임 소장</td><td class="n">300</td><td>기간 제한 없이 계속 · 클라우드 저장 · 명예의 전당</td></tr>
+<tr><td>판매 중인 게임 전체 소장</td><td class="n">게임당 300 · 최대 2,500</td><td>위와 같음</td></tr>
+<tr><td>게임 안 상품(이어하기 · 아이템 등)</td><td class="n">상품마다 표시</td><td>산 즉시 · 상품마다 하루 횟수 제한</td></tr>
+<tr><td>유료 운세 풀이</td><td class="n">원화 가격 ÷ 10</td><td>위 1과 같음</td></tr>
+</table></div>
+
+<h2>3. 확률형 상품</h2>
+<p>원어데이 골드나 원화로 <b>직접 사는 확률형(무작위) 상품은 없습니다.</b> 일부 게임 안의 뽑기는 게임 안에서 모은 재화로만 돌리며, 그 게임의 뽑기 화면에 아이템별 확률과 천장(정해진 횟수 안에 반드시 나오는 보상)을 공개합니다. 골드로 파는 확률형 상품을 새로 열 때는 이 페이지와 구매 화면에 확률을 먼저 공개합니다.</p>
+
+<h2>4. 결제 전에 확인해 주세요</h2>
+<ul>
+<li>결제 화면에서 상품 이름 · 가격 · 환불 조건을 확인한 뒤 '결제 진행'을 누르면 구매 조건에 동의한 것으로 봅니다.</li>
+<li>유료 운세 풀이는 결제 즉시 열리는 디지털 콘텐츠라 단순 변심 환불이 제한됩니다(오류 · 중복 결제는 전액 환불).</li>
+<li>미성년자는 법정대리인(부모 등)의 동의를 받고 결제해 주세요. 동의 없이 한 결제는 취소할 수 있습니다.</li>
+<li>운세 · AI 콘텐츠는 재미 · 참고용이며 의료 · 투자 · 법률 판단의 근거가 아닙니다(<a href="../ai/">AI 생성 콘텐츠 안내</a>).</li>
+</ul>
+</main>
+<footer id="opfoot"></footer>
+<!--oad:test--><p class="legalnote">초안 · 법률 검토 전 (대표 확인용 표시 — 실서버에는 나가지 않음) · 검토 지점: 골드 6,000(50,000원) 묶음 — 카드사 '충전 1일 5만 원 미만' 규칙(research.md 3장) · 유상 5년 유효기간 · 게임 안 뽑기 확률 공개 위치 게임별 확인</p><!--/oad:test-->
+</div>
+<script type="module">
+import { mount } from '../operator.js';
+import { PAID, PACK } from '../fortune/fortune.js';
+/* 운세 상품 표: 앱과 같은 목록(fortune.js PAID · PACK — 가격 표시용, 실제 결제 가격은 서버 gold.js FORTUNE · 둘은 tabs_check 가 대조) */
+const won = n => n.toLocaleString('ko-KR') + '원', esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const rows = PAID.map(p => `<tr data-fortune="${p.id}"><td>${esc(p.title)}</td><td>${esc(p.hook || '')}</td><td class="n">${won(p.price)}</td><td class="n">${(p.price / 10).toLocaleString('ko-KR')}</td></tr>`);
+rows.push(`<tr data-fortune="pack"><td>${esc(PACK.title)}</td><td>신년운세 + 고른 풀이 2개</td><td class="n">${won(PACK.price)}</td><td class="n">${(PACK.price / 10).toLocaleString('ko-KR')}</td></tr>`);
+document.getElementById('fortuneTable').insertAdjacentHTML('beforeend', rows.join(''));
+mount();
+</script>
+</body>
+</html>

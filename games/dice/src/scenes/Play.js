@@ -1,16 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.99.0';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.0';
-import { DESC } from './Deck.js?v=0.99.0';
-import { act } from '../core/ai.js?v=0.99.0';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.0';
-import { audio } from '../audio.js?v=0.99.0';
-import { load, save } from '../save.js?v=0.99.0';
-import * as M from '../meta.js?v=0.99.0';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.0';
-import * as BM from '../bmflow.js?v=0.99.0';
-import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.0';
-import { guidePop } from '../guide.js?v=0.99.0';
+import { W, H } from '../config.js?v=0.99.1';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.1';
+import { DESC } from './Deck.js?v=0.99.1';
+import { act } from '../core/ai.js?v=0.99.1';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.1';
+import { audio } from '../audio.js?v=0.99.1';
+import { load, save } from '../save.js?v=0.99.1';
+import * as M from '../meta.js?v=0.99.1';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.1';
+import * as BM from '../bmflow.js?v=0.99.1';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.1';
+import { guidePop } from '../guide.js?v=0.99.1';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -34,7 +34,7 @@ const RUN0 = () => ({
   hinted: false, danger: null, chillFx: null, minePool: null, recordSaid: false, manaT: 0,
   bpId: null, bpImg: null, bpObjs: null, bpArgs: null,
   drag: null, drag0moved: false, frozen: [], hints: [], targets: [], powerHintObj: null, rarFxT: 0, popT: 0,
-  pulseQ: [], pick: null, itemBusy: false, autoBought: false, itemBar: null, items: [], itemY: null,
+  pulseQ: [], links: [], linked: new Set(), lastLink: null, fingerObj: null, pick: null, itemBusy: false, autoBought: false, itemBar: null, items: [], itemY: null,
 });
 
 export class PlayScene extends Phaser.Scene {
@@ -384,20 +384,78 @@ export class PlayScene extends Phaser.Scene {
     this.updateBossPreview();
     for (const p of this.pw) { const lv = s.power[p.t], c = s.powerCost(p.t), st = c == null ? 'max' : s.sp >= c ? 'ok' : 'no'; p.lv.setText(`Lv${lv + 1}`); this.drawPower(p, st, c); if (st === 'ok' && s.wave >= 2) this.powerHint(p); }
     this.drawItems();
+    if (this.links.length) this.checkLinks();
     if (this.pulseQ.length) this.mergePulse();
   }
-  // 합성 짝 강조 (QA 6): 소환 직후 그 주사위와 합칠 수 있는 짝이 판에 있으면 둘 다 짧게 맥동 — 화면만, 판 로직 · 봇과 무관
+  /* 합성 짝 잇는 빛줄기 (QA 6 → 19, 2026-11-05): 새로 생긴 주사위(소환 · 합성 결과, 1~6눈 모두 같은 방식)와 합칠 수 있는 짝이 판에 있으면
+     둘을 빛나는 선 + 흐르는 빛 + 화살표로 한 번 이어 보여 주고 사라짐 (반복 깜빡임 X — 주사위 평소 숨쉬기 · 등급 빛과 확실히 다르게).
+     짝이 여럿이면 가까운 한 쪽(같은 종류 먼저) · 같은 두 주사위는 한 번만 · 처음 한 번은 '끌어서 합치기' 손가락 힌트. 화면만, 판 로직 · 봇과 무관 */
   mergePulse() {
     const q = this.pulseQ.splice(0); if (this.bot || this.drag || this.pick) return;
-    const lit = new Set();
-    for (const i of q) { const mates = []; for (let j = 0; j < SLOTS; j++) if (this.s.canMerge(i, j)) mates.push(j); if (mates.length) { lit.add(i); mates.forEach(j => lit.add(j)); } }
-    for (const i of lit) {
-      const v = this.dieViews[i], dd = this.s.board[i]; if (!v || !dd) continue;
-      const col = RUNES[dd.type].color, gl = this.add.image(0, 0, 'glow').setTint(col).setBlendMode('ADD').setScale(2).setAlpha(0);
-      const rg = this.add.graphics(); rg.lineStyle(6, col, 1).strokeRoundedRect(-CS / 2 + 6, -CS / 2 + 6, CS - 12, CS - 12, 28); rg.setAlpha(0);
-      v.addAt(gl, 0); v.add(rg);
-      this.tweens.add({ targets: [gl, rg], alpha: { from: 0, to: 0.85 }, duration: 240, delay: 120, yoyo: true, repeat: 2, onComplete: () => { gl.destroy(); rg.destroy(); } });
+    const s = this.s; if (s.autoMerge && !s.emptySlots().length) return;   /* 자동 합성이 판을 정리하는 중엔 조용히 */
+    for (const i of q) {
+      const A = s.board[i]; if (!A || this.links.length >= 2) continue;
+      const r = k => [Math.floor(k / COLS), k % COLS], [ri, ci] = r(i);
+      let best = -1, bd = 1e9;
+      for (let j = 0; j < SLOTS; j++) if (s.canMerge(i, j)) { const [rj, cj] = r(j), dd = Math.hypot(ri - rj, ci - cj) + (s.board[j].type === A.type ? 0 : 10); if (dd < bd) { bd = dd; best = j; } }
+      if (best < 0) continue;
+      const key = [A.id, s.board[best].id].sort().join('_'); if (this.linked.has(key)) continue;
+      this.linked.add(key); this.mergeLink(i, best);
     }
+  }
+  mergeLink(i, j) {
+    const s = this.s, A = s.board[i], B = s.board[j], col = RUNES[A.type].color, [x0, y0] = this.slotXY(i), [x1, y1] = this.slotXY(j);
+    const ang = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0), ux = Math.cos(ang), uy = Math.sin(ang);
+    const c = this.add.container(0, 0).setDepth(28), g = this.add.graphics(), fr = this.add.graphics();
+    c.add([fr, g]);
+    /* 두 주사위 테두리: 한 번 조여 들어오며 켜짐 (맥동 X) */
+    for (const [x, y] of [[x0, y0], [x1, y1]]) { fr.lineStyle(12, col, 0.35).strokeRoundedRect(x - CS / 2 - 2, y - CS / 2 - 2, CS + 4, CS + 4, 32); fr.lineStyle(5, 0xFFFFFF, 0.95).strokeRoundedRect(x - CS / 2 + 3, y - CS / 2 + 3, CS - 6, CS - 6, 28); }
+    const ends = [[x0, y0], [x1, y1]].map(([x, y]) => this.add.image(x, y, 'glow').setTint(col).setBlendMode('ADD').setScale(1.1).setAlpha(0.9));
+    c.add(ends);
+    /* 빛줄기: 새 주사위 → 짝 쪽으로 뻗어 나감 · 끝에 화살표 */
+    const st = { k: 0 }, a0 = CS * 0.18, a1 = L - CS * 0.2;
+    const draw = () => {
+      const e = a0 + (a1 - a0) * st.k, ex = x0 + ux * e, ey = y0 + uy * e, sx = x0 + ux * a0, sy = y0 + uy * a0;
+      g.clear();
+      g.lineStyle(26, col, 0.28).lineBetween(sx, sy, ex, ey);
+      g.lineStyle(13, col, 0.8).lineBetween(sx, sy, ex, ey);
+      g.lineStyle(5, 0xFFFFFF, 1).lineBetween(sx, sy, ex, ey);
+      const hx = ex + ux * 26, hy = ey + uy * 26, px = -uy, py = ux;
+      g.fillStyle(col, 0.9).fillTriangle(hx + ux * 8, hy + uy * 8, ex - ux * 14 + px * 30, ey - uy * 14 + py * 30, ex - ux * 14 - px * 30, ey - uy * 14 - py * 30);
+      g.fillStyle(0xFFFFFF, 1).fillTriangle(hx, hy, ex - ux * 6 + px * 18, ey - uy * 6 + py * 18, ex - ux * 6 - px * 18, ey - uy * 6 - py * 18);
+    };
+    draw();
+    fr.setAlpha(0); ends.forEach(e => e.setAlpha(0));
+    this.tweens.add({ targets: [fr, ...ends], alpha: 1, duration: 160 });
+    this.tweens.add({ targets: st, k: 1, duration: 300, ease: 'Cubic.easeOut', onUpdate: draw });
+    /* 선을 따라 흐르는 빛 알갱이 3개 (두 번 지나감) */
+    for (let n = 0; n < 3; n++) {
+      const dot = this.add.image(x0, y0, 'pip').setTint(0xFFFFFF).setBlendMode('ADD').setDisplaySize(40, 40).setAlpha(0); c.add(dot);
+      this.tweens.add({ targets: dot, x: x0 + ux * a1, y: y0 + uy * a1, alpha: { from: 1, to: 0.2 }, duration: 520, delay: 260 + n * 150, repeat: 1, repeatDelay: 80 });
+    }
+    const link = { c, i, j, ida: A.id, idb: B.id, gone: false };
+    const kill = (ms = 320) => { if (link.gone) return; link.gone = true; this.links = this.links.filter(x => x !== link); this.tweens.add({ targets: c, alpha: 0, duration: ms, onComplete: () => c.destroy() }); };
+    link.kill = kill;
+    this.links.push(link);
+    this.time.delayedCall(1250, () => kill());
+    if (this.mergeTip()) this.fingerHint(x0, y0, x1, y1);
+    this.lastLink = { i, j, t: this.time.now };
+  }
+  /* 판 상태가 바뀌면(둘 중 하나가 합성 · 제거됨) · 끌기 시작하면 빛줄기를 바로 거둠 */
+  checkLinks() {
+    for (const l of this.links.slice()) { const a = this.s.board[l.i], b = this.s.board[l.j]; if (this.drag || !a || !b || a.id !== l.ida || b.id !== l.idb) l.kill(120); }
+  }
+  mergeTip() { const d = load(); if (d.tips.mergeLink || this.bot) return false; d.tips.mergeLink = 1; save(); return true; }
+  /* 처음 한 번: 손가락이 새 주사위를 짝 위로 끌어다 놓는 모양 (두 번) + '끌어서 합치기' */
+  fingerHint(x0, y0, x1, y1) {
+    const c = this.add.container(0, 0).setDepth(31), h = this.add.image(x0 + 30, y0 + 40, 'i_hand').setDisplaySize(110, 110).setOrigin(0.38, 0.08).setAlpha(0);
+    const tip = T(this, (x0 + x1) / 2, Math.min(y0, y1) - CS / 2 - 34, '끌어서 합치기', 30, '#FFFFFF', { w: 900, stroke: '#1A1240', thick: 8 }).setAlpha(0);
+    c.add([h, tip]); this.fingerObj = c;
+    this.tweens.add({ targets: tip, alpha: 1, duration: 200 });
+    this.tweens.chain({ targets: h, tweens: [
+      { alpha: 1, duration: 160 }, { x: x1 + 30, y: y1 + 40, duration: 620, ease: 'Sine.easeInOut' }, { alpha: 0, duration: 160 },
+      { x: x0 + 30, y: y0 + 40, duration: 1 }, { alpha: 1, duration: 160 }, { x: x1 + 30, y: y1 + 40, duration: 620, ease: 'Sine.easeInOut' }, { alpha: 0, duration: 200 },
+    ], onComplete: () => this.tweens.add({ targets: tip, alpha: 0, duration: 200, onComplete: () => c.destroy() }) });
   }
   // 적 그리기 + 움직임: 정령은 둥실 · 임프는 뛰어다님 · 골렘은 쿵쿵 · 보스는 숨쉬며 흔들림. 진행 방향을 바라봄
   drawEnemies() {
@@ -574,6 +632,7 @@ export class PlayScene extends Phaser.Scene {
       case 'summon': this.pulseQ.push(e.slot); audio.play('sfx_summon', { volume: 0.55, gap: 40 }); { const [sx2, sy2] = this.slotXY(e.slot); this.rarityPop(sx2, sy2, e.die.type); } if (e.free) { const [x, y] = this.slotXY(e.slot); this.float(x, y - 70, '소환사!', '#9AA6FF'); this.spark.setParticleTint(0x6F7CFF); this.spark.emitParticleAt(x, y, 10); } break;
       case 'shot': audio.play('sfx_pew', { volume: 0.22, gap: 55, rate: 0.85 + e.die.pips * 0.06 + Math.random() * 0.1 }); this.shotFx(e.slot, e.target, e.n, e.die.type); break;
       case 'merge': {
+        this.pulseQ.push(e.to);   /* 합성 결과에도 짝이 있으면 같은 빛줄기 (QA 19: 1~4성 모두 같게) */
         const [x, y] = this.slotXY(e.to), col = RUNES[e.die.type].color;
         audio.play('sfx_merge', { volume: 0.7 }); buzz(20);
         this.spark.setParticleTint(col); this.spark.emitParticleAt(x, y, 14);
@@ -806,7 +865,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.0').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.1').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤

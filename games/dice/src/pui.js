@@ -1,7 +1,7 @@
 // 프리미엄 UI 키트: 깔끔한 글자 · 유리 패널 · 그라데이션 버튼 · 선 아이콘 (모두 코드로 그림 — 선명하고 가벼움)
-import { W, H, FONT } from './config.js?v=0.99.0';
-import { audio } from './audio.js?v=0.99.0';
-import { pushBack } from './oad.js?v=0.99.0';
+import { W, H, FONT } from './config.js?v=0.99.1';
+import { audio } from './audio.js?v=0.99.1';
+import { pushBack } from './oad.js?v=0.99.1';
 
 export const C = {
   ink: '#0B1026', text: '#F4F6FF', sub: '#9AA3D6', dim: '#5E679A', gold: '#F5C451', cyan: '#5EE3FF', pink: '#FF6FAE', green: '#5BE39A',
@@ -96,6 +96,35 @@ export function iconBtn(scene, x, y, icon, onClick, size = 104) {
   return c;
 }
 
+/* 유리 알약 버튼 (아이콘 + 짧은 글자) — 동그란 아이콘 버튼과 같은 유리 · 같은 높이. 원어데이로 나가기(QA 21) */
+export function pillBtn(scene, x, y, w, h, icon, label, onClick) {
+  const key = `pill_${w}_${h}`;
+  canvasTex(scene, key, w + 20, h + 20, g => {
+    g.translate(10, 10); rr(g, 2, 2, w - 4, h - 4, (h - 4) / 2);
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(60,72,150,0.85)'); gr.addColorStop(1, 'rgba(24,30,74,0.9)'); g.fillStyle = gr; g.fill();
+    g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.16)'; g.stroke();
+  });
+  const c = scene.add.container(x, y), ic = scene.add.image(-w / 2 + h * 0.5, 0, icon).setDisplaySize(h * 0.42, h * 0.42);
+  const t = T(scene, -w / 2 + h * 0.86, -1, label, Math.round(h * 0.3), C.text, { ox: 0, w: 800, shadow: false });
+  c.add([scene.add.image(0, 0, key), ic, t]); c.icon = ic; c.label = t;
+  c.setSize(w, h).setInteractive({ useHandCursor: true });
+  c.on('pointerdown', () => c.setScale(0.94));
+  c.on('pointerout', () => c.setScale(1));
+  c.on('pointerup', () => { c.setScale(1); audio.play('sfx_click', { volume: 0.5 }); onClick && onClick(); });
+  return c;
+}
+
+/* 보상 묶음 (QA 20): 왼쪽에 '보상' 꼬리표 · 오른쪽에 한 줄에 한 항목. 모든 화면(홈 카드 · 아케이드 · 결과 이정표)이 같은 모양
+   lines: 문자열 배열 · 첫 줄은 하늘색, 다음 줄은 연한 색 · 돌려줌 { objs, texts, h } */
+export function rewardBlock(scene, x, y, lines, o = {}) {
+  const size = o.size || 22, gap = o.gap || Math.round(size * 1.6), tag = o.tag || '보상', tw = Math.round(size * 2.9), th = Math.round(size * 1.45);
+  const g = scene.add.graphics();
+  g.fillStyle(0xF5C451, 0.14).fillRoundedRect(x, y - th / 2, tw, th, th / 2).lineStyle(2, 0xF5C451, 0.7).strokeRoundedRect(x, y - th / 2, tw, th, th / 2);
+  const tg = T(scene, x + tw / 2, y, tag, Math.round(size * 0.86), C.gold, { w: 900, shadow: false });
+  const texts = lines.map((s, i) => T(scene, x + tw + 14, y + i * gap, s, size, i ? (o.sub || '#C3CAF0') : (o.color || '#8FE3FF'), { ox: 0, w: 800 }));
+  return { objs: [g, tg, ...texts], texts, h: (lines.length - 1) * gap + th };
+}
+
 // 선 아이콘 (흰색, 틴트로 색 변경)
 export function makeIcons(scene) {
   const S = 96, L = 8;
@@ -119,11 +148,25 @@ export function makeIcons(scene) {
   ic('i_grid', g => { for (const [x, y] of [[18, 18], [52, 18], [18, 52], [52, 52]]) g.fillRect(x, y, 26, 26); });
   ic('i_land', g => { g.lineWidth = 7; g.strokeRect(14, 18, 68, 60); g.beginPath(); g.moveTo(18, 72); g.lineTo(40, 44); g.lineTo(54, 60); g.lineTo(64, 50); g.lineTo(78, 72); g.closePath(); g.fill(); g.beginPath(); g.arc(64, 34, 7, 0, Math.PI * 2); g.fill(); });
   ic('i_film', g => { g.lineWidth = 7; g.strokeRect(16, 24, 64, 48); g.beginPath(); g.moveTo(42, 38); g.lineTo(58, 48); g.lineTo(42, 58); g.closePath(); g.fill(); });
+  /* 원어데이로 나가기: 열린 문틀 + 왼쪽으로 나가는 화살표 (QA 21) */
+  ic('i_exit', g => { g.beginPath(); g.moveTo(50, 18); g.lineTo(78, 18); g.lineTo(78, 78); g.lineTo(50, 78); g.stroke(); g.beginPath(); g.moveTo(62, 48); g.lineTo(18, 48); g.stroke(); g.beginPath(); g.moveTo(34, 32); g.lineTo(18, 48); g.lineTo(34, 64); g.stroke(); });
   // 판 안 아이템 아이콘: 자동 합성(두 칸이 하나로) · 룬 제거(지우개 X 칸) · 1성 교체(돌아가는 화살표 칸) · 폭탄
   ic('i_auto', g => { g.lineWidth = 7; g.strokeRect(12, 16, 28, 28); g.strokeRect(12, 54, 28, 28); g.beginPath(); g.moveTo(44, 30); g.lineTo(60, 48); g.lineTo(44, 66); g.stroke(); g.fillRect(62, 34, 26, 28); });
   ic('i_trash', g => { g.lineWidth = 7; g.strokeRect(20, 20, 56, 56); g.beginPath(); g.moveTo(34, 34); g.lineTo(62, 62); g.moveTo(62, 34); g.lineTo(34, 62); g.stroke(); });
   ic('i_swap', g => { g.lineWidth = 8; g.beginPath(); g.arc(48, 48, 26, -Math.PI * 0.85, Math.PI * 0.35); g.stroke(); g.beginPath(); g.moveTo(66, 74); g.lineTo(70, 56); g.lineTo(52, 58); g.closePath(); g.fill(); g.beginPath(); g.arc(48, 48, 7, 0, Math.PI * 2); g.fill(); });
   ic('i_bomb', g => { g.beginPath(); g.arc(44, 56, 28, 0, Math.PI * 2); g.fill(); g.lineWidth = 6; g.beginPath(); g.moveTo(62, 34); g.quadraticCurveTo(70, 18, 82, 20); g.stroke(); g.beginPath(); g.arc(84, 16, 6, 0, Math.PI * 2); g.fill(); });
+}
+
+/* 손가락 힌트 그림 (QA 19 '끌어서 합치기'): 검지를 편 손 · 흰 몸통 + 짙은 테두리 · 손끝이 (38%, 8%) */
+export function makeHand(scene) {
+  canvasTex(scene, 'i_hand', 128, 128, g => {
+    const P = [[40, 8, 22, 64, 11], [30, 50, 66, 62, 22], [62, 44, 18, 30, 9], [78, 50, 16, 28, 8]];   /* 검지 · 손바닥 · 가운뎃손가락 · 약손가락 */
+    g.lineJoin = 'round'; g.lineWidth = 10; g.strokeStyle = '#1A1240';
+    for (const f of P) { rr(g, ...f); g.stroke(); }
+    g.fillStyle = '#FFFFFF';
+    for (const f of P) { rr(g, ...f); g.fill(); }
+    g.fillStyle = 'rgba(120,110,190,0.35)'; rr(g, 44, 12, 14, 12, 6); g.fill();
+  });
 }
 
 // 팝업: 어두운 막 + 유리 패널 + 제목

@@ -1,11 +1,11 @@
 // 결과: 도달 웨이브 · 처치 · 보스 · 최고 눈 · 받은 수정 · 새 해금
-import { W, H } from '../config.js?v=0.99.0';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.0';
-import { audio } from '../audio.js?v=0.99.0';
-import { load } from '../save.js?v=0.99.0';
-import * as M from '../meta.js?v=0.99.0';
-import * as BM from '../bmflow.js?v=0.99.0';
-import { RUNES } from '../core/sim.js?v=0.99.0';
+import { W, H } from '../config.js?v=0.99.1';
+import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.1';
+import { audio } from '../audio.js?v=0.99.1';
+import { load } from '../save.js?v=0.99.1';
+import * as M from '../meta.js?v=0.99.1';
+import * as BM from '../bmflow.js?v=0.99.1';
+import { RUNES } from '../core/sim.js?v=0.99.1';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -31,7 +31,8 @@ export class ResultScene extends Phaser.Scene {
       audio.play('sfx_awaken', { volume: 0.7 });
     } else if (r.mode === 'run') {   // 다음 이정표 미리보기 (QA 18)
       const nm = M.nextMilestone();
-      if (nm) T(this, W / 2, cy + 250, `다음 이정표 웨이브 ${nm.wave}  ·  ${nm.text}  (최고 ${nm.best})`, 30, '#8FE3FF', { w: 800 });
+      /* 홈 카드와 같은 형식 (QA 20): '보상' 꼬리표 + 한 줄에 한 항목 */
+      if (nm) this.rwNext = rewardBlock(this, 250, cy + 236, [M.milestoneLine(nm), `지금 최고 웨이브 ${nm.best} · 처음 도달하면 받아요`], { size: 28, gap: 44 });
     }
     if (r.items) T(this, W / 2, cy - 222, `아이템 ${r.items}번 사용한 판`, 22, C.dim, { w: 800 });
     const by = Math.min(H - 150, cy + 700);

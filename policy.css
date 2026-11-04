@@ -1,0 +1,36 @@
+/* 정책 페이지 공용 (terms · privacy · refund · paid · ai · help — 2026-11-04) · 앱과 같은 밤하늘 색 */
+:root{--bg:#14102E;--card:#221A4A;--text:#F6F2FF;--sub:#B9AEE0;--line:rgba(255,255,255,.12);--gold:#FFC93C;--todo:#FFB37A}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 -apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;overflow-wrap:anywhere;word-break:keep-all}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 48px}
+.home{display:inline-flex;align-items:center;gap:6px;color:var(--sub);text-decoration:none;font-size:14px;padding:6px 0}
+.pnav{position:sticky;top:0;background:var(--bg);display:flex;gap:6px;padding:10px 0;z-index:2;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.pnav::-webkit-scrollbar{display:none}
+.pnav a{color:var(--sub);text-decoration:none;padding:6px 12px;border-radius:99px;border:1px solid var(--line);white-space:nowrap;font-size:13px;flex:none}
+.pnav a.on{color:#2A1C00;background:var(--gold);border-color:var(--gold);font-weight:600}
+h1{font-size:23px;line-height:1.4;margin:26px 0 4px}
+h2{font-size:17px;margin:28px 0 6px;color:var(--gold)}
+h3{font-size:15px;margin:18px 0 4px}
+p,li{color:#E3DDF7}
+ol,ul{padding-left:20px}
+li{margin:2px 0}
+a{color:var(--text)}
+.meta{color:var(--sub);font-size:13px;margin:0}
+.box{background:var(--card);border-radius:12px;padding:14px 16px;margin:12px 0;font-size:14px}
+.box.warn{border:1px solid rgba(255,201,60,.35)}
+.tw{overflow-x:auto;margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:500;white-space:nowrap}
+td.n{text-align:right;white-space:nowrap}
+details{background:var(--card);border-radius:12px;padding:12px 16px;margin:8px 0}
+details summary{cursor:pointer;font-weight:600}
+details p{margin:8px 0 0}
+.optodo{color:var(--todo)}
+.legalnote{margin-top:36px;color:var(--sub);font-size:12px;opacity:.75}
+footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--sub)}
+.oplinks{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:8px}
+.oplinks a{color:var(--sub);font-size:12px}
+.opinfo{margin:0;color:var(--sub);font-size:12px;line-height:1.7}
+.opinfo a{color:var(--sub)}

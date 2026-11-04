@@ -1,12 +1,12 @@
 // 아케이드: 보스 러시 · 랜덤 아레나 · 단일 룬 시련 · 심연 광산 (원작 아케이드 모드를 혼자 하는 버전으로)
-import { W, H } from '../config.js?v=0.99.0';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.0';
-import { audio } from '../audio.js?v=0.99.0';
-import { load, save } from '../save.js?v=0.99.0';
-import * as M from '../meta.js?v=0.99.0';
-import * as BM from '../bmflow.js?v=0.99.0';
-import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.99.0';
-import { DESC } from './Deck.js?v=0.99.0';
+import { W, H } from '../config.js?v=0.99.1';
+import { T, C, fmt, panel, btn, iconBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.1';
+import { audio } from '../audio.js?v=0.99.1';
+import { load, save } from '../save.js?v=0.99.1';
+import * as M from '../meta.js?v=0.99.1';
+import * as BM from '../bmflow.js?v=0.99.1';
+import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.99.1';
+import { DESC } from './Deck.js?v=0.99.1';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const LOOK = { rush: ['boss_serpent', 0xFF5A7A], arena: ['die_echo', 0xB59BFF], mono: ['die_flame', 0xFF8A3D], abyss: ['boss_statue', 0x5EE3FF] };
@@ -19,7 +19,8 @@ export class ArcadeScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.6);
     iconBtn(this, 80, 92, 'i_home', () => this.go('Home'), 96);
     T(this, W / 2, 92, '아케이드', 44, C.text, { w: 900 });
-    T(this, W / 2, 160, '메인 원정과 다른 규칙으로 즐기는 도전 · 수정과 명성을 받아요', 26, C.sub, { w: 800 });
+    T(this, W / 2, 160, '메인 원정과 다른 규칙으로 즐기는 도전 · 모드마다 보상이 달라요', 26, C.sub, { w: 800 });
+    this.rw = {};
     const keys = Object.keys(M.ARCADE), top = 250, ch = Math.min(400, (H - top - 40) / keys.length - 24);
     keys.forEach((k, i) => {
       const A = M.ARCADE[k], y = top + ch / 2 + i * (ch + 24), [img, col] = LOOK[k];
@@ -30,7 +31,9 @@ export class ArcadeScene extends Phaser.Scene {
       if (k === 'mono' || k === 'arena') this.add.image(190, y, k === 'mono' ? 'rune_flame' : 'rune_echo').setDisplaySize(Math.min(ch * 0.36, 120), Math.min(ch * 0.36, 120));
       T(this, 330, y - ch / 2 + 50, A.en, 22, hex(col), { ox: 0, w: 900, ls: 5 });
       T(this, 330, y - ch / 2 + 98, A.name, 46, C.text, { ox: 0, w: 900 });
-      T(this, 330, y + 6, A.desc, 24, C.sub, { ox: 0, w: 700, wrap: 420, align: 'left' });
+      T(this, 330, y - ch / 2 + 136, A.desc, 23, C.sub, { ox: 0, oy: 0, w: 700, wrap: 440, align: 'left' });
+      /* 받을 보상 (QA 20): '보상' 꼬리표 + 한 줄에 한 항목 — 최고 기록 바로 위 */
+      this.rw[k] = rewardBlock(this, 330, y + ch / 2 - 118, M.REWARD[k], { size: 21, gap: 32 });
       const best = d.arcade[k] || 0;
       T(this, 330, y + ch / 2 - 46, best ? `최고 ${A.unit} ${best}` : '아직 기록 없음', 28, best ? C.gold : C.dim, { ox: 0, w: 800 });
       const left = k === 'abyss' ? M.abyssLeft() : null;

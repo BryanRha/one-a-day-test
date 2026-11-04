@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head><!--oad:test--><script>/* 테스트 환경: localStorage 키 앞에 test: 를 붙여 서비스와 분리 */(function(){var P='test:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem,k=S.key;if(S.__t)return;S.__t=1;
+S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return s.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};
+S.key=function(i){var a=[];for(var j=0;j<this.length;j++){var y=k.call(this,j);if(y&&y.indexOf(P)===0)a.push(y.slice(P.length))}return a[i]===undefined?null:a[i]};
+S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&y.indexOf(P)===0)r.call(this,y)}};})();</script><!--/oad:test--><!--oad:env--><script>window.OAD_ENV='test'</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14102E">
+<title>AI 생성 콘텐츠 안내 · One a Day</title>
+<link rel="stylesheet" href="../policy.css">
+</head>
+<body data-page="ai">
+<div class="wrap">
+<a class="home" href="../">← One a Day 열기</a>
+<nav class="pnav"><a href="../terms/">이용약관</a><a href="../privacy/">개인정보처리방침</a><a href="../refund/">환불 · 청약철회</a><a href="../paid/">유료 서비스</a><a href="../ai/">AI 콘텐츠</a><a href="../help/">고객센터</a></nav>
+<main>
+<h1>AI 생성 콘텐츠 안내</h1>
+<p class="meta">「인공지능 발전과 신뢰 기반 조성 등에 관한 기본법」(AI 기본법)의 생성형 AI 고지 · 운영자 <span data-op="name">알앤지웍스</span></p>
+<div class="box warn"><b>아래 기능의 답과 문장은 생성형 인공지능(AI)이 만듭니다.</b> 사람이 그때그때 쓰는 답이 아니며, 사실과 다르거나 엉뚱할 수 있어요. 재미 · 참고용이고 <b>의료 · 투자 · 법률 · 심리 상담 판단이 아닙니다.</b></div>
+
+<h2>1. AI가 만드는 기능</h2>
+<div class="tw"><table>
+<tr><th>기능</th><th>AI가 만드는 것</th><th>AI에 보내는 것</th></tr>
+<tr><td>그날의 점쟁이 대화 (점방)</td><td>점쟁이 캐릭터의 답 · 이어 물을 질문 추천</td><td>내가 쓴 질문과 최근 대화 몇 마디, 이 기기에서 계산한 운세 해석 요약(오행 · 경향 · 점수). 이름 · 생년월일 원본은 보내지 않아요.</td></tr>
+<tr><td>너랑 (캐릭터 이야기 · 대화)</td><td>등장인물의 대사 · 이야기 전개 · 대화 기억 요약</td><td>내가 쓴 말과 최근 대화, 내가 정한 부를 이름 · 나이대, 기억 요약 몇 줄</td></tr>
+<tr><td>AI가 본 나 「한 단어」</td><td>후보 중 고른 한 단어와 한 줄 풀이</td><td>답한 보기 번호 · 나이대 · 날짜만 (이름 · 생년월일 · 성격 유형 없음)</td></tr>
+</table></div>
+<p><b>AI가 아닌 것</b>: 오늘의 운세와 점방의 유료 운세 풀이는 명리학 규칙으로 계산해 미리 써 둔 문장을 고르는 방식이라 AI 생성 콘텐츠가 아닙니다. 게임도 AI가 실시간으로 만들지 않습니다.</p>
+
+<h2>2. 이렇게 받아들여 주세요</h2>
+<ul>
+<li>AI의 답은 운세 · 이야기 놀이를 위한 <b>창작물</b>입니다. 특정인의 실제 마음 · 행동 · 미래를 알려 주지 않습니다.</li>
+<li>건강 · 약 · 돈(투자 · 대출 · 복권) · 법(소송 · 계약 · 이혼) 문제는 AI 답으로 결정하지 말고 전문가와 상의해 주세요.</li>
+<li>너랑의 등장인물은 꾸며 낸 인물이며 실제 사람이 아닙니다.</li>
+<li>힘든 마음이 들면 혼자 견디지 말고 도움을 받으세요: 자살예방상담 <b>109</b> · 정신건강위기상담 <b>1577-0199</b> (24시간).</li>
+</ul>
+
+<h2>3. 안전장치</h2>
+<ul>
+<li>질문마다 별도의 안전 판별을 거쳐, 위기 · 성적 · 위해 관련 내용에는 AI 대신 미리 써 둔 고정 문장으로 답합니다.</li>
+<li>하루 이용 횟수 · 길이에 한도를 둡니다. 일부 기능은 나이 제한이 있습니다(점쟁이 대화 만 19세 이상 · 너랑 만 14세 이상).</li>
+<li>대화 원문은 운영자 서버에 저장하지 않습니다. 횟수 · 안전 분류 · 사용량만 기록합니다(<a href="../privacy/">개인정보처리방침</a> 1 · 3항).</li>
+</ul>
+
+<h2>4. 사용하는 AI</h2>
+<p>Anthropic PBC(미국)의 생성형 AI 모델 Claude를 API로 사용합니다. AI 제공자는 제공자 정책에 따라 API로 받은 내용을 짧게 보관할 수 있고, 운영자는 받은 내용을 모델 학습에 쓰지 않는 기본 조건으로 이용합니다.</p>
+
+<h2>5. 이상한 답을 받았다면</h2>
+<p>부적절하거나 불쾌한 답은 화면을 캡처해 <a href="../help/">고객센터</a>(<a data-op-mail><span data-op="email">대표 확인 필요</span></a>)로 알려 주세요. 확인 후 안전 규칙을 고칩니다.</p>
+</main>
+<footer id="opfoot"></footer>
+<!--oad:test--><p class="legalnote">초안 · 법률 검토 전 (대표 확인용 표시 — 실서버에는 나가지 않음) · 검토 지점: AI 기본법 제31조 고지 방식(이 페이지 + 기능 첫 화면 표시로 충분한지 · 시행령) · 결과물 'AI 생성' 표시 의무 범위 · Anthropic 데이터 보관 · 학습 미사용 조건(계약서 확인)</p><!--/oad:test-->
+</div>
+<script type="module">import { mount } from '../operator.js'; mount();</script>
+</body>
+</html>
