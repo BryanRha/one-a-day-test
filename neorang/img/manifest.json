@@ -405,6 +405,198 @@
    "cover_s": "soon/c26_s.webp"
   }
  },
+ "c11": {
+  "cover": "c11/cover.webp",
+  "avatar": {
+   "serious": "c11/avatar_serious.webp",
+   "shaken": "c11/avatar_shaken.webp",
+   "sly": "c11/avatar_sly.webp",
+   "smile": "c11/avatar_smile.webp",
+   "tired": "c11/avatar_tired.webp",
+   "default": "c11/avatar.webp"
+  },
+  "bust": {
+   "serious": "c11/bust_serious.webp",
+   "shaken": "c11/bust_shaken.webp",
+   "sly": "c11/bust_sly.webp",
+   "smile": "c11/bust_smile.webp",
+   "tired": "c11/bust_tired.webp"
+  },
+  "scenes": {
+   "c11_garden_serious": "c11/scenes/c11_garden_serious.webp",
+   "c11_garden_shaken": "c11/scenes/c11_garden_shaken.webp",
+   "c11_garden_sly": "c11/scenes/c11_garden_sly.webp",
+   "c11_garden_smile": "c11/scenes/c11_garden_smile.webp",
+   "c11_garden_tired": "c11/scenes/c11_garden_tired.webp",
+   "c11_lift_serious": "c11/scenes/c11_lift_serious.webp",
+   "c11_lift_shaken": "c11/scenes/c11_lift_shaken.webp",
+   "c11_lift_sly": "c11/scenes/c11_lift_sly.webp",
+   "c11_lift_smile": "c11/scenes/c11_lift_smile.webp",
+   "c11_lift_tired": "c11/scenes/c11_lift_tired.webp",
+   "c11_lobby_serious": "c11/scenes/c11_lobby_serious.webp",
+   "c11_lobby_shaken": "c11/scenes/c11_lobby_shaken.webp",
+   "c11_lobby_sly": "c11/scenes/c11_lobby_sly.webp",
+   "c11_lobby_smile": "c11/scenes/c11_lobby_smile.webp",
+   "c11_lobby_tired": "c11/scenes/c11_lobby_tired.webp"
+  },
+  "cast": {
+   "hajiseok": {
+    "avatar": "c11/cast_hajiseok.webp",
+    "portrait": "c11/cast_hajiseok_portrait.webp"
+   },
+   "mayewon": {
+    "avatar": "c11/cast_mayewon.webp",
+    "portrait": "c11/cast_mayewon_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c11/teaser_ep4.webp"
+  },
+  "cover_s": "c11/cover_s.webp",
+  "portrait": "c11/portrait.webp",
+  "places": {
+   "garden": "c11/scenes/c11_garden_serious.webp",
+   "lift": "c11/scenes/c11_lift_serious.webp",
+   "lobby": "c11/scenes/c11_lobby_serious.webp"
+  },
+  "places_s2": {
+   "ballroom": "c11/scenes/c11_ballroom.webp",
+   "suite": "c11/scenes/c11_suite.webp"
+  },
+  "cards": {
+   "c11_card_w1": "c11/cards/c11_card_w1.webp",
+   "c11_card_w2": "c11/cards/c11_card_w2.webp",
+   "c11_card_w3": "c11/cards/c11_card_w3.webp"
+  }
+ },
+ "c24": {
+  "cover": "c24/cover.webp",
+  "avatar": {
+   "calm": "c24/avatar_calm.webp",
+   "firm": "c24/avatar_firm.webp",
+   "lonely": "c24/avatar_lonely.webp",
+   "smile": "c24/avatar_smile.webp",
+   "surprised": "c24/avatar_surprised.webp",
+   "default": "c24/avatar.webp"
+  },
+  "bust": {
+   "calm": "c24/bust_calm.webp",
+   "firm": "c24/bust_firm.webp",
+   "lonely": "c24/bust_lonely.webp",
+   "smile": "c24/bust_smile.webp",
+   "surprised": "c24/bust_surprised.webp"
+  },
+  "scenes": {
+   "c24_counter_calm": "c24/scenes/c24_counter_calm.webp",
+   "c24_counter_firm": "c24/scenes/c24_counter_firm.webp",
+   "c24_counter_lonely": "c24/scenes/c24_counter_lonely.webp",
+   "c24_counter_smile": "c24/scenes/c24_counter_smile.webp",
+   "c24_counter_surprised": "c24/scenes/c24_counter_surprised.webp",
+   "c24_platform_calm": "c24/scenes/c24_platform_calm.webp",
+   "c24_platform_firm": "c24/scenes/c24_platform_firm.webp",
+   "c24_platform_lonely": "c24/scenes/c24_platform_lonely.webp",
+   "c24_platform_smile": "c24/scenes/c24_platform_smile.webp",
+   "c24_platform_surprised": "c24/scenes/c24_platform_surprised.webp",
+   "c24_shelf_calm": "c24/scenes/c24_shelf_calm.webp",
+   "c24_shelf_firm": "c24/scenes/c24_shelf_firm.webp",
+   "c24_shelf_lonely": "c24/scenes/c24_shelf_lonely.webp",
+   "c24_shelf_smile": "c24/scenes/c24_shelf_smile.webp",
+   "c24_shelf_surprised": "c24/scenes/c24_shelf_surprised.webp"
+  },
+  "cast": {
+   "pijaemun": {
+    "avatar": "c24/cast_pijaemun.webp",
+    "portrait": "c24/cast_pijaemun_portrait.webp"
+   },
+   "wangmija": {
+    "avatar": "c24/cast_wangmija.webp",
+    "portrait": "c24/cast_wangmija_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c24/teaser_ep4.webp"
+  },
+  "cover_s": "c24/cover_s.webp",
+  "portrait": "c24/portrait.webp",
+  "places": {
+   "counter": "c24/scenes/c24_counter_calm.webp",
+   "platform": "c24/scenes/c24_platform_calm.webp",
+   "shelf": "c24/scenes/c24_shelf_calm.webp"
+  },
+  "places_s2": {
+   "archive": "c24/scenes/c24_archive.webp",
+   "riverside": "c24/scenes/c24_riverside.webp"
+  },
+  "cards": {
+   "c24_card_w1": "c24/cards/c24_card_w1.webp",
+   "c24_card_w2": "c24/cards/c24_card_w2.webp",
+   "c24_card_w3": "c24/cards/c24_card_w3.webp"
+  }
+ },
+ "c25": {
+  "cover": "c25/cover.webp",
+  "avatar": {
+   "firm": "c25/avatar_firm.webp",
+   "playful": "c25/avatar_playful.webp",
+   "relief": "c25/avatar_relief.webp",
+   "sad": "c25/avatar_sad.webp",
+   "tense": "c25/avatar_tense.webp",
+   "default": "c25/avatar.webp"
+  },
+  "bust": {
+   "firm": "c25/bust_firm.webp",
+   "playful": "c25/bust_playful.webp",
+   "relief": "c25/bust_relief.webp",
+   "sad": "c25/bust_sad.webp",
+   "tense": "c25/bust_tense.webp"
+  },
+  "scenes": {
+   "c25_alley_firm": "c25/scenes/c25_alley_firm.webp",
+   "c25_alley_playful": "c25/scenes/c25_alley_playful.webp",
+   "c25_alley_relief": "c25/scenes/c25_alley_relief.webp",
+   "c25_alley_sad": "c25/scenes/c25_alley_sad.webp",
+   "c25_alley_tense": "c25/scenes/c25_alley_tense.webp",
+   "c25_darkroom_firm": "c25/scenes/c25_darkroom_firm.webp",
+   "c25_darkroom_playful": "c25/scenes/c25_darkroom_playful.webp",
+   "c25_darkroom_relief": "c25/scenes/c25_darkroom_relief.webp",
+   "c25_darkroom_sad": "c25/scenes/c25_darkroom_sad.webp",
+   "c25_darkroom_tense": "c25/scenes/c25_darkroom_tense.webp",
+   "c25_studio_firm": "c25/scenes/c25_studio_firm.webp",
+   "c25_studio_playful": "c25/scenes/c25_studio_playful.webp",
+   "c25_studio_relief": "c25/scenes/c25_studio_relief.webp",
+   "c25_studio_sad": "c25/scenes/c25_studio_sad.webp",
+   "c25_studio_tense": "c25/scenes/c25_studio_tense.webp"
+  },
+  "cast": {
+   "heodogang": {
+    "avatar": "c25/cast_heodogang.webp",
+    "portrait": "c25/cast_heodogang_portrait.webp"
+   },
+   "yukseonhui": {
+    "avatar": "c25/cast_yukseonhui.webp",
+    "portrait": "c25/cast_yukseonhui_portrait.webp"
+   }
+  },
+  "teaser": {
+   "ep4": "c25/teaser_ep4.webp"
+  },
+  "cover_s": "c25/cover_s.webp",
+  "portrait": "c25/portrait.webp",
+  "places": {
+   "alley": "c25/scenes/c25_alley_firm.webp",
+   "darkroom": "c25/scenes/c25_darkroom_firm.webp",
+   "studio": "c25/scenes/c25_studio_firm.webp"
+  },
+  "cards": {
+   "c25_card_w1": "c25/cards/c25_card_w1.webp",
+   "c25_card_w2": "c25/cards/c25_card_w2.webp",
+   "c25_card_w3": "c25/cards/c25_card_w3.webp"
+  },
+  "places_s2": {
+   "rooftop": "c25/scenes/c25_rooftop.webp",
+   "waitingroom": "c25/scenes/c25_waitingroom.webp"
+  }
+ },
  "_meta": {
   "base": "oneaday/shell/neorang/img/",
   "paths": "manifest 의 모든 경로는 이 base 기준 상대 경로",
@@ -471,6 +663,27 @@
     "smile",
     "tired",
     "fury"
+   ],
+   "c11": [
+    "smile",
+    "tired",
+    "sly",
+    "serious",
+    "shaken"
+   ],
+   "c24": [
+    "calm",
+    "smile",
+    "lonely",
+    "surprised",
+    "firm"
+   ],
+   "c25": [
+    "playful",
+    "tense",
+    "firm",
+    "sad",
+    "relief"
    ]
   },
   "source": "원본 PNG 는 git 밖 ~/dev/neorang-art-src/<작품>/ (Figma generate_image, gpt-image-2.5-sunburst)"

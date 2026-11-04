@@ -2,18 +2,18 @@
 //   아침 · 낮 · 오후 = 골목 손님(짧은 퍼즐 · 동전 · 도감 · 경험치) → 저녁 = 오늘의 주인공(모두 같은 손님 · 주간 이야기 · 평판 · 통계)
 //   → 하루 결산(등급 도장 · 동전 · 평판 · 경험치) → 영업 연장(광고 3 · 골드 6) · 장부 · 도감 · 꾸미기
 //   데이터: data/*.json (사람이 쓴 8주 뼈대 + 예비 손님 + 골목 손님 풀 — content/*.mjs 에서 tools/build_data.mjs 로 만듦)
-import { D, H, cur, loadData, tagOf, prefetch, face, sil, itemImg } from './state.js?v=0.99.4';
-import { S, load, save, today, setDay, week } from './save.js?v=0.99.4';
-import * as A from './audio.js?v=0.99.4';
-import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.99.4';
-import { sceneHTML, layout, setFace } from './scene.js?v=0.99.4';
-import { openInspect, resizeInspect } from './inspect.js?v=0.99.4';
-import { openTalk } from './talk.js?v=0.99.4';
-import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.99.4';
-import { WHY } from './check.js?v=0.99.4';
-import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.99.4';
-import { bm } from './oad_bm.js?v=0.99.4';
-import { installBack, inOAD, exitToOAD } from './oad.js?v=0.99.4';
+import { D, H, cur, loadData, tagOf, prefetch, face, sil, itemImg } from './state.js?v=0.99.5';
+import { S, load, save, today, setDay, week } from './save.js?v=0.99.5';
+import * as A from './audio.js?v=0.99.5';
+import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.99.5';
+import { sceneHTML, layout, setFace } from './scene.js?v=0.99.5';
+import { openInspect, resizeInspect } from './inspect.js?v=0.99.5';
+import { openTalk } from './talk.js?v=0.99.5';
+import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.99.5';
+import { WHY } from './check.js?v=0.99.5';
+import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.99.5';
+import { bm } from './oad_bm.js?v=0.99.5';
+import { installBack, inOAD, exitToOAD } from './oad.js?v=0.99.5';
 
 window.__errs = [];
 addEventListener('error', e => window.__errs.push(String(e.message)));
