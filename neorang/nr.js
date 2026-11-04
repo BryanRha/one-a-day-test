@@ -72,23 +72,22 @@ async function sync() {
     save();
   } catch { /* 다음에 */ }
 }
-/* 회차 장면: 1~3화는 이 파일(원고) · 칩 · 4화부터는 서버 (한 번 받으면 기기에 둠) */
+/* 회차 장면: 원고에 쓴 화(시즌 1 = 1~12화)는 works.js(원고 · 그림 · 첫 칩) 그대로 · 원고 없는 화만 서버 AI (한 번 받으면 기기에 둠) */
 const localEp = (w, no) => { const e = w.eps[no - 1]; return e && e.body ? e : null; };
 async function episode(id, no) {
   const k = id + '/' + no, w = W(id);
-  if (S.epc[k] && S.epc[k].chips) return S.epc[k];
   const loc = localEp(w, no);
-  if (no === 1 && loc) return (S.epc[k] = { title: loc.title, body: loc.body, tease: loc.tease, chips: w.chips1 });
-  if (no === 3 && loc && w.chips3) return (S.epc[k] = { title: loc.title, body: loc.body, tease: loc.tease, chips: w.chips3 });
+  if (loc && (loc.chips || no === 1)) return epNow(id, no);
+  if (S.epc[k] && S.epc[k].chips) return S.epc[k];
   try {
     const r = await post({ act: 'scene', w: id, ep: no }); const j = await r.json();
     if (r.ok && j.body) { S.epc[k] = { title: j.title, body: j.body, tease: j.tease, chips: j.chips }; save(); return S.epc[k]; }
   } catch { /* 아래 */ }
   return loc ? { title: loc.title, body: loc.body, tease: loc.tease, chips: w.chips1, tmp: 1 } : null;
 }
-const epNow = (id, no) => S.epc[id + '/' + no] || (localEp(W(id), no) ? { ...localEp(W(id), no), chips: null } : null);
+const epNow = (id, no) => { const l = localEp(W(id), no); return l && (l.chips || no === 1) ? { ...l, chips: l.chips || W(id).chips1 } : S.epc[id + '/' + no] || (l ? { ...l, chips: null } : null); };
 const epTitle = (w, no) => (w.eps[no - 1] || {}).title || `${no}화`;
-const epTease = (w, no) => { const e = S.epc[w.id + '/' + no] || w.eps[no - 1] || {}; return e.tease || (w.eps[no] || {}).line || ''; };
+const epTease = (w, no) => { const e = epNow(w.id, no) || w.eps[no - 1] || {}; return e.tease || (w.eps[no] || {}).line || ''; };
 const seedOf = (w, no) => (no <= 1 ? w.hook : no <= 4 ? (w.eps[no - 2] || {}).tease : (w.eps[no - 1] || {}).line) || w.hook;
 const lastSay = body => { const s = [...(body || [])].reverse().find(x => x[0] === 's'); return s ? s[1] : ''; };
 
@@ -114,6 +113,8 @@ const sceneImg = (w, tag) => {
 const portrait = w => { const a = artOf(w); return A(a.avatar && (a.avatar.default || Object.values(a.avatar)[0])); };
 const teaserOf = (w, n) => { const t = artOf(w).teaser; return (t && A(t['ep' + n])) || sceneImg(w); };
 const soonCover = id => { const s = (ART.soon || {})[id]; return s ? A(s.cover_s || s.cover) : ''; };
+/* 장면 카드 그림: 아트 cards{태그} → 장면 태그면 장면 그림 → 없으면 표지 */
+const cardImg = (w, tag) => { const c = (artOf(w).cards || {})[tag]; return c ? A(c) : tag && !/_card_w\d$/.test(tag) ? sceneImg(w, tag) : coverOf(w); };
 const placeName = (w, tag) => { const p = w.places.find(x => tag && tag.startsWith(`${w.id}_${x.tag}_`)); return p ? p.name : ''; };
 
 /* ── 아이콘 · 조각 (시안 D 그대로) ── */
@@ -303,7 +304,7 @@ VIEWS.read = (id, no, sub) => {
     <div class="prog"><i id="prog"></i></div>
     <div class="rhead"><div class="k">${esc(w.title)}</div><h2>${no}화 · ${esc(ep.title)}</h2><div class="pl">모두가 함께 읽는 장면 · 3분</div></div>
     ${prevTxt ? `<div class="prevbox"><b>지난 화</b>${esc(prevTxt)}</div>` : ''}
-    <div class="sceneimg" style="background-image:url(${sceneImg(w)})"><span>${esc((w.places[0] || {}).name || w.short)}</span></div>
+    <div class="sceneimg" style="background-image:url(${sceneImg(w, ep.img)})"><span>${esc(placeName(w, ep.img) || (w.places[0] || {}).name || w.short)}</span></div>
     <div class="text">${body}</div>
     <section class="handoff" id="handoff">
       <div class="line">여기까지 모두가 본 장면</div>
@@ -551,15 +552,18 @@ VIEWS.end = (id, no) => {
 };
 
 /* 내 서재 */
-VIEWS.lib = (tab = 'reading') => {
+VIEWS.lib = (tab = 'reading', open) => {
   const tabs = [['reading', '읽는 중'], ['cards', '모은 것'], ['mine', '나만 아는 것']];
   const reading = WORKS.filter(w => Object.values(WS(w.id).eps).some(e => e.read));
   let body = '';
   if (tab === 'reading') body = reading.length ? reading.map(w => { const ws = WS(w.id), rd = Object.values(ws.eps).filter(e => e.read).length, un = Math.max(0, H.open - rd), lastAi = (() => { for (let n = 12; n >= 1; n--) { const e = ws.eps[n]; const a = e && [...e.log].reverse().find(x => x.k === 'ai' && !x.safe); if (a) { const s = a.items.find(x => x.k === 'say'); if (s) return s.t; } } return ''; })();
     return `<button class="lrow" data-go="work/${w.id}">${cover(w, '', false)}<div class="m"><b>${esc(w.title)}</b><div class="q">${lastAi ? `${esc(w.ch.short)} · ${esc(lastAi)}` : esc(w.hook)}</div><div class="bar"><i style="width:${rd / 12 * 100}%"></i></div><div class="ft"><span>${rd}/12화 · ${STAGES[ws.stage]}</span><span>${un ? `${H.open}화 열림` : '다 읽음'}</span></div></div>${un ? `<span class="un">${un}</span>` : ''}</button>`; }).join('')
     : `<p class="loading">아직 읽은 작품이 없어요<br><button class="cta" data-go="home" style="margin-top:16px">오늘 밤 화 보러 가기</button></p>`;
-  if (tab === 'cards') body = S.cards.length ? `<div class="cards">${[...S.cards].reverse().map(c => { const w = W(c.w); return `<div class="k ${Date.now() - c.at < 864e5 ? 'new' : ''}"><div class="ph" style="background-image:url(${sceneImg(w, c.tag)})">${Date.now() - c.at < 864e5 ? '<i class="badge">NEW</i>' : ''}</div><div><b>${esc(c.t || placeName(w, c.tag) || '한 장면')}</b><small>${esc(w.short)}${c.ep ? ` · ${c.ep}화` : ''}</small></div></div>`; }).join('')}</div>`
-    : `<p class="loading">대화 중 장면이 바뀌면 장면 카드가 모여요</p>`;
+  if (tab === 'cards') { const cs = S.cards.map((c, i) => [c, i]).reverse().filter(([c]) => W(c.w));
+    body = cs.length ? `<div class="cards">${cs.map(([c, i]) => { const w = W(c.w); return `<button class="k ${Date.now() - c.at < 864e5 ? 'new' : ''}" data-go="lib/cards/${i}" style="display:block;width:100%;text-align:left;padding:0;font:inherit;color:inherit;cursor:pointer"><div class="ph" style="background-image:url(${cardImg(w, c.tag)})">${Date.now() - c.at < 864e5 ? '<i class="badge">NEW</i>' : ''}</div><div><b>${esc(c.t || placeName(w, c.tag) || '한 장면')}</b><small>${esc(w.short)}${c.ep ? ` · ${c.ep}화` : c.wk ? ` · ${c.wk * 7}일 연속` : ''}</small></div></button>`; }).join('')}</div>`
+    : `<p class="loading">대화 중 장면이 바뀌면 장면 카드가 모여요<br>7일 연속으로 찾아오면 둘만 아는 장면 카드를 드려요</p>`;
+    const c = open != null ? S.cards[+open] : null, cw = c && W(c.w);
+    if (cw) body += `<div class="dim" data-back></div><div class="sheet" role="dialog" aria-label="장면 카드"><div class="grab"></div><div style="height:260px;border-radius:16px;background:center/cover url(${cardImg(cw, c.tag)});margin-bottom:14px"></div><h4>${esc(c.t || placeName(cw, c.tag) || '한 장면')}</h4><small style="color:var(--ink3)">${esc(cw.title)}${c.ep ? ` · ${c.ep}화` : c.wk ? ` · ${c.wk * 7}일 연속으로 찾은 밤의 선물` : ''}</small>${c.x ? `<p style="margin:12px 0 0;line-height:1.75;font-size:15px;white-space:pre-wrap">${esc(c.x)}</p>` : ''}<button class="cta" data-back style="margin-top:16px">닫기</button></div>`; }
   if (tab === 'mine') { const ws0 = WORKS.filter(w => WS(w.id).talks > 0);
     body = ws0.length ? `<div class="mine">${ws0.map(w => { const ws = WS(w.id), mem = ws.mem; return `<div class="grp"><div class="gh">${av(w, 32)}<b>${esc(w.ch.name)}</b><span class="badge vi">${STAGES[ws.stage]}</span></div>
       <h6><span>비밀</span><span>${ws.secrets.length}/3</span></h6>${w.secrets.map(s => ws.secrets.includes(s.n) ? `<div class="sx">${I('unlock', 's')}<span>${esc(mine(s.text))}</span></div>` : `<div class="sx lk">${I('lock', 's')}<span>‘${s.need}’ 이상 · ${s.ep}화 이후에 열려요</span></div>`).join('')}
@@ -637,7 +641,10 @@ function streak() {
   const p = period(), y = new Date(Date.parse(p) - 864e5).toISOString().slice(0, 10);
   if (S.streak.p === p) return;
   S.streak.n = S.streak.p === y ? S.streak.n + 1 : 1; S.streak.p = p;
-  if (S.streak.n % 7 === 0 && S.streak.gift !== S.streak.n) { S.streak.gift = S.streak.n; const w = mainW(); S.cards.push({ w: w.id, ep: 0, tag: '', t: `${S.streak.n}일째 밤의 선물`, at: Date.now() }); }
+  if (S.streak.n % 7 === 0 && S.streak.gift !== S.streak.n) {   /* 7 · 14 · 21일째 = 원고 9장 장면 카드 1 · 2 · 3주 (그 뒤는 다시 1주부터) */
+    S.streak.gift = S.streak.n; const w = mainW(), wk = ((S.streak.n / 7 - 1) % 3) + 1, k = (w.cards || []).find(x => x.wk === wk);
+    S.cards.push(k ? { w: w.id, ep: 0, tag: k.tag, t: k.title, x: k.text, wk, at: Date.now() } : { w: w.id, ep: 0, tag: '', t: `${S.streak.n}일째 밤의 선물`, at: Date.now() });
+    toast(`${S.streak.n}일째 밤 · 장면 카드 「${k ? k.title : '선물'}」를 받았어요`); }
   save();
 }
 async function lunch() {
