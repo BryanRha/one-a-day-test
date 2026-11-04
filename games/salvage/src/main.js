@@ -1,17 +1,17 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.8';
-import { FX } from './fx.js?v=0.99.8';
-import { Raid } from './raid.js?v=0.99.8';
-import { UI } from './ui.js?v=0.99.8';
-import { S, load, save, stashCap } from './save.js?v=0.99.8';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.8';
-import * as E from './econ.js?v=0.99.8';
-import { installBack } from './oad.js?v=0.99.8';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.8';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.8';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.8';
-import { Story, artUrl } from './story_ui.js?v=0.99.8';
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.9';
+import { FX } from './fx.js?v=0.99.9';
+import { Raid } from './raid.js?v=0.99.9';
+import { UI } from './ui.js?v=0.99.9';
+import { S, load, save, stashCap } from './save.js?v=0.99.9';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.9';
+import * as E from './econ.js?v=0.99.9';
+import { installBack } from './oad.js?v=0.99.9';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.9';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.9';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.9';
+import { Story, artUrl } from './story_ui.js?v=0.99.9';
 
 const Q = new URLSearchParams(location.search);
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
@@ -208,7 +208,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.8'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.9'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

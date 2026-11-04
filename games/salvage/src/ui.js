@@ -1,13 +1,13 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.8';
-import { S, save, rollDay } from './save.js?v=0.99.8';
-import * as E from './econ.js?v=0.99.8';
-import { A } from './assets.js?v=0.99.8';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.8';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.8';
-import { Wardrobe } from './wardrobe.js?v=0.99.8';
-import { grantEarned, COS } from './look.js?v=0.99.8';
-import * as BM from './bmflow.js?v=0.99.8';
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.9';
+import { S, save, rollDay } from './save.js?v=0.99.9';
+import * as E from './econ.js?v=0.99.9';
+import { A } from './assets.js?v=0.99.9';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.9';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.9';
+import { Wardrobe } from './wardrobe.js?v=0.99.9';
+import { grantEarned, COS } from './look.js?v=0.99.9';
+import * as BM from './bmflow.js?v=0.99.9';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };

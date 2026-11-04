@@ -1,14 +1,14 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.8';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.8';
-import { mapOf } from './plan.js?v=0.99.8';
-import { prop, charClone } from './assets.js?v=0.99.8';
-import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.8'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.8';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.8';
-import { sfx, ambience } from './audio.js?v=0.99.8';
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.9';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.9';
+import { mapOf } from './plan.js?v=0.99.9';
+import { prop, charClone } from './assets.js?v=0.99.9';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.9'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.9';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.9';
+import { sfx, ambience } from './audio.js?v=0.99.9';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tmp = V(), tmp2 = V(), tmp3 = V();

@@ -1,10 +1,10 @@
 // 저장 (localStorage 'salvage_v4', v3 · v2 · v1 에서 자동으로 옮겨 옴) — 창고 · 조개 · 재료 · 시설 · 무기 · 장비 · 의뢰 · 오늘의 목록 · 하루 출격 · 시체 자리
 //   v3(0.3.0): look(고른 겉모습 — 머리 · 몸 · 얼굴 · 등 장식 · 총 스킨 · 털 · 무늬 · 몽이) · owned(가진 꾸미기)
 //   v4(0.5.0): story(이야기 진행 · 인물 관계 · 기억 도감 · 세 등불 · 열쇠 기억 — story.js) · 주인공 이름은 저장에 안 넣음(기기에만: 'salvage_name')
-import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS } from './data.js?v=0.99.8';
-import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.8';
-import { freshLook, COS } from './look.js?v=0.99.8';
-import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.8';
+import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS } from './data.js?v=0.99.9';
+import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.9';
+import { freshLook, COS } from './look.js?v=0.99.9';
+import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.9';
 export const KEY = 'salvage_v4';
 const OLD3 = 'salvage_v3', OLD2 = 'salvage_v2', OLD = 'salvage_v1';
 export const today = () => kstDay();

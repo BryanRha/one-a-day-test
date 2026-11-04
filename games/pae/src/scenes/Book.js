@@ -1,11 +1,11 @@
 // 도감: 족보 · 계절신 12 · 부적(장터 등장 확률 공개) · 패 48장 — 판마다 조금씩 채워짐
-import { W, H, C } from '../config.js?v=0.99.8';
-import { load } from '../save.js?v=0.99.8';
-import { txt, button, roundButton, boxTex } from '../ui.js?v=0.99.8';
-import { DECK, yakuOrder } from '../meta.js?v=0.99.8';
-import { yakuRow } from '../yakuview.js?v=0.99.8';
-import { GODS } from '../core/gods.js?v=0.99.8';
-import { CHARMS, RARITY_P, RARITY_NAME, COST } from '../core/charms.js?v=0.99.8';
+import { W, H, C } from '../config.js?v=0.99.9';
+import { load } from '../save.js?v=0.99.9';
+import { txt, button, roundButton, boxTex } from '../ui.js?v=0.99.9';
+import { DECK, yakuOrder } from '../meta.js?v=0.99.9';
+import { yakuRow } from '../yakuview.js?v=0.99.9';
+import { GODS } from '../core/gods.js?v=0.99.9';
+import { CHARMS, RARITY_P, RARITY_NAME, COST } from '../core/charms.js?v=0.99.9';
 
 const TABS = [['yaku', '족보'], ['gods', '계절신'], ['charms', '부적'], ['cards', '패']];
 
