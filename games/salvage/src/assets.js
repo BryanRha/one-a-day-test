@@ -1,10 +1,11 @@
 // 모델 불러오기 · 복제 · 전리품 아이콘(3D 모델을 찍어 만듦)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.7';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.7';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.7';
-import { ITEMS } from './data.js?v=0.99.7';
-import { initHero } from './hero.js?v=0.99.7';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.8';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.8';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.8';
+import { ITEMS } from './data.js?v=0.99.8';
+import { initHero } from './hero.js?v=0.99.8';
+import { loadEnemyPack, enemyReady } from './enemy3d.js?v=0.99.8';
 
 export const A = { props: {}, hero: null, skel: null, icons: {}, bytes: 0, chars: {}, packs: {}, packBytes: 0 };
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
@@ -13,10 +14,13 @@ function load(url, onBytes) {
   return new Promise((res, rej) => loader.load(url, g => res(g), e => { if (e.lengthComputable && onBytes) onBytes(url, e.loaded, e.total); }, rej));
 }
 /* 평면 셰이딩 로우폴리 톤 통일: MeshLambert 로 바꾸고 텍스처 최근접 필터 */
+/* 꾸밈 소품(dress_*.glb): 정점 색 · 재질 2개(pal · glow)를 지도 전체가 같이 씀 → 합치면 지도당 그리기 2번 */
+const VC = {};
 function toonify(root, opt = {}) {
   root.traverse(o => {
     if (!o.isMesh) return;
     const m = o.material; const map = m.map || null;
+    if (o.geometry.getAttribute('color') && !map) { const g = m.name === 'glow'; o.material = VC[g ? 'glow' : 'pal'] ||= g ? new THREE.MeshBasicMaterial({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }); o.castShadow = !g; o.receiveShadow = !g; return; }
     if (map) { map.magFilter = THREE.NearestFilter; map.minFilter = THREE.NearestMipmapLinearFilter; map.colorSpace = THREE.SRGBColorSpace; }
     o.material = new THREE.MeshLambertMaterial({ map, color: m.color ? m.color.clone() : 0xffffff, transparent: m.transparent, opacity: m.opacity });
     o.castShadow = !!opt.cast; o.receiveShadow = opt.receive !== false;
@@ -29,19 +33,23 @@ export async function loadAll(progress) {
   for (const n of p.scene.children) { toonify(n); A.props[n.name] = n; }
   toonify(s.scene, { cast: true });
   A.hero = h; A.skel = s; initHero(h); /* 수달: 팔레트 재질 · 몸 그룹을 풀어 둠 (hero.js) */
+  loadPack('ware').catch(e => console.warn('지도 묶음', e)); /* 창고 꾸밈 소품(약 35KB)은 기다리지 않고 받음 — 첫 출격 때 아직이면 출격이 기다림 */
   /* 무기: 1손 석궁 = 작살총 */
   return A;
 }
 /* v0.4 지도 묶음: 해금된 지도만 늦게 받음 (첫 진입 용량에 안 들어감) — 소품은 A.props 에 더하고, 해골 새 몸은 A.chars
    두 번 불러도 한 번만 받음 (Promise 공유) */
-const PACK_FILES = { harbor: { props: 'map_harbor.glb', chars: { rogue: 'skel_rogue.glb', warrior: 'skel_warrior.glb' } }, tunnel: { props: 'map_tunnel.glb', chars: { warrior: 'skel_warrior.glb' } } };
+/* v0.5 레벨 아트: 지도마다 꾸밈 소품 · 랜드마크 묶음(dress_<지도>.glb · tools/props3d) — 창고도 묶음이 생김(첫 화면 뒤 바로 받기 시작) */
+const PACK_FILES = { ware: { props: ['dress_ware.glb'], chars: {} }, harbor: { props: ['map_harbor.glb', 'dress_harbor.glb'], chars: {} }, tunnel: { props: ['map_tunnel.glb', 'dress_tunnel.glb'], chars: {} } }; /* v0.5.x: 등불 · 광부 해골 몸은 enemy_<지도>.glb 에 빛이끼와 같이 구워 넣음 → skel_rogue · skel_warrior 안 받음 */
 const charLoads = {};
-export const packReady = m => !PACK_FILES[m] || A.packs[m] === true;
-export function loadPack(m) {
+export const packReady = m => (!PACK_FILES[m] || A.packs[m] === true) && enemyReady(m);
+/* v0.5.x 적 · 보스 전용 모델(enemy_<지도>.glb · tools/enemy3d)도 같은 때 받음 — 출격은 둘 다 받은 뒤 */
+export function loadPack(m) { return Promise.all([loadEnemyPack(m), loadMapPack(m)]).then(() => {}); }
+function loadMapPack(m) {
   if (!PACK_FILES[m]) return Promise.resolve();
   if (A.packs[m]) return A.packs[m] === true ? Promise.resolve() : A.packs[m];
   const F = PACK_FILES[m]; const bytes = (u, l, t) => { if (l >= t) A.packBytes += t; };
-  const job = Promise.all([load('assets/' + F.props, bytes).then(g => { for (const n of g.scene.children) { toonify(n); A.props[n.name] = n; } }),
+  const job = Promise.all([...F.props.map(f => load('assets/' + f, bytes).then(g => { for (const n of g.scene.children) { toonify(n); A.props[n.name] = n; } })),
     ...Object.entries(F.chars).map(([k, f]) => (charLoads[k] ||= load('assets/' + f, bytes).then(g => { toonify(g.scene, { cast: true }); A.chars[k] = g; })))]).then(() => { A.packs[m] = true; });
   A.packs[m] = job; job.catch(() => { A.packs[m] = null; });
   return job;

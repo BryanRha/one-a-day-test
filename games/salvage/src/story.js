@@ -1,6 +1,6 @@
 // 이야기 규칙 (docs/NARRATIVE.md) — 진행 · 하루 한 걸음 · 인물 합류(창에 불) · 관계 · 기억 도감 · 세 등불 · 열쇠 기억
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀. 대사 글은 talk/*.js (나눠 받음 · story_ui.js 가 불러옴)
-import { ITEMS } from './data.js?v=0.99.7';
+import { ITEMS } from './data.js?v=0.99.8';
 
 /* ───── 인물 6 (창 여섯 = 이 순서) · 말하는 이 ───── */
 export const CAST = {
@@ -195,6 +195,13 @@ export const lampLevel = (S, side) => Math.min(1, (S.story.gauge[side] || 0) / L
 export const lit = S => CAST_KEYS.filter(k => S.story.joined.includes(k));
 export const visitor = S => S.story.met.includes('baram') && !S.story.joined.includes('baram');
 /* 은신처 말 걸기: 하루에 한 번 '…' (합류한 인물 · 만난 떠돌이) */
+/* 합류 전 인물은 말하지 않음 (v0.5.1 · QA: 터널 판에서 아직 안 온 서리 무전) — 무전 · 의뢰 카드 · 결과 한 마디가 모두 여기를 지남
+ *  곰방 = 첫 무전부터 · 노을/파수(목소리) · 몽이 = 늘 · 바람 = 판 안에서 만난 뒤 · 나머지 인물은 합류(창에 불)한 뒤 */
+export function present(S, id) { const st = S.story; if (!CAST[id] || id === 'gombang') return true; return st.joined.includes(id) || (id === 'baram' && st.met.includes('baram')); }
+/* 무전 한 줄 고르기: [말하는 이, 글] 이 아직 없는 사람이면 곰방 줄(alt) · 그것도 안 되면 null(말 안 함) */
+export function voiceLine(S, line, alt) { for (const l of [line, alt]) if (l && present(S, ALIAS[String(l[0]).replace('~', '')] || String(l[0]).replace('~', ''))) return l; return null; }
+/* 의뢰인: 와 있으면 그 사람 · 아니면 곰방이 대신 전함 (relay = 그 사람의 일 이름) */
+export function giverVoice(S, who) { return present(S, who) ? { id: who, relay: null } : { id: 'gombang', relay: CAST[who]?.role || '' }; }
 export const canTalk = (S, who) => S.story.joined.includes(who) || (who === 'baram' && visitor(S));
 export const talkDue = (S, who, today) => canTalk(S, who) && S.story.talkDay[who] !== today;
 export function talked(S, who, today, n) { const st = S.story; if (st.talkDay[who] !== today) { st.talkDay[who] = today; addRel(S, who, 1); } st.talkIdx[who] = n; }

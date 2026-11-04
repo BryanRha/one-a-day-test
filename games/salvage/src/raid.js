@@ -1,16 +1,17 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.7';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.7';
-import { mapOf } from './plan.js?v=0.99.7';
-import { prop, charClone } from './assets.js?v=0.99.7';
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.7';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.7';
-import { sfx, ambience } from './audio.js?v=0.99.7';
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.8';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.8';
+import { mapOf } from './plan.js?v=0.99.8';
+import { prop, charClone } from './assets.js?v=0.99.8';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.8'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.8';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.8';
+import { sfx, ambience } from './audio.js?v=0.99.8';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-const tmp = V(), tmp2 = V();
+const tmp = V(), tmp2 = V(), tmp3 = V();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 
@@ -168,7 +169,7 @@ export class Raid {
     ambience(true);
     this.fx.weather?.(map === 'harbor' && this.C.rain ? 'rain' : null);
     this.ui.raidStart(this);
-    if (map !== 'ware') setTimeout(() => this.alive && this.ui.event(`${MP.name} · ${this.C.name}${this.C.txt ? ' — ' + this.C.txt : ''}`, 'warn'), 600);
+    if (map !== 'ware') setTimeout(() => this.alive && this.ui.condBand(MP, this.cond), 600); /* 판 상태 띠 한 구절 (v0.5.1 · 자세한 건 출격 준비 ⓘ) */
   }
   /* 지도 · 상태에 맞춘 빛 · 안개 (은신처로 돌아갈 때 되돌림) */
   applyLook(on) {
@@ -191,26 +192,27 @@ export class Raid {
     const base = ENEMIES[e.kind]; const VR = VARIANTS[this.map]?.[e.kind]; const D = VR ? { ...base, name: VR.name, sight: base.sight * (VR.sight || 1), speed: base.speed * (VR.speed || 1) } : base;
     const Z = this.Z[e.zone || 3]; const boss = !!D.boss; const hpMul = boss ? 1 : Z.hp * (e.elite ? 1.15 : 1) * (VR?.hp || 1);
     const en = { kind: e.kind, D, zone: e.zone, elite: !!e.elite, dmgMul: boss ? 1 : Z.dmg, pos: V(e.x, 0, e.z), vel: V(), face: this.R() * 6.28, hp: D.hp * hpMul, maxHp: D.hp * hpMul, state: 'idle', alert: 0, t: this.R() * 3, cd: 1 + this.R(), home: V(e.x, 0, e.z), target: null, flash: 0, dead: false, wind: 0, id: i, mark: 0, stagger: 0, seen: 0, sleep: false, weakT: 0, pcd: 0 };
-    if (e.kind === 'drone') { const d = makeDrone(e.elite); en.root = d.root; en.d = d; en.mats = d.mats; if (VR?.color) d.mats[0].color.setHex(VR.color);
+    if (e.kind === 'drone') { const d = enemyBody('drone', this.map, e.elite) || makeDrone(e.elite); en.root = d.root; en.d = d; en.mats = d.mats; if (VR?.color && !d.custom) d.mats[0].color.setHex(VR.color);
       if (VR?.spot) { /* 탐조 드론: 앞으로 비추는 빛 부채꼴 (이 안에 들면 바로 알아챔) */ const sm = new THREE.MeshBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
         const cone = new THREE.Mesh(new THREE.CircleGeometry(7, 18, Math.PI / 2 - 0.3, 0.6), sm); cone.rotation.x = -Math.PI / 2; cone.position.y = 0.18; d.root.add(cone); en.spot = cone; en.mats.push(sm); } }
-    else if (e.kind === 'crab') { const c = makeCrab(e.elite); en.root = c.root; en.c = c; en.mats = c.mats; }
-    else if (e.kind === 'jelly') { const j = makeJelly(e.elite); en.root = j.root; en.j = j; en.mats = j.mats; }
-    else if (e.kind === 'eel') { const l = makeEel(); en.root = new THREE.Group(); en.root.add(l.root); en.l = l; en.mats = l.mats; l.root.position.set(0, 0, 0); this.eelInit = false; }
+    else if (e.kind === 'crab') { const c = enemyBody('crab', this.map, e.elite) || makeCrab(e.elite); en.root = c.root; en.c = c; en.mats = c.mats; }
+    else if (e.kind === 'jelly') { const j = enemyBody('jelly', this.map, e.elite) || makeJelly(e.elite); en.root = j.root; en.j = j; en.mats = j.mats; }
+    else if (e.kind === 'eel') { const l = enemyBody('eel', this.map) || makeEel(); en.root = new THREE.Group(); en.vis = this.visGroup(en.root, e.kind); en.vis.add(l.root); en.l = l; en.mats = l.mats; l.root.position.set(0, 0, 0); this.eelInit = false; }
     else {
       const body = { lamp: 'rogue', miner: 'warrior', captain: 'warrior' }[e.kind] || 'skel';
-      const c = charClone(body); en.root = new THREE.Group(); en.root.add(c.root); fitHeight(c.root, boss ? 3.1 : e.kind === 'miner' ? 1.95 : 1.8); en.anim = new Anim(c.root, c.clips); en.anim.play('Idle_Combat', { speed: boss ? 0.6 : 0.8 }); en.mats = [];
-      const tint = e.kind === 'boss' ? [0.55, 0.85, 0.75] : e.kind === 'captain' ? [0.85, 0.72, 0.55] : e.kind === 'miner' ? [0.9, 0.82, 0.62] : VR?.tint || (e.elite ? [0.75, 0.68, 0.6] : null);
+      const c = enemyBody(e.kind, this.map, e.elite) || charClone(body); en.root = new THREE.Group(); (boss ? en.vis = this.visGroup(en.root, e.kind) : en.root).add(c.root); if (c.scale) c.root.scale.setScalar(c.scale); else fitHeight(c.root, boss ? 3.1 : e.kind === 'miner' ? 1.95 : 1.8); en.cust = c; en.anim = new Anim(c.root, c.clips); en.anim.play('Idle_Combat', { speed: boss ? 0.6 : 0.8 }); en.mats = [];
+      const tint = c.custom ? null : e.kind === 'boss' ? [0.55, 0.85, 0.75] : e.kind === 'captain' ? [0.85, 0.72, 0.55] : e.kind === 'miner' ? [0.9, 0.82, 0.62] : VR?.tint || (e.elite ? [0.75, 0.68, 0.6] : null);
       c.root.traverse(o => { if (o.isMesh) { en.mats.push(o.material); if (tint) o.material.color.setRGB(...tint); } }); this.ownMats.push(...en.mats); en.anim.mixer.setTime(this.R() * 2);
       /* 등불 해골 · 선장: 손에 랜턴 (빛나는 공 + 빛 테) */
       if (e.kind === 'lamp' || e.kind === 'captain') { const s = boss ? 1.7 : 1; const lg = new THREE.Group(); const lm = new THREE.MeshBasicMaterial({ color: 0xffc870 }); const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16 * s, 10, 8), lm); lg.add(bulb);
-        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffb860, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); halo.scale.setScalar(1.3 * s); lg.add(halo);
-        lg.position.set(0.55 * s, 1.05 * s, 0.25 * s); en.root.add(lg); en.lantern = { g: lg, m: lm, halo }; en.mats.push(lm, halo.material); }
-      if (e.kind === 'captain') { const hook = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.07, 6, 12, Math.PI * 1.3), new THREE.MeshLambertMaterial({ color: 0x9aa4ad })); hook.position.set(-0.9, 1.9, 0.4); en.root.add(hook); en.mats.push(hook.material); }
-      if (e.kind === 'miner') { const lampM = new THREE.MeshBasicMaterial({ color: 0xfff1b0 }); const hl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), lampM); hl.position.set(0, 1.78, 0.2); en.root.add(hl); en.mats.push(lampM); }
+        const halo = glowSprite(0xffb860, 0.55, 1.3 * s); lg.add(halo);
+        if (c.lantern) { bulb.visible = false; c.lantern.add(lg); lg.position.set(0, -0.12, 0); lg.scale.setScalar(1 / c.root.scale.x); } else { lg.position.set(0.55 * s, 1.05 * s, 0.25 * s); (en.vis || en.root).add(lg); } en.lantern = { g: lg, m: lm, halo }; en.mats.push(lm, halo.material); }
+      if (e.kind === 'captain' && !c.custom) { const hook = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.07, 6, 12, Math.PI * 1.3), new THREE.MeshLambertMaterial({ color: 0x9aa4ad })); hook.position.set(-0.9, 1.9, 0.4); (en.vis || en.root).add(hook); en.mats.push(hook.material); }
+      if (e.kind === 'miner' && !c.custom) { const lampM = new THREE.MeshBasicMaterial({ color: 0xfff1b0 }); const hl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), lampM); hl.position.set(0, 1.78, 0.2); en.root.add(hl); en.mats.push(lampM); }
     }
+    en.custom = [en.d, en.c, en.j, en.l, en.cust].find(x => x?.custom) || null;
     en.root.position.copy(en.pos); this.root.add(en.root);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex(), transparent: true, depthTest: false })); sp.scale.set(0.9, 0.9, 1); sp.position.y = boss ? 4 : e.kind === 'crab' ? 1.4 : 2.6; sp.visible = false; sp.renderOrder = 10; en.root.add(sp); en.markSp = sp;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex(), transparent: true, depthTest: false })); sp.scale.set(0.9, 0.9, 1); sp.position.y = boss ? ({ boss: 2.9, captain: 3.25, eel: 1.6 }[e.kind] || 3) * (en.vis?.scale.x || 1) + 1 : e.kind === 'crab' ? 1.4 : 2.6; /* 보스: 설계 키 × 화면 배율 + 1m (커진 머리 위) */ sp.visible = false; sp.renderOrder = 10; en.root.add(sp); en.markSp = sp;
     return en;
   }
 
@@ -331,7 +333,7 @@ export class Raid {
     this.events.boss = true; const B = this.P.boss; const kind = this.M.bossKind; const e = this.makeEnemy({ kind, x: B.x, z: B.z, zone: 3 }, 999);
     e.state = this.zone === 3 ? 'chase' : 'idle'; e.target = this.pl.pos.clone(); this.enemies.push(e); this.boss = e;
     sfx.roar(); this.shake = Math.max(this.shake, 0.5); this.fx.burst(B.x, 0.3, B.z, 30, 0xbfe8ee, 7, 0.14, 1, 18);
-    const tip = { boss: '바닥 경고 원을 조심', captain: '바닥 줄은 옆으로 · 내려찍은 뒤 랜턴이 약점', eel: '돌진을 벽으로 유도하면 기절 · 물속 방전 조심' }[kind];
+    const tip = { boss: '바닥 경고 원을 조심 · 내려찍은 뒤 가슴 보관함이 약점', captain: '바닥 줄은 옆으로 · 내려찍은 뒤 랜턴이 약점', eel: '돌진을 벽으로 유도하면 기절 · 물속 방전 조심' }[kind];
     const ig = e.D.name + josa(e.D.name, '이', '가'); this.ui.event(this.zone === 3 ? `${ig} 깨어났어요! ${tip}` : `깊은 곳에서 ${ig} 깨어났어요`, 'boss');
   }
   updatePlayer(dt) {
@@ -483,7 +485,8 @@ export class Raid {
     this.fx.burst(at.x, at.y, at.z, metal ? 9 : 7, metal ? 0xffd27a : 0xf2ecd8, 6, 0.08, 0.4, 20, dir);
     if (metal) this.fx.burst(at.x, at.y, at.z, 3, 0x3a4148, 4, 0.13, 0.7, 24, dir);
     (metal ? sfx.hitMetal : sfx.hit)();
-    this.fx.num(e.pos, weak > 1 ? d + ' 약점!' : shield < 1 ? d + ' 막힘' : crit ? d + '!' : String(d), crit || weak > 1 ? 'crit' : '');
+    const at3 = weak > 1 && weakPoint(e); /* 약점 숫자는 커진 모델의 약점 위에서 (fx.num 이 1.8m 올림) */
+    this.fx.num(at3 ? tmp3.set(at3.x, at3.y - 1.8, at3.z) : e.pos, weak > 1 ? d + ' 약점!' : shield < 1 ? d + ' 막힘' : crit ? d + '!' : String(d), crit || weak > 1 ? 'crit' : '');
     e.alert = 1; e.state = 'chase'; e.target = this.pl.pos.clone();
     if (e.hp <= 0) this.kill(e, dir);
     else if (e.anim && !boss && shield === 1) e.anim.play('Hit_A', { once: true, fade: 0.05, speed: 1.6, force: true });
@@ -501,7 +504,7 @@ export class Raid {
     else { this.fx.burst(e.pos.x, 1.0, e.pos.z, boss ? 50 : 18, 0xf2ecd8, boss ? 10 : 7, 0.12, 0.9, 24, dir); e.anim.play('Death_C_Skeletons', { once: true, fade: 0.05, force: true }); }
     e.markSp.visible = false; if (e.lantern) e.lantern.g.visible = false;
     if (boss) { this.ui.event(`${e.D.name}${josa(e.D.name, '을', '를')} 쓰러뜨렸어요! 잔해에 금고 열쇠가`, 'good'); sfx.rare(); }
-    else this.ui.toast(['깔끔해요!', '한 방 더 정확하게!', '좋은 조준!', '인양단 솜씨!'][this.killN % 4], 'good');
+    else this.ui.praise(['깔끔해요!', '한 방 더 정확하게!', '좋은 조준!', '인양단 솜씨!'][this.killN % 4]); /* 칭찬은 머리 위 (v0.5.1) */
     const kind = e.D.loot || 'body';
     this.containers.push({ kind, zone: e.zone || 3, pos: e.pos.clone(), obj: null, items: rollLoot(kind, e.zone || 3, this.R), searched: false, name: boss ? e.D.name + ' 잔해' : LOOT_TABLE[kind]?.name && kind !== 'body' ? LOOT_TABLE[kind].name : e.D.name + ' 잔해', best: 0 });
   }
@@ -528,7 +531,7 @@ export class Raid {
     const sightMul = darkMul * (this.C.sight || 1) * (night ? (plLit ? LAMP.seenMul : 1 - 0.2 * night) : 1) * (this.douse > 0 ? 0.6 : 1);
     const hearMul = this.C.hear || 1;
     for (const e of this.enemies) {
-      if (e.dead) {
+      if (e.dead) { enemyTick(e, dt, this);
         if (e.kind === 'drone') { e.fall = (e.fall || 0) + dt; const b = e.d.body; b.position.y = Math.max(0.35, 1.25 - e.fall * e.fall * 9); b.rotation.z += dt * 6 * Math.max(0, 1 - e.fall); e.d.eyeM.color.setRGB(0.2, 0.2, 0.2); }
         else if (e.kind === 'jelly') { e.fall = (e.fall || 0) + dt; e.j.body.position.y = Math.max(0.2, 1.15 - e.fall * 2); e.j.body.scale.setScalar(Math.max(0.3, 1 - e.fall)); }
         else if (e.kind === 'crab') { e.c.body.rotation.z = Math.min(Math.PI, (e.c.body.rotation.z || 0) + dt * 9); }
@@ -600,12 +603,15 @@ export class Raid {
       else if (e.kind === 'crab') { const c = e.c; const w = moving ? Math.sin(e.t * 22) : 0; c.legs.forEach((l, k) => { l.rotation.y = w * 0.5 * (k % 2 ? 1 : -1); }); c.body.position.y = 0.32 + Math.abs(w) * 0.04; if (e.wind <= 0) for (const cl of c.claws) cl.rotation.x *= Math.pow(0.001, dt); }
       else if (e.kind === 'jelly') { const j = e.j; j.body.position.y = 1.15 + Math.sin(e.t * 2.2 + e.id) * 0.18; const p = 1 + Math.sin(e.t * 4.4 + e.id) * 0.08; j.body.scale.set(p, 2 - p, p); j.tents.forEach((t, k) => { t.rotation.z = Math.sin(e.t * 3 + k) * 0.25; }); if (e.wind <= 0) j.coreM.color.setRGB(0.87, 0.98, 1); }
       else if (e.kind === 'eel') this.eelPose(e, dt);
-      else { const n = e.anim.curName; const busy = /Attack|Hit_A|Taunt/.test(n) && e.anim.cur.isRunning(); if (!busy) e.anim.play(moving ? (e.state === 'chase' ? 'Running_A' : 'Walking_D_Skeletons') : 'Idle_Combat', { speed: (e.state === 'chase' ? 1.1 : 0.9) * (boss ? 0.65 * rage : e.kind === 'miner' ? 0.8 : 1) * (stunned ? 0.2 : 1) }); e.anim.mixer.update(dt); }
+      else { const n = e.anim.curName; const busy = /Attack|Hit_A|Taunt/.test(n) && e.anim.cur.isRunning(); if (!busy) e.anim.play(stunned && e.anim.clips.Stun ? 'Stun' : moving ? (e.state === 'chase' ? 'Running_A' : 'Walking_D_Skeletons') : 'Idle_Combat', { speed: (e.state === 'chase' ? 1.1 : 0.9) * (boss ? 0.65 * rage : e.kind === 'miner' ? 0.8 : 1) * (stunned ? 0.2 : 1) }); e.anim.mixer.update(dt); }
+      enemyTick(e, dt, this); /* 전용 모델: 예고 자세 · 약점 빛 · 맞음 */
       if (e.lantern) { const k = e.weakT > 0 ? 1 : 0; e.lantern.m.color.setRGB(1, 0.78 + 0.2 * k, 0.44 + 0.5 * k); e.lantern.halo.scale.setScalar((boss ? 2.2 : 1.3) * (1 + k * 0.6 + Math.sin(e.t * 9) * 0.05)); e.lantern.g.visible = this.douse <= 0 || boss; }
       const f = e.flash > 0 ? 1 : 0; for (const m of e.mats) { if (m.emissive) m.emissive.setRGB(f, f, f); }
       e.mark -= dt; e.markSp.visible = e.mark > 0 || e.weakT > 0; if (e.weakT > 0) { e.markSp.material.map = markTex('★'); e.markSp.scale.setScalar(1.1 + Math.sin(e.t * 12) * 0.15); } else if (e.mark > 0) { e.markSp.material.map = markTex(e.markType); e.markSp.scale.setScalar(0.9 + Math.max(0, e.mark - 1) * 2); }
     }
   }
+  /* 보스 보이는 모델 묶음: 화면 배율만 (판정 · 예고 원 · 이동은 en.root/en.pos 그대로) */
+  visGroup(root, kind) { const g = new THREE.Group(); g.scale.setScalar(bossVis(kind)); root.add(g); return g; }
   /* 경고 표시: 바닥 원(warnDisc) · 바닥 줄(warnLine) — 예고 시간 동안 커지며 깜빡임 */
   warnDisc(e, r, color, follow = false) { const m = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.setScalar(0.5); this.root.add(m); e.warn = m; e.warnR = r; e.warnFollow = follow; }
   warnLine(e, len, w, color) { const m = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide })); m.userData.line = true; m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, e.lockFace, 0); m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.set(w * 0.4, len, 1); this.root.add(m); e.warn = m; e.warnW = w; e.warnFollow = false; }
@@ -654,14 +660,15 @@ export class Raid {
     const shoot = (n, spread, size, color, glowC, sp, dmg, r, extra = {}) => { const a0 = e.lockFace != null ? e.lockFace : Math.atan2(pl.pos.x - e.pos.x, pl.pos.z - e.pos.z);
       for (let i = 0; i < n; i++) { const a = a0 + (n > 1 ? (spread >= 6 ? i / n * Math.PI * 2 : (i / (n - 1) - 0.5) * spread) : (this.R() - 0.5) * 0.12);
         const m = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 6), new THREE.MeshBasicMaterial({ color })); m.position.set(e.pos.x, 1.15, e.pos.z); this.root.add(m);
-        const glow = new THREE.Sprite(new THREE.SpriteMaterial({ color: glowC, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.setScalar(size * 4.5); m.add(glow);
+        const glow = glowSprite(glowC, 0.6, size * 4.5); m.add(glow);
         this.enemyShots.push({ m, dir: V(Math.sin(a), 0, Math.cos(a)), sp, t: 0, dmg, from: e.pos.clone(), r, src: e, ...extra }); }
       sfx.enemyShot((e.pos.x - pl.pos.x) / 12); this.fx.burst(e.pos.x + Math.sin(a0) * 0.5, 1.15, e.pos.z + Math.cos(a0) * 0.5, 4, 0xffa070, 3, 0.07, 0.25); };
     const wet = this.water.userData.mask(pl.pos.x, pl.pos.z) > 0.15 || this.inDeep(pl.pos);
     if (e.kind === 'drone') shoot(1, 0, 0.16, 0xff7a4a, 0xff8a50, 11, D.dmg * e.dmgMul, 0.55);
     else if (e.kind === 'lamp') shoot(1, 0, 0.2, 0xffc870, 0xffb860, 10, D.dmg * e.dmgMul, 0.6);
     else if (e.kind === 'boss' && e.pat === 'wave') shoot(5, 1.0, 0.3, 0x6fe0ff, 0x9ff0ff, 8, 14, 0.7);
-    else if (e.kind === 'boss') { sfx.slam(); this.shake = Math.max(this.shake, 0.7); this.fx.ring(e.pos.x, e.pos.z, 3.4, 0xff9a7a); this.fx.burst(e.pos.x, 0.3, e.pos.z, 30, 0xbfe8ee, 8, 0.14, 0.8, 20); if (dist < 3.4) this.hurt(D.dmg, e.pos); }
+    else if (e.kind === 'boss') { sfx.slam(); this.shake = Math.max(this.shake, 0.7); this.fx.ring(e.pos.x, e.pos.z, 3.4, 0xff9a7a); this.fx.burst(e.pos.x, 0.3, e.pos.z, 30, 0xbfe8ee, 8, 0.14, 0.8, 20); if (dist < 3.4) this.hurt(D.dmg, e.pos);
+      const B = BOSS.boss; e.weakT = B.weak; e.stun = B.weak * 0.8; this.ui.toast('보관함이 열렸어요 — 약점!', 'good'); }
     else if (e.kind === 'jelly') { sfx.hitMetal(); this.fx.ring(e.pos.x, e.pos.z, D.range, 0x9ff0ff); this.fx.burst(e.pos.x, 1, e.pos.z, 14, 0xdffaff, 6, 0.06, 0.3, 0); if (dist < D.range + 0.2) this.hurt(D.dmg * e.dmgMul * (wet ? 1.5 : 1), e.pos); }
     else if (e.kind === 'captain') { const B = BOSS.captain;
       if (e.pat === 'hook') shoot(1, 0, 0.26, 0xc7d0d6, 0xffffff, 20, B.hook.dmg, 0.75, { hook: e, life: B.hook.len / 20 });
@@ -688,7 +695,7 @@ export class Raid {
       if (!gone && !this.pl.dead && p.distanceTo(tmp.set(this.pl.pos.x, 1.15, this.pl.pos.z)) < s.r) { if (this.hurt(s.dmg, s.from)) { gone = true;
           /* 갈고리: 선장 쪽으로 끌려감 */
           if (s.hook && !s.hook.dead) { const d = tmp2.copy(s.hook.pos).sub(this.pl.pos).setY(0); const l = d.length(); this.pl.pull = { dir: d.normalize().clone(), left: Math.max(0, Math.min(BOSS.captain.hook.pull, l - 1.8)) }; this.ui.toast('갈고리에 끌려가요!', 'warn'); } }
-        else if (this.pl.roll > 0 && !s.dodged) { s.dodged = true; this.ui.toast('회피!', 'good'); } }
+        else if (this.pl.roll > 0 && !s.dodged) { s.dodged = true; this.ui.praise('회피!'); } }
       if (gone) { this.fx.burst(p.x, p.y, p.z, 6, 0xff9a60, 3, 0.07, 0.3); this.root.remove(s.m); s.m.geometry.dispose(); s.m.material.dispose(); s.m.children[0]?.material.dispose(); this.enemyShots.splice(i, 1); }
     }
   }

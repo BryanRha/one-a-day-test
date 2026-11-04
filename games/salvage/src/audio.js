@@ -1,42 +1,57 @@
 // 소리 — 전부 Web Audio 로 직접 합성 (소리 파일 0개 · 저작권 걱정 없음)
-//  효과음 = 이 파일 · 배경음 5곡(적응형) = assets/audio/music.js (첫 탭 뒤 늦게 받음 — 첫 진입 용량 X)
-//  이름 목록 · 렌더 측정표 = docs/AUDIO.md · 미리듣기 = docs/audio_preview/
-let ctx = null, master = null, sfxBus = null, musBus = null, revIn = null, amb = null;
-let mus = null, musLoad = null, drive = 0, T0 = 0;
+//  효과음 = 이 파일 · 배경음 5곡(적응형) = assets/audio/music.js · 지도 환경음 = assets/audio/env.js (둘 다 첫 탭 · 판 시작 뒤 늦게 받음 — 첫 진입 용량 X)
+//  이름 목록 · 렌더 측정표 = docs/AUDIO.md · 미리듣기 = docs/audio_preview/ (v2 = *_v2.m4a)
+//  v2 (11-05): 마스터 = 가상 저음 + 중역 보강 → 묶음 압축 → 리미터 → 천장(−3dBFS) / 방 울림 4종(코드로 만든 IR · 지도 따라 바뀜)
+//              효과음마다 무작위 변주(높이 · 필터 · 세기 · 2ms 어긋남) · 발사음 = 몸통 + 터짐 + 중역 + 꼬리(방) + 기계음
+let ctx = null, master = null, sfxBus = null, musBus = null, ambBus = null, revIn = null, rvBus = null;
+let mus = null, musLoad = null, env = null, envLoad = null, ambOn = false, drive = 0, T0 = 0;
 const noiseBuf = {};
 /* 설정: 음량 · 배경음 · 음소거 (기기에 기억) */
 const SET = { vol: 1, music: true, muted: false };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('salvage_audio') || '{}')); } catch { /* */ }
 const saveSet = () => { try { localStorage.setItem('salvage_audio', JSON.stringify(SET)); } catch { /* */ } };
-const MASTER = 0.85, MUS = 0.5;
+/* 버스 음량 (docs/AUDIO.md 5장 측정으로 맞춤: 배경음 평균 −20dBFS 안팎 · 효과음 최고 −3dBFS 이내 · 환경음은 배경음보다 10dB 아래) */
+const MASTER = 1, MUS = 1.25, SFXV = 4.5, AMBV = 1;
 const applySet = () => { if (!ctx) return; const t = ctx.currentTime; master.gain.setTargetAtTime(SET.muted ? 0 : SET.vol * MASTER, t, 0.03); musBus.gain.setTargetAtTime(SET.music ? MUS : 0, t, 0.3); };
 const isOffline = c => typeof OfflineAudioContext !== 'undefined' && c instanceof OfflineAudioContext;
+const bq = (type, f, q = 0.7, g = 0) => { const x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = q; x.gain.value = g; return x; };
+const gn = v => { const g = ctx.createGain(); g.gain.value = v; return g; };
+const shaper = fn => { const w = ctx.createWaveShaper(), n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = fn(i / (n - 1) * 2 - 1); w.curve = c; w.oversample = '2x'; return w; };
 
 export function unlock() {
   if (ctx) { if (ctx.state === 'suspended' && !isOffline(ctx)) ctx.resume().catch(() => {}); return; }
   try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return; }
   const sr = ctx.sampleRate;
+  /* ── 마스터 ──
+     폰 스피커는 200Hz 아래가 거의 안 남 → ① 45Hz 아래 버림(헤드룸) ② 150Hz 아래를 온파 정류해 2배음(160~300Hz)으로 옮긴 '가상 저음'을 조금 섞음
+     ③ 중역 1.1kHz +2dB · 2.6kHz +1dB (작은 스피커에서 말소리 · 타격이 또렷) ④ 7.5kHz 위 −3.5dB (날카로움 피로 X)
+     → 묶음 압축(−20dB · 2.5:1 · 느린 풀림: 소리 덩어리를 붙여 평균을 올림) → 리미터(−4dB · 20:1 · 2ms) → 천장(부드러운 자름 · 최대 0.707 = −3dBFS) */
   master = ctx.createGain();
-  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -12; comp.knee.value = 8; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.18;
-  /* 맨 끝 아주 살짝 고음 깎기 (archer 교훈: 날카로우면 피로) */
-  const tame = ctx.createBiquadFilter(); tame.type = 'highshelf'; tame.frequency.value = 7000; tame.gain.value = -4;
-  master.connect(comp); comp.connect(tame); tame.connect(ctx.destination);
-  sfxBus = ctx.createGain(); sfxBus.connect(master);
+  const hp = bq('highpass', 45, 0.7), mid = bq('peaking', 1100, 0.8, 2), pres = bq('peaking', 2600, 1, 1), tame = bq('highshelf', 7500, 0.7, -3.5);
+  const vb = bq('lowpass', 150, 0.7), vbs = shaper(x => Math.sqrt(x * x + 1e-6) - 1e-3), vbb = bq('bandpass', 300, 0.9), vbg = gn(0.5); /* 온파 정류 = 기본음 없이 2배음만 (작은 소리에서도 같은 비율) */
+  const glue = ctx.createDynamicsCompressor(); glue.threshold.value = -20; glue.knee.value = 12; glue.ratio.value = 2.5; glue.attack.value = 0.015; glue.release.value = 0.3;
+  const trim = gn(0.62);
+  const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12;
+  const pre = gn(0.42); /* 리미터 자동 보정(+) 되돌림 + 천장 곡선 입력 범위(±2 → ±1) */
+  const ceil = shaper(u => { const x = u * 2, a = Math.abs(x); return Math.sign(x) * (a < 0.5 ? a : 0.5 + 0.207 * Math.tanh((a - 0.5) / 0.207)); });
+  master.connect(hp); hp.connect(mid); mid.connect(pres); pres.connect(tame); tame.connect(glue);
+  master.connect(vb); vb.connect(vbs); vbs.connect(vbb); vbb.connect(vbg); vbg.connect(glue);
+  glue.connect(trim); trim.connect(lim); lim.connect(pre); pre.connect(ceil); ceil.connect(ctx.destination);
+  sfxBus = gn(SFXV); sfxBus.connect(master);
   musBus = ctx.createGain(); musBus.connect(master);
-  /* 울림: 물에 잠긴 콘크리트 방 (만든 잔향 1.9초 · 꼬리일수록 어두움) */
-  revIn = ctx.createConvolver(); const ir = ctx.createBuffer(2, Math.round(sr * 1.9), sr);
-  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); let lp = 0;
-    for (let i = 0; i < d.length; i++) { const x = i / sr, k = 0.08 + 0.9 * Math.exp(-x * 3.2); lp += (Math.random() * 2 - 1 - lp) * k; d[i] = x < 0.012 ? 0 : lp * Math.exp(-x * 3.4) * 0.7; } }
-  revIn.buffer = ir; const rv = ctx.createGain(); rv.gain.value = 0.55; revIn.connect(rv); rv.connect(master);
+  ambBus = gn(AMBV); ambBus.connect(master);
+  /* 울림: 보내기 버스 하나 → 지금 방(지도)의 컨볼버. 방이 바뀌면 1초 겹쳐 바꿈 */
+  revIn = ctx.createGain(); rvBus = gn(1); rvBus.connect(master);
   for (const k of ['white', 'pink', 'brown']) { const b = ctx.createBuffer(1, sr * 2, sr); const d = b.getChannelData(0); let last = 0, b0 = 0, b1 = 0, b2 = 0;
     for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1;
       if (k === 'brown') { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
       else if (k === 'pink') { b0 = 0.99765 * b0 + w * 0.099046; b1 = 0.963 * b1 + w * 0.2965164; b2 = 0.57 * b2 + w * 1.0526913; d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.2; }
       else d[i] = w; } noiseBuf[k] = b; }
+  room('hideout', 0, true);
   applySet();
   if (isOffline(ctx)) return;
-  /* 배경음: 첫 탭 1초 뒤 받아서 (첫 진입 용량에 안 들어감) · 0.25초마다 장면 · 긴장 단계 맞춤 */
-  setTimeout(loadMusic, 1000); drive = setInterval(musicTick, 250);
+  /* 배경음: 첫 탭 1초 뒤 받아서 (첫 진입 용량에 안 들어감) · 0.25초마다 장면 · 긴장 단계 · 방 · 환경음 맞춤 */
+  setTimeout(loadMusic, 1000); drive = setInterval(tick, 250);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') suspendAudio(); });
 }
 /* 원어데이 확인 창 · 광고 동안 소리 멈춤 → 창이 닫히면 다시 켬 (폰 iframe 에선 포커스가 앱에 남아 저절로 안 돌아옴 · iOS 'interrupted' 포함) */
@@ -55,72 +70,128 @@ const stepNow = () => Math.max(0, STEPS.findIndex(s => s.muted === SET.muted && 
 export const soundLabel = () => STEPS[stepNow()].t;
 export function cycleSound() { const s = STEPS[(stepNow() + 1) % STEPS.length]; Object.assign(SET, { vol: s.vol, music: s.music, muted: s.muted }); saveSet(); unlock(); applySet(); if (!SET.muted) sfx.ui(); }
 
+/* ───── 방 울림 (코드로 만든 충격 응답 IR) ─────
+   rt = 60dB 줄어드는 시간 · damp = 꼬리가 어두워지는 빠르기 · er = 이른 반사(ms) · ring = 벽 쇠 울림(모드 Hz · 세기) · flutter = 관 속 떨림 메아리 간격(ms) */
+const ROOMS = {
+  /* 은신처: 나무 초소 — 작고 따뜻 */
+  hideout: { len: 0.9, rt: 0.55, damp: 2.6, er: [11, 17, 23, 31, 43], erA: 0.5, send: 0.42 },
+  /* 침수 창고: 콘크리트 · 철벽 — 이른 반사 촘촘 + 쇠 울림 */
+  ware: { len: 1.9, rt: 1.35, damp: 1.8, er: [7, 12, 15, 21, 26, 33, 38, 47, 55, 64], erA: 0.6, ring: [[176, 0.5], [389, 0.35], [702, 0.25], [1187, 0.12]], send: 0.55 },
+  /* 밤의 항구: 열린 곳 — 잔향 짧고 엷음 · 먼 건물 · 컨테이너에서 늦게 돌아오는 메아리 몇 개 */
+  harbor: { len: 1.4, rt: 0.5, damp: 3.5, er: [64, 131, 237, 380], erA: 0.45, erW: 28, diffuse: 0.35, send: 0.45 },
+  /* 해저 터널: 긴 관 — 일정 간격 떨림 메아리 + 어두운 긴 꼬리 */
+  tunnel: { len: 3.0, rt: 2.4, damp: 1.3, flutter: 19, er: [9, 19, 28], erA: 0.4, ring: [[92, 0.6], [151, 0.4]], send: 0.62 },
+};
+const IRS = {}; let roomNow = null, roomG = null;
+function smear(d, at, a, w) { for (let k = 0; k < w; k++) { const i = at + k; if (i >= 0 && i < d.length) d[i] += a * Math.exp(-k / (w * 0.35)) * (1 - 0.5 * Math.random()); } }
+function makeIR(k) {
+  if (IRS[k]) return IRS[k];
+  const R = ROOMS[k], sr = ctx.sampleRate, n = Math.round(sr * R.len), b = ctx.createBuffer(2, n, sr), dec = 6.91 / R.rt;
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); let lp = 0;
+    for (let i = 0; i < n; i++) { const x = i / sr, kf = 0.04 + 0.85 * Math.exp(-x * R.damp * 3); lp += (Math.random() * 2 - 1 - lp) * kf; d[i] = lp * Math.exp(-x * dec) * Math.min(1, x / 0.012) * (R.diffuse ?? 1); }
+    R.er.forEach((ms, j) => smear(d, Math.round((ms + (ch ? 1.3 : -0.7) * (j % 3)) * sr / 1000), R.erA * Math.pow(0.82, j) * (j % 2 ? -1 : 1), R.erW || 6));
+    if (R.flutter) for (let ms = R.flutter, j = 0; ms < R.len * 1000; ms += R.flutter * (0.97 + Math.random() * 0.06), j++) smear(d, Math.round((ms + ch * 0.6) * sr / 1000), 0.35 * Math.exp(-ms / 1000 * dec * 1.1) * (j % 2 ? -1 : 1), (10 + j * 0.5) | 0);
+    if (R.ring) for (const [f, a] of R.ring) { const ph = Math.random() * 6.28, w = 6.2832 * f * (1 + (ch ? 0.003 : -0.003)) / sr; for (let i = 0; i < n; i++) d[i] += 0.08 * a * Math.sin(w * i + ph) * Math.exp(-i / sr * dec * 0.9) * Math.min(1, i / sr / 0.02); } }
+  return (IRS[k] = b);
+}
+/* 방 바꾸기 (같은 방이면 그대로) — 새 컨볼버를 1초 겹쳐 들이고 옛것은 4초 뒤 뗌 */
+function room(k, at = ctx.currentTime, instant) {
+  if (!ROOMS[k] || k === roomNow) return; roomNow = k;
+  const cv = ctx.createConvolver(); cv.buffer = makeIR(k); const g = gn(instant ? ROOMS[k].send : 0.0001); revIn.connect(cv); cv.connect(g); g.connect(rvBus);
+  if (!instant) g.gain.setTargetAtTime(ROOMS[k].send, at, 0.35);
+  const old = roomG; roomG = { cv, g };
+  if (old) { old.g.gain.setTargetAtTime(0.0001, at, 0.35); if (!isOffline(ctx)) setTimeout(() => { try { revIn.disconnect(old.cv); old.g.disconnect(); } catch { /* */ } }, 4000); }
+}
+
 /* ───── 합성 도구 ───── */
 const now = () => ctx.currentTime + T0;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const cl = v => Math.max(-1, Math.min(1, v));
 const R = () => (typeof window !== 'undefined' && window.__salvage && window.__salvage.raid) || null;
+/* 무작위 변주 — 효과음 한 번 부를 때마다 새로 굴림: p 높이 · f 필터 · a 층마다 세기 · j 층마다 어긋남(초) (음악 같은 소리는 높이 고정) */
+const NOVAR = { p: 1, f: 1, a: 0, j: 0, g: 1 };
+let EV = NOVAR;
 let satCurve = null;
 function sat() { if (!satCurve) { satCurve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; satCurve[i] = Math.tanh(x * 2.2) / Math.tanh(2.2); } } const w = ctx.createWaveShaper(); w.curve = satCurve; return w; }
-/* 목소리 하나: 소스 → (필터) → (포화) → 엔벨로프 → (팬) → 버스 (+ 울림 보내기) */
+/* 목소리 하나: 소스 → (필터) → (포화) → 엔벨로프 → (팬) → 버스 (+ 울림 보내기) · o.t 는 이미 어긋남을 더한 시각 */
 function voice(src, o) {
-  let n = src; const t = o.t, a = o.a ?? 0.002, hold = o.hold || 0;
+  let n = src; const t = o.t, a = o.a ?? 0.002, hold = o.hold || 0, pk = o.peak * EV.g * (1 + EV.a * (Math.random() * 2 - 1));
   if (o.ft) { const f = ctx.createBiquadFilter(); f.type = o.ft; f.frequency.setValueAtTime(o.ff, t); if (o.ff1) f.frequency.exponentialRampToValueAtTime(o.ff1, t + (o.fdur || a + hold + o.dur)); f.Q.value = o.q ?? 0.7; n.connect(f); n = f; }
   if (o.sat) { const w = sat(); n.connect(w); n = w; }
-  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.peak, t + a); if (hold) g.gain.setValueAtTime(o.peak, t + a + hold); g.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + o.dur);
+  const g = ctx.createGain(); g.gain.value = 0.0001; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(pk, t + a); if (hold) g.gain.setValueAtTime(pk, t + a + hold); g.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + o.dur);
   n.connect(g); let out = g;
   if (o.pan) { const p = ctx.createStereoPanner(); p.pan.value = cl(o.pan); g.connect(p); out = p; }
   out.connect(o.bus || sfxBus);
   if (o.wet) { const s = ctx.createGain(); s.gain.value = o.wet; out.connect(s); s.connect(revIn); }
   return t + a + hold + o.dur + 0.03;
 }
-/* 잡음 소리: kind white|pink|brown · ft 필터 종류 · ff→ff1 필터 이동 */
-function nz(o) { const s = ctx.createBufferSource(); s.buffer = noiseBuf[o.kind || 'white']; s.loop = true; if (o.rate) s.playbackRate.value = o.rate; const end = voice(s, o); s.start(o.t, Math.random() * 1.5); s.stop(end); return s; }
-/* 음 소리: f0→f1 (glide 초) · wave · lp(→lp1) 낮은 통과 */
-function os(o) { const s = ctx.createOscillator(); s.type = o.wave || 'sine'; s.frequency.setValueAtTime(o.f0, o.t); if (o.f1 && o.f1 !== o.f0) s.frequency.exponentialRampToValueAtTime(Math.max(20, o.f1), o.t + (o.glide || o.dur)); if (o.det) s.detune.value = o.det;
-  const end = voice(s, o.lp ? { ...o, ft: 'lowpass', ff: o.lp, ff1: o.lp1, q: o.q ?? 0.5 } : o); s.start(o.t); s.stop(end); return s; }
-/* 금속(비조화 배음) · 마림바(나무) · 딸깍 */
-function metal(t, f, dur, peak, pan = 0, wet = 0.15, bright = 1) { [[1, 1, 1], [2.76, 0.55, 0.7], [5.4, 0.3 * bright, 0.45], [8.93, 0.16 * bright, 0.3]].forEach(([r, a, d]) => os({ t, f0: f * r, dur: dur * d, peak: peak * a, pan, wet })); }
-function mar(t, f, peak, dur = 0.45, pan = 0, wet = 0.12) { os({ t, f0: f, dur, peak, pan, wet }); os({ t, f0: f * 4, dur: dur * 0.25, peak: peak * 0.22, pan, wet }); os({ t, f0: f * 10.1, dur: 0.03, peak: peak * 0.08, pan }); }
+const jit = o => o.t + (o.j ?? EV.j) * Math.random();
+/* 잡음 소리: kind white|pink|brown · ft 필터 종류 · ff→ff1 필터 이동 (EV.f 로 필터 변주) */
+function nz(o) { const s = ctx.createBufferSource(); s.buffer = noiseBuf[o.kind || 'white']; s.loop = true; if (o.rate) s.playbackRate.value = o.rate; const t = jit(o), k = o.fix ? 1 : EV.f;
+  const end = voice(s, { ...o, t, ff: o.ff && o.ff * k, ff1: o.ff1 && o.ff1 * k }); s.start(t, Math.random() * 1.5); s.stop(end); return s; }
+/* 음 소리: f0→f1 (glide 초) · wave · lp(→lp1) 낮은 통과 (EV.p 로 높이 변주) */
+function os(o) { const s = ctx.createOscillator(), t = jit(o), k = o.fix ? 1 : EV.p; s.type = o.wave || 'sine'; s.frequency.setValueAtTime(o.f0 * k, t); if (o.f1 && o.f1 !== o.f0) s.frequency.exponentialRampToValueAtTime(Math.max(20, o.f1 * k), t + (o.glide || o.dur)); if (o.det) s.detune.value = o.det;
+  const end = voice(s, o.lp ? { ...o, t, ft: 'lowpass', ff: o.lp * (o.fix ? 1 : EV.f), ff1: o.lp1 && o.lp1 * (o.fix ? 1 : EV.f), q: o.q ?? 0.5 } : { ...o, t }); s.start(t); s.stop(end); return s; }
+/* 금속(모달 합성): 자유 막대 비조화 배음(1 · 2.76 · 5.4 · 8.93)을 매번 ±1.2% 흔들고 · 모드마다 감쇠 다르게 · 기본음은 맥놀이 둘 · 때림 잡음 */
+function metal(t, f, dur, peak, pan = 0, wet = 0.15, bright = 1) {
+  [[1, 1, 1], [2.76, 0.55, 0.7], [5.4, 0.3 * bright, 0.45], [8.93, 0.16 * bright, 0.3]].forEach(([r, a, d], i) => { const fr = f * r * rnd(0.988, 1.012);
+    os({ t, f0: fr, dur: dur * d * rnd(0.85, 1.15), peak: peak * a * rnd(0.8, 1.1), pan, wet, j: 0 });
+    if (i === 0 && dur > 0.15) os({ t, f0: fr * 1.0045, dur: dur * 0.85, peak: peak * 0.35, pan, wet, j: 0 }); });
+  nz({ t, dur: 0.006, ft: 'bandpass', ff: Math.min(9000, f * 2.2), q: 2, peak: peak * 0.8, pan, j: 0 });
+}
+/* 나무(마림바형) · 딸깍 · 둔탁 · 물방울(미너트 공기 방울: 높이가 위로 휨) */
+function mar(t, f, peak, dur = 0.45, pan = 0, wet = 0.12) { os({ t, f0: f, dur, peak, pan, wet, j: 0 }); os({ t, f0: f * 4, dur: dur * 0.25, peak: peak * 0.22, pan, wet, j: 0 }); os({ t, f0: f * 10.1, dur: 0.03, peak: peak * 0.08, pan, j: 0 }); }
 function clk(t, f, peak, pan = 0) { nz({ t, dur: 0.012, ft: 'bandpass', ff: f, q: 1.4, peak, pan }); os({ t, f0: f * 0.45, f1: f * 0.35, dur: 0.035, peak: peak * 0.35, wave: 'triangle', lp: 3000, pan }); }
 function thud(t, f, dur, peak, pan = 0) { os({ t, f0: f, f1: f * 0.45, dur, peak, pan }); nz({ t, kind: 'brown', dur: dur * 0.8, ft: 'lowpass', ff: f * 4, peak: peak * 0.6, pan }); }
-function plip(t, f, peak, pan = 0, wet = 0.35) { os({ t, f0: f, f1: f * 1.9, glide: 0.035, dur: 0.06, peak, pan, wet }); }
+function plip(t, f, peak, pan = 0, wet = 0.35) { nz({ t, kind: 'pink', dur: 0.003, ft: 'highpass', ff: 1500, peak: peak * 0.15, pan, j: 0 }); os({ t: t + 0.002, f0: f, f1: f * rnd(1.6, 2.2), glide: rnd(0.03, 0.05), dur: rnd(0.05, 0.08), peak, pan, wet }); }
 const MIDI = m => 440 * Math.pow(2, (m - 69) / 12);
 
-/* ───── 무기 4종: 발사 · 재장전 · 탄피 (판에서 지금 무기를 읽음 — 직접 넘겨도 됨) ───── */
+/* ───── 무기 4종: 발사 · 재장전 · 탄피 (판에서 지금 무기를 읽음 — 직접 넘겨도 됨) ─────
+   발사 = ① 터짐(아주 짧은 중고역 잡음 · 6~10ms 라 날카로움 피로 X) ② 몸통(사인 낙하 + 포화 → 2·3차 배음이 폰에서 '쿵'으로 들림 + 갈색 잡음 '퍽')
+          ③ 중역 몸(분홍 잡음 대역 내려감 · 폰이 잘 내는 400~1200Hz) ④ 꼬리(대부분 방 울림으로 → 창고 쇠벽 · 항구 열린 메아리 · 터널 긴 울림) ⑤ 기계음(작동 · 장전) */
 const wkNow = () => R()?.w?.key || 'pistol';
+function gun(t, p, G) {
+  const v = G.v || 0.05, k = rnd(1 - v, 1 + v), d = rnd(0.88, 1.12);
+  nz({ t, dur: G.ck[0], ft: 'bandpass', ff: G.ck[1], q: 0.8, peak: G.ck[2], pan: p, j: 0 });
+  os({ t, f0: G.b[0] * k, f1: G.b[1] * rnd(0.88, 1.12), dur: G.b[2] * d, peak: G.b[3], pan: p, sat: 1, j: 0 });
+  nz({ t, kind: 'brown', dur: G.b[2] * 0.9, ft: 'lowpass', ff: G.b[0] * 5, ff1: G.b[0] * 1.5, peak: G.b[3] * 0.7, pan: p, j: 0 });
+  nz({ t, kind: 'pink', dur: G.m[0], ft: 'bandpass', ff: G.m[1] * k, ff1: G.m[2], q: 0.9, peak: G.m[3], pan: p, wet: 0.1, sat: G.m[4] });
+  nz({ t: t + 0.008, kind: 'pink', dur: G.tl[0] * d, a: 0.004, ft: 'lowpass', ff: G.tl[1], ff1: 240, peak: G.tl[2], pan: p * 0.6, wet: G.tl[3], j: 0.003 });
+}
 const GUN = {
-  /* 작살 권총: 압축공기 '퓩' + 스프링 · 가볍고 짧게 */
-  pistol(t, p) { const k = rnd(0.95, 1.05); nz({ t, dur: 0.008, ft: 'bandpass', ff: 2600, q: 0.8, peak: 0.2, pan: p });
-    nz({ t, kind: 'pink', dur: 0.075, ft: 'bandpass', ff: 1200 * k, ff1: 550, q: 0.9, peak: 0.55, pan: p, wet: 0.12 });
-    os({ t, f0: 190 * k, f1: 62, dur: 0.07, peak: 0.6, pan: p }); os({ t: t + 0.01, f0: 430 * k, f1: 400 * k, dur: 0.12, peak: 0.05, wave: 'triangle', lp: 1800, pan: p }); },
-  /* 연발 작살소총: 짧고 촘촘 · 한 발씩 높이가 살짝 달라 기관총처럼 안 들림 */
-  rifle(t, p) { const k = rnd(0.93, 1.07); nz({ t, dur: 0.006, ft: 'bandpass', ff: 2400, q: 0.8, peak: 0.13, pan: p });
-    nz({ t, kind: 'pink', dur: 0.045, ft: 'bandpass', ff: 1400 * k, ff1: 700, q: 1, peak: 0.42, pan: p, wet: 0.08 });
-    os({ t, f0: 150 * k, f1: 70, dur: 0.05, peak: 0.5, pan: p }); clk(t + 0.03, 1600 * k, 0.05, p); },
-  /* 산탄 작살포: 굵은 폭발 + 포화 + 방 울림 */
-  shotgun(t, p) { const k = rnd(0.95, 1.04); nz({ t, dur: 0.012, ft: 'bandpass', ff: 2200, q: 0.7, peak: 0.3, pan: p });
-    nz({ t, kind: 'pink', dur: 0.16, ft: 'lowpass', ff: 2200, ff1: 450, peak: 0.75, pan: p, sat: 1, wet: 0.25 });
-    nz({ t, kind: 'brown', dur: 0.32, ft: 'lowpass', ff: 900, ff1: 180, peak: 0.8, pan: p });
-    os({ t, f0: 95 * k, f1: 34, dur: 0.24, peak: 0.85, pan: p, sat: 1 }); },
-  /* 대형 작살총: 묵직한 '퉁' + 줄이 풀리는 '쉬익' + 쇠 울림 */
-  harpoon(t, p) { const k = rnd(0.96, 1.04); nz({ t, dur: 0.01, ft: 'highpass', ff: 2000, peak: 0.35, pan: p });
-    os({ t, f0: 115 * k, f1: 38, dur: 0.26, peak: 0.95, pan: p, sat: 1 }); nz({ t, kind: 'pink', dur: 0.12, ft: 'bandpass', ff: 700, q: 1.6, peak: 0.6, pan: p, wet: 0.2 });
-    nz({ t: t + 0.03, dur: 0.32, ft: 'bandpass', ff: 2600, ff1: 800, q: 4, peak: 0.12, pan: p * 1.5 }); metal(t, 520 * k, 0.35, 0.05, p, 0.25, 0.5); },
+  /* 작살 권총: 압축공기 '퓩' + 공기 빠짐 + 스프링 슬라이드 */
+  pistol(t, p) { gun(t, p, { ck: [0.006, 2400, 0.22], b: [175, 55, 0.09, 0.7], m: [0.08, 1150, 480, 0.5], tl: [0.26, 1500, 0.05, 0.5] });
+    nz({ t: t + 0.015, kind: 'pink', dur: 0.06, ft: 'bandpass', ff: 1800, ff1: 1100, q: 2, peak: 0.05, pan: p }); clk(t + rnd(0.04, 0.05), 1700, 0.07, p); metal(t + 0.045, rnd(2000, 2200), 0.05, 0.02, p, 0, 0.3); },
+  /* 연발 작살소총: 짧고 촘촘 · 한 발씩 높이 · 필터가 달라 기관총처럼 안 들림 + 노리쇠 '착' */
+  rifle(t, p) { gun(t, p, { v: 0.08, ck: [0.005, 2200, 0.16], b: [145, 60, 0.06, 0.55], m: [0.05, 1350, 650, 0.4], tl: [0.2, 1400, 0.04, 0.38] });
+    clk(t + rnd(0.03, 0.04), 1500, 0.06, p); thud(t + 0.035, 320, 0.03, 0.06, p); },
+  /* 산탄 작살포: 굵은 폭발 + 포화 + 긴 방 꼬리 + 0.35초 뒤 펌프 '착-칵' */
+  shotgun(t, p) { gun(t, p, { ck: [0.01, 2000, 0.3], b: [92, 32, 0.26, 0.95], m: [0.16, 2000, 450, 0.7, 1], tl: [0.6, 1200, 0.09, 0.8] });
+    nz({ t, kind: 'brown', dur: 0.32, ft: 'lowpass', ff: 900, ff1: 180, peak: 0.6, pan: p });
+    const u = t + rnd(0.33, 0.38); nz({ t: u, dur: 0.06, ft: 'bandpass', ff: 1100, ff1: 600, q: 1.5, peak: 0.12, pan: p }); clk(u + 0.02, 1000, 0.1, p);
+    nz({ t: u + 0.1, dur: 0.05, ft: 'bandpass', ff: 900, ff1: 1600, q: 1.5, peak: 0.1, pan: p }); clk(u + 0.12, 1400, 0.12, p); thud(u + 0.12, 160, 0.05, 0.1, p); },
+  /* 대형 작살총: 묵직한 '퉁' + 줄이 풀리는 '쉬익' + 쇠 울림 + 톱니 되감김 */
+  harpoon(t, p) { gun(t, p, { ck: [0.01, 1900, 0.28], b: [115, 38, 0.3, 0.95], m: [0.12, 700, 520, 0.6], tl: [0.5, 1100, 0.07, 0.7] });
+    nz({ t: t + 0.03, dur: 0.32, ft: 'bandpass', ff: 1800, ff1: 600, q: 4, peak: 0.1, pan: p * 1.5 }); metal(t, 520 * rnd(0.96, 1.04), 0.35, 0.05, p, 0.25, 0.5);
+    for (let i = 0; i < 3; i++) clk(t + 0.16 + i * 0.05, 1400 - i * 120, 0.05, p); },
 };
 const RELOAD = {
   pistol(t, T) { clk(t + 0.04, 1800, 0.22); nz({ t: t + 0.06, dur: 0.05, ft: 'bandpass', ff: 900, q: 2, peak: 0.08 }); clk(t + T * 0.62, 1500, 0.25); clk(t + T * 0.78, 2400, 0.3); thud(t + T * 0.79, 220, 0.05, 0.15); },
-  rifle(t, T) { clk(t + 0.05, 1600, 0.22); nz({ t: t + 0.08, dur: 0.09, ft: 'bandpass', ff: 700, q: 1.5, peak: 0.1 }); clk(t + T * 0.55, 1300, 0.28); thud(t + T * 0.56, 180, 0.06, 0.2);
-    clk(t + T * 0.76, 2100, 0.22); nz({ t: t + T * 0.77, dur: 0.06, ft: 'bandpass', ff: 3000, q: 2, peak: 0.08 }); clk(t + T * 0.85, 2600, 0.3); },
-  shotgun(t, T) { for (let i = 0; i < 3; i++) { const u = t + 0.12 + i * T * 0.2; clk(u, 1200, 0.16); thud(u + 0.01, 260, 0.05, 0.14); }
+  rifle(t, T) { clk(t + 0.05, 1500, 0.15); nz({ t: t + 0.08, kind: 'pink', dur: 0.09, ft: 'bandpass', ff: 700, q: 1.5, peak: 0.12 }); clk(t + T * 0.55, 1200, 0.2); thud(t + T * 0.56, 180, 0.07, 0.3);
+    clk(t + T * 0.76, 1500, 0.14); nz({ t: t + T * 0.77, kind: 'pink', dur: 0.06, ft: 'bandpass', ff: 1500, q: 2, peak: 0.08 }); clk(t + T * 0.85, 1700, 0.2); thud(t + T * 0.85, 240, 0.05, 0.22); },
+  shotgun(t, T) { for (let i = 0; i < 3; i++) { const u = t + 0.12 + i * T * 0.2 + rnd(-0.02, 0.02); clk(u, 1200, 0.16); thud(u + 0.01, 260, 0.05, 0.14); }
     nz({ t: t + T * 0.78, dur: 0.07, ft: 'bandpass', ff: 1100, ff1: 600, q: 1.5, peak: 0.22 }); clk(t + T * 0.8, 1000, 0.3); nz({ t: t + T * 0.86, dur: 0.06, ft: 'bandpass', ff: 900, ff1: 1600, q: 1.5, peak: 0.2 }); clk(t + T * 0.88, 1500, 0.34); thud(t + T * 0.88, 150, 0.08, 0.25); },
-  harpoon(t, T) { for (let i = 0; i < 9; i++) clk(t + 0.1 + i * T * 0.075, 1700 + (i % 2) * 300, 0.1 + i * 0.012);
+  harpoon(t, T) { for (let i = 0; i < 9; i++) clk(t + 0.1 + i * T * 0.075 + rnd(-0.006, 0.006), 1700 + (i % 2) * 300, 0.1 + i * 0.012);
     nz({ t: t + 0.1, dur: T * 0.68, ft: 'bandpass', ff: 500, q: 3, peak: 0.05, a: 0.05 }); metal(t + T * 0.86, 260, 0.4, 0.09, 0, 0.2, 0.6); thud(t + T * 0.86, 120, 0.12, 0.35); },
 };
 function shell(t, wk) {
   if (wk === 'harpoon') return;
+  /* 바닥 따라: 창고 콘크리트(맑게 튐) · 항구 나무 부두(둔하게) · 터널 쇠 격자(길게) · 물 위면 '퐁' */
+  const m = R()?.map, wet = (() => { const r = R(); try { return r?.water?.userData?.mask?.(r.pl.pos.x, r.pl.pos.z) > 0.15; } catch { return false; } })();
+  if (wet) { plip(t, rnd(500, 800), 0.03, rnd(-0.2, 0.2), 0.25); return; }
   if (wk === 'shotgun') { [0, 0.11, 0.18].forEach((d, i) => { thud(t + d, 520 - i * 40, 0.04, 0.06 - i * 0.015); os({ t: t + d, f0: 1150 + i * 30, dur: 0.05, peak: 0.025, wave: 'triangle', lp: 2400 }); }); return; }
-  const f = wk === 'rifle' ? rnd(3600, 4200) : rnd(3000, 3500); [0, 0.085, 0.14, 0.175].forEach((d, i) => metal(t + d, f * (1 + i * 0.01), 0.07 - i * 0.012, 0.035 * (1 - i * 0.22), rnd(-0.2, 0.2), 0, 0.35));
+  const f = (wk === 'rifle' ? rnd(3600, 4200) : rnd(3000, 3500)) * (m === 'harbor' ? 0.8 : 1), dk = m === 'harbor' ? 0.6 : m === 'tunnel' ? 1.4 : 1;
+  [0, rnd(0.07, 0.1), rnd(0.13, 0.16), rnd(0.165, 0.19)].forEach((d, i) => metal(t + d, f * (1 + i * 0.01), (0.07 - i * 0.012) * dk, 0.035 * (1 - i * 0.22), rnd(-0.2, 0.2), 0, 0.35));
 }
 
 /* 보스 3종 예고 (판 안 보스 패턴에서 sfx.warn 이 부르면 보스 종류 · 패턴으로 바꿔 냄) */
@@ -133,19 +204,25 @@ function bossWarn(kind, pat, d) {
     return; }
   if (kind === 'eel') {
     if (pat === 'charge') { nz({ t, kind: 'brown', dur: 0.2, ft: 'lowpass', ff: 200, ff1: 900, peak: 0.5, a: d * 0.9 }); os({ t, f0: 60, f1: 110, dur: 0.2, a: d * 0.9, peak: 0.35 }); }
-    else { const o = { t, f0: 180, f1: 760, glide: d, dur: 0.15, a: d * 0.95, peak: 0.07, wave: 'sawtooth', lp: 1300 }; os(o); os({ ...o, f0: 182, f1: 768, det: 9 }); for (let i = 0; i < 5; i++) nz({ t: t + d * (0.3 + i * 0.13), dur: 0.015, ft: 'bandpass', ff: 2200, q: 2, peak: 0.05 + i * 0.012 }); }
+    else { const o = { t, f0: 180, f1: 760, glide: d, dur: 0.15, a: d * 0.95, peak: 0.07, wave: 'sawtooth', lp: 1300, j: 0 }; os(o); os({ ...o, f0: 182, f1: 768, det: 9 }); for (let i = 0; i < 5; i++) nz({ t: t + d * (0.3 + i * 0.13), dur: 0.015, ft: 'bandpass', ff: 2200, q: 2, peak: 0.05 + i * 0.012 }); }
     return; }
   /* 수문지기: 쇠 문이 끌리는 낮은 경적 + 내려찍기면 차오르는 바람 */
-  os({ t, f0: 98, dur: 0.12, a: d * 0.5, hold: d * 0.4, peak: 0.16, wave: 'sawtooth', lp: 700 }); os({ t, f0: 147, dur: 0.12, a: d * 0.5, hold: d * 0.4, peak: 0.1, wave: 'sawtooth', lp: 700, det: 6 });
+  os({ t, f0: 98, dur: 0.12, a: d * 0.5, hold: d * 0.4, peak: 0.16, wave: 'sawtooth', lp: 700, j: 0 }); os({ t, f0: 147, dur: 0.12, a: d * 0.5, hold: d * 0.4, peak: 0.1, wave: 'sawtooth', lp: 700, det: 6, j: 0 });
   if (pat === 'slam') nz({ t, kind: 'pink', dur: 0.08, ft: 'bandpass', ff: 300, ff1: 2000, q: 1.2, peak: 0.28, a: d * 0.9 });
 }
 /* 몽이(반려 수달): 짧은 '끼익-끽' 울음 (기분: happy · ask · sad) */
 function mong(mood = 'happy', t = now()) {
   const n = mood === 'sad' ? 1 : mood === 'ask' ? 2 : 3;
-  for (let i = 0; i < n; i++) { const u = t + i * 0.11, b = mood === 'sad' ? 1050 : 1300 + i * 90 + rnd(-40, 40);
-    const o = { t: u, f0: b, f1: mood === 'sad' ? b * 0.7 : mood === 'ask' && i === n - 1 ? b * 1.35 : b * 1.18, glide: 0.07, dur: 0.075, a: 0.012, peak: 0.07, wave: 'triangle', lp: 3200, wet: 0.08 };
-    os(o); os({ ...o, f0: o.f0 * 2.01, f1: o.f1 * 2.01, peak: 0.018 }); nz({ t: u, dur: 0.05, ft: 'bandpass', ff: b * 1.5, q: 3, peak: 0.02 }); }
+  for (let i = 0; i < n; i++) { const u = t + i * rnd(0.1, 0.12), b = mood === 'sad' ? 1050 : 1300 + i * 90 + rnd(-40, 40);
+    const o = { t: u, f0: b, f1: mood === 'sad' ? b * 0.7 : mood === 'ask' && i === n - 1 ? b * 1.35 : b * 1.18, glide: 0.07, dur: 0.075, a: 0.012, peak: 0.07, wave: 'triangle', lp: 3200, wet: 0.08, j: 0 };
+    os(o); os({ ...o, f0: o.f0 * 2.01, f1: o.f1 * 2.01, peak: 0.018 }); nz({ t: u, dur: 0.05, ft: 'bandpass', ff: b * 1.5, q: 3, peak: 0.02, j: 0 }); }
 }
+/* 천둥(폭풍 번개 — 판이 번개를 치며 sfx.boom 을 부르면): 가까운 '쩍' + 늦게 굴러오는 낮은 우르릉 두 겹 (항구 열린 메아리) */
+function thunder(t) { duck(0.5, 2.5); const d = rnd(0.12, 0.5);
+  nz({ t, dur: 0.04, ft: 'highpass', ff: 1400, peak: 0.25, j: 0 }); nz({ t, kind: 'pink', dur: 0.45, ft: 'bandpass', ff: 900, ff1: 300, q: 0.7, peak: 0.3, wet: 0.4, j: 0 });
+  nz({ t: t + d, kind: 'brown', dur: 2.6, a: 0.15, ft: 'lowpass', ff: 240, ff1: 90, peak: 1.0, wet: 0.45, pan: rnd(-0.3, 0.3), j: 0 });
+  nz({ t: t + d + rnd(0.5, 0.9), kind: 'brown', dur: 1.8, a: 0.3, ft: 'lowpass', ff: 420, ff1: 120, peak: 0.55, wet: 0.5, pan: rnd(-0.5, 0.5), j: 0 });
+  os({ t: t + d, f0: 55, f1: 32, dur: 1.6, a: 0.1, peak: 0.45, sat: 1, j: 0 }); }
 
 let lastShot = -1, lastStep = -1;
 export const sfx = {
@@ -157,9 +234,10 @@ export const sfx = {
     if (!T && r && !(r.pl?.reload > 0)) { nz({ t, kind: 'pink', dur: 0.14, ft: 'bandpass', ff: 700, ff1: 1400, q: 1, peak: 0.12 }); clk(t + 0.12, 1400, 0.2); clk(t + 0.2, 2100, 0.16); return; }
     (RELOAD[wk] || RELOAD.pistol)(t, T || r?.w?.reload || 1.2); },
   empty() { if (!ctx) return; const t = now(); clk(t, 2600, 0.18); clk(t + 0.05, 1900, 0.08); },
-  /* 맞음 · 쇠 맞음 · 처치 — 판이 히트스톱을 길게 건 타격(치명 · 약점)이면 저음 펀치 + 반짝을 더함 */
+  /* 맞음(해골 = 뼈 · 나무 같은 딱) · 쇠 맞음 · 처치 — 판이 히트스톱을 길게 건 타격(치명 · 약점)이면 저음 펀치 + 반짝을 더함 */
   hit(pan = 0, strong) { if (!ctx) return; const t = now(); strong ??= (R()?.hitstop || 0) >= 0.065; const k = rnd(0.9, 1.1);
     os({ t, f0: 170 * k, f1: 80, dur: 0.06, peak: 0.45, pan }); nz({ t, kind: 'pink', dur: 0.05, ft: 'bandpass', ff: 1300 * k, q: 1.1, peak: 0.42, pan }); clk(t, 2400 * k, 0.1, pan);
+    os({ t, f0: rnd(640, 760), dur: 0.035, peak: 0.035, wave: 'triangle', lp: 1600, pan }); /* 뼈 공명 */
     if (strong) { os({ t, f0: 80, f1: 38, dur: 0.16, peak: 0.6, pan, sat: 1 }); metal(t + 0.01, 1750, 0.18, 0.05, pan, 0.25, 0.4); } },
   hitMetal(pan = 0, strong) { if (!ctx) return; const t = now(); strong ??= (R()?.hitstop || 0) >= 0.065; const f = rnd(620, 820);
     nz({ t, dur: 0.02, ft: 'bandpass', ff: 3000, q: 1, peak: 0.3, pan }); metal(t, f, 0.22, 0.13, pan, 0.18, 0.6); thud(t, 200, 0.05, 0.2, pan);
@@ -173,7 +251,8 @@ export const sfx = {
   /* 내가 맞음: 몸에 둔탁하게 + 작은 '끽' */
   hurt() { if (!ctx) return; const t = now(); thud(t, 140, 0.18, 0.6); nz({ t, kind: 'pink', dur: 0.12, ft: 'lowpass', ff: 1600, ff1: 300, peak: 0.35, sat: 1 });
     os({ t: t + 0.02, f0: 1250, f1: 900, glide: 0.08, dur: 0.08, a: 0.01, peak: 0.05, wave: 'triangle', lp: 2600 }); },
-  enemyShot(pan = 0) { if (!ctx) return; const t = now(); os({ t, f0: 1100, f1: 420, dur: 0.11, peak: 0.12, wave: 'square', lp: 2200, lp1: 700, pan }); nz({ t, kind: 'pink', dur: 0.06, ft: 'bandpass', ff: 1800, q: 1, peak: 0.16, pan }); },
+  enemyShot(pan = 0) { if (!ctx) return; const t = now(); os({ t, f0: 1100, f1: 420, dur: 0.11, peak: 0.12, wave: 'square', lp: 2200, lp1: 700, pan }); nz({ t, kind: 'pink', dur: 0.06, ft: 'bandpass', ff: 1800, q: 1, peak: 0.16, pan });
+    nz({ t: t + 0.01, kind: 'pink', dur: 0.2, ft: 'lowpass', ff: 1200, ff1: 300, peak: 0.03, pan, wet: 0.5 }); },
   swing(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.12, a: 0.08, ft: 'bandpass', ff: 400, ff1: 1500, fdur: 0.12, q: 1.2, peak: 0.3, pan }); },
   /* 구르기: 옷 · 물 휙 + 0.31초 뒤 착지 / 판에서 장어가 돌진 시작이면 물 밀려오는 소리 / 던지기면 휙만 */
   roll() { if (!ctx) return; const t = now(), r = R();
@@ -181,8 +260,11 @@ export const sfx = {
     nz({ t, kind: 'pink', dur: 0.2, a: 0.05, ft: 'bandpass', ff: 500, ff1: 1700, q: 0.9, peak: 0.28 });
     if (r && r.pl?.roll > 0) { const wet = r.water?.userData?.mask?.(r.pl.pos.x, r.pl.pos.z) > 0.15; const u = t + 0.31; thud(u, 110, 0.12, 0.35);
       if (wet) { nz({ t: u, dur: 0.16, ft: 'bandpass', ff: 1100, ff1: 600, q: 0.9, peak: 0.2 }); plip(u + 0.04, 700, 0.06); } else nz({ t: u, kind: 'pink', dur: 0.06, ft: 'highpass', ff: 1800, peak: 0.07 }); } },
-  /* 발: 말랑한 발바닥 (매번 조금씩 다름 · 아주 작게) / 물 첨벙 */
-  step() { if (!ctx) return; const t = now(); if (t - lastStep < 0.06) return; lastStep = t; const k = rnd(0.85, 1.15); thud(t, 105 * k, 0.05, 0.06); nz({ t, kind: 'pink', dur: 0.03, ft: 'highpass', ff: 2200 * k, peak: 0.012 }); },
+  /* 발: 말랑한 발바닥 + 바닥 따라(창고 젖은 콘크리트 · 항구 나무 부두 · 터널 쇠 격자) · 매번 조금씩 다름 · 아주 작게 / 물 첨벙 */
+  step() { if (!ctx) return; const t = now(); if (t - lastStep < 0.06) return; lastStep = t; const k = rnd(0.85, 1.15), m = R()?.map;
+    thud(t, 105 * k, rnd(0.04, 0.07), 0.06); nz({ t, kind: 'pink', dur: rnd(0.02, 0.04), ft: 'highpass', ff: 2200 * k, peak: 0.012 });
+    if (m === 'harbor') os({ t, f0: 210 * k, f1: 170 * k, dur: 0.06, peak: 0.03, wave: 'triangle', lp: 900 });
+    else if (m === 'tunnel' && Math.random() < 0.45) metal(t, rnd(900, 1250), 0.05, 0.006, 0, 0.12, 0.3); },
   splash() { if (!ctx) return; const t = now(); if (t - lastStep < 0.06) return; lastStep = t; const k = rnd(0.85, 1.2);
     nz({ t, kind: 'pink', dur: 0.12, ft: 'bandpass', ff: 1100 * k, ff1: 650, q: 0.9, peak: 0.08 }); thud(t, 95, 0.05, 0.04); if (Math.random() < 0.6) plip(t + rnd(0.03, 0.07), rnd(600, 1000), 0.02, rnd(-0.3, 0.3), 0.2); },
   /* 뒤지기: 천 · 종이 · 나무 바스락 알갱이 */
@@ -196,12 +278,12 @@ export const sfx = {
   rare() { if (!ctx) return; const t = now(); [79, 83, 86, 91].forEach((m, i) => mar(t + i * 0.075, MIDI(m), 0.11, 0.6, 0, 0.3)); metal(t + 0.3, MIDI(98), 0.9, 0.025, 0.2, 0.5, 0.3); },
   /* 적이 나를 봄: 낮은 쇠 찌름 + 반음 부딪힘 (삐 소리 X) */
   alert(pan = 0) { if (!ctx) return; const t = now(); thud(t, 90, 0.1, 0.25, pan);
-    [MIDI(62), MIDI(63)].forEach((f, i) => os({ t: t + i * 0.02, f0: f, dur: 0.22, a: 0.01, peak: 0.08, wave: 'sawtooth', lp: 1400, lp1: 500, pan })); metal(t, 1180, 0.2, 0.04, pan, 0.15, 0.5); },
+    [MIDI(62), MIDI(63)].forEach((f, i) => os({ t: t + i * 0.02, f0: f, dur: 0.22, a: 0.01, peak: 0.08, wave: 'sawtooth', lp: 1400, lp1: 500, pan, j: 0 })); metal(t, 1180, 0.2, 0.04, pan, 0.15, 0.5); },
   /* 마지막 10초 시계: 나무 똑딱 (마지막 3초는 높게) */
   tick() { if (!ctx) return; const t = now(), last = (R()?.time ?? 10) <= 3.2; nz({ t, dur: 0.02, ft: 'bandpass', ff: last ? 2600 : 2000, q: 8, peak: 0.3 }); os({ t, f0: last ? 1500 : 1150, dur: 0.04, peak: 0.07, wave: 'triangle', lp: 2500 }); },
   /* 물 차기 1분 전: 먼 경적(뱃고동) 두 번 + 물 밀려옴 */
   siren() { if (!ctx) return; const t = now(); duck(0.4, 2.5);
-    for (const d of [0, 1.1]) { [110, 110.9, 165].forEach((f, i) => os({ t: t + d, f0: f, dur: 0.5, a: 0.12, hold: 0.55, peak: i === 2 ? 0.06 : 0.12, wave: 'sawtooth', lp: 900, wet: 0.5 })); }
+    for (const d of [0, 1.1]) { [110, 110.9, 165].forEach((f, i) => os({ t: t + d, f0: f, dur: 0.5, a: 0.12, hold: 0.55, peak: i === 2 ? 0.06 : 0.12, wave: 'sawtooth', lp: 900, wet: 0.5, j: 0 })); }
     nz({ t, kind: 'brown', dur: 1.6, a: 0.8, ft: 'lowpass', ff: 600, peak: 0.25 }); },
   /* 탈출: 따뜻한 마림바 오름 + 화음 + 몽이 기뻐함 */
   extract() { if (!ctx) return; const t = now(); duck(0.3, 2.4); [62, 66, 69, 74, 78].forEach((m, i) => mar(t + i * 0.085, MIDI(m), 0.13, 0.9, 0, 0.3));
@@ -216,9 +298,12 @@ export const sfx = {
   tab() { if (!ctx) return; const t = now(); mar(t, MIDI(79), 0.06, 0.15, 0, 0.05); mar(t + 0.04, MIDI(86), 0.04, 0.12, 0, 0.05); },
   coin() { if (!ctx) return; const t = now(); metal(t, 1800, 0.25, 0.05, 0, 0.15, 0.3); metal(t + 0.07, 2300, 0.3, 0.045, 0, 0.15, 0.3); },
   equip() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.09, ft: 'lowpass', ff: 1200, peak: 0.18 }); clk(t + 0.05, 1500, 0.16); mar(t + 0.08, MIDI(76), 0.06, 0.25); },
-  /* 폭발 · 번개: 깊은 저음 + 갈라지는 소리 + 방 울림 */
-  boom(pan = 0) { if (!ctx) return; const t = now(); duck(0.45, 1.4); nz({ t, dur: 0.02, ft: 'highpass', ff: 1500, peak: 0.5, pan });
-    nz({ t, kind: 'brown', dur: 1.3, ft: 'lowpass', ff: 1400, ff1: 140, peak: 1.0, pan, wet: 0.35 }); os({ t, f0: 75, f1: 28, dur: 0.8, peak: 0.9, pan, sat: 1 }); nz({ t, kind: 'pink', dur: 0.25, ft: 'bandpass', ff: 1600, ff1: 500, q: 0.6, peak: 0.4, pan }); },
+  /* 폭발: 깊은 저음 + 갈라지는 소리 + 방 울림 / 폭풍 번개면 천둥 */
+  boom(pan = 0) { if (!ctx) return; const t = now(), r = R(); if (r?.C?.rain && r.flash >= 0.2) return thunder(t);
+    duck(0.45, 1.4); nz({ t, dur: 0.02, ft: 'highpass', ff: 1500, peak: 0.5, pan });
+    nz({ t, kind: 'brown', dur: 1.3, ft: 'lowpass', ff: 1400, ff1: 140, peak: 1.0, pan, wet: 0.35 }); os({ t, f0: 75, f1: 28, dur: 0.8, peak: 0.9, pan, sat: 1 }); nz({ t, kind: 'pink', dur: 0.25, ft: 'bandpass', ff: 1600, ff1: 500, q: 0.6, peak: 0.4, pan });
+    for (let i = 0; i < 6; i++) clk(t + 0.15 + i * rnd(0.05, 0.12), rnd(900, 2200), rnd(0.03, 0.06), pan + rnd(-0.4, 0.4)); /* 떨어지는 잔해 */ },
+  thunder() { if (!ctx) return; thunder(now()); },
   puff() { if (!ctx) return; const t = now(); clk(t, 1200, 0.12); nz({ t, kind: 'pink', dur: 1.0, a: 0.06, ft: 'lowpass', ff: 3000, ff1: 400, peak: 0.28 }); },
   /* 발전기 · 등불: 크랭크 → 웅 → 딸깍 → 불빛 화음 */
   power() { if (!ctx) return; const t = now(); for (let i = 0; i < 4; i++) clk(t + i * 0.07, 900, 0.1);
@@ -239,10 +324,10 @@ export const sfx = {
     nz({ t: t + 0.02, kind: 'pink', dur: 0.3, ft: 'bandpass', ff: 1000, ff1: 500, q: 0.8, peak: 0.25, pan }); for (let i = 0; i < 5; i++) clk(t + 0.08 + i * rnd(0.04, 0.09), rnd(900, 1800), 0.05, pan); },
   /* 사건 알림(낮은 두 음 '봉-봉') — 보스가 패턴을 예고하는 중이면 보스 예고음으로 */
   warn() { if (!ctx) return; const b = R()?.boss; if (b && !b.dead && b.wind > 0 && b.wind === b.windMax) return bossWarn(b.kind, b.pat, b.windMax);
-    const t = now(); [0, 0.2].forEach((d, i) => { os({ t: t + d, f0: MIDI(i ? 64 : 69), dur: 0.35, a: 0.01, peak: 0.12, wave: 'triangle', lp: 1400 }); os({ t: t + d, f0: MIDI(i ? 52 : 57), dur: 0.35, a: 0.01, peak: 0.08, wave: 'sine' }); }); },
+    const t = now(); [0, 0.2].forEach((d, i) => { os({ t: t + d, f0: MIDI(i ? 64 : 69), dur: 0.35, a: 0.01, peak: 0.12, wave: 'triangle', lp: 1400, j: 0 }); os({ t: t + d, f0: MIDI(i ? 52 : 57), dur: 0.35, a: 0.01, peak: 0.08, wave: 'sine', j: 0 }); }); },
   bossWarn(kind = 'boss', pat, d) { if (!ctx) return; bossWarn(kind, pat, d); },
   /* 공사 · 만들기: 망치 · 톱니 + 끝 화음 */
-  build() { if (!ctx) return; const t = now(); for (let i = 0; i < 3; i++) { const u = t + i * 0.13; thud(u, 180, 0.06, 0.2); metal(u, rnd(800, 950), 0.12, 0.05, 0, 0.1, 0.5); }
+  build() { if (!ctx) return; const t = now(); for (let i = 0; i < 3; i++) { const u = t + i * rnd(0.12, 0.14); thud(u, 180, 0.06, 0.2); metal(u, rnd(800, 950), 0.12, 0.05, 0, 0.1, 0.5); }
     [72, 76, 79].forEach((m, i) => mar(t + 0.45 + i * 0.07, MIDI(m), 0.09, 0.6, 0, 0.25)); },
 
   /* ── 이야기 세션용 (docs/AUDIO.md 목록) ── */
@@ -267,12 +352,20 @@ export const sfx = {
     os({ t: t + 0.12, f0: 52, dur: 1.0, a: 0.15, peak: 0.04, wave: 'sawtooth', lp: 200 }); },
 };
 sfx.window = sfx.windowLight; sfx.memo = sfx.memory;
-/* 바닥에 깔리는 물소리 (판 중에만 · 배경음을 꺼도 남음) */
+/* 변주 씌우기: 부를 때마다 EV 를 새로 굴림. 음악 같은 소리(화음 · 마림바)는 높이 고정 · 필터만 조금 */
+const TUNED = /^(pick|rare|extract|die|ui|tab|coin|equip|power|build|talk|cut|memory|memo|windowLight|window|bond|chapter|lamp|quest|warn|bossWarn|tape|radio|mong|siren|alert)$/;
+/* 소리마다 음량 손질 (효과음 버스를 사격 · 타격에 맞춰 올렸으므로 큰 사건 · 화음 소리는 덜어 리미터가 덜 일하게 — 5장 측정) */
+const GAIN = { boom: 0.5, thunder: 0.4, roar: 0.5, slam: 0.5, gate: 0.5, siren: 0.5, bossWarn: 0.5, warn: 0.55, die: 0.55, extract: 0.55, power: 0.55, cut: 0.55, chapter: 0.55, memory: 0.55, memo: 0.55,
+  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, roll: 0.7, rotate: 0.6 };
+for (const k of Object.keys(sfx)) { const fn = sfx[k], tuned = TUNED.test(k), g = GAIN[k] || 1;
+  sfx[k] = function (...a) { if (!ctx) return; const prev = EV; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; try { return fn.apply(this, a); } finally { EV = prev; } }; }
+
+/* 지도 환경음 (판 중에만 · 배경음을 꺼도 남음) — assets/audio/env.js 를 판 시작 때 늦게 받음 · 구역 · 날씨 · 정전 · 급류 · 침수 따라 바뀜 */
+function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.8').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
+const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
 export function ambience(on) {
-  if (!ctx) return;
-  if (on && !amb) { const s = ctx.createBufferSource(); s.buffer = noiseBuf.brown; s.loop = true; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 480; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 1.5);
-    s.connect(f); f.connect(g); g.connect(sfxBus); s.start(); amb = { s, g }; }
-  if (!on && amb) { const a = amb; amb = null; a.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2); setTimeout(() => { try { a.s.stop(); } catch { /* */ } }, 1200); }
+  ambOn = !!on; if (!ctx) return; /* 소리가 아직 안 풀렸으면 기억만 → 첫 탭 뒤 tick 이 받음 */
+  if (on) loadEnv(); else if (env) env.stop(ctx.currentTime);
 }
 /* 큰 소리 동안 배경음 잠깐 낮춤 */
 function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gain, t = ctx.currentTime + T0; g.cancelScheduledValues(t); g.setTargetAtTime(MUS * to, t, 0.03); g.setTargetAtTime(MUS, t + dur * 0.4, dur * 0.3); }
@@ -281,7 +374,7 @@ function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gai
    장면: 은신처(처음 · 하루 끝) · 침수 창고 · 밤의 항구 · 해저 터널 · 보스전(지도 색)
    긴장 단계: 0 평소 → 1 적 발견(쫓는 적이 있음 · 4초 여운) → 2 탈출 카운트다운(물 차기 1분 전) */
 let seenRaid = false, chaseT = 0;
-function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.7').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.8').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
 function scene() {
   const r = R();
   if (!r || !r.alive) return { id: seenRaid ? 'dusk' : 'hideout', lv: 0 };
@@ -296,11 +389,17 @@ function scene() {
   if (b && !b.dead && b.__mus) return { id: 'boss', color, lv };
   return { id: color, lv };
 }
-function musicTick() {
+function tick() {
   if (!ctx || ctx.state !== 'running') return;
+  const r = R(), inRaid = !!(r && r.alive);
+  room(inRaid ? (r.map || 'ware') : 'hideout');
+  if (ambOn && inRaid) { if (!env) loadEnv(); else { env.set(envState(r), ctx.currentTime); env.pump(ctx.currentTime + 0.7); } }
+  musicTick();
+}
+function musicTick() {
   if (!SET.music || SET.muted) { if (mus) mus.set(null); return; }
   if (!mus) { loadMusic(); return; }
   const s = scene(); mus.set(s.id, s.lv, s.color); mus.pump(ctx.currentTime + 0.7);
 }
 /* 시험 · 렌더 도구용 (docs/audio_preview/render.mjs) */
-export const __audio = { get ctx() { return ctx; }, set at(s) { T0 = s; }, music: () => loadMusic() || Promise.resolve(mus), scene, set: SET };
+export const __audio = { get ctx() { return ctx; }, set at(s) { T0 = s; }, music: () => loadMusic() || Promise.resolve(mus), env: () => loadEnv() || Promise.resolve(env), room: (k, at, inst) => room(k, at, inst), scene, set: SET, get roomNow() { return roomNow; } };

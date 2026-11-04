@@ -1,11 +1,11 @@
 // 판 안 이야기 — 무전(짧은 자막 + 몽이 반응) · 튜토리얼 무전 · 이야기 물건(금빛 고리 상자) · 녹음기 · 벽 낙서
 //  raid.js 는 건드리지 않고 판 상태를 매 프레임 지켜봄 (main.js 가 attach · tick · detach)
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.7';
-import * as ST from './story.js?v=0.99.7';
-import { RS } from './plan.js?v=0.99.7';
-import { sfx } from './audio.js?v=0.99.7';
-import { T, talk, portrait } from './story_ui.js?v=0.99.7';
+import { S, save } from './save.js?v=0.99.8';
+import * as ST from './story.js?v=0.99.8';
+import { RS } from './plan.js?v=0.99.8';
+import { sfx } from './audio.js?v=0.99.8';
+import { T, talk, portrait } from './story_ui.js?v=0.99.8';
 
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -15,7 +15,7 @@ const LIMIT = 3; /* 튜토리얼 밖 무전은 판당 3줄 (판 시작 · 사건
 export class StoryRaid {
   constructor(app, story) { this.app = app; this.story = story; this.R = null; }
   attach(R) {
-    this.detach(); this.R = R; this.t = 0; this.said = new Set(); this.n = 0; this.q = []; this.cur = 0; this.texs = []; this.rings = []; this.grafs = [];
+    this.detach(); this.R = R; this.t = 0; this.said = new Set(); this.n = 0; this.intro = false; this.texs = []; this.rings = []; this.grafs = [];
     const st = S.story; this.tut = this.story.on && st.tut >= 1 && st.tut <= 3 ? st.tut : 0;
     talk('common'); talk('memo'); if (this.tut) talk('t0'); const b = ST.openBeat(S); if (b) talk('t' + Math.min(3, b.ch));
     const f = document.getElementById('frame'); document.getElementById('radio')?.remove();
@@ -60,25 +60,41 @@ export class StoryRaid {
   }
   /* 상자 열 때 (ui.openLoot) — 튜토리얼 첫 상자엔 이름표 붙은 상자 */
   onLoot(c) {
-    const st = S.story; if (this.tut === 1 && !st.flags.tagGiven && c && LOOTY.has(c.kind)) { c.items.unshift('tagbox'); st.flags.tagGiven = 1; this.R?.want.add('tagbox'); save(); this.say('tag', T.t0?.RADIO_TUT.tag, true); }
+    const st = S.story; if (this.tut === 1 && !st.flags.tagGiven && c && LOOTY.has(c.kind)) { c.items.unshift('tagbox'); st.flags.tagGiven = 1; this.R?.want.add('tagbox'); save(); this.say('tag', T.t0?.RADIO_TUT.tag, true, null, null, 2.5);
+      /* 장면 1 선택지는 첫 상자를 연 뒤 (v0.5.1 · 검수 Top 3) — 규칙 한 줄 + 고르기, 안 고르면 그냥 지나감 */
+      if (T.t0?.ASK1 && !this.said.has('ask1')) { this.said.add('ask1'); this.push({ key: 'ask1', line: T.t0.RULE, prio: 2.5, ask: T.t0.ASK1 }); } }
   }
-  /* 무전 한 줄 (말하는 이 · 글 · 몽이 반응) — 같은 key 는 한 번 */
-  say(key, line, force, mongi) {
-    if (!line || this.said.has(key)) return; if (!force && this.n >= LIMIT) return; this.said.add(key); if (!force) this.n++;
-    this.q.push({ line, mongi }); if (!this.cur) this.next();
+  /* 무전 한 줄 — 같은 key 는 한 번 · 아직 합류 안 한 사람이면 곰방 줄(alt) 또는 말 안 함 (story.voiceLine — QA v0.5.1)
+   *  보여 주는 순서 · 겹침은 ui.top(위쪽 한 줄 대기열): 무전 = 우선순위 2 (튜토리얼 그 자리 안내 2.5) */
+  say(key, line, force, mongi, alt, prio = 2) {
+    if (!line || this.said.has(key)) return; if (!force && this.n >= LIMIT) return;
+    this.said.add(key); const l = ST.voiceLine(S, line, alt); if (!l) return; if (!force) this.n++;
+    this.push({ key, line: l, mongi, prio });
   }
-  next() {
-    const it = this.q.shift(); const el = this.el; if (!it || !el) { this.cur = 0; el?.classList.remove('on'); return; }
-    const [sp, text] = it.line; const id = ST.ALIAS[sp] || sp; const pet = it.mongi && this.R?.L.pet;
-    el.innerHTML = `${portrait(id, 'sm')}<div><b><em>무전</em> ${esc(ST.SPEAK[id]?.name || '')}</b><span>${esc(ST.say(text, this.story ? this.storyName() : '단비'))}</span>${pet ? `<small class="mg">${portrait('mongi', 'xs')}${esc(it.mongi)}</small>` : ''}</div>`;
-    el.className = 'radio on' + (id === 'nole' ? ' nole' : ''); snd('radio'); if (pet) snd('mong', 'ask');
-    this.cur = (this.tut ? 3.6 : 2.6) + (pet ? 0.8 : 0) + Math.max(0, text.length - 18) * 0.05;
+  push({ key, line, mongi, prio = 2, ask, cap }) {
+    const ui = this.app.ui; if (!ui?.top) return; const text = cap || line[1];
+    const it = { prio, key: 'r:' + key, ask, hold: !!ask, dur: ask ? 12 : (this.tut ? 3.4 : 2.6) + (mongi ? 0.8 : 0) + Math.max(0, text.length - 18) * 0.06,
+      show: () => this.render(it, line, mongi, cap), hide: () => this.el?.classList.remove('on', 'asking'), timeout: ask ? () => this.answer(it, -1) : null };
+    ui.top.push(it); return it;
+  }
+  render(it, line, mongi, cap) {
+    const el = this.el; if (!el) return;
+    if (cap) { el.innerHTML = `<div><span class="capt">${esc(cap)}</span></div>`; el.className = 'radio on cap'; return; }
+    const [sp, text] = line; const id = ST.ALIAS[sp.replace('~', '')] || sp.replace('~', ''); const pet = mongi && this.R?.L.pet; const nm = this.storyName();
+    el.innerHTML = `${portrait(id, 'sm')}<div><b><em>무전</em> ${esc(ST.SPEAK[id]?.name || '')}</b><span>${esc(ST.say(text, nm))}</span>${pet ? `<small class="mg">${portrait('mongi', 'xs')}${esc(mongi)}</small>` : ''}${it.ask ? `<div class="ask">${it.ask.c.map(([t], i) => `<button data-i="${i}">${esc(ST.say(t, nm))}</button>`).join('')}</div>` : ''}</div>`;
+    el.className = 'radio on' + (id === 'nole' ? ' nole' : '') + (it.ask ? ' asking' : ''); snd('radio'); if (pet) snd('mong', 'ask');
+    if (it.ask) el.querySelectorAll('.ask button').forEach(b => b.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); this.answer(it, +b.dataset.i); });
+  }
+  /* 판 안 선택지: 고르면 반응 무전 · 시간이 지나면 첫 줄 효과만 (모두 같은 사이 +1) */
+  answer(it, i) {
+    if (it.answered) return; it.answered = true; const pick = it.ask.c[Math.max(0, i)];
+    ST.applyFx(S, pick[2]); if (pick[2]?.rel && i >= 0) snd('bond'); save(); this.app.ui.top.done(it);
+    if (i >= 0) (pick[1] || []).forEach((l, k) => this.push({ key: it.key + ':re' + k, line: l, prio: 2.6 }));
   }
   storyName() { try { return ST.cleanName(localStorage.getItem(ST.NAME_KEY)); } catch { return ST.NAME_DEFAULT; } }
   tick(dt) {
     const R = this.R; if (!R || !R.alive) return; this.t += dt; const pl = R.pl; const st = S.story;
-    if (this.cur) { this.cur -= dt; if (this.cur <= 0) { this.cur = 0; this.next(); } }
-    if (R.over) { this.el?.classList.remove('on'); return; }
+    if (R.over) { this.app.ui.top?.clear(); return; }
     for (const r of this.rings) { if (r.c.searched && !r.c.items.some(k => ITEMS_MEMO(k))) r.m.visible = false; else r.m.material.opacity = 0.55 + Math.sin(this.t * 4) * 0.3; }
     for (const g of this.grafs) { if (g.read) continue; g.sp.material.opacity = 0.5 + Math.sin(this.t * 5 + g.x) * 0.4; g.sp.scale.setScalar(1 + Math.sin(this.t * 3) * 0.25);
       if (Math.hypot(pl.pos.x - g.x, pl.pos.z - g.z) < 3.0) { g.read = true; g.sp.visible = false; g.m.material.opacity = 0.85; if (!st.graf.includes(g.id)) { st.graf.push(g.id); st.flags.codexNew = 1; } if (g.id === 'ware:0') st.flags.sawGraf = 1; save(); this.app.ui.event(`벽 낙서 — “${g.txt}”`, 'lore'); snd('memory'); } }
@@ -86,35 +102,41 @@ export class StoryRaid {
     const openExit = () => R.exits.find(x => x.open && near(x.pos, 7));
     /* 튜토리얼 첫 판 */
     if (this.tut === 1 && RT) {
-      if (R.near?.type === 'loot' && !R.near.c.searched) this.say('box', RT.box, true);
-      const sp = R.enemies.find(e => !e.dead && !e.sleep && e.state === 'chase' && near(e.pos, 16)); if (sp) this.say('spot', sp.kind === 'drone' ? RT.spot : RT.spotSkel, true);
+      /* 장면 1: 빈 화면 대신 걸어가는 동안 (장면 글 → 곰방 3줄) — 그 자리 안내(상자 · 적 · 구르기)가 오면 그쪽이 먼저 */
+      const T0 = T.t0; if (!this.intro && this.t > 0.5 && T0?.INTRO) { this.intro = true; this.push({ key: 'cap', cap: T0.DOCK_CAP, prio: 2 }); T0.INTRO.forEach((l, k) => this.say('intro' + k, l, true)); }
+      const P = 2.5;
+      if (R.near?.type === 'loot' && !R.near.c.searched) this.say('box', RT.box, true, null, null, P);
+      const sp = R.enemies.find(e => !e.dead && !e.sleep && e.state === 'chase' && near(e.pos, 16)); if (sp) this.say('spot', sp.kind === 'drone' ? RT.spot : RT.spotSkel, true, null, null, P);
       if (R.killN > 0) this.say('kill', RT.kill, true);
-      if (R.enemyShots.some(s => s.m && near(s.m.position, 7))) this.say('roll', RT.roll, true);
-      if (R.events.flood) this.say('flood', RT.flood, true);
-      const x = openExit(); if (x) this.say('exit', x.kind === 'early' ? RT.exit : RT.exitOther, true);
+      if (R.enemyShots.some(s => s.m && near(s.m.position, 7))) this.say('roll', RT.roll, true, null, null, P);
+      if (R.events.flood) this.say('flood', RT.flood, true, null, null, P);
+      const x = openExit(); if (x) this.say('exit', x.kind === 'early' ? RT.exit : RT.exitOther, true, null, null, P);
       return;
     }
     if (!C) return;
     const b = ST.openBeat(S); const bt = b && T['t' + Math.min(3, b.ch)]?.BEAT[b.id];
     if (this.t > 1.6) {
       if (this.tut === 2 && RT) this.say('start', RT.start2, true); else if (this.tut === 3 && RT) this.say('start', RT.start3, true);
-      else if (b?.goal?.map === R.map && bt?.hint) this.say('start', bt.hint); else this.say('start', C.RADIO.start[R.map]);
+      else if (b?.goal?.map === R.map && bt?.hint) this.say('start', bt.hint, false, null, rad(C.RADIO_G, 'start', R.map)); else this.say('start', rad(C.RADIO, 'start', R.map), false, null, rad(C.RADIO_G, 'start', R.map));
     }
-    if (R.events.flood) this.say('flood', C.RADIO.flood[R.map]);
-    if (R.events.blackout && R.map !== 'harbor') this.say('blackout', C.RADIO.blackout);
-    if (R.events.boss) this.say('boss', C.RADIO.boss);
-    if (pl.hp < pl.maxHp * 0.5 && !pl.dead) this.say('hurt', st.joined.includes('haedam') ? C.RADIO.hurt : C.RADIO.hurtG);
+    const RD = k => [rad(C.RADIO, k, R.map), rad(C.RADIO_G, k, R.map)];
+    if (R.events.flood) this.say('flood', ...RD('flood'));
+    if (R.events.blackout && R.map !== 'harbor') this.say('blackout', ...RD('blackout'));
+    if (R.events.boss) this.say('boss', ...RD('boss'), 2.4);
+    if (pl.hp < pl.maxHp * 0.5 && !pl.dead) this.say('hurt', C.RADIO.hurt, false, null, C.RADIO.hurtG);
     if (openExit() && R.elapsed > 30) this.say('exit', C.RADIO.exit);
     /* 3장: 제어실 노을 목소리(파수) · 선로의 떠돌이 */
-    if (b?.id === 'b_freq' && R.map === 'tunnel' && R.zone >= 3) { this.say('nole', C.RADIO.nole, true, C.RADIO.noleMongi); st.flags.heardNole = 1; }
-    if (b?.id === 'b_boot' && R.map === 'tunnel' && R.zone >= 2 && !st.met.includes('baram')) { this.say('baram', C.RADIO.baram, true); st.met.push('baram'); save(); }
+    if (b?.id === 'b_freq' && R.map === 'tunnel' && R.zone >= 3) { this.say('nole', C.RADIO.nole, true, C.RADIO.noleMongi, null, 2.8); st.flags.heardNole = 1; }
+    if (b?.id === 'b_boot' && R.map === 'tunnel' && R.zone >= 2 && !st.met.includes('baram')) { st.met.push('baram'); save(); this.say('baram', C.RADIO.baram, true); }
     /* 몽이 코: 녹음기 · 이야기 물건 상자 가까이 */
     if (R.L.pet) for (const c of R.containers) if ((c.tape || c.story) && !c.searched && near(c.pos, 9)) { this.say('sniff' + (c.tape ? 't' : 's'), ['y', C.RADIO.sniff], true); break; }
   }
   detach() {
-    for (const t of this.texs || []) t.dispose(); this.texs = []; this.rings = []; this.grafs = []; this.q = []; this.cur = 0;
+    for (const t of this.texs || []) t.dispose(); this.texs = []; this.rings = []; this.grafs = []; this.app.ui?.top?.clear();
     this.el?.remove(); this.el = null; this.R = null;
   }
 }
+/* 무전 표: 지도마다 다르면 { ware, harbor, tunnel }, 아니면 한 줄 */
+const rad = (tbl, k, map) => { const v = tbl?.[k]; return Array.isArray(v) ? v : v?.[map] || null; };
 const ITEMS_MEMO = k => ['tagbox', 'tagbundle', 'ferrytix', 'ledger', 'roster', 'lboot'].includes(k);
 function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

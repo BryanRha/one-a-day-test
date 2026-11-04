@@ -1,5 +1,5 @@
 // 수달 인양단 — 데이터 · 숫자 (조정은 여기서만). three 없이 읽힘 → node 시뮬 · 시험에서도 씀
-export const VERSION = '0.5.0-a';
+export const VERSION = '0.5.2';
 
 /* ───── 재료 (창고 숫자로만 셈 · 분해해서 얻음) ───── */
 export const MATS = {
@@ -195,10 +195,12 @@ export const ENEMIES = {
 };
 /* 보스 패턴 숫자 (예고 시간 · 반경 · 피해) — raid.js bossWind/enemyAttack
  *  수문지기: slam(가까이) · wave(멀리) · 체력 절반부터 1.25배
+ *    약점(v0.5.2): 내려찍은 직후 2초 가슴 보관함 문이 열림 → 피해 ×2 (선장 랜턴 · 장어 기절과 같은 규칙: 약점 시간의 0.8 동안 멈칫)
  *  갈고리 선장: hook(줄 경고 → 갈고리, 맞으면 끌려감) · slam(원 경고 → 내려찍기 + 불붙은 기름 4초) · douse(포효 → 5초 등불 끄기 + 게 2 부름)
  *    약점: 내려찍은 뒤 1.4초 랜턴이 드러남 → 피해 ×2
  *  터널 장어: charge(줄 경고 → 돌진, 벽에 박히면 2초 기절 = 약점 ×2) · shock(둘레 원 경고 → 방전, 물속이면 ×1.4) · surge(물살 + 거품탄 8발, 체력 60% 아래) */
 export const BOSS = {
+  boss: { weak: 2.0, weakMul: 2 },
   captain: { hook: { wind: 0.8, len: 11, dmg: 16, pull: 4.2 }, slam: { wind: 0.85, r: 3.0, dmg: 24, fire: 4, fireDps: 9 }, douse: { wind: 1.0, dark: 5, adds: 2, below: 0.6 }, weak: 1.4, weakMul: 2 },
   eel: { charge: { wind: 0.9, len: 13, speed: 17, dmg: 22, stun: 2.0 }, shock: { wind: 0.9, r: 4.2, dmg: 18, wet: 1.4 }, surge: { wind: 0.8, n: 8, dmg: 10, push: 7, below: 0.6 }, weakMul: 2 },
 };

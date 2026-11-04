@@ -1,13 +1,13 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.7';
-import * as ST from './story.js?v=0.99.7';
-import { ITEMS, QUESTS, MAPS, FACILITIES } from './data.js?v=0.99.7';
-import { A } from './assets.js?v=0.99.7';
-import { sfx, unlock } from './audio.js?v=0.99.7';
-import { StoryRaid } from './story_raid.js?v=0.99.7';
-import { ART } from './talk/art.js?v=0.99.7';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import { S, save, today } from './save.js?v=0.99.8';
+import * as ST from './story.js?v=0.99.8';
+import { ITEMS, QUESTS, MAPS, FACILITIES } from './data.js?v=0.99.8';
+import { A } from './assets.js?v=0.99.8';
+import { sfx, unlock } from './audio.js?v=0.99.8';
+import { StoryRaid } from './story_raid.js?v=0.99.8';
+import { ART } from './talk/art.js?v=0.99.8';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
 
 const Q = new URLSearchParams(location.search);
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
@@ -17,7 +17,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.7'), t1: () => import('./talk/t1.js?v=0.99.7'), t2: () => import('./talk/t2.js?v=0.99.7'), t3: () => import('./talk/t3.js?v=0.99.7'), common: () => import('./talk/common.js?v=0.99.7'), memo: () => import('./talk/memo.js?v=0.99.7') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.8'), t1: () => import('./talk/t1.js?v=0.99.8'), t2: () => import('./talk/t2.js?v=0.99.8'), t3: () => import('./talk/t3.js?v=0.99.8'), common: () => import('./talk/common.js?v=0.99.8'), memo: () => import('./talk/memo.js?v=0.99.8') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;
@@ -59,9 +59,14 @@ export function bubbles(t) {
   if (cur.trim()) out.push(cur.trim()); return out;
 }
 
+/* 그림 없는 초소 장면 → 초소 3D 흐리게 + 얹을 것 (원화 자리: cut_night · cut_tape — 생기면 그 그림을 씀) */
+const TAPE_SLOT = '<div class="tapeslot"><svg viewBox="0 0 160 100" aria-hidden="true"><rect x="8" y="14" width="144" height="74" rx="9" fill="#2b2a26" stroke="#c9a36a" stroke-width="2"/><rect x="26" y="28" width="108" height="34" rx="5" fill="#e9dcc0"/><circle cx="56" cy="45" r="11" fill="#2b2a26"/><circle cx="104" cy="45" r="11" fill="#2b2a26"/><circle cx="56" cy="45" r="4" fill="#e9dcc0"/><circle cx="104" cy="45" r="4" fill="#e9dcc0"/><path d="M40 88l10-14h60l10 14" fill="#3a3832"/></svg><div class="wave">' + '<i></i>'.repeat(18) + '</div></div>';
+const SCENE3D = { night: '<div class="glow"></div>', tape: TAPE_SLOT, cut_tape: TAPE_SLOT, cut_night: '<div class="glow"></div>' };
+
 /* ───── 대화 재생기 ───── */
 class Player {
   constructor(story) { this.story = story; }
+  get app() { return this.story.app; }
   mount() {
     const f = $('#frame'); let el = $('#story', f); if (el) el.remove();
     el = this.el = h('div', 'story', `<div class="st-cut"></div><div class="st-shade"></div>
@@ -69,12 +74,12 @@ class Player {
       <div class="st-card"></div>
       <div class="st-bust"><img alt="" draggable="false"></div>
       <div class="st-box"><div class="st-who"></div><div class="st-txt"></div><i class="st-next"></i><div class="st-ch"></div></div>`);
-    el.id = 'story'; f.appendChild(el);
+    el.id = 'story'; f.appendChild(el); f.classList.add('storying'); /* 이야기 중엔 위쪽 자원 줄 숨김 (건너뛰기가 골드를 덮지 않게) */
     this.bust = $('.st-bust', el); this.box = $('.st-box', el); this.txt = $('.st-txt', el); this.who = $('.st-who', el); this.ch = $('.st-ch', el); this.cut = $('.st-cut', el); this.card = $('.st-card', el);
     $('.st-skip', el).onclick = e => { e.stopPropagation(); this.skipping = true; snd('ui'); this.tap?.(); };
     el.addEventListener('pointerdown', e => { if (e.target.closest('.st-ch, .st-skip, .st-keep')) return; unlock(); this.tap?.(); });
   }
-  unmount() { this.el?.classList.add('out'); const e = this.el; setTimeout(() => e?.remove(), 260); this.el = null; }
+  unmount() { this.el?.classList.add('out'); const e = this.el; setTimeout(() => { e?.remove(); if (!$('#story')) $('#frame').classList.remove('storying', 'st3d'); }, 260); this.el = null; }
   /* 스크립트 재생 · opt: { ctx(flag), replay(효과 없이), noSkip } */
   async play(script, opt = {}) {
     this.opt = opt; this.skipping = false; if (!this.el) this.mount();
@@ -85,17 +90,21 @@ class Player {
   async run(steps) {
     for (const s of steps || []) {
       if (Array.isArray(s)) { await this.line(s[0], s[1], s[2]); continue; }
-      if (s.cut !== undefined) { if (!this.skipping) this.setCut(s.cut, s.tone); continue; }
+      if (s.cut !== undefined) { if (!this.skipping) this.setCut(s.cut && !artUrl(s.cut) && s.fb ? s.fb : s.cut, s.tone); continue; }
       if (s.c) { await this.choice(s); continue; }
       if (s.if) { const v = this.opt.ctx?.(s.if); await this.run(v ? s.then : s.else); continue; }
       if (s.fx) await this.fx(s);
     }
   }
   setCut(name, tone) {
-    const c = this.cut; if (!name) { c.className = 'st-cut'; c.innerHTML = ''; this.el.classList.remove('cutting'); return; }
+    const c = this.cut; const f = $('#frame'); f.classList.remove('st3d');
+    if (!name) { c.className = 'st-cut'; c.innerHTML = ''; this.el.classList.remove('cutting'); return; }
     this.el.classList.add('cutting'); c.className = `st-cut on tone-${tone || 'night'}`; c.innerHTML = '<div class="glow"></div>';
     if (name === 'black') { c.className = 'st-cut on tone-black'; return; }
-    const u = artUrl(name); if (!u) return; /* 그림 없는 장면(선착장 · 밤 · 녹음기)은 색 배경만 */
+    const u = artUrl(name);
+    /* 그림 없는 초소 장면(밤 · 녹음기)은 초소 3D 를 흐리게 깔고 색만 입힘 (v0.5.1 · 검수 Top 3) — 원화가 생기면 그 그림이 먼저 */
+    if (!u && SCENE3D[name] && !this.app?.raid) { c.className = `st-cut on s3d tone-${tone || 'night'}`; f.classList.add('st3d'); c.innerHTML = SCENE3D[name]; return; }
+    if (!u) return; /* 그 밖의 그림 없는 장면은 색 배경만 */
     const im = new Image(); im.className = 'kb'; im.alt = ''; im.onload = () => c.classList.add('art'); im.src = u; c.appendChild(im);
     snd('cut');
   }
@@ -215,11 +224,14 @@ export class Story {
   /* ───── 튜토리얼 시작: 프롤로그 → 이름 → 장면 1 → 첫 판 ───── */
   async tutorialStart() {
     const t0 = await talk('t0'); S.firstRun = false; save();
+    /* 프롤로그 첫 그림을 받은 뒤 로딩 막을 걷음 (막 뒤로 은신처가 비치지 않게) */
+    const u = artUrl('cut_0_1'); if (u) { const im = new Image(); im.src = u; await Promise.race([im.decode().catch(() => {}), wait(2500)]); }
+    setTimeout(() => this.app.hideLoading?.(), 150);
     await this.play(t0.PROLOGUE);
     const skip = await this.nameModal(true);
     const st = S.story; if (!st.joined.includes('gombang')) st.joined.push('gombang');
     if (skip) { ST.finishTut(S, today()); st.codex.tagbox = Math.max(1, st.codex.tagbox || 0); st.flags.tutSkipped = 1; save(); await this.play(t0.SKIPPED, { noSkip: true }); this.close(); this.busy = false; this.ui.hideout(); setTimeout(() => this.ui.howto(), 200); return; }
-    await this.play(t0.SCENE1);
+    /* 장면 1 은 첫 판 안에서 (걸어가는 동안 무전 · 선택지는 첫 상자 뒤 — story_raid.js) */
     st.tut = 1; save(); this.close(); this.busy = false;
     this.app.startRaid({ safeItems: [], carry: [], map: 'ware' });
   }
@@ -253,14 +265,14 @@ export class Story {
   }
   async playTape(id) {
     const M = await talk('memo'); const t = M.TAPE[id]; if (!t) return; snd('tape');
-    await this.play([{ cut: 'tape', tone: 'tape' }, ['@', `녹음기 · ${t.who}`], ...t.lines.map(l => [t.nole ? 'o' : '@', `“${l}”`]), ...(t.nole && S.story.joined.includes('neuru') ? [['@', '몽이가 녹음기 옆에 가서 웅크린다.']] : [])]);
+    await this.play([{ cut: 'cut_tape', tone: 'tape' }, ['@', `녹음기 · ${t.who}`], ...t.lines.map(l => [t.nole ? 'o' : '@', `“${l}”`]), ...(t.nole && S.story.joined.includes('neuru') ? [['@', '몽이가 녹음기 옆에 가서 웅크린다.']] : [])]);
   }
   async dayEnd(C, d) {
     const st = S.story; st.dayEnd = d; const who = ST.lit(S).filter(k => C.DAYEND[k]); const w = who[(Date.parse(d) / 864e5 | 0) % Math.max(1, who.length)] || 'gombang';
     const next = ST.beatNow(S); let tease = C.TEASE_IDLE;
     if (next && !next.tut) { const ok = !next.need?.q || S.quests.done.includes(next.need.q); tease = ok && !st.open ? ((await beatTalk(next)).tease || C.TEASE_IDLE) : st.open ? C.TEASE_QUEST : C.TEASE_QUEST; }
     st.tomorrow = tease; save();
-    await this.play([{ cut: 'night', tone: 'night' }, [w, C.DAYEND[w]], { fx: 'tomorrow', txt: tease }]);
+    await this.play([{ cut: 'cut_night', tone: 'night' }, [w, C.DAYEND[w]], { fx: 'tomorrow', txt: tease }]);
   }
 
   /* ───── 은신처 꾸미기: 창 여섯(인물) + 세 등불 + 기록 도감 · 설정 ───── */
@@ -282,7 +294,7 @@ export class Story {
   questHtml() {
     const st = S.story; const b = ST.openBeat(S); const bt = b && got['t' + Math.min(3, b.ch)]?.BEAT[b.id];
     if (b?.goal) return `<div class="qcard story"><small>이야기 의뢰 · ${b.ch}장 「${esc(ST.CHAPTERS[b.ch].name)}」${b.goal.map ? ` · ${MAPS[b.goal.map].icon} ${MAPS[b.goal.map].name}` : ''}</small><h3>${esc(b.name)}</h3>
-      ${bt?.ask ? `<div class="giver">${portrait(b.giver)}<p><b>${esc(whoName(b.giver))}</b> ${esc(say(bt.ask))}</p></div>` : ''}<p>${esc(b.txt || '')}</p>${b.reward ? '<small class="hint">보상: 은신처에서 이야기와 함께</small>' : ''}</div>`;
+      ${bt?.ask && ST.present(S, b.giver) ? `<div class="giver">${portrait(b.giver)}<p><b>${esc(whoName(b.giver))}</b> ${esc(say(bt.ask))}</p></div>` : ''}<p>${esc(b.txt || '')}</p>${b.reward ? '<small class="hint">보상: 은신처에서 이야기와 함께</small>' : ''}</div>`;
     if (st.tut < 4) return '';
     const nx = ST.beatNow(S); if (!nx) return '<div class="note good st-note">이야기 1~3장을 모두 봤어요. 4장은 다음 업데이트에서.</div>';
     const qn = nx.need?.q && QUESTS.find(q => q.id === nx.need.q).name; const wait = qn && !S.quests.done.includes(nx.need.q) ? `의뢰 '${qn}'${ST.say('{name:을/를}', qn).slice(qn.length)} 끝내면` : '내일';
@@ -290,22 +302,30 @@ export class Story {
   }
   /* 지금 의뢰 카드: 의뢰인 한 마디 (아직 안 온 사람은 무전) */
   giverHtml(q) {
-    const C = got.common; if (!q || !C) return ''; const t = C.QTALK[q.id]; if (!t) return ''; const g = q.giver; const here = S.story.joined.includes(g);
+    const C = got.common; if (!q || !C) return ''; const t = C.QTALK[q.id]; if (!t) return ''; const v = ST.giverVoice(S, q.giver);
     const kind = { story: '이야기', char: '인물', boss: '보스', chal: '도전' }[q.kind] || '';
-    return `<div class="giver">${portrait(g)}<p><b>${here ? '' : '<em>무전</em> · '}${esc(whoName(g))}</b> ${esc(say(t.give))}</p></div><small class="kind k-${q.kind}">${kind}</small>`;
+    /* 아직 초소에 없는 의뢰인은 말하지 않음 — 곰방이 '그 사람 몫'이라고 대신 전함 (v0.5.1) */
+    const line = v.relay ? (C.QRELAY?.give || '').replace('{role}', v.relay) : t.give;
+    return `<div class="giver">${portrait(v.id)}<p><b>${esc(whoName(v.id))}</b> ${esc(say(line))}</p></div><small class="kind k-${q.kind}">${kind}</small>`;
   }
   /* 출격 준비: 이 지도에 이야기 의뢰가 있으면 */
   prepNote(map) { const w = ST.storyWant(S, map); const b = ST.openBeat(S); if (!b?.goal || b.goal.map !== map) return ''; return `<div class="note story">이야기 의뢰 <b>${esc(b.name)}</b> — ${esc(b.txt)}${w ? ' · 금빛 고리 상자' : ''}</div>`; }
-  /* 결과 화면 이야기 칸 */
+  /* 결과 화면 이야기 칸 (v0.5.1 · 검수 Top 10) — 의뢰 · 이야기 의뢰 = 의뢰인 작은 얼굴 + 금빛 카드 · 새 기억 조각 = 카드 뒤집기(차례로) */
   resultHtml(res) {
     const so = res.story || {}; const C = got.common, M = got.memo; const out = []; const t0 = got.t0;
     if (so.tut === 1 && t0) out.push(`<div class="card st-say">${portrait('gombang')}<p><b>곰방</b> ${esc(res.outcome === 'extract' ? t0.RESULT_TUT.ok : t0.RESULT_TUT.ko)}</p></div>`);
-    if (C) for (const q of res.quests || []) { if (so.tut === 1 && q.id === 'q1') continue; const t = C.QTALK[q.id]; if (t) out.push(`<div class="card st-say">${portrait(q.giver)}<p><b>${esc(whoName(q.giver))}</b> ${esc(say(t.done))}<small>이야기 조각 · ${esc(say(t.lore))}</small></p></div>`); }
-    if (so.beatDone) { const b = ST.BEATS[ST.BEAT_IDX[so.beatDone]]; out.push(`<div class="note story"><b>이야기 의뢰 완료 · ${esc(b.name)}</b><br>은신처에서 이야기가 이어져요</div>`); }
-    if (so.newMemo?.length) out.push(`<div class="card st-memo"><div class="fh"><b>새 기억 조각 ${so.newMemo.length}</b><span class="lv">${S.story.joined.includes('seori') ? '서리의 기록 도감' : '기억 조각'}에 쌓였어요</span></div>${so.newMemo.slice(0, 3).map(k => `<div class="mrow2"><img src="${A.icons[k] || ''}" alt=""><p><b>${esc(ITEMS[k].name)}</b>${esc(say(M?.MEMO[k]?.[0] || ''))}</p></div>`).join('')}${so.newMemo.length > 3 ? `<small class="hint">그 밖에 ${so.newMemo.length - 3}개</small>` : ''}</div>`);
-    if (so.third?.length) out.push(`<div class="card st-memo"><div class="fh"><b>사연 한 줄 더</b><span class="lv">세 번째로 건짐</span></div>${so.third.slice(0, 2).map(k => `<div class="mrow2"><img src="${A.icons[k] || ''}" alt=""><p><b>${esc(ITEMS[k].name)}</b>${esc(say(M?.MEMO[k]?.[1] || ''))}</p></div>`).join('')}</div>`);
+    for (const q of res.quests || []) {
+      const t = C?.QTALK[q.id]; const v = ST.giverVoice(S, q.giver); const line = t && !(so.tut === 1 && q.id === 'q1') ? (v.relay ? (C.QRELAY?.done || '').replace('{role}', v.relay) : t.done) : '';
+      const extra = `${q.unlock ? FACILITIES[q.unlock].name + ' 해금! ' : ''}${q.map ? `새 지도 ${MAPS[q.map].name}! ` : ''}`;
+      out.push(`<div class="card st-gold ${q.kind === 'story' ? 'sg-story' : ''}">${portrait(v.id, 'sm')}<div><small class="kick">의뢰 완료${extra ? ' · ' + esc(extra.trim()) : ''}</small><b class="gt">${esc(q.name)}</b>${line ? `<p><b>${esc(whoName(v.id))}</b> ${esc(say(line))}</p>` : '<p>보상을 받았어요</p>'}${t?.lore ? `<small class="lore">이야기 조각 · ${esc(say(t.lore))}</small>` : ''}</div></div>`);
+    }
+    if (so.beatDone) { const b = ST.BEATS[ST.BEAT_IDX[so.beatDone]]; out.push(`<div class="card st-gold sg-story sg-beat">${portrait(ST.present(S, b.giver) ? b.giver : 'gombang', 'sm')}<div><small class="kick">이야기 의뢰 완료 · ${b.ch}장 「${esc(ST.CHAPTERS[b.ch].name)}」</small><b class="gt">${esc(b.name)}</b><p>은신처에서 이야기가 이어져요</p></div></div>`); }
+    const flip = (k, txt, i) => `<div class="mflip" style="--d:${(0.35 + i * 0.28).toFixed(2)}s"><div class="mf-in"><div class="mf-back"><i></i></div><div class="mf-front mrow2"><img src="${A.icons[k] || ''}" alt=""><p><b>${esc(ITEMS[k].name)}</b>${esc(say(txt || ''))}</p></div></div></div>`;
+    if (so.newMemo?.length) out.push(`<div class="card st-memo"><div class="fh"><b>새 기억 조각 ${so.newMemo.length}</b><span class="lv">${S.story.joined.includes('seori') ? '서리의 기록 도감' : '기억 조각'}에 쌓였어요</span></div>${so.newMemo.slice(0, 3).map((k, i) => flip(k, M?.MEMO[k]?.[0], i)).join('')}${so.newMemo.length > 3 ? `<small class="hint">그 밖에 ${so.newMemo.length - 3}개</small>` : ''}</div>`);
+    if (so.third?.length) out.push(`<div class="card st-memo"><div class="fh"><b>사연 한 줄 더</b><span class="lv">세 번째로 건짐</span></div>${so.third.slice(0, 2).map((k, i) => flip(k, M?.MEMO[k]?.[1], i + (so.newMemo?.length ? Math.min(3, so.newMemo.length) : 0))).join('')}</div>`);
     if (so.tapes?.length) out.push(`<div class="note story">녹음기 ${so.tapes.length}개 — 은신처에서 들어 봐요</div>`);
-    if (out.length) snd('memory');
+    if (so.newMemo?.length || so.third?.length) { const n = Math.min(3, so.newMemo?.length || 0) + Math.min(2, so.third?.length || 0); for (let i = 0; i < n; i++) setTimeout(() => snd('memory'), 350 + i * 280); }
+    else if (out.length) snd('memory');
     return out.join('');
   }
 

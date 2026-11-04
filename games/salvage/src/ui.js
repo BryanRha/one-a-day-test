@@ -1,13 +1,13 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.7';
-import { S, save, rollDay } from './save.js?v=0.99.7';
-import * as E from './econ.js?v=0.99.7';
-import { A } from './assets.js?v=0.99.7';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.7';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.7';
-import { Wardrobe } from './wardrobe.js?v=0.99.7';
-import { grantEarned, COS } from './look.js?v=0.99.7';
-import * as BM from './bmflow.js?v=0.99.7';
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.8';
+import { S, save, rollDay } from './save.js?v=0.99.8';
+import * as E from './econ.js?v=0.99.8';
+import { A } from './assets.js?v=0.99.8';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.8';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.8';
+import { Wardrobe } from './wardrobe.js?v=0.99.8';
+import { grantEarned, COS } from './look.js?v=0.99.8';
+import * as BM from './bmflow.js?v=0.99.8';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -25,14 +25,44 @@ function costChips(cost) {
 const pct = x => Math.round(x * 100) + '%';
 const WHY = { cost: '재료가 모자라요', bench: '작업대 단계가 모자라요', rack: '무기대 단계가 모자라요', busy: '공사는 한 번에 하나씩', locked: '의뢰를 먼저 끝내요', fac: '시설이 필요해요', full: '창고가 가득', have: '이미 요리가 있어요', max: '최고 단계', owned: '이미 있어요' };
 
+/* 판 상태 띠 — 판 안엔 한 구절 + 아이콘, 배율 · 자세한 설명은 출격 준비 ⓘ (v0.5.1 · 검수 Top 8) */
+export const COND_UI = { storm: ['⛈', '소리가 묻혀요'], fog: ['🌫', '가까이 와야 보여요'], clear: ['🌙', '서로 멀리 보여요'], dark: ['🔦', '발전기를 찾아요'], rapids: ['🌊', '물살이 세요'], calm: ['💧', '산소만 조심'] };
+/* 판 안 위쪽 한 줄 (v0.5.1 · 검수 Top 1): 보스 경고(3) > 무전(2~2.6) > 판 상태 · 사건(1) — 한 번에 하나만.
+ *  더 높은 것이 오면 지금 것은 0.35초 뒤 비키고(덜 보였으면 뒤로 다시 줄 섬), 같거나 낮은 것은 최대 2초 기다린 뒤 지금 것을 줄임(최소 1.2초는 보임).
+ *  칭찬은 줄에 안 서고 주인공 머리 위 (ui.praise) */
+export class TopLine {
+  constructor() { this.q = []; this.cur = null; this.log = []; }
+  push(it) {
+    it.prio ??= 1; it.age = 0;
+    if (it.key && (this.cur?.key === it.key || this.q.some(x => x.key === it.key))) return;
+    this.q.push(it); this.q.sort((a, b) => b.prio - a.prio);
+  }
+  done(it) { if (this.cur === it) { it.hide?.(); this.cur = null; } }
+  tick(dt) {
+    for (const x of this.q) x.age += dt;
+    const c = this.cur, nx = this.q[0];
+    if (c) {
+      c.left -= dt; c.shown += dt;
+      const up = nx && nx.prio > c.prio && c.shown > 0.35, waited = nx && !c.hold && nx.age >= 2 && c.shown >= 1.2;
+      if (c.left <= 0 || up || waited) {
+        c.hide?.(); this.cur = null; if (c.left <= 0) c.timeout?.();
+        else if (up && c.shown < c.dur * 0.6) { c.dur = Math.max(1.6, c.left); c.age = 0; this.q.unshift(c); this.q.sort((a, b) => b.prio - a.prio); }
+        else c.timeout?.();
+      }
+    }
+    if (!this.cur && this.q.length) { const it = this.q.shift(); it.left = it.dur; it.shown = 0; this.cur = it; it.show(); this.log.push(it.key || ''); if (this.log.length > 40) this.log.shift(); }
+  }
+  clear() { this.cur?.hide?.(); this.cur = null; this.q = []; }
+}
+
 export class UI {
   constructor(app) {
     this.app = app; this.root = $('#ui'); this.hud = $('#hud'); this.invOpen = false; this.tab = 'fac'; this.wsel = null;
     this.veil = $('#veil'); this.vx = this.veil.getContext('2d'); this.carry = {}; this.safePick = [];
     setInterval(() => this.tickHideout(), 1000);
-    this.wardrobe = new Wardrobe(app, this);
+    this.wardrobe = new Wardrobe(app, this); this.top = new TopLine();
   }
-  clear() { this.root.innerHTML = ''; this.invOpen = false; this.loot = null; this.el = null; }
+  clear() { this.root.innerHTML = ''; this.invOpen = false; this.loot = null; this.el = null; this.top?.clear(); }
   toastWhy(r) { if (!r.ok) { this.toast(WHY[r.why] || '지금은 안 돼요', 'soft'); sfx.empty(); } }
 
   /* ───────── 은신처 ───────── */
@@ -252,7 +282,8 @@ export class UI {
       <header class="topbar"><button class="back" id="back">‹</button><div class="brand"><b>출격 준비</b><small>${MP.name} · ${fmt(RAID.time)} 안에 탈출</small></div><div class="money">${shell(S.shells)}</div></header>
       <div class="maprow">${mapRow}</div>
       <div class="mapcard m-${mk}"><div class="mapart"><i class="z3"></i><i class="z2"></i><i class="z1"></i></div><div><b>${MP.name} 3단</b>
-        <p>${MP.blurb}<br>출구: ${exitTxt(mk)}<br>${MP.tips}${mk !== 'ware' ? `<br><em>판마다 상태가 달라요: ${Object.keys(MP.conds).map(c => CONDS[c].name).join(' · ')}</em>` : ''}</p></div></div>
+        <p>${MP.blurb}<br>출구: ${exitTxt(mk)}<br>${MP.tips}${mk !== 'ware' ? `<br><em>판마다 상태가 달라요: ${Object.keys(MP.conds).map(c => `${COND_UI[c]?.[0] || ''}${CONDS[c].name}`).join(' · ')}</em> <button class="infob" id="condInfo" aria-label="판 상태 자세히">ⓘ</button>` : ''}</p>
+        ${mk !== 'ware' ? `<div class="condinfo" id="condBox" hidden>${Object.keys(MP.conds).map(c => `<p><b>${COND_UI[c]?.[0] || ''} ${CONDS[c].name}</b> ${CONDS[c].txt}</p>`).join('')}</div>` : ''}</div></div>
       ${corpse}${this.app.story?.prepNote(mk) || ''}
       <div class="card"><div class="fh"><b>장비</b><span class="lv">체력 ${L.hp} · 방어 ${pct(L.armor)}</span></div>
         <div class="loadout"><span><small>주무기</small><b>${w[0].name}</b></span>${w[1] ? `<span><small>보조</small><b>${w[1].name}</b></span>` : ''}<span><small>가방</small><b>${L.bag.w}×${L.bag.h} · ${L.bag.comfy}kg</b></span>${L.pet ? `<span><small>몽이 주머니</small><b>${L.pet.w}×${L.pet.h}${L.pet.safe ? ' · 지켜 줌' : ''}</b></span>` : ''}</div>
@@ -272,6 +303,7 @@ export class UI {
     el.querySelectorAll('.carry button').forEach(b => b.onclick = () => { const k = b.dataset.k, d = +b.dataset.d; const cur = this.carry[k] || 0; const avail = E.count(S, k) - this.safePick.filter(x => x === k).length;
       if (d > 0 && (carryN >= maxCarry || cur >= avail)) return this.toast(cur >= avail ? '창고에 더 없어요' : '가방 칸을 남겨 둬요', 'soft'); this.carry[k] = Math.max(0, cur + d); sfx.ui(); this.prep(); });
     $('#back', el).onclick = () => { sfx.ui(); this.hideout(); };
+    $('#condInfo', el) && ($('#condInfo', el).onclick = () => { sfx.ui(); const bx = $('#condBox', el); bx.hidden = !bx.hidden; });
     el.querySelectorAll('.mapbtn').forEach(b => b.onclick = () => { const m = b.dataset.m; if (!open.includes(m)) { sfx.empty(); return this.toast(`의뢰 ${lockQ(m)} '${QUESTS[lockQ(m) - 1].name}'을 끝내면 열려요`, 'soft'); } if (S.corpse) return; S.mapSel = m; save(); sfx.ui(); this.prep(); });
     BM.bindInsure(el, () => this.prep()); BM.bindSortie(el, () => this.prep());
     $('#sortie', el).onclick = () => {
@@ -284,7 +316,7 @@ export class UI {
 
   /* ───────── 전투 HUD ───────── */
   raidStart(R) {
-    this.clear(); this.R = R; this.root.className = 'scr-raid';
+    this.clear(); this.R = R; this.root.className = 'scr-raid'; this.top.clear(); this._praiseT = 0;
     const el = h('div', 'raidui', `
       <div class="top"><div class="hpbox"><div class="hp"><i id="hpf"></i><span id="hpt"></span></div><div class="st"><i id="stf"></i></div><div class="wt" id="wt"><i></i><span></span></div></div>
         <div class="tcol"><div class="timer" id="timer">7:00</div><div class="zone" id="zone"></div></div><div class="val" id="val"></div></div>
@@ -319,7 +351,19 @@ export class UI {
     $('#ammo').onclick = () => R.switchWeapon();
     this.app.showHideout(false);
   }
-  event(t, kind = '') { const e = $('#evt'); if (!e) return; e.textContent = t; e.className = 'evt show ' + kind; clearTimeout(this._evt); this._evt = setTimeout(() => e.classList.remove('show'), 3800); }
+  event(t, kind = '') {
+    if (!$('#evt')) return; const boss = kind.split(' ').includes('boss');
+    this.top.push({ prio: boss ? 3 : 1, key: 'e:' + t, dur: boss ? 3.4 : Math.min(3.6, 2.2 + t.length * 0.03),
+      show: () => { const e = $('#evt'); if (e) { e.textContent = t; e.className = 'evt show ' + kind; } }, hide: () => $('#evt')?.classList.remove('show') });
+  }
+  /* 판 상태 띠: 지도 · 상태 한 구절 (무전이 같은 말을 하면 무전 쪽 key 로 생략) */
+  condBand(MP, ck) { const u = COND_UI[ck]; if (!u) return; this.event(`${u[0]} ${CONDS[ck].name} · ${u[1]}`, 'warn cond'); }
+  /* 칭찬: 주인공 머리 위 작은 글씨 (위쪽 줄과 안 겹침) */
+  praise(t) { const R = this.R; if (!R || !this.el) return; let e = $('#praise'); if (!e) { e = h('div', 'praise'); e.id = 'praise'; this.el.appendChild(e); } e.textContent = t; e.classList.remove('on'); void e.offsetWidth; e.classList.add('on'); this._praiseT = 1.1; }
+  topTick(dt) {
+    this.top.tick(dt);
+    if (this._praiseT > 0 && this.R) { this._praiseT -= dt; const e = $('#praise'); if (e) { const v = this._pv || (this._pv = this.R.pl.pos.clone()); v.copy(this.R.pl.pos); v.y = 2.6; v.project(this.app.camera); e.style.transform = `translate(${((v.x * 0.5 + 0.5) * innerWidth) | 0}px,${((-v.y * 0.5 + 0.5) * innerHeight) | 0}px) translate(-50%,-100%)`; if (this._praiseT <= 0) e.classList.remove('on'); } }
+  }
   bindStick() {
     const z = $('#stickzone'), st = $('#stick'), knob = st.firstChild; let id = null, ox = 0, oy = 0; const RAD = 52;
     z.addEventListener('pointerdown', e => { unlock(); id = e.pointerId; z.setPointerCapture(id); const r = z.getBoundingClientRect(); ox = e.clientX; oy = e.clientY; st.style.left = (ox - r.left) + 'px'; st.style.top = (oy - r.top) + 'px'; st.classList.add('on'); z.classList.add('used'); });
@@ -483,22 +527,30 @@ export class UI {
     const list = ok ? [...res.items, ...res.safe, ...res.pet] : [...res.safe, ...(res.petSafe ? res.pet : [])];
     const praise = ok ? (res.value >= 350 ? '전설의 인양! 은신처가 들썩여요' : res.value >= 150 ? '대박 인양!' : res.value >= 60 ? '알찬 인양이었어요' : '무사 귀환이 제일이에요') : res.outcome === 'tide' ? '물이 너무 빨리 찼어요' : '아깝다! 거의 다 왔는데';
     const MP = MAPS[res.map || 'ware']; const zn = MP.zones[res.zoneMax].name; const exitName = res.exit ? MP.exits[res.exit] : '';
-    const el = h('div', 'result ' + (ok ? 'ok' : 'ko'), `
+    /* v0.5.1 (검수 Top 10): 위 = 머리 · 숫자(가치는 0 → 값으로 0.6초) · 이야기/의뢰 금빛 카드 · 새 기억 조각(카드 뒤집기) · 들어온 것 / 아래 = 버튼 고정 */
+    const story = this.app.story; const sh = story?.resultHtml(res) || '';
+    const qdone = !story && res.quests?.length ? `<div class="card qdone">${res.quests.map(q => `<div><b>의뢰 완료 · ${q.name}</b><small>${q.unlock ? FACILITIES[q.unlock].name + ' 해금! ' : ''}보상을 받았어요</small></div>`).join('')}</div>` : '';
+    const el = h('div', 'result ' + (ok ? 'ok' : 'ko'), `<div class="rscroll">
       <div class="rh"><small>${ok ? '탈출 성공 · ' + exitName : '인양 실패'}</small><h2>${praise}</h2><small class="sub">${MP.icon} ${MP.name}${res.map && res.map !== 'ware' ? ' · ' + CONDS[res.cond].name : ''} · 가장 깊이: ${zn}${res.power ? ' · 전원 복구' : ''}${res.vaultOpened ? ' · 금고실' : ''}${res.minO2 != null ? ` · 최저 산소 ${res.minO2}` : ''}</small></div>
-      <div class="rstats"><div><b>${ok ? res.value : 0}</b><small>가져온 가치</small></div><div><b>${res.killN}</b><small>처치${res.kills.boss ? ' (보스!)' : ''}</small></div><div><b>${fmt(res.time)}</b><small>걸린 시간</small></div><div><b>${res.shots ? Math.round(res.hits / res.shots * 100) : 0}%</b><small>명중</small></div></div>
-      ${this.app.story?.resultHtml(res) || ''}
-      ${res.quests?.length ? `<div class="card qdone">${res.quests.map(q => `<div><b>의뢰 완료 · ${q.name}</b><small>${q.unlock ? FACILITIES[q.unlock].name + ' 해금! ' : ''}보상을 받았어요</small></div>`).join('')}</div>` : ''}
+      <div class="rstats"><div class="rval"><b data-n="${ok ? res.value : 0}">${ok ? res.value : 0}</b><small>가져온 가치</small></div><div><b>${res.killN}</b><small>처치${res.kills.boss ? ' (보스!)' : ''}</small></div><div><b>${fmt(res.time)}</b><small>걸린 시간</small></div><div><b>${res.shots ? Math.round(res.hits / res.shots * 100) : 0}%</b><small>명중</small></div></div>
+      ${sh}${qdone}
       <div class="card"><div class="fh"><b>${ok ? '창고로 들어온 것' : '지킨 것 (안전 칸)'}</b><span class="lv">${list.length}개</span></div>
-        <div class="rlist">${list.length ? list.map(k => `<div class="ri">${icon(k)}<small>${ITEMS[k].name}</small></div>`).join('') : '<small class="hint">빈손이에요. 그래도 길을 익혔어요!</small>'}</div>
+        <div class="rlist">${list.length ? list.map((k, i) => `<div class="ri" style="--d:${(0.65 + Math.min(i, 12) * 0.05).toFixed(2)}s">${icon(k)}<small>${ITEMS[k].name}</small></div>`).join('') : '<small class="hint">빈손이에요. 그래도 길을 익혔어요!</small>'}</div>
         ${gained.overflow ? `<small class="hint">창고가 가득 차 ${gained.overflow}개는 바로 조개로 바꿨어요 (+${gained.overflowVal})</small>` : ''}
         ${ok && list.length ? '<small class="hint">은신처 창고 탭에서 팔거나 분해해요</small>' : ''}</div>
       ${!ok && (res.items.length || (!res.petSafe && res.pet.length)) ? `<div class="note warm"><b>가방은 쓰러진 자리에 남았어요</b><br>다음 출격에서 주황 깃발을 찾으면 한 번 되찾을 수 있어요</div>` : ''}
-      ${res.corpseTaken ? '<div class="note good">지난번 가방을 되찾았어요!</div>' : ''}
-      <div class="bmrow"></div>
-      <button class="btn cta" id="home">은신처로</button>`);
+      ${res.corpseTaken ? '<div class="note good">지난번 가방을 되찾았어요!</div>' : ''}</div>
+      <div class="rfoot"><div class="bmrow"></div><button class="btn cta" id="home">은신처로</button></div>`);
     this.root.appendChild(el); $('#home', el).onclick = () => { sfx.ui(); this.hideout(); }; BM.resultBm(el, res);
     if (res.quests?.length) setTimeout(() => sfx.rare(), 400);
+    this.countUp($('.rval b', el));
     this.app.showHideout(true);
+  }
+  /* 가치 숫자 올라가기 (0.6초 · 끝에 한 번 소리) */
+  countUp(b) {
+    const n = +(b?.dataset.n || 0); if (!b || n <= 0) return; const t0 = performance.now(); b.textContent = '0'; b.parentNode.classList.add('counting');
+    const step = now => { if (!b.isConnected) return; const k = Math.min(1, (now - t0) / 600); b.textContent = Math.round(n * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); else { b.parentNode.classList.remove('counting'); b.parentNode.classList.add('landed'); sfx.pick?.(Math.min(9, n / 40)); } };
+    requestAnimationFrame(step);
   }
   /* ───────── 알림 ───────── */
   toast(t, kind = '') {

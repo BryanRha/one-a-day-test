@@ -1,17 +1,17 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.7';
-import { FX } from './fx.js?v=0.99.7';
-import { Raid } from './raid.js?v=0.99.7';
-import { UI } from './ui.js?v=0.99.7';
-import { S, load, save, stashCap } from './save.js?v=0.99.7';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.7';
-import * as E from './econ.js?v=0.99.7';
-import { installBack } from './oad.js?v=0.99.7';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.7';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.7';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.7';
-import { Story } from './story_ui.js?v=0.99.7';
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.8';
+import { FX } from './fx.js?v=0.99.8';
+import { Raid } from './raid.js?v=0.99.8';
+import { UI } from './ui.js?v=0.99.8';
+import { S, load, save, stashCap } from './save.js?v=0.99.8';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.8';
+import * as E from './econ.js?v=0.99.8';
+import { installBack } from './oad.js?v=0.99.8';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.8';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.8';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.8';
+import { Story, artUrl } from './story_ui.js?v=0.99.8';
 
 const Q = new URLSearchParams(location.search);
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
@@ -177,7 +177,7 @@ function frame(now) {
     if (app.camOverride) { const o = app.camOverride; camera.position.set(o.x, o.y, o.z + o.back); camera.lookAt(o.x, 0, o.z); } /* 시험용 전체 보기 */
     sun.position.set(p.x + 8, 22, p.z + 6); sun.target.position.set(p.x, 0, p.z);
     fx.update(rdt, camera, innerWidth, innerHeight);
-    ui.drawVeil(raid, camera); story.raidTick(rdt);
+    ui.drawVeil(raid, camera); story.raidTick(rdt); ui.topTick(rdt);   /* 위쪽 한 줄 대기열 · 머리 위 칭찬 (v0.5.1) */
   } else {
     /* 은신처 카메라: 천천히 숨쉬기 */
     const t = now / 1000; camera.position.set(Math.sin(t * 0.15) * 0.8, 7.2, 9.4); camera.lookAt(0, -1.4, -1.8);
@@ -193,6 +193,10 @@ function frame(now) {
 /* ───── 시작 ───── */
 async function boot() {
   resize(); load();
+  /* 첫 실행 로딩 (v0.5.1 · 검수 Top 9): 불투명 · 프롤로그 첫 그림을 흐리게 미리 깔고 '7년 전 밤으로…' — 막은 프롤로그 그림이 뜬 뒤에 걷음 */
+  const ld = document.getElementById('loading'); const first = story.on && S.story?.tut === 0;
+  app.hideLoading = () => { if (!ld.isConnected || ld.classList.contains('done')) return; ld.classList.add('done'); setTimeout(() => ld.remove(), 500); };
+  if (first) { ld.classList.add('first'); ld.querySelector('small').textContent = '7년 전 밤으로…'; const u = artUrl('cut_0_1'); if (u) { const pre = document.createElement('i'); pre.className = 'pre'; ld.prepend(pre); const im = new Image(); im.onload = () => { pre.style.backgroundImage = `url(${u})`; pre.classList.add('on'); }; im.src = u; } }
   const bar = document.querySelector('#loading i'); const t0 = performance.now();
   try { await loadAll(p => { if (bar) bar.style.width = Math.round(p * 100) + '%'; }); }
   catch (e) { document.querySelector('#loading span').textContent = '불러오기 실패 — 새로고침해 주세요'; throw e; }
@@ -200,11 +204,11 @@ async function boot() {
   /* 장착한 겉모습 파일만 먼저 받음 (판 안 · 은신처) — 옷장의 나머지는 열 때 */
   grantEarned(S); try { await ensure([...resolve(lookOf(S, { both: true })).files, ...resolve({ pet: true, look: S.look }).files]); } catch (e) { console.warn('장착 파일', e); }
   app.loadMs = Math.round(performance.now() - t0); app.assetBytes = A.bytes;
-  document.getElementById('loading').classList.add('done'); setTimeout(() => document.getElementById('loading')?.remove(), 500);
+  if (first) setTimeout(app.hideLoading, 6000); else app.hideLoading();   /* 첫 실행은 프롤로그가 걷음 (6초 안전) */
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.7'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.8'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

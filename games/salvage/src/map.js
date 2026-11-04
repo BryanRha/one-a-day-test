@@ -1,10 +1,11 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.7';
-import { prop } from './assets.js?v=0.99.7';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.8';
+import { prop } from './assets.js?v=0.99.8';
+import { buildDress, farWater } from './dress_art.js?v=0.99.8';
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.7';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.8';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */
@@ -71,13 +72,17 @@ export function build(P, scene) {
   }
   /* v0.4 지도 특수물 (정적인 것은 아래 합치기에 들어감) */
   const extra = buildExtras(P, map, statics, group, put, addBox);
+  /* v0.5 레벨 아트: 바닥 무늬 · 벽 그림 · 주제 소품 · 옆벽 배관 · 구역 랜드마크 (dress.js 계획 · dress_art.js 그림) */
+  buildDress(P, map, statics, group, addBox, extra);
   /* 물: 전체 얕은 물(반투명) + 웅덩이(진한 물) — 한 장의 셰이더 평면 */
   const water = makeWater(P); group.add(water);
+  /* 지도 밖: 검정 대신 어두운 물 + 물안개 (항구 바다도 이것) */
+  group.add(farWater(P, map, water.material.uniforms.uTime));
   /* 합치기 */
   statics.updateMatrixWorld(true);
   const byMat = new Map();
   statics.traverse(o => { if (!o.isMesh) return; let zp = o; while (zp && zp.userData.zone == null) zp = zp.parent; const g = toFloat(o.geometry).applyMatrix4(o.matrixWorld); const m = o.material; const key = (m.map ? m.map.uuid : m.uuid) + '/' + (zp?.userData.zone || 0); if (!byMat.has(key)) byMat.set(key, { m, gs: [] }); byMat.get(key).gs.push(g); });
-  for (const { m, gs } of byMat.values()) { const mg = mergeGeometries(gs, false); gs.forEach(g => g.dispose()); const mesh = new THREE.Mesh(mg, m); mesh.receiveShadow = true; mesh.castShadow = true; mesh.name = 'static'; group.add(mesh); }
+  for (const { m, gs } of byMat.values()) { const mg = mergeGeometries(gs, false); gs.forEach(g => g.dispose()); const mesh = new THREE.Mesh(mg, m); mesh.receiveShadow = !m.isMeshBasicMaterial; mesh.castShadow = !m.isMeshBasicMaterial; mesh.name = 'static'; group.add(mesh); }
   scene.add(group);
   /* 잠긴 문: 판정 상자 + 창살(열리면 내려감) */
   const gates = [];
@@ -135,8 +140,7 @@ function buildExtras(P, map, statics, group, put, addBox) {
       const piv = new THREE.Group(); piv.position.set(x, 4.95, z); group.add(piv);
       for (const a of [0, Math.PI]) { const b = new THREE.Mesh(new THREE.ConeGeometry(2.4, 22, 16, 1, true), beamM); b.rotation.z = Math.PI / 2; b.position.x = 11; const h = new THREE.Group(); h.rotation.y = a; h.add(b); piv.add(h); b.userData.own = true; }
       addBox(x, z, 1.1, 1.1, 1); out.beams.push(piv); }
-    /* 바깥 바다 (지도 둘레 · 어둡게 출렁) */
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), own(new THREE.MeshLambertMaterial({ color: 0x0b2232 }))); sea.rotation.x = -Math.PI / 2; sea.position.set(P.W / 2, -0.6, P.H / 2); sea.receiveShadow = false; group.add(sea); sea.userData.own = true;
+    /* 바깥 바다는 v0.5 부터 지도 밖 물(dress_art.js farWater) 하나로 */
   }
   if (map === 'tunnel') {
     const conc = mat3('conc', () => new THREE.MeshLambertMaterial({ color: 0x8d999b, flatShading: true })), stripe = mat3('stripe', () => new THREE.MeshLambertMaterial({ color: 0xd8b13a, flatShading: true })), steel = mat3('steel', () => new THREE.MeshLambertMaterial({ color: 0x8a8f91, flatShading: true }));
@@ -170,7 +174,7 @@ function radial(c0, c1) { const c = document.createElement('canvas'); c.width = 
 /* 양자화 속성 → float (합치기 · 변환용) */
 function toFloat(geo) {
   const g = new THREE.BufferGeometry();
-  for (const name of ['position', 'normal', 'uv']) {
+  for (const name of ['position', 'normal', 'uv', 'color']) { /* color = 꾸밈 소품 정점 색 */
     const a = geo.getAttribute(name); if (!a) continue; const n = a.count, s = a.itemSize; const arr = new Float32Array(n * s);
     const get = [a.getX, a.getY, a.getZ, a.getW].map(f => f.bind(a));
     for (let i = 0; i < n; i++) for (let k = 0; k < s; k++) arr[i * s + k] = get[k](i);
