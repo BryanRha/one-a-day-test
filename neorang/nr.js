@@ -120,6 +120,7 @@ const placeName = (w, tag) => { const p = w.places.find(x => tag && tag.startsWi
 const P = {
   back: '<path d="M15 5l-7 7 7 7"/>', bell: '<path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   book: '<path d="M4 5.5A1.5 1.5 0 015.5 4H11v16H5.5A1.5 1.5 0 014 18.5z"/><path d="M20 5.5A1.5 1.5 0 0018.5 4H13v16h5.5a1.5 1.5 0 001.5-1.5z"/>',
+  today: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/>',
   game: '<rect x="3" y="7" width="18" height="11" rx="4"/><path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 14h.01"/>', moon: '<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>',
   chat: '<path d="M4 6.5A2.5 2.5 0 016.5 4h11A2.5 2.5 0 0120 6.5v8a2.5 2.5 0 01-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 014 14.5z"/>', box: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v9"/>',
   aa: '<path d="M3 18l5-12 5 12M4.8 14h6.4"/><path d="M15 18v-1.5M15 12.5a2.5 2.5 0 015 0V18M20 15.5c-3.5-.6-5 .3-5 1.6"/>', send: '<path d="M5 12h13M13 6l6 6-6 6"/>',
@@ -133,7 +134,7 @@ const I = (n, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="
 const av = (w, sz = 34) => { const p = portrait(w); return `<span class="av" style="--c:${w.ch.col};width:${sz}px;height:${sz}px;font-size:${Math.round(sz * .42)}px${p ? `;background:center/cover url(${p})` : ''}">${p ? '' : w.ch.mono}</span>`; };
 const cover = (w, extra = '', title = true, sz = '') => { const c = coverOf(w, true); return `<div class="cv" style="--tint:${w.tint};${sz}${c ? `background-image:url(${c})` : 'background-image:radial-gradient(120% 80% at 70% 20%,#3a4d44 0%,#16201c 60%,#0b100e 100%)'}">${extra}${title ? `<span class="ct">${esc(w.short)}</span>` : ''}</div>`; };
 const back = () => `<button class="btn" data-back aria-label="뒤로">${I('back')}</button>`;
-const tabbar = () => `<nav class="tabbar"><button data-shell="">${I('game')}게임</button><button data-shell="fortune">${I('moon')}운세</button><button class="on" data-go="home">${I('chat')}너랑</button><button data-shell="box">${I('box')}보관함</button></nav>`;
+const tabbar = () => `<nav class="tabbar"><button data-shell="">${I('today')}오늘</button><button data-shell="fortune">${I('moon')}점방</button><button class="on" data-go="home">${I('chat')}너랑</button><button data-shell="box">${I('box')}보관함</button></nav>`;
 const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2000); };
 /* 비밀 글: 원고는 '이용자'로 적혀 있음 → 화면에선 '나' */
 const mine = t => String(t).replace(/이용자가/g, '내가').replace(/이용자의/g, '나의').replace(/이용자를/g, '나를').replace(/이용자에게/g, '나에게').replace(/이용자는/g, '나는').replace(/이용자/g, '나');
@@ -287,7 +288,7 @@ VIEWS.read = (id, no, sub) => {
   const ep = epNow(id, no);
   if (!ep || !ep.body) { episode(id, no).then(() => { if (route()[0] === 'read') render(); }); return `<div class="rd"><header class="top">${back()}<h1>${no}화 · ${esc(epTitle(w, no))}</h1></header><p class="loading">오늘 밤 장면을 펼치는 중…</p></div>`; }
   if (!ep.chips) episode(id, no);
-  const e = EP(id, no); if (!e.read) { e.read = 1; S.lastW = id; save(); }
+  const e = EP(id, no); if (!e.read) { e.read = 1; S.lastW = id; } S.seen = Date.now(); save();   /* seen: 마지막으로 읽거나 대화한 때 (원어데이 오늘 허브 '오늘 챙김' 셈) */
   const body = ep.body.map(([k, x, who]) => k === 's' ? `<p class="s" style="--cc:${who && who !== w.ch.short ? 'var(--rtx2)' : w.ch.col}"><small class="${who && who !== w.ch.short ? 'o' : ''}">${esc(who || w.ch.short)}</small>${esc(x)}</p>` : k === 'd' ? `<p class="d">${esc(x)}</p>` : `<p>${esc(x)}</p>`).join('');
   const v = S.view, prev = no > 1 ? epNow(id, no - 1) : null;
   const prevTxt = prev && prev.body ? prev.body.filter(x => x[0] !== 'd').slice(-2).map(x => x[1]).join(' ') : no > 1 ? (w.eps[no - 2] || {}).line || '' : '';
@@ -487,6 +488,7 @@ async function send(q, o = {}) {
       const n = j.nr || {}, s0 = ws.stage;
       ws.talks = Math.max(ws.talks + 1, n.talks || 0); ws.stage = Math.max(ws.stage, n.stage || 0); if (n.secrets) ws.secrets = [...new Set([...ws.secrets, ...n.secrets])];
       if (c.kind === 'ep') st.talks = (st.talks || 0) + 1;
+      S.seen = Date.now();
       if (c.kind === 'lunch') H.lunchUsed = Math.min(H.lunchMax, H.lunchMax - (n.lunchLeft ?? (H.lunchMax - H.lunchUsed - 1)));
       if (j.left != null) { H.left = Math.max(0, j.left); H.used = j.used; }
       if (ws.stage > s0) st.log.push({ k: 'stage', from: s0, to: ws.stage });

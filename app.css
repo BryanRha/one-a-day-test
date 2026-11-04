@@ -379,21 +379,10 @@ body.playing #app { visibility: hidden; }
   #sheet .panel .stack { gap: 8px; }
   .sdpage h1 { font-size: 30px; }
 }
-/* 오늘: 넓은 PC 창은 두 칸 — 왼쪽 오늘의 게임(따라 내려옴) · 오른쪽 운세와 나머지 */
-@media (pointer: fine) and (min-width: 960px) {
-  body[data-tab="today"] #app { max-width: 1060px; }
-  .today { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); column-gap: 26px; grid-auto-flow: row dense; align-items: start; }
-  .today > .top, .today > .date, .today > .install { grid-column: 1 / -1; }
-  .today > .tfort { grid-column: 2; }
-  .today > .tgame { grid-column: 1; grid-row: span 2; position: sticky; top: 18px; }
-  .today > .tmore { grid-column: 2; }
-  .today > .tmore > .section:first-child { margin-top: 10px; }
-}
-/* 좁은 PC 창(한 줄): 오늘의 게임을 운세보다 위로 */
+/* 좁은 PC 창(한 줄): 머리줄 · 설치 배너가 먼저 */
 @media (pointer: fine) and (max-width: 959.98px) {
   .today { display: flex; flex-direction: column; }
-  .today > .top, .today > .date, .today > .install { order: -2; }
-  .today > .tgame { order: -1; margin-bottom: 18px; }
+  .today > .top, .today > .install { order: -2; }
 }
 
 /* 게임물 등급 표시 (catalog.js RATING · 등급 받은 게임만) */
@@ -597,8 +586,8 @@ body.playing #app { visibility: hidden; }
   #tabs .ic { width: auto; height: auto; background: none !important; } #tabs button.dot::after { top: 5px; left: 26px; }
   .top .brand { visibility: hidden; }
   .toast { bottom: 40px; }
-  /* 새 메인 B: 달력 한 줄 · 왼쪽 오늘의 게임 · 오른쪽 운세 · 내일 · 만난 게임 · 아래 진열장 6칸 */
-  body[data-tab="today"][data-lay="b"] #app { max-width: 1120px; }
+  /* 오늘: 허브 카드 세 장 한 줄 · 아래 이번 주 게임(달력 한 줄 · 왼쪽 오늘의 게임 · 오른쪽 내일 · 만난 게임 · 아래 진열장 6칸) */
+  body[data-tab="today"] #app { max-width: 1120px; }
   .today.hb { display: block; }
   .hb .week { gap: 12px; } .hb .wd .th { aspect-ratio: 1200 / 630; border-radius: 14px; } .hb .wd .lab { font-size: 12px; } .hb .wd .lab b { display: inline; margin-right: 4px; font-size: 14px; }
   .hb .wd .adl { font-size: 11px; padding: 2px 0; } .hb .wd .q { font-size: 28px; }
@@ -933,3 +922,76 @@ body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]:
 #ow .mrow .buy.credit { display: flex; flex-direction: column; align-items: center; line-height: 1.2; background: #FFF3D6; border-color: #9A6A10; color: #5A3D06; } #ow .mrow .buy small { font: 10.5px -apple-system, 'Noto Sans KR', sans-serif; opacity: .75; }
 #ow .shkeep { display: block; width: 100%; margin-top: 8px; padding: 12px; text-align: center; font-size: 14px; color: var(--ows); }
 #ow .owreset { display: block; margin: 14px auto 0; padding: 8px 14px; border-radius: 99px; border: 1px dashed #B5530B; color: #B5530B; font-size: 12.5px; }
+
+/* ── 오늘 허브 (2026-11-04 대표 '오늘 허브' 4칸 안 · 시안 lab/home-hub/b · hub.css 의 B 부분 그대로 — hub.js) ── */
+:root { --nv: #16133A; --nv2: #201C4B; --vi: #5B48E2; --vi2: #9C8CFF; --moonc: #F1D7A2; }
+/* 세 서비스 로고 줄 (형제처럼 같은 자리 · 같은 크기) */
+.svc { display: flex; align-items: center; gap: 6px; min-width: 0; font: 12px/1 'Jua'; letter-spacing: .3px; white-space: nowrap; }
+.svc img.ic { width: 20px; height: 20px; border-radius: 6px; flex: none; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.svc.oad { color: var(--gold); } .svc.jb { color: #f4d58a; } .svc.nr { color: #DCD6FF; }
+
+/* ── B: 첫 탭 '오늘' 허브 ────────────────────────────────── */
+.hub .hello { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+.hub .hello h1 { font-size: 22px; line-height: 1.15; }
+.hub .hello small { display: block; color: var(--sub); font-size: 12.5px; margin-bottom: 3px; }
+.ring { flex: none; display: flex; align-items: center; gap: 7px; padding: 6px 10px 6px 6px; border-radius: 99px; background: rgba(255,255,255,.07); border: 1px solid var(--line); font-size: 12px; color: var(--sub); white-space: nowrap; }
+.ring svg { width: 26px; height: 26px; } .ring b { color: var(--gold); font: 15px 'Jua'; }
+.hcard { position: relative; display: flex; border-radius: 22px; overflow: hidden; margin: 0 0 11px; min-height: 150px; cursor: pointer; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 14px 30px rgba(0,0,0,.4); }
+.hcard .art { position: absolute; inset: 0 0 0 auto; width: 58%; background-size: cover; background-position: center 18%; }
+.hcard .art::after { content: ''; position: absolute; inset: 0; }
+.hcard .in { position: relative; z-index: 1; flex: 1; min-width: 0; padding: 12px 14px 13px; display: flex; flex-direction: column; }
+.hcard .k { margin: 9px 0 2px; font-size: 11.5px; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64%; }
+.hcard .t { font: 21px/1.2 'Jua'; max-width: 64%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hcard .s { font-size: 12.5px; line-height: 1.35; color: rgba(255,255,255,.8); margin-top: 4px; max-width: 66%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hcard .row { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 8px; }
+.hcard .go { height: 36px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px; font: 14px 'Jua'; white-space: nowrap; border: 0; }
+.hcard .meta2 { font-size: 11.5px; color: rgba(255,255,255,.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hcard .meta2 b { color: #fff; font-variant-numeric: tabular-nums; }
+.hcard .badge { position: absolute; top: 11px; right: 11px; z-index: 2; padding: 3px 8px; border-radius: 99px; font: 11.5px 'Jua'; }
+.hcard.g { background: #2A2158; border-color: rgba(255,201,60,.4); }
+.hcard.g .art { width: 62%; background-size: auto 150%; background-position: 96% 62%; }
+.hcard.g .art::after { background: linear-gradient(90deg, #2A2158 0%, rgba(42,33,88,.7) 30%, rgba(42,33,88,0) 70%); }
+.hcard.g .go { background: linear-gradient(135deg, #FFE27A, var(--gold2)); color: #3A2200; box-shadow: 0 4px 0 #C26D00; }
+.hcard.f { background: var(--ink2); border-color: rgba(179,18,42,.65); box-shadow: 0 0 30px -12px rgba(224,36,64,.6), 0 14px 30px rgba(0,0,0,.4); }
+.hcard.f .art { width: 46%; background-position: center 8%; }
+.hcard.f .art::after { background: linear-gradient(90deg, var(--ink2) 0%, rgba(23,19,15,.6) 35%, rgba(23,19,15,0) 75%); }
+.hcard.f .t { font-family: 'Nanum Myeongjo', 'AppleMyungjo', serif; font-weight: 800; font-size: 18px; color: var(--paper); }
+.hcard.f .t em { font-style: normal; color: var(--blood2); }
+.hcard.f .go { background: var(--blood); color: var(--paper); }
+.hcard.f .score { font: 900 30px/1 serif; color: var(--paper); text-shadow: 0 0 14px rgba(224,36,64,.6); margin-right: 2px; } .hcard.f .score small { font-size: 12px; color: var(--paper2); font-weight: 400; }
+.hcard.f .seal { position: absolute; right: 12px; bottom: 12px; z-index: 2; width: 36px; height: 36px; display: grid; place-items: center; border: 2px solid var(--blood2); color: var(--blood2); border-radius: 6px; font: 800 11px/1.05 serif; transform: rotate(-6deg); background: rgba(23,19,15,.6); text-align: center; }
+.hcard.n { background: var(--nv2); border-color: rgba(156,140,255,.45); box-shadow: 0 0 30px -12px rgba(122,102,255,.7), 0 14px 30px rgba(0,0,0,.4); }
+.hcard.n .art { width: 62%; }
+.hcard.n .art::after { background: linear-gradient(90deg, var(--nv2) 0%, rgba(32,28,75,.65) 32%, rgba(32,28,75,0) 72%); }
+.hcard.n .go { background: linear-gradient(135deg, #7C69F6, #4E3BD4); color: #fff; }
+.hcard .go.ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.18); box-shadow: none; }
+.hcard .go.done { background: rgba(110,231,200,.14); color: var(--mint); border: 1px solid rgba(110,231,200,.35); box-shadow: none; }
+.hcard .cdbig small { font: 12px 'Jua'; color: rgba(255,255,255,.7); letter-spacing: 0; margin-left: 4px; }
+.hcard .cdbig { font: 700 22px/1 -apple-system, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: .5px; color: var(--moonc); margin-top: 6px; }
+.lunch { display: flex; align-items: center; gap: 10px; margin: -3px 0 11px; padding: 9px 12px; border-radius: 16px; background: linear-gradient(90deg, rgba(91,72,226,.35), rgba(91,72,226,.12)); border: 1px solid rgba(156,140,255,.5); cursor: pointer; }
+.lunch img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid #9C8CFF; }
+.lunch .tx { flex: 1; min-width: 0; font-size: 12px; color: #DCD6FF; } .lunch .tx b { display: block; font: 13.5px 'Jua'; color: #fff; }
+.lunch .tx span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lunch .badge { position: static; flex: none; }
+.tmr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 12px; }
+.tmr > div { border-radius: 16px; padding: 10px 11px; background: rgba(255,255,255,.05); border: 1px solid var(--line); min-width: 0; cursor: pointer; }
+.tmr small { display: block; font-size: 11px; color: var(--sub); } .tmr b { display: block; font: 14px 'Jua'; margin: 3px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tmr span { font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.hsec { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 8px; } .hsec h3 { font-size: 16px; } .hsec span { font-size: 12px; color: var(--sub); }
+
+.badge.live { background: #FF4D7A; color: #fff; box-shadow: 0 0 10px rgba(255,77,122,.7); }
+.badge.newb { background: var(--gold); color: #3A2200; }
+.badge.ok { background: rgba(110,231,200,.9); color: #07322A; }
+/* 실제 앱에서 덧붙인 것: 카드 안 버튼은 카드 누르기와 같음 · 실서버 너랑 '곧 공개' · 아래 이번 주 게임 칸 */
+.hcard .go { cursor: pointer; font-family: 'Jua', sans-serif; }
+.hcard.n.soon { background: radial-gradient(120% 90% at 85% 10%, #3A3480 0%, var(--nv2) 55%); }
+.hgames { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); scroll-margin-top: 12px; }
+.hgames .wkhead h2 { font-size: 20px; }
+@media (hover: hover) { .hcard, .lunch, .tmr > div { transition: transform .12s, border-color .12s; } .hcard:hover, .lunch:hover, .tmr > div:hover { transform: translateY(-2px); } }
+@media (pointer: fine) and (min-width: 960px) {
+  .hub { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 14px; align-items: stretch; }
+  .hub > .hello, .hub > .lunch, .hub > .hsec, .hub > .tmr { grid-column: 1 / -1; }
+  .hub > .hcard { margin-bottom: 12px; min-height: 196px; }
+  .hub .hcard .art { width: 50%; } .hub .hcard .t { max-width: 72%; } .hub .hcard .s, .hub .hcard .k { max-width: 72%; }
+  .hub .tmr { grid-template-columns: 1fr 1fr; }
+  .hgames { margin-top: 22px; }
+}

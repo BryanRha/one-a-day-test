@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.98.3';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.99.0';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -100,6 +100,7 @@ export function recordPlay(id) {
   const s = state(), today = keyOf(now());
   const e = s.library[id] || (s.library[id] = { first: today, plays: 0, last: '' });
   e.plays++; e.last = today;
+  e.tn = e.td === today ? (e.tn || 0) + 1 : 1; e.td = today;   /* 오늘 판 수 (오늘 허브 '오늘 N판') */
   checkIn();
   if (id === todayId()) s.history[today] = id;
   if (RULES.adUnlock === 'once' && access(id) === 'unlocked') delete s.unlocks[id];
