@@ -46,6 +46,18 @@ const toNine = () => hms(next9() - now());
 setInterval(() => { document.querySelectorAll('[data-cd]').forEach(e => { e.textContent = toNine(); }); if (H.loaded && now() >= H.next9 && !H.reloading) { H.reloading = true; home().then(() => { H.reloading = false; render(); }); } }, 1000);
 const epDate = n => { const d = new Date(Date.parse(period() + 'T00:00:00Z') + (n - H.open) * 864e5); return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 밤 9시`; };
 
+/* ── 이용 기록 (2026-11-05 운영실 작품 · 회차 지표 · team/ops/neorang-metrics.md) ──
+   원어데이 track.js 와 같은 기기 번호(oad_did) · 같은 /api/ev · 같은 '이용 기록 보내지 않기' 설정 · 보내는 주소도 같은 규칙(oneaday.kr · vercel.app)
+   보내는 것: 기록 이름 + 작품(w) · 화(ep) · 방법(how · mode · via) · 숫자(n)만 — 대화 원문 · 이름 · 나이는 보내지 않음 · 허용 이름은 server/api/_lib/events.js */
+const EVQ = [], EV1 = new Set(), SID = Math.random().toString(36).slice(2, 12);
+const EV_ON = !PROD && (() => { try { if (localStorage.getItem('oad_track_off') === '1') return false; return /(^|\.)oneaday\.kr$/.test(location.hostname) || location.hostname.endsWith('.vercel.app') || localStorage.getItem('oad_track') === '1'; } catch { return false; } })();
+const evFlush = () => { if (!EVQ.length) return; const body = JSON.stringify({ d: did(), s: SID, v: 'nr', e: EVQ.splice(0, 50) });
+  try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ev', new Blob([body], { type: 'text/plain' })))) fetch('/api/ev', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {}); } catch { /* 기록 실패는 무시 */ } };
+const ev = (n, p, once) => { if (once) { if (EV1.has(once)) return; EV1.add(once); } if (!EV_ON || EVQ.length >= 200) return; EVQ.push({ n, t: Date.now(), p: p || {} }); clearTimeout(ev.h); ev.h = setTimeout(evFlush, 3000); };
+addEventListener('pagehide', evFlush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') evFlush(); });
+/* 들어온 길: 원어데이 오늘 허브 카드(?via=hub) · 너랑 탭(tab) · 앱을 #neorang 주소로 연 경우(link) · 한 단어(oneword) / 너랑 주소를 바로 연 경우 = 광고 · 다른 사이트에서 왔으면 share, 아니면 direct */
+const VIA = (() => { const v = Q.get('via'); if (/^(hub|tab|link|oneword)$/.test(v || '')) return v; let ext = false; try { ext = !!document.referrer && new URL(document.referrer).hostname !== location.hostname; } catch { /* */ } return Q.get('utm_source') || ext ? 'share' : 'direct'; })();
+
 /* ── 서버 (/api/story) ── */
 const H = { loaded: false, open: 0, next9: 0, used: 0, max: 30, left: 30, lunchOpen: false, lunchUsed: 0, lunchMax: 3, on: true, db: false };
 let TOK = '';
@@ -160,6 +172,11 @@ function render() {
   if (key === lastKey && (r[0] === 'talk' || r[0] === 'lunch') && $('#log')) { refreshTalk(); return; }   /* 대화 화면은 다시 그리지 않음(스크롤 · 입력 유지) */
   app.innerHTML = v(...r.slice(1));
   if (key !== lastKey) { if (r[0] === 'talk' || r[0] === 'lunch' || r[0] === 'out') requestAnimationFrame(() => scrollTo(0, document.body.scrollHeight)); else if (!(r[0] === 'read' && r[3] === 'view')) scrollTo(0, 0); }
+  if (key !== lastKey) {   /* 화면이 바뀔 때만 기록 (같은 화면 다시 그리기는 셈 안 함) */
+    if (r[0] === 'work' && W(r[1])) ev('nr_work', { w: r[1] });
+    if (r[0] === 'read' && W(r[1]) && +r[2] >= 1 && +r[2] <= 12 && !(+r[2] > H.open && H.loaded)) ev('nr_read', { w: r[1], ep: +r[2] }, 'r/' + r[1] + '/' + r[2]);
+    if (r[0] === 'lunch' && S.lunch) ev('nr_note', { w: S.lunch.w, what: 'open' }, 'lo/' + S.lunch.day);
+  }
   lastKey = key;
   if (r[0] === 'read') readProg();
   if (r[0] === 'talk' || r[0] === 'lunch') { CU.anchor = null; pill(false); }
@@ -473,13 +490,14 @@ async function send(q, o = {}) {
   busy = false;
   if (!j || j.error || (!j.items && !j.safety)) {
     node.remove();
-    if (j && j.status === 429 && j.limit) { H.left = 0; H.used = H.max; if (!o.alt) { st.log.pop(); anchor && anchor.remove(); } save(); refreshTalk(); go(`out/${w.id}/${c.no || 0}`); return; }
+    if (j && j.status === 429 && j.limit) { ev('nr_rest', { w: w.id, ep: c.kind === 'lunch' ? 0 : c.no }, 'rest/' + period()); H.left = 0; H.used = H.max; if (!o.alt) { st.log.pop(); anchor && anchor.remove(); } save(); refreshTalk(); go(`out/${w.id}/${c.no || 0}`); return; }
     if (j && j.status === 429 && j.lunch) { H.lunchUsed = H.lunchMax; if (!o.alt) { st.log.pop(); anchor && anchor.remove(); } save(); refreshTalk(); toast(j.error); return; }
     if (!o.alt) { st.log.pop(); anchor && anchor.remove(); const s = $('#say'); refreshTalk(); const s2 = $('#say'); if (s2) s2.value = q; }
     else redrawLog();
     toast((j && j.error ? j.error : '이야기가 잠깐 끊겼어요') + ' · 대화는 차감되지 않았어요'); refreshTalk(); return;
   }
-  const from = st.log.length;
+  const from = st.log.length, epNo = c.kind === 'lunch' ? 0 : c.no;
+  ev('nr_say', { w: w.id, ep: epNo, how: o.alt ? 'alt' : o.how === 'chip' ? 'chip' : 'type', mode: c.kind === 'lunch' ? 'lunch' : 'talk' });
   if (j.safety) { st.log.push({ k: 'ai', items: [{ k: 'safe', t: j.items[0].t }], safe: true }); }
   else {
     const entry = { k: 'ai', items: j.items, chips: (j.replies || []).slice(0, 3).map((x, i) => [['다가가기', '묻기', '장난'][i], x]), image: j.image, alt: !!o.alt || undefined };
@@ -492,13 +510,13 @@ async function send(q, o = {}) {
       S.seen = Date.now();
       if (c.kind === 'lunch') H.lunchUsed = Math.min(H.lunchMax, H.lunchMax - (n.lunchLeft ?? (H.lunchMax - H.lunchUsed - 1)));
       if (j.left != null) { H.left = Math.max(0, j.left); H.used = j.used; }
-      if (ws.stage > s0) st.log.push({ k: 'stage', from: s0, to: ws.stage });
-      if (n.secret) st.log.push({ k: 'sec', n: n.secret.n, t: n.secret.text });
-      if (j.image && j.image !== 'none' && !S.cards.some(x => x.tag === j.image)) { st.log.push({ k: 'card', tag: j.image }); S.cards.push({ w: w.id, ep: c.no || 0, tag: j.image, at: Date.now() }); }
+      if (ws.stage > s0) { st.log.push({ k: 'stage', from: s0, to: ws.stage }); ev('nr_stage', { w: w.id, n: ws.stage }); }
+      if (n.secret) { st.log.push({ k: 'sec', n: n.secret.n, t: n.secret.text }); ev('nr_secret', { w: w.id, n: n.secret.n }); }
+      if (j.image && j.image !== 'none' && !S.cards.some(x => x.tag === j.image)) { st.log.push({ k: 'card', tag: j.image }); S.cards.push({ w: w.id, ep: c.no || 0, tag: j.image, at: Date.now() }); ev('nr_card', { w: w.id, how: 'scene' }); }
       if (c.kind === 'ep' && st.talks === END_AT && !st.done) { st.done = 1; st.log.push({ k: 'endc' }); }
       if (c.kind === 'ep' && st.talks === 1) st.log.push({ k: 'pr', t: `첫마디가 남았어요 — ${w.ch.short}${josa(w.ch.short, '이', '가')} 이 말을 기억해요` });
       if (c.kind === 'lunch' && H.lunchUsed >= H.lunchMax) st.done = 1;
-      if (n.last || H.left <= 0) st.log.push({ k: 'restc' });
+      if (n.last || H.left <= 0) { st.log.push({ k: 'restc' }); ev('nr_rest', { w: w.id, ep: epNo }, 'rest/' + period()); }
       if (ws.talks % MEMO_EVERY === 0) memo(w, st.hist);
     }
   }
@@ -617,7 +635,7 @@ document.addEventListener('click', e => {
   if (d.age) { S.age = d.age === 't' ? 16 : d.age === 'a' ? 25 : 10; save(); render(); return; }
   if (d.toggle) { S[d.toggle] = !S[d.toggle]; save(); render(); post({ act: 'alarm', id: { alarm: 'night', lunchOn: 'lunch', soonOn: 'soon' }[d.toggle], on: S[d.toggle] }).catch(() => {}); if (d.toggle === 'alarm' && S.alarm) toast('밤 9시에 새 화 소식을 알려 드릴게요'); return; }
   if (d.start) { S.onboarded = true; if (d.start !== 'home') S.lastW = d.start; save(); if (S.alarm) post({ act: 'alarm', id: 'night', on: true }).catch(() => {}); location.replace('#' + (d.start === 'home' ? 'home' : 'work/' + d.start)); history.replaceState({ d: 0 }, ''); return; }
-  if (d.chip) { const c = ctxOf(), st = c && c.store, last = st && st.log.filter(x => x.k === 'ai' || x.k === 'me').slice(-1)[0], chips = !last ? c.chips : last.chips; if (chips && chips[+d.chip]) send(chips[+d.chip][1]); return; }
+  if (d.chip) { const c = ctxOf(), st = c && c.store, last = st && st.log.filter(x => x.k === 'ai' || x.k === 'me').slice(-1)[0], chips = !last ? c.chips : last.chips; if (chips && chips[+d.chip]) send(chips[+d.chip][1], { how: 'chip' }); return; }
   if (d.alt) { const c = ctxOf(), st = c && c.store, i = +d.alt, me = st && [...st.log.slice(0, i)].reverse().find(x => x.k === 'me'); if (me) send(me.t, { alt: true }); return; }
   if (d.tab) { location.replace('#lib/' + d.tab); return; }
   if (d.bell) { const id = d.bell, a = S.soonBell, k = a.indexOf(id); const on = k < 0; on ? a.push(id) : a.splice(k, 1); save(); render(); post({ act: 'bell', id, on }).catch(() => {}); toast(on ? '공개되는 밤 9시에 알려 드릴게요' : '알림을 껐어요'); return; }
@@ -632,7 +650,8 @@ document.addEventListener('input', e => {
   if (e.target.id === 'nm') { S.name = e.target.value.replace(/\s+/g, '').slice(0, 8); save(); const pv = $('#pv'); if (pv) pv.textContent = `“…${nm()}. 지금은 연기 아니었습니다.”`; const c = e.target.nextElementSibling; if (c) c.textContent = `${e.target.value.length}/8`; }
 });
 function readProg() {
-  const f = () => { const p = $('#prog'); if (!p) return; const h = document.body.scrollHeight - innerHeight; p.style.width = (h > 0 ? Math.min(100, scrollY / h * 100) : 0) + '%'; };
+  const f = () => { const p = $('#prog'); if (!p) return; const h = document.body.scrollHeight - innerHeight; p.style.width = (h > 0 ? Math.min(100, scrollY / h * 100) : 0) + '%';
+    const ho = $('#handoff'), r = route(); if (ho && r[0] === 'read' && ho.getBoundingClientRect().top < innerHeight - 40) ev('nr_readend', { w: r[1], ep: +r[2] }, 're/' + r[1] + '/' + r[2]); };   /* 끝까지 읽음 = 공통 장면 끝 '둘만의 이야기' 칸이 화면에 들어옴 */
   f(); if (!readProg.on) { readProg.on = 1; addEventListener('scroll', f, { passive: true }); }
 }
 
@@ -640,18 +659,20 @@ function readProg() {
 function streak() {
   const p = period(), y = new Date(Date.parse(p) - 864e5).toISOString().slice(0, 10);
   if (S.streak.p === p) return;
-  S.streak.n = S.streak.p === y ? S.streak.n + 1 : 1; S.streak.p = p;
+  S.streak.n = S.streak.p === y ? S.streak.n + 1 : 1; S.streak.p = p; ev('nr_night', { n: S.streak.n });
   if (S.streak.n % 7 === 0 && S.streak.gift !== S.streak.n) {   /* 7 · 14 · 21일째 = 원고 9장 장면 카드 1 · 2 · 3주 (그 뒤는 다시 1주부터) */
     S.streak.gift = S.streak.n; const w = mainW(), wk = ((S.streak.n / 7 - 1) % 3) + 1, k = (w.cards || []).find(x => x.wk === wk);
     S.cards.push(k ? { w: w.id, ep: 0, tag: k.tag, t: k.title, x: k.text, wk, at: Date.now() } : { w: w.id, ep: 0, tag: '', t: `${S.streak.n}일째 밤의 선물`, at: Date.now() });
+    ev('nr_card', { w: w.id, how: 'streak', n: S.streak.n });
     toast(`${S.streak.n}일째 밤 · 장면 카드 「${k ? k.title : '선물'}」를 받았어요`); }
   save();
 }
 async function lunch() {
   if (!S.lunchOn || !H.lunchOpen || !S.onboarded) return;
   const w = mainW(); if (S.lunch && S.lunch.day === period()) return;
-  try { const r = await post({ act: 'lunch', w: w.id }); const j = await r.json(); if (r.ok && j.text) { S.lunch = { day: period(), w: w.id, text: j.text, chips: j.chips || [], log: [], hist: [] }; save(); if (route()[0] === 'home') render(); } } catch { /* 다음에 */ }
+  try { const r = await post({ act: 'lunch', w: w.id }); const j = await r.json(); if (r.ok && j.text) { S.lunch = { day: period(), w: w.id, text: j.text, chips: j.chips || [], log: [], hist: [] }; save(); ev('nr_note', { w: w.id, what: 'get' }); if (route()[0] === 'home') render(); } } catch { /* 다음에 */ }
 }
-window.__nr = { state: () => S, H, render, follow: () => CU, send, ctxOf };   /* 점검용 */
+window.__nr = { state: () => S, H, render, follow: () => CU, send, ctxOf, evq: () => EVQ.slice() };   /* 점검용 */
+ev('nr_open', { via: VIA, new: S.onboarded || Object.keys(S.works).length ? 0 : 1 });
 render();
 home().then(() => { streak(); render(); lunch(); sync(); });
