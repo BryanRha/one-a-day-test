@@ -1,7 +1,7 @@
 // 수달 인양단 배경음 5곡 — 직접 작곡 · 전부 Web Audio 합성 (소리 파일 0개)
 //  audio.js 가 첫 탭 1초 뒤 늦게 받아서 씀 (첫 진입 용량 X) · 오프라인 렌더(미리듣기 · 측정)도 같은 코드
 //  곡: hideout 등불 초소(D장조 70) · dusk 하루 끝(같은 곡 변주 60) · ware 잠긴 창고(D단조 84) · harbor 등대가 꺼진 밤(E단조 76)
-//      tunnel 물 밑 선로(C단조 90) · boss 인양단의 결전(A단조 128 · 지도 색 ware/harbor/tunnel)
+//      tunnel 물 밑 선로(C단조 90) · factory 불을 만든 곳(G단조 96 · M3-B) · boss 인양단의 결전(A단조 128 · 지도 색 ware/harbor/tunnel/factory)
 //  층: 0 평소 · 1 적 발견 · 2 탈출 카운트다운 — 같은 박자 격자 위에서 층이 더해짐 (곡은 끊기지 않음)
 const MIDI = m => 440 * Math.pow(2, (m - 69) / 12);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -80,6 +80,11 @@ export function createMusic({ ctx, out, rev, noise }) {
   function heart(d, t, v) { osc(d, t, 62, 'sine', 0.004, v, 0.16, { f1: 42 }); osc(d, t + 0.27, 58, 'sine', 0.004, v * 0.65, 0.16, { f1: 40 }); }
   function zap(d, t, v) { for (let i = 0; i < 4; i++) nz(d, t + i * rnd(0.01, 0.04), 'white', 'bandpass', rnd(2500, 5000), 3, 0.001, v * rnd(0.4, 1), 0.012); osc(d, t, 100, 'sawtooth', 0.002, v * 0.5, 0.12, { cut: 900 }); }
   function creak(d, t, v) { nz(d, t, 'pink', 'bandpass', rnd(260, 340), 14, 0.15, v, 0.7, { f1: rnd(380, 460), wet: 0.4 }); }
+  /* M3-B 공장: 먼 기계 박동(낮은 쇠 '쿵') · 증기 쉬익 · 낮은 금관 찌르기 */
+  function forge(d, t, v) { osc(d, t, 72, 'sine', 0.003, v, 0.42, { f1: 36, glide: 0.3 }); [[110, 0.5, 1.2], [247, 0.22, 0.9], [413, 0.1, 0.6]].forEach(([f, a, dd]) => osc(d, t + 0.01, f, 'sine', 0.002, v * a * 0.35, dd, { wet: 0.55 })); nz(d, t, 'brown', 'lowpass', 500, 0.6, 0.002, v * 0.5, 0.18, { wet: 0.3 }); }
+  function hiss(d, t, v) { nz(d, t, 'white', 'bandpass', rnd(3200, 5200), 0.8, rnd(0.04, 0.12), v, rnd(0.5, 1.1), { f1: rnd(1800, 2600), wet: 0.4 }); }
+  function brass(d, t, m, v, dur) { const fl = lp(300, 1.2); fl.frequency.setValueAtTime(300, t); fl.frequency.linearRampToValueAtTime(1500, t + 0.08); fl.frequency.setTargetAtTime(500, t + 0.1, dur * 0.4);
+    const g = c.createGain(); const end = env(g, t, 0.04, v, dur * 0.6, dur * 0.3); fl.connect(g); g.connect(d); wetTo(g, 0.35); for (const det of [-6, 0, 7]) { const s = c.createOscillator(); s.type = 'sawtooth'; s.frequency.value = MIDI(m); s.detune.value = det; s.connect(fl); s.start(t); s.stop(end); } }
   function horn(d, t, v) { for (const det of [-6, 6]) osc(d, t, 65.4, 'sawtooth', 0.5, v, 1.6, { det, hold: 1.4, cut: 380, wet: 0.6 }); }
   /* 바닥 소리(이어지는 것): 바람 · 물결 · 전기 웅웅 · 깊은 저음 — 곡이 바뀌면 같이 사라짐 */
   function loopSrc(kind, d, t, ft, f, q, v, lfoHz, lfoAmt, gainLfo) {
@@ -164,19 +169,35 @@ export function createMusic({ ctx, out, rev, noise }) {
         if (on[1]) { const A = [ch[0] + 12, ch[1], ch[2], ch[3], ch[2], ch[1], ch[0] + 24, ch[2]]; for (let k = 0; k < 4; k++) arp(L[1], t + k * spb / 4, A[(b * 4 + k) % 8], 0.045, on[2] ? 2600 : 1300);
           clank(L[1], t + spb * 0.5, 560, 0.022, 0.18); }
         if (on[2]) { kick(L[2], t, 0.3); if (b === 1 || b === 3) snare(L[2], t, 0.12); if (b === 0) for (const m of [79, 80]) osc(L[2], t, MIDI(m), 'sawtooth', 0.02, 0.012, 0.45, { cut: 1600 }); } } },
+    /* 불을 만든 곳(가라앉은 공장): 먼 기계 박동 '쿵 — 쿵' + 모루 망치 쇳소리 + 증기 쉬익 + 낮은 피아노(되풀이 둘째마다) / 1층 검은 닻 긴장: 낮은 베이스 · 반음 위 긴장음 · 프레임 북 · 금관 찌르기 / 2층 킥 · 스네어 · 톱니 */
+    factory: { bpm: 96, bar: 4, gain: 0.92, amb: ['deep'], deep: 31,
+      CH: [[43, 55, 58, 62], [43, 55, 58, 62], [39, 55, 58, 63], [39, 55, 58, 63], [36, 55, 60, 63], [36, 55, 60, 63], [38, 54, 57, 62], [38, 54, 57, 62]],
+      mel: mel([[0, 70, 1.5], [1.5, 69, 0.5], [2, 67, 2], [4, 62, 3], [8, 70, 1], [9, 72, 1], [10, 74, 2], [12, 72, 1], [13, 70, 1], [14, 69, 2], [16, 67, 2], [18, 63, 2], [20, 62, 3], [24, 65, 1], [25, 67, 1], [26, 69, 2], [28, 66, 1], [29, 67, 3]]), melLen: 32,
+      lead(x, n, t, dur) { if (x.loop % 2 === 0) return; piano(x.L[0], hz(t), n.m - 12, 0.4 + rnd(-0.05, 0.05), Math.max(1.4, dur * 1.3)); },
+      beat(x) { const { t, b, ch, spb, L, on } = x;
+        if (b === 0) forge(L[0], t, 0.3); if (b === 2) forge(L[0], t + spb * 0.5, 0.17);
+        if (b === 1 || b === 3) clank(L[0], hz(t), [523, 587][x.bar % 2], 0.014, 0.3, 0.45);
+        if (b === 3 && x.bar % 4 === 3) for (let k = 0; k < 3; k++) clank(L[0], t + k * spb / 3, 698, 0.01, 0.2, 0.45);
+        if (b === 0 && x.bar % 2 === 0) pad(L[0], t, ch.slice(1), spb * 8, 0.012, 560);
+        if (Math.random() < 0.05) hiss(L[0], t + rnd(0, spb), 0.025); if (Math.random() < 0.025) creak(L[0], t, 0.015);
+        if (on[1]) { if (b === 0 || b === 2) bass(L[1], t, ch[0] + 12, spb * 0.7, 0.12, 380); if (b === 3) bass(L[1], t + spb * 0.5, ch[0] + 13, spb * 0.3, 0.08, 380);
+          tom(L[1], t, b % 2 ? 140 : 92, b % 2 ? 0.05 : 0.13, 0.32); if (x.bar % 4 === 0 && b === 0) brass(L[1], t, ch[0] + 12, 0.03, spb * 1.6); if (x.bar % 4 === 2 && b === 2) brass(L[1], t, ch[0] + 13, 0.022, spb * 0.8); }
+        if (on[2]) { kick(L[2], t, 0.3); if (b === 1 || b === 3) snare(L[2], t, 0.11); for (let k = 0; k < 4; k++) hat(L[2], t + k * spb / 4, k % 2 ? 0.01 : 0.02);
+          for (let k = 0; k < 2; k++) osc(L[2], t + k * spb / 2, MIDI(ch[2 + k] + 12), 'sawtooth', 0.01, 0.016, spb * 0.35, { cut: 1700 }); } } },
     /* 인양단의 결전: 공통 주제(A단조) + 북 · 베이스 · 금관 찌르기 / 지도 색: 창고 파이프 · 물방울 · 항구 종 · 바람 · 뱃고동 · 터널 지지직 · 아르페지오 */
     boss: { bpm: 128, bar: 4, gain: 1.1, layers: lv => [true, true, lv >= 2],
       CH: [[33, 57, 60, 64], [29, 57, 60, 65], [31, 55, 59, 62], [28, 56, 59, 64], [33, 57, 60, 64], [29, 57, 60, 65], [26, 57, 62, 65], [28, 56, 59, 64]],
       mel: mel([[0, 69, 1], [1, 72, 0.5], [1.5, 76, 0.5], [2, 81, 1.5], [3.5, 79, 0.5], [4, 77, 2], [6, 76, 1], [7, 72, 1], [8, 74, 1], [9, 79, 1], [10, 77, 1], [11, 76, 1], [12, 76, 3], [15, 68, 1],
         [16, 69, 1], [17, 72, 0.5], [17.5, 76, 0.5], [18, 81, 1.5], [19.5, 83, 0.5], [20, 84, 2], [22, 81, 1], [23, 77, 1], [24, 74, 1], [25, 77, 1], [26, 81, 1], [27, 79, 1], [28, 80, 2], [30, 83, 1], [31, 76, 1]]), melLen: 32,
       lead(x, n, t, dur) { lead(x.L[1], t, n.m, dur * 0.92, 0.035); },
-      ambOf: col => col === 'tunnel' ? ['deep'] : [], deep: 33,
+      ambOf: col => col === 'tunnel' || col === 'factory' ? ['deep'] : [], deep: 33,
       beat(x) { const { t, b, ch, spb, L, on, color } = x, r = ch[0] + 12;
         if (b === 0 || (b === 1 && Math.random() < 0.3)) kick(L[0], t, 0.42); if (b === 2) { kick(L[0], t, 0.4); kick(L[0], t + spb * 0.5, 0.25); } if (b === 1 || b === 3) snare(L[0], t, 0.22);
         for (let k = 0; k < 2; k++) bass(L[0], t + k * spb / 2, r + (k ? 12 : 0), spb * 0.4, 0.13, 520);
         if (b === 0) stab(L[0], t, ch.slice(1), 0.03); if (b === 2) stab(L[0], t + spb * 0.5, ch.slice(1), 0.022);
         if (x.bar === 7 && b === 3) for (let k = 0; k < 4; k++) tom(L[0], t + k * spb / 4, 190 - k * 25, 0.16, 0.18);
         if (color === 'harbor') { if (b === 0) bell(L[1], t, ch[3] + 12, 0.02, 2.5); if (x.bar === 0 && b === 0) horn(L[1], t, 0.025); }
+        else if (color === 'factory') { if (b === 0) forge(L[1], t, 0.14); if (b === 2) forge(L[1], t + spb * 0.5, 0.08); clank(L[1], t + spb * 0.5, 466, 0.018, 0.22, 0.3); if (Math.random() < 0.18) hiss(L[1], t + rnd(0, spb), 0.022); if (x.bar % 4 === 0 && b === 0) brass(L[1], t, r, 0.025, spb * 1.5); }
         else if (color === 'tunnel') { for (let k = 0; k < 4; k++) arp(L[1], t + k * spb / 4, [r, r + 7, r + 12, r + 7][k], 0.03, 1500); if (Math.random() < 0.12) zap(L[1], t + rnd(0, spb), 0.03); }
         else { clank(L[1], t + spb * 0.5, 380, 0.025, 0.18, 0.2); if (Math.random() < 0.3) drip(L[1], t + rnd(0, spb), [81, 84, 88][Math.floor(Math.random() * 3)], 0.025); }
         if (on[2]) { for (let k = 0; k < 4; k++) hat(L[2], t + k * spb / 4, k % 2 ? 0.012 : 0.024, k === 2 && b === 3); if (x.bar % 2 === 1 && b === 3) for (let k = 0; k < 4; k++) snare(L[2], t + k * spb / 4, 0.06 + k * 0.03); } } },

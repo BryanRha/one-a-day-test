@@ -1,13 +1,14 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS } from './data.js?v=0.99.9';
-import { S, save, rollDay } from './save.js?v=0.99.9';
-import * as E from './econ.js?v=0.99.9';
-import { A } from './assets.js?v=0.99.9';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.9';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.9';
-import { Wardrobe } from './wardrobe.js?v=0.99.9';
-import { grantEarned, COS } from './look.js?v=0.99.9';
-import * as BM from './bmflow.js?v=0.99.9';
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS } from './data.js?v=0.99.10';
+import { S, save, rollDay } from './save.js?v=0.99.10';
+import * as E from './econ.js?v=0.99.10';
+import { A } from './assets.js?v=0.99.10';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.10';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.10';
+import { Wardrobe } from './wardrobe.js?v=0.99.10';
+import { grantEarned, COS } from './look.js?v=0.99.10';
+import * as BM from './bmflow.js?v=0.99.10';
+import * as G from './ui_grow.js?v=0.99.10'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -69,7 +70,7 @@ export class UI {
   hideout() {
     if (this.wardrobe.on) { this.wardrobe.commit(); this.wardrobe.close(); }
     rollDay(); E.tickBuild(S); E.syncDaily(S); const qt = E.questTick(S);
-    const got = grantEarned(S); save(); if (qt.length) setTimeout(() => this.questDone(qt), 250);
+    const got = grantEarned(S); const ach = E.achTick(S); save(); for (const a of ach) setTimeout(() => { sfx.rare(); this.toast(`업적 '${a.name}' — 조개 +${a.reward.shells}${a.reward.cos ? ' · 꾸미기 ' + (COS[a.reward.cos]?.name || '') : ''}`, 'good'); }, 600); if (qt.length) setTimeout(() => this.questDone(qt), 250);
     this.clear(); const app = this.app; this.root.className = 'scr-hideout';
     const pips = Array.from({ length: DAILY_SORTIES }, (_, i) => `<i class="${i < S.sorties ? 'on' : ''}"></i>`).join('');
     const q = E.questNow(S); const qp = E.questProgress(S);
@@ -81,11 +82,11 @@ export class UI {
         ${BM.sortieHtml()}${q ? `<button class="qpill" id="qpill">의뢰 · ${q.name}${qp && qp.n > 1 ? ` ${qp.cur}/${qp.n}` : ''}</button>` : '<span class="qpill done">의뢰 모두 완료!</span>'}</div>
       <div class="spacer"><button class="wardpill" id="ward">옷장 · 무기대${(S.owned || []).some(k => !(S.lookSeen || []).includes(k)) ? '<i class="dot"></i>' : ''}</button></div>
       <section class="panel">
-        <nav class="tabs">${[['fac', '시설'], ['gun', '무기'], ['gear', '장비'], ['stash', '창고'], ['quest', '의뢰']].map(([k, t]) => `<button data-t="${k}" class="${this.tab === k ? 'on' : ''}">${t}${k === 'stash' && E.syncDaily(S).some((o, i) => !S.daily.done[i] && E.count(S, o.item) >= o.n) ? '<i class="dot"></i>' : ''}${k === 'quest' && q?.goal.t === 'deliver' && qp.cur >= qp.n ? '<i class="dot"></i>' : ''}</button>`).join('')}</nav>
+        <nav class="tabs">${[['fac', '시설'], ['gun', '무기'], ['gear', '장비'], ['shop', '상인'], ['stash', '창고'], ['quest', '의뢰']].map(([k, t]) => `<button data-t="${k}" class="${this.tab === k ? 'on' : ''}">${t}${k === 'stash' && E.syncDaily(S).some((o, i) => !S.daily.done[i] && E.count(S, o.item) >= o.n) ? '<i class="dot"></i>' : ''}${k === 'quest' && q?.goal.t === 'deliver' && qp.cur >= qp.n ? '<i class="dot"></i>' : ''}</button>`).join('')}</nav>
         <div class="tabbody" id="tabbody"></div>
       </section>
       <button class="btn cta" id="go">출격 준비</button>
-      <footer class="foot"><button class="lnk" id="snd">${soundLabel()}</button><span>v${VERSION} 시제품</span><button class="lnk" id="how">조작법</button></footer>`);
+      <footer class="foot"><button class="lnk" id="snd">${soundLabel()}</button>${G.diffChip()}<button class="lnk" id="achBtn">업적 ${Object.keys(S.ach || {}).length}/20</button><span>v${VERSION} 시제품</span><button class="lnk" id="how">조작법</button></footer>`);
     this.root.appendChild(el); this.el = null;
     el.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { sfx.ui(); this.tab = b.dataset.t; this.hideout(); });
     $('#qpill', el) && ($('#qpill', el).onclick = () => { this.tab = 'quest'; this.hideout(); });
@@ -93,11 +94,12 @@ export class UI {
     BM.bindSortie(el, () => this.hideout()); BM.refreshHello().then(ch => { if (ch) this.refresh(); });
     $('#snd', el).onclick = () => { cycleSound(); this.hideout(); };
     $('#how', el).onclick = () => this.howto();
+    $('#diffBtn', el).onclick = () => { sfx.ui(); G.diffSheet(this); }; $('#achBtn', el).onclick = () => { sfx.ui(); G.achSheet(this); };
     app.story?.decorate(el);
     $('#ward', el).onclick = () => { unlock(); sfx.ui(); this.wardrobe.open(this.tab === 'gun' ? 'weapon' : null); };
     for (const k of got) setTimeout(() => this.toast(`새 꾸미기: ${COS[k].name} — 옷장에서 입어 봐요`, 'good'), 300);
     app.lookChanged?.();
-    const body = $('#tabbody', el); this[{ fac: 'tabFac', gun: 'tabGun', gear: 'tabGear', stash: 'tabStash', quest: 'tabQuest' }[this.tab]](body);
+    const body = $('#tabbody', el); this[{ fac: 'tabFac', gun: 'tabGun', gear: 'tabGear', shop: 'tabShop', stash: 'tabStash', quest: 'tabQuest' }[this.tab] || 'tabFac'](body);
     if (this._scroll?.[this.tab]) body.scrollTop = this._scroll[this.tab]; body.onscroll = () => { (this._scroll ||= {})[this.tab] = body.scrollTop; };
     app.showHideout(true);
     if (S.firstRun && !app.story?.on) { S.firstRun = false; save(); setTimeout(() => { if (this.root.className === 'scr-hideout' && !this.root.querySelector('.modal')) this.howto(); }, 400); }
@@ -108,101 +110,13 @@ export class UI {
   tickHideout() {
     if (this.root.className !== 'scr-hideout') return;
     const done = E.tickBuild(S); if (done) { save(); sfx.build(); this.toast(`${FACILITIES[done].name} Lv.${S.fac[done]} 완성!`, 'good'); this.hideout(); return; }
-    const t = $('#buildt'); if (t && S.build) t.textContent = fmt(Math.max(0, (S.build.until - Date.now()) / 1000));
+    if (S.build) { const tt = G.fmt(Math.max(0, (S.build.until - Date.now()) / 1000)); document.querySelectorAll('#buildt, .buildt').forEach(t => { t.textContent = tt; }); }
   }
-  /* 시설 탭 */
-  tabFac(body) {
-    body.innerHTML = FAC_KEYS.map(k => {
-      const F = FACILITIES[k], lv = E.facLvl(S, k), cur = E.facCur(S, k), nx = E.facNext(S, k), un = E.facUnlocked(S, k);
-      const building = S.build?.k === k;
-      const q = F.unlock && QUESTS.find(q => q.id === F.unlock);
-      let act = '';
-      if (!un) act = `<div class="lock">의뢰 '${q.name}'<br>끝내면 열려요</div>`;
-      else if (building) act = `<div class="busy"><b id="buildt">${fmt(Math.max(0, (S.build.until - Date.now()) / 1000))}</b><small>공사 중</small><div class="instbox"></div></div>`;
-      else if (nx) { const lp = E.lackPrice(S, nx.cost); const can = E.canPay(S, nx.cost);
-        act = `<button class="fb ${S.build ? 'dim' : can ? '' : lp.ok ? 'buy' : 'dim'}" data-k="${k}">${lv ? '올리기' : '짓기'}<small>${dur(nx.time || 0)}</small>${!can && lp.ok ? `<small class="bp">재료 사서 +${lp.price}</small>` : ''}</button>`; }
-      else act = '<div class="max">최고 단계</div>';
-      return `<div class="frow ${un ? '' : 'locked'} ${building ? 'building' : ''}">
-        <div class="fi">${F.icon}</div>
-        <div class="fm"><div class="fh"><b>${F.name}</b><span class="lv">${lv ? 'Lv.' + lv : '없음'} / ${F.levels.length}</span></div>
-          <small>${cur ? cur.txt : F.desc}</small>
-          ${nx && un ? `<small class="next">다음: ${nx.txt}</small><div class="cost">${costChips(nx.cost)}</div>` : ''}</div>
-        ${act}</div>`;
-    }).join('') + (S.build ? '' : '<small class="hint">공사는 한 번에 하나 · 시간이 지나면 저절로 끝나요 (게임을 꺼 둬도)</small>');
-    body.querySelectorAll('.fb').forEach(b => b.onclick = () => {
-      unlock(); const k = b.dataset.k; const nx = E.facNext(S, k);
-      if (!E.canPay(S, nx.cost)) { const lp = E.lackPrice(S, nx.cost); if (lp.ok) E.buyLack(S, nx.cost); }
-      const r = E.startBuild(S, k); if (!r.ok) return this.toastWhy(r);
-      save(); sfx.build(); this.toast(r.done ? `${FACILITIES[k].name} 완성!` : `${FACILITIES[k].name} 공사 시작 — ${dur(nx.time)} 뒤 완성`, 'good'); this.hideout();
-    });
-    BM.bindInst(body);
-  }
-  /* 무기 탭: 고른 무기 숫자 · 처치 시간 · 퍼짐 그림 · 개조 전후 */
-  tabGun(body) {
-    const wk = this.wsel || (this.wsel = S.equip.main); const W = WEAPONS[wk]; const own = S.weapons[wk]; const ws = E.weaponStats(wk, own || undefined);
-    const rack = E.facCur(S, 'rack'); const mk = E.rackMk(S);
-    const killT = st => [['drone', 2, 10], ['skel', 2, 4.5], ['boss', 3, 8]].map(([k, z, d]) => { const hp = k === 'boss' ? ENEMIES.boss.hp : ENEMIES[k].hp * ZONES[z].hp; const r = E.ttk(st, hp, d); return { k, t: r.t, hit: r.hit }; });
-    const kt = killT(ws); const acc = E.ttk(ws, 400, 10).hit;
-    const cone = (sp, mx) => { const L = 92, a1 = sp, a2 = mx; const p = a => `${(L * Math.sin(a)).toFixed(1)},${(-L * Math.cos(a)).toFixed(1)}`;
-      return `<svg viewBox="-60 -100 120 104" class="cone"><path d="M0,0 L${p(-a2)} A${L},${L} 0 0 1 ${p(a2)} Z" class="c2"/><path d="M0,0 L${p(-a1)} A${L},${L} 0 0 1 ${p(a1)} Z" class="c1"/><circle cx="0" cy="${-L * 0.86}" r="${(0.62 / 7 * L).toFixed(1)}" class="tg"/><circle cx="0" cy="0" r="4" class="me"/></svg>`; };
-    const sides = rack?.side; const isMain = S.equip.main === wk, isSide = S.equip.side === wk;
-    body.innerHTML = `
-      <div class="wsel">${WEAPON_KEYS.map(k => `<button data-w="${k}" class="${k === wk ? 'on' : ''} ${S.weapons[k] ? '' : 'no'}" style="--c:${WEAPONS[k].color}"><b>${WEAPONS[k].short}</b><small>${S.equip.main === k ? '주무기' : S.equip.side === k ? '보조' : S.weapons[k] ? '보유' : '제작'}</small></button>`).join('')}</div>
-      <div class="wcard">
-        <div class="fh"><b>${W.name}</b><span class="lv">${own ? `개조 ${MOD_KEYS.reduce((s, m) => s + own[m], 0)}/12` : '아직 없음'}</span></div>
-        <small class="hint">${W.desc}</small>
-        <div class="wgrid">
-          ${cone(ws.spread, ws.max)}
-          <div class="wstats">
-            <div><span>파워</span><b>${Math.round(ws.dmg)}${ws.pellets > 1 ? '×' + ws.pellets : ''}</b></div>
-            <div><span>정확도(10m 연사)</span><b>${pct(acc)}</b></div>
-            <div><span>약점</span><b>${pct(ws.crit)}</b></div>
-            <div><span>사거리</span><b>${ws.range.toFixed(1)}m</b></div>
-            <div><span>장탄</span><b>${ws.mag}발 · ${ws.reload.toFixed(1)}초</b></div>
-            <div><span>연사</span><b>${ws.rate}/초</b></div>
-          </div></div>
-        <div class="ttk">${kt.map(x => `<span><small>${ENEMIES[x.k].name} ${x.k === 'drone' ? '10m' : x.k === 'skel' ? '근접' : ''}</small><b>${isFinite(x.t) ? x.t.toFixed(1) + '초' : '닿지 않음'}</b></span>`).join('')}</div>
-        <small class="hint">처치 시간 = 이 숫자로 계속 쏠 때 (퍼짐 · 장전 포함) · 바깥 부채꼴 = 연사로 벌어진 퍼짐</small>
-        ${own ? `<div class="wbtns"><button class="btn sm ${isMain ? 'on' : ''}" id="eqMain">${isMain ? '주무기 ✓' : '주무기로'}</button>${sides ? `<button class="btn sm ${isSide ? 'on' : ''}" id="eqSide">${isSide ? '보조 ✓ (빼기)' : '보조 무기로'}</button>` : '<small class="hint">무기대 Lv.2 에서 보조 무기 칸</small>'}</div>`
-        : `<div class="craft"><div class="cost">${costChips(W.cost)}</div><button class="btn ${E.facLvl(S, 'bench') >= W.bench ? '' : 'dim'}" id="mkW">${E.facLvl(S, 'bench') >= W.bench ? '제작' : `작업대 Lv.${W.bench} 필요`}</button></div>`}
-      </div>
-      ${own ? `<div class="mods">${MOD_KEYS.map(m => { const M = MODS[m]; const cur = own[m]; const nx = cur + 1; const c = nx <= 3 ? E.modCost(wk, m, nx) : null;
-        let prev = ''; if (c) { const after = E.weaponStats(wk, { ...own, [m]: nx }); const ka = killT(after); const aa = E.ttk(after, 400, 10).hit;
-          prev = m === 'scope' ? `정확도 ${pct(acc)} → <b>${pct(aa)}</b> · 드론 ${kt[0].t.toFixed(1)} → <b>${ka[0].t.toFixed(1)}초</b>`
-            : m === 'chamber' ? `파워 ${Math.round(ws.dmg)} → <b>${Math.round(after.dmg)}</b> · 해골 ${kt[1].t.toFixed(1)} → <b>${ka[1].t.toFixed(1)}초</b>`
-            : m === 'mag' ? `장탄 ${ws.mag} → <b>${after.mag}</b> · 수문지기 ${kt[2].t.toFixed(1)} → <b>${ka[2].t.toFixed(1)}초</b>`
-            : `사거리 ${ws.range.toFixed(1)} → <b>${after.range.toFixed(1)}m</b>`; }
-        return `<div class="mrow"><div class="mh"><b>${M.name}</b><small>${M.stat}</small><span class="pips2">${[1, 2, 3].map(i => `<i class="${i <= cur ? 'on' : ''}"></i>`).join('')}</span></div>
-          <small>${M.fx[cur]}</small>
-          ${c ? `<small class="prev">${prev}</small><div class="mfoot"><div class="cost">${costChips(c)}</div><button class="btn sm ${mk >= nx ? '' : 'dim'}" data-m="${m}">${mk >= nx ? `Mk${nx} 개조` : mk ? `무기대 Lv.${nx}` : '무기대 필요'}</button></div>` : '<small class="max">최고 단계</small>'}</div>`; }).join('')}</div>` : ''}`;
-    body.querySelectorAll('.wsel button').forEach(b => b.onclick = () => { sfx.ui(); this.wsel = b.dataset.w; this.hideout(); });
-    $('#mkW', body) && ($('#mkW', body).onclick = () => { const r = E.craftWeapon(S, wk); if (!r.ok && r.why === 'cost' && E.lackPrice(S, W.cost).ok) { E.buyLack(S, W.cost); return $('#mkW', body).onclick(); } if (!r.ok) return this.toastWhy(r); save(); sfx.build(); this.toast(`${W.name} 완성!`, 'good'); this.hideout(); });
-    $('#eqMain', body) && ($('#eqMain', body).onclick = () => { if (S.equip.side === wk) S.equip.side = null; S.equip.main = wk; save(); sfx.ui(); this.hideout(); });
-    $('#eqSide', body) && ($('#eqSide', body).onclick = () => { if (isSide) S.equip.side = null; else { if (S.equip.main === wk) return this.toast('주무기는 보조로 못 해요', 'soft'); S.equip.side = wk; } save(); sfx.ui(); this.hideout(); });
-    body.querySelectorAll('.mods [data-m]').forEach(b => b.onclick = () => { const m = b.dataset.m; const c = E.modCost(wk, m, own[m] + 1); let r = E.upgradeMod(S, wk, m);
-      if (!r.ok && r.why === 'cost' && E.lackPrice(S, c).ok) { E.buyLack(S, c); r = E.upgradeMod(S, wk, m); }
-      if (!r.ok) return this.toastWhy(r); save(); sfx.build(); this.toast(`${MODS[m].name} Mk${own[m]}! ${MODS[m].fx[own[m]]}`, 'good'); this.hideout(); });
-  }
-  /* 장비 탭: 방어구 · 헬멧 · 가방 · 소모품 · 요리 · 고물상 */
-  tabGear(body) {
-    const kl = E.facCur(S, 'kitchen')?.meal || 0;
-    body.innerHTML = `
-      <div class="sec">장비 <small>한 번 만들면 계속 · 쓰러져도 안 잃어요</small></div>
-      ${Object.entries(GEAR).map(([g, G]) => { const cur = S.gear[g]; const nx = G.tiers[cur + 1];
-        return `<div class="grow"><div><b>${G.name} ${cur ? ['', 'Ⅰ', 'Ⅱ', 'Ⅲ'][cur] : ''}</b><small>${G.tiers[cur].txt}</small>${nx ? `<small class="next">다음: ${nx.txt}</small><div class="cost">${costChips(nx.cost)}</div>` : ''}</div>
-          ${nx ? `<button class="btn sm ${E.facLvl(S, 'bench') >= nx.bench ? '' : 'dim'}" data-g="${g}">${E.facLvl(S, 'bench') >= nx.bench ? '제작' : `작업대 Lv.${nx.bench}`}</button>` : '<small class="max">최고</small>'}</div>`; }).join('')}
-      <div class="sec">소모품 <small>출격 준비에서 가방에 넣어 가요</small></div>
-      ${Object.entries(CRAFTS).map(([k, C]) => { const ok = E.facLvl(S, C.fac) >= C.lv; return `<div class="grow"><div class="gi">${icon(k)}</div><div><b>${ITEMS[k].name} <small>보유 ${E.count(S, k)}</small></b><small>${ITEMS[k].desc}</small><div class="cost">${costChips(C.cost)}</div></div>
-          <button class="btn sm ${ok ? '' : 'dim'}" data-c="${k}">${ok ? '만들기' : `${FACILITIES[C.fac].name} Lv.${C.lv}`}</button></div>`; }).join('')}
-      ${kl ? `<div class="sec">주방 <small>다음 출격 한 번 · 하나만</small></div>
-        ${S.meal ? `<div class="note good">${MEALS[S.meal].name} 준비됨 — ${MEALS[S.meal].txt}</div>` : Object.entries(MEALS).map(([k, M]) => `<div class="grow"><div><b>${M.name}</b><small>${M.txt}</small><div class="cost">${costChips(M.cost)}</div></div><button class="btn sm ${kl >= M.lv ? '' : 'dim'}" data-meal="${k}">${kl >= M.lv ? '요리' : `주방 Lv.${M.lv}`}</button></div>`).join('')}` : ''}
-      <div class="sec">고물상 <small>모자란 재료를 조개로 (분해보다 비싸요)</small></div>
-      <div class="market">${Object.entries(MARKET).map(([k, p]) => `<button class="btn sm" data-buy="${k}">${mat(k, '')}${MATS[k].name} ×5<em>${shell(p * 5)}</em></button>`).join('')}</div>`;
-    body.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const g = b.dataset.g; const c = GEAR[g].tiers[S.gear[g] + 1].cost; let r = E.craftGear(S, g); if (!r.ok && r.why === 'cost' && E.lackPrice(S, c).ok) { E.buyLack(S, c); r = E.craftGear(S, g); } if (!r.ok) return this.toastWhy(r); save(); sfx.build(); this.toast(`${GEAR[g].name} ${['', 'Ⅰ', 'Ⅱ', 'Ⅲ'][S.gear[g]]}! ${GEAR[g].tiers[S.gear[g]].txt}`, 'good'); this.hideout(); });
-    body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const r = E.craftItem(S, b.dataset.c, 1); if (!r.ok) return this.toastWhy(r); save(); sfx.pick(3); this.toast(`${ITEMS[b.dataset.c].name} +1`, 'good'); this.hideout(); });
-    body.querySelectorAll('[data-meal]').forEach(b => b.onclick = () => { const r = E.cook(S, b.dataset.meal); if (!r.ok) return this.toastWhy(r); save(); sfx.build(); this.toast(`${MEALS[b.dataset.meal].name} 완성! 다음 출격에 효과`, 'good'); this.hideout(); });
-    body.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (!E.buy(S, b.dataset.buy, 5)) { this.toast('조개가 모자라요', 'soft'); return sfx.empty(); } save(); sfx.pick(2); this.hideout(); });
-  }
+  /* 시설 · 무기 · 장비 · 상인 탭 → ui_grow.js (v0.6 M3-A) */
+  tabFac(body) { G.tabFac(this, body); }
+  tabGun(body) { G.tabGun(this, body); }
+  tabGear(body) { G.tabGear(this, body); }
+  tabShop(body) { G.tabShop(this, body); }
   /* 창고 탭: 오늘의 인양 목록 · 한 번에 정리 · 물건별 팔기/분해 */
   tabStash(body) {
     const D = E.syncDaily(S); const cnt = {}; for (const k of S.stash) cnt[k] = (cnt[k] || 0) + 1;
@@ -276,7 +190,7 @@ export class UI {
     /* 지도 고르기 (v0.4) — 쓰러진 가방이 있으면 그 지도로 고정 */
     const open = E.openMaps(S); let mk = S.corpse ? (S.corpse.map || 'ware') : open.includes(S.mapSel) ? S.mapSel : 'ware'; this.mapKey = mk; const MP = MAPS[mk];
     const lockQ = m => QUESTS.findIndex(q => q.id === MAPS[m].unlock) + 1;
-    const mapRow = MAP_KEYS.map(m => { const on = open.includes(m); return `<button class="mapbtn m-${m} ${m === mk ? 'on' : ''} ${on ? '' : 'locked'}" data-m="${m}" ${S.corpse && m !== mk ? 'disabled' : ''}><span>${MAPS[m].icon}</span><b>${MAPS[m].name}</b><small>${on ? (m === 'ware' ? '기본' : '열림') : `의뢰 ${lockQ(m)}에서 열려요`}</small></button>`; }).join('');
+    const mapRow = MAP_KEYS.map(m => { const on = open.includes(m); return `<button class="mapbtn m-${m} ${m === mk ? 'on' : ''} ${on ? '' : 'locked'}" data-m="${m}" ${S.corpse && m !== mk ? 'disabled' : ''}><span>${MAPS[m].icon}</span><b>${MAPS[m].name}</b><small>${on ? (m === 'ware' ? '기본' : '열림') : MAPS[m].lock || `의뢰 ${lockQ(m)}에서 열려요`}</small></button>`; }).join('');
     const exitTxt = m => m === 'tunnel' ? `${MP.exits.early}(물 닿으면 잠김) · ${MP.exits.power}(전원) · ${MP.exits.sub}` : m === 'harbor' ? `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}(신호탄 → 7초)` : `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}`;
     const el = h('div', 'prep', `
       <header class="topbar"><button class="back" id="back">‹</button><div class="brand"><b>출격 준비</b><small>${MP.name} · ${fmt(RAID.time)} 안에 탈출</small></div><div class="money">${shell(S.shells)}</div></header>
@@ -288,13 +202,14 @@ export class UI {
       <div class="card"><div class="fh"><b>장비</b><span class="lv">체력 ${L.hp} · 방어 ${pct(L.armor)}</span></div>
         <div class="loadout"><span><small>주무기</small><b>${w[0].name}</b></span>${w[1] ? `<span><small>보조</small><b>${w[1].name}</b></span>` : ''}<span><small>가방</small><b>${L.bag.w}×${L.bag.h} · ${L.bag.comfy}kg</b></span>${L.pet ? `<span><small>몽이 주머니</small><b>${L.pet.w}×${L.pet.h}${L.pet.safe ? ' · 지켜 줌' : ''}</b></span>` : ''}</div>
         ${meal ? `<small class="hint good">🍲 ${meal.name}: ${meal.txt}</small>` : ''}${L.kit ? `<small class="hint">창고 보너스: 연고 ${L.kit}개 공짜로 넣고 출발</small>` : ''}</div>
+      <div class="card prepx">${G.ammoHtml(true)}<div class="prepline">${(S.charms?.eq || []).slice(0, E.charmSlots(S)).map(k => `<span class="chip">◆ ${CHARMS[k].name}</span>`).join('')}${G.diffChip()}</div></div>
       <div class="card"><div class="fh"><b>가져갈 소모품</b><span class="lv">${carryN}/${maxCarry} · 가방 칸을 차지해요</span></div>
         <div class="carry">${['med', 'bandage', 'smoke', 'nade'].filter(k => E.count(S, k)).map(k => `<div class="cr">${icon(k)}<small>${ITEMS[k].name}</small><div><button data-k="${k}" data-d="-1">−</button><b>${this.carry[k] || 0}</b><button data-k="${k}" data-d="1">+</button></div></div>`).join('') || '<small class="hint">창고에 소모품이 없어요 — 의무실 · 연구대에서 만들어요</small>'}</div></div>
       <div class="card"><div class="fh"><b>안전 칸</b><span class="lv">${L.safe[0]}×${L.safe[1]} · 쓰러져도 지켜요</span></div>
         <div class="safepick">${choices.length ? choices.map(k => `<button class="slot ${this.safePick.includes(k) ? 'on' : ''}" data-k="${k}">${icon(k)}<small>${ITEMS[k].name}</small></button>`).join('') : '<small class="hint">창고에 넣을 만한 게 없어요</small>'}
           <button class="slot ${this.safePick.length ? '' : 'on'}" data-k=""><span class="none">비움</span><small>빈 칸</small></button></div></div>
       <div class="bmrow bmprep">${BM.insureHtml()}${BM.sortieHtml()}</div>
-      <button class="btn cta" id="sortie">${S.sorties > 0 || this.app.free ? `출격! <small>(오늘 ${S.sorties}회 남음)</small>` : '오늘 출격 끝 — 내일 다시'}</button>`);
+      <button class="btn cta" id="sortie">${this.app.nolimit ? '출격! <small>(테스트 · 무제한)</small>' : S.sorties > 0 ? `출격! <small>(오늘 ${S.sorties}회 남음)</small>` : '오늘 출격 끝 — 내일 다시'}</button>`);
     this.root.appendChild(el);
     el.querySelectorAll('.slot').forEach(b => b.onclick = () => { this.safeTouched = true; const k = b.dataset.k; sfx.ui();
       if (!k) this.safePick = []; else if (this.safePick.includes(k)) this.safePick.splice(this.safePick.indexOf(k), 1);
@@ -306,8 +221,9 @@ export class UI {
     $('#condInfo', el) && ($('#condInfo', el).onclick = () => { sfx.ui(); const bx = $('#condBox', el); bx.hidden = !bx.hidden; });
     el.querySelectorAll('.mapbtn').forEach(b => b.onclick = () => { const m = b.dataset.m; if (!open.includes(m)) { sfx.empty(); return this.toast(`의뢰 ${lockQ(m)} '${QUESTS[lockQ(m) - 1].name}'을 끝내면 열려요`, 'soft'); } if (S.corpse) return; S.mapSel = m; save(); sfx.ui(); this.prep(); });
     BM.bindInsure(el, () => this.prep()); BM.bindSortie(el, () => this.prep());
+    G.bindAmmo(this, el, () => this.prep()); $('#diffBtn', el) && ($('#diffBtn', el).onclick = () => { sfx.ui(); G.diffSheet(this, () => this.prep()); });
     $('#sortie', el).onclick = () => {
-      unlock(); if (S.sorties <= 0 && !this.app.free) { this.toast('오늘 출격 3번을 다 썼어요. 내일 또 만나요!', 'soft'); return; }
+      unlock(); if (S.sorties <= 0 && !this.app.nolimit) { this.toast('오늘 출격 3번을 다 썼어요. 내일 또 만나요!', 'soft'); return; }
       sfx.ui(); const carry = Object.entries(this.carry).flatMap(([k, n]) => Array(n).fill(k)); this.carry = {};
       this.app.startRaid({ safeItems: this.safePick.slice(), carry, map: this.mapKey });
     };
@@ -379,22 +295,22 @@ export class UI {
   raidHud(R) {
     if (!this.el) return; const pl = R.pl; const L = R.L;
     $('#hpf').style.width = (pl.hp / pl.maxHp * 100) + '%'; $('#hpf').parentNode.classList.toggle('low', pl.hp < pl.maxHp * 0.3); $('#hpt').textContent = Math.ceil(pl.hp);
-    $('#stf').style.width = pl.stam + '%';
+    $('#stf').style.width = (pl.stam / (100 + (L.stamMax || 0)) * 100) + '%';
     const wv = R.weight(); const wt = $('#wt'); wt.firstChild.style.width = Math.min(100, wv / (L.bag.comfy * 2) * 100) + '%'; wt.lastChild.textContent = `${wv.toFixed(1)}/${L.bag.comfy}kg`; wt.classList.toggle('heavy', wv > L.bag.comfy);
     const tm = $('#timer'); tm.textContent = fmt(Math.ceil(R.time)); tm.classList.toggle('warn', R.time <= RAID.warnAt);
     const zt = `${R.Z[R.zone].name}${R.dark > 0 ? ' · 정전' : R.map !== 'ware' && R.cond !== 'calm' ? ' · ' + R.C.name : ''}${R.floodZ < R.P.H ? (R.map === 'harbor' ? ' · 밀물' : ' · 침수 중') : ''}${R.surge > 0 ? ' · 급류' : ''}`; if (zt !== this._zt) { $('#zone').textContent = zt; this._zt = zt; }
     if (R.o2 != null) { const o = $('#o2'); const k = R.o2 / R.o2Max; o.firstChild.style.width = (k * 100) + '%'; o.classList.toggle('low', k < 0.3); o.classList.toggle('air', !!pl.air); o.lastChild.textContent = pl.air ? '산소 채우는 중' : pl.deep ? `산소 ${Math.ceil(R.o2)} · 물속` : `산소 ${Math.ceil(R.o2)}`; }
     const val = bagValue(R.bag) + bagValue(R.safe) + (R.pet ? bagValue(R.pet) : 0); if (val !== this._val) { $('#val').innerHTML = shell(val); this._val = val; }
-    const w = R.w; $('#ammo').innerHTML = (pl.reload > 0 ? '<b class="rl">장전 중</b>' : `<b>${pl.mags[R.wi]}</b><small>/${w.mag}</small>`) + `<em>${w.short}${R.ws.length > 1 ? ' ⇄' : ''}</em>`;
+    const w = R.w; const ah = `${w.short}${!w.melee && L.ammo && L.ammo !== 'normal' ? ' · ' + AMMO[L.ammo].short : ''}${R.ws.length > 1 ? ' ⇄' : ''}`; const ak = (pl.reload > 0 ? 'r' : w.melee ? 'm' : pl.mags[R.wi]) + ah; if (ak !== this._ak) { this._ak = ak; $('#ammo').innerHTML = (pl.reload > 0 ? '<b class="rl">장전 중</b>' : w.melee ? '<b>근접</b>' : `<b>${pl.mags[R.wi]}</b><small>/${w.mag}</small>`) + `<em>${ah}</em>`; } /* v0.6 탄약 · 근접 */
     /* 상황 버튼 */
     const act = $('#bAct'); const n = R.near; act.classList.toggle('show', !!n && !pl.searching && !pl.dead);
-    if (n) { const c = n.c; $('#actTxt').textContent = n.type === 'gen' ? '전원 켜기' : n.type === 'lamp' ? (n.L.lit ? '등불 끄기' : '등불 켜기') : n.type === 'flare' ? '신호탄 쏘기' : n.type === 'gate' ? (n.g.door.lock === 'vault' ? (R.hasItem('vkey') ? '금고 열기' : '금고 · 열쇠 필요') : '전원 문') : c.searched ? (c.items?.length ? '다시 보기' : '빈 곳') : (c.corpse ? '내 가방 찾기' : '뒤지기'); }
+    if (n) { const c = n.c; $('#actTxt').textContent = n.type === 'gen' ? '전원 켜기' : n.type === 'lamp' ? (n.L.lit ? '등불 끄기' : '등불 켜기') : n.type === 'flare' ? (n.label || '신호탄 쏘기') : n.type === 'gate' ? (n.g.door.lock === 'vault' ? (R.hasItem('vkey') ? '금고 열기' : '금고 · 열쇠 필요') : '전원 문') : c.searched ? (c.items?.length ? '다시 보기' : '빈 곳') : (c.corpse ? '내 가방 찾기' : '뒤지기'); }
     act.classList.toggle('gold', !!(n?.c?.corpse || n?.type === 'gen' || n?.type === 'flare' || (n?.type === 'gate' && R.hasItem('vkey'))));
     $('#bMed').classList.toggle('show', R.hasItem('med') || R.hasItem('bandage'));
     for (const k of ['nade', 'smoke']) { const c = R.carried().reduce((s, b) => s + b.items.filter(p => p.it.key === k).length, 0); const b = $(k === 'nade' ? '#bNade' : '#bSmoke'); b.classList.toggle('show', c > 0); $(k === 'nade' ? '#nadeN' : '#smokeN').textContent = c; }
     $('#bFire').classList.toggle('aim', !!pl.aim);
     $('#bRoll').classList.toggle('dim', pl.stam < 34 * (wv > L.bag.comfy ? 1.5 : 1));
-    const sr = $('#search'); sr.classList.toggle('show', !!pl.searching); if (pl.searching) { sr.firstChild.style.width = (pl.searching.prog * 100) + '%'; sr.lastChild.textContent = { gen: '전원 켜는 중…', lamp: '등불 만지는 중…', flare: '신호탄 준비…' }[pl.searching.kind] || '뒤지는 중…'; }
+    const sr = $('#search'); sr.classList.toggle('show', !!pl.searching); if (pl.searching) { sr.firstChild.style.width = (pl.searching.prog * 100) + '%'; sr.lastChild.textContent = pl.searching.txt || { gen: '전원 켜는 중…', lamp: '등불 만지는 중…', flare: '신호탄 준비…' }[pl.searching.kind] || '뒤지는 중…'; }
     const ex = $('#exitbar'); const x = R.exitHere; const showEx = !!x && x.open && !R.over; ex.classList.toggle('show', showEx); if (showEx) ex.firstChild.style.width = (x.hold / x.need * 100) + '%';
     /* 보스 체력 */
     const B = R.boss; const bb = $('#bossbar'); const showB = B && !B.dead && B.state === 'chase'; bb.classList.toggle('show', !!showB); if (showB) bb.lastChild.firstChild.style.width = (B.hp / B.maxHp * 100) + '%';

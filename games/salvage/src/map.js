@@ -1,17 +1,18 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.9';
-import { prop } from './assets.js?v=0.99.9';
-import { buildDress, farWater } from './dress_art.js?v=0.99.9';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.10';
+import { prop } from './assets.js?v=0.99.10';
+import { buildDress, farWater } from './dress_art.js?v=0.99.10';
+import { buildFactory } from './factory.js?v=0.99.10'; /* M3-B 가라앉은 공장 */
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.9';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.10';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */
 /* 뒤질 곳 모델 */
-export const LOOT_MODEL = { crate: 'k_boxopen', barrel: 'k_barrel', locker: 'cabinet', chest: 'k_chest', toolbox: 'k_crate', vault: 'chest', net: 'k_bucket', cargo: 'cont_b', kiosk: 'cabinet', cart: 'k_crate' };
-export const LOOT_SCALE = { k_boxopen: 4.2, k_barrel: 5, k_chest: 5.5, k_crate: 1.6, chest: 1.3, k_bucket: 5.5, cont_b: 3.2 };
+export const LOOT_MODEL = { crate: 'k_boxopen', barrel: 'k_barrel', locker: 'cabinet', chest: 'k_chest', toolbox: 'k_crate', vault: 'chest', net: 'k_bucket', cargo: 'cont_b', kiosk: 'cabinet', cart: 'k_crate', bench: 'k_bench', stash: 'f_stash', corebox: 'f_corebox' };
+export const LOOT_SCALE = { k_boxopen: 4.2, k_barrel: 5, k_chest: 5.5, k_crate: 1.6, chest: 1.3, k_bucket: 5.5, cont_b: 3.2, k_bench: 5 };
 /* 지도 모양: 바닥(방 종류 · 칸) · 벽(구역 · 카메라 쪽 낮은 벽) — [키, 세로 배수, 크기 배수, 회전 더함] */
 const STYLE = {
   ware: { floor: (rm, i, j) => (rm.type === 'pump' || rm.type === 'engine') && (i + j) % 3 === 0 ? 'floor_grate' : rm.type === 'office' || rm.type === 'vault' ? 'floor_wood' : 'floor',
@@ -21,12 +22,14 @@ const STYLE = {
     wall: (z, low, n) => low ? ['h_fence', 0.95, 'x', 0.2] : z === 2 ? [['k_cont_a', 'k_cont_b', 'h_cont_c'][n % 3], 2.3, 'z', 2.0] : z === 1 ? ['h_fence', 1.8, 'x', 0.22] : ['h_mwall', 2.4, 'x', 0.4] },
   tunnel: { floor: (rm, i, j) => rm.type === 'track' && (i === 1 || i === 2) ? 'floor_grate' : rm.type === 'vault' || rm.type === 'control' ? 'floor_wood' : rm.type === 'reservoir' && (i + j) % 2 ? 'floor_grate' : 'floor',
     wall: (z, low) => low ? ['t_wall', 0.9, 'z', 0.7] : ['t_wall', 3.0, 'z', 0.7] },
+  factory: { floor: (rm, i, j) => (rm.type === 'furnace' || rm.type === 'foundry' || rm.type === 'crucible') && (i + j) % 2 ? 'floor_grate' : rm.type === 'workshop' || rm.type === 'fcontrol' || rm.type === 'vault' ? 'floor_wood' : 'f_floor',
+    wall: (z, low) => low ? ['f_wall', 0.9, 'z', 0.7] : ['f_wall', 3.0, 'z', 0.7] },
 };
 const dimCache = {};
 function dimsOf(k) { if (dimCache[k]) return dimCache[k]; const o = prop(k); o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o); const v = b.getSize(new THREE.Vector3()); return dimCache[k] = { x: Math.max(0.01, v.x), y: Math.max(0.01, v.y), z: Math.max(0.01, v.z) }; }
 /* 너무 높아 주인공을 가리는 것은 낮춤 */
 const LOW = { k_cont_a: 0.62, k_cont_b: 0.62, cont: 0.6, k_tank: 0.8 };
-const SCALE = { h_cont_c: 6, h_tank: 2.2, t_machine: 1.5, t_bench: 2.6, h_planks: 3, h_fish: 4, h_stand: 4, h_magnet: 2.2, t_pipe: 1.4, t_lever: 2, t_sign: 1.6, cont: 3.2, box_a: 4, cont_a: 3, cont_b: 3, cargo: 2, cargo_b: 3, k_cont_a: 6, k_cont_b: 6, k_machine: 1.5, k_hopper: 1.6, k_tank: 4, k_boxwide: 2.5, k_crate: 2.5, k_screen: 1.25, k_bucket: 4, k_pipe: 1.4, k_conveyor: 1.6 };
+const SCALE = { f_floor: 2, f_press: 1.5, f_mold: 1.0, f_crate: 1.5, f_hopper: 1.5, h_cont_c: 6, h_tank: 2.2, t_machine: 1.5, t_bench: 2.6, h_planks: 3, h_fish: 4, h_stand: 4, h_magnet: 2.2, t_pipe: 1.4, t_lever: 2, t_sign: 1.6, cont: 3.2, box_a: 4, cont_a: 3, cont_b: 3, cargo: 2, cargo_b: 3, k_cont_a: 6, k_cont_b: 6, k_machine: 1.5, k_hopper: 1.6, k_tank: 4, k_boxwide: 2.5, k_crate: 2.5, k_screen: 1.25, k_bucket: 4, k_pipe: 1.4, k_conveyor: 1.6 };
 
 /* 장면 만들기: 정적인 것은 재질별로 합쳐 그리기 수 줄이기 */
 export function build(P, scene) {
@@ -168,6 +171,7 @@ function buildExtras(P, map, statics, group, put, addBox) {
     const NA = 6; if (P.currents.length) { const im = new THREE.InstancedMesh(arrG, arrM, P.currents.length * NA); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; im.userData.keepGeo = true; group.add(im); out.arrowIM = im; }
     P.currents.forEach((c, ci) => { const arrows = []; for (let i = 0; i < NA; i++) arrows.push({ idx: ci * NA + i, k: i / NA, off: (i % 3 - 1) * 2.2 }); out.currents.push({ ...c, arrows, rot: Math.atan2(-c.dx, c.dz) + Math.PI }); });
   }
+  if (map === 'factory') buildFactory(P, statics, group, put, addBox, out, add, own);
   return out;
 }
 function radial(c0, c1) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, c0); g.addColorStop(1, c1); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }

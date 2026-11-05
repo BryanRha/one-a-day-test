@@ -1,13 +1,16 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.9';
-import * as ST from './story.js?v=0.99.9';
-import { ITEMS, QUESTS, MAPS, FACILITIES } from './data.js?v=0.99.9';
-import { A } from './assets.js?v=0.99.9';
-import { sfx, unlock } from './audio.js?v=0.99.9';
-import { StoryRaid } from './story_raid.js?v=0.99.9';
-import { ART } from './talk/art.js?v=0.99.9';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import { S, save, today } from './save.js?v=0.99.10';
+import * as ST from './story.js?v=0.99.10';
+import * as B from './board.js?v=0.99.10';
+import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.10';
+import { COS } from './look.js?v=0.99.10';
+import { A } from './assets.js?v=0.99.10';
+import { sfx, unlock } from './audio.js?v=0.99.10';
+import { StoryRaid } from './story_raid.js?v=0.99.10';
+import { NpcHome } from './npc_home.js?v=0.99.10';
+import { ART } from './talk/art.js?v=0.99.10';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
 
 const Q = new URLSearchParams(location.search);
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
@@ -17,17 +20,20 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.9'), t1: () => import('./talk/t1.js?v=0.99.9'), t2: () => import('./talk/t2.js?v=0.99.9'), t3: () => import('./talk/t3.js?v=0.99.9'), common: () => import('./talk/common.js?v=0.99.9'), memo: () => import('./talk/memo.js?v=0.99.9') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.10'), t1: () => import('./talk/t1.js?v=0.99.10'), t2: () => import('./talk/t2.js?v=0.99.10'), t3: () => import('./talk/t3.js?v=0.99.10'), t4: () => import('./talk/t4.js?v=0.99.10'), common: () => import('./talk/common.js?v=0.99.10'), memo: () => import('./talk/memo.js?v=0.99.10') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;
-const beatTalk = async b => (await talk('t' + Math.min(3, b.ch))).BEAT[b.id] || {};
+export const CH_MAX = 4; /* 대사 파일이 있는 마지막 장 */
+const tk = ch => 't' + Math.min(CH_MAX, ch);
+const beatTalk = async b => (await talk(tk(b.ch))).BEAT[b.id] || {};
 
 /* ───── 이름 (기기에만) ───── */
 let memName = null;
 export function getName() { try { const v = localStorage.getItem(ST.NAME_KEY); if (v) return ST.cleanName(v); } catch { /* */ } return memName || ST.NAME_DEFAULT; }
 export function setName(n) { memName = ST.cleanName(n); try { localStorage.setItem(ST.NAME_KEY, memName); } catch { /* */ } }
 const say = t => ST.say(t, getName());
+const rwTxt = r => Object.entries(r || {}).map(([k, n]) => k === 'shells' ? `조개 ${n}` : k === 'cos' ? `꾸미기 ${COS[n]?.name || ''}` : `${MATS[k]?.name || ITEMS[k]?.name || k} ${n}`).join(' · ');
 
 /* ───── 인물 그림 (assets/story/<id>_<표정>.webp — 아트 세션 · 없으면 실루엣) ───── */
 const ART_ID = { nole: 'noeul' };
@@ -42,6 +48,7 @@ const SIL = {
   baram: '<path d="M22 70q0-46 28-50q28 4 28 50z" opacity=".7"/><ellipse cx="50" cy="58" rx="19" ry="23"/><circle cx="50" cy="94" r="5" fill="#222"/>',
   nole: '<circle cx="50" cy="56" r="26"/><circle cx="50" cy="38" r="7" fill="#fff3c0"/><path d="M50 38l-34-20v40z" fill="rgba(255,240,180,.25)"/>',
   pasu: '<rect x="24" y="30" width="52" height="46" rx="8"/><circle cx="50" cy="53" r="9" fill="#6fe0d8"/>',
+  anchor: '<circle cx="50" cy="26" r="7" fill="none" stroke="#2a2c31" stroke-width="5"/><path d="M50 33v46M34 46h32M22 62q4 18 28 18q24 0 28-18" fill="none" stroke="#2a2c31" stroke-width="7" stroke-linecap="round"/>',
   mongi: '<ellipse cx="50" cy="60" rx="24" ry="21"/><circle cx="34" cy="42" r="5"/><circle cx="66" cy="42" r="5"/><circle cx="50" cy="64" r="4" fill="rgba(0,0,0,.4)"/>',
   box: '<rect x="20" y="36" width="60" height="42" rx="5"/><rect x="20" y="36" width="60" height="12" rx="4" fill="rgba(0,0,0,.25)"/><rect x="44" y="44" width="12" height="10" rx="2" fill="#ffd36b"/>',
 };
@@ -148,7 +155,8 @@ class Player {
     if (s.fx === 'join') { if (this.skipping) return; snd('windowLight'); await this.showCard(`<div class="cardwin">${portrait(s.who)}<i class="winlight"></i></div><b>초소 창에 불이 하나 더</b><small>${esc(whoName(s.who))} · ${esc(ST.CAST[s.who]?.role || '')} 합류</small>`, 1600); return; }
     if (s.fx === 'memo') { snd('memory'); const m = got.memo?.MEMO[s.item]; await this.showCard(`<div class="memoic">${A.icons[s.item] ? `<img src="${A.icons[s.item]}" alt="">` : ''}</div><small class="kick">기억 조각 · 첫 기록</small><b>${esc(ITEMS[s.item]?.name || '')}</b><p>${esc(say(s.txt || m?.[0] || ''))}</p>`, 0, true); if (!R) { st.codex[s.item] = Math.max(1, st.codex[s.item] || 0); st.flags.codexNew = 1; save(); } return; }
     if (s.fx === 'keymem') { if (R) return; if (!st.keyMem[s.id]) { if (!st.keyQ.includes(s.id)) st.keyQ.push(s.id); save(); this.skipping = false; await this.story.keyChooser(s.id, this); } return; }
-    if (s.fx === 'title') { if (this.skipping) return; snd('chapter'); await this.title(s.ch, s.soon); return; }
+    if (s.fx === 'title') { if (this.skipping) return; if (s.soon === 'nomap' && !ST.waitsMap(S, ST.BEATS.find(b => b.ch === s.ch))) return; /* 3장 끝: 공장 지도가 아직 없을 때만 '다음 업데이트' */ snd('chapter'); await this.title(s.ch, !!s.soon); return; }
+    if (s.fx === 'soon') { if (this.skipping) return; snd('chapter'); await this.showCard(`<small class="kick">이어지는 이야기</small><b>${esc(s.txt)}</b>`, 0, true); return; }
     if (s.fx === 'tomorrow') { if (this.skipping) return; await this.showCard(`<small class="kick">내일</small><b>${esc(s.txt.replace(/^내일:\s*/, ''))}</b>`, 0, true); if (!R) { st.tomorrow = s.txt; save(); } return; }
     if (s.fx === 'pulse') { if (!R) this.story.pulse = s.sel; return; }
     if (s.fx === 'codex') { if (!R) { st.flags.codexNew = 1; save(); } return; }
@@ -175,8 +183,10 @@ export class Story {
     this.app = app; this.ui = ui; this.player = new Player(this); this.busy = false;
     this.on = !(Q.has('bot') || ((Q.has('free') || Q.has('nostory')) && !Q.has('story')));
     this.raid = new StoryRaid(app, this);
+    this.home = new NpcHome(app, this);   /* v0.6 은신처 인물 3D (M3-C) */
+    this.ST = ST; this.B = B;   /* 시험 훅 (storytest) */
     /* 첫 진입 뒤 조용히 받아 둠 (은신처 대사 · 도감) */
-    setTimeout(() => { talk('common'); talk('memo'); const ch = ST.chapter(S); talk('t' + Math.min(3, ch)); if (S.story.tut < 4) talk('t0'); }, 1200);
+    setTimeout(() => { talk('common'); talk('memo'); const ch = ST.chapter(S); talk(tk(ch)); if (S.story.tut < 4) talk('t0'); }, 1200);
   }
   ctx(f) { const st = S.story; if (f === 'metBaram') return st.met.includes('baram'); return !!st.flags[f]; }
   async play(script, opt = {}) { if (!script) return; await this.player.play(script, { ctx: f => this.ctx(f), ...opt }); }
@@ -197,6 +207,7 @@ export class Story {
       }
       if (!stillHome()) return;
       const C = await talk('common'); await talk('memo');
+      this.boardTick(d);
       if (st.flags.welcome) { played = true; await this.play(C.WELCOME); delete st.flags.welcome; save(); }
       /* 녹음기 */
       while (st.tapeQ.length && stillHome()) { played = true; const id = st.tapeQ[0]; await this.playTape(id); st.tapeQ.shift(); if (!st.tapes.includes(id)) st.tapes.push(id); st.flags.codexNew = 1; save(); }
@@ -213,6 +224,7 @@ export class Story {
         if (b.last && !st.beatsDone[b.id]) ST.finishBeat(S, b, d, false);
         save();
       }
+      this.boardTick(d);
       /* 하루 끝 인사 */
       if (stillHome() && ST.dayEndDue(S, d)) { played = true; await this.dayEnd(C, d); }
     } catch (e) { console.warn('이야기', e); }
@@ -221,6 +233,8 @@ export class Story {
       if (played && stillHome()) { if (this.wantTab) { ui.tab = this.wantTab; this.wantTab = null; } ui.hideout(); }
     }
   }
+  /* 판 의뢰: 은신처에서 끝나는 것 (시설 · 무기 · 도감 · 이야기 걸음 · 지도 열기) */
+  boardTick(d) { const bq = B.boardTick(S, d); if (!bq.length) return; save(); this.ui.questDone(bq); if (bq.some(q => q.map)) this.app.preloadMaps?.(); }
   /* ───── 튜토리얼 시작: 프롤로그 → 이름 → 장면 1 → 첫 판 ───── */
   async tutorialStart() {
     const t0 = await talk('t0'); S.firstRun = false; save();
@@ -285,20 +299,40 @@ export class Story {
     sp.prepend(post); this.lampFlash = null;
     post.querySelectorAll('.win:not([disabled])').forEach(b => b.onclick = () => { unlock(); snd('ui'); this.chat(b.dataset.who); });
     post.querySelector('.lamps').onclick = () => this.codex('key');
-    const cx = h('button', 'wardpill codexpill', `${st.joined.includes('seori') ? '서리의 기록 도감' : '기억 조각'}${st.flags.codexNew ? '<i class="dot"></i>' : ''}`); cx.id = 'codexBtn';
+    const cx = h('button', 'wardpill codexpill', `${st.joined.includes('seori') ? '기록 도감' : '기억 조각'}${st.flags.codexNew ? '<i class="dot"></i>' : ''}`); cx.id = 'codexBtn';
     cx.onclick = () => { unlock(); snd('ui'); this.codex(); }; sp.appendChild(cx);
     if (this.pulse) { $(this.pulse, el)?.classList.add('pulse'); if (st.tut >= 4) this.pulse = null; }
     const how = $('#how', el); if (how) { how.textContent = '설정'; how.onclick = () => this.settings(); }
+    /* 인물 의뢰 납품 (의뢰 탭 카드 — 탭 내용은 나중에 그려지므로 위임) */
+    el.addEventListener('click', e => { const b = e.target.closest('[data-bq]'); if (!b) return; e.stopPropagation(); unlock();
+      const r = B.boardDeliver(S, b.dataset.bq, today()); if (!r.ok) { snd('empty'); this.ui.toast('아직 모자라요', 'soft'); return; }
+      save(); this.ui.questDone([r.q]); const t = got.common?.QTALK[r.q.id]; if (t?.done && ST.present(S, r.q.giver)) setTimeout(() => this.ui.toast(`${whoName(r.q.giver)}: ${say(t.done)}`, 'good'), 900); this.ui.hideout(); });
+    if (B.deliverReady(S, d)) { const qt = el.querySelector('.tabs button[data-t="quest"]'); if (qt && !qt.querySelector('.dot')) qt.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); }
+    this.home?.sync(el);
   }
-  /* 의뢰 탭 위: 이야기 의뢰 카드 */
-  questHtml() {
-    const st = S.story; const b = ST.openBeat(S); const bt = b && got['t' + Math.min(3, b.ch)]?.BEAT[b.id];
+  /* 의뢰 탭 위: 이야기 의뢰 카드 + 인물 의뢰(판 의뢰) */
+  questHtml() { return this.beatHtml() + this.boardHtml(); }
+  beatHtml() {
+    const st = S.story; const b = ST.openBeat(S); const bt = b && got[tk(b.ch)]?.BEAT[b.id];
     if (b?.goal) return `<div class="qcard story"><small>이야기 의뢰 · ${b.ch}장 「${esc(ST.CHAPTERS[b.ch].name)}」${b.goal.map ? ` · ${MAPS[b.goal.map].icon} ${MAPS[b.goal.map].name}` : ''}</small><h3>${esc(b.name)}</h3>
       ${bt?.ask && ST.present(S, b.giver) ? `<div class="giver">${portrait(b.giver)}<p><b>${esc(whoName(b.giver))}</b> ${esc(say(bt.ask))}</p></div>` : ''}<p>${esc(b.txt || '')}</p>${b.reward ? '<small class="hint">보상: 은신처에서 이야기와 함께</small>' : ''}</div>`;
     if (st.tut < 4) return '';
-    const nx = ST.beatNow(S); if (!nx) return '<div class="note good st-note">이야기 1~3장을 모두 봤어요. 4장은 다음 업데이트에서.</div>';
+    const nx = ST.beatNow(S); if (!nx) return '<div class="note good st-note">4장 도입까지 봤어요. 4장 「불을 만든 곳」은 다음 업데이트에서 이어져요.</div>';
+    if (ST.waitsMap(S, nx)) return `<div class="note good st-note">이야기 1~3장을 모두 봤어요. ${nx.ch}장 「${esc(ST.CHAPTERS[nx.ch].name)}」은 다음 업데이트에서.</div>`;
     const qn = nx.need?.q && QUESTS.find(q => q.id === nx.need.q).name; const wait = qn && !S.quests.done.includes(nx.need.q) ? `의뢰 '${qn}'${ST.say('{name:을/를}', qn).slice(qn.length)} 끝내면` : '내일';
     return `<div class="note st-note">다음 이야기: <b>${wait}</b> 열려요 · 은포는 하루에 조금씩 열려요</div>`;
+  }
+  /* 인물 의뢰 — 와 있는 인물이 주는 의뢰 (앞에서 4개 + 매주 납품) · 납품 버튼은 decorate 의 위임 클릭 */
+  boardHtml() {
+    const d = today(); const C = got.common; const act = B.active(S, d); const wait = B.waiting(S, d); if (!act.length) return '';
+    if (!C) talk('common').then(() => { if (this.ui.root.className === 'scr-hideout' && this.ui.tab === 'quest' && !this.busy) this.ui.hideout(); }); /* 대사 파일이 아직이면 받은 뒤 다시 */
+    const kind = { char: '인물', boss: '보스', chal: '도전', repeat: '매주', story: '이야기' };
+    const card = q => { const p = B.progress(S, q); const t = C?.QTALK[q.id]; const g = q.goal; const ready = g.t === 'deliver' && p.cur >= p.n;
+      const map = g.map && MAPS[g.map] ? ` · ${MAPS[g.map].icon} ${esc(MAPS[g.map].name)}` : '';
+      return `<div class="bq k-${q.kind}" data-q="${q.id}">${portrait(q.giver, 'sm')}<div class="bqb"><small class="bk">${kind[q.kind] || ''}${map}</small><b class="bn">${esc(q.name)}</b>${t?.give ? `<p class="bl">${esc(say(t.give))}</p>` : ''}<p class="bt">${esc(q.txt)}</p>
+        ${p.n > 1 ? `<div class="qbar"><i style="width:${(p.cur / p.n * 100).toFixed(0)}%"></i><span>${p.cur}/${p.n}</span></div>` : ''}<small class="brw">보상 ${esc(rwTxt(q.reward))}</small>${g.t === 'deliver' ? `<button class="btn sm bdel ${ready ? '' : 'dim'}" data-bq="${q.id}">납품하기</button>` : ''}</div></div>`; };
+    const once = act.filter(q => !q.repeat), rep = act.filter(q => q.repeat);
+    return `<div class="bqs">${once.length ? `<div class="sec">인물 의뢰 <small>${once.length}${wait ? ` · 다음 차례 ${wait}` : ''}</small></div>${once.map(card).join('')}` : ''}${rep.length ? `<div class="sec">이번 주 납품 <small>매주 월요일 다시</small></div>${rep.map(card).join('')}` : ''}</div>`;
   }
   /* 지금 의뢰 카드: 의뢰인 한 마디 (아직 안 온 사람은 무전) */
   giverHtml(q) {
@@ -314,7 +348,7 @@ export class Story {
   resultHtml(res) {
     const so = res.story || {}; const C = got.common, M = got.memo; const out = []; const t0 = got.t0;
     if (so.tut === 1 && t0) out.push(`<div class="card st-say">${portrait('gombang')}<p><b>곰방</b> ${esc(res.outcome === 'extract' ? t0.RESULT_TUT.ok : t0.RESULT_TUT.ko)}</p></div>`);
-    for (const q of res.quests || []) {
+    for (const q of [...(res.quests || []), ...(so.board || []).map(id => B.QBY[id]).filter(Boolean)]) {
       const t = C?.QTALK[q.id]; const v = ST.giverVoice(S, q.giver); const line = t && !(so.tut === 1 && q.id === 'q1') ? (v.relay ? (C.QRELAY?.done || '').replace('{role}', v.relay) : t.done) : '';
       const extra = `${q.unlock ? FACILITIES[q.unlock].name + ' 해금! ' : ''}${q.map ? `새 지도 ${MAPS[q.map].name}! ` : ''}`;
       out.push(`<div class="card st-gold ${q.kind === 'story' ? 'sg-story' : ''}">${portrait(v.id, 'sm')}<div><small class="kick">의뢰 완료${extra ? ' · ' + esc(extra.trim()) : ''}</small><b class="gt">${esc(q.name)}</b>${line ? `<p><b>${esc(whoName(v.id))}</b> ${esc(say(line))}</p>` : '<p>보상을 받았어요</p>'}${t?.lore ? `<small class="lore">이야기 조각 · ${esc(say(t.lore))}</small>` : ''}</div></div>`);
@@ -332,7 +366,7 @@ export class Story {
   /* ───── 은신처 말 걸기 ───── */
   async chat(who) {
     if (this.busy) return; this.busy = true; const C = await talk('common'); const st = S.story; const d = today(); const pool = C.SMALL[who] || [];
-    const ok = (t) => (!t.rel || (st.rel[who] || 0) >= t.rel) && (!t.ch || ST.chapter(S) >= t.ch);
+    const ok = (t) => (!t.rel || (st.rel[who] || 0) >= t.rel) && (!t.ch || ST.chapter(S) >= t.ch) && (!t.beat || st.beatsDone[t.beat]);
     let i = st.talkIdx[who] || 0; const fresh = st.talkDay[who] !== d;
     let pickI = -1; if (fresh) for (let j = i; j < pool.length; j++) if (ok(pool[j])) { pickI = j; break; }
     if (pickI < 0) { const can = pool.map((t, j) => ok(t) ? j : -1).filter(j => j >= 0); pickI = can[(Date.now() / 1000 | 0) % Math.max(1, can.length)] ?? 0; }
@@ -353,8 +387,8 @@ export class Story {
       const lamps = Object.entries(ST.SIDES).map(([s, S2]) => `<div class="lampc"><i class="lamp" style="--c:${S2.color};--b:${(0.12 + ST.lampLevel(S, s) * 0.88).toFixed(2)}"></i><small>${S2.name}</small></div>`).join('');
       let body = '';
       if (tab === 'memo') body = `<div class="cgrid">${ST.CODEX_KEYS.map(k => { const n = st.codex[k] || 0; return `<button class="cc ${n ? '' : 'no'} ${ITEMS[k].cat === 'memo' ? 'story' : ''}" data-k="${k}">${n ? `<img src="${A.icons[k] || ''}" alt="">` : '<span>?</span>'}${n >= 3 && M.MEMO[k]?.[1] ? '<i class="three">✦</i>' : ''}</button>`; }).join('')}</div><div class="cdetail" id="cdet"><small class="hint">칸을 누르면 사연이 보여요 · 같은 물건을 세 번 건지면 한 줄 더</small></div>`;
-      if (tab === 'key') body = `<div class="lampbox">${lamps}</div><small class="hint center">세 등불은 열쇠 기억을 누구에게 맡겼는지, 장 끝에 무엇을 골랐는지에 따라 밝아져요</small><div class="klist">${Object.entries(ST.KEYMEM).map(([id, K]) => { const w = st.keyMem[id]; return `<div class="kl ${w ? '' : 'no'}"><i class="lampdot" style="--c:${w ? ST.SIDES[ST.SIDE_OF[w]].color : '#3a4a52'}"></i><div><b>${w ? esc(K.name) : '???'}</b><small>${w ? `${K.ch}장 · ${esc(whoName(w))}에게 맡김` : `${K.ch}장에서`}</small></div></div>`; }).join('')}${Array.from({ length: ST.KEY_TOTAL - Object.keys(ST.KEYMEM).length }, (_, i) => `<div class="kl no"><i class="lampdot"></i><div><b>???</b><small>${4 + Math.floor(i / 2)}장에서 (다음 업데이트)</small></div></div>`).join('')}</div>`;
-      if (tab === 'tape') body = `<div class="sec">녹음기 <small>${st.tapes.length}/9</small></div><div class="tlist">${Object.keys(M.TAPE).map(id => { const has = st.tapes.includes(id); return `<button class="tl ${has ? '' : 'no'}" data-t="${id}" ${has ? '' : 'disabled'}><b>${has ? esc(M.TAPE[id].who) : '???'}</b><small>${MAPS[Object.keys(ST.TAPES).find(m2 => ST.TAPES[m2].includes(id))].name}</small></button>`; }).join('')}</div>
+      if (tab === 'key') body = `<div class="lampbox">${lamps}</div><small class="hint center">세 등불은 열쇠 기억을 누구에게 맡겼는지, 장 끝에 무엇을 골랐는지에 따라 밝아져요</small>${this.endingHtml()}<div class="klist">${Object.entries(ST.KEYMEM).map(([id, K]) => { const w = st.keyMem[id]; return `<div class="kl ${w ? '' : 'no'}"><i class="lampdot" style="--c:${w ? ST.SIDES[ST.SIDE_OF[w]].color : '#3a4a52'}"></i><div><b>${w ? esc(K.name) : '???'}</b><small>${w ? `${K.ch}장 · ${esc(whoName(w))}에게 맡김` : `${K.ch}장에서`}</small></div></div>`; }).join('')}${Array.from({ length: ST.KEY_TOTAL - Object.keys(ST.KEYMEM).length }, (_, i) => `<div class="kl no"><i class="lampdot"></i><div><b>???</b><small>${4 + Math.floor(i / 2)}장에서 (다음 업데이트)</small></div></div>`).join('')}</div>`;
+      if (tab === 'tape') body = `<div class="sec">녹음기 <small>${st.tapes.length}/${ST.TAPE_N}</small></div><div class="tlist">${Object.keys(M.TAPE).map(id => { const has = st.tapes.includes(id); return `<button class="tl ${has ? '' : 'no'}" data-t="${id}" ${has ? '' : 'disabled'}><b>${has ? esc(M.TAPE[id].who) : '???'}</b><small>${MAPS[Object.keys(ST.TAPES).find(m2 => ST.TAPES[m2].includes(id))].name}</small></button>`; }).join('')}</div>
         <div class="sec">벽 낙서 <small>${st.graf.length}/${Object.keys(M.GRAF).length * ST.GRAF_N}</small></div><div class="glist">${st.graf.length ? st.graf.map(g => { const [mp, i] = g.split(':'); return `<p>“${esc(M.GRAF[mp]?.[+i] || '')}”<small>${esc(MAPS[mp]?.name || '')}</small></p>`; }).join('') : '<small class="hint">판 안에서 반짝이는 낙서 위를 지나가면 기록돼요</small>'}</div>`;
       m.innerHTML = `<div class="sheet big"><div class="ch"><div><small class="kick">${seori ? '기록관 서리' : '곰방의 메모 — 사연은 기록관이 오면 더'}</small><h3>${seori ? '서리의 기록 도감' : '기억 조각'}</h3></div><button class="x" id="cxX">✕</button></div>
         <p class="cprog"><b>${found}</b> / ${ST.CODEX_KEYS.length}칸 · 은포가 ${found}칸만큼 덜 잊혔어요</p>
@@ -370,6 +404,12 @@ export class Story {
     draw();
   }
 
+  /* 세 등불 → 엔딩 (6장 끝에서 문턱을 넘은 등불의 엔딩이 모두 선택지로 — 숫자 없이 문장으로만) */
+  endingHtml() {
+    const top = ST.brightest(S); const open = ST.endingsOpen(S);
+    if (!top) return '<p class="endl">아직 어느 등불도 밝지 않아요. 열쇠 기억을 맡기면 그 사람 쪽 등불이 밝아져요.</p>';
+    const E = ST.ENDINGS; return `<p class="endl">지금 가장 밝은 등불: <b style="color:${ST.SIDES[top].color}">${ST.SIDES[top].name}</b> — 이대로라면 끝에 「${esc(E[top].name)}」의 길이 열려 있어요.${open.length > 1 ? ` 다른 길도 ${open.length - 1}개 열려 있어요.` : ''}</p>`;
+  }
   /* ───── 설정 · 기록실 ───── */
   settings() {
     const st = S.story; const done = ST.BEATS.filter(b => st.beatsDone[b.id] && !b.tut);
@@ -401,5 +441,5 @@ export class Story {
   raidTick(dt) { this.raid.tick(dt); }
   raidEnd() { this.raid.detach(); }
   onLoot(c) { this.raid.onLoot(c); }
-  afterRaid(res) { const so = ST.afterRaid(S, res, today()); res.story = so; return so; }
+  afterRaid(res) { const d = today(); const bq = B.boardRaid(S, res, d); const so = ST.afterRaid(S, res, d); so.board = bq.map(q => q.id); res.story = so; return so; }
 }

@@ -3,6 +3,7 @@
 //  창고: 먼 물 흐름 · 물방울(음높이가 휘는 공기 방울) · 철 삐걱(붙었다 미끄러지는 마찰) · 형광등 웅(정전이면 꺼지고 불꽃 지지직) · 기관실 웅웅(구역 3) · 침수면 물 쏟아짐
 //  항구(밤): 바람(돌풍 · 무작위 걷기) · 파도(밀려옴 → 부서짐 → 빠짐) · 밧줄 · 배 삐걱 · 선체 '통' · 폭풍이면 비 + 센 바람 + 휘파람 · 안개면 바람 잦고 먼 무적(霧笛) · 정전이면 부두 등 웅 끊김
 //  터널: 수압 웅웅(저음 + 폰에서 들리는 배음) · 누수 쉬익 + 물줄기 · 먼 전기 지지직 · 금속 신음 · 급류(판 상태 · 몰려오는 25초)면 물살 · 정전이면 전기 웅 끊김
+//  공장(M3-B): 먼 기계 박동(낮은 '쿵' · 불규칙) · 쇠 부딪는 소리(멀리 · 넓게) · 증기 쉬익(증기 판이면 많이) · 용광로 웅(과열이면 크게) · 사슬 삐걱 · 물 흐름 · 정전이면 전기 웅 끊기고 기계 박동이 잦아듦
 //  반복감 줄이기: 잡음 버퍼 길이를 서로 안 맞게(5.3 · 6.7초) · 바닥은 LFO 대신 무작위 걷기 · 사건은 포아송(간격 무작위) · 높이 · 팬 · 거리(필터 · 울림) 매번 다름
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -91,6 +92,14 @@ export function createEnv({ ctx, out, rev }) {
     for (const det of [-5, 4]) { const s = c.createOscillator(); s.type = 'sawtooth'; s.frequency.value = 73.4; s.detune.value = det; s.connect(f); s.start(t); s.stop(t + L + 1.6); }
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.5); g.gain.setValueAtTime(v, t + L); g.gain.exponentialRampToValueAtTime(0.0001, t + L + 1.5); }
   /* 물 쏟아짐 · 꿀럭(물방울 여럿이 낮게 몰림) */
+  /* 공장: 먼 프레스 '쿵'(저음 미끄러짐 + 쇠 모드 · 울림 많이) · 쇠 부딪힘(비조화 모드 셋 · 멀리) · 증기 쉬익(높은 잡음이 빠르게 차오르고 길게 빠짐) */
+  function thump(bus, t, v) { const pp = pan(rnd(-0.6, 0.6)); pp.connect(bus); send(pp, 0.7); const g = gn(0.0001); g.connect(pp); const s = c.createOscillator(); s.frequency.setValueAtTime(rnd(62, 74), t); s.frequency.exponentialRampToValueAtTime(34, t + 0.35); s.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5); s.start(t); s.stop(t + 0.55);
+    const f0 = rnd(150, 210); for (const [r, a, d] of [[1, 0.35, 0.9], [2.31, 0.18, 0.6], [3.9, 0.08, 0.35]]) { const o = c.createOscillator(); o.frequency.value = f0 * r; const og = gn(0.0001); o.connect(og); og.connect(pp); og.gain.setValueAtTime(0.0001, t + 0.01); og.gain.linearRampToValueAtTime(v * a, t + 0.014); og.gain.exponentialRampToValueAtTime(0.0001, t + d); o.start(t); o.stop(t + d + 0.05); } }
+  function clang(bus, t, v) { const pp = pan(rnd(-0.9, 0.9)); pp.connect(bus); send(pp, 0.75); const lp = bq('lowpass', rnd(1800, 3200), 0.5); lp.connect(pp); const f0 = rnd(280, 720);
+    for (const [r, a, d] of [[1, 1, 0.8], [2.76, 0.5, 0.5], [5.4, 0.25, 0.25]]) { const o = c.createOscillator(); o.frequency.value = f0 * r * rnd(0.99, 1.01); const og = gn(0.0001); o.connect(og); og.connect(lp); og.gain.setValueAtTime(0.0001, t); og.gain.linearRampToValueAtTime(v * a, t + 0.003); og.gain.exponentialRampToValueAtTime(0.0001, t + d * rnd(0.8, 1.3)); o.start(t); o.stop(t + d * 1.4 + 0.05); } }
+  function hiss(bus, t, v) { const pp = pan(rnd(-0.8, 0.8)); pp.connect(bus); send(pp, 0.35); const s = c.createBufferSource(); s.buffer = NZ.pink; const hp = bq('highpass', 1800, 0.5), bp = bq('bandpass', rnd(3500, 5200), 0.7), g = gn(0.0001); s.connect(hp); hp.connect(bp); bp.connect(g); g.connect(pp);
+    const L = rnd(0.8, 1.8); bp.frequency.setTargetAtTime(bp.frequency.value * 0.6, t + 0.2, L * 0.5); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + rnd(0.03, 0.1)); g.gain.exponentialRampToValueAtTime(0.0001, t + L); s.start(t, rnd(0, 4)); s.stop(t + L + 0.05); }
   function gurgle(bus, t, v) { const n = Math.round(rnd(3, 7)), p = rnd(-0.7, 0.7); for (let i = 0; i < n; i++) drip(bus, t + i * rnd(0.03, 0.08), { f: rnd(250, 600), v, pan: p + rnd(-0.1, 0.1), d: 0.5, splash: false }); }
 
   /* ───── 지도마다: 바닥 목록 · 상태 → 음량 · 사건 빠르기(초당) ───── */
@@ -135,6 +144,20 @@ export function createEnv({ ctx, out, rev }) {
       ev: s => ({ drip: 1.1 + s.zone * 0.3, spark: s.dark ? 0.06 : 0.16, groan: 0.04 + s.zone * 0.02, gurgle: s.surge ? 0.6 : 0.1 }),
       fire: { drip: (b, t) => drip(b, t, { v: 0.055, d: rnd(0.2, 1) }), spark: (b, t, s) => crackle(b, t, { v: s.dark ? 0.06 : 0.035, far: rnd(0.5, 1) }),
         groan: (b, t) => creak(b, t, { v: 0.06, f: rnd(110, 220), modes: [[1, 22, 1], [1.5, 16, 0.4], [2.6, 12, 0.25]], wet: 0.7 }), gurgle: (b, t) => gurgle(b, t, 0.035) },
+    },
+    /* 가라앉은 공장 (M3-B) */
+    factory: { gain: 0.72,
+      beds: {
+        flow: { kind: 'brown', f: [['bandpass', 380, 0.6], ['lowpass', 1000, 0.5]], wide: true, wet: 0.35, wander: { every: [1.5, 3.5], f: [0.8, 1.25], g: [0.8, 1.15], tc: 1.2 } },
+        machine: { drone: 1, hz: [[49, 1], [98, 0.6], [147, 0.3, 'triangle'], [196, 0.12, 'sawtooth']], cut: 420, wet: 0.35, wander: { every: [1.2, 2.6], g: [0.6, 1.3], tc: 0.5 } },
+        steam: { kind: 'pink', f: [['bandpass', 4200, 0.9], ['highpass', 1800, 0.5]], wide: true, wet: 0.3, wander: { every: [0.3, 1.2], f: [0.8, 1.25], g: [0.4, 1.4], tc: 0.25 } },
+        roar: { kind: 'brown', f: [['lowpass', 320, 0.7], ['peaking', 120, 1, 4]], wide: true, wet: 0.25, wander: { every: [0.4, 1.4], f: [0.8, 1.3], g: [0.7, 1.3], tc: 0.4 } },
+        hum: { drone: 1, hz: [[60, 0.6, 'sawtooth'], [120, 0.3]], cut: 600, wet: 0.2, wander: { every: [2, 5], g: [0.85, 1.1] } },
+      },
+      lv: s => ({ flow: 0.07 + (s.flood ? 0.05 : 0), machine: s.dark ? 0.012 : 0.03 + s.zone * 0.006, steam: s.cond === 'steam' ? 0.03 : 0.007, roar: s.cond === 'overheat' ? 0.06 : 0.018 + (s.zone === 2 ? 0.014 : 0), hum: s.dark ? 0 : 0.018 }),
+      ev: s => ({ thump: s.dark ? 0.2 : 0.55, clang: 0.16 + s.zone * 0.04, hiss: s.cond === 'steam' ? 0.35 : 0.1, drip: 0.5, spark: s.dark ? 0.12 : 0.04, chain: 0.06, gurgle: s.flood ? 0.15 : 0.04 }),
+      fire: { thump: (b, t) => thump(b, t, 0.12), clang: (b, t) => clang(b, t, 0.045), hiss: (b, t) => hiss(b, t, 0.045), drip: (b, t) => drip(b, t, { v: 0.05, d: rnd(0.3, 1) }),
+        spark: (b, t) => crackle(b, t, { v: 0.05, far: rnd(0.4, 0.9) }), chain: (b, t) => creak(b, t, { v: 0.05, f: rnd(600, 1100), modes: [[1, 18, 1], [2.7, 14, 0.5]], wet: 0.6 }), gurgle: (b, t) => gurgle(b, t, 0.04) },
     },
   };
 

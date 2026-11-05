@@ -4,19 +4,19 @@
 //   아이템 누르면 입어 보기(안 가진 것도 미리보기) + 능력치 비교(지금 → 바꾸면) + 얻는 길(플레이 · 의뢰 · 조개 · 원어데이 골드 — bmflow, 원어데이 밖이면 골드 숨김)
 //   [되돌리기] 처음으로 · [이대로 출격 준비] 저장 후 출격 준비
 import * as THREE from 'three';
-import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.9';
-import { S, save } from './save.js?v=0.99.9';
-import * as E from './econ.js?v=0.99.9';
-import * as BM from './bmflow.js?v=0.99.9';
-import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf } from './look.js?v=0.99.9';
-import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.9';
-import { sfx } from './audio.js?v=0.99.9';
+import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.10';
+import { S, save } from './save.js?v=0.99.10';
+import * as E from './econ.js?v=0.99.10';
+import * as BM from './bmflow.js?v=0.99.10';
+import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf } from './look.js?v=0.99.10';
+import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.10';
+import { sfx } from './audio.js?v=0.99.10';
 
 const $ = (s, r = document) => r.querySelector(s);
 const pct = x => Math.round(x * 100) + '%';
 const TABS = [['weapon', '무기'], ['head', '머리'], ['body', '몸'], ['back', '등'], ['face', '얼굴'], ['fur', '털'], ['pet', '몽이']];
 const VIEWS = [['front', '정면', 0], ['side', '측면', Math.PI / 2], ['back', '뒤', Math.PI], ['top', '위(게임)', Math.PI]];
-const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
 const clone = o => JSON.parse(JSON.stringify(o));
 
 export class Wardrobe {
@@ -104,7 +104,7 @@ export class Wardrobe {
     if (t === 'weapon') {
       for (const k of WEAPON_KEYS) out.push({ id: k, weapon: k, name: WEAPONS[k].name, sw: WEAPONS[k].color, own: !!S.weapons[k], on: d.main === k });
       out.push(...cos('skin'));
-      return { equip: `${WEAPONS[d.main].name} · 개조 ${MOD_KEYS.map(m => (S.weapons[d.main]?.[m] || 0) ? `${MODS[m].name} Mk${S.weapons[d.main][m]}` : '').filter(Boolean).join(' · ') || '없음'}`, skin: L.skin ? COS[L.skin].name : '기본 색', slot: 'skin', items: out, note: '개조 부품은 스킨을 씌워도 늘 총 위에 보여요 · 개조는 무기 탭에서' };
+      return { equip: `${WEAPONS[d.main].name} · 개조 ${MOD_KEYS.map(m => (S.weapons[d.main]?.[m] || 0) ? `${MODS[m].name} ${['', 'Mk1', 'Mk2', 'Mk3', '특수'][S.weapons[d.main][m]]}` : '').filter(Boolean).join(' · ') || '없음'}`, skin: L.skin ? COS[L.skin].name : '기본 색', slot: 'skin', items: out, note: '개조 부품은 스킨을 씌워도 늘 총 위에 보여요 · 개조는 무기 탭에서' };
     }
     if (t === 'head') return { equip: S.gear.helmet ? `헬멧 ${ROMAN[S.gear.helmet]} (${GEAR.helmet.tiers[S.gear.helmet].txt})` : '헬멧 없음 · 기본 헤드램프', skin: L.head ? COS[L.head].name : '장착한 모습 그대로', slot: 'head', items: [...tiers('helmet', '헬멧', '#8e979f'), ...cos('head')], note: '겉모습만 바뀌어요 · 능력치 그대로' };
     if (t === 'body') return { equip: S.gear.vest ? `방어구 ${ROMAN[S.gear.vest]} (${GEAR.vest.tiers[S.gear.vest].txt})` : '방어구 없음 · 기본 잠수복', skin: L.body ? COS[L.body].name : '장착한 모습 그대로', slot: 'body', items: [...tiers('vest', '방어구', '#6e7650'), ...cos('body')], note: '3단 방어구를 입고 화면엔 우비 — 능력치는 3단 그대로' };

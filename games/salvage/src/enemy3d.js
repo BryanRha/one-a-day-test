@@ -5,26 +5,27 @@
 //  · 재질: pal(빛 받음 · 맞으면 번쩍) · glow(빛남) · eye(게임이 색을 바꾸는 빛 = 약점 · 눈빛 · 코어). 모두 정점 색 → 적 하나 = 그리기 2~3번
 //  · 받기 전이면 null → raid.js 가 예전 모델로 그림(안전망)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.9';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.9';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.9';
-import { A } from './assets.js?v=0.99.9';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.10';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.10';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.10';
+import { A } from './assets.js?v=0.99.10';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 export const EN = { tpl: {}, packs: {}, bytes: 0 };
-const FILES = { ware: 'enemy_ware.glb', harbor: 'enemy_harbor.glb', tunnel: 'enemy_tunnel.glb' };
+const FILES = { ware: 'enemy_ware.glb', harbor: 'enemy_harbor.glb', tunnel: 'enemy_tunnel.glb', factory: 'enemy_factory.glb' };
 /* 해골 계열 몸 키: 종류 → 부착물 (지도마다 물먹은 · 젖은 선원 · 물때) */
 const SKEL = { skel: m => 'att_' + m, lamp: () => 'att_lamp', miner: () => 'att_miner' };
 /* 예전 KayKit 몸의 보이는 크기 그대로 (fitHeight 가 투구 · 두건까지 쟀던 값) */
-const SKEL_SCALE = { att_ware: 1.8 / 2.166, att_harbor: 1.8 / 2.166, att_tunnel: 1.8 / 2.166, att_lamp: 1.8 / 2.308, att_miner: 1.95 / 2.59 };
+const SKEL_SCALE = { att_ware: 1.8 / 2.166, att_harbor: 1.8 / 2.166, att_tunnel: 1.8 / 2.166, att_lamp: 1.8 / 2.308, att_miner: 1.95 / 2.59, att_factory: 1.8 / 2.166 };
 const OLD = typeof location !== 'undefined' && /oldenemy/.test(location.search);
-const DRONE = { ware: 'drone_w', harbor: 'drone_h', tunnel: 'drone_t' };
+const DRONE = { ware: 'drone_w', harbor: 'drone_h', tunnel: 'drone_t', factory: 'drone_f' };
+const ANCHOR = { raider: 1, brute: 1, bomber: 1 }; /* M3-B 검은 닻 (쥐 · 오소리 · 흰족제비) — 뼈 + 동작 모델 */
 
 /* 보스 화면 배율 (v0.5.2 · 대표 '의견대로') — 보이는 모델만 키움. 판정 반지름 · 패턴 거리 · 예고 원 · 밸런스는 그대로
  *  수문지기 1.4: 이미 어깨가 넓은 덩치 → 조금만 키워도 방을 누름 (1.5면 팔이 주인공 쪽 예고 원 밖까지 덮음)
  *  갈고리 선장 1.5: 마른 뼈 실루엣 + 밤 화면 → 키가 주인공 1.7배여도 위에서 보면 얇아 보스 같지 않음 = 가장 크게
  *  터널 장어 1.3: 몸이 이미 6m 넘게 길어 → 굵기만 살짝 (더 키우면 꼬리가 방 벽을 뚫고 나감) */
-export const BOSS_VIS = { boss: 1.4, captain: 1.5, eel: 1.3 };
+export const BOSS_VIS = { boss: 1.4, captain: 1.5, eel: 1.3, smelter: 1.3 }; /* 쇳물 감독관 1.3: 국자 팔이 이미 옆으로 넓음 (더 키우면 붓기 줄 시작점이 몸 밖) */
 export const bossVis = kind => (typeof location !== 'undefined' && /bossbase/.test(location.search)) ? 1 : BOSS_VIS[kind] || 1; /* ?bossbase = 설계 크기(전/후 비교) */
 /* 빛 스프라이트 텍스처 (하양 → 투명 원). 지도 없는 SpriteMaterial 은 네모로 그려짐 → 빛 스프라이트는 꼭 이걸 씀 (v0.5.2 하얀 네모 버그) */
 let glowT = null;
@@ -100,21 +101,26 @@ export function enemyBody(kind, map, elite) {
     const segs = []; for (let i = 0; i < 11; i++) { const t = i * 0.6 / 6.4; segs.push({ m: c.bone('seg' + i), p: new THREE.Vector3(), r: 0.56 * (1 - t ** 1.4 * 0.85) }); }
     return { custom: true, boss: true, root: c.root, segs, glowM: c.mats.eye, finM: c.mats.glow, jaw: c.bone('jaw'), mats: list(c), meta: c.T.meta };
   }
-  const key = kind === 'boss' ? 'gate' : kind === 'captain' ? 'captain' : SKEL[kind]?.(map);
+  if (ANCHOR[kind]) { /* 검은 닻: 쉬는 자세 = 무기 든 자세 · 동작 이름 KayKit 식 + Aim · Shoot · Crouch */
+    const c = clone(kind); if (!c) return null; if (elite) c.mats.pal.color.setRGB(0.8, 0.78, 0.86);
+    const g = new THREE.Group(); g.add(c.root); blobShadow(g, 0, 0.32);
+    return { custom: true, boss: false, key: kind, root: g, clips: c.T.clips, scale: 1, mats: list(c), eyeM: c.mats.eye, meta: c.T.meta, chest: c.bone('chest') };
+  }
+  const key = kind === 'boss' ? 'gate' : kind === 'captain' ? 'captain' : kind === 'smelter' ? 'smelter' : SKEL[kind]?.(map);
   if (!key) return null;
   const c = clone(key); if (!c) return null;
   const att = c.T.kind === 'attach';
   /* 수문지기 약점: 가슴 보관함 안쪽 빛 (뒤판 앞 · 이름표 뒤 판 + 문 앞 빛 테) — 평소엔 숨김, 약점 때 문이 열리며 켜짐 */
   let weak = null; const chest = c.bone('chest');
-  if (key === 'gate' && chest) {
+  if ((key === 'gate' || key === 'smelter') && chest) { const sm = key === 'smelter'; /* 쇳물 감독관: 가슴 용광로 문 안 (같은 규칙 · 같은 빛) */
     const pm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.56), pm); plate.position.set(0, 0.11, 0.718); chest.add(plate);
-    const halo = glowSprite(0xffd890, 0, 1.6); halo.position.set(0, 0.11, 0.86); chest.add(halo);
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(sm ? 0.78 : 0.68, sm ? 0.66 : 0.56), pm); plate.position.set(0, sm ? 0.1 : 0.11, sm ? 0.9 : 0.718); chest.add(plate);
+    const halo = glowSprite(0xffd890, 0, 1.6); halo.position.set(0, sm ? 0.1 : 0.11, sm ? 1.02 : 0.86); chest.add(halo);
     weak = { g: [plate, halo], plateM: pm, haloM: halo.material, k: 0 }; plate.visible = halo.visible = false;
   }
   if (att && elite) c.mats.pal.color.setRGB(0.82, 0.76, 0.7);
   const clips = att ? Object.fromEntries((A.skel?.animations || []).map(a => [a.name, a])) : c.T.clips;
-  return { custom: true, boss: !att, key, root: c.root, clips, scale: att ? SKEL_SCALE[key] : key === 'gate' ? 0.93 : 1.05, /* 보스: 저작 크기 그대로(양자화된 피부 메시는 fitHeight 로 못 잼) */ mats: list(c), eyeM: c.mats.eye, meta: c.T.meta,
+  return { custom: true, boss: !att, key, root: c.root, clips, scale: att ? SKEL_SCALE[key] : key === 'gate' ? 0.93 : key === 'smelter' ? 1.0 : 1.05, /* 보스: 저작 크기 그대로(양자화된 피부 메시는 fitHeight 로 못 잼) */ mats: list(c), eyeM: c.mats.eye, meta: c.T.meta,
     lantern: c.bone('lantern'), hook: c.bone('hook'), chest, head: c.bone('head'), door: c.bone('door'), weak };
 }
 
@@ -123,7 +129,8 @@ const tc = new THREE.Color();
 export function enemyTick(e, dt, R) {
   const c = e.custom; if (!c) return;
   const hit = e.flash > 0 ? 1 : 0;
-  if (e.kind === 'boss') {
+  if (e.kind === 'raider' && c.eyeM) { /* 총구 등: 겨냥 예고 때 빨갛게 깜빡 */ const k = e.wind > 0 ? 1 - e.wind / (e.windMax || 1) : 0; if (e.dead) c.eyeM.color.setHex(0x221a18); else if (k > 0) c.eyeM.color.setRGB(1, 0.2 + 0.6 * Math.sin(e.t * 50) ** 2, 0.15); else c.eyeM.color.setRGB(0.6, 0.25, 0.2); return; }
+  if (e.kind === 'boss' || e.kind === 'smelter') {
     if (e.dead) { c.eyeM.color.lerp(tc.setHex(+c.meta.eyeDead), Math.min(1, dt * 1.5)); if (c.weak) c.weak.g[0].visible = c.weak.g[1].visible = false; return; }
     const k = e.wind > 0 ? 1 - e.wind / (e.windMax || 1) : 0; /* 예고: 둥근 창이 점점 밝게 깜빡임 */
     if (k > 0) c.eyeM.color.setRGB(1, 0.3 + 0.6 * k * (0.5 + 0.5 * Math.sin(e.t * 40)), 0.15 + 0.4 * k); else c.eyeM.color.setRGB(1, 0.24 + 0.08 * Math.sin(e.t * 3), 0.16);
@@ -165,6 +172,6 @@ export function enemyTick(e, dt, R) {
 const wp = new THREE.Vector3();
 export function weakPoint(e) {
   const c = e.custom; if (!c) return null;
-  const o = e.kind === 'boss' ? c.chest : e.kind === 'captain' ? c.lantern : e.kind === 'eel' ? c.segs?.[5]?.m : null;
+  const o = e.kind === 'boss' || e.kind === 'smelter' ? c.chest : e.kind === 'captain' ? c.lantern : e.kind === 'eel' ? c.segs?.[5]?.m : null;
   return o ? o.getWorldPosition(wp) : null;
 }

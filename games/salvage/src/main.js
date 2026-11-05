@@ -1,20 +1,22 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.9';
-import { FX } from './fx.js?v=0.99.9';
-import { Raid } from './raid.js?v=0.99.9';
-import { UI } from './ui.js?v=0.99.9';
-import { S, load, save, stashCap } from './save.js?v=0.99.9';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.9';
-import * as E from './econ.js?v=0.99.9';
-import { installBack } from './oad.js?v=0.99.9';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.9';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.9';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.9';
-import { Story, artUrl } from './story_ui.js?v=0.99.9';
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.10';
+import { FX } from './fx.js?v=0.99.10';
+import { Raid } from './raid.js?v=0.99.10';
+import { UI } from './ui.js?v=0.99.10';
+import { S, load, save, stashCap } from './save.js?v=0.99.10';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.10';
+import * as E from './econ.js?v=0.99.10';
+import { installBack } from './oad.js?v=0.99.10';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.10';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.10';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.10';
+import { Story, artUrl } from './story_ui.js?v=0.99.10';
 
 const Q = new URLSearchParams(location.search);
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
+/* 출격 제한: 실서버(oneaday.kr)에서만 하루 3회 · 테스트 서버·로컬은 완성될 때까지 무제한 (대표 2026-11-05) */
+app.nolimit = app.free || !Q.has('limit') && location.hostname !== 'oneaday.kr' && location.hostname !== 'www.oneaday.kr';   /* ?limit = 시험에서 실서버처럼 제한 */
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, Q.has('lo') ? 1 : 2)); renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -115,8 +117,8 @@ app.startRaid = o => {
 app.preloadMaps = () => { for (const m of E.openMaps(S)) if (m !== 'ware') loadPack(m).catch(e => console.warn('지도 묶음', e)); };
 function startRaidNow({ safeItems = [], carry = [], map }) {
   if (raid) endRaid();
-  if (!app.free) S.sorties = Math.max(0, S.sorties - 1);
-  const L = E.loadout(S);
+  if (!app.free) S.sorties = Math.max(0, S.sorties - 1);   /* 테스트 무제한(nolimit)이어도 횟수는 세서 '하루 끝' 이야기는 그대로 */
+  const L = E.loadout(S); E.useAmmo(S); /* v0.6 탄약 상자 1개 = 이번 판 (L.ammo 는 쓰기 전에 정해짐) */
   /* 안전 칸 · 가져갈 소모품은 창고에서 꺼냄 · 창고 단계 보너스 연고는 공짜 */
   const take = k => { const i = S.stash.indexOf(k); if (i >= 0) { S.stash.splice(i, 1); return true; } return false; };
   const safe = safeItems.filter(take), bring = carry.filter(take);
@@ -138,8 +140,10 @@ function endRaid() {
   const intoStash = keys => { for (const k of keys) { if (S.stash.length < stashCap()) S.stash.push(k); else { gained.overflow++; gained.overflowVal += ITEMS[k].val; S.shells += ITEMS[k].val; } } };
   if (res.corpseTaken || (S.corpse && res.seed === S.corpse.seed)) S.corpse = null; /* 한 번만 */
   if (res.outcome === 'extract') { intoStash([...res.items, ...res.safe, ...res.pet]); S.stats.extracts++; S.stats.best = Math.max(S.stats.best, res.value); }
-  else { intoStash([...res.safe, ...(res.petSafe ? res.pet : [])]); S.stats.deaths++; const lost = [...res.items, ...(res.petSafe ? [] : res.pet)]; if (lost.length) S.corpse = { seed: res.seed, map: res.map, x: res.deathPos.x, z: res.deathPos.z, items: lost }; }
+  else { const keep = [...res.items].sort((a, b) => ITEMS[b].val - ITEMS[a].val).slice(0, res.keep || 0); res.kept = keep.slice(); /* v0.6 돌아올 표 부적 · 구조 보트 */
+    intoStash([...res.safe, ...(res.petSafe ? res.pet : []), ...keep]); S.stats.deaths++; const lost = [...res.items.filter((k, i, a) => { const j = keep.indexOf(k); if (j < 0) return true; keep.splice(j, 1); return false; }), ...(res.petSafe ? [] : res.pet)]; if (lost.length) S.corpse = { seed: res.seed, map: res.map, x: res.deathPos.x, z: res.deathPos.z, items: lost }; }
   S.stats.kills += res.killN; S.stats.drones += res.kills.drone; S.stats.bosses += res.kills.boss; if (res.vaultOpened && res.outcome === 'extract') S.stats.vaults++; S.stats.zoneMax = Math.max(S.stats.zoneMax, res.zoneMax);
+  if (res.diff === 'deep' && res.outcome === 'extract') S.stats.deepExt = (S.stats.deepExt || 0) + 1;
   /* v0.4 지도별 기록 · 보스 종류 (의뢰 28 '인양단장') */
   const ms = ((S.stats.maps ||= {})[res.map] ||= { raids: 0, extracts: 0 }); ms.raids++; if (res.outcome === 'extract') ms.extracts++;
   if (res.bossKind) (S.stats.bossKinds ||= {})[res.bossKind] = (S.stats.bossKinds[res.bossKind] || 0) + 1;
@@ -208,7 +212,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.9'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.10'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

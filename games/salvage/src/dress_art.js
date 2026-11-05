@@ -2,8 +2,8 @@
 //  그리기 횟수: 바닥/벽 그림 1 + 빛 웅덩이 1 + 지도 밖 물 1 + 소품·랜드마크(정점 색 재질 2개 — 구역별로 합침) → 지도당 +5~8
 //  그림 조각은 코드로 그림(내려받기 0) · 한 번 만들어 계속 씀
 import * as THREE from 'three';
-import { dress } from './dress.js?v=0.99.9';
-import { prop, A } from './assets.js?v=0.99.9';
+import { dress } from './dress.js?v=0.99.10';
+import { prop, A } from './assets.js?v=0.99.10';
 
 /* ───── 아틀라스: 1024² · 128px 칸 8×8 (표지판은 가로로 여러 칸) ───── */
 const S = 128, N = 8;
@@ -12,7 +12,9 @@ const CELLS = {}; /* 이름 → [열, 행, 가로칸, 세로칸] */
   'flow', 'oil', 'weed', 'edge', 'tire', 'tactile', 'ticket', 'sleeper',
   'rope', 'p_evac', 'p_tags', 'tide', 'graf', 'p_keep', 'p_fest', 'p_ferry',
   'p_line', 'p_exit', 'graf_isle', 'tile', 'g_pool', 'g_teal', 'g_red', 'g_green', 'grime', 'debris', 'patch', 'bayzone'].forEach((k, i) => CELLS[k] = [i % N, Math.floor(i / N), 1, 1]);
-Object.assign(CELLS, { s_station: [0, 5, 4, 1], s_pile: [4, 5, 3, 1], s_ferry: [0, 6, 3, 1], s_sea: [3, 6, 3, 1], s_crane: [0, 7, 3, 1], s_gate: [3, 7, 2, 1], s_car: [5, 7, 1, 1] }); /* 0~4행 = 1칸짜리(최대 40개) */
+Object.assign(CELLS, { s_station: [0, 5, 4, 1], s_pile: [4, 5, 3, 1], s_ferry: [0, 6, 3, 1], s_sea: [3, 6, 3, 1], s_crane: [0, 7, 3, 1], s_gate: [3, 7, 2, 1], s_car: [5, 7, 1, 1] });
+/* M3-B 가라앉은 공장: 1칸 4 (검은 닻 낙서 · 등불 공방 포스터 · 작업 수칙 · 쇳물 자국) + 남는 칸 (줄무늬 바닥 · 표지판 2) */
+Object.assign(CELLS, { anchor: [4, 4, 1, 1], p_lampw: [5, 4, 1, 1], p_rule: [6, 4, 1, 1], slag: [7, 4, 1, 1], hazard: [7, 5, 1, 1], s_works: [6, 6, 2, 1], s_relay: [6, 7, 2, 1] }); /* 0~4행 = 1칸짜리(최대 40개) */
 export const SIGN_ASPECT = k => CELLS[k][2] / CELLS[k][3];
 const FONT = "'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif";
 let ATLAS = null;
@@ -76,6 +78,15 @@ function atlas() {
   cell('s_crane', (w, h) => { x.fillStyle = '#e0b23a'; x.fillRect(0, 0, w, h); txt('은포항 3', w / 2, 66, 54, '#22262a', 900); wear(w, h, 60, 0.7); });
   cell('s_gate', (w, h) => { x.fillStyle = '#8e4a2c'; x.fillRect(0, 0, w, h); txt('수문 2', w / 2, 60, 52, '#efe6d2', 900); x.fillStyle = 'rgba(239,230,210,0.8)'; x.fillRect(16, 104, w - 32, 6); wear(w, h, 70, 0.7); });
   cell('s_car', () => { x.fillStyle = '#2f8a8a'; x.fillRect(0, 0, 128, 128); txt('3', 64, 66, 80, '#ece8de', 900); });
+  /* M3-B 공장 */
+  const anc = (cx, cy, s, col, lw = 6) => { x.save(); x.translate(cx, cy); x.scale(s, s); x.strokeStyle = col; x.fillStyle = col; x.lineCap = 'round'; x.lineWidth = lw; x.beginPath(); x.arc(0, -34, 8, 0, 6.3); x.stroke(); x.beginPath(); x.moveTo(0, -26); x.lineTo(0, 30); x.moveTo(-18, -14); x.lineTo(18, -14); x.stroke(); x.beginPath(); x.arc(0, 4, 28, 0.25, Math.PI - 0.25); x.stroke(); for (const sx of [-1, 1]) { x.beginPath(); x.moveTo(sx * 27, 12); x.lineTo(sx * 36, 4); x.lineTo(sx * 31, 18); x.fill(); } x.restore(); };
+  cell('anchor', () => { x.fillStyle = 'rgba(20,20,22,0.85)'; x.beginPath(); for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28, r = 52 + rnd() * 10; x.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r * 0.9); } x.fill(); anc(64, 66, 1.15, 'rgba(236,232,222,0.92)', 7); for (let i = 0; i < 6; i++) { x.fillStyle = 'rgba(20,20,22,0.8)'; x.fillRect(30 + rnd() * 70, 108 + rnd() * 8, 3, 6 + rnd() * 12); } wear(128, 128, 50); });
+  cell('p_lampw', () => { board('#2a3550'); x.fillStyle = '#ffd88a'; x.beginPath(); x.moveTo(64, 26); x.lineTo(78, 42); x.lineTo(74, 70); x.lineTo(54, 70); x.lineTo(50, 42); x.closePath(); x.globalAlpha = 0.9; x.fill(); x.globalAlpha = 1; x.strokeStyle = '#c99a4a'; x.lineWidth = 3; x.stroke(); x.fillStyle = 'rgba(255,216,138,0.25)'; x.beginPath(); x.arc(64, 52, 30, 0, 6.3); x.fill(); txt('은포 등불 공방', 64, 88, 14, '#f2ead8'); txt('불빛 하나가 길 하나', 64, 106, 10, '#ffd88a', 600); wear(128, 128, 40); tear(128, 128); });
+  cell('p_rule', () => { board('#e8dcc4'); x.fillStyle = '#c8452f'; x.fillRect(12, 12, 104, 20); txt('작업 수칙', 64, 23, 14, '#fff6e0'); x.font = `700 10px ${FONT}`; x.textAlign = 'left'; x.fillStyle = '#3a3a40'; ['1. 국자는 둘이서', '2. 쇳물 앞 장갑', '3. 불은 끄고 퇴근', '4. 대수문 회로 3층'].forEach((t, i) => x.fillText(t, 18, 48 + i * 17)); wear(128, 128, 60); });
+  cell('slag', () => { for (let i = 0; i < 9; i++) blob(36 + rnd() * 56, 36 + rnd() * 56, 8 + rnd() * 16, `rgba(${40 + rnd() * 20 | 0},${34 + rnd() * 10 | 0},${30 + rnd() * 10 | 0},${0.55 + rnd() * 0.3})`); for (let i = 0; i < 5; i++) blob(40 + rnd() * 48, 40 + rnd() * 48, 3 + rnd() * 5, `rgba(${150 + rnd() * 60 | 0},${70 + rnd() * 30 | 0},30,0.6)`, 8); speck(120, '#1a1614', 0.6); });
+  cell('hazard', () => { x.save(); x.beginPath(); x.rect(0, 40, 128, 48); x.clip(); for (let i = -4; i < 12; i++) { x.fillStyle = i % 2 ? 'rgba(20,20,22,0.75)' : 'rgba(224,178,58,0.82)'; x.beginPath(); x.moveTo(i * 16, 40); x.lineTo(i * 16 + 16, 40); x.lineTo(i * 16 + 64, 88); x.lineTo(i * 16 + 48, 88); x.fill(); } x.restore(); wear(128, 128, 120); });
+  cell('s_works', (w, h) => { x.fillStyle = '#2a2d30'; x.fillRect(0, 0, w, h); x.fillStyle = '#c99a4a'; x.fillRect(6, 6, w - 12, 6); x.fillRect(6, h - 12, w - 12, 6); txt('은포 등불 공방', w / 2, 58, 30, '#efe6d2', 900); txt('조력 발전소 · 2주조장', w / 2, 96, 16, '#c99a4a', 700); wear(w, h, 60, 0.6); });
+  cell('s_relay', (w, h) => { x.fillStyle = '#1f2a2e'; x.fillRect(0, 0, w, h); x.save(); x.beginPath(); x.rect(0, 0, w, 18); x.clip(); for (let i = -2; i < 20; i++) { x.fillStyle = i % 2 ? '#22262a' : '#e0b23a'; x.beginPath(); x.moveTo(i * 16, 0); x.lineTo(i * 16 + 16, 0); x.lineTo(i * 16 + 34, 18); x.lineTo(i * 16 + 18, 18); x.fill(); } x.restore(); txt('파수 관제 연결선', w / 2, 62, 28, '#ffd88a', 900); txt('은포 수리공사 · 대수문 직결', w / 2, 100, 15, '#9fc8c8', 700); wear(w, h, 50, 0.6); });
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = false; tex.anisotropy = 4; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
   return ATLAS = { tex, cv };
 }
@@ -103,13 +114,13 @@ class Quads {
   }
 }
 /* 랜드마크 위 표지판 · 빛 (모델 기준 자리) */
-const MARK_SIGNS = { lm_pile: [['s_pile', 0.4, 5.4, 0.37, 2.25]], lm_wheel: [['s_gate', 0, 4.6, 0.16, 2.0]], lm_booth: [['s_ferry', 2.0, 5.6, 1.06, 2.4]], lm_gantry: [['s_crane', -3.2, 11.3, 0.74, 3.0]], lm_clock: [['s_station', 0, 4.3, 0.11, 5.3]], lm_hatch: [['s_sea', 0, 6.4, 0.22, 3.4]], lm_train: [['s_car', 0, 3.1, 5.53, 0.7]] };
-const MARK_GLOW = { lm_pile: [['g_pool', 1.9, 3.2]], lm_wheel: [['g_red', 3.0, 2.2]], lm_boiler: [['g_red', 0, 3.4], ['g_red', 0.9, 2.4]], lm_booth: [['g_pool', 0, 4.2], ['g_pool', 2.0, 2.6]], lm_gantry: [['g_pool', 1.6, 3.2]], lm_light: [['g_pool', 0, 6]], lm_clock: [['g_pool', 0, 4.2]], lm_train: [['g_pool', 2.2, 5], ['g_pool', -2.2, 5]], lm_hatch: [['g_teal', 0, 7]] };
-const FAR = { ware: [0.05, 0.16, 0.18], harbor: [0.04, 0.12, 0.18], tunnel: [0.04, 0.13, 0.13] };
+const MARK_SIGNS = { lm_furnace: [['s_works', 0, 3.5, 2.42, 3.4]], lm_relay: [['s_relay', 0, 3.75, 0.5, 3.0]], lm_pile: [['s_pile', 0.4, 5.4, 0.37, 2.25]], lm_wheel: [['s_gate', 0, 4.6, 0.16, 2.0]], lm_booth: [['s_ferry', 2.0, 5.6, 1.06, 2.4]], lm_gantry: [['s_crane', -3.2, 11.3, 0.74, 3.0]], lm_clock: [['s_station', 0, 4.3, 0.11, 5.3]], lm_hatch: [['s_sea', 0, 6.4, 0.22, 3.4]], lm_train: [['s_car', 0, 3.1, 5.53, 0.7]] };
+const MARK_GLOW = { lm_anchor: [['g_red', -1.6, 3.0], ['g_red', 1.4, 3.0]], lm_furnace: [['g_red', 0, 4.4]], lm_relay: [['g_pool', 0, 4.0]], lm_pile: [['g_pool', 1.9, 3.2]], lm_wheel: [['g_red', 3.0, 2.2]], lm_boiler: [['g_red', 0, 3.4], ['g_red', 0.9, 2.4]], lm_booth: [['g_pool', 0, 4.2], ['g_pool', 2.0, 2.6]], lm_gantry: [['g_pool', 1.6, 3.2]], lm_light: [['g_pool', 0, 6]], lm_clock: [['g_pool', 0, 4.2]], lm_train: [['g_pool', 2.2, 5], ['g_pool', -2.2, 5]], lm_hatch: [['g_teal', 0, 7]] };
+const FAR = { ware: [0.05, 0.16, 0.18], harbor: [0.04, 0.12, 0.18], tunnel: [0.04, 0.13, 0.13], factory: [0.06, 0.1, 0.1] };
 
 /* map.js build() 안에서 부름 — statics(합쳐짐) · group(따로) · addBox(판정) · out(가진 재질/기하 정리용) */
 /* 꾸밈을 켠 지도 (지도마다 따로 켜고 끔 — 묶음 파일이 없으면 끔) */
-export const DRESS_ON = { ware: 1, harbor: 1, tunnel: 1 };
+export const DRESS_ON = { ware: 1, harbor: 1, tunnel: 1, factory: 1 };
 export function buildDress(P, map, statics, group, addBox, out) {
   if (!DRESS_ON[map]) return null;
   const D = dress(P); const has = k => !!A.props[k];
@@ -134,6 +145,7 @@ export function buildDress(P, map, statics, group, addBox, out) {
       for (const a of [0, Math.PI]) { const b = new THREE.Mesh(bg, beamM); b.rotation.z = Math.PI / 2; b.position.x = 15; b.userData.keepGeo = true; const h = new THREE.Group(); h.rotation.y = a; h.add(b); piv.add(h); }
       out.beams.push(piv); }
   }
+  for (const g of D.glows || []) glow.add(g.c, g.x, 0.075, g.z, g.s, g.s, 0, false); /* 공장 작업등 빛 웅덩이 (M3-B) */
   const dm = dec.mesh(decalMat(), 'static'); if (dm) { dm.renderOrder = 1; dm.receiveShadow = true; group.add(dm); }
   const gm = glow.mesh(glowMat(), 'static'); if (gm) { gm.renderOrder = 3; group.add(gm); }
   out.dress = D;

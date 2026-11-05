@@ -1,6 +1,7 @@
 // 경제 · 성장 계산 (화면 · three 없이 — node 시뮬 · 시험에서도 그대로 씀)
 //  S = 저장 상태(save.js). 모든 함수는 S 를 직접 바꾸고 { ok, why } 를 돌려줌
-import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2 } from './data.js?v=0.99.9';
+import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2,
+  AMMO, MOD_MAX, freshMods, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS } from './data.js?v=0.99.10';
 
 export const kstDay = (t = Date.now()) => new Date(t + 324e5).toISOString().slice(0, 10);
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -36,7 +37,9 @@ export function buy(S, k, n) { const p = MARKET[k] * n; if (S.shells < p) return
 /* ───── 시설 ───── */
 export const facLvl = (S, k) => S.fac[k] || 0;
 export const facCur = (S, k) => { const L = facLvl(S, k); return L ? FACILITIES[k].levels[L - 1] : null; };
-export const facUnlocked = (S, k) => { const u = FACILITIES[k].unlock; return !u || S.quests.done.includes(u); };
+/* 열림: 의뢰(unlock) · 시설 단계/지도(req — M3-A 새 시설) */
+export const reqMet = (S, r) => !r || ((!r.fac || facLvl(S, r.fac[0]) >= r.fac[1]) && (!r.map || mapOpen(S, r.map)));
+export const facUnlocked = (S, k) => { const F = FACILITIES[k]; return (!F.unlock || S.quests.done.includes(F.unlock)) && reqMet(S, F.req); };
 export function facNext(S, k) { const F = FACILITIES[k]; const L = facLvl(S, k); return L < F.levels.length ? F.levels[L] : null; }
 /* 공사 (한 번에 하나) — time 초 뒤 완성. now 는 ms */
 export function startBuild(S, k, now = Date.now()) {
@@ -58,7 +61,7 @@ export function finishBuild(S) { if (!S.build) return null; S.build.until = 0; r
 export const rackMk = S => facCur(S, 'rack')?.mk || 0;
 export function modCost(wk, slot, mk) {
   const base = MOD_COST[mk]; if (!base) return null; const m = TIER_MUL[WEAPONS[wk].tier];
-  const c = {}; for (const [k, n] of Object.entries(base)) { if (k === 'part') c[MODS[slot].part] = (c[MODS[slot].part] || 0) + n; else if (k === 'core') c.core = n; else c[k] = Math.round(n * m); }
+  const c = {}; for (const [k, n] of Object.entries(base)) { if (k === 'part') c[MODS[slot].part] = (c[MODS[slot].part] || 0) + n; else if (k === 'sp') c[MODS[slot].sp.item] = n; else if (k === 'core') c.core = n; else c[k] = Math.round(n * m); }
   if (slot === 'scope' && mk === 1) c.glass = 1;
   return c;
 }
@@ -66,31 +69,34 @@ export function craftWeapon(S, wk) {
   const W = WEAPONS[wk]; if (S.weapons[wk]) return { ok: false, why: 'owned' };
   if (facLvl(S, 'bench') < W.bench) return { ok: false, why: 'bench' };
   if (!pay(S, W.cost)) return { ok: false, why: 'cost' };
-  S.weapons[wk] = { scope: 0, barrel: 0, mag: 0, chamber: 0 }; return { ok: true };
+  S.weapons[wk] = freshMods(); return { ok: true };
 }
 export function upgradeMod(S, wk, slot) {
-  const w = S.weapons[wk]; if (!w) return { ok: false, why: 'noweapon' };
-  const mk = w[slot] + 1; if (mk > 3) return { ok: false, why: 'max' };
+  const w = S.weapons[wk]; if (!w) return { ok: false, why: 'noweapon' }; if (!WEAPONS[wk].slots.includes(slot)) return { ok: false, why: 'slot' };
+  const mk = (w[slot] || 0) + 1; if (mk > MOD_MAX) return { ok: false, why: 'max' };
   if (rackMk(S) < mk) return { ok: false, why: 'rack' };
   if (!pay(S, modCost(wk, slot, mk))) return { ok: false, why: 'cost' };
   w[slot] = mk; return { ok: true };
 }
 /* 개조 반영한 무기 숫자 */
-export function weaponStats(wk, mods = { scope: 0, barrel: 0, mag: 0, chamber: 0 }) {
-  const W = WEAPONS[wk], M = MODS;
-  const sm = M.scope.spread[mods.scope];
-  return { key: wk, name: W.name, short: W.short, pellets: W.pellets || 1, pierce: W.pierce || 0, knock: W.knock, noise: W.noise,
-    dmg: W.dmg * M.chamber.dmg[mods.chamber], rate: W.rate, mag: Math.round(W.mag * M.mag.mag[mods.mag]), reload: W.reload * M.mag.reload[mods.mag],
-    range: W.range * M.barrel.range[mods.barrel], spread: W.spread * sm, add: W.add * sm, max: W.max * sm, rec: W.rec * M.barrel.rec[mods.barrel],
-    crit: W.crit + M.scope.crit[mods.scope], mods: { ...mods } };
+export function weaponStats(wk, mods0) {
+  const W = WEAPONS[wk], M = MODS; const mods = { ...freshMods(), ...(mods0 || {}) };
+  const sm = M.scope.spread[mods.scope], gm = M.grip;
+  return { key: wk, name: W.name, short: W.short, pellets: W.pellets || 1, pierce: W.pierce || 0, knock: W.knock, noise: W.noise * M.barrel.noise[mods.barrel],
+    dmg: W.dmg * M.chamber.dmg[mods.chamber], boss: M.chamber.boss[mods.chamber], rate: W.rate * (W.melee ? gm.swing[mods.grip] : 1),
+    mag: W.melee ? 0 : Math.round(W.mag * M.mag.mag[mods.mag]), reload: W.reload * M.mag.reload[mods.mag],
+    range: W.range * M.barrel.range[mods.barrel], spread: W.spread * sm, add: W.add * sm * gm.add[mods.grip], max: W.max * sm * gm.max[mods.grip], rec: W.rec * M.barrel.rec[mods.barrel],
+    crit: W.crit + M.scope.crit[mods.scope] + gm.crit[mods.grip], melee: !!W.melee, arc: W.arc || 0, water: W.water || null, chain: W.chain || null, blast: W.blast || null, light: W.light || 0, mods };
 }
 /* 체감용 숫자: 거리 d 에서 적을 연사로 잡는 데 걸리는 시간(초) · 명중률 — 같은 식을 화면 · 시뮬이 같이 씀
  *  명중: 적 반지름이 보이는 각(atan(r/d)) ÷ 그때의 퍼짐(연사 중 평균) · 산탄은 알 수 만큼 */
 export function ttk(ws, hp, d = 7, r = 0.62) {
+  /* 근접(렌치): 다가가는 시간(4.5m/초) + 휘두르기는 늘 맞음 */
+  if (ws.melee) { const r0 = ttk({ ...ws, melee: false, range: 99, spread: 0, add: 0, max: 0, mag: 1e9 }, hp, 1, r); return { ...r0, hit: 1, t: Math.round((r0.t + Math.max(0, d - ws.range) / 4.5) * 100) / 100 }; }
   const half = Math.atan(r / d);
   if (d > ws.range) return { hit: 0, t: Infinity, dps: 0 };
-  let spread = ws.spread, t = 0, dealt = 0, mag = ws.mag, shots = 0, hitSum = 0;
-  const per = ws.dmg * (1 + ws.crit * 0.8);
+  let spread = ws.spread, t = 0, dealt = 0, mag = ws.melee ? Infinity : ws.mag, shots = 0, hitSum = 0;
+  const per = ws.dmg * (1 + ws.crit * 0.8) + (ws.blast ? ws.blast.burn * ws.blast.dps * 0.6 : 0);
   while (dealt < hp && t < 60) {
     if (mag <= 0) { t += ws.reload; mag = ws.mag; spread = ws.spread; }
     const p = Math.min(1, half / Math.max(1e-3, spread));
@@ -126,7 +132,7 @@ export function cook(S, mk) {
 
 /* ───── 창고: 팔기 · 분해 ───── */
 export const stashCap = S => facCur(S, 'store')?.cap || 30;
-export const appraise = S => facCur(S, 'lab')?.appraise || 0;
+export const appraise = S => (facCur(S, 'lab')?.appraise || 0) + (charmFx(S).appraise || 0);
 export const sellPrice = (S, k) => Math.round(ITEMS[k].val * (ITEMS[k].cat === 'treasure' ? 1 + appraise(S) : 1));
 export function sell(S, k) { const i = S.stash.indexOf(k); if (i < 0) return 0; S.stash.splice(i, 1); const v = sellPrice(S, k); S.shells += v; S.stats.sold = (S.stats.sold || 0) + v; return v; }
 export function dismantle(S, k) { const d = ITEMS[k].dis; if (!d) return null; const i = S.stash.indexOf(k); if (i < 0) return null; S.stash.splice(i, 1); give(S, d); return d; }
@@ -219,18 +225,132 @@ export function questProgress(S) {
 export function loadout(S) {
   const main = S.equip.main in S.weapons ? S.equip.main : 'pistol';
   const rack = facCur(S, 'rack'); const side = rack?.side && S.equip.side && S.equip.side !== main && S.weapons[S.equip.side] ? S.equip.side : null;
-  const clinic = facCur(S, 'clinic'), store = facCur(S, 'store'), lab = facCur(S, 'lab'), aq = facCur(S, 'aquarium'), lt = facCur(S, 'lights');
-  const vest = GEAR.vest.tiers[S.gear.vest], helm = GEAR.helmet.tiers[S.gear.helmet], bag = GEAR.bag.tiers[S.gear.bag];
-  const meal = S.meal ? MEALS[S.meal] : null;
+  const clinic = facCur(S, 'clinic'), store = facCur(S, 'store'), lab = facCur(S, 'lab'), aq = facCur(S, 'aquarium'), lt = facCur(S, 'lights'), gym = facCur(S, 'gym'), dock = facCur(S, 'dock');
+  const vest = GEAR.vest.tiers[S.gear.vest] || GEAR.vest.tiers[0], helm = GEAR.helmet.tiers[S.gear.helmet] || GEAR.helmet.tiers[0], bag = GEAR.bag.tiers[S.gear.bag] || GEAR.bag.tiers[0];
+  const meal = S.meal ? MEALS[S.meal] : null; const cf = charmFx(S); const D = DIFF[S.diff] || DIFF.normal;
+  const ammo = ammoReady(S);
   return {
     weapons: [weaponStats(main, S.weapons[main]), ...(side ? [weaponStats(side, S.weapons[side])] : [])],
-    hp: PLAYER.hp + (clinic?.hp || 0) + (helm.hp || 0) + (meal?.hp || 0), armor: vest.armor || 0, lastStand: !!clinic?.last,
-    o2: O2.max + (helm.hp || 0), /* v0.4 해저 터널: 헬멧이 산소통 몫도 함 */
-    bag: { w: bag.w, h: bag.h, comfy: bag.comfy }, safe: store?.safe || [1, 1], kit: store?.kit || 0,
+    hp: PLAYER.hp + (clinic?.hp || 0) + (helm.hp || 0) + (meal?.hp || 0) + (cf.hp || 0), armor: vest.armor || 0, lastStand: !!clinic?.last, heal: clinic?.heal || 1,
+    o2: O2.max + (helm.hp || 0) + (gym?.o2 || 0), o2Drain: 1 - (cf.o2 || 0), /* v0.4 해저 터널: 헬멧이 산소통 몫도 함 · 훈련장 · 장어 이빨 부적 */
+    bag: { w: bag.w, h: bag.h, comfy: bag.comfy, slow: bag.slow || 1 }, safe: store?.safe || [1, 1], kit: store?.kit || 0,
     pet: aq ? { w: aq.pet[0], h: aq.pet[1], safe: !!aq.petSafe, sniff: !!aq.sniff } : null,
-    glow: !!lab?.glow, hints: !!lab?.hints, vision: lt?.vision || 1, blackout: lt?.blackout || 1, sense: !!lt?.sense,
-    stam: meal?.stam || 1, speed: meal?.speed || 1, search: meal?.search || 1, meal: S.meal,
+    glow: !!lab?.glow, hints: !!lab?.hints, vision: (lt?.vision || 1) * (helm.vision || 1) * (1 + (cf.vision || 0)), blackout: lt?.blackout || 1, sense: !!lt?.sense, dark: 1 + (cf.dark || 0),
+    stam: (meal?.stam || 1) * (gym?.stam || 1) * (1 + (cf.stam || 0)), stamMax: gym?.stamMax || 0, roll: (1 - (gym?.roll || 0)) * (1 - (cf.roll || 0)),
+    speed: (meal?.speed || 1) * (gym?.speed || 1), water: 1 + (cf.water || 0), search: (meal?.search || 1) * (1 + (cf.search || 0)), meal: S.meal,
+    hold: 1 - (cf.hold || 0), boss: 1 + (cf.boss || 0), loot: (1 + (cf.loot || 0)) * D.loot, keep: (cf.keep || 0) + (dock?.rescue || 0),
+    ammo, diff: S.diff || 'normal', foeHp: D.foeHp, foeDmg: D.foeDmg,
   };
 }
 /* 장비 점수 (시뮬 · 의뢰 난이도 가늠용): 주무기 DPS(7m) × 체력 ÷ (1-방어) */
-export function power(S) { const L = loadout(S); const w = L.weapons[0]; return Math.round(ttk(w, 1000, 7).dps * (L.hp / 100) / (1 - L.armor)); }
+export function power(S) { const L = loadout(S); const w = L.weapons[0]; return Math.round(ttk(w, 1000, w.melee ? 2 : 7).dps * (L.hp / 100) / (1 - L.armor)); }
+
+/* ═════ M3-A 성장 뼈대 (v0.6): 탄약 · 부적 · 상인 · 업적 · 난이도 — 숫자는 data/*.js ═════ */
+import { COS } from './look.js?v=0.99.10';
+const ITEM_LIST = Object.keys(ITEMS);
+/* ───── 탄약 상자 (관통 · 전기) — 한 판에 1상자, 출격 때 씀 ───── */
+export const ammoCount = (S, k) => (S.ammo?.[k] || 0);
+export const ammoReady = S => { const k = S.ammoSel || 'normal'; return k !== 'normal' && ammoCount(S, k) > 0 ? k : 'normal'; };
+export function craftAmmo(S, k) {
+  const A = AMMO[k]; if (!A?.cost) return { ok: false, why: 'max' };
+  const F = facCur(S, 'ammo'); if (!F || F.ammo < A.fac) return { ok: false, why: 'fac' };
+  if (!pay(S, A.cost)) return { ok: false, why: 'cost' };
+  S.ammo ||= {}; S.ammo[k] = (S.ammo[k] || 0) + (F.twice ? 2 : 1); return { ok: true, n: F.twice ? 2 : 1 };
+}
+export function useAmmo(S) { const k = ammoReady(S); if (k !== 'normal') S.ammo[k]--; return k; }
+/* ───── 부적 2칸 ───── */
+export const charmSlots = S => facCur(S, 'shelf')?.charm || 0;
+export const charmHave = (S, k) => (S.charms?.have || []).includes(k);
+export function charmCan(S, k) { const C = CHARMS[k]; if (!C) return false; const cx = S.story?.codex || {}; return !!(cx[C.need] || S.stash.includes(C.need)) && (!C.fac || facLvl(S, C.fac[0]) >= C.fac[1]); }
+export function craftCharm(S, k) {
+  if (!charmSlots(S)) return { ok: false, why: 'fac' }; if (charmHave(S, k)) return { ok: false, why: 'owned' };
+  if (!charmCan(S, k)) return { ok: false, why: 'locked' }; if (!pay(S, CHARMS[k].cost)) return { ok: false, why: 'cost' };
+  S.charms ||= { have: [], eq: [] }; S.charms.have.push(k); if (S.charms.eq.length < charmSlots(S)) S.charms.eq.push(k); return { ok: true };
+}
+export function equipCharm(S, k) {
+  const C = S.charms ||= { have: [], eq: [] }; if (!C.have.includes(k)) return { ok: false, why: 'locked' };
+  if (C.eq.includes(k)) { C.eq = C.eq.filter(x => x !== k); return { ok: true, off: true }; }
+  const n = charmSlots(S); if (!n) return { ok: false, why: 'fac' };
+  C.eq = [...C.eq.filter(x => C.have.includes(x)).slice(0, n - 1), k]; return { ok: true };
+}
+export function charmFx(S) {
+  const out = {}; const n = charmSlots(S); const mul = facCur(S, 'shelf')?.charmMul || 1;
+  for (const k of (S.charms?.eq || []).slice(0, n)) for (const [f, v] of Object.entries(CHARMS[k]?.fx || {})) out[f] = (out[f] || 0) + (f === 'keep' ? v : v * mul);
+  return out;
+}
+/* ───── 상인 3 ───── */
+export const merchOpen = (S, m) => reqMet(S, MERCHANTS[m]?.req);
+export const merchDiscount = S => facCur(S, 'dock')?.discount || 0;
+function tradeDay(S, day = kstDay()) { if (!S.trade || S.trade.day !== day) S.trade = { day, n: {} }; return S.trade; }
+export const TRADER_COS = () => Object.keys(COS).filter(k => COS[k].get?.t === 'trader');
+/* 오늘 바람 행상이 찾는 것 (날짜마다 하나 · 모두 같은 날 같은 것) */
+export function wantToday(S, day = tradeDay(S).day) {
+  const W = MERCHANTS.baram.wants.map(w => ({ ...w, items: w.map ? ITEM_LIST.filter(k => ITEMS[k].map === w.map && ITEMS[k].cat !== 'memo') : w.items })).filter(w => w.items.length);
+  return W[hash('want' + day) % W.length];
+}
+/* 오늘 진열 — [{ k, kind, price, per, left, i }] */
+export function stockToday(S, m) {
+  const M = MERCHANTS[m]; const T = tradeDay(S); const disc = merchDiscount(S);
+  let list = [];
+  if (m === 'gombang') list = Object.keys(MARKET).map(k => ({ k, kind: 'mat', price: MARKET[k] * 5, per: 99, n: 5 }));
+  else if (m === 'moru') list = M.stock.filter(s => reqMet(S, s.need)).map(s => ({ ...s }));
+  else if (m === 'baram') {
+    const n = M.n + ((facCur(S, 'dock')?.trader || 1) > 1 ? 2 : 0); const cos = TRADER_COS().filter(k => !(S.owned || []).includes(k));
+    let x = hash('baram' + T.day); const used = new Set(); let ci = 0;
+    for (let g = 0; list.length < n && g < 200; g++) { x = Math.imul(x ^ (x >>> 13), 2654435761) >>> 0; const i = x % M.pool.length; if (used.has(i)) continue; used.add(i);
+      const p = M.pool[i]; if (p.kind === 'cos') { const k = cos[(x >>> 8) % Math.max(1, cos.length) + 0]; if (!k || list.some(o => o.k === k)) continue; list.push({ k, kind: 'cos', price: COS[k].get.n, per: 1, i: 'c' + ci++ }); }
+      else if (!list.some(o => o.k === p.k)) list.push({ ...p }); }
+  }
+  return list.map((o, i) => { const id = m + ':' + (o.kind === 'cos' ? 'cos:' + o.k : o.k); const price = o.kind === 'cos' || m === 'gombang' ? o.price : Math.round(o.price * (1 - disc));
+    return { ...o, id, price, left: Math.max(0, o.per - (T.n[id] || 0)) }; });
+}
+export function buyStock(S, m, id) {
+  if (!merchOpen(S, m)) return { ok: false, why: 'locked' };
+  const o = stockToday(S, m).find(x => x.id === id); if (!o) return { ok: false, why: 'max' }; if (o.left <= 0) return { ok: false, why: 'soldout' };
+  if (o.kind === 'item' && S.stash.length >= stashCap(S)) return { ok: false, why: 'full' };
+  if (o.kind === 'cos' && (S.owned || []).includes(o.k)) return { ok: false, why: 'owned' };
+  if (S.shells < o.price) return { ok: false, why: 'cost' };
+  S.shells -= o.price; S.stats.bought = (S.stats.bought || 0) + o.price; S.stats.spentTrade = (S.stats.spentTrade || 0) + o.price;
+  if (o.kind === 'mat') S.mats[o.k] = (S.mats[o.k] || 0) + (o.n || 1);
+  else if (o.kind === 'item') S.stash.push(o.k);
+  else if (o.kind === 'ammo') { S.ammo ||= {}; S.ammo[o.k] = (S.ammo[o.k] || 0) + 1; }
+  else if (o.kind === 'cos') (S.owned ||= []).push(o.k);
+  const T = tradeDay(S); T.n[o.id] = (T.n[o.id] || 0) + 1; (S.stats.traded ||= {})[m] = 1; return { ok: true, o };
+}
+/* 상인마다 사 주는 값 (null = 안 삼) */
+export function sellPriceAt(S, m, k) {
+  const I = ITEMS[k]; if (!I || I.cat === 'memo' || I.cat === 'key') return m === 'gombang' && I?.cat === 'key' ? sellPrice(S, k) : null;
+  const M = MERCHANTS[m];
+  if (m === 'gombang') return sellPrice(S, k);
+  if (m === 'moru') return M.buy.cats.includes(I.cat) && !M.buy.not.includes(k) ? Math.round(I.val * M.buy.mul) : null;
+  if (m === 'baram') return wantToday(S)?.items.includes(k) ? Math.round(sellPrice(S, k) * M.buy.wantMul) : null;
+  return null;
+}
+export function sellAt(S, m, k) {
+  const v = sellPriceAt(S, m, k); if (v == null || !merchOpen(S, m)) return 0; const i = S.stash.indexOf(k); if (i < 0) return 0;
+  S.stash.splice(i, 1); S.shells += v; S.stats.sold = (S.stats.sold || 0) + v; (S.stats.traded ||= {})[m] = 1; return v;
+}
+/* ───── 업적 20 ───── */
+export function achValue(S, t) {
+  const st = S.stats || {};
+  switch (t) {
+    case 'bossKinds': return bossKinds(S);
+    case 'fac': return FAC_KEYS.reduce((s, k) => s + facLvl(S, k), 0);
+    case 'weapons': return Object.keys(S.weapons || {}).length;
+    case 'fullMods': return Object.entries(S.weapons || {}).some(([wk, w]) => WEAPONS[wk].slots.every(m => (w[m] || 0) >= 3)) ? 1 : 0;
+    case 'gear5': return ['vest', 'helmet', 'bag'].some(g => (S.gear?.[g] || 0) >= GEAR_MAX) ? 1 : 0;
+    case 'charms': return (S.charms?.have || []).length;
+    case 'traders': return Object.keys(st.traded || {}).length;
+    case 'deep': return st.deepExt || 0;
+    default: return st[t] || 0;
+  }
+}
+export function achTick(S) {
+  const out = []; S.ach ||= {};
+  for (const a of ACHIEVEMENTS) { if (S.ach[a.id] || achValue(S, a.t) < a.n) continue;
+    S.ach[a.id] = kstDay(); const { cos, ...rw } = a.reward; give(S, rw);
+    if (cos) { S.owned ||= []; if (S.owned.includes(cos) || !COS[cos]) S.shells += 150; else S.owned.push(cos); } out.push(a); }
+  return out;
+}
+/* ───── 난이도 (언제든) ───── */
+export function setDiff(S, k) { if (!DIFF[k]) return { ok: false }; S.diff = k; return { ok: true }; }

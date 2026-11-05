@@ -1,15 +1,17 @@
 // 판 안 이야기 — 무전(짧은 자막 + 몽이 반응) · 튜토리얼 무전 · 이야기 물건(금빛 고리 상자) · 녹음기 · 벽 낙서
 //  raid.js 는 건드리지 않고 판 상태를 매 프레임 지켜봄 (main.js 가 attach · tick · detach)
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.9';
-import * as ST from './story.js?v=0.99.9';
-import { RS } from './plan.js?v=0.99.9';
-import { sfx } from './audio.js?v=0.99.9';
-import { T, talk, portrait } from './story_ui.js?v=0.99.9';
+import { S, save } from './save.js?v=0.99.10';
+import * as ST from './story.js?v=0.99.10';
+import { boardWants } from './board.js?v=0.99.10';
+import { ITEMS } from './data.js?v=0.99.10';
+import { RS } from './plan.js?v=0.99.10';
+import { sfx } from './audio.js?v=0.99.10';
+import { T, talk, portrait } from './story_ui.js?v=0.99.10';
 
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const LOOTY = new Set(['crate', 'barrel', 'locker', 'toolbox', 'chest', 'net', 'cargo', 'kiosk', 'cart']);
+const LOOTY = new Set(['crate', 'barrel', 'locker', 'toolbox', 'chest', 'net', 'cargo', 'kiosk', 'cart', 'bench', 'stash', 'corebox']); /* 공장(M3-B) 상자 포함 */
 const LIMIT = 3; /* 튜토리얼 밖 무전은 판당 3줄 (판 시작 · 사건 · 탈출 직전) */
 
 export class StoryRaid {
@@ -17,15 +19,16 @@ export class StoryRaid {
   attach(R) {
     this.detach(); this.R = R; this.t = 0; this.said = new Set(); this.n = 0; this.intro = false; this.texs = []; this.rings = []; this.grafs = [];
     const st = S.story; this.tut = this.story.on && st.tut >= 1 && st.tut <= 3 ? st.tut : 0;
-    talk('common'); talk('memo'); if (this.tut) talk('t0'); const b = ST.openBeat(S); if (b) talk('t' + Math.min(3, b.ch));
+    talk('common'); talk('memo'); if (this.tut) talk('t0'); const b = ST.openBeat(S); if (b) talk('t' + Math.min(4, b.ch));
     const f = document.getElementById('frame'); document.getElementById('radio')?.remove();
     const el = this.el = document.createElement('div'); el.id = 'radio'; el.className = 'radio'; f.appendChild(el);
     const rnd = mulberry(R.opt.seed * 13 + 5);
     const pick = list => list[Math.floor(rnd() * list.length)];
     const boxes = z => R.containers.filter(c => LOOTY.has(c.kind) && (z == null || c.zone === z));
     /* 이야기 물건: 열린 걸음이 이 지도 carry 면 그 구역 상자 하나에 (금빛 고리) */
-    const w = ST.storyWant(S, R.map);
-    if (w) { const c = pick(boxes(w.zone).length ? boxes(w.zone) : boxes()); if (c) { c.items.unshift(w.item); c.best = Math.max(c.best || 0, 99); c.story = true; R.want.add(w.item); this.ring(c, 0xffd36b); } }
+    /* + 진행 중인 판 의뢰(carry)도 같은 방식 — 물건마다 다른 상자 (M3-C) */
+    const day = S.day; const wants = [ST.storyWant(S, R.map), ...boardWants(S, R.map, day)].filter(Boolean); const used = new Set();
+    for (const w of wants) { const L = boxes(w.zone).filter(c => !used.has(c)); const c = pick(L.length ? L : boxes().filter(c2 => !used.has(c2))); if (c) { used.add(c); c.items.unshift(w.item); c.best = Math.max(c.best || 0, 99); c.story = true; R.want.add(w.item); this.ring(c, 0xffd36b); } }
     /* 녹음기: 그 지도에 안 들은 게 있으면 40% (튜토리얼 판 X) — 깊은 구역 상자 */
     if (!this.tut && ST.tapeLeft(S, R.map).length && rnd() < 0.4) { const L = [...boxes(2), ...boxes(3)]; const c = L.length && pick(L); if (c) { c.items.push('tape'); c.tape = true; } }
     /* 벽 낙서: 안 본 것부터 2개 (튜토리얼 둘째 판은 깊은 창고 첫 방에 '짐 찾으러 꼭 옴') */
@@ -114,7 +117,7 @@ export class StoryRaid {
       return;
     }
     if (!C) return;
-    const b = ST.openBeat(S); const bt = b && T['t' + Math.min(3, b.ch)]?.BEAT[b.id];
+    const b = ST.openBeat(S); const bt = b && T['t' + Math.min(4, b.ch)]?.BEAT[b.id];
     if (this.t > 1.6) {
       if (this.tut === 2 && RT) this.say('start', RT.start2, true); else if (this.tut === 3 && RT) this.say('start', RT.start3, true);
       else if (b?.goal?.map === R.map && bt?.hint) this.say('start', bt.hint, false, null, rad(C.RADIO_G, 'start', R.map)); else this.say('start', rad(C.RADIO, 'start', R.map), false, null, rad(C.RADIO_G, 'start', R.map));
@@ -128,6 +131,8 @@ export class StoryRaid {
     /* 3장: 제어실 노을 목소리(파수) · 선로의 떠돌이 */
     if (b?.id === 'b_freq' && R.map === 'tunnel' && R.zone >= 3) { this.say('nole', C.RADIO.nole, true, C.RADIO.noleMongi, null, 2.8); st.flags.heardNole = 1; }
     if (b?.id === 'b_boot' && R.map === 'tunnel' && R.zone >= 2 && !st.met.includes('baram')) { st.met.push('baram'); save(); this.say('baram', C.RADIO.baram, true); }
+    /* 4장: 공장에서 검은 닻 첫 무전 (낯선 주파수 — 누구든 늘 들림) → 바람이 끼어듦 */
+    if (R.map === 'factory' && (b?.id === 'b_ch4' || b?.id === 'b_anchor') && this.t > 14 && C.RADIO.anchor) { this.say('anchor', C.RADIO.anchor, true, null, null, 2.7); if (!st.flags.heardAnchor) { st.flags.heardAnchor = 1; save(); } if (this.t > 18) this.say('anchorB', C.RADIO.anchorB, true, null, C.RADIO_G.anchorB, 2.6); }
     /* 몽이 코: 녹음기 · 이야기 물건 상자 가까이 */
     if (R.L.pet) for (const c of R.containers) if ((c.tape || c.story) && !c.searched && near(c.pos, 9)) { this.say('sniff' + (c.tape ? 't' : 's'), ['y', C.RADIO.sniff], true); break; }
   }
@@ -138,5 +143,5 @@ export class StoryRaid {
 }
 /* 무전 표: 지도마다 다르면 { ware, harbor, tunnel }, 아니면 한 줄 */
 const rad = (tbl, k, map) => { const v = tbl?.[k]; return Array.isArray(v) ? v : v?.[map] || null; };
-const ITEMS_MEMO = k => ['tagbox', 'tagbundle', 'ferrytix', 'ledger', 'roster', 'lboot'].includes(k);
+const ITEMS_MEMO = k => k !== 'tape' && ITEMS[k]?.cat === 'memo';
 function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

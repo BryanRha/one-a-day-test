@@ -1,6 +1,6 @@
 // 이야기 규칙 (docs/NARRATIVE.md) — 진행 · 하루 한 걸음 · 인물 합류(창에 불) · 관계 · 기억 도감 · 세 등불 · 열쇠 기억
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀. 대사 글은 talk/*.js (나눠 받음 · story_ui.js 가 불러옴)
-import { ITEMS } from './data.js?v=0.99.9';
+import { ITEMS, MAPS } from './data.js?v=0.99.10';
 
 /* ───── 인물 6 (창 여섯 = 이 순서) · 말하는 이 ───── */
 export const CAST = {
@@ -12,14 +12,20 @@ export const CAST = {
   baram:   { name: '바람', role: '떠돌이', animal: '족제비', color: '#9a8fb5' },
 };
 export const CAST_KEYS = Object.keys(CAST);
-export const SPEAK = { ...CAST, nole: { name: '노을', role: '목소리', color: '#ffb44a' }, pasu: { name: '파수', role: '목소리', color: '#6fe0d8' }, mongi: { name: '몽이', role: '', color: '#8a6a4c' }, me: { name: '', role: '' } };
+export const SPEAK = { ...CAST, nole: { name: '노을', role: '목소리', color: '#ffb44a' }, pasu: { name: '파수', role: '목소리', color: '#6fe0d8' }, mongi: { name: '몽이', role: '', color: '#8a6a4c' }, anchor: { name: '검은 닻', role: '낯선 무전', color: '#8a8f99' }, me: { name: '', role: '' } };
 /* 대사 원고의 짧은 이름 */
-export const ALIAS = { g: 'gombang', m: 'moru', n: 'neuru', h: 'haedam', s: 'seori', b: 'baram', o: 'nole', p: 'pasu', y: 'mongi' };
+export const ALIAS = { g: 'gombang', m: 'moru', n: 'neuru', h: 'haedam', s: 'seori', b: 'baram', o: 'nole', p: 'pasu', y: 'mongi', k: 'anchor' };
 
 /* ───── 세 등불 (엔딩 게이지 — 숫자 없이 은신처 벽 등불 밝기로만) ───── */
 export const SIDES = { land: { name: '땅', txt: '되찾기', color: '#e0a060' }, lamp: { name: '등불', txt: '함께 살기', color: '#ffc861' }, sea: { name: '바다', txt: '돌려보내기', color: '#6fe0d8' } };
 export const SIDE_OF = { gombang: 'land', moru: 'land', neuru: 'lamp', haedam: 'lamp', seori: 'sea', baram: 'sea', box: 'sea' };
 export const LAMP_FULL = 12; /* 이 값이면 가장 밝음 (1~3장 최대: 열쇠 기억 6 × 2 + 장 끝 선택 2 + 인물 1~2) */
+/* 엔딩 분기 (docs/NARRATIVE.md 3-7) — 6장 끝에서 이 문턱을 넘은 등불의 엔딩이 모두 선택지로 (숨은 실패 엔딩 없음 · 가장 밝은 것이 맨 위)
+ *  1~3장에서 쌓이는 것: 열쇠 기억 6(맡긴 사람 쪽 +2) · 장 끝 선택(1 · 2장 +1, 3장은 관계만) · 곰방 장부 고백(+1) */
+export const ENDING_GATE = 4;
+export const ENDINGS = { land: { name: '닫힌 수문', txt: '물을 빼고 은포를 돌려받는다' }, lamp: { name: '물 위의 등불', txt: '잠긴 도시 위에 등불 마을을 띄운다' }, sea: { name: '기억의 바다', txt: '맡긴 물건을 모두 주인에게 돌려보낸다' } };
+export function endingsOpen(S) { const g = S.story.gauge; return Object.keys(ENDINGS).filter(k => (g[k] || 0) >= ENDING_GATE).sort((a, b) => (g[b] || 0) - (g[a] || 0)); }
+export const brightest = S => { const g = S.story.gauge; const k = Object.keys(SIDES).sort((a, b) => (g[b] || 0) - (g[a] || 0))[0]; return (g[k] || 0) > 0 ? k : null; };
 
 /* ───── 열쇠 기억 12 (장마다 2) — 1~3장 6개만 이번에 · 맡길 수 있는 사람(box = 도감 상자 → 서리 몫, 바다) ───── */
 export const KEYMEM = {
@@ -33,34 +39,51 @@ export const KEYMEM = {
 export const KEY_TOTAL = 12;
 
 /* ───── 장 ───── */
-export const CHAPTERS = { 1: { name: '맡겨 둔 짐', map: 'ware' }, 2: { name: '마지막 배', map: 'harbor' }, 3: { name: '멈춘 열차', map: 'tunnel' }, 4: { name: '불을 만든 곳', map: null } };
+export const CHAPTERS = { 1: { name: '맡겨 둔 짐', map: 'ware' }, 2: { name: '마지막 배', map: 'harbor' }, 3: { name: '멈춘 열차', map: 'tunnel' }, 4: { name: '불을 만든 곳', map: 'factory' }, 5: { name: '파수의 목소리', map: null } };
 
 /* ───── 이야기 걸음 (하루 한 걸음) ─────
  *  need.q: 그 의뢰(본 사슬 q1~q28)를 끝내야 열림 · nextDay: 앞 걸음을 끝낸 다음 날부터 · join: 열릴 때 은신처에 들어옴(창에 불)
  *  goal: carry(그 지도 · 구역 상자에서 이야기 물건 들고 탈출) · power · zone · extract · quest(본 사슬 의뢰가 끝나 있으면 바로) · 없음(장면만)
  *  cut: 장 끝 컷신(assets/story/cut_<장>_<n>.webp — 아트 세션 · 없으면 색 배경) · title: 장 제목 카드 */
 export const BEATS = [
+  /* 1장 「맡겨 둔 짐」 — 침수 창고 (1~8일) */
   { id: 'b_tut',    ch: 1, tut: true, name: '첫 인양' },
   { id: 'b_moru',   ch: 1, giver: 'gombang', name: '이름표 셋', join: 'moru', goal: { t: 'carry', item: 'tagbundle', map: 'ware', zone: 2 }, txt: '깊은 창고에서 이름표 묶음을 들고 탈출', reward: { shells: 80, bolt: 4 } },
   { id: 'b_power',  ch: 1, giver: 'moru', name: '정직한 기계', goal: { t: 'power', map: 'ware' }, txt: '침수 창고 발전기를 켜고 탈출', reward: { wire: 4, glass: 1 } },
+  { id: 'b_bluebox',ch: 1, giver: 'gombang', name: '파란 상자', need: { q: 'q3' }, goal: { t: 'carry', item: 'bluebox', map: 'ware', zone: 2 }, txt: '깊은 창고에서 고양이 그림 붙은 파란 상자를 들고 탈출', reward: { shells: 70, cloth: 3 } },
   { id: 'b_neuru',  ch: 1, giver: 'neuru', name: '국거리', need: { q: 'q5' }, join: 'neuru' },
+  { id: 'b_door',   ch: 1, giver: 'neuru', name: '기관실 문 앞', need: { q: 'q4' }, goal: { t: 'zone', map: 'ware', zone: 3 }, txt: '기관실 구역에 들어갔다 탈출', reward: { herb: 4, shells: 60 } },
   { id: 'b_gate',   ch: 1, giver: 'moru', name: '멈추게 해', need: { q: 'q7' }, goal: { t: 'quest', q: 'q8' }, txt: '수문지기 멈추기 (의뢰 8)' },
   { id: 'b_ch1end', ch: 1, name: '1장의 끝', nextDay: true, cut: ['cut_1_1', 'cut_1_2'] },
+  /* 2장 「마지막 배」 — 밤의 항구 (9~15일) */
   { id: 'b_ch2',    ch: 2, giver: 'moru', name: '마지막 배', need: { q: 'q11' }, title: 2, goal: { t: 'extract', map: 'harbor' }, txt: '밤의 항구에서 살아 나오기', reward: { shells: 60 } },
   { id: 'b_haedam', ch: 2, giver: 'haedam', name: '배표 꾸러미', join: 'haedam', goal: { t: 'carry', item: 'ferrytix', map: 'harbor', zone: 1 }, txt: '부두에서 배표 꾸러미를 들고 탈출', reward: { bandage: 2, cloth: 6 } },
+  { id: 'b_festival', ch: 2, giver: 'neuru', name: '크레인의 등롱', need: { q: 'q12' }, goal: { t: 'carry', item: 'festlamp', map: 'harbor', zone: 2 }, txt: '야적장 크레인에서 축제 등롱을 들고 탈출', reward: { shells: 90, glass: 2 } },
   { id: 'b_ledger', ch: 2, giver: 'gombang', name: '곰방 상회 장부', goal: { t: 'carry', item: 'ledger', map: 'harbor', zone: 2 }, txt: '야적장에서 낡은 장부를 들고 탈출', reward: { shells: 200 } },
+  { id: 'b_stairs', ch: 2, giver: 'haedam', name: '부두 계단', need: { q: 'q14' }, goal: { t: 'zone', map: 'harbor', zone: 3 }, txt: '등대 · 크레인 구역에 들어갔다 탈출', reward: { bandage: 1, shells: 80 } },
   { id: 'b_light',  ch: 2, giver: 'haedam', name: '꺼진 등대', goal: { t: 'quest', q: 'q17' }, txt: '갈고리 선장 쓰러뜨리기 (의뢰 17)' },
   { id: 'b_ch2end', ch: 2, name: '2장의 끝', nextDay: true, cut: ['cut_2_1', 'cut_2_2'] },
+  /* 3장 「멈춘 열차」 — 해저 터널 (16~22일) */
   { id: 'b_ch3',    ch: 3, giver: 'seori', name: '멈춘 열차', need: { q: 'q19' }, title: 3, join: 'seori', goal: { t: 'carry', item: 'roster', map: 'tunnel', zone: 1 }, txt: '역 승강장에서 승객 명부를 들고 탈출', reward: { shells: 150, herb: 6 } },
+  { id: 'b_duty',   ch: 3, giver: 'seori', name: '역무원의 근무표', need: { q: 'q20' }, goal: { t: 'carry', item: 'dutylog', map: 'tunnel', zone: 2 }, txt: '잠긴 선로에서 역무원 근무표를 들고 탈출', reward: { shells: 120, wire: 4 } },
   { id: 'b_freq',   ch: 3, giver: 'seori', name: '낯선 주파수', goal: { t: 'zone', map: 'tunnel', zone: 3 }, txt: '터널 제어실에 들어갔다 탈출', reward: { lens: 1 } },
+  { id: 'b_reply',  ch: 3, giver: 'seori', name: '답신' },
   { id: 'b_boot',   ch: 3, giver: 'neuru', name: '빈 좌석의 장화', goal: { t: 'carry', item: 'lboot', map: 'tunnel', zone: 2 }, txt: '잠긴 선로에서 장화 한 짝을 들고 탈출', reward: { shells: 120, herb: 4 } },
   { id: 'b_eel',    ch: 3, giver: 'moru', name: '두 번째 코어', goal: { t: 'quest', q: 'q25' }, txt: '터널 장어 쓰러뜨리기 (의뢰 25)' },
-  { id: 'b_ch3end', ch: 3, name: '3장의 끝', nextDay: true, cut: ['cut_3_1', 'cut_3_2'], last: true },
+  { id: 'b_ch3end', ch: 3, name: '3장의 끝', nextDay: true, cut: ['cut_3_1', 'cut_3_2'] },
+  /* 4장 「불을 만든 곳」 도입 — 가라앉은 공장 (M3-B 지도 · 23~25일) · 공장 지도는 판 의뢰 q57(3장 끝)이 엶 */
+  { id: 'b_ch4',    ch: 4, giver: 'moru', name: '불을 만든 곳', nextDay: true, need: { map: 'factory' }, title: 4, goal: { t: 'extract', map: 'factory' }, txt: '가라앉은 공장에서 살아 나오기', reward: { shells: 150, bolt: 6 } },
+  { id: 'b_anchor', ch: 4, giver: 'baram', name: '검은 닻', goal: { t: 'carry', item: 'anchorlog', map: 'factory', zone: 2 }, txt: '용광로 구역 은닉 상자에서 검은 닻 장부를 들고 탈출', reward: { shells: 160, spring: 2 } },
+  { id: 'b_baram',  ch: 4, giver: 'baram', name: '떠돌이의 빚', join: 'baram', last: true },
 ];
 export const BEAT_IDX = Object.fromEntries(BEATS.map((b, i) => [b.id, i]));
+/* v0.5 저장(걸음 16)의 순서 — 걸음 번호(st.beat)를 새 목록 번호로 옮길 때 (fixStory · bv 2) */
+export const BEATS_V1 = ['b_tut', 'b_moru', 'b_power', 'b_neuru', 'b_gate', 'b_ch1end', 'b_ch2', 'b_haedam', 'b_ledger', 'b_light', 'b_ch2end', 'b_ch3', 'b_freq', 'b_boot', 'b_eel', 'b_ch3end'];
+export const BEAT_V = 2;
 /* 녹음기 (지도마다 3) · 벽 낙서 (지도마다 6) — 글은 talk/memo.js */
-export const TAPES = { ware: ['t_w1', 't_w2', 't_w3'], harbor: ['t_h1', 't_h2', 't_h3'], tunnel: ['t_t1', 't_t2', 't_t3'] };
-export const TAPE_NOLE = ['t_w3', 't_h3', 't_t3'];
+export const TAPES = { ware: ['t_w1', 't_w2', 't_w3'], harbor: ['t_h1', 't_h2', 't_h3'], tunnel: ['t_t1', 't_t2', 't_t3'], factory: ['t_f1', 't_f2', 't_f3'] };
+export const TAPE_NOLE = ['t_w3', 't_h3', 't_t3', 't_f3'];
+export const TAPE_N = Object.values(TAPES).flat().length;
 export const GRAF_N = 6;
 /* 기억 도감 칸: 전리품 전부 + 이야기 물건 (녹음기 제외 — 녹음기는 따로) */
 export const CODEX_KEYS = Object.keys(ITEMS).filter(k => k !== 'tape');
@@ -68,7 +91,7 @@ export const REL_LV = [[0, '처음 본 사이'], [3, '아는 사이'], [6, '믿�
 export const relName = n => REL_LV.filter(([v]) => n >= v).pop()[1];
 
 /* ───── 저장 (S.story) ───── */
-export const freshStory = () => ({ v: 1, tut: 0, tutRaids: 0, beat: 0, open: null, openDay: null, doneQ: [], beatsDone: {}, credits: 0, creditDay: null,
+export const freshStory = () => ({ v: 1, bv: BEAT_V, tut: 0, tutRaids: 0, beat: 0, open: null, openDay: null, doneQ: [], beatsDone: {}, credits: 0, creditDay: null,
   joined: [], met: [], rel: {}, gauge: { land: 0, lamp: 0, sea: 0 }, keyMem: {}, keyQ: [], codex: {}, tapes: [], tapeQ: [], graf: [], flags: {}, talkDay: {}, talkIdx: {}, dayEnd: null, choices: {} });
 /* 저장에서 읽은 값 다듬기 (모르는 값 · 빠진 칸) */
 export function fixStory(o) {
@@ -79,6 +102,12 @@ export function fixStory(o) {
   m.joined = m.joined.filter(k => CAST[k]); m.beat = Math.max(0, Math.min(BEATS.length, m.beat | 0));
   if (m.open && !BEATS.some(b => b.id === m.open)) m.open = null; m.doneQ = m.doneQ.filter(id => BEAT_IDX[id] != null); m.keyQ = m.keyQ.filter(k => KEYMEM[k]);
   for (const k of Object.keys(m.codex)) if (!ITEMS[k]) delete m.codex[k];
+  /* v0.5 걸음 16 → v0.6 걸음 25: 걸음 번호를 id 로 옮기고, 그 앞에 새로 생긴 걸음은 '지난 걸음'(기록실에서 다시 보기) */
+  if ((o.bv | 0) < BEAT_V) {
+    const at = (o.beat | 0) >= BEATS_V1.length ? 'b_ch4' : BEATS_V1[o.beat | 0]; const ni = BEAT_IDX[at] ?? 0;
+    for (let i = 0; i < ni; i++) if (!m.beatsDone[BEATS[i].id]) m.beatsDone[BEATS[i].id] = 'old';
+    m.beat = ni; m.bv = BEAT_V;
+  }
   return m;
 }
 /* 처음 만들기 · v3 이하에서 옮겨 올 때: 이미 진행한 사람은 지금 장의 처음부터 (지난 장은 기록실에서 다시 보기) */
@@ -105,10 +134,13 @@ export function rollStory(S, today) {
 /* ───── 걸음 ───── */
 export const beatNow = S => BEATS[S.story.beat] || null;
 export const openBeat = S => (S.story.open ? BEATS[BEAT_IDX[S.story.open]] : null);
-export const chapter = S => { const b = beatNow(S); return b ? b.ch : 3; };
+export const chapter = S => { const b = beatNow(S); return b ? b.ch : BEATS[BEATS.length - 1].ch; };
+/* 지도가 게임에 있고 열렸는지 (econ.mapOpen 과 같은 규칙 — story.js 는 econ 을 안 읽음) */
+export const mapReady = (S, m) => { const M = MAPS[m]; return !!M && (!M.unlock || (S.quests?.done || []).includes(M.unlock)); };
 export function needMet(S, b, today) {
   if (!b || b.tut) return false;
   if (b.need?.q && !(S.quests?.done || []).includes(b.need.q)) return false;
+  if (b.need?.map && !mapReady(S, b.need.map)) return false; /* 4장: 공장 지도(M3-B)가 게임에 있고 열려야 */
   if (b.nextDay) { const prev = BEATS[BEAT_IDX[b.id] - 1]; const d = S.story.beatsDone[prev.id]; if (!d || d === today) return false; }
   return true;
 }
@@ -152,6 +184,8 @@ export function storyTick(S, today) {
 }
 /* 판에 넣을 이야기 물건: 열린 걸음이 carry 고 그 지도면 { item, zone } */
 export function storyWant(S, map) { const b = openBeat(S); const g = b?.goal; return g && g.t === 'carry' && g.map === map ? { item: g.item, zone: g.zone, beat: b.id } : null; }
+/* 이 걸음이 게임에 아직 없는 지도를 기다리는지 (4장 = 공장) — '다음 업데이트' 안내 */
+export const waitsMap = (S, b = beatNow(S)) => !!b?.need?.map && !MAPS[b.need.map];
 /* 이 지도에서 아직 안 들은 녹음기 */
 export const tapeLeft = (S, map) => (TAPES[map] || []).filter(t => !S.story.tapes.includes(t) && !S.story.tapeQ.includes(t));
 

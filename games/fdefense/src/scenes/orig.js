@@ -1,8 +1,8 @@
 // 원작 UI 그리기 도구 (v0.3.0 원작 맞춤)
 //   원작은 800×480 좌표에 그림을 '기준점 + 정렬 번호'로 찍는다(Texture2D.drawAtPointOption). 여기서는 같은 좌표를 받아
 //   변환 T = { x0, y0, s } (원작 1px → 화면 s px) 로 옮겨 찍는다. 아틀라스 그림은 원작의 ×2.4 로 키워 두었다(SCALE).
-import { SCALE, FONT } from '../config.js?v=0.99.9';
-import { FRAME_ATLAS } from './Boot.js?v=0.99.9';
+import { SCALE, FONT } from '../config.js?v=0.99.10';
+import { FRAME_ATLAS } from './Boot.js?v=0.99.10';
 
 // 원작 정렬 번호 → 기준점 (18 왼쪽 위 · 17 가운데 위 · 20 오른쪽 위 · 9 가운데 · 10 왼쪽 가운데 · 12 오른쪽 가운데 · 33 가운데 아래 · 34 왼쪽 아래 · 36 오른쪽 아래)
 export const ANCH = { 18: [0, 0], 17: [0.5, 0], 20: [1, 0], 9: [0.5, 0.5], 10: [0, 0.5], 12: [1, 0.5], 33: [0.5, 1], 34: [0, 1], 36: [1, 1] };
