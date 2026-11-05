@@ -2,10 +2,10 @@
 //   v3(0.3.0): look(고른 겉모습 — 머리 · 몸 · 얼굴 · 등 장식 · 총 스킨 · 털 · 무늬 · 몽이) · owned(가진 꾸미기)
 //   v5(0.6.0 · M3-A · 키는 'salvage_v4' 그대로 — 계정 저장 목록 안 바꿈): 무기 개조 grip 칸 · ammo(관통 · 전기 상자 수) · ammoSel · charms{have, eq} · diff · ach(업적 받은 날) · trade(상인 그날 산 수) · 시설 4개 · 장비 5단
 //   v4(0.5.0): story(이야기 진행 · 인물 관계 · 기억 도감 · 세 등불 · 열쇠 기억 — story.js) · 주인공 이름은 저장에 안 넣음(기기에만: 'salvage_name')
-import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS, WEAPONS, freshMods, CHARMS, DIFF } from './data.js?v=0.99.10';
-import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.10';
-import { freshLook, COS } from './look.js?v=0.99.10';
-import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.10';
+import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS, WEAPONS, freshMods, CHARMS, DIFF } from './data.js?v=0.99.11';
+import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.11';
+import { freshLook, COS } from './look.js?v=0.99.11';
+import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.11';
 export const KEY = 'salvage_v4';
 const OLD3 = 'salvage_v3', OLD2 = 'salvage_v2', OLD = 'salvage_v1';
 export const today = () => kstDay();
@@ -42,7 +42,17 @@ export function migrate(o) {
   n.firstRun = false; n.migrated = 1; n.story = null; initStory(n, kstDay(), true);
   return n;
 }
+/* 시험 저장 (v0.6.1 · tools/testsave.mjs): ?save=<base64url JSON> — 검수 · QA 가 7 · 21일 차 같은 진행을 바로 엶 (기기 저장을 덮어씀 · 실서버 oneaday.kr 에선 무시)
+ *  build.untilIn(ms) = 공사 남은 시간 → 지금 시각 기준 until 로 바꿈 */
+function urlSave() {
+  try { if (typeof location === 'undefined' || /^(www\.)?oneaday\.kr$/.test(location.hostname)) return null; /* 실서버에선 안 받음 (링크로 남의 저장을 덮는 일 막기) */
+    const q = new URLSearchParams(location.search).get('save'); if (!q) return null;
+    const o = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(q.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))));
+    if (o.build && o.build.untilIn != null) { o.build.until = Date.now() + o.build.untilIn; delete o.build.untilIn; } return o;
+  } catch (e) { console.warn('시험 저장(?save=)을 못 읽었어요', e); return null; }
+}
 export function load() {
+  const u = urlSave(); if (u) { S = migrate(u); save(); rollDay(); return S; }
   try {
     const t = ls()?.getItem(KEY) ?? mem.store;
     if (t) S = migrate(JSON.parse(t));

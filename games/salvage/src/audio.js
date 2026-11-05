@@ -244,7 +244,7 @@ let lastShot = -1, lastStep = -1;
 export const sfx = {
   /* 사격 — 무기 4종 각각 (wk 없으면 판의 지금 무기) */
   shot(pan = 0, wk) { if (!ctx) return; const t = now(); if (t - lastShot < 0.03) return; lastShot = t; (GUN[wk || wkNow()] || GUN.pistol)(t, pan); },
-  shell(wk) { if (!ctx) return; shell(now() + rnd(0.18, 0.3), wk || wkNow()); },
+  shell(wk) { if (!ctx) return; shell(now() + rnd(0.46, 0.56), wk || wkNow()); }, /* v0.6.1 탄피가 바닥에 처음 닿는 때(fx.shell 0.46~0.58초)에 맞춤 — 전엔 0.18~0.3초로 공중에서 남 */
   /* 재장전(무기마다 길이 맞춤) · 무기 바꾸기(장전 중이 아니면) */
   reload(wk, T) { if (!ctx) return; const r = R(), t = now(); wk = wk || wkNow();
     if (!T && r && !(r.pl?.reload > 0)) { nz({ t, kind: 'pink', dur: 0.14, ft: 'bandpass', ff: 700, ff1: 1400, q: 1, peak: 0.12 }); clk(t + 0.12, 1400, 0.2); clk(t + 0.2, 2100, 0.16); return; }
@@ -263,6 +263,19 @@ export const sfx = {
     nz({ t, kind: 'pink', dur: 0.07, ft: 'bandpass', ff: 1800, q: 0.8, peak: 0.35, pan });
     for (let i = 0; i < (big ? 9 : 5); i++) { const u = t + 0.06 + i * rnd(0.03, 0.07); clk(u, rnd(1400, 2600), rnd(0.04, 0.09), pan + rnd(-0.2, 0.2)); }
     if (big) { duck(0.35, 1.6); [57, 64, 69, 72].forEach((m, i) => metal(t + 0.25 + i * 0.06, MIDI(m + 12), 1.4, 0.04, 0, 0.5, 0.4)); } },
+  /* v0.6.1 무기 서명 소리 (검수 M3 Top 5) — 그림과 같은 프레임에 부름 */
+  /* 감전: 지직(짧은 고역 잡음 다발) + 톱니 웅 — n = 연쇄 몇 번째(0 = 전기 작살촉 명중 · 작게) */
+  zap(pan = 0, n = 1) { if (!ctx) return; const t = now(), k = n ? 1 : 0.45, c = n ? 6 : 3;
+    for (let i = 0; i < c; i++) nz({ t: t + i * rnd(0.012, 0.024), dur: 0.008, ft: 'bandpass', ff: rnd(3200, 6200), q: 2, peak: 0.16 * k, pan: pan + rnd(-0.2, 0.2), j: 0 });
+    os({ t, f0: 118 + n * 9, dur: 0.12 * (n ? 1 : 0.6), peak: 0.09 * k, wave: 'sawtooth', lp: 1800, pan }); os({ t, f0: 236 + n * 18, dur: 0.08, peak: 0.04 * k, wave: 'square', lp: 2400, pan, det: 12 }); },
+  /* 망원 치명/약점: 맑은 '핑' (두 배음 쇠) */
+  ping(pan = 0) { if (!ctx) return; const t = now(); metal(t + 0.01, 2350, 0.5, 0.07, pan, 0.35, 0.8); metal(t + 0.01, 3520, 0.32, 0.035, pan, 0.3, 0.6); },
+  /* 관통 작살촉 명중: 높은 '틱' + 뒤로 빠지는 쉭 */
+  pierce(pan = 0) { if (!ctx) return; const t = now(); clk(t, 3800, 0.12, pan); nz({ t: t + 0.01, dur: 0.06, ft: 'bandpass', ff: 4200, ff1: 1800, q: 2, peak: 0.07, pan }); },
+  /* 조명탄 날아감: 불꽃 '쉬익'(날아가는 시간 T 만큼) */
+  fizz(T = 0.3) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: Math.max(0.06, T), a: 0.02, ft: 'bandpass', ff: 2600, ff1: 1400, fdur: T + 0.05, q: 1.4, peak: 0.12, j: 0 }); },
+  /* 잠수 작살: 거품 보글 (물속이면 많고 낮게) */
+  bubble(wet) { if (!ctx) return; const t = now(); for (let i = 0; i < (wet ? 5 : 3); i++) plip(t + 0.03 + i * rnd(0.03, 0.06), rnd(wet ? 380 : 600, wet ? 650 : 950), 0.05, rnd(-0.3, 0.3), 0.3); },
   cover() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.05, ft: 'bandpass', ff: 700, q: 2.5, peak: 0.28 }); os({ t, f0: 240, f1: 180, dur: 0.05, peak: 0.12, wave: 'triangle', lp: 900 }); },
   /* 내가 맞음: 몸에 둔탁하게 + 작은 '끽' */
   hurt() { if (!ctx) return; const t = now(); thud(t, 140, 0.18, 0.6); nz({ t, kind: 'pink', dur: 0.12, ft: 'lowpass', ff: 1600, ff1: 300, peak: 0.35, sat: 1 });
@@ -377,12 +390,12 @@ sfx.window = sfx.windowLight; sfx.memo = sfx.memory;
 const TUNED = /^(pick|rare|extract|die|ui|tab|coin|equip|power|build|talk|cut|memory|memo|windowLight|window|bond|chapter|lamp|quest|warn|bossWarn|tape|radio|mong|siren|alert)$/;
 /* 소리마다 음량 손질 (효과음 버스를 사격 · 타격에 맞춰 올렸으므로 큰 사건 · 화음 소리는 덜어 리미터가 덜 일하게 — 5장 측정) */
 const GAIN = { boom: 0.5, thunder: 0.4, roar: 0.5, slam: 0.5, gate: 0.5, siren: 0.5, bossWarn: 0.5, warn: 0.55, die: 0.55, extract: 0.55, power: 0.55, cut: 0.55, chapter: 0.55, memory: 0.55, memo: 0.55,
-  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, roll: 0.7, rotate: 0.6 };
+  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, roll: 0.7, rotate: 0.6, zap: 0.8, fizz: 0.7, bubble: 0.7 };
 for (const k of Object.keys(sfx)) { const fn = sfx[k], tuned = TUNED.test(k), g = GAIN[k] || 1;
   sfx[k] = function (...a) { if (!ctx) return; const prev = EV; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; try { return fn.apply(this, a); } finally { EV = prev; } }; }
 
 /* 지도 환경음 (판 중에만 · 배경음을 꺼도 남음) — assets/audio/env.js 를 판 시작 때 늦게 받음 · 구역 · 날씨 · 정전 · 급류 · 침수 따라 바뀜 */
-function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.10').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
+function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.11').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
 const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
 export function ambience(on) {
   ambOn = !!on; if (!ctx) return; /* 소리가 아직 안 풀렸으면 기억만 → 첫 탭 뒤 tick 이 받음 */
@@ -395,7 +408,7 @@ function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gai
    장면: 은신처(처음 · 하루 끝) · 침수 창고 · 밤의 항구 · 해저 터널 · 보스전(지도 색)
    긴장 단계: 0 평소 → 1 적 발견(쫓는 적이 있음 · 4초 여운) → 2 탈출 카운트다운(물 차기 1분 전) */
 let seenRaid = false, chaseT = 0;
-function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.10').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.11').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
 function scene() {
   const r = R();
   if (!r || !r.alive) return { id: seenRaid ? 'dusk' : 'hideout', lv: 0 };

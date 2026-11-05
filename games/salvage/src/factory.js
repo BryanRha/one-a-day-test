@@ -6,9 +6,9 @@
 //  · 쇳물 도랑: 문 없는 벽 쪽을 따라 흐르는 쇳물(셰이더 하나) · 들어가면 피해(구르면 안 데임)
 //  · 보스 쇳물 감독관: 쇳물 붓기(줄 경고) · 내려찍기(원 경고 → 가슴 용광로 2초 약점 ×2) · 쇳물 비(체력 60% 아래 · 떨어질 자리 원 5개)
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.10';
-import { STEAM, MOLTEN, BELT, CRANE } from './data/map_factory.js?v=0.99.10';
-import { sfx } from './audio.js?v=0.99.10';
+import { BOSS } from './data.js?v=0.99.11';
+import { STEAM, MOLTEN, BELT, CRANE } from './data/map_factory.js?v=0.99.11';
+import { sfx } from './audio.js?v=0.99.11';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V();
@@ -191,7 +191,7 @@ export function smelterWind(R, e, dist, rage) {
 export function smelterAttack(R, e, dist) {
   const pl = R.pl, B = BOSS.smelter;
   if (e.pat === 'slam') { sfx.slam(); R.shake = Math.max(R.shake, 0.7); R.fx.ring(e.pos.x, e.pos.z, B.slam.r, 0xff9a5a); R.fx.burst(e.pos.x, 0.3, e.pos.z, 34, 0xffb347, 8, 0.14, 0.8, 20); if (dist < B.slam.r) R.hurt(B.slam.dmg, e.pos);
-    e.weakT = B.weak; e.stun = B.weak * 0.8; R.ui.toast('가슴 용광로가 열렸어요 — 약점!', 'good'); return; }
+    e.weakT = B.weak; e.stun = B.weak * 0.8; R.ui.weak('가슴 용광로가 열렸어요 — 약점!'); return; }
   if (e.pat === 'pour') { const dx = Math.sin(e.lockFace), dz = Math.cos(e.lockFace); (sfx.pour || sfx.slam)(); R.shake = Math.max(R.shake, 0.35);
     const px = pl.pos.x - e.pos.x, pz = pl.pos.z - e.pos.z, along = px * dx + pz * dz, side = Math.abs(px * dz - pz * dx);
     if (along > 0 && along < B.pour.len + 0.5 && side < B.pour.w / 2 + 0.3) R.hurt(B.pour.dmg, e.pos);

@@ -1,12 +1,14 @@
 // 은신처 성장 화면 (M3-A · v0.6) — 시설 카드 · 무기대(무기 10 · 탄약 3 · 개조 5칸) · 장비(5단 · 부적 2칸) · 상인 3 · 업적 · 난이도
 //  ui.js 의 탭이 여기를 부름. 글자 목록 대신 그림 · 단계 점 · '다음' 한 구절 · 모자란 것은 빨간 점 (QUALITY_M2 Top 7)
-import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.10';
-import { S, save } from './save.js?v=0.99.10';
-import * as E from './econ.js?v=0.99.10';
-import { A } from './assets.js?v=0.99.10';
-import { sfx, unlock } from './audio.js?v=0.99.10';
-import { COS } from './look.js?v=0.99.10';
-import * as BM from './bmflow.js?v=0.99.10';
+import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.11';
+import { S, save } from './save.js?v=0.99.11';
+import * as E from './econ.js?v=0.99.11';
+import { A } from './assets.js?v=0.99.11';
+import { sfx, unlock } from './audio.js?v=0.99.11';
+import { COS } from './look.js?v=0.99.11';
+import * as BM from './bmflow.js?v=0.99.11';
+import * as GL from './goal.js?v=0.99.11'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
+import { costChips } from './chips.js?v=0.99.11'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -18,15 +20,23 @@ const mat = (k, n) => `<span class="mat" style="--c:${MATS[k].color}"></span>${n
 const pct = x => Math.round(x * 100) + '%';
 const dots = (n, max, cls = '') => `<span class="ldots ${cls}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
 export const WHY2 = { cost: '재료가 모자라요', bench: '작업대 단계가 모자라요', rack: '무기대 단계가 모자라요', busy: '공사는 한 번에 하나씩', locked: '아직 잠겨 있어요', fac: '시설이 필요해요', full: '창고가 가득', have: '이미 요리가 있어요', max: '최고 단계', owned: '이미 있어요', soldout: '오늘은 다 팔렸어요', slot: '이 무기엔 그 칸이 없어요' };
-function costChips(cost) {
-  return Object.entries(cost || {}).map(([k, n]) => { const have = E.count(S, k); const ok = have >= n;
-    const lab = k === 'shells' ? shell(n) : k in MATS ? `${mat(k, '')}${MATS[k].name} ${n}` : `${ITEMS[k]?.name || k} ${n}`;
-    return `<span class="c ${ok ? 'ok' : 'no'}">${lab}${k !== 'shells' ? `<i>${have}</i>` : ''}</span>`; }).join('');
-}
 /* 모자란 것: 빨간 점 + 개수 (조개로 채울 수 있으면 주황) */
+/* v0.6.1 (검수 M3 Top 1): 빨간 점 대신 진행 막대 + % (조개로 채울 수 있으면 주황) */
 function lackDots(cost) {
   const L = E.lack(S, cost); const n = Object.keys(L).length; if (!n) return '<span class="lk ok">✓ 지을 수 있어요</span>';
-  const lp = E.lackPrice(S, cost); return `<span class="lk ${lp.ok ? 'buy' : 'no'}">${Object.keys(L).slice(0, 4).map(() => '<i></i>').join('')}${lp.ok ? `조개로 +${lp.price}` : `${n}가지 모자람`}</span>`;
+  const lp = E.lackPrice(S, cost); const k = GL.progressOf(S, cost);
+  return `<span class="lk ${lp.ok ? 'buy' : 'no'}"><span class="lkbar"><i style="width:${Math.round(k * 100)}%"></i></span>${lp.ok ? `조개로 +${lp.price}` : `${Math.round(k * 100)}% · ${n}가지`}</span>`;
+}
+/* 시설 탭 맨 위 '가장 가까운 공사' 한 줄: 진행 막대 · 판에서 찾아올 것과 나오는 상자 · 고물상 '모자란 것 사기' */
+function nearHtml() {
+  const nb = GL.nearestBuild(S); if (!nb) return '';
+  const F = FACILITIES[nb.f]; const lp = nb.lp; const parts = Object.keys(nb.lack).filter(m => m !== 'shells' && !(m in MATS));
+  const act = nb.st === 'ready' ? `<button class="btn sm ${S.build ? '' : 'cta'}" id="nbGo">${S.build ? '보기' : '짓기'}</button>`
+    : lp.ok ? `<button class="btn sm" id="nbBuy">모자란 것 사기 ${shell(lp.price)}</button>`
+    : lp.can ? `<button class="btn sm dim" id="nbBuy" disabled>조개 ${((nb.nx.cost.shells || 0) + lp.price - S.shells).toLocaleString('ko-KR')} 더</button>` : '';
+  const where = nb.st === 'ready' ? `<small class="nbw"><b>재료가 다 모였어요 ✓</b>${S.build ? ` · ${FACILITIES[S.build.k].name} 공사가 끝나면 바로` : ''}</small>` : nb.key ? `<small class="nbw">${parts.length ? '판에서' : '찾아오기'} · <b>${E.costName(nb.key.item)} ${nb.key.n}</b>${nb.key.src ? ` — ${nb.key.src}` : ''}${nb.key.buy ? ' · 고물상에도 있어요' : ''}</small>` : nb.shellsLack ? `<small class="nbw">조개 ${nb.shellsLack.toLocaleString('ko-KR')} 모자람 — 보물을 팔거나 한 판 더</small>` : '';
+  return `<div class="nearb" data-k="${nb.f}"><div class="nbh">${facArt(nb.f)}<span><small>가장 가까운 공사</small><b>${F.name} ${nb.lv}단계</b><em>${nb.nx.short || ''}</em></span><b class="nbp">${Math.round(nb.k * 100)}%</b></div>
+    <span class="nbar"><i style="width:${Math.round(nb.k * 100)}%"></i></span><div class="cost nbc">${costChips(nb.nx.cost)}</div><div class="nbf">${where}${act}</div></div>`;
 }
 
 /* ───── 시설 그림 (단순한 평면 그림 · 카드 색 = tint) ───── */
@@ -48,9 +58,9 @@ export const facArt = (k, cls = '') => `<span class="fart ${cls}" style="--c:${F
 
 /* ───── 시설 탭: 그림 카드 2열 · 누르면 자세히 ───── */
 export function tabFac(ui, body) {
-  const order = FAC_KEYS.slice().sort((a, b) => (S.build?.k === b) - (S.build?.k === a) || (E.facUnlocked(S, b) - E.facUnlocked(S, a)));
+  const order = GL.facOrder(S); /* 공사 중 → 바로 지음 → 조개로 → '거의 됨' 순 → 잠김 → 최고 (v0.6.1) */
   const built = FAC_KEYS.reduce((s, k) => s + E.facLvl(S, k), 0), max = FAC_KEYS.reduce((s, k) => s + FACILITIES[k].levels.length, 0);
-  body.innerHTML = `<div class="facsum"><b>초소 살림</b>${dots(Math.round(built / max * 10), 10, 'wide')}<small>${built}/${max}단계</small></div>
+  body.innerHTML = `${nearHtml()}<div class="facsum"><b>초소 살림</b>${dots(Math.round(built / max * 10), 10, 'wide')}<small>${built}/${max}단계</small></div>
     <div class="fgrid">${order.map(k => {
       const F = FACILITIES[k], lv = E.facLvl(S, k), nx = E.facNext(S, k), un = E.facUnlocked(S, k), building = S.build?.k === k;
       const left = building ? Math.max(0, (S.build.until - Date.now()) / 1000) : 0;
@@ -60,6 +70,10 @@ export function tabFac(ui, body) {
         ${building ? `<i class="bprog" style="--p:${1 - left / (nx?.time || 1)}"></i>` : ''}</button>`; }).join('')}</div>
     ${S.build ? `<div class="instrow"><small>${FACILITIES[S.build.k].name} 공사 중</small><div class="instbox"></div></div>` : '<small class="hint">공사는 한 번에 하나 · 시간이 지나면 저절로 끝나요 (게임을 꺼 둬도)</small>'}`;
   body.querySelectorAll('.fcard').forEach(b => b.onclick = () => { sfx.ui(); facSheet(ui, b.dataset.k); });
+  const nb = $('.nearb', body); if (nb) { nb.onclick = e => { if (e.target.closest('button')) return; sfx.ui(); facSheet(ui, nb.dataset.k); };
+    $('#nbGo', nb) && ($('#nbGo', nb).onclick = () => { sfx.ui(); facSheet(ui, nb.dataset.k); });
+    $('#nbBuy', nb) && ($('#nbBuy', nb).onclick = () => { unlock(); const nx = E.facNext(S, nb.dataset.k); const p = E.lackPrice(S, nx.cost).price;
+      if (!E.buyLack(S, nx.cost)) { sfx.empty(); return ui.toast('조개가 모자라요', 'soft'); } save(); sfx.ui(); ui.toast(`곰방 고물상에서 샀어요 — 조개 −${p}`, 'good'); ui.hideout(); }); }
   BM.bindInst(body);
 }
 function lockTxt(k) {
@@ -219,4 +233,12 @@ export function diffSheet(ui, after) {
   m.querySelectorAll('.dopt').forEach(b => b.onclick = () => { E.setDiff(S, b.dataset.d); save(); sfx.ui(); close(); });
   $('#dClose', m).onclick = close; m.onclick = e => { if (e.target === m) close(); };
 }
+/* 출격 준비 (v0.6.1 · 검수 M3 Top 1 · 4): '이번 판 목표' 한 줄 + 최근 5판 다 탈출이면 '깊게' 권유 한 줄 (곰방 말투 · 보상 +10%) */
+export function prepGoal() {
+  const g = GL.raidGoal(S), d = GL.deepHint(S);
+  const goal = g ? `<div class="pgoal ${g.done ? 'done' : ''}"><small>이번 판 목표${g.why ? ` · ${g.why}` : ''}</small><b>${g.txt}</b></div>` : '';
+  const deep = d ? `<div class="pdeep"><span>곰방 “요즘 너무 쉽지? 최근 ${d.n}판 다 살아 왔잖아. <b>깊게</b> 가 봐 — 적은 세도 건지는 게 10% 더 많아.”</span><button class="btn sm" id="deepGo">${DIFF.deep.icon} 깊게</button></div>` : '';
+  return goal + deep;
+}
+export function bindPrepGoal(ui, el, after) { $('#deepGo', el) && ($('#deepGo', el).onclick = () => { unlock(); E.setDiff(S, 'deep'); save(); sfx.ui(); ui.toast(`${DIFF.deep.icon} 깊게 — 보상 +10%`, 'good'); after(); }); }
 export const diffChip = () => `<button class="lnk diffchip" id="diffBtn">${DIFF[S.diff || 'normal'].icon} ${DIFF[S.diff || 'normal'].name}</button>`;

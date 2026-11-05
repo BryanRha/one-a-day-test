@@ -2,9 +2,9 @@
 //  데이터 = data/quests.js BOARD · 대사 = talk/common.js QTALK · 화면 = story_ui.js (의뢰 탭 '인물 의뢰' · 결과 화면 금빛 카드)
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀
 //  저장: S.quests.board = { prog: { 의뢰: 누적 }, rep: { 반복 의뢰: 끝낸 주 } } (salvage_v4 그대로 · 없으면 여기서 만듦) · 끝낸 판 의뢰 id 는 S.quests.done 에 같이 들어감
-import { ITEMS, MAPS, ENEMIES, MATS } from './data.js?v=0.99.10';
-import { BOARD, QBY } from './data/quests.js?v=0.99.10';
-import * as ST from './story.js?v=0.99.10';
+import { ITEMS, MAPS, ENEMIES, MATS } from './data.js?v=0.99.11';
+import { BOARD, QBY } from './data/quests.js?v=0.99.11';
+import * as ST from './story.js?v=0.99.11';
 
 export { BOARD, QBY };
 export const ACTIVE_MAX = 4;   /* 한 번에 보이는 인물 의뢰 (반복 납품은 따로) */

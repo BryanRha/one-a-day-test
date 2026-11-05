@@ -1,17 +1,17 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.10';
-import { FX } from './fx.js?v=0.99.10';
-import { Raid } from './raid.js?v=0.99.10';
-import { UI } from './ui.js?v=0.99.10';
-import { S, load, save, stashCap } from './save.js?v=0.99.10';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.10';
-import * as E from './econ.js?v=0.99.10';
-import { installBack } from './oad.js?v=0.99.10';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.10';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.10';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.10';
-import { Story, artUrl } from './story_ui.js?v=0.99.10';
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.11';
+import { FX, shakeMul } from './fx.js?v=0.99.11';
+import { Raid } from './raid.js?v=0.99.11';
+import { UI } from './ui.js?v=0.99.11';
+import { S, load, save, stashCap } from './save.js?v=0.99.11';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.11';
+import * as E from './econ.js?v=0.99.11';
+import { installBack } from './oad.js?v=0.99.11';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.11';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.11';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.11';
+import { Story, artUrl } from './story_ui.js?v=0.99.11';
 
 const Q = new URLSearchParams(location.search);
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
@@ -176,8 +176,8 @@ function frame(now) {
     const tx = p.x + lead.x, tz = p.z + lead.z - 1.2;
     camLook.lerp(new THREE.Vector3(tx, 0, tz), 1 - Math.pow(0.002, rdt));
     raid.kick.multiplyScalar(Math.pow(0.0001, rdt)); raid.shake = Math.max(0, raid.shake - rdt * 1.6);
-    const s = raid.shake * raid.shake * 0.9; shakeV.set((Math.random() - 0.5) * s, (Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
-    camera.position.set(camLook.x, 25, camLook.z + 15).add(raid.kick).add(shakeV); camera.lookAt(camLook.x + shakeV.x * 0.5, 0, camLook.z);
+    const sm = shakeMul(), s = raid.shake * raid.shake * 0.9 * sm; shakeV.set((Math.random() - 0.5) * s, (Math.random() - 0.5) * s, (Math.random() - 0.5) * s); /* 설정 '흔들림 약하게' = ×0.35 (반동도 줄임) */
+    camera.position.set(camLook.x, 25, camLook.z + 15).addScaledVector(raid.kick, 0.4 + 0.6 * sm).add(shakeV); camera.lookAt(camLook.x + shakeV.x * 0.5, 0, camLook.z);
     if (app.camOverride) { const o = app.camOverride; camera.position.set(o.x, o.y, o.z + o.back); camera.lookAt(o.x, 0, o.z); } /* 시험용 전체 보기 */
     sun.position.set(p.x + 8, 22, p.z + 6); sun.target.position.set(p.x, 0, p.z);
     fx.update(rdt, camera, innerWidth, innerHeight);
@@ -212,7 +212,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.10'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.11'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

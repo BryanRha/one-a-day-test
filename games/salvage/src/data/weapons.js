@@ -33,6 +33,31 @@ export const WEAPONS = {
 };
 export const WEAPON_KEYS = Object.keys(WEAPONS);
 
+/* ───── 손맛 칸 (v0.6.1 · 검수 M3 Top 5 — 폰 쿼터뷰에서 보이는 '서명 효과' 하나씩 · arms.js 가 읽음) ─────
+ * shake 쏠 때 화면 흔들림(카메라는 제곱으로 흔듦: 0.3 ≈ 3px · 0.5 ≈ 9px · 상한 SHAKE_MAX · 설정 '흔들림 약하게' ×0.35)
+ * kick 반동(카메라가 쏘는 반대로 밀림 m) · stop 히트스톱 배수(기본 0.04초 · 치명/약점 0.07 — 연사 무기는 작게: 멈춤이 쌓이면 끈적임)
+ * push 넉백 배수(knock × push · 산탄은 알마다) · flash 총구 불꽃 크기(0 = 없음) · light 총구 빛 세기 · fc 불꽃/빛 색
+ * tc 궤적 색 · tw 궤적 두께(m · 폰에서 1m ≈ 32px) · tl 궤적 남는 초 · sig 서명 효과(arms.js shotSig)
+ *   spark 금빛 작살 꼬리 + 맞은 자리 별 · stream 푸른 궤적 다발 + 탄피 줄 · swing 휘두름 잔상 부채꼴 · fan 부채꼴 화염 + 밀어내기
+ *   rivet 짧은 불티 점선 + 탄피 비 · line 오래 남는 흰 선 + 관통 파편 · 치명 '핑' 고리 · bubble 물속 거품 꼬리 · pierce 굵은 관통선 + 꿰뚫은 적마다 파편 분수
+ *   arc 지그재그 전기 호 + 감전 번쩍 · flare 날아가는 불덩이 → 바닥 불 링 + 빛 웅덩이 */
+export const SHAKE_MAX = 0.6;
+export const FEEL = {
+  pistol:  { shake: 0.30, kick: 0.16, stop: 1,    push: 1,   flash: 1.1, light: 28, fc: 0xffd890, tc: 0xffd890, tw: 0.16, tl: 0.13, sig: 'spark' },
+  rifle:   { shake: 0.24, kick: 0.10, stop: 0.45, push: 1,   flash: 0.8, light: 20, fc: 0xcfe8ff, tc: 0x8fd0ff, tw: 0.09, tl: 0.16, sig: 'stream' },
+  wrench:  { shake: 0.45, kick: 0.22, stop: 2,    push: 1.2, flash: 0,   light: 0,  fc: 0xffffff, tc: 0xfff4dc, tw: 0.9,  tl: 0.18, sig: 'swing' },
+  shotgun: { shake: 0.52, kick: 0.30, stop: 1,    push: 1.6, flash: 1.9, light: 44, fc: 0xffb860, tc: 0xffc070, tw: 0.13, tl: 0.13, sig: 'fan' },
+  rivet:   { shake: 0.21, kick: 0.06, stop: 0.3,  push: 1,   flash: 0.8, light: 16, fc: 0xffa040, tc: 0xffb050, tw: 0.17, tl: 0.1, sig: 'rivet' },
+  longshot:{ shake: 0.46, kick: 0.26, stop: 1.8,  push: 1,   flash: 1.3, light: 34, fc: 0xffffff, tc: 0xeef8ff, tw: 0.14, tl: 0.55, sig: 'line' },
+  diver:   { shake: 0.18, kick: 0.10, stop: 1,    push: 1,   flash: 0.6, light: 12, fc: 0x9ff4ff, tc: 0x8fefff, tw: 0.08, tl: 0.14, sig: 'bubble' },
+  harpoon: { shake: 0.56, kick: 0.32, stop: 1.6,  push: 1.2, flash: 1.5, light: 36, fc: 0xffc070, tc: 0xffa63a, tw: 0.34, tl: 0.34, sig: 'pierce' },
+  volt:    { shake: 0.30, kick: 0.12, stop: 1.2,  push: 1,   flash: 1.1, light: 44, fc: 0x9fe8ff, tc: 0x6fd0ff, tw: 0.2,  tl: 0.17, sig: 'arc' },
+  flare:   { shake: 0.26, kick: 0.18, stop: 1.2,  push: 1,   flash: 1.2, light: 30, fc: 0xffa050, tc: 0xff9a3c, tw: 0,    tl: 0,    sig: 'flare', boom: 0.6, fly: 34 },
+};
+for (const k of WEAPON_KEYS) WEAPONS[k].feel = FEEL[k];
+/* 탄약 명중 효과 (arms.js hitSig) — 일반 = 뼈 조각 + 따뜻한 별 · 관통 = 뒤로 빠지는 은빛 침 3 + '틱' · 전기 = 파란 번쩍 + 작은 호 2 + '지직' */
+export const AMMO_FX = { normal: { c: 0xffd9a0, s: 1.1 }, ap: { c: 0xf2f6ff, s: 1.2, spikes: 3 }, sp: { c: 0x5fc8ff, s: 1.9, arcs: 3 } };
+
 /* ───── 개조 5칸 × Mk1~3 + 특수 부품(4번 칸 · 무기대 4단계 · 보스 보물) ─────
  *  배열 칸 = 단계 0 · Mk1 · Mk2 · Mk3 · 특수. 근접(렌치)은 총열 = 휘두르는 거리 · 손잡이 = 휘두르는 빠르기 */
 export const MODS = {

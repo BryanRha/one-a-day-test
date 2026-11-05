@@ -5,11 +5,11 @@
 //  · 무리: 같은 방에서 시작한 검은 닻 = 무리. 하나가 알아채면 다 같이 · 역할 pin(묶어 둠) · flank(반대쪽으로 돌아 듦) · flush(숨은 자리에 불병을 던져 몰아냄)
 //  · M4(AI 2단계)에서 늘릴 자리: ROLE 표에 역할 추가 · Squad.plan() 에 협공 순서 · 소리/빛 반응 · 투척 — 판정 · 이동 · 공격 예고는 raid.js 것을 그대로 씀
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.10';
-import { LOB } from './data/map_factory.js?v=0.99.10';
-import { SOLID } from './plan.js?v=0.99.10';
-import { glowSprite } from './enemy3d.js?v=0.99.10';
-import { sfx } from './audio.js?v=0.99.10';
+import { ENEMIES } from './data.js?v=0.99.11';
+import { LOB } from './data/map_factory.js?v=0.99.11';
+import { SOLID } from './plan.js?v=0.99.11';
+import { glowSprite } from './enemy3d.js?v=0.99.11';
+import { sfx } from './audio.js?v=0.99.11';
 
 export const FACTION = { drone: 'machine', boss: 'machine', smelter: 'machine', skel: 'moss', lamp: 'moss', miner: 'moss', captain: 'moss', crab: 'beast', jelly: 'beast', eel: 'beast' };
 export const facOf = kind => ENEMIES[kind]?.fac || FACTION[kind] || 'machine';
@@ -71,7 +71,7 @@ export class AI {
     const d = Math.round(dmg * sh * (t.D.boss ? 0.5 : 1)); t.hp -= d; t.flash = 0.08; t.stagger = t.D.boss ? 0 : 0.08;
     if (src && !src.dead && hostile(t.F, src.F) && !t.D.boss) { t.foe = src; t.foeT = 0.6; if (t.state !== 'chase') t.state = 'fight'; }
     if (t.ai) t.ai.hitT = R.t;
-    R.fx.num(t.pos, String(d), '');
+    R.hn.hit(t, t.pos, d, sh < 1 ? 'block' : ''); /* 같은 적 0.25초 안은 하나로 (검수 M3 Top 6) */
     if (t.hp <= 0) R.kill(t, dir || V(0, 0, 1), src);
   }
   /* 맞힐 대상: 노리는 적 · 없으면 주인공 */

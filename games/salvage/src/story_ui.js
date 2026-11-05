@@ -1,16 +1,18 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.10';
-import * as ST from './story.js?v=0.99.10';
-import * as B from './board.js?v=0.99.10';
-import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.10';
-import { COS } from './look.js?v=0.99.10';
-import { A } from './assets.js?v=0.99.10';
-import { sfx, unlock } from './audio.js?v=0.99.10';
-import { StoryRaid } from './story_raid.js?v=0.99.10';
-import { NpcHome } from './npc_home.js?v=0.99.10';
-import { ART } from './talk/art.js?v=0.99.10';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import { S, save, today } from './save.js?v=0.99.11';
+import * as ST from './story.js?v=0.99.11';
+import * as B from './board.js?v=0.99.11';
+import { frac } from './chips.js?v=0.99.11'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.11';
+import { COS } from './look.js?v=0.99.11';
+import { A } from './assets.js?v=0.99.11';
+import { sfx, unlock } from './audio.js?v=0.99.11';
+import { shakeLabel, cycleShake } from './fx.js?v=0.99.11'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
+import { StoryRaid } from './story_raid.js?v=0.99.11';
+import { NpcHome } from './npc_home.js?v=0.99.11';
+import { ART } from './talk/art.js?v=0.99.11';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
 
 const Q = new URLSearchParams(location.search);
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
@@ -20,7 +22,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.10'), t1: () => import('./talk/t1.js?v=0.99.10'), t2: () => import('./talk/t2.js?v=0.99.10'), t3: () => import('./talk/t3.js?v=0.99.10'), t4: () => import('./talk/t4.js?v=0.99.10'), common: () => import('./talk/common.js?v=0.99.10'), memo: () => import('./talk/memo.js?v=0.99.10') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.11'), t1: () => import('./talk/t1.js?v=0.99.11'), t2: () => import('./talk/t2.js?v=0.99.11'), t3: () => import('./talk/t3.js?v=0.99.11'), t4: () => import('./talk/t4.js?v=0.99.11'), common: () => import('./talk/common.js?v=0.99.11'), memo: () => import('./talk/memo.js?v=0.99.11') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;
@@ -330,7 +332,7 @@ export class Story {
     const card = q => { const p = B.progress(S, q); const t = C?.QTALK[q.id]; const g = q.goal; const ready = g.t === 'deliver' && p.cur >= p.n;
       const map = g.map && MAPS[g.map] ? ` · ${MAPS[g.map].icon} ${esc(MAPS[g.map].name)}` : '';
       return `<div class="bq k-${q.kind}" data-q="${q.id}">${portrait(q.giver, 'sm')}<div class="bqb"><small class="bk">${kind[q.kind] || ''}${map}</small><b class="bn">${esc(q.name)}</b>${t?.give ? `<p class="bl">${esc(say(t.give))}</p>` : ''}<p class="bt">${esc(q.txt)}</p>
-        ${p.n > 1 ? `<div class="qbar"><i style="width:${(p.cur / p.n * 100).toFixed(0)}%"></i><span>${p.cur}/${p.n}</span></div>` : ''}<small class="brw">보상 ${esc(rwTxt(q.reward))}</small>${g.t === 'deliver' ? `<button class="btn sm bdel ${ready ? '' : 'dim'}" data-bq="${q.id}">납품하기</button>` : ''}</div></div>`; };
+        ${p.n > 1 ? `<div class="qbar"><i style="width:${(p.cur / p.n * 100).toFixed(0)}%"></i><span>${frac(p.cur, p.n, g.t === 'deliver')}</span></div>` : ''}<small class="brw">보상 ${esc(rwTxt(q.reward))}</small>${g.t === 'deliver' ? `<button class="btn sm bdel ${ready ? '' : 'dim'}" data-bq="${q.id}">납품하기</button>` : ''}</div></div>`; };
     const once = act.filter(q => !q.repeat), rep = act.filter(q => q.repeat);
     return `<div class="bqs">${once.length ? `<div class="sec">인물 의뢰 <small>${once.length}${wait ? ` · 다음 차례 ${wait}` : ''}</small></div>${once.map(card).join('')}` : ''}${rep.length ? `<div class="sec">이번 주 납품 <small>매주 월요일 다시</small></div>${rep.map(card).join('')}` : ''}</div>`;
   }
@@ -415,12 +417,14 @@ export class Story {
     const st = S.story; const done = ST.BEATS.filter(b => st.beatsDone[b.id] && !b.tut);
     const m = h('div', 'modal st-keep', `<div class="sheet"><h3>설정</h3>
       <div class="setrow"><span>주인공 이름</span><b>${esc(getName())}</b><button class="btn sm" id="sName">바꾸기</button></div>
+      <div class="setrow"><span>화면 흔들림</span><b id="sShkT">${shakeLabel().split(' · ')[1]}</b><button class="btn sm" id="sShk">바꾸기</button></div>
       <div class="sec">기록실 <small>본 이야기 다시 보기</small></div>
       <div class="rec"><button class="btn sm" id="sPro">처음 이야기 (프롤로그 · 첫날)</button>${done.map(b => `<button class="btn sm" data-b="${b.id}">${b.ch}장 · ${esc(b.name)}</button>`).join('')}</div>
       <div class="sbtns"><button class="btn" id="sHow">조작법</button><button class="btn" id="sX">닫기</button></div></div>`);
     $('#frame').appendChild(m); const close = () => { m.remove(); };
     $('#sX', m).onclick = () => { snd('ui'); close(); }; m.onclick = e => { if (e.target === m) close(); };
     $('#sHow', m).onclick = () => { close(); this.ui.howto(); };
+    $('#sShk', m).onclick = () => { snd('ui'); cycleShake(); $('#sShkT', m).textContent = shakeLabel().split(' · ')[1]; }; /* 보통 ↔ 약하게(×0.35 · 반동도 줄임) */
     $('#sName', m).onclick = async () => { close(); await this.nameModal(false); if (this.ui.root.className === 'scr-hideout') this.ui.hideout(); this.settings(); };
     $('#sPro', m).onclick = () => { close(); this.replayIntro(); };
     m.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { close(); this.replayBeat(b.dataset.b); });
