@@ -4,13 +4,13 @@
 //  몽이: 가끔 인물 하나에게 깡충깡충 다가가 마주 보고(인물도 몽이 쪽으로 몸을 돌림) 다시 제자리 · 인물을 누르면 그 발치로 먼저 달려감
 //  main.js 를 건드리지 않음: 은신처 묶음(scene 'hideout')에 붙고, 은신처가 보일 때만 자기 rAF 로 움직임
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.13';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.13';
-import { heroMat, HERO_SCALE } from './hero.js?v=0.99.13';
-import { S, today } from './save.js?v=0.99.13';
-import * as ST from './story.js?v=0.99.13';
-import { sfx, unlock } from './audio.js?v=0.99.13';
-import { FACILITIES, FAC_TOTAL } from './data.js?v=0.99.13';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.14';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.14';
+import { heroMat, HERO_SCALE } from './hero.js?v=0.99.14';
+import { S, today } from './save.js?v=0.99.14';
+import * as ST from './story.js?v=0.99.14';
+import { sfx, unlock } from './audio.js?v=0.99.14';
+import { FACILITIES, FAC_TOTAL } from './data.js?v=0.99.14';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 /* 자리 [x, z, 바라보는 방향] — 은신처 카메라(main.js: 높이 7.2 · 뒤 9.4)에 세로 폰에서 다 보이게 (뒤 줄 x ±3 · 앞 줄 ±2.4)

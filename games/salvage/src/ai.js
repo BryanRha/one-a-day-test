@@ -6,13 +6,13 @@
 //  · 판정 · 이동 · 공격 예고는 raid.js 것을 그대로 · 새 적 공격 모양은 foes.js · 두목은 chief.js
 //  · 모든 큰 공격은 예고(바닥 원 · 줄 · 떨어질 자리) — 예고를 띄우면 e.teleT0 (raid.warnDisc/warnLine) → raid.hurt 가 '예고 없는 큰 피해' 자동 검사
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.13';
-import { LOB } from './data/map_factory.js?v=0.99.13';
-import { AI2, NADE } from './data/enemies.js?v=0.99.13';
-import { SOLID } from './plan.js?v=0.99.13';
-import { glowSprite } from './enemy3d.js?v=0.99.13';
-import { sfx } from './audio.js?v=0.99.13';
-import { foeWind } from './foes.js?v=0.99.13';
+import { ENEMIES } from './data.js?v=0.99.14';
+import { LOB } from './data/map_factory.js?v=0.99.14';
+import { AI2, NADE } from './data/enemies.js?v=0.99.14';
+import { SOLID } from './plan.js?v=0.99.14';
+import { glowSprite } from './enemy3d.js?v=0.99.14';
+import { sfx } from './audio.js?v=0.99.14';
+import { foeWind } from './foes.js?v=0.99.14';
 
 export const FACTION = { drone: 'machine', boss: 'machine', smelter: 'machine', skel: 'moss', lamp: 'moss', miner: 'moss', captain: 'moss', crab: 'beast', jelly: 'beast', eel: 'beast' };
 export const facOf = kind => ENEMIES[kind]?.fac || FACTION[kind] || 'machine';

@@ -1,61 +1,65 @@
 // 방문형 방 창 (크루룸 · 사장실 · 창고) · 금고 · 공사 · 풍선 · 골드 상품 · 시즌 패스 · 지점 완성 — UI 에 붙임
 //   방 창: 방에 들어가면 아래에서 올라옴 (게임은 멈추지 않음 · 위쪽을 끌면 계속 걸음) · 나가면 닫힘 · 뒤로 = 닫기
 //   모든 광고 자리는 바구니(하루 10) 하나를 나눠 씀 · 다 쓰면 같은 효과의 🪙 로 바뀌거나(1·2·4·6·10) 조용히 숨음(3·7·9)
-import { UI } from './ui.js?v=0.99.13';
-import { S, save, vipOn, has, today } from './state.js?v=0.99.13';
-import { BRANCHES, STAFF, STAFF_JOB, ROOM_UP, ROOM_UP_MAX, OUTFITS_PRO, GOLD, VIP, IDLE, THEME_SETS, SEASON, COUPON, BRAND, STORE_MAP, AD_PLACES, AD_DAY } from './data.js?v=0.99.13';
-import { ROOMS, hms, instGold } from './layout.js?v=0.99.13';
-import { sfx } from './audio.js?v=0.99.13';
-import { pushBack, track } from './oad.js?v=0.99.13';
-import { bm } from './oad_bm.js?v=0.99.13';
+import { UI } from './ui.js?v=0.99.14';
+import { S, save, vipOn, has, today } from './state.js?v=0.99.14';
+import { BRANCHES, STAFF, STAFF_JOB, ROOM_UP, ROOM_UP_MAX, OUTFITS_PRO, GOLD, VIP, IDLE, THEME_SETS, SEASON, COUPON, BRAND, STORE_MAP, AD_PLACES, AD_DAY } from './data.js?v=0.99.14';
+import { ROOMS, hms, instGold } from './layout.js?v=0.99.14';
+import { sfx } from './audio.js?v=0.99.14';
+import { pushBack, track } from './oad.js?v=0.99.14';
+import { bm } from './oad_bm.js?v=0.99.14';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 const day = () => Math.floor(Date.now() / 864e5);
 // ── 방 창
 P.sheetOn = function () { const e = $('#sheet'); return !!e && !e.hidden; };
+/* 방 창 (0.3.1 대표 「크루룸이 복잡함」): 처음엔 할 일 하나만 크게 · 설명은 한 줄 · 「더 보기」를 누르거나 첫 일을 하면 나머지가 짧은 줄로 · 바닥 칸도 같은 순서로 드러남 (S.roomStep) */
+P.roomStep = function (room) { return (S.roomStep || {})[room] || 0; };
+P.roomNext = function (room) { S.roomStep ||= {}; if (S.roomStep[room]) return; S.roomStep[room] = 1; save(); this.app.game.refreshPads(); };
+/* 그 방의 첫 할 일 */
+P.primary = function (room) { const g = this.app.game, lv = id => S.branch[S.bi]?.lv?.[id] || 0;
+  if (room === 'crew') { const hp = g.pads.find(p => p.s.type === 'hire'); if (hp) return { k: 'hire', p: hp }; const u = ROOM_UP.crew.filter(u => lv(u.id) < ROOM_UP_MAX).sort((a, b) => g.lvCost(a.id) - g.lvCost(b.id))[0]; return u ? { k: 'lv', u } : null; }
+  if (room === 'boss') { if (S.safe.v > 0) return { k: 'safe' }; if (g.pads.some(p => p.s.type === 'next')) return { k: 'next' }; const u = ROOM_UP.boss.find(u => u.id === 'price' && lv(u.id) < ROOM_UP_MAX) || ROOM_UP.boss.find(u => lv(u.id) < ROOM_UP_MAX); return u ? { k: 'lv', u } : null; }
+  if (room === 'store') { if (S.gift !== today()) return { k: 'gift' }; if (vipOn() && S.vipBox !== today()) return { k: 'vbox' }; if (this.passReady()) return { k: 'pass' }; return null; } return null; };
 P.roomSheet = function (room, refresh, was, byBack) {
   const el = $('#sheet'); if (!el) return;
   if (!room) { if (byBack) this._sheetClosed = this.app.game.room; el.hidden = true; el.innerHTML = ''; this._sheet = null; this._sbk && this._sbk(); this._sbk = null; if (!byBack) this._sheetClosed = null; return; }
   if (refresh && this._sheet !== room) return; if (!refresh && this._sheetClosed === room) return;   /* 뒤로로 닫은 방은 나갔다 들어올 때까지 다시 안 띄움 */
-  this._sheet = room; el.hidden = false; const g = this.app.game, R = ROOMS[room]; let rows = '', sub = '';
-  const adBtn = (pl, data, txt = '📺 무료') => this.slotOk(pl) ? `<button class="sbtn ad" ${data}>${vipOn() ? '👑 바로' : txt}<small>오늘 ${this.placeLeft(pl)}번</small></button>` : '';
-  const goldBtn = (sku, data, sm = '1단계 바로') => { const p = this.goldOf(sku); return p ? `<button class="sbtn gold" ${data}>🪙 ${p}<small>${sm}</small></button>` : ''; };
-  const lvRow = (u, pl) => { const lv = g.lvAt ? g.lvAt(u.id) : (S.branch[S.bi]?.lv?.[u.id] || 0), max = lv >= ROOM_UP_MAX, c = g.lvCost(u.id), free = !max ? (adBtn(pl, `data-fa="${u.id}"`) || goldBtn('free_lv', `data-fg="${u.id}"`)) : '';
-    return `<div class="srow"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name} Lv ${lv}</b><div class="lvb">${'<i class="on"></i>'.repeat(lv)}${'<i></i>'.repeat(ROOM_UP_MAX - lv)}</div></div><button class="sbtn cash ${max || S.coins < c ? 'off' : ''}" data-lv="${u.id}">${max ? 'MAX' : fmt(c)}</button>${free}</div>`; };
-  if (room === 'crew') { sub = '바닥 칸에 서 있으면 돈이 들어가요 · 칸 앞에서 이 창이 열려요';
-    const hp = g.pads.find(p => p.s.type === 'hire'); rows += hp ? `<div class="srow"><div class="ic">🧑‍🍳</div><div class="tx"><b>새 직원 뽑기</b><span>다음: ${STAFF[hp.s.staff].name} · ${STAFF_JOB[hp.s.staff] || ''}</span></div><button class="sbtn cash ${S.coins < hp.s.cost - hp.paid ? 'off' : ''}" data-hire="${hp.s.id}">${fmt(hp.s.cost - hp.paid)}</button></div>`
-      : `<div class="srow"><div class="ic">🧑‍🍳</div><div class="tx"><b>새 직원 뽑기</b><span>${g.staff.length ? `직원 ${g.staff.length}명이 일하는 중 · 가게를 더 열면 새 자리가 생겨요` : '가게를 더 열면 직원 자리가 생겨요'}</span></div></div>`;
-    for (const u of ROOM_UP.crew) rows += lvRow(u, 'crew_free');
-    const pro = OUTFITS_PRO.find(o => !S.outfits.includes(o.id) && !has(o.id)), n = pro && S.outfitAd.id === pro.id ? S.outfitAd.n : 0;
-    rows += pro ? `<div class="srow"><div class="ic">👕</div><div class="tx"><b>옷장 · ${pro.name}</b><span>광고 3번이면 열려요 (${n}/3)</span></div>${this.slotOk('outfit_ad') ? `<button class="sbtn ad" data-oa="${pro.id}">📺 ${3 - n}번 더</button>` : ''}${goldBtn(pro.id, `data-og="${pro.id}"`, '바로 열기')}<button class="sbtn ghost" data-wd="1">옷장</button></div>` : `<div class="srow"><div class="ic">👕</div><div class="tx"><b>옷장</b><span>유니폼을 갈아입혀요</span></div><button class="sbtn ghost" data-wd="1">열기</button></div>`; }
-  if (room === 'boss') { sub = '사장님 강화 · 금고 · 다음 지점 계약 책상';
-    for (const u of ROOM_UP.boss) rows += lvRow(u, 'boss_free');
-    rows += `<div class="srow"><div class="ic">🔐</div><div class="tx"><b>금고</b><span>${S.safe.v > 0 ? `쉬는 동안 번 돈 ${fmt(S.safe.v)} · 금고 앞으로 가요` : `쉬는 동안 번 돈이 여기에 쌓여요 (최대 ${this.idleCapH()}시간)`}</span></div>${S.safe.v > 0 ? '<button class="sbtn cash" data-safe="1">열기</button>' : ''}</div>`;
-    const rate = g.rate(); rows += `<div class="srow"><div class="ic">✍</div><div class="tx"><b>지점 계약 책상</b><span>${S.bi >= 3 ? '모든 지점을 열었어요 · 5호점 준비 중' : rate >= 0.9 ? `${BRANCHES[S.bi + 1].name} 계약 칸이 책상 앞에 있어요` : `진행 ${Math.round(rate * 100)}% · 90% 가 되면 다음 지점 계약`}</span></div></div>`;
-    rows += `<div class="srow"><div class="ic">📍</div><div class="tx"><b>매장 찾기</b><span>${BRANCHES[S.bi].name} 실제 매장 지도</span></div><button class="sbtn ghost" data-store="1">가 보기</button></div>`; }
-  if (room === 'store') { sub = '배송 상자가 도착해요 · 오늘의 선물 · VIP 상자 · 시즌 패스';
-    const gift = S.gift !== today(), gv = this.giftCoins();
-    rows += `<div class="srow"><div class="ic">🎁</div><div class="tx"><b>오늘의 선물</b><span>${gift ? `+${fmt(gv)} · 하루 한 번` : '내일 또 와요'}</span></div>${gift ? `<button class="sbtn cash" data-gift="1">받기</button>${this.slotOk('gift2x') ? `<button class="sbtn ad" data-gift2="1">📺 ×2<small>${fmt(gv * 2)}</small></button>` : ''}` : ''}</div>`;
-    const vb = vipOn() && S.vipBox !== today(), vv = Math.round(this.perMin() * VIP.boxMin / 10) * 10;
-    rows += `<div class="srow"><div class="ic">👑</div><div class="tx"><b>VIP 상자</b><span>${vipOn() ? (vb ? `+${fmt(vv)} (${VIP.boxMin}분치)` : '내일 또 와요') : '마루미 VIP 동안 매일 와요'}</span></div>${vb ? '<button class="sbtn cash" data-vbox="1">받기</button>' : vipOn() ? '' : '<button class="sbtn ghost" data-gs="1">VIP 보기</button>'}</div>`;
-    const pn = this.passReady(); rows += `<div class="srow"><div class="ic">🎟</div><div class="tx"><b>${SEASON.name}</b><span>${pn ? `받을 보상 ${pn}개` : `베이글을 팔면 별이 쌓여요 · ★${this.passTier()}`}</span></div><button class="sbtn ${pn ? 'cash' : 'ghost'}" data-pass="1">${pn ? '받기' : '보기'}</button></div>`;
-    rows += `<div class="srow"><div class="ic">⚡</div><div class="tx"><b>즉시 완성권</b><span>공사를 바로 끝내요 · ${S.inst || 0}장</span></div></div>`; }
-  el.innerHTML = `<div class="sh"><h3>${{ crew: '👥', boss: '💼', store: '📦' }[room]} ${R.name}${{ crew: ' · 인사팀', boss: ' · 업그레이드', store: ' · 배송' }[room]}</h3><button class="sx" id="shx">✕</button></div><p>${sub}</p>${rows}<div class="note">📺 오늘 남은 광고 ${this.adLeft()}/${AD_DAY} · 다 보면 같은 효과를 🪙 로 · 소장 · VIP 는 광고 없이 바로</div>`;
+  this._sheet = room; el.hidden = false; const g = this.app.game, R = ROOMS[room], step = this.roomStep(room), pr = this.primary(room), lvOf = id => S.branch[S.bi]?.lv?.[id] || 0;
+  const free = (pl, data) => this.slotOk(pl) ? `<button class="sbtn ad" ${data}>${vipOn() ? '👑' : '📺'} 무료</button>` : (this.goldOf('free_lv') ? `<button class="sbtn gold" ${data.replace('data-fa', 'data-fg')}>🪙${this.goldOf('free_lv')}</button>` : '');
+  /* 큰 카드: 지금 할 일 하나 */
+  let big = '';
+  if (pr?.k === 'hire') big = card('🧑‍🍳', `${STAFF[pr.p.s.staff].name} 뽑기`, STAFF_JOB[pr.p.s.staff] || '', `<button class="bbtn cash ${S.coins < pr.p.s.cost - pr.p.paid ? 'off' : ''}" data-hire="${pr.p.s.id}"><i class="c"></i>${fmt(pr.p.s.cost - pr.p.paid)}</button>`);
+  if (pr?.k === 'lv') { const c = g.lvCost(pr.u.id); big = card(pr.u.icon, `${pr.u.name} Lv ${lvOf(pr.u.id) + 1}`, pr.u.desc, `<button class="bbtn cash ${S.coins < c ? 'off' : ''}" data-lv="${pr.u.id}"><i class="c"></i>${fmt(c)}</button>${free(room + '_free', `data-fa="${pr.u.id}"`)}`); }
+  if (pr?.k === 'safe') big = card('🔐', '금고 열기', `쉬는 동안 번 돈 +${fmt(S.safe.v)}`, '<button class="bbtn cash" data-safe="1">받기</button>');
+  if (pr?.k === 'next') big = card('✍', `${BRANCHES[S.bi + 1].name} 계약`, '책상 앞 바닥 칸에 서면 계약해요', '');
+  if (pr?.k === 'gift') big = card('🎁', '오늘의 선물', `+${fmt(this.giftCoins())}`, `<button class="bbtn cash" data-gift="1">받기</button>${this.slotOk('gift2x') ? `<button class="sbtn ad" data-gift2="1">📺 ×2</button>` : ''}`);
+  if (pr?.k === 'vbox') big = card('👑', 'VIP 상자', `+${fmt(Math.round(this.perMin() * VIP.boxMin / 10) * 10)}`, '<button class="bbtn cash" data-vbox="1">받기</button>');
+  if (pr?.k === 'pass') big = card('🎟', '시즌 패스 보상', `받을 보상 ${this.passReady()}개`, '<button class="bbtn cash" data-pass="1">보기</button>');
+  if (!pr) big = card({ crew: '👥', boss: '💼', store: '📦' }[room], '지금은 할 일이 없어요', '가게를 더 열면 생겨요', '');
+  /* 나머지: 짧은 줄 (더 보기 뒤) */
+  let rows = '';
+  if (step) { const row = (ic, nm, btns) => `<div class="srow s"><div class="ic">${ic}</div><div class="tx"><b>${nm}</b></div>${btns}</div>`;
+    if (room === 'crew' || room === 'boss') for (const u of ROOM_UP[room]) { if (pr?.k === 'lv' && pr.u.id === u.id) continue; const lv = lvOf(u.id), max = lv >= ROOM_UP_MAX, c = g.lvCost(u.id); rows += row(u.icon, `${u.name} <em>Lv ${lv}</em>`, max ? '<span class="mx">MAX</span>' : `<button class="sbtn cash ${S.coins < c ? 'off' : ''}" data-lv="${u.id}">${fmt(c)}</button>${free(room + '_free', `data-fa="${u.id}"`)}`); }
+    if (room === 'crew') { const pro = OUTFITS_PRO.find(o => !S.outfits.includes(o.id) && !has(o.id)), n = pro && S.outfitAd.id === pro.id ? S.outfitAd.n : 0; rows += row('👕', '옷장', `${pro && this.slotOk('outfit_ad') ? `<button class="sbtn ad" data-oa="${pro.id}">📺 ${n}/3</button>` : ''}<button class="sbtn ghost" data-wd="1">열기</button>`); }
+    if (room === 'boss') { if (pr?.k !== 'safe') rows += row('🔐', `금고 <em>최대 ${this.idleCapH()}시간</em>`, ''); rows += row('📍', '매장 찾기', '<button class="sbtn ghost" data-store="1">지도</button>'); }
+    if (room === 'store') { if (pr?.k !== 'gift' && S.gift === today()) rows += row('🎁', '오늘의 선물 <em>내일 또</em>', ''); if (pr?.k !== 'vbox') rows += row('👑', 'VIP 상자', vipOn() ? '' : '<button class="sbtn ghost" data-gs="1">VIP</button>'); if (pr?.k !== 'pass') rows += row('🎟', `시즌 패스 <em>★${this.passTier()}</em>`, '<button class="sbtn ghost" data-pass="1">보기</button>'); rows += row('⚡', `즉시 완성권 <em>${S.inst || 0}장</em>`, ''); } }
+  el.innerHTML = `<div class="sh"><h3>${{ crew: '👥', boss: '💼', store: '📦' }[room]} ${R.name}</h3><span class="adn">📺 ${this.adLeft()}/${AD_DAY}</span><button class="sx" id="shx">✕</button></div><p>${{ crew: '직원을 뽑고 키워요', boss: '사장님을 키우고 금고를 열어요', store: '날마다 상자가 와요' }[room]} · 바닥 칸에 서도 돼요</p>${big}${step ? rows : '<button class="more" id="shm">다른 것도 보기 ›</button>'}`;
+  function card(ic, t, d, btn) { return `<div class="bigcard"><div class="ic">${ic}</div><div class="tx"><b>${t}</b><span>${d}</span></div><div class="bb">${btn}</div></div>`; }
   if (!this._sbk) this._sbk = pushBack(() => { this.roomSheet(null, false, null, true); return true; });
-  $('#shx').onclick = () => this.roomSheet(null, false, null, true);
-  const re = () => this.roomSheet(room, true);
-  el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { const id = b.dataset.lv, c = g.lvCost(id); if (b.classList.contains('off') || S.coins < c) return; S.coins -= c; g.levelUp(id); });
-  el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { const id = b.dataset.fa; this.ad('lv', () => g.levelUp(id, '광고 무료 단계'), room + '_free', `${ROOM_UP[room].find(u => u.id === id).name} 1단계 무료`); });
-  el.querySelectorAll('[data-fg]').forEach(b => b.onclick = () => { const id = b.dataset.fg; this.gold('free_lv', () => g.levelUp(id, '🪙 1단계 바로')); });
-  el.querySelectorAll('[data-hire]').forEach(b => b.onclick = () => { const p = g.pads.find(q => q.s.id === b.dataset.hire); if (!p || b.classList.contains('off')) return; const need = p.s.cost - p.paid; if (S.coins < need) return; S.coins -= need; p.paid = p.s.cost; g.unlock(p); re(); });
-  el.querySelectorAll('[data-oa]').forEach(b => b.onclick = () => { const o = OUTFITS_PRO.find(x => x.id === b.dataset.oa); this.ad('outfit', () => { if (S.outfitAd.id !== o.id) S.outfitAd = { id: o.id, n: 0 }; S.outfitAd.n++; if (S.outfitAd.n >= 3) { S.outfitAd = { id: '', n: 0 }; S.outfits.push(o.id); S.outfit = o.id; g.restaff(); this.toast(`🎉 ${o.name} 열림! 직원들이 입었어요`); } else this.toast(`📺 ${S.outfitAd.n}/3 · 내일도 이어서 쌓여요`); save(true); re(); }, 'outfit_ad', `${o.name} (광고 3편이면 열려요)`); });
-  el.querySelectorAll('[data-og]').forEach(b => b.onclick = () => { const o = OUTFITS_PRO.find(x => x.id === b.dataset.og); this.gold(o.id, () => { S.outfits.push(o.id); S.outfit = o.id; g.restaff(); this.toast(`🎉 ${o.name}!`); re(); }, o.id); });
+  $('#shx').onclick = () => this.roomSheet(null, false, null, true); const m = $('#shm'); if (m) m.onclick = () => { this.roomNext(room); this.roomSheet(room, true); };
+  const re = () => this.roomSheet(room, true), done = () => { this.roomNext(room); re(); };
+  el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { const id = b.dataset.lv, c = g.lvCost(id); if (b.classList.contains('off') || S.coins < c) return; S.coins -= c; g.levelUp(id); done(); });
+  el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { const id = b.dataset.fa; this.ad('lv', () => { g.levelUp(id, '광고 무료 단계'); done(); }, room + '_free', `${ROOM_UP[room].find(u => u.id === id).name} 1단계 무료`); });
+  el.querySelectorAll('[data-fg]').forEach(b => b.onclick = () => { const id = b.dataset.fg; this.gold('free_lv', () => { g.levelUp(id, '🪙 1단계 바로'); done(); }); });
+  el.querySelectorAll('[data-hire]').forEach(b => b.onclick = () => { const p = g.pads.find(q => q.s.id === b.dataset.hire); if (!p || b.classList.contains('off')) return; const need = p.s.cost - p.paid; if (S.coins < need) return; S.coins -= need; p.paid = p.s.cost; g.unlock(p); done(); });
+  el.querySelectorAll('[data-oa]').forEach(b => b.onclick = () => { const o = OUTFITS_PRO.find(x => x.id === b.dataset.oa); this.ad('outfit', () => { if (S.outfitAd.id !== o.id) S.outfitAd = { id: o.id, n: 0 }; S.outfitAd.n++; if (S.outfitAd.n >= 3) { S.outfitAd = { id: '', n: 0 }; S.outfits.push(o.id); S.outfit = o.id; g.restaff(); this.toast(`🎉 ${o.name} 열림!`); } else this.toast(`📺 ${S.outfitAd.n}/3`); save(true); re(); }, 'outfit_ad', `${o.name} (광고 3편이면 열려요)`); });
   el.querySelectorAll('[data-wd]').forEach(b => b.onclick = () => { this._dtab = 'staff'; this.decoShop(); });
   el.querySelectorAll('[data-safe]').forEach(b => b.onclick = () => this.safe());
   el.querySelectorAll('[data-store]').forEach(b => b.onclick = () => { track('bg_store', { b: S.bi, at: 'boss' }); try { window.open(STORE_MAP[S.bi], '_blank', 'noopener'); } catch { /* */ } });
-  el.querySelectorAll('[data-gift]').forEach(b => b.onclick = () => { const v = this.giftCoins(); S.gift = today(); S.coins += v; S.earned += v; save(true); sfx('reward'); this.toast(`🎁 오늘의 선물 +${fmt(v)}`); this.progress(); re(); });
-  el.querySelectorAll('[data-gift2]').forEach(b => b.onclick = () => { const v = this.giftCoins() * 2; this.ad('gift', () => { S.gift = today(); S.coins += v; S.earned += v; this.toast(`🎁 오늘의 선물 ×2 +${fmt(v)}`); re(); }, 'gift2x', `오늘의 선물 ×2 (+${fmt(v)})`); });
-  el.querySelectorAll('[data-vbox]').forEach(b => b.onclick = () => { const v = Math.round(this.perMin() * VIP.boxMin / 10) * 10; S.vipBox = today(); S.coins += v; S.earned += v; save(true); sfx('reward'); this.toast(`👑 VIP 상자 +${fmt(v)}`); this.progress(); re(); });
+  el.querySelectorAll('[data-gift]').forEach(b => b.onclick = () => { const v = this.giftCoins(); S.gift = today(); S.coins += v; S.earned += v; save(true); sfx('reward'); this.toast(`🎁 +${fmt(v)}`); this.progress(); done(); });
+  el.querySelectorAll('[data-gift2]').forEach(b => b.onclick = () => { const v = this.giftCoins() * 2; this.ad('gift', () => { S.gift = today(); S.coins += v; S.earned += v; this.toast(`🎁 ×2 +${fmt(v)}`); done(); }, 'gift2x', `오늘의 선물 ×2 (+${fmt(v)})`); });
+  el.querySelectorAll('[data-vbox]').forEach(b => b.onclick = () => { const v = Math.round(this.perMin() * VIP.boxMin / 10) * 10; S.vipBox = today(); S.coins += v; S.earned += v; save(true); sfx('reward'); this.toast(`👑 +${fmt(v)}`); this.progress(); done(); });
   el.querySelectorAll('[data-gs]').forEach(b => b.onclick = () => { this._stab = 'gold'; this.shop(); });
   el.querySelectorAll('[data-pass]').forEach(b => b.onclick = () => { this._stab = 'pass'; this.shop(); });
 };
@@ -66,7 +70,7 @@ P.freeLevel = function (room) { const g = this.app.game, L0 = ROOM_UP[room].filt
   $('#mOk').onclick = () => this.close();
   m.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { const id = b.dataset.u; if (ad) { this.close(); this.ad('lv', () => g.levelUp(id, '광고 무료 단계'), pl, `${ROOM_UP[room].find(u => u.id === id).name} 1단계 무료`); } else this.gold('free_lv', () => { this.close(); g.levelUp(id, '🪙 1단계 바로'); }); }); };
 /* 금고: 쉬는 동안 번 돈 받기 · 📺 ×2 · 🪙 ×2 · 닫으면 1배 · 닫은 뒤 = 쉼표 */
-P.safe = function () { const v = Math.round(+S.safe.v || 0); if (v <= 0) return; let got = false; const take = (k = 1) => { if (got) return; got = true; S.safe.v = 0; S.coins += v * k; S.earned += v * k; save(true); sfx('coin'); this.progress(); this.roomSheet(this.app.game.room, true); setTimeout(() => this.pause('safe'), 400); };
+P.safe = function () { const v = Math.round(+S.safe.v || 0); if (v <= 0) return; let got = false; const take = (k = 1) => { if (got) return; got = true; S.safe.v = 0; S.coins += v * k; S.earned += v * k; save(true); sfx('coin'); this.progress(); this.roomNext('boss'); this.roomSheet(this.app.game.room, true); setTimeout(() => this.pause('safe'), 400); };
   const adOk = this.slotOk('offline2x'), g = this.goldOf('safe2x');
   this.modal(`<h3>🔐 사장실 금고</h3><p>쉬는 동안 직원들이 번 돈이에요! <b>+${fmt(v)}</b></p><div class="btns"><button class="btn ghost" id="s1">받기</button>${adOk ? `<button class="btn" id="s2">${vipOn() ? '👑' : '📺'} 2배 받기</button>` : g ? `<button class="btn gold" id="s3">🪙${g} 2배</button>` : ''}</div><p class="sm">최대 ${this.idleCapH()}시간 쌓여요${vipOn() ? ' · VIP' : ` · VIP 는 ${VIP.idleH}시간`}</p>`, () => take(1));
   $('#s1').onclick = () => this.close();

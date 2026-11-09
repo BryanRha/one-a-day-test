@@ -9,11 +9,11 @@ export const ROOMS = {
   shop: { name: '매대', en: 'COUNTER', rect: [-250, -450, 650, 450], kind: 'open', start: true },
   dough: { name: '반죽실', en: 'DOUGH ROOM', rect: [-650, -1150, 0, -450], kind: 'open', main: 'mixer', pad: [-170, -370] },
   cream: { name: '크림치즈 공방', en: 'CREAM ATELIER', rect: [0, -1150, 650, -450], kind: 'open', main: 'cc', pad: [170, -370] },
-  cafe: { name: '커피 바', en: 'COFFEE BAR', rect: [650, -1150, 1250, -450], kind: 'open', main: 'espresso', pad: [0, -370] },
+  cafe: { name: '커피 바', en: 'COFFEE BAR', rect: [650, -450, 1250, 450], kind: 'open', main: 'espresso', pad: [590, -30] },   /* 0.3.1: 계산대 바로 오른쪽 (커피 → 계산대가 오븐 앞을 안 지나감) */
   hall: { name: '홀 확장', en: 'HALL', rect: [-650, -450, -250, 450], kind: 'open', main: 't2', pad: [-170, -200] },
   crew: { name: '크루룸', en: 'CREW ROOM', rect: [-1250, -1150, -650, -450], kind: 'encl', visit: true, doors: [{ side: 'E', at: -800 }], pad: [-560, -880] },
   boss: { name: '사장실', en: "OWNER'S OFFICE", rect: [-1250, -450, -650, 450], kind: 'encl', visit: true, doors: [{ side: 'N', at: -950 }, { side: 'E', at: 0 }], pad: [-1100, -540] },
-  store: { name: '창고', en: 'STOCKROOM', rect: [650, -450, 1250, 450], kind: 'encl', visit: true, doors: [{ side: 'W', at: -250 }], pad: [590, -30] },
+  store: { name: '창고', en: 'STOCKROOM', rect: [650, -1150, 1250, -450], kind: 'encl', visit: true, doors: [{ side: 'W', at: -800 }], pad: [590, -880] },   /* 0.3.1: 뒤쪽 오른편 · 문은 크림치즈 공방 쪽 */
   /* 지점 특색 (8번 방) — 지점마다 하나 */
   pickup: { name: '픽업 창구', en: 'PICK-UP', rect: [650, 450, 1250, 1050], kind: 'open', main: 'drive', pad: [565, 330], feature: 1 },
   up2: { name: '2층 홀', en: '2F LAKE VIEW', rect: [-1250, 450, -250, 1050], kind: 'open', main: 'u1', pad: [-160, 370], feature: 2, raised: 150 },
@@ -41,8 +41,8 @@ const S = {
   cc: { type: 'ccbar', x: 180, z: -660, room: 'cream', base: 160, label: '토핑 바' },
   topper: { type: 'hire', staff: 'topper', x: 180, z: -960, room: 'cream', base: 520, label: '토핑 직원 뽑기' },
   coffee: { type: 'coffee', x: 480, z: -680, room: 'cream', base: 420, label: '크림치즈 냉장고' },
-  fridge: { type: 'hire', staff: 'fridge', x: 480, z: -960, room: 'cream', base: 760, label: '음료·크림치즈 직원 뽑기' },
-  espresso: { type: 'espresso', x: 920, z: -660, room: 'cafe', base: 340, label: '커피 머신' },
+  fridge: { type: 'hire', staff: 'fridge', x: 345, z: -960, room: 'cream', base: 760, label: '음료·크림치즈 직원 뽑기' },
+  espresso: { type: 'espresso', x: 800, z: -320, room: 'cafe', base: 340, label: '커피 머신' },
   baker: { type: 'hire', staff: 'baker', x: 0, z: -200, room: 'shop', base: 300, label: '진열 직원 뽑기' },
   t2: { type: 'table', x: -450, z: -260, room: 'hall', base: 200 },
   t3: { type: 'table', x: -450, z: 30, room: 'hall', base: 560 },
@@ -73,15 +73,15 @@ export const FEATURE = ['pickup', 'up2', 'drive', 'terrace'];
 export const MULT = [1, 4, 14, 45];
 export const COST_K = [0.85, 2.16, 2.72, 2.72];   /* 2026-11-09 성장 곡선(tools/growth_sim.mjs): 무과금 15일 · 광고 10 9일 · VIP 6일 */
 
-// ── 지점 인테리어 (계획안 2-2 · 실제 매장 공통 요소는 모든 지점 유지: 회색 벽 흰 로고 · 흰 세로 타일 진열대 · 테라조 받침 · 검은 칠판 가격표 · 주황 m 상자 선반 · 스테인리스 오븐)
+// ── 지점 인테리어 (계획안 2-2 · 0.3.1: 바닥은 채도 · 대비를 낮춤 — 베이글(황갈색) · 쟁반 · 쓰레기가 늘 또렷이 · tools/floor_check.mjs 가 대비를 잼) · 실제 매장 공통 요소는 모든 지점 유지: 회색 벽 흰 로고 · 흰 세로 타일 진열대 · 테라조 받침 · 검은 칠판 가격표 · 주황 m 상자 선반 · 스테인리스 오븐)
 export const INTERIOR = [
-  { id: 'oak', name: '밝은 우드 카페', floor: 'plank', fa: '#EBCB9C', fb: '#DDB37E', line: '#C9975E', wall: 'plain', wallC: 0xF5EBDD, wallB: 0xF0E2CE, trim: 0xB07A44, light: 'pendant', props: 'oak', ext: 'awning', sky: '#F6EEE2', ground: 0xE7DCCB, hemi: [0xFFF4E2, 0xC9A882, 1.65], sun: 0xFFEFD6,
+  { id: 'oak', name: '밝은 우드 카페', floor: 'plank', fa: '#F1E8DC', fb: '#EBE0D1', line: '#DDD0BE', wall: 'plain', wallC: 0xF5EBDD, wallB: 0xF0E2CE, trim: 0xB07A44, light: 'pendant', props: 'oak', ext: 'awning', sky: '#F6EEE2', ground: 0xE7DCCB, hemi: [0xFFF4E2, 0xC9A882, 1.65], sun: 0xFFEFD6,
     note: '아파트 상가 아침 빵집 · 둥근 펜던트 등 · 몬스테라 · 라탄 의자' },
-  { id: 'classic', name: '본점다운 클래식 베이커리', floor: 'check', fa: '#F3E7D6', fb: '#7A4A2A', line: '#5A3A22', wall: 'wainscot', wallC: 0x8E8C88, wallB: 0x86847F, wain: 0x5A3A22, trim: 0x3E2A1A, light: 'brass', props: 'classic', ext: 'stripe', sky: '#E7EDF2', ground: 0xDCD6CC, hemi: [0xFFF0DC, 0xB49A7A, 1.55], sun: 0xFFE7C8, lake: true, cherry: true,
+  { id: 'classic', name: '본점다운 클래식 베이커리', floor: 'check', fa: '#F2EDE6', fb: '#E3DBD0', line: '#D6CCBF', wall: 'wainscot', wallC: 0x8E8C88, wallB: 0x86847F, wain: 0x5A3A22, trim: 0x3E2A1A, light: 'brass', props: 'classic', ext: 'stripe', sky: '#E7EDF2', ground: 0xDCD6CC, hemi: [0xFFF0DC, 0xB49A7A, 1.55], sun: 0xFFE7C8, lake: true, cherry: true,
     note: '월넛 웨인스코팅 · 황동 벽등 · 샹들리에 · 빵 바구니 선반' },
-  { id: 'white', name: '모던 화이트', floor: 'bigtile', fa: '#F7F7F5', fb: '#E9EBEA', line: '#C4C9C8', wall: 'vtile', wallC: 0xFBFBFA, wallB: 0xF2F3F2, grout: 0xA8D8C8, trim: 0xC8CCCC, light: 'led', props: 'modern', ext: 'glass', sky: '#EEF1F3', ground: 0xD5D8DA, hemi: [0xF2F6FF, 0xB8BEC8, 1.75], sun: 0xF4F8FF,
+  { id: 'white', name: '모던 화이트', floor: 'bigtile', fa: '#F4F5F4', fb: '#ECEEED', line: '#D6DAD9', wall: 'vtile', wallC: 0xFBFBFA, wallB: 0xF2F3F2, grout: 0xA8D8C8, trim: 0xC8CCCC, light: 'led', props: 'modern', ext: 'glass', sky: '#EEF1F3', ground: 0xD5D8DA, hemi: [0xF2F6FF, 0xB8BEC8, 1.75], sun: 0xF4F8FF,
     note: '흰 세로 타일 · 민트 줄눈 · 천장 LED 라인 · 테라조 진열대 · 네온 m' },
-  { id: 'forest', name: '숲과 공원 테라스', floor: 'terracotta', fa: '#D9845C', fb: '#CB7650', line: '#B5623E', wall: 'louver', wallC: 0x9CB496, wallB: 0x93AC8D, wood: 0xB98A5A, trim: 0x7A5A3A, light: 'garland', props: 'forest', ext: 'wood', sky: '#E6EFDF', ground: 0xBFD9A8, hemi: [0xFFF6E2, 0x9AB08A, 1.6], sun: 0xFFF2D8, lawn: true,
+  { id: 'forest', name: '숲과 공원 테라스', floor: 'terracotta', fa: '#F2E9E3', fb: '#ECE0D8', line: '#DCCDC3', wall: 'louver', wallC: 0x9CB496, wallB: 0x93AC8D, wood: 0xB98A5A, trim: 0x7A5A3A, light: 'garland', props: 'forest', ext: 'wood', sky: '#E6EFDF', ground: 0xBFD9A8, hemi: [0xFFF6E2, 0x9AB08A, 1.6], sun: 0xFFF2D8, lawn: true,
     note: '원목 루버 · 세이지 그린 · 전구 줄조명 · 피크닉 테이블' },
 ];
 

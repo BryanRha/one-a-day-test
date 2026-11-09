@@ -1,12 +1,12 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.13';
-import { ROOMS, hms } from './layout.js?v=0.99.13';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.13';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.13';
-import { sfx, setAudio } from './audio.js?v=0.99.13';
-import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.13';
-import { bm } from './oad_bm.js?v=0.99.13';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.14';
+import { ROOMS, hms } from './layout.js?v=0.99.14';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.14';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.14';
+import { sfx, setAudio } from './audio.js?v=0.99.14';
+import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.14';
+import { bm } from './oad_bm.js?v=0.99.14';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -79,7 +79,8 @@ export class UI {
   frame(g) {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
     for (const p of g.padList()) { v.set(p.x, 30 + (p.y || 0), p.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
-    for (const p of g.lvPads || []) { v.set(p.x, 20, p.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0 || p.free); }
+    const eqBest = (g.lvPads || []).filter(p => p.u.eq && S.coins >= g.eqCost(p)).sort((a, b) => g.eqCost(a) - g.eqCost(b))[0];   /* 살 수 있는 설비 칸은 가장 싼 하나만 글자 */
+    for (const p of g.lvPads || []) { const vis = p.u.eq ? (Math.hypot(g.pl.pos.x - p.x, g.pl.pos.z - p.z) < 260 || p === eqBest) : g.room === p.room; p.tag.style.display = vis ? '' : 'none'; if (!vis) continue;   /* 방 칸 글자는 그 방 안에서만 · 설비 칸은 가까이 가거나 살 수 있을 때만 */ v.set(p.x, 20, p.z).project(cam);   /* 방 칸 글자는 그 방 안에서만 */ p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0 || p.free); }
     for (const t of g.rtags || []) { v.set(t.x, 6 + t.y, t.z).project(cam); t.d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; if (t.bd) { const l = g.buildLeft('R_' + t.id); const h = `🔨 ${ROOMS[t.id].name} <em>${hms(l)}</em>`; if (t.d._h !== h) { t.d.innerHTML = h; t.d._h = h; } } }
     for (const r of g.riders || []) { if (!r.tag) continue; const show = r.state === 'wait' || r.state === 'in'; r.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(r.pos.x, 200, r.pos.z).project(cam); r.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = '🛵 ' + Object.entries(r.order).map(([k, n]) => `<b>${ICON[k]}</b><em>${n - (r.got[k] || 0)}</em>`).join(' '); if (r.tag._h !== html) { r.tag.innerHTML = html; r.tag._h = html; } }
     if ((this._bc = (this._bc || 0) + 1) % 15 === 0) { const bd = Object.entries(S.branch[S.bi]?.build || {}), bc = $('#bchip'); bc.hidden = !bd.length; if (bd.length) { const [id] = bd.sort((a, b) => a[1] - b[1])[0], s = BRANCHES[S.bi].slots.find(x => x.id === id), l = g.buildLeft(id); const h = `🔨 ${s?.type === 'room' ? ROOMS[s.room].name : s?.label || ''} <b>${hms(l)}</b>${bd.length > 1 ? ` <small>+${bd.length - 1}</small>` : ''} <em>⚡</em>`; if (bc._h !== h) { bc.innerHTML = h; bc._h = h; } } }
@@ -236,7 +237,7 @@ export class UI {
     const row = (icon, name, lv, max, desc, c, data, head = '') => `<div class="upr"><i>${icon}</i><div>${head}<b>${name} <em>Lv.${lv}</em></b><span>${desc}</span><div class="pips">${'<s class="on"></s>'.repeat(lv)}${'<s></s>'.repeat(max - lv)}</div></div><button class="btn sm ${lv >= max || S.coins < c ? 'off' : ''}" ${data}>${lv >= max ? 'MAX' : `<i class="c"></i>${fmt(c)}`}</button></div>`;
     const html = tab === 'shop' ? L.map(u => { const lv = this.lv(u.id); return row(u.icon, u.name, lv, UP_MAX, u.desc, upCost(u, lv, m), `data-u="${u.id}"`, stTag(u)); }).join('')
       : (ROOM_UP[tab === 'staff' ? 'crew' : 'boss']).map(u => row(u.icon, u.name, this.lv(u.id), ROOM_UP_MAX, u.desc, g.lvCost(u.id), `data-r="${u.id}"`)).join('') + `<p class="sm">🔨 ${tab === 'staff' ? '크루룸' : '사장실'}이 열리면 그 방 바닥 칸에서 올려요 (광고 · 골드 무료 단계도)</p>`;
-    const md = this.modal(`<h3>⬆ ${BRANCHES[S.bi].name} 업그레이드</h3><div class="tabs">${tabs.map(([k, n]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${n}</button>`).join('')}</div><div class="uplist">${html}</div><p class="sm">${g.open.has('crew') && g.open.has('boss') ? '직원 · 사장님 강화는 크루룸 · 사장실에서' : '설비를 더 열면 업그레이드도 늘어나요'}</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+    const md = this.modal(`<h3>⬆ ${BRANCHES[S.bi].name} 업그레이드</h3><div class="tabs">${tabs.map(([k, n]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${n}</button>`).join('')}</div><div class="uplist">${html}</div><p class="sm">설비 앞 ⬆ 바닥 칸에 서도 올라가요${g.open.has('crew') && g.open.has('boss') ? ' · 직원 · 사장님은 크루룸 · 사장실에서' : ''}</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
     md.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { const u = UPGRADES.find(x => x.id === b.dataset.u), lv = this.lv(u.id), c = upCost(u, lv, m); if (lv >= UP_MAX || S.coins < c) return; S.coins -= c;
       const br = (S.branch[S.bi] ||= { unl: [], staff: [], paid: {} }); (br.lv ||= {})[u.id] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${u.st ? stName(u.st) + ' · ' : ''}${u.name} Lv.${lv + 1}!`); if (u.st) this.app.game.restyle(u.st); this.progress(); this.upgrades(); });
     md.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const id = b.dataset.r, c = g.lvCost(id); if (this.lv(id) >= ROOM_UP_MAX || S.coins < c) return; S.coins -= c; g.levelUp(id); this.upgrades(); });

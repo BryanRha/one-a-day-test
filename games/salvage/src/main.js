@@ -1,21 +1,21 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
-import { forecast, setWxTest } from './data/weather.js?v=0.99.13'; /* M4-B 판 상태 5 */
+import { forecast, setWxTest } from './data/weather.js?v=0.99.14'; /* M4-B 판 상태 5 */
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.13';
-import { FX, shakeMul } from './fx.js?v=0.99.13';
-import { Raid } from './raid.js?v=0.99.13';
-import { UI } from './ui.js?v=0.99.13';
-import { S, load, save, stashCap } from './save.js?v=0.99.13';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.13';
-import * as E from './econ.js?v=0.99.13';
-import { installBack } from './oad.js?v=0.99.13';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.13';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.13';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.13';
-import { Story, artUrl } from './story_ui.js?v=0.99.13';
-import { HomeFac } from './home_fac.js?v=0.99.13';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.13';
-import * as TH from './threat.js?v=0.99.13'; /* M4-A 위협 곡선 · 주간 변주 */
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.14';
+import { FX, shakeMul } from './fx.js?v=0.99.14';
+import { Raid } from './raid.js?v=0.99.14';
+import { UI } from './ui.js?v=0.99.14';
+import { S, load, save, stashCap } from './save.js?v=0.99.14';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.14';
+import * as E from './econ.js?v=0.99.14';
+import { installBack } from './oad.js?v=0.99.14';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.14';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.14';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.14';
+import { Story, artUrl } from './story_ui.js?v=0.99.14';
+import { HomeFac } from './home_fac.js?v=0.99.14';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.14';
+import * as TH from './threat.js?v=0.99.14'; /* M4-A 위협 곡선 · 주간 변주 */
 
 const Q = new URLSearchParams(location.search);
 setWxTest({ wx: Q.get('wx'), week: Q.has('week') ? Q.get('week') : undefined }); /* ?wx= · ?week= 시험값 → 출격 준비 예보 카드와 실제 판이 같은 값 (M4 마무리) */
@@ -235,7 +235,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.13'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.14'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

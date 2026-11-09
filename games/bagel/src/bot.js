@@ -1,8 +1,8 @@
 // 시험용 자동 플레이 (?bot=1): 굽기 → 진열 → 계산 → 돈 줍기 → 열기 칸 · 크림치즈 · 커피 · 쓰레기
 import * as THREE from 'three';
-import { IN } from './ui.js?v=0.99.13';
-import { S } from './state.js?v=0.99.13';
-import { SIZE } from './game.js?v=0.99.13';
+import { IN } from './ui.js?v=0.99.14';
+import { S } from './state.js?v=0.99.14';
+import { SIZE } from './game.js?v=0.99.14';
 export function startBot(app) {
   let goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
   const me = { get pos() { return app.game.pl.pos; } };
@@ -27,7 +27,7 @@ export function startBot(app) {
   setInterval(() => {
     const g = app.game; if (!g || !g.st) return; const pl = g.pl, c = g.st.counter, ov = g.st.oven; wait -= 0.1;
     if (document.querySelector('#modal').firstChild) { const b = document.querySelector('#modal #mOk') || document.querySelector('#modal #s1') || document.querySelector('#modal .btn'); b && b.click(); return; }
-    const pad = g.pads.find(p => S.coins >= Math.min(p.s.cost - p.paid, 30)) || (S.coins > 0 ? (g.lvPads || []).filter(q => !q.free && S.coins >= g.lvCost(q.u.id) * 1.5).sort((a, b) => g.lvCost(a.u.id) - g.lvCost(b.u.id))[0] : null); const pile = g.piles.find(p => p.v > 0);
+    const pad = g.pads.find(p => S.coins >= Math.min(p.s.cost - p.paid, 30)) || (S.coins > 0 ? (g.lvPads || []).filter(q => !q.free && S.coins >= (q.u.eq ? g.eqCost(q) : g.lvCost(q.u.id)) * 1.5).sort((a, b) => (a.u.eq ? g.eqCost(a) : g.lvCost(a.u.id)) - (b.u.eq ? g.eqCost(b) : g.lvCost(b.u.id)))[0] : null); const pile = g.piles.find(p => p.v > 0);
     let t;
     const mx = g.st.mixer, kt = g.st.kettle;
     if (pl.kind === 'dough') t = kt && pl.stack.some(x => !x.m.userData.b) ? [kt.Z.io.x, kt.Z.io.z] : [ov.Z.out.x, ov.Z.out.z];
@@ -36,7 +36,7 @@ export function startBot(app) {
     else if (pl.stack.length && pl.kind && g.st.counter.shelf[pl.kind] && g.st.counter.shelf[pl.kind].length >= 12) t = pl.kind === 'bagel' && g.st.cc && g.st.cc.inStack.length < 8 ? [g.st.cc.Z.io.x, g.st.cc.Z.io.z] : [g.st.bin.Z.drop.x, g.st.bin.Z.drop.z];
     else if (pl.stack.length) t = pl.kind === 'bagel' && g.st.cc && c.shelf.cream.length < 2 && g.st.cc.inStack.length < 4 ? [g.st.cc.x, g.st.cc.z + 135] : pl.kind === 'bagel' && g.st.drive && g.st.drive.lane.bagel.length < 4 && c.shelf.bagel.length > 6 ? [g.st.drive.Z.all.x, g.st.drive.Z.all.z] : [c.Z[pl.kind].x, c.Z[pl.kind].z];
     else if (pile && pile.v > 60 * (g.B.mult)) t = [pile.x, pile.z + 20];
-    else if (pad && S.coins > 0) t = [pad.x, pad.z];
+    else if (pad && S.coins > 0 && !(g.cust.find(x => x.state === 'queue' && x.qi === 0)?.order.some(o => o.got < o.n && !c.shelf[o.k].length) && !g.staff.some(w => w.k === 'baker'))) t = [pad.x, pad.z];   /* 손님이 기다리는데 진열대가 비었으면 먼저 채움 (방이 멀어져서) */
     else { const tt = Object.values(g.st).find(o => o.type === 'table' && o.trash.length >= 3); const need = g.cust.find(x => x.state === 'queue' && x.qi === 0)?.order.find(o => o.got < o.n);
       if (tt && !g.staff.some(w => w.k === 'cleaner')) t = [tt.x, tt.z + (pl.pos.z < tt.z ? -125 : 125)];
       else if (need && c.shelf[need.k].length) t = g.staff.some(w => w.k === 'cashier') ? (pile ? [pile.x, pile.z + 20] : [ov.x, ov.z + 130]) : [c.Z.cash.x, c.Z.cash.z];

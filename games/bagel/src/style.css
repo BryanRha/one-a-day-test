@@ -141,3 +141,11 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .sheet { width: min(100%, 560px); margin: 0 auto; }
 @media (min-aspect-ratio: 1/1) { .sheet { border-radius: 22px 22px 0 0; } }
 .lvl b { display: block; padding-right: 42px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 0.3.1 방 창 간결하게: 큰 카드 하나 + 더 보기 */
+.sheet .adn { font-size: 11px; color: #2E80B8; background: #E8F4FC; border-radius: 10px; padding: 3px 8px; margin-right: 8px; }
+.bigcard { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 18px; padding: 14px 14px; box-shadow: 0 3px 0 #EEDCC4, 0 0 0 2px #FFD9B8; margin-bottom: 8px; }
+.bigcard .ic { width: 52px; height: 52px; flex: none; border-radius: 16px; background: #FFF0E2; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.bigcard .tx { flex: 1; min-width: 0; } .bigcard .tx b { display: block; font-size: 16px; font-weight: 900; } .bigcard .tx span { font-size: 12px; font-weight: 700; color: #9A7050; }
+.bigcard .bb { display: flex; flex-direction: column; gap: 6px; align-items: stretch; } .bbtn { border-radius: 14px; padding: 10px 14px; font-size: 16px; font-weight: 900; min-width: 92px; } .bbtn.cash { background: #FFD24A; box-shadow: 0 3px 0 #D9A20E; color: #5A3A22; } .bbtn.off { opacity: .5; pointer-events: none; }
+.sheet .more { width: 100%; padding: 10px; border-radius: 12px; background: #F6EEDC; color: #7A4A2A; font-size: 13px; }
+.srow.s { padding: 7px 10px; margin-bottom: 5px; } .srow.s .ic { width: 32px; height: 32px; font-size: 17px; } .srow.s .tx b { font-size: 13px; } .srow.s .tx b em { font-style: normal; color: #B07A4A; font-size: 11px; margin-left: 4px; } .srow .mx { font-size: 11px; color: #B07A4A; }

@@ -1,12 +1,12 @@
 // 데이터: 브랜드(받은 자료로 교체) · 메뉴 · 지점 배치 · 열기 순서 · 직원 · 쿠폰
 //   ※ 메뉴 이름 · 지점 이름 · 색은 임시 — 트렌차이즈 자료 받으면 여기만 바꾸면 됨
-import { LAYOUT } from './layout.js?v=0.99.13';
+import { LAYOUT } from './layout.js?v=0.99.14';
 export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO BAGEL', dark: '#5A3A22', brown: '#A98259', accent: '#FF6720', accentHex: 0xFF6720, cream: '#F3E7D6',
   slogan: '일상의 쉼표가 되는 곳, 마루미베이글에서 즐기는 갓 구운 행복', story: '도쿄 요요기에서 이어지는 정신 · 매일 새벽 직접 반죽하고 굽는 수제 베이글', insta: 'https://www.instagram.com/marumi.bagel_official/' };   /* 공식 홈페이지 marumibagel.com */
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.3.0' };   /* 0.3.0 (2026-11-09): 매장이 자라는 마루미 — 방 · 공사 · 크루룸 · 사장실 · 창고 · 지점 특색 · 인테리어 4종 · BM · 0.2.0: 테스터 QA/QC 시트 #1~14 */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.3.1' };   /* 0.3.0 (2026-11-09): 매장이 자라는 마루미 — 방 · 공사 · 크루룸 · 사장실 · 창고 · 지점 특색 · 인테리어 4종 · BM · 0.2.0: 테스터 QA/QC 시트 #1~14 */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)
@@ -130,9 +130,9 @@ export const DECO = [
   { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 760, score: 18, pos: [-210, -410], r: 30, desc: '문 앞 손글씨 칠판' },
   { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 860, score: 20, pos: [-160, -1135], r: 0, wall: 'left', desc: '요요기 본점의 아침 풍경' },
   { id: 'vase', name: '테이블 꽃병', icon: '💐', cost: 970, score: 22, pos: null, r: 0, desc: '열린 테이블마다 꽃 한 송이' },
-  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 1150, score: 24, pos: [1150, -540], r: 45, desc: '입구가 숲처럼' },
+  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 1150, score: 24, pos: [1150, 380], r: 45, desc: '입구가 숲처럼' },
   { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 1620, score: 30, pos: [-20, 630], r: 0, desc: '가게 앞 바깥 자리' },
-  { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [820, -1135], r: 0, wall: 'left', desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
+  { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [-480, -1135], r: 0, wall: 'left', desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
 ];
 // 단골: 하루 한 번 찾아오는 동네 사람 · fav = 좋아하는 메뉴 칸(bagel 플레인 · cream 특별 · coffee 크림치즈 · drink 커피)
 //   하트 단계 = 호감 [1, 3, 6, 10, 15] · 단계마다 사연 한 줄 · 2·4단계는 꾸미기 선물
@@ -186,10 +186,10 @@ export const VIP = { mult: 1.3, idleH: 3, maxDays: 28, boxMin: 5 };   /* 수익 
 export const IDLE = { baseH: 2, managerH: 2, upK: 0.1, upMax: 5, upAds: 3, off: 0.25 };   /* off: 쉬는 동안 수익 = 장사 기준(0.9 × 지점 배수 × (1 + 열린 칸/10))의 25% — 실제 장사(봇 측정 약 3배)가 늘 더 큼 · growth_sim 으로 맞춤 */   /* 쉬는 동안 쌓이는 시간 · 점장 +2시간 · 지점 영구 단계 +10% (최대 5 · 광고 3편 = 1단계) */
 // 지점 테마 세트 (능력치 0 · 겉모습만) — 무과금 길: 단골 ♥5 마다 하나씩 · 시즌 무료 줄 1종
 export const THEME_SETS = [
-  { id: 'set_lake', name: '석촌호수 벚꽃', icon: '🌸', gold: 300, floor: ['#FBEFF1', '#F2D3DA'], wall: 0xF6E4E8, trim: 0xD88AA0, petals: 0xF6B8C8 },
+  { id: 'set_lake', name: '석촌호수 벚꽃', icon: '🌸', gold: 300, floor: ['#F8F0F1', '#F0E2E5'], wall: 0xF6E4E8, trim: 0xD88AA0, petals: 0xF6B8C8 },
   { id: 'set_winter', name: '겨울 마루미', icon: '❄️', gold: 300, floor: ['#F2F5F8', '#DDE5EC'], wall: 0xEEF2F6, trim: 0x8AA0B8, petals: 0xFFFFFF },
-  { id: 'set_camp', name: '숲속 캠핑', icon: '🏕', gold: 300, floor: ['#D8C29A', '#C6AC80'], wall: 0xB8C8A0, trim: 0x6A5A3A, petals: 0x8AB86A },
-  { id: 'set_neon', name: 'TOKYO 네온', icon: '🌃', gold: 300, floor: ['#3A3A44', '#2E2E36'], wall: 0x3A3A46, trim: 0xFF6720, petals: 0xFF6720 },
+  { id: 'set_camp', name: '숲속 캠핑', icon: '🏕', gold: 300, floor: ['#EFEBE1', '#E8E2D6'], wall: 0xB8C8A0, trim: 0x6A5A3A, petals: 0x8AB86A },
+  { id: 'set_neon', name: 'TOKYO 네온', icon: '🌃', gold: 300, floor: ['#2E2E38', '#2A2A33'], wall: 0x3A3A46, trim: 0xFF6720, petals: 0xFF6720 },
 ];
 // 프리미엄 유니폼 (능력치 0) — 무과금 길: 광고 3편 (날 넘겨도 쌓임)
 export const OUTFITS_PRO = [

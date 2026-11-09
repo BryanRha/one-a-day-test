@@ -1,17 +1,17 @@
 // 홈 (2026-11-09 QA 시트 #1 · #3 · #4 · #9): '블록 하늘' 로비 — 노을 하늘 · 흐르는 구름 · 떠다니는 보석 블록
 //   룬 다이스와 다른 배치: 큰 클래식 카드(미니 판 그림 + 가로로 긴 플레이 버튼) · 어드벤처 그림 카드 · 아래 두 칸(미션 · 컬렉션)
 //   왼쪽 위 '원어데이' 버튼: 앱 안 = 원어데이로 나가기(oad:exit) · 단독 링크 = 원어데이 사이트 (룬 다이스 #21 과 같은 방식)
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.13';
-import { T, C, fmt, panel, btn, iconBtn, pillBtn, popup, toast } from '../pui.js?v=0.99.13';
-import { audio } from '../audio.js?v=0.99.13';
-import { load, save } from '../save.js?v=0.99.13';
-import * as M from '../meta.js?v=0.99.13';
-import { makeLevel, SEASON_LEVELS } from '../core/levels.js?v=0.99.13';
-import { pictureView } from '../picture.js?v=0.99.13';
-import { hallShown, hallPopup } from '../hall.js?v=0.99.13';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.13';
-import { sky } from '../sky.js?v=0.99.13';
-import { THEMES, PALETTE } from './Boot.js?v=0.99.13';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.14';
+import { T, C, fmt, panel, btn, iconBtn, pillBtn, popup, toast } from '../pui.js?v=0.99.14';
+import { audio } from '../audio.js?v=0.99.14';
+import { load, save } from '../save.js?v=0.99.14';
+import * as M from '../meta.js?v=0.99.14';
+import { makeLevel, SEASON_LEVELS } from '../core/levels.js?v=0.99.14';
+import { pictureView } from '../picture.js?v=0.99.14';
+import { hallShown, hallPopup } from '../hall.js?v=0.99.14';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.14';
+import { sky } from '../sky.js?v=0.99.14';
+import { THEMES, PALETTE } from './Boot.js?v=0.99.14';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }

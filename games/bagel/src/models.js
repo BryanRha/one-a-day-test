@@ -1,6 +1,6 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (사람 · 베이글 · 커피 · 설비 · 가게)
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.99.13';
+import { BRAND } from './data.js?v=0.99.14';
 
 const gm = (() => { const d = new Uint8Array([95, 190, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -29,8 +29,11 @@ export function item(kind) {
   else if (kind === 'boiled') { mesh(torus(), new THREE.MeshToonMaterial({ color: 0xE8C08A, gradientMap: gm, emissive: 0x3A2208 }), 0, 7.5, 0, g); }
   else if (kind === 'prem') { mesh(torus(), new THREE.MeshToonMaterial({ color: 0xB86A20, gradientMap: gm, emissive: 0x3A1A00 }), 0, 7.5, 0, g); sph(3, 0xFFFFFF, 8, 15, -6, g, 6, 4); }
   else if (kind === 'trash') { box(30, 3, 22, 0x6A4A3A, 0, 0, 0, g); sph(7, 0xB8B8B8, -6, 8, 0, g, 6, 4); sph(6, 0xA8A8A8, 6, 7, 3, g, 6, 4); cyl(4, 3, 10, 0xD84A3A, 8, 3, -6, g, 6); }   /* 쟁반 + 구겨진 종이 (음식과 구분) */
-  return g;
+  outline(g); g.userData.item = kind; return g;
 }
+/* 물건 외곽선 (0.3.1 대표: 바닥에서 베이글이 안 보임) — 뒷면만 그리는 짙은 껍데기를 살짝 크게 · 바닥 색과 상관없이 테두리가 보임 */
+const OUTM = new THREE.MeshBasicMaterial({ color: 0x3A2414, side: THREE.BackSide });
+function outline(g) { for (const m of [...g.children]) if (m.isMesh) { if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere(); if (m.geometry.boundingSphere.radius * Math.max(m.scale.x, m.scale.z) < 7) continue; const o = new THREE.Mesh(m.geometry, OUTM); o.position.copy(m.position); o.rotation.copy(m.rotation); o.scale.copy(m.scale).multiplyScalar(1.16); o.castShadow = false; o.userData.outline = 1; g.add(o); } }
 // ── 사람: 동그란 몸 · 머리 · 모자 · 팔다리 (걸을 때 흔듦)
 export function person(o = {}) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);

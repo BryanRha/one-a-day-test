@@ -2,13 +2,15 @@
 //   지점마다 확실히 다르게 (계획안 2-2) + 실제 매장 공통 요소(회색 벽 흰 로고 · 흰 세로 타일 진열대 · 테라조 · 검은 칠판 가격표 · 주황 m 상자 선반)는 모든 지점
 //   모든 모델은 코드로 (새 그림 리소스 없음) · 작은 소품은 그림자를 안 드리움(가벼움)
 import * as THREE from 'three';
-import { M, box, cyl, sph, mesh } from './models.js?v=0.99.13';
-import { ROOMS, STAIRS, inRect } from './layout.js?v=0.99.13';
-import { BRAND, THEME_SETS } from './data.js?v=0.99.13';
+import { M, box, cyl, sph, mesh } from './models.js?v=0.99.14';
+import { ROOMS, STAIRS, inRect } from './layout.js?v=0.99.14';
+import { BRAND, THEME_SETS } from './data.js?v=0.99.14';
 
 const T = {};   /* 무늬 텍스처 캐시 */
 const LOGO = (() => { const im = new Image(); im.src = 'assets/brand/logo.png'; return im; })();
 const noShadow = o => { o.traverse(m => { if (m.isMesh) m.castShadow = false; }); return o; };
+/* 가림막 표시: 키 큰 것(파라솔 · 어닝 · 조명 · 나무 · 간판 · 2층 받침)은 테이블 · 설비 · 사장님을 가리면 game.js 가 흐리게 (0.3.1 대표 「어닝이 테이블을 가림」) */
+export const occ = o => { o.userData.occ = true; return o; };
 const glow = c => new THREE.MeshBasicMaterial({ color: c });
 // ── 바닥 무늬 (캔버스 256 · 한 장 = 세계 400)
 function pattern(kind, a, b, line) {
@@ -53,17 +55,17 @@ function chalk(g, x, y, z, ry = 0, w = 120) { const b = new THREE.Group(); b.pos
 function boxShelf(g, x, z, ry = 0, n = 3) { const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = ry; g.add(s); for (const y of [40, 110, 180]) box(170, 6, 46, 0x9A643A, 0, y, 0, s); for (const xx of [-82, 82]) box(6, 200, 46, 0x9A643A, xx, 0, 0, s);
   for (let r = 0; r < n; r++) for (let i = 0; i < 3; i++) { box(44, 34, 36, 0xFFFFFF, -50 + i * 50, 46 + r * 70, 0, s); box(14, 10, 2, BRAND.accentHex, -50 + i * 50, 58 + r * 70, 19, s); } return noShadow(s); }
 function plant(g, x, z, s = 1, pot = 0xE7B98A) { const p = new THREE.Group(); p.position.set(x, 0, z); p.scale.setScalar(s); g.add(p); cyl(26, 20, 44, pot, 0, 0, 0, p, 12); sph(42, 0x7FBF6A, 0, 82, 0, p, 12, 10).scale.set(1, 1.15, 1); sph(28, 0x5FA85A, 18, 104, 10, p, 10, 8); return p; }
-function tree(g, x, z, s = 1, leaf = 0x7FBF6A) { const p = new THREE.Group(); p.position.set(x, 0, z); p.scale.setScalar(s); g.add(p); cyl(12, 16, 150, 0x7A5A3A, 0, 0, 0, p, 8); sph(80, leaf, 0, 200, 0, p, 12, 10); sph(56, leaf, 40, 250, 20, p, 10, 8); return p; }
-function pendant(g, x, z, y = 250) { const p = new THREE.Group(); p.position.set(x, 0, z); g.add(p); const cord = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 120, 4), glow(0x3A2A1A)); cord.position.y = y + 60; p.add(cord); const sh = mesh(new THREE.SphereGeometry(30, 14, 8, 0, 6.28, 0, 1.4), M(0xFFF1D6), 0, y, 0, p); sh.rotation.x = Math.PI; const b = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 6), glow(0xFFD98A)); b.position.y = y - 8; p.add(b); return noShadow(p); }
+function tree(g, x, z, s = 1, leaf = 0x7FBF6A) { const p = occ(new THREE.Group()); p.position.set(x, 0, z); p.scale.setScalar(s); g.add(p); cyl(12, 16, 150, 0x7A5A3A, 0, 0, 0, p, 8); sph(80, leaf, 0, 200, 0, p, 12, 10); sph(56, leaf, 40, 250, 20, p, 10, 8); return p; }
+function pendant(g, x, z, y = 250) { const p = occ(new THREE.Group()); p.position.set(x, 0, z); g.add(p); const cord = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 120, 4), glow(0x3A2A1A)); cord.position.y = y + 60; p.add(cord); const sh = mesh(new THREE.SphereGeometry(30, 14, 8, 0, 6.28, 0, 1.4), M(0xFFF1D6), 0, y, 0, p); sh.rotation.x = Math.PI; const b = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 6), glow(0xFFD98A)); b.position.y = y - 8; p.add(b); return noShadow(p); }
 function sconce(g, x, z, ry) { const p = new THREE.Group(); p.position.set(x, 150, z); p.rotation.y = ry; g.add(p); box(14, 30, 8, 0xC8A050, 0, 0, 0, p); const b = new THREE.Mesh(new THREE.SphereGeometry(9, 8, 6), glow(0xFFE2A0)); b.position.set(0, 36, 12); p.add(b); box(24, 4, 20, 0xC8A050, 0, 26, 8, p); return noShadow(p); }
-function chandelier(g, x, z) { const p = new THREE.Group(); p.position.set(x, 270, z); g.add(p); const r = mesh(new THREE.TorusGeometry(46, 4, 6, 24).rotateX(Math.PI / 2), M(0xC8A050), 0, 0, 0, p); for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, b = new THREE.Mesh(new THREE.SphereGeometry(7, 8, 6), glow(0xFFE2A0)); b.position.set(Math.cos(a) * 46, 10, Math.sin(a) * 46); p.add(b); } const c = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 80, 4), glow(0x6A5A3A)); c.position.y = 40; p.add(c); return noShadow(p); }
-function led(g, x0, z0, x1, z1, y = 260) { const l = Math.hypot(x1 - x0, z1 - z0), m = new THREE.Mesh(new THREE.BoxGeometry(x1 !== x0 ? l : 8, 5, x1 !== x0 ? 8 : l), glow(0xF4FAFF)); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); g.add(m);
+function chandelier(g, x, z) { const p = occ(new THREE.Group()); p.position.set(x, 270, z); g.add(p); const r = mesh(new THREE.TorusGeometry(46, 4, 6, 24).rotateX(Math.PI / 2), M(0xC8A050), 0, 0, 0, p); for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, b = new THREE.Mesh(new THREE.SphereGeometry(7, 8, 6), glow(0xFFE2A0)); b.position.set(Math.cos(a) * 46, 10, Math.sin(a) * 46); p.add(b); } const c = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 80, 4), glow(0x6A5A3A)); c.position.y = 40; p.add(c); return noShadow(p); }
+function led(g, x0, z0, x1, z1, y = 260) { const l = Math.hypot(x1 - x0, z1 - z0), m = occ(new THREE.Mesh(new THREE.BoxGeometry(x1 !== x0 ? l : 8, 5, x1 !== x0 ? 8 : l), glow(0xF4FAFF))); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); g.add(m);
   for (const [px, pz] of [[x0, z0], [x1, z1]]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 60, 4), glow(0xB8C0C8)); c.position.set(px, y + 30, pz); g.add(c); } return m; }
 function garland(g, ax, az, bx, bz, y = 230, sag = 50) { const n = Math.max(6, Math.round(Math.hypot(bx - ax, bz - az) / 45)), bm = glow(0xFFE29A), wm = glow(0x4A3A2A), pts = [];
   for (let i = 0; i <= n; i++) { const u = i / n; pts.push(new THREE.Vector3(ax + (bx - ax) * u, y - Math.sin(u * Math.PI) * sag, az + (bz - az) * u)); if (i % 1 === 0) { const b = new THREE.Mesh(new THREE.SphereGeometry(6, 6, 4), bm); b.position.copy(pts[i]).y -= 7; g.add(b); } }
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x4A3A2A })); g.add(line); return wm; }
-function awning(g, x0, x1, z, y, cols, depth = 110) { const n = Math.max(2, Math.round((x1 - x0) / 60)), w = (x1 - x0) / n; for (let i = 0; i < n; i++) { const m = mesh(new THREE.BoxGeometry(w, 6, depth), M(cols[i % cols.length]), x0 + w * (i + 0.5), y, z + depth / 2 - 10, g); m.rotation.x = 0.35; m.castShadow = false; } box(x1 - x0, 14, 8, cols[0], (x0 + x1) / 2, y - 26, z + depth - 4, g).castShadow = false; }
-function roundSign(g, x, z, y = 240) { const s = new THREE.Group(); s.position.set(x, y, z); s.rotation.y = Math.PI / 4; g.add(s); const d = mesh(new THREE.CylinderGeometry(60, 60, 10, 28).rotateX(Math.PI / 2), M(BRAND.accentHex), 0, 0, 0, s); d.castShadow = false; const lp = logoWall(90, 30, '#FF6720'); lp.position.z = 6; s.add(lp); box(8, 70, 8, 0x5A3A22, 0, -100, -10, s); return s; }
+function awning(g0, x0, x1, z, y, cols, depth = 110) { const g = occ(new THREE.Group()); g0.add(g); const n = Math.max(2, Math.round((x1 - x0) / 60)), w = (x1 - x0) / n; for (let i = 0; i < n; i++) { const m = mesh(new THREE.BoxGeometry(w, 6, depth), M(cols[i % cols.length]), x0 + w * (i + 0.5), y, z + depth / 2 - 10, g); m.rotation.x = 0.35; m.castShadow = false; } box(x1 - x0, 14, 8, cols[0], (x0 + x1) / 2, y - 26, z + depth - 4, g).castShadow = false; }
+function roundSign(g, x, z, y = 240) { const s = occ(new THREE.Group()); s.position.set(x, y, z); s.rotation.y = Math.PI / 4; g.add(s); const d = mesh(new THREE.CylinderGeometry(60, 60, 10, 28).rotateX(Math.PI / 2), M(BRAND.accentHex), 0, 0, 0, s); d.castShadow = false; const lp = logoWall(90, 30, '#FF6720'); lp.position.z = 6; s.add(lp); box(8, 70, 8, 0x5A3A22, 0, -100, -10, s); return s; }
 // ── 방 가구 (방문형 방 · 작업실)
 const FURN = {
   crew(g, r, I) { const [x0, z0] = r; for (let i = 0; i < 4; i++) { box(70, 190, 50, i % 2 ? 0xFF8A3C : 0x8A9AA4, x0 + 90 + i * 76, 0, z0 + 40, g); box(30, 6, 2, 0xFFFFFF, x0 + 90 + i * 76, 150, z0 + 66, g); }
@@ -101,26 +103,26 @@ const EXT = {
     const lk = new THREE.Mesh(new THREE.BoxGeometry(2400, 6, 1500), new THREE.MeshLambertMaterial({ color: 0x9CC8E2 })); lk.position.set(-2500, -6, 900); g.add(lk); box(2400, 8, 40, 0xD8D0C4, -2500, -6, 140, g);   /* 석촌호수 */
     for (const [x, z] of [[-1400, 300], [-1400, 700], [-80, 1300], [800, 1300], [1300, 1250]]) tree(g, x, z, 1, 0xF6B8C8); },   /* 벚나무 */
   glass(g, I) { const gm = new THREE.MeshLambertMaterial({ color: 0xCFE8F2, transparent: true, opacity: 0.35 }); for (const [a, b] of [[-250, 240]]) { const p = new THREE.Mesh(new THREE.BoxGeometry(b - a, 230, 8), gm); p.position.set((a + b) / 2, 115, 452); g.add(p); for (let x = a; x <= b; x += 122) box(6, 230, 10, 0xC8CCCC, x, 0, 452, g); }
-    const sb = new THREE.Group(); sb.position.set(620, 300, 470); g.add(sb); box(220, 70, 30, 0xFFFFFF, 0, 0, 0, sb); const lp = logoWall(180, 44, '#FFFFFF'); lp.material.color.set(0x222222); lp.position.z = 16; sb.add(lp); const gl = new THREE.Mesh(new THREE.BoxGeometry(230, 4, 34), glow(0xF4FAFF)); gl.position.y = -4; sb.add(gl);   /* 흰 박스 간판 */
+    const sb = occ(new THREE.Group()); sb.position.set(620, 300, 470); g.add(sb); box(220, 70, 30, 0xFFFFFF, 0, 0, 0, sb); const lp = logoWall(180, 44, '#FFFFFF'); lp.material.color.set(0x222222); lp.position.z = 16; sb.add(lp); const gl = new THREE.Mesh(new THREE.BoxGeometry(230, 4, 34), glow(0xF4FAFF)); gl.position.y = -4; sb.add(gl);   /* 흰 박스 간판 */
     floor(g, [-1250, 450, 1600, 1500], 'bigtile', '#DCDEE0', '#D2D5D8', '#B8BCC0', -2, 300); for (const x of [-700, 0, 900]) { box(60, 330, 60, 0xC8CCCC, x, 0, 1320, g); } box(2900, 30, 40, 0xB8BCC0, 150, 300, 1320, g); },   /* 지하 상가 통로 */
-  wood(g, I) { const s = new THREE.Group(); s.position.set(560, 0, 560); g.add(s); for (const x of [-60, 60]) box(12, 200, 12, 0x7A5A3A, x, 0, 0, s); box(170, 60, 12, 0xB98A5A, 0, 170, 0, s); const lp = logoWall(130, 36, '#B98A5A'); lp.position.set(0, 200, 7); s.add(lp);   /* 나무 간판 */
-    const ar = new THREE.Group(); ar.position.set(230, 0, 1320); g.add(ar); for (const x of [-220, 220]) box(26, 260, 26, 0x7A5A3A, x, 0, 0, ar); mesh(new THREE.TorusGeometry(220, 14, 6, 20, Math.PI), M(0x7A5A3A), 0, 260, 0, ar); for (let i = 0; i < 9; i++) { const a = i / 8 * Math.PI; sph(20, 0x6FAF5A, Math.cos(a) * 220, 260 + Math.sin(a) * 220, 0, ar, 8, 6); }   /* 공원 입구 아치 */
+  wood(g, I) { const s = occ(new THREE.Group()); s.position.set(560, 0, 560); g.add(s); for (const x of [-60, 60]) box(12, 200, 12, 0x7A5A3A, x, 0, 0, s); box(170, 60, 12, 0xB98A5A, 0, 170, 0, s); const lp = logoWall(130, 36, '#B98A5A'); lp.position.set(0, 200, 7); s.add(lp);   /* 나무 간판 */
+    const ar = occ(new THREE.Group()); ar.position.set(230, 0, 1320); g.add(ar); for (const x of [-220, 220]) box(26, 260, 26, 0x7A5A3A, x, 0, 0, ar); mesh(new THREE.TorusGeometry(220, 14, 6, 20, Math.PI), M(0x7A5A3A), 0, 260, 0, ar); for (let i = 0; i < 9; i++) { const a = i / 8 * Math.PI; sph(20, 0x6FAF5A, Math.cos(a) * 220, 260 + Math.sin(a) * 220, 0, ar, 8, 6); }   /* 공원 입구 아치 */
     for (const [x, z] of [[-150, 1250], [900, 1250], [1350, 900], [-1400, 300], [-1400, 800]]) tree(g, x, z, 1.1); for (let i = 0; i < 3; i++) { const b = new THREE.Group(); b.position.set(-200 + i * 50, 0, 560); g.add(b); mesh(new THREE.TorusGeometry(22, 3, 6, 14), M(0x3A3A3A), 0, 26, 0, b); } },   /* 자전거 거치대 */
 };
 // ── 지점 특색 방 그림 (열렸을 때)
 const FEAT = {
-  pickup(g, r, I) { floor(g, r, 'deck', '#E9D3B0', '#E0C8A2', '#C8A87E', 0, 300); awning(g, 900, 1240, 560, 230, [BRAND.accentHex, 0xFFFFFF], 90); chalk(g, 1200, 120, 900, -Math.PI / 2, 110); box(26, 30, 100, 0xE8E0D0, 1238, 120, 760, g); },
+  pickup(g, r, I) { floor(g, r, 'deck', '#ECE2D3', '#E5D9C8', '#D2C3AE', 0, 300); awning(g, 900, 1240, 560, 230, [BRAND.accentHex, 0xFFFFFF], 90); chalk(g, 1200, 120, 900, -Math.PI / 2, 110); box(26, 30, 100, 0xE8E0D0, 1238, 120, 760, g); },
   drive(g, r, I) { floor(g, r, 'bigtile', '#E9EBEA', '#E1E4E3', '#C4C9C8', 0, 300); const road = new THREE.Mesh(new THREE.BoxGeometry(300, 6, 3400), new THREE.MeshLambertMaterial({ color: 0x5A5E66 })); road.position.set(1440, -4, 300); g.add(road);
     for (let z = -1200; z < 1900; z += 160) box(8, 2, 80, 0xFFFFFF, 1440, 0, z, g); const mb = new THREE.Group(); mb.position.set(1610, 0, 1100); g.add(mb); box(10, 160, 10, 0x3A3A3A, 0, 0, 0, mb); box(16, 110, 160, 0x24282A, 0, 150, 0, mb); for (let i = 0; i < 4; i++) box(4, 6, 110, i % 2 ? BRAND.accentHex : 0xFFFFFF, -10, 180 + i * 20, 0, mb); },
   up2(g, r, I) { const H = 150, [x0, z0, x1, z1] = r; const pl = floor(g, [x0, z0, STAIRS.x0, z1], 'check', I.fa, I.fb, I.line, H, 300); floor(g, [STAIRS.x0, STAIRS.z1, x1, z1], 'check', I.fa, I.fb, I.line, H, 300);
-    box(STAIRS.x0 - x0, H - 20, z1 - z0, 0x6A4A32, (x0 + STAIRS.x0) / 2, 0, (z0 + z1) / 2, g); box(x1 - STAIRS.x0, H - 20, z1 - STAIRS.z1, 0x6A4A32, (STAIRS.x0 + x1) / 2, 0, (STAIRS.z1 + z1) / 2, g);
+    occ(box(STAIRS.x0 - x0, H - 20, z1 - z0, 0x6A4A32, (x0 + STAIRS.x0) / 2, 0, (z0 + z1) / 2, g)); occ(box(x1 - STAIRS.x0, H - 20, z1 - STAIRS.z1, 0x6A4A32, (STAIRS.x0 + x1) / 2, 0, (STAIRS.z1 + z1) / 2, g));
     const n = 8, sd = (STAIRS.z1 - STAIRS.z0) / n; for (let i = 0; i < n; i++) box(STAIRS.x1 - STAIRS.x0, H * (i + 1) / n, sd + 2, i % 2 ? 0x8A5A3A : 0x9A6A44, (STAIRS.x0 + STAIRS.x1) / 2, 0, STAIRS.z0 + sd * (i + 0.5), g);   /* 계단 */
     for (let x = x0 + 40; x < STAIRS.x0; x += 60) box(6, 50, 6, 0xC8A050, x, H, z1 - 8, g); box(STAIRS.x0 - x0, 6, 8, 0xC8A050, (x0 + STAIRS.x0) / 2, H + 50, z1 - 8, g); for (let z = z0 + 40; z < z1; z += 60) box(6, 50, 6, 0xC8A050, x0 + 8, H, z, g); box(8, 6, z1 - z0, 0xC8A050, x0 + 8, H + 50, (z0 + z1) / 2, g);   /* 황동 난간 · 호수 쪽 */
     box(STAIRS.x0 - x0, 6, 8, 0xC8A050, (x0 + STAIRS.x0) / 2, H + 50, z0 + 4, g); for (let z = STAIRS.z0; z < STAIRS.z1; z += 60) box(6, 50, 6, 0xC8A050, STAIRS.x0, H * (z - STAIRS.z0) / (STAIRS.z1 - STAIRS.z0), z, g);
     chandelier(g, -850, 780); },
-  terrace(g, r, I) { floor(g, r, 'deck', '#C89A68', '#BC8E5C', '#9A7048', 0, 260); for (const [x, z] of [[-1180, 500], [-1180, 1000], [-300, 1000]]) { box(10, 260, 10, 0x7A5A3A, x, 0, z, g); } garland(g, -1180, 500, -1180, 1000, 250); garland(g, -1180, 1000, -300, 1000, 250); garland(g, -1180, 500, -300, 1000, 255, 70);
+  terrace(g, r, I) { floor(g, r, 'deck', '#ECE3D7', '#E6DCCE', '#D3C5B3', 0, 260); for (const [x, z] of [[-1180, 500], [-1180, 1000], [-300, 1000]]) { box(10, 260, 10, 0x7A5A3A, x, 0, z, g); } garland(g, -1180, 500, -1180, 1000, 250); garland(g, -1180, 1000, -300, 1000, 250); garland(g, -1180, 500, -300, 1000, 255, 70);
     for (const [x, z] of [[-1200, 760], [-700, 1020], [-420, 560]]) { const p = new THREE.Group(); p.position.set(x, 0, z); g.add(p); box(80, 50, 60, 0xB98A5A, 0, 0, 0, p); sph(46, 0x7FBF6A, 0, 80, 0, p, 10, 8); }
-    for (const [x, z, c] of [[-620, 660, BRAND.accentHex], [-1050, 880, 0x6FAF5A]]) { const u = new THREE.Group(); u.position.set(x, 0, z); g.add(u); cyl(4, 4, 220, 0xE8E0D0, 0, 0, 0, u, 6); mesh(new THREE.ConeGeometry(120, 44, 12), M(c), 0, 230, 0, u); } },
+    for (const [x, z, c] of [[-640, 560, BRAND.accentHex], [-1180, 960, 0x6FAF5A]]) { const u = occ(new THREE.Group()); u.position.set(x, 0, z); g.add(u); cyl(4, 4, 220, 0xE8E0D0, 0, 0, 0, u, 6); mesh(new THREE.ConeGeometry(120, 44, 12), M(c), 0, 230, 0, u); } },
 };
 /* 공사장: 비계 · 가림막 · 콘 · 크레인 팔 */
 function site(g, r) { const [x0, z0, x1, z1] = r, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, s = new THREE.Group(); g.add(s);
@@ -134,7 +136,7 @@ function site(g, r) { const [x0, z0, x1, z1] = r, cx = (x0 + x1) / 2, cz = (z0 +
 export function drawWorld(sc, B, open, build, setId) {
   const g = new THREE.Group(); g.name = 'world'; sc.add(g); const I0 = B.interior, ts = THEME_SETS.find(t => t.id === setId), I = ts ? { ...I0, fa: ts.floor[0], fb: ts.floor[1], line: ts.floor[1], wallC: ts.wall, wallB: ts.wall, trim: ts.trim } : I0;
   const ground = new THREE.Mesh(new THREE.BoxGeometry(14000, 10, 14000), M(I.lawn ? 0xBFD9A8 : I0.ground)); ground.position.set(0, -16, 0); ground.receiveShadow = true; g.add(ground);
-  if (I.lawn) floor(g, [-2000, -2000, 2600, 2600], 'grass', '#C3DCAA', '#B2D196', '#A6C88A', -6, 260);
+  if (I.lawn) floor(g, [-2000, -2000, 2600, 2600], 'grass', '#CFE0BF', '#C4D8B2', '#BAD0A6', -6, 260);
   EXT[I0.ext](g, I);
   /* 건물 바닥: 모든 방 (잠긴 방 = 밝은 맨바닥 + 점선) */
   const feat = B.feature, all = ['shop', 'dough', 'cream', 'cafe', 'hall', 'crew', 'boss', 'store', feat];
@@ -142,8 +144,8 @@ export function drawWorld(sc, B, open, build, setId) {
     if (build && build.has(id)) { site(g, r); continue; }
     if (!on) { if (!R.feature) floor(g, r, 'concrete', '#ECE6DC', '#E2DBCF', '#DDD5C8', -3, 400); dashed(g, r); continue; }
     if (R.feature) { FEAT[feat](g, r, I); continue; }
-    if (id === 'crew') floor(g, r, 'mint', '#EEF3EF', '#EEF3EF', '#A9CBBE', 0, 260);
-    else if (id === 'boss') floor(g, r, 'parquet', '#8A5A36', '#7A4E2E', '#5E3A20', 0, 260);
+    if (id === 'crew') floor(g, r, 'mint', '#F1F5F2', '#F1F5F2', '#D2E4DB', 0, 260);
+    else if (id === 'boss') floor(g, r, 'parquet', '#ECE4DA', '#E5DBCF', '#D2C4B4', 0, 260);
     else if (id === 'store') floor(g, r, 'concrete', '#D8D4CC', '#C8C2B8', '#BAB2A6', 0, 300);
     else floor(g, r, I.floor, I.fa, I.fb, I.line, 0, I.floor === 'check' ? 300 : 400);
     if (FURN[id]) FURN[id](g, r, I); }
