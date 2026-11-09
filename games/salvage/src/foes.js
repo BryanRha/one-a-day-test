@@ -2,10 +2,10 @@
 //  굴림 기뢰(자폭) · 문짝 소라게(방패) · 먹물 문어(은신) · 등대 저격수(저격) · 닻 신호수(소환) — 숫자 data/enemies.js · 움직임 판단 ai.js(역할)
 //  예고 규칙: 큰 공격은 모두 바닥 원/줄이 TELE_MIN 넘게 먼저 보임 (raid.warnDisc/warnLine → e.teleT0 → raid.hurt 자동 검사)
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.12';
-import { TELE_MIN } from './data/enemies.js?v=0.99.12';
-import { enemyBody, glowSprite } from './enemy3d.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
+import { ENEMIES } from './data.js?v=0.99.13';
+import { TELE_MIN } from './data/enemies.js?v=0.99.13';
+import { enemyBody, glowSprite } from './enemy3d.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
 const st = (R, k) => { const o = R.aiSt || (R.aiSt = {}); o[k] = (o[k] || 0) + 1; };
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -59,10 +59,10 @@ export function foeBody(R, en, e) {
 /* 예고 시작 (ai.startAttack 이 부름) — 처리했으면 true */
 export function foeWind(R, e, ang, tp) {
   const D = e.D;
-  if (D.atk === 'boom') { e.pat = 'boom'; e.armed = R.t; R.warnDisc(e, D.boomR, 0xff2a1a, true); e.cd = 99; sfx.tick?.(); return true; }
-  if (D.atk === 'grab') { e.pat = 'grab'; R.warnDisc(e, D.range + 0.3, 0x9a7aff, true); e.revealT = Math.max(e.revealT || 0, D.wind + 0.6); e.anim?.play('Unarmed_Melee_Attack_Punch_A', { once: true, force: true }); return true; }
-  if (D.atk === 'snipe') { e.pat = 'snipe'; e.lockT = D.lock; R.warnLine(e, Math.min(D.range + 1, dist2(e.pos, tp) + 2.5), 0.2, 0xff2a2a); e.anim?.play('Aim', { fade: 0.06, force: true }) || e.anim?.play('Idle_Combat'); sfx.warn?.(); return true; }
-  if (D.atk === 'call') { e.pat = 'call'; e.anim?.play('Taunt', { once: true, fade: 0.06, force: true });
+  if (D.atk === 'boom') { e.pat = 'boom'; e.armed = R.t; R.warnDisc(e, D.boomR, 0xff2a1a, true); e.cd = 99; sfx.foeWarn?.(e); return true; } /* 검수 M4 Top 10: 전용 예고음 */
+  if (D.atk === 'grab') { e.pat = 'grab'; R.warnDisc(e, D.range + 0.3, 0x9a7aff, true); e.revealT = Math.max(e.revealT || 0, D.wind + 0.6); sfx.foeWarn?.(e); e.anim?.play('Unarmed_Melee_Attack_Punch_A', { once: true, force: true }); return true; }
+  if (D.atk === 'snipe') { e.pat = 'snipe'; e.lockT = D.lock; R.warnLine(e, Math.min(D.range + 1, dist2(e.pos, tp) + 2.5), 0.2, 0xff2a2a); e.anim?.play('Aim', { fade: 0.06, force: true }) || e.anim?.play('Idle_Combat'); sfx.foeWarn?.(e); return true; }
+  if (D.atk === 'call') { e.pat = 'call'; e.anim?.play('Taunt', { once: true, fade: 0.06, force: true }); sfx.foeWarn?.(e);
     if (!e.flareSp) { e.flareSp = glowSprite(0xff3a2a, 0.9, 0.7); e.root.add(e.flareSp); R.ownMats.push(e.flareSp.material); } e.flareSp.visible = true; e.flareSp.position.set(0.25, 2.2, 0.1); return true; }
   return false;
 }
@@ -106,7 +106,7 @@ export function foeKill(R, e, by) {
 function ink(R, p, r, t) {
   const mats = []; const g = new THREE.Group(); g.position.set(p.x, 0, p.z);
   for (let j = 0; j < 5; j++) { const mm = new THREE.MeshLambertMaterial({ color: 0x241a30, transparent: true, opacity: 0.6, depthWrite: false }); mats.push(mm); const s = new THREE.Mesh(new THREE.SphereGeometry(1, 9, 7), mm); const a = j / 5 * 6.28; s.position.set(Math.cos(a) * 1.2 * (j ? 1 : 0), 0.9, Math.sin(a) * 1.2 * (j ? 1 : 0)); s.scale.setScalar(1.1 + Math.random() * 0.6); g.add(s); }
-  R.root.add(g); R.smokes.push({ x: p.x, z: p.z, r, t, g, mats }); sfx.puff?.(); st(R, 'ink');
+  R.root.add(g); R.smokes.push({ x: p.x, z: p.z, r, t, g, mats }); sfx.foeWarn?.({ pos: p }, 'ink'); st(R, 'ink');
 }
 /* 매 프레임 (raid.updateEnemies 의 움직임 그리기 자리) */
 export function foeTick(R, e, dt, moving) {

@@ -2,8 +2,8 @@
 //   기능 장비(능력치)는 S.gear · S.equip · S.weapons 그대로. 꾸미기(능력치 0)는 S.look(고른 것) · S.owned(가진 것)
 //   규칙(docs/CUSTOMIZE.md): 부위마다 [장착](능력치) + [겉모습](꾸미기 · 비우면 장착한 장비 모습)
 //     · 총 개조 부품은 스킨을 씌워도 항상 보임 · 가방 크기는 늘 실제 단계 · 겉모습 바꾸기는 무료 · 언제든 끔
-import { GEAR_FILES, CELLS, BACK_DECO } from './hero_gen.js?v=0.99.12';
-import { ACHIEVEMENTS } from './data/achievements.js?v=0.99.12';
+import { GEAR_FILES, CELLS, BACK_DECO } from './hero_gen.js?v=0.99.13';
+import { ACHIEVEMENTS } from './data/achievements.js?v=0.99.13';
 
 /* 털 색 6 (털 · 진한 털 · 귀 안 · 밝은 털) */
 export const FUR = {

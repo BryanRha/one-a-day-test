@@ -1,25 +1,26 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.12';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.12';
-import { mapOf } from './plan.js?v=0.99.12';
-import { prop, charClone } from './assets.js?v=0.99.12';
-import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.12'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.12';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.12';
-import { sfx, ambience } from './audio.js?v=0.99.12';
-import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.12'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
-import { AI } from './ai.js?v=0.99.12'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
-import { populate, chiefRoll } from './threat.js?v=0.99.12'; /* M4-A 위협 곡선 */
-import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.12'; /* M4-A 새 적 5 */
-import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.12'; /* M4-A 검은 닻 두목 */
-import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.12';
-import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.12'; /* M4-B 심해 연구소 */
-import { wxStart } from './weather.js?v=0.99.12'; /* M4-B 공통 판 상태 5 */
-import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.12';
-import { HitNums } from './nums.js?v=0.99.12'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
-import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.12'; /* M3-B 가라앉은 공장 */
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.13';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.13';
+import { mapOf } from './plan.js?v=0.99.13';
+import { prop, charClone } from './assets.js?v=0.99.13';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.13'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.13';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.13';
+import { sfx, ambience } from './audio.js?v=0.99.13';
+import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.13'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
+import { AI, facOf } from './ai.js?v=0.99.13'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
+import { populate, chiefRoll } from './threat.js?v=0.99.13'; /* M4-A 위협 곡선 */
+import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.13'; /* M4-A 새 적 5 */
+import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.13'; /* M4-A 검은 닻 두목 */
+import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.13';
+import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.13'; /* M4-B 심해 연구소 */
+import { wxStart } from './weather.js?v=0.99.13'; /* M4-B 공통 판 상태 5 */
+import { rimify, rimHit } from './rim.js?v=0.99.13'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
+import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.13';
+import { HitNums } from './nums.js?v=0.99.13'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
+import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.13'; /* M3-B 가라앉은 공장 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tmp = V(), tmp2 = V(), tmp3 = V();
@@ -111,7 +112,7 @@ export class Raid {
     this.time = RAID.time; this.t = 0; this.over = null; this.hitstop = 0; this.shake = 0; this.kick = V(); this.slow = 1;
     this.kills = Object.fromEntries(Object.keys(ENEMIES).map(k => [k, 0])); this.killN = 0; this.dmgDealt = 0; this.shots = 0; this.hits = 0; this.warned = false; this.lastTick = 0;
     this.noises = []; this.enemyShots = []; this.containers = []; this.ownMats = [...M.extra.mats]; this.smokes = []; this.nades = []; this.warns = []; this.hazards = []; this.lines = [];
-    this.power = false; this.vaultOpened = false; this.zone = 1; this.zoneMax = 1; this.floodZ = 1e4; this.dark = 0; this.boss = null; this.used = [];
+    this.liftK = map === 'tunnel' || map === 'factory' ? 1.15 : 1; /* v0.7.1 검수 M4 Top 3 */ this.power = false; this.vaultOpened = false; this.zone = 1; this.zoneMax = 1; this.floodZ = 1e4; this.dark = 0; this.boss = null; this.used = [];
     this.blackoutAt = RAID.blackoutAt[0] + this.R() * (RAID.blackoutAt[1] - RAID.blackoutAt[0]);
     this.events = { flood: false, blackout: false, blackoutEnd: false, boss: false, earlyWarn: false, earlyClosed: false };
     /* v0.4 지도 상태: 밤 · 날씨 · 정전 · 물살 · 산소 · 번개 · 등불 꺼짐(선장) */
@@ -203,7 +204,8 @@ export class Raid {
   updateLook(dt) {
     const lt = this.lights, b = this.lookBase; if (!lt || !b) return; const sc = this.scene;
     const darkK = this.dark > 0 ? (this.map === 'tunnel' ? 0.55 : 0.6) : 1; const bolt = this.flash > 0 ? 3.2 * (this.flash / 0.25) : 0;
-    lt.hemi.intensity = b.hemi[0] * darkK * (this.douse > 0 ? 0.55 : 1) + bolt; lt.sun.intensity = b.sun[0] * darkK + bolt * 0.6;
+    const lift = this.dark > 0 || (this.night || 0) >= 0.5 ? 1 : (this.liftK || 1); /* v0.7.1 검수 M4 Top 3 */
+    lt.hemi.intensity = b.hemi[0] * darkK * lift * (this.douse > 0 ? 0.55 : 1) + bolt; lt.sun.intensity = b.sun[0] * darkK * lift + bolt * 0.6;
     if (this.map === 'tunnel' || this.map === 'factory' || this.map === 'lab') lt.hemi.color.setHex(this.dark > 0 ? 0xc87a70 : b.hemi[1]);
     const f = this.C.fog || [22, 48]; sc.fog.near = f[0] * (this.dark > 0 ? 0.92 : 1); sc.fog.far = f[1] * (this.dark > 0 ? 0.92 : 1);
   }
@@ -231,6 +233,7 @@ export class Raid {
       if (e.kind === 'miner' && !c.custom) { const lampM = new THREE.MeshBasicMaterial({ color: 0xfff1b0 }); const hl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), lampM); hl.position.set(0, 1.78, 0.2); en.root.add(hl); en.mats.push(lampM); }
     }
     en.custom = [en.d, en.c, en.j, en.l, en.cust].find(x => x?.custom) || null; if (D.cloak) en.hidden = true;
+    en.big = boss || D.radius >= 0.6; en.rimU = rimify(en.mats, facOf(e.kind), this.liftK > 1 || this.wx === 'night' || this.C.dark); /* v0.7.1 검수 M4 Top 1 · 3 */
     en.root.position.copy(en.pos); this.root.add(en.root);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex(), transparent: true, depthTest: false })); sp.scale.set(0.9, 0.9, 1); sp.position.y = boss ? ({ boss: 2.9, captain: 3.25, eel: 1.6, smelter: 3.4, mother: 2.6, chief: 3.0 }[e.kind] || 3) * (en.vis?.scale.x || 1) + 1 : e.kind === 'crab' || e.kind === 'mine' ? 1.4 : e.kind === 'hermit' ? 1.9 : 2.6; /* 보스: 설계 키 × 화면 배율 + 1m (커진 머리 위) */ sp.visible = false; sp.renderOrder = 10; en.root.add(sp); en.markSp = sp;
     if (e.squad != null) en.squad = e.squad; this.ai?.join(en); /* M3-B: 판 중에 생긴 적(보스 · 부름)도 진영 */
@@ -306,6 +309,7 @@ export class Raid {
   /* 화면 가리개 숫자: 어둠 · 시야 배수 (ui.drawVeil) */
   veilParams() {
     const night = this.night || 0; let dark = this.darkPerm ? (this.L.blackout < 1 ? 0.7 : 0.78) : this.dark > 0 ? (this.L.blackout < 1 ? 0.74 : 0.86) : 0.62 + night * 0.12;
+    if (this.liftK > 1 && !this.darkPerm && !(this.dark > 0) && night < 0.5) dark *= 0.85; /* v0.7.1 검수 M4 Top 3: 터널 · 공장 등불 원 밖 +15% (밤 · 정전은 그대로) */
     let vis = this.L.vision * (this.dark > 0 || this.darkPerm || night ? this.L.dark || 1 : 1) * (this.dark > 0 && this.L.blackout >= 1 ? 0.75 : 1) * (this.C.vis || 1) * (night ? 0.92 : 1) * (this.wxVis || 1); if (night || this.dark > 0) dark *= this.wxDark || 1; /* M4-B 고성능 헤드램프 */
     if (this.douse > 0) { dark = Math.max(dark, 0.9); vis *= 0.55; }
     if (this.flash > 0) { dark *= 0.25; vis *= 2; }
@@ -509,7 +513,7 @@ export class Raid {
     const am = ammoMul(this, e, how); /* v0.6 탄약 × 방어 · 기계 · 보스 */
     const shield = e.D.shield && dir && (dir.x * Math.sin(e.face) + dir.z * Math.cos(e.face)) < -0.45 ? 1 - e.D.shield * am.shield : 1;
     const d = Math.max(1, Math.round(dmg * (crit ? 1.8 : 1) * weak * shield * am.m));
-    e.hp -= d; this.dmgDealt += d; e.flash = 0.08; e.stagger = boss ? 0.03 : e.kind === 'miner' ? 0.05 : 0.12; e.sleep = false;
+    e.hp -= d; this.dmgDealt += d; if (!(e.flashCd > this.t)) { e.flash = 0.08; e.flashCd = this.t + 0.2; } /* v0.7.1 검수 M4 Top 1: 번쩍임 0.2초에 한 번 (연사에도 흰색이 끊김) */ e.stagger = boss ? 0.03 : e.kind === 'miner' ? 0.05 : 0.12; e.sleep = false;
     const hf = hitFeel(this, how); /* v0.6.1 무기마다 넉백 · 히트스톱 배수 */
     e.vel.addScaledVector(dir, this.w.knock * hf.push * (e.kind === 'drone' ? 1.4 : boss ? 0.15 : e.kind === 'jelly' ? 0.4 : e.kind === 'crab' ? 1.3 : 1) * (pellet ? 0.35 : 1));
     this.hitstop = Math.max(this.hitstop, (crit || weak > 1 ? 0.07 : pellet ? 0.02 : 0.04) * hf.stop);
@@ -519,7 +523,7 @@ export class Raid {
     hitSig(this, e, at, dir, { crit, weak: weak > 1, how }); (metal ? sfx.hitMetal : sfx.hit)(0, crit || weak > 1 || !!how.melee); /* 탄약 3 · 무기 서명 명중 · 굵은 소리 = 치명 · 약점 · 근접 */
     const at3 = weak > 1 && weakPoint(e); /* 약점 숫자는 커진 모델의 약점 위에서 (숫자가 1.8m 올림) */
     if (shield < 1) this.fx.burst(at.x, at.y, at.z, 6, 0xfff0c0, 9, 0.05, 0.22, 6, tmp2.copy(dir).multiplyScalar(-1)); /* 막힘 = 방패 불꽃(튕겨 나옴) */
-    this.hn.hit(e, at3 ? tmp3.set(at3.x, at3.y - 1.8, at3.z) : e.pos, d, weak > 1 ? 'weak' : crit ? 'crit' : shield < 1 ? 'block' : ''); /* 같은 적 0.25초 안은 하나로 (검수 M3 Top 6) */
+    const nE = how.chainTo && !how.chainTo.dead ? how.chainTo : e; this.hn.hit(nE, at3 ? tmp3.set(at3.x, at3.y - 1.8, at3.z) : nE.pos, d, weak > 1 ? 'weak' : crit ? 'crit' : shield < 1 ? 'block' : '', weak); /* v0.7.1 검수 M4 Top 2: 연쇄는 첫 적 숫자에 합침 · 보스 약점은 체력 줄 아래 한 줄 */ /* 같은 적 0.25초 안은 하나로 (검수 M3 Top 6) */
     e.alert = 1; e.state = 'chase'; e.target = this.pl.pos.clone();
     if (e.hp <= 0) this.kill(e, dir);
     else if (e.anim && !boss && shield === 1) e.anim.play('Hit_A', { once: true, fade: 0.05, speed: 1.6, force: true });
@@ -657,8 +661,9 @@ export class Raid {
       if (FOE[e.kind] && !PRIM[e.kind]) foeTick(this, e, dt, moving); /* 저격수 겨냥 줄 따라오기 */
       enemyTick(e, dt, this); /* 전용 모델: 예고 자세 · 약점 빛 · 맞음 */
       if (e.lantern) { const k = e.weakT > 0 ? 1 : 0; e.lantern.m.color.setRGB(1, 0.78 + 0.2 * k, 0.44 + 0.5 * k); e.lantern.halo.scale.setScalar((boss ? 2.2 : 1.3) * (1 + k * 0.6 + Math.sin(e.t * 9) * 0.05)); e.lantern.g.visible = this.douse <= 0 || boss; }
-      const f = e.flash > 0 ? 1 : 0; for (const m of e.mats) { if (m.emissive) m.emissive.setRGB(f, f, f); }
-      e.mark -= dt; e.markSp.visible = e.mark > 0 || e.weakT > 0; if (e.weakT > 0) { e.markSp.material.map = markTex('★'); e.markSp.scale.setScalar(1.1 + Math.sin(e.t * 12) * 0.15); } else if (e.mark > 0) { e.markSp.material.map = markTex(e.markType); e.markSp.scale.setScalar(0.9 + Math.max(0, e.mark - 1) * 2); }
+      if (e.big) { const h = e.flash > 0 ? e.flash / 0.08 : 0; if (h !== e.hit0) { rimHit(e.rimU, h); e.hit0 = h; if (h > 0 && e.weakT > 0 && e.custom?.eyeM) e.custom.eyeM.color.setRGB(1, 0.78, 0.25); } } /* v0.7.1 검수 M4 Top 1: 보스 · 큰 적은 흰색으로 덮지 않고 밝기 틴트 + 림 빛 · 약점이 열려 있으면 그 부위만 금색 */
+      else { const f = e.flash > 0 ? 1 : 0; if (f !== e.hit0) { e.hit0 = f; for (const m of e.mats) { if (m.emissive) m.emissive.setRGB(f, f, f); } } }
+      e.mark -= dt; e.markSp.visible = e.mark > 0 || e.weakT > 0; if (e.weakT > 0) { e.markSp.material.map = markTex('★'); e.markSp.scale.setScalar(1.1 + Math.sin(e.t * 12) * 0.15); } else if (e.mark > 0) { e.markSp.material.map = markTex(e.markType); e.markSp.scale.setScalar(0.54 + Math.max(0, e.mark - 1) * 1.2); } e.markSp.center.set(e.weakT > 0 ? 0.5 : 0.05, e.weakT > 0 ? 0.5 : 0.2); e.markSp.material.opacity = e.weakT > 0 ? 1 : 0.45 + 0.55 * Math.min(1, Math.max(0, (e.mark - 0.15) / 0.25)); /* v0.7.1 검수 M4 Top 3: '!' · '?' 60% · 머리 위 옆 · 1초 뒤 흐리게 */
     }
   }
   /* 보스 보이는 모델 묶음: 화면 배율만 (판정 · 예고 원 · 이동은 en.root/en.pos 그대로) */

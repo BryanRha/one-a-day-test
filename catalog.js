@@ -141,7 +141,8 @@ export const SAVES = {
   witch: ['witch_whiskers_v1'], ocean: ['dessertpop_save_v1'], racer: ['honk_rush_v1'], blocks: ['panda_blocks_v1'],
   dice: ['rune_dice_v1'], war: ['front_tactics_v1', 'front_tactics_maps', 'front_tactics_resume'], seek: ['his_secret_v1'],
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
-  bagel: ['marumi_v1', 'marumi_slot_*'], gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'], fdefense: ['fdefense_v1', 'fdefense_resume_v1'],
+  bagel: ['marumi_v2', 'marumi_v1', 'marumi_slot_*'],   /* 2026-11-09 마루미 0.3.0 저장 v2 (예전 v1 은 게임이 처음 열 때 v2 로 옮김 · 되돌리기용으로 같이 올림) */
+  gamsung: ['gamsung_v1', 'gamsung_slot_*'], pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'], fdefense: ['fdefense_v1', 'fdefense_resume_v1'],
   hanson: ['hanson_v1'],
   salvage: ['salvage_v4'],   /* 2026-11-05 수달 인양단 (v3 · v2 · v1 예전 키는 게임이 처음 열 때 v4 로 옮기므로 계정엔 v4 만) */   /* 2026-11-02 오랜상회 (목록 노출 순서는 총괄이 정함 — DAILY 에는 아직 없음) */
 };
@@ -149,7 +150,7 @@ export const SAVES = {
 export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice_pity_v1'] };
 // 라이브러리 · 컬렉션 노출 기준 (2026-10-28 대표 승인)
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
-//   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드로 열기/소장은 의뢰사 계약 확인 전까지 X(광고로만)
+//   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드 규칙은 일반 게임과 같음(2026-11-09 대표 · 전체 소장에는 안 넣음 — 브랜드 매출 따로 집계)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
 export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson', 'salvage'];   /* 2026-11-05 salvage 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
 export const BRAND = ['bagel', 'gamsung'];

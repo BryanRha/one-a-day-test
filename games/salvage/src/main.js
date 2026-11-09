@@ -1,24 +1,27 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
-import { forecast, setWxTest } from './data/weather.js?v=0.99.12'; /* M4-B 판 상태 5 */
+import { forecast, setWxTest } from './data/weather.js?v=0.99.13'; /* M4-B 판 상태 5 */
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.12';
-import { FX, shakeMul } from './fx.js?v=0.99.12';
-import { Raid } from './raid.js?v=0.99.12';
-import { UI } from './ui.js?v=0.99.12';
-import { S, load, save, stashCap } from './save.js?v=0.99.12';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.12';
-import * as E from './econ.js?v=0.99.12';
-import { installBack } from './oad.js?v=0.99.12';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.12';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.12';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.12';
-import { Story, artUrl } from './story_ui.js?v=0.99.12';
-import { HomeFac } from './home_fac.js?v=0.99.12';
-import * as TH from './threat.js?v=0.99.12'; /* M4-A 위협 곡선 · 주간 변주 */
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.13';
+import { FX, shakeMul } from './fx.js?v=0.99.13';
+import { Raid } from './raid.js?v=0.99.13';
+import { UI } from './ui.js?v=0.99.13';
+import { S, load, save, stashCap } from './save.js?v=0.99.13';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.13';
+import * as E from './econ.js?v=0.99.13';
+import { installBack } from './oad.js?v=0.99.13';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.13';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.13';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.13';
+import { Story, artUrl } from './story_ui.js?v=0.99.13';
+import { HomeFac } from './home_fac.js?v=0.99.13';
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.13';
+import * as TH from './threat.js?v=0.99.13'; /* M4-A 위협 곡선 · 주간 변주 */
 
 const Q = new URLSearchParams(location.search);
 setWxTest({ wx: Q.get('wx'), week: Q.has('week') ? Q.get('week') : undefined }); /* ?wx= · ?week= 시험값 → 출격 준비 예보 카드와 실제 판이 같은 값 (M4 마무리) */
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
+/* 판 카메라 거리: 390×844 화면 가로에 보이는 바닥 폭(m). 기본 12.08 (25, 15 오프셋) · 시험 ?cam=10|11|12 (v0.7.1 대표 확인 칸 · PROJECT_STATUS v0.7.1) */
+const CAM_W = 12.08; app.camW = +(Q.get('cam') || 11); /* v0.7.1 총괄 판단: 12 → 11 m (근거 docs/camera_m4*.json · shots/fix_qm4_cam_compare.png) */ app.camK = app.camW / CAM_W;
 /* 출격 제한: 실서버(oneaday.kr)에서만 하루 3회 · 테스트 서버·로컬은 완성될 때까지 무제한 (대표 2026-11-05) */
 app.nolimit = app.free || !Q.has('limit') && location.hostname !== 'oneaday.kr' && location.hostname !== 'www.oneaday.kr';   /* ?limit = 시험에서 실서버처럼 제한 */
 const canvas = document.getElementById('gl');
@@ -49,10 +52,30 @@ function resize() {
 addEventListener('resize', resize);
 
 /* ───── 은신처 장면 (3D 배경) ───── */
+/* 물가: 물결 면(캔버스 물결 무늬 · 천천히 흐름) + 부두(앞 줄 바닥 끝 들보 · 앞 데크 · 말뚝 — 한 지오메트리 · 판자 무늬) */
+function waterfront(g) {
+  const wc = document.createElement('canvas'); wc.width = wc.height = 128; const x = wc.getContext('2d');
+  x.fillStyle = '#2b6d74'; x.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 46; i++) { const px = (i * 53) % 128, py = (i * 29) % 128, w = 10 + (i * 7) % 22; x.strokeStyle = i % 3 ? 'rgba(160,230,230,.16)' : 'rgba(10,40,48,.35)'; x.lineWidth = 2; x.beginPath(); x.ellipse(px, py, w, 2.2, 0, 0, Math.PI * 2); x.stroke(); }
+  const wt = new THREE.CanvasTexture(wc); wt.wrapS = wt.wrapT = THREE.RepeatWrapping; wt.repeat.set(16, 16); wt.colorSpace = THREE.SRGBColorSpace;
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(96, 96), new THREE.MeshLambertMaterial({ map: wt, emissive: 0x0c3238 })); water.rotation.x = -Math.PI / 2; water.position.y = -0.32; water.receiveShadow = true; water.name = 'hide_water'; g.userData.water = wt;
+  const pc = document.createElement('canvas'); pc.width = 64; pc.height = 64; const y = pc.getContext('2d');
+  for (let i = 0; i < 8; i++) { y.fillStyle = ['#7a5636', '#6e4c2f', '#835d3b', '#74512f'][i % 4]; y.fillRect(0, i * 8, 64, 8); y.fillStyle = 'rgba(30,18,8,.55)'; y.fillRect(0, i * 8 + 7, 64, 1); y.fillRect((i * 23) % 64, i * 8, 1, 8); }
+  const pt = new THREE.CanvasTexture(pc); pt.colorSpace = THREE.SRGBColorSpace; pt.magFilter = THREE.NearestFilter;
+  const parts = []; const box = (w, h, d, px, py, pz, ry = 0) => { const b = new THREE.BoxGeometry(w, h, d); if (ry) b.rotateY(ry); b.translate(px, py, pz); parts.push(b); };
+  const post = (px, pz, h = 1.0) => { const c = new THREE.CylinderGeometry(0.16, 0.18, h, 7).toNonIndexed(); c.translate(px, 0.06 - h / 2 + 0.25, pz); parts.push(c); };
+  box(20.4, 0.34, 0.36, 0, -0.14, 2.12);                 /* 앞 줄 바닥 끝 들보 (방 → 물) */
+  box(6.2, 0.22, 4.3, 1.75, -0.1, 4.2);                  /* 앞 데크 (수족관 · 훈련장) */
+  box(6.4, 0.3, 0.3, 1.75, -0.12, 6.38); box(0.3, 0.3, 4.3, -1.42, -0.12, 4.2); box(0.3, 0.3, 4.3, 4.92, -0.12, 4.2); /* 데크 테두리 */
+  for (const [px, pz] of [[-1.42, 6.38], [1.75, 6.38], [4.92, 6.38], [-1.42, 3.3], [4.92, 3.3], [-10, 2.12], [-6.2, 2.12], [-4.6, 2.12], [6.4, 2.12], [10, 2.12]]) post(px, pz);
+  const geo = mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p)); parts.forEach(p => p.dispose());
+  const deck = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: pt })); deck.name = 'hide_pier'; deck.receiveShadow = true; deck.castShadow = true;
+  const grp = new THREE.Group(); grp.add(water, deck); return grp;
+}
 function buildHideout() {
   const g = new THREE.Group(); g.name = 'hideout';
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 40), new THREE.MeshLambertMaterial({ color: 0x3a4a52 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
-  const water = new THREE.Mesh(new THREE.RingGeometry(9, 40, 48), new THREE.MeshLambertMaterial({ color: 0x18414a, transparent: true, opacity: 0.9 })); water.rotation.x = -Math.PI / 2; water.position.y = -0.05; g.add(water);
+  /* 검수 M4 Top 8: 앞쪽 = 물가. 옛 바닥 원 + 물 고리(그리기 2) → 물결 면 하나 + 부두 데크 하나(그리기 2, 같은 수) — 선착장 · 수족관 · 훈련장이 물 위 부두에 놓임 */
+  g.add(waterfront(g));
   const add = (k, x, z, ry = 0, s = 1) => { const o = prop(k); o.position.set(x, 0, z); o.rotation.y = ry; o.scale.setScalar(s); o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); g.add(o); return o; };
   for (let i = -2; i <= 2; i++) add('floor_wood', i * 4, 0); for (let i = -1; i <= 1; i++) add('floor_wood', i * 4, -4);
   add('wall', -4, -6, 0); add('wall', 0, -6, 0); add('wall', 4, -6, 0);
@@ -95,6 +118,7 @@ app.showHideout = on => {
   if (on && !hide) { hide = buildHideout(); scene.add(hide); }
   if (on) syncHideoutProps();
   if (hide) hide.visible = on;
+  if (!on) homeFac.abort(); /* 검수 M4 Top 9: 판으로 가면 공사 끝 연출 · 띠를 바로 끝냄 */
   scene.fog.near = on ? 30 : 22; scene.fog.far = on ? 70 : 48;
 };
 
@@ -176,7 +200,7 @@ function frame(now) {
     camLook.lerp(new THREE.Vector3(tx, 0, tz), 1 - Math.pow(0.002, rdt));
     raid.kick.multiplyScalar(Math.pow(0.0001, rdt)); raid.shake = Math.max(0, raid.shake - rdt * 1.6);
     const sm = shakeMul(), s = raid.shake * raid.shake * 0.9 * sm; shakeV.set((Math.random() - 0.5) * s, (Math.random() - 0.5) * s, (Math.random() - 0.5) * s); /* 설정 '흔들림 약하게' = ×0.35 (반동도 줄임) */
-    camera.position.set(camLook.x, 25, camLook.z + 15).addScaledVector(raid.kick, 0.4 + 0.6 * sm).add(shakeV); camera.lookAt(camLook.x + shakeV.x * 0.5, 0, camLook.z);
+    const ck = app.camK; camera.position.set(camLook.x, 25 * ck, camLook.z + 15 * ck).addScaledVector(raid.kick, 0.4 + 0.6 * sm).add(shakeV); camera.lookAt(camLook.x + shakeV.x * 0.5, 0, camLook.z);
     if (app.camOverride) { const o = app.camOverride; camera.position.set(o.x, o.y, o.z + o.back); camera.lookAt(o.x, 0, o.z); } /* 시험용 전체 보기 */
     sun.position.set(p.x + 8, 22, p.z + 6); sun.target.position.set(p.x, 0, p.z);
     fx.update(rdt, camera, innerWidth, innerHeight);
@@ -185,7 +209,7 @@ function frame(now) {
     /* 은신처 카메라: 천천히 숨쉬기 */
     const t = now / 1000; if (!app.hideCam?.(camera, t, rdt)) { camera.position.set(Math.sin(t * 0.15) * 0.8, 7.2, 9.4); camera.lookAt(0, -1.4, -1.8); }
     sun.position.set(6, 14, 8); sun.target.position.set(0, 0, -2);
-    if (hide) { const U = hide.userData; U.mixer?.update(rdt); U.pet?.m.update(rdt); if (U.hero) tailWag(U.hero, rdt, 0); if (U.pet) tailWag(U.pet.h, rdt, 0); }
+    if (hide) { const U = hide.userData; if (U.water) { U.water.offset.x = (t * 0.012) % 1; U.water.offset.y = (t * 0.02) % 1; } U.mixer?.update(rdt); U.pet?.m.update(rdt); if (U.hero) tailWag(U.hero, rdt, 0); if (U.pet) tailWag(U.pet.h, rdt, 0); }
     ui.drawVeil(null, camera);
   }
   if (ui.wardrobe.on) { renderer.setClearColor(0x14181d, 1); renderer.clear(); ui.wardrobe.draw(renderer, rdt); renderer.setClearColor(0x000000, 1); }
@@ -211,7 +235,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.12'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.13'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

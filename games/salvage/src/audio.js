@@ -1,4 +1,4 @@
-// 소리 — 전부 Web Audio 로 직접 합성 (소리 파일 0개 · 저작권 걱정 없음)
+// 소리 — Web Audio 합성 + CC0 녹음 층 하나(assets/audio/foley.m4a · Kenney RPG Audio · 첫 탭 뒤 늦게 받음 · 없으면 합성만)
 //  효과음 = 이 파일 · 배경음 5곡(적응형) = assets/audio/music.js · 지도 환경음 = assets/audio/env.js (둘 다 첫 탭 · 판 시작 뒤 늦게 받음 — 첫 진입 용량 X)
 //  이름 목록 · 렌더 측정표 = docs/AUDIO.md · 미리듣기 = docs/audio_preview/ (v2 = *_v2.m4a)
 //  v2 (11-05): 마스터 = 가상 저음 + 중역 보강 → 묶음 압축 → 리미터 → 천장(−3dBFS) / 방 울림 4종(코드로 만든 IR · 지도 따라 바뀜)
@@ -51,7 +51,7 @@ export function unlock() {
   applySet();
   if (isOffline(ctx)) return;
   /* 배경음: 첫 탭 1초 뒤 받아서 (첫 진입 용량에 안 들어감) · 0.25초마다 장면 · 긴장 단계 · 방 · 환경음 맞춤 */
-  setTimeout(loadMusic, 1000); drive = setInterval(tick, 250);
+  setTimeout(loadMusic, 1000); setTimeout(loadFoley, 1500); drive = setInterval(tick, 250);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') suspendAudio(); });
 }
 /* 원어데이 확인 창 · 광고 동안 소리 멈춤 → 창이 닫히면 다시 켬 (폰 iframe 에선 포커스가 앱에 남아 저절로 안 돌아옴 · iOS 'interrupted' 포함) */
@@ -149,6 +149,23 @@ function clk(t, f, peak, pan = 0) { nz({ t, dur: 0.012, ft: 'bandpass', ff: f, q
 function thud(t, f, dur, peak, pan = 0) { os({ t, f0: f, f1: f * 0.45, dur, peak, pan }); nz({ t, kind: 'brown', dur: dur * 0.8, ft: 'lowpass', ff: f * 4, peak: peak * 0.6, pan }); }
 function plip(t, f, peak, pan = 0, wet = 0.35) { nz({ t, kind: 'pink', dur: 0.003, ft: 'highpass', ff: 1500, peak: peak * 0.15, pan, j: 0 }); os({ t: t + 0.002, f0: f, f1: f * rnd(1.6, 2.2), glide: rnd(0.03, 0.05), dur: rnd(0.05, 0.08), peak, pan, wet }); }
 const MIDI = m => 440 * Math.pow(2, (m - 69) / 12);
+/* ───── CC0 녹음 층 (검수 M4 Top 10 · Kenney 'RPG Audio' CC0 — 출처 CREDITS.md) ─────
+   천 스침 · 가방(가죽) · 발소리 · 쇠 걸쇠를 한 파일(assets/audio/foley.m4a 35KB · 모노 22kHz)에 이어 붙임 → 첫 탭 1.5초 뒤 받음.
+   합성 소리 위에 작게 얹는 '질감 층' — 못 받았거나 아직이면 합성만 (소리는 그대로 남) */
+const FOLEY = { cloth: [[0.1, 0.32], [0.54, 0.32], [0.98, 0.32], [1.42, 0.32]], bag: [[1.86, 0.2665], [2.2465, 0.186], [2.5526, 0.4]],
+  step: [[3.0726, 0.22], [3.4126, 0.22], [3.7526, 0.22], [4.0926, 0.22], [4.4326, 0.22], [4.7726, 0.22]], latch: [[5.1126, 0.2492], [5.4818, 0.3]] };
+let foleyBuf = null, foleyLoad = null;
+function loadFoley() { if (foleyLoad || !ctx || isOffline(ctx)) return foleyLoad;
+  foleyLoad = fetch(new URL('../assets/audio/foley.m4a', import.meta.url)).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(b => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no))).then(b => (foleyBuf = b)).catch(e => { console.warn('녹음 층', e?.message || e); foleyLoad = null; }); return foleyLoad; }
+function fol(kind, t, peak, o = {}) {
+  if (!foleyBuf) return; const L = FOLEY[kind]; const [st, len] = L[Math.floor(Math.random() * L.length)];
+  const s = ctx.createBufferSource(); s.buffer = foleyBuf; s.playbackRate.value = (o.rate || 1) * rnd(0.94, 1.06) * EV.p;
+  let n = s; if (o.lp) { const f = bq('lowpass', o.lp * EV.f, 0.7); n.connect(f); n = f; } if (o.hp) { const f = bq('highpass', o.hp, 0.7); n.connect(f); n = f; }
+  const g = ctx.createGain(); g.gain.value = peak * EV.g * (1 + EV.a * (Math.random() * 2 - 1)); n.connect(g); let out = g;
+  if (o.pan) { const p = ctx.createStereoPanner(); p.pan.value = cl(o.pan); g.connect(p); out = p; }
+  out.connect(sfxBus); if (o.wet) { const w = gn(o.wet); out.connect(w); w.connect(revIn); }
+  s.start(t, st, len / s.playbackRate.value * (o.cut || 1)); }
 
 /* ───── 무기 4종: 발사 · 재장전 · 탄피 (판에서 지금 무기를 읽음 — 직접 넘겨도 됨) ─────
    발사 = ① 터짐(아주 짧은 중고역 잡음 · 6~10ms 라 날카로움 피로 X) ② 몸통(사인 낙하 + 포화 → 2·3차 배음이 폰에서 '쿵'으로 들림 + 갈색 잡음 '퍽')
@@ -235,6 +252,9 @@ function mong(mood = 'happy', t = now()) {
     const o = { t: u, f0: b, f1: mood === 'sad' ? b * 0.7 : mood === 'ask' && i === n - 1 ? b * 1.35 : b * 1.18, glide: 0.07, dur: 0.075, a: 0.012, peak: 0.07, wave: 'triangle', lp: 3200, wet: 0.08, j: 0 };
     os(o); os({ ...o, f0: o.f0 * 2.01, f1: o.f1 * 2.01, peak: 0.018 }); nz({ t: u, dur: 0.05, ft: 'bandpass', ff: b * 1.5, q: 3, peak: 0.02, j: 0 }); }
 }
+/* 쇠 호루라기 (두목): 숨소리 + 가는 사각파 두 겹이 위로 꺾임 (dur 초 · k 높이 배수) */
+function whistle(t, dur, k = 1) { nz({ t, kind: 'white', dur, a: 0.02, ft: 'bandpass', ff: 2800 * k, q: 4, peak: 0.05, wet: 0.3, j: 0 });
+  for (const f of [2350, 2380]) os({ t, f0: f * 0.82 * k, f1: f * k, glide: 0.06, dur: 0.08, a: 0.015, hold: dur - 0.1, peak: 0.035, wave: 'square', lp: 4200, wet: 0.35, j: 0 }); }
 /* 천둥(폭풍 번개 — 판이 번개를 치며 sfx.boom 을 부르면): 가까운 '쩍' + 늦게 굴러오는 낮은 우르릉 두 겹 (항구 열린 메아리) */
 function thunder(t) { duck(0.5, 2.5); const d = rnd(0.12, 0.5);
   nz({ t, dur: 0.04, ft: 'highpass', ff: 1400, peak: 0.25, j: 0 }); nz({ t, kind: 'pink', dur: 0.45, ft: 'bandpass', ff: 900, ff1: 300, q: 0.7, peak: 0.3, wet: 0.4, j: 0 });
@@ -288,12 +308,12 @@ export const sfx = {
   /* 구르기: 옷 · 물 휙 + 0.31초 뒤 착지 / 판에서 장어가 돌진 시작이면 물 밀려오는 소리 / 던지기면 휙만 */
   roll() { if (!ctx) return; const t = now(), r = R();
     if (r?.boss?.charging && r.boss.kind === 'eel') { nz({ t, kind: 'brown', dur: 0.9, ft: 'lowpass', ff: 300, ff1: 1400, fdur: 0.4, peak: 0.7, wet: 0.2 }); nz({ t, kind: 'pink', dur: 0.7, ft: 'bandpass', ff: 900, ff1: 2500, q: 0.8, peak: 0.22, a: 0.1 }); return; }
-    nz({ t, kind: 'pink', dur: 0.2, a: 0.05, ft: 'bandpass', ff: 500, ff1: 1700, q: 0.9, peak: 0.28 });
+    nz({ t, kind: 'pink', dur: 0.2, a: 0.05, ft: 'bandpass', ff: 500, ff1: 1700, q: 0.9, peak: 0.28 }); fol('cloth', t, 0.16, { rate: 1.25 }); fol('bag', t + 0.28, 0.07, { lp: 2000 });
     if (r && r.pl?.roll > 0) { const wet = r.water?.userData?.mask?.(r.pl.pos.x, r.pl.pos.z) > 0.15; const u = t + 0.31; thud(u, 110, 0.12, 0.35);
       if (wet) { nz({ t: u, dur: 0.16, ft: 'bandpass', ff: 1100, ff1: 600, q: 0.9, peak: 0.2 }); plip(u + 0.04, 700, 0.06); } else nz({ t: u, kind: 'pink', dur: 0.06, ft: 'highpass', ff: 1800, peak: 0.07 }); } },
   /* 발: 말랑한 발바닥 + 바닥 따라(창고 젖은 콘크리트 · 항구 나무 부두 · 터널 쇠 격자) · 매번 조금씩 다름 · 아주 작게 / 물 첨벙 */
   step() { if (!ctx) return; const t = now(); if (t - lastStep < 0.06) return; lastStep = t; const k = rnd(0.85, 1.15), m = R()?.map;
-    thud(t, 105 * k, rnd(0.04, 0.07), 0.06); nz({ t, kind: 'pink', dur: rnd(0.02, 0.04), ft: 'highpass', ff: 2200 * k, peak: 0.012 });
+    thud(t, 105 * k, rnd(0.04, 0.07), 0.06); nz({ t, kind: 'pink', dur: rnd(0.02, 0.04), ft: 'highpass', ff: 2200 * k, peak: 0.012 }); fol('step', t, 0.045, { lp: m === 'harbor' ? 1800 : 3200, rate: m === 'harbor' ? 0.85 : 1 });
     if (m === 'harbor') os({ t, f0: 210 * k, f1: 170 * k, dur: 0.06, peak: 0.03, wave: 'triangle', lp: 900 });
     else if ((m === 'tunnel' || m === 'factory') && Math.random() < 0.45) metal(t, rnd(900, 1250), 0.05, 0.006, 0, 0.12, 0.3); },
   /* M4-B 심해 연구소: 수압 문(삑삑 · 쿵 · 쉬익) · 배양조 유리(톡 · 와장창) · 파수 신호음(두 음 · 차갑게 울림) · 경보 · 포자 · 수압 탄 · 덩굴 / 판 상태: 떨림(한파) · 독 */
@@ -319,9 +339,9 @@ export const sfx = {
     nz({ t, kind: 'pink', dur: 0.12, ft: 'bandpass', ff: 1100 * k, ff1: 650, q: 0.9, peak: 0.08 }); thud(t, 95, 0.05, 0.04); if (Math.random() < 0.6) plip(t + rnd(0.03, 0.07), rnd(600, 1000), 0.02, rnd(-0.3, 0.3), 0.2); },
   /* 뒤지기: 천 · 종이 · 나무 바스락 알갱이 */
   search() { if (!ctx) return; const t = now(); for (let i = 0; i < 6; i++) { const u = t + i * rnd(0.07, 0.12); nz({ t: u, kind: Math.random() < 0.5 ? 'pink' : 'white', dur: rnd(0.03, 0.07), ft: 'bandpass', ff: rnd(900, 2600), q: rnd(1, 2.5), peak: rnd(0.05, 0.11), pan: rnd(-0.2, 0.2) }); }
-    if (Math.random() < 0.5) clk(t + rnd(0.1, 0.4), rnd(900, 1400), 0.06); },
+    if (Math.random() < 0.5) clk(t + rnd(0.1, 0.4), rnd(900, 1400), 0.06); fol('cloth', t + 0.05, 0.1); fol('bag', t + rnd(0.25, 0.4), 0.09); },
   /* 가방 넣기: 천 '툭' + 물건 소리(값이 클수록 밝은 마림바 두 음) */
-  pick(v = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.07, ft: 'lowpass', ff: 900, peak: 0.25 }); thud(t, 150, 0.05, 0.15);
+  pick(v = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.07, ft: 'lowpass', ff: 900, peak: 0.25 }); thud(t, 150, 0.05, 0.15); fol('bag', t, 0.14);
     const b = MIDI(72 + Math.min(7, Math.round(v * 1.5))); mar(t + 0.04, b, 0.12); if (v >= 2) mar(t + 0.11, b * 1.5, 0.1); },
   /* 가방 안 물건 돌리기 */
   rotate() { if (!ctx) return; const t = now(); clk(t, 1700, 0.08); nz({ t, kind: 'pink', dur: 0.06, a: 0.03, ft: 'bandpass', ff: 900, ff1: 1600, q: 1.2, peak: 0.07 }); clk(t + 0.07, 2100, 0.07); },
@@ -347,7 +367,7 @@ export const sfx = {
   ui() { if (!ctx) return; const t = now(); mar(t, MIDI(84) * rnd(0.99, 1.01), 0.07, 0.18, 0, 0.05); nz({ t, kind: 'pink', dur: 0.015, ft: 'bandpass', ff: 2500, q: 2, peak: 0.04 }); },
   tab() { if (!ctx) return; const t = now(); mar(t, MIDI(79), 0.06, 0.15, 0, 0.05); mar(t + 0.04, MIDI(86), 0.04, 0.12, 0, 0.05); },
   coin() { if (!ctx) return; const t = now(); metal(t, 1800, 0.25, 0.05, 0, 0.15, 0.3); metal(t + 0.07, 2300, 0.3, 0.045, 0, 0.15, 0.3); },
-  equip() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.09, ft: 'lowpass', ff: 1200, peak: 0.18 }); clk(t + 0.05, 1500, 0.16); mar(t + 0.08, MIDI(76), 0.06, 0.25); },
+  equip() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.09, ft: 'lowpass', ff: 1200, peak: 0.18 }); clk(t + 0.05, 1500, 0.16); fol('cloth', t, 0.09, { cut: 0.6 }); fol('latch', t + 0.04, 0.07); mar(t + 0.08, MIDI(76), 0.06, 0.25); },
   /* 폭발: 깊은 저음 + 갈라지는 소리 + 방 울림 / 폭풍 번개면 천둥 */
   boom(pan = 0) { if (!ctx) return; const t = now(), r = R(); if (r?.C?.rain && r.flash >= 0.2) return thunder(t);
     duck(0.45, 1.4); nz({ t, dur: 0.02, ft: 'highpass', ff: 1500, peak: 0.5, pan });
@@ -373,6 +393,34 @@ export const sfx = {
     nz({ t, kind: 'brown', dur: 1.3, ft: 'lowpass', ff: 320, peak: 0.6, pan }); metal(t + 0.15, 180, 1.2, 0.08, pan, 0.4, 0.6); },
   slam(pan = 0) { if (!ctx) return; const t = now(); duck(0.4, 0.9); os({ t, f0: 62, f1: 26, dur: 0.55, peak: 1.0, pan, sat: 1 }); nz({ t, kind: 'brown', dur: 0.6, ft: 'lowpass', ff: 600, ff1: 150, peak: 0.85, pan, wet: 0.3 });
     nz({ t: t + 0.02, kind: 'pink', dur: 0.3, ft: 'bandpass', ff: 1000, ff1: 500, q: 0.8, peak: 0.25, pan }); for (let i = 0; i < 5; i++) clk(t + 0.08 + i * rnd(0.04, 0.09), rnd(900, 1800), 0.05, pan); },
+  /* 검수 M4 Top 10: 새 적 5 전용 예고음 — 겨냥 줄 · 무장 원 · 앞 원이 뜨는 그 순간 (판 안 거리로 작아짐 · 좌우 팬)
+     기뢰 = 짧게 올라가는 두 번 삑 + 빨라지는 딸깍 · 소라게 = 집게 쇠 딸깍 둘 + 껍데기 긁힘 · 문어 = 축축한 빨판 '쩝' + 먹물 '푸슉'
+     저격수 = 렌즈 겨눔 '이잉'(올라가는 가는 사인 · 0.8초 따라옴 → 0.5초 멈춤 = 고정 '틱') · 신호수 = 신호탄 심지 치익 + 위로 솟는 휘파람 */
+  foeWarn(e, kind) { if (!ctx) return; kind ||= e?.kind; const r = R(), t = now(); let pan = 0, v = 1;
+    if (e?.pos && r?.pl) { const dx = e.pos.x - r.pl.pos.x, dz = e.pos.z - r.pl.pos.z; pan = cl(dx / 12); v = Math.max(0.35, Math.min(1, 14 / (Math.hypot(dx, dz) + 6))); }
+    if (kind === 'mine') { for (let i = 0; i < 2; i++) os({ t: t + i * 0.13, f0: 1650 + i * 450, f1: 2100 + i * 500, glide: 0.06, dur: 0.07, peak: 0.07 * v, wave: 'square', lp: 4200, pan, j: 0 });
+      for (let i = 0; i < 5; i++) clk(t + 0.3 + i * (0.16 - i * 0.022), 3200, 0.05 * v, pan); return; }
+    if (kind === 'hermit') { metal(t, rnd(1300, 1500), 0.08, 0.06 * v, pan, 0.1, 0.5); metal(t + 0.09, rnd(1600, 1800), 0.07, 0.05 * v, pan, 0.1, 0.5);
+      nz({ t: t + 0.12, kind: 'pink', dur: 0.35, a: 0.12, ft: 'bandpass', ff: 700, ff1: 1500, q: 2.5, peak: 0.12 * v, pan, wet: 0.15 }); fol('latch', t + 0.02, 0.05 * v, { rate: 0.7, pan }); return; }
+    if (kind === 'octo') { for (let i = 0; i < 3; i++) { const u = t + i * 0.07; nz({ t: u, kind: 'pink', dur: 0.06, ft: 'lowpass', ff: 900, ff1: 300, peak: 0.16 * v, pan }); plip(u + 0.01, rnd(260, 360), 0.05 * v, pan, 0.2); }
+      os({ t, f0: 180, f1: 95, dur: 0.4, a: 0.05, peak: 0.08 * v, wave: 'triangle', lp: 500, pan }); return; }
+    if (kind === 'ink') { nz({ t, kind: 'pink', dur: 0.5, a: 0.01, ft: 'lowpass', ff: 1400, ff1: 250, peak: 0.3 * v, pan, wet: 0.25 }); nz({ t, kind: 'brown', dur: 0.6, ft: 'lowpass', ff: 300, peak: 0.35 * v, pan });
+      for (let i = 0; i < 6; i++) plip(t + 0.05 + i * rnd(0.04, 0.08), rnd(220, 420), 0.04 * v, pan + rnd(-0.2, 0.2), 0.3); return; }
+    if (kind === 'sniper') { const o = { t, f0: 1400, f1: 2600, glide: 0.8, dur: 0.06, a: 0.02, hold: 0.78, peak: 0.035 * v, wave: 'sine', pan, wet: 0.2, j: 0 }; os(o); os({ ...o, f0: 1408, f1: 2615, peak: 0.02 * v });
+      clk(t + 0.8, 4200, 0.09 * v, pan); os({ t: t + 0.8, f0: 2600, dur: 0.45, a: 0.005, peak: 0.03 * v, wave: 'triangle', lp: 5000, pan, j: 0 }); return; }
+    if (kind === 'signal') { nz({ t, kind: 'white', dur: 0.9, a: 0.05, ft: 'bandpass', ff: 3800, ff1: 5200, q: 1.2, peak: 0.07 * v, pan, wet: 0.15 });
+      for (let i = 0; i < 8; i++) clk(t + i * rnd(0.06, 0.11), rnd(2600, 4200), 0.025 * v, pan);
+      os({ t: t + 0.55, f0: 900, f1: 2800, glide: 0.55, dur: 0.12, a: 0.05, hold: 0.4, peak: 0.05 * v, wave: 'triangle', lp: 4500, pan, wet: 0.3, j: 0 }); return; }
+  },
+  /* 검은 닻 두목: 등장 = 쇠 호루라기 두 번(삐-익 · 삐익) + 낮은 뱃고동 / 패턴 예고 = 닻 던지기 사슬 풀림 · 내려찍기 숨 + 쇠 신음 · 수류탄 셋 핀 딸깍 셋 · 호루라기 */
+  chiefHorn() { if (!ctx) return; const t = now(); duck(0.4, 2.4); whistle(t, 0.9); whistle(t + 0.42, 0.5, 1.06);
+    for (const det of [-7, 7]) os({ t: t + 0.15, f0: 73.4, dur: 0.4, a: 0.25, hold: 0.9, peak: 0.14, wave: 'sawtooth', lp: 420, det, wet: 0.5, j: 0 }); metal(t + 0.2, 330, 1.2, 0.05, 0, 0.4, 0.4); },
+  chiefWarn(pat, d = 0.9) { if (!ctx) return; const t = now(); d = Math.max(0.35, Math.min(1.6, d));
+    if (pat === 'throw') { for (let i = 0; i < 9; i++) metal(t + i * d / 10, rnd(700, 900), 0.05, 0.04 + i * 0.006, 0, 0.1, 0.4); nz({ t, dur: d, a: d * 0.7, ft: 'bandpass', ff: 400, ff1: 1400, q: 1.5, peak: 0.07 }); return; }
+    if (pat === 'slam') { nz({ t, kind: 'brown', dur: 0.2, a: d * 0.85, ft: 'lowpass', ff: 250, ff1: 900, peak: 0.45 }); os({ t, f0: 65, f1: 110, dur: 0.15, a: d * 0.85, peak: 0.22, wave: 'sawtooth', lp: 450, sat: 1, j: 0 }); metal(t + 0.05, 260, d, 0.05, 0, 0.3, 0.4); return; }
+    if (pat === 'volley') { for (let i = 0; i < 3; i++) { clk(t + i * 0.14, 2800, 0.12); metal(t + i * 0.14 + 0.02, 3400, 0.05, 0.02, (i - 1) * 0.3, 0.05, 0.6); } return; }
+    if (pat === 'whistle') { whistle(t, 0.7); whistle(t + 0.3, 0.7, 1.06); whistle(t + 0.6, 0.6); return; }
+    os({ t, f0: MIDI(57), dur: 0.35, a: 0.01, peak: 0.1, wave: 'triangle', lp: 1400, j: 0 }); },
   /* 사건 알림(낮은 두 음 '봉-봉') — 보스가 패턴을 예고하는 중이면 보스 예고음으로 */
   warn() { if (!ctx) return; const b = R()?.boss; if (b && !b.dead && b.wind > 0 && b.wind === b.windMax) return bossWarn(b.kind, b.pat, b.windMax);
     const t = now(); [0, 0.2].forEach((d, i) => { os({ t: t + d, f0: MIDI(i ? 64 : 69), dur: 0.35, a: 0.01, peak: 0.12, wave: 'triangle', lp: 1400, j: 0 }); os({ t: t + d, f0: MIDI(i ? 52 : 57), dur: 0.35, a: 0.01, peak: 0.08, wave: 'sine', j: 0 }); }); },
@@ -404,15 +452,15 @@ export const sfx = {
 };
 sfx.window = sfx.windowLight; sfx.memo = sfx.memory;
 /* 변주 씌우기: 부를 때마다 EV 를 새로 굴림. 음악 같은 소리(화음 · 마림바)는 높이 고정 · 필터만 조금 */
-const TUNED = /^(pick|rare|extract|die|ui|tab|coin|equip|power|build|talk|cut|memory|memo|windowLight|window|bond|chapter|lamp|quest|warn|bossWarn|tape|radio|mong|siren|alert)$/;
+const TUNED = /^(chiefHorn|chiefWarn|pick|rare|extract|die|ui|tab|coin|equip|power|build|talk|cut|memory|memo|windowLight|window|bond|chapter|lamp|quest|warn|bossWarn|tape|radio|mong|siren|alert)$/;
 /* 소리마다 음량 손질 (효과음 버스를 사격 · 타격에 맞춰 올렸으므로 큰 사건 · 화음 소리는 덜어 리미터가 덜 일하게 — 5장 측정) */
-const GAIN = { boom: 0.5, thunder: 0.4, roar: 0.5, slam: 0.5, gate: 0.5, siren: 0.5, bossWarn: 0.5, warn: 0.55, die: 0.55, extract: 0.55, power: 0.55, cut: 0.55, chapter: 0.55, memory: 0.55, memo: 0.55,
+const GAIN = { chiefHorn: 0.6, chiefWarn: 0.6, foeWarn: 0.8, boom: 0.5, thunder: 0.4, roar: 0.5, slam: 0.5, gate: 0.5, siren: 0.5, bossWarn: 0.5, warn: 0.55, die: 0.55, extract: 0.55, power: 0.55, cut: 0.55, chapter: 0.55, memory: 0.55, memo: 0.55,
   windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, roll: 0.7, rotate: 0.6, zap: 0.8, fizz: 0.7, bubble: 0.7 };
 for (const k of Object.keys(sfx)) { const fn = sfx[k], tuned = TUNED.test(k), g = GAIN[k] || 1;
   sfx[k] = function (...a) { if (!ctx) return; const prev = EV; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; try { return fn.apply(this, a); } finally { EV = prev; } }; }
 
 /* 지도 환경음 (판 중에만 · 배경음을 꺼도 남음) — assets/audio/env.js 를 판 시작 때 늦게 받음 · 구역 · 날씨 · 정전 · 급류 · 침수 따라 바뀜 */
-function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.12').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
+function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.13').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
 const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', wx: r?.wx || 'none', /* M4-B 판 상태 → 날씨 소리 */ dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
 export function ambience(on) {
   ambOn = !!on; if (!ctx) return; /* 소리가 아직 안 풀렸으면 기억만 → 첫 탭 뒤 tick 이 받음 */
@@ -425,7 +473,7 @@ function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gai
    장면: 은신처(처음 · 하루 끝) · 침수 창고 · 밤의 항구 · 해저 터널 · 보스전(지도 색)
    긴장 단계: 0 평소 → 1 적 발견(쫓는 적이 있음 · 4초 여운) → 2 탈출 카운트다운(물 차기 1분 전) */
 let seenRaid = false, chaseT = 0;
-function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.12').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.13').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
 function scene() {
   const r = R();
   if (!r || !r.alive) return { id: seenRaid ? 'dusk' : 'hideout', lv: 0 };
@@ -438,6 +486,8 @@ function scene() {
   /* 보스: 쫓기 시작했거나 · 맞았거나 · 14m 안이면 보스전 (쓰러질 때까지 유지) */
   if (b && !b.dead && !b.__mus && (b.state === 'chase' || b.hp < b.maxHp || (r.pl && b.pos.distanceTo(r.pl.pos) < 14))) b.__mus = true;
   if (b && !b.dead && b.__mus) return { id: 'boss', color, lv };
+  /* 검수 M4 Top 10: 떠돌이 두목과 붙으면 결전곡 '두목 색'(뱃고동 · 사슬 · 금관) — 지도 보스전이 먼저 */
+  const c = r.chief; if (c && !c.dead && (c.state === 'chase' || c.hp < c.maxHp)) return { id: 'boss', color: 'chief', lv };
   return { id: color, lv };
 }
 function tick() {
@@ -453,4 +503,4 @@ function musicTick() {
   const s = scene(); mus.set(s.id, s.lv, s.color); mus.pump(ctx.currentTime + 0.7);
 }
 /* 시험 · 렌더 도구용 (docs/audio_preview/render.mjs) */
-export const __audio = { get ctx() { return ctx; }, set at(s) { T0 = s; }, music: () => loadMusic() || Promise.resolve(mus), env: () => loadEnv() || Promise.resolve(env), room: (k, at, inst) => room(k, at, inst), scene, set: SET, get roomNow() { return roomNow; } };
+export const __audio = { get ctx() { return ctx; }, set at(s) { T0 = s; }, music: () => loadMusic() || Promise.resolve(mus), env: () => loadEnv() || Promise.resolve(env), room: (k, at, inst) => room(k, at, inst), scene, set: SET, get roomNow() { return roomNow; }, foley: () => loadFoley() || Promise.resolve(foleyBuf), get foleyOk() { return !!foleyBuf; } };

@@ -4,13 +4,13 @@
 //   아이템 누르면 입어 보기(안 가진 것도 미리보기) + 능력치 비교(지금 → 바꾸면) + 얻는 길(플레이 · 의뢰 · 조개 · 원어데이 골드 — bmflow, 원어데이 밖이면 골드 숨김)
 //   [되돌리기] 처음으로 · [이대로 출격 준비] 저장 후 출격 준비
 import * as THREE from 'three';
-import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.12';
-import { S, save } from './save.js?v=0.99.12';
-import * as E from './econ.js?v=0.99.12';
-import * as BM from './bmflow.js?v=0.99.12';
-import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf } from './look.js?v=0.99.12';
-import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
+import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.13';
+import { S, save } from './save.js?v=0.99.13';
+import * as E from './econ.js?v=0.99.13';
+import * as BM from './bmflow.js?v=0.99.13';
+import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf } from './look.js?v=0.99.13';
+import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
 
 const $ = (s, r = document) => r.querySelector(s);
 const pct = x => Math.round(x * 100) + '%';

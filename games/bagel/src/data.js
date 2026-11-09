@@ -1,11 +1,12 @@
 // 데이터: 브랜드(받은 자료로 교체) · 메뉴 · 지점 배치 · 열기 순서 · 직원 · 쿠폰
 //   ※ 메뉴 이름 · 지점 이름 · 색은 임시 — 트렌차이즈 자료 받으면 여기만 바꾸면 됨
+import { LAYOUT } from './layout.js?v=0.99.13';
 export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO BAGEL', dark: '#5A3A22', brown: '#A98259', accent: '#FF6720', accentHex: 0xFF6720, cream: '#F3E7D6',
   slogan: '일상의 쉼표가 되는 곳, 마루미베이글에서 즐기는 갓 구운 행복', story: '도쿄 요요기에서 이어지는 정신 · 매일 새벽 직접 반죽하고 굽는 수제 베이글', insta: 'https://www.instagram.com/marumi.bagel_official/' };   /* 공식 홈페이지 marumibagel.com */
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.2.0' };   /* 0.2.0 (2026-11-09): 테스터 QA/QC 시트 #1~14 반영 */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.3.0' };   /* 0.3.0 (2026-11-09): 매장이 자라는 마루미 — 방 · 공사 · 크루룸 · 사장실 · 창고 · 지점 특색 · 인테리어 4종 · BM · 0.2.0: 테스터 QA/QC 시트 #1~14 */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)
@@ -18,48 +19,10 @@ export const BRANCH_MENU = [
   { cream: { name: '크랜베리호두 베이글', short: '크랜베리호두', price: 9, look: 'cranberry', bar: '크랜베리호두 바' }, coffee: { name: '무화과호두 크림치즈', short: '무화과 크림', price: 5, look: 'cup_fig' } },
 ];
 export function setBranchMenu(i) { const m = BRANCH_MENU[i] || BRANCH_MENU[0]; Object.assign(MENU.cream, m.cream); Object.assign(MENU.coffee, m.coffee); }
-// 지점: 가게 크기 · 테마 · 배수 · 설비 자리 (order = 열리는 순서 · cost = 열기 비용)
-//   type: oven·counter·ccbar·coffee·table·bin·drive·hire(staff)·up(upgrade)·plant·next
-const B1 = {
-  W: 1500, D: 1500, mult: 1,
-  theme: { floorA: '#FBF1E3', floorB: '#F0DCC2', wallA: 0xF7E6CF, wallB: 0xEFD9BC, trim: 0x9A643A, outside: 0xE8D2B4 },
-  door: [380, 920], queue: [[260, 250], 110],
-  slots: [
-    { id: 'mixer', type: 'mixer', x: -620, z: -600, free: true },
-    { id: 'oven', type: 'oven', x: -170, z: -580, free: true },
-    { id: 'counter', type: 'counter', x: 150, z: 80, free: true },
-    { id: 'bin', type: 'bin', x: -600, z: -110, free: true },
-    { id: 't1', type: 'table', x: -440, z: 340, cost: 30 },
-    { id: 'cashier', type: 'hire', staff: 'cashier', x: 460, z: -130, cost: 90, label: '계산원 뽑기' },
-    { id: 'dougher', type: 'hire', staff: 'dougher', x: -580, z: -300, cost: 140, label: '반죽 직원 뽑기' },
-    { id: 'cc', type: 'ccbar', x: 130, z: -580, cost: 160, label: '토핑 바' },
-    { id: 't2', type: 'table', x: -40, z: 340, cost: 200 },
-    { id: 'espresso', type: 'espresso', x: 640, z: -570, cost: 340, label: '커피 머신' },
-    { id: 'baker', type: 'hire', staff: 'baker', x: -200, z: -300, cost: 300, label: '진열 직원 뽑기' },
-    { id: 'coffee', type: 'coffee', x: 430, z: -580, cost: 420, label: '크림치즈 냉장고' },
-    { id: 'topper', type: 'hire', staff: 'topper', x: 130, z: -300, cost: 520, label: '토핑 직원 뽑기' },
-    { id: 't3', type: 'table', x: -440, z: 640, cost: 560 },
-    { id: 'carry', type: 'up', up: 'carry', x: 330, z: 260, cost: 640, label: '더 많이 들기' },
-    { id: 'fridge', type: 'hire', staff: 'fridge', x: 430, z: -315, cost: 760, label: '음료·크림치즈 직원 뽑기' },
-    { id: 'kettle', type: 'kettle', x: -420, z: -590, cost: 900, label: '데치기 솥 · 쫄깃 플레인' },
-    { id: 't4', type: 'table', x: -40, z: 640, cost: 900 },
-    { id: 'cleaner', type: 'hire', staff: 'cleaner', x: -400, z: 90, cost: 1100, label: '청소 직원 뽑기' },
-    { id: 'drive', type: 'drive', x: 740, z: -200, px: 560, pz: 60, cost: 1600, label: '드라이브스루' },
-    { id: 'driver', type: 'hire', staff: 'driver', x: 560, z: 230, cost: 1400, label: '드라이브스루 직원 뽑기' },
-    { id: 'speed', type: 'up', up: 'speed', x: 330, z: 450, cost: 1300, label: '빨리 걷기' },
-    { id: 'next', type: 'next', x: 330, z: 640, cost: 3500, label: '2호점 열기' },
-  ],
-};
-/* 밸런스 (2026-10-27): 뒤로 갈수록 비싸게 — 열리는 순서 i 에 따라 ×1.2 → ×2.8 (1호점 완성 약 1시간 목표) */
-{ const paid = B1.slots.filter(x => x.cost); paid.forEach((x, i) => { x.cost = Math.round(x.cost * (1.2 + 1.6 * i / (paid.length - 1)) / 10) * 10; }); }
-const scale = (b, k, theme, name) => ({ ...b, name, mult: k, theme: { ...b.theme, ...theme }, slots: b.slots.map(s => ({ ...s, cost: s.cost && Math.round(s.cost * k * 1.6 / 10) * 10, label: s.id === 'next' ? s.labelNext || s.label : s.label })) });
-export const BRANCHES = [
-  { ...B1, name: '1호점 · 잠실리센츠점', photo: 'store1' },
-  { ...scale(B1, 4, { floorA: '#F4F1EC', floorB: '#DCD3C8', wallA: 0xEDE6DC, wallB: 0xE2D8CA, trim: 0x5A4A3A, outside: 0xD9CDBC }, '2호점 · 석촌본점'), photo: 'store2' },
-  { ...scale(B1, 14, { floorA: '#FFF4E8', floorB: '#F7D9C4', wallA: 0xFBE3D3, wallB: 0xF1D2BE, trim: 0xB0603A, outside: 0xEBCDB6 }, '3호점 · 헬리오시티점'), photo: 'store3' },
-  { ...scale(B1, 45, { floorA: '#F0EEE8', floorB: '#D2CCC0', wallA: 0xE8E2D8, wallB: 0xDAD2C4, trim: 0x3A3A3A, outside: 0xCFC6B6 }, '4호점 · 파크포레온점'), photo: 'store4' },
-];
-BRANCHES.forEach((b, i) => { const n = b.slots.find(s => s.id === 'next'); if (n) n.label = `${i + 2}호점 열기`; }); BRANCHES[3].slots = BRANCHES[3].slots.filter(s => s.id !== 'next');
+// 지점: 배치 · 방 · 여는 순서 · 인테리어는 layout.js (v2 · 2026-11-09 「매장이 자라는 마루미」)
+//   type: oven·counter·ccbar·coffee·table·picnic·bin·drive·rider·retard·hire(staff)·room(방 열기)·next(다음 지점 계약)
+const NAMES = ['1호점 · 잠실리센츠점', '2호점 · 석촌본점', '3호점 · 헬리오시티점', '4호점 · 파크포레온점'];
+export const BRANCHES = LAYOUT.map((L, i) => ({ ...L, name: NAMES[i], photo: 'store' + (i + 1), W: 2500, D: 2300 }));
 export const BRANCH_INFO = ['서울 송파구 올림픽로 145 리센츠상가 1층', '서울 송파구 삼학사로 42-1 1~2층', '서울 송파구 송파대로 345 헬리오시티 B1', '서울 강동구 양재대로 1360 포레온스테이션5 B1'];
 // 업그레이드 (지점마다 · 1~10단계): 효과는 game.js 에서 L(이름)으로 읽음
 export const UPGRADES = [
@@ -93,8 +56,26 @@ export const STAFF = {
   dougher: { name: '반죽 직원', body: 0xF4F0E8, speed: 280, carry: 3, hello: '반죽 직원이 반죽을 데치고 오븐에 넣어요!', up: '걷기 속도 · 들기', cap: 0xA98259 },
   driver: { name: '드라이브스루 직원', body: 0xE86A8A, speed: 300, carry: 4, hello: '드라이브스루 주문을 맡아요!', up: '걷기 속도 · 들기', cap: 0xFF6720 },
   cleaner: { name: '청소 직원', body: 0x6AB07A, speed: 320, carry: 4, hello: '청소 직원이 테이블을 치워요!', up: '걷기 속도 · 들기' },
+  server: { name: '2층 서빙 직원', body: 0xC08AE0, speed: 300, carry: 4, hello: '2층 손님 테이블을 맡아요!', up: '걷기 속도 · 들기', cap: 0xFF6720 },
 };
+/* 직원 뽑는 순서 (크루룸 「새 직원 뽑기」 칸 설명) */
+export const STAFF_JOB = { cashier: '계산대에서 손님을 받아요', baker: '오븐 → 계산대 진열', topper: '토핑 바에서 특별 베이글', fridge: '크림치즈 · 커피 채우기', dougher: '반죽 → 오븐', driver: '창구 주문 채우기', cleaner: '테이블 치우기', server: '2층 테이블 치우기' };
 export const STAFF_UP = { base: 260, max: 10 };
+// 방문형 방의 바닥 칸 (서 있으면 돈이 빠져나감 · 1~10단계) — 크루룸 = 직원 · 사장실 = 나 · 값 = base × 1.6^단계 × 지점 배수
+//   방이 열리기 전에는 HUD 「업그레이드」 창에서 같은 단계를 올림 (처음 하는 사람이 막히지 않게)
+export const ROOM_UP = {
+  crew: [
+    { id: 'swalk', name: '직원 걷기', icon: '👟', base: 220, desc: '모든 직원 +10% 빠르게' },
+    { id: 'scarry', name: '직원 들기', icon: '🧺', base: 260, desc: '모든 직원 +1개 더 들기' },
+  ],
+  boss: [
+    { id: 'walk', name: '사장님 걷기', icon: '🏃', base: 180, desc: '사장님 +6% 빠르게' },
+    { id: 'carry', name: '사장님 들기', icon: '🥯', base: 200, desc: '한 번에 +1개 더' },
+    { id: 'price', name: '메뉴 가격', icon: '💰', base: 180, desc: '모든 메뉴 +8%' },
+    { id: 'tip', name: '팁 · 홍보', icon: '📣', base: 220, desc: '손님이 더 자주 · 팁도 더' },
+  ],
+};
+export const ROOM_UP_MAX = 10;
 // 직원 쉬기 (테스터 #10): 화면을 안 만지고 REST 초가 지나면 직원이 하나씩 쉼 → 사장님이 다가가면(거리 near) 다시 일함 + 기운 충전(빨리 · BOOST 초)
 export const REST = { after: 45, spread: 20, near: 150, boost: 30, boostK: 1.25 };
 // 직원 유니폼 (꾸미기 › 직원) · basic = 역할별 색 · 모든 지점 공통 · 한 번 사면 언제든 바꿔 입힘
@@ -107,7 +88,7 @@ export const OUTFITS = [
   { id: 'black', name: 'TOKYO 블랙 에디션', icon: '🖤', cost: 2600, body: 0x2A2A2E, apronC: 0xFF6720, hat: 'cap', cap: 0x2A2A2E, desc: '요요기 본점 감성' },
 ];
 // 가게 물품 (상점 · 게임 돈으로 삼): 시간 효과는 S.fx[이름] = 끝나는 시각 · cost × 지점 배수
-//   브랜드 게임은 의뢰사 계약 전 원어데이 골드 판매 X (docs/bm-policy.md) → 게임 돈 + 광고만
+//   원어데이 골드 상품은 아래 GOLD (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 · 광고 규칙 · 실물 쿠폰은 팔지 않음)
 export const SHOP_ITEMS = [
   { id: 'batch', name: '갓 구운 플레인 한 판', icon: '🥯', cost: 60, desc: '오븐에 플레인 10개가 바로 나와요' },
   { id: 'shoes', name: '가벼운 운동화', icon: '👟', cost: 90, fx: 'speed', sec: 180, desc: '3분 동안 빨리 걸어요' },
@@ -122,7 +103,7 @@ export const AD_REWARDS = [
   { id: 'speed', name: '빨리 걷기', icon: '👟', desc: '3분 동안 이동 속도 ×1.4' },
   { id: 'coins', name: '돈 바로 받기', icon: '🪙', desc: '지금 가게 규모만큼 돈' },
 ];
-export const AD_DAY = 5, GIFT = 80;   /* 하루 무료 선물 = GIFT × 지점 배수 × (1 + 열린 칸/10) */
+export const AD_DAY = 10, GIFT = 80;   /* 광고 바구니 하루 10 (2026-11-09 대표: 브랜드 게임 게임당 10 · 앱 전체 15 그대로) · 하루 무료 선물 = GIFT × 지점 배수 × (1 + 열린 칸/10) */
 // 돌발 이벤트 (테스터 #12): 1호점 4칸 이상 열면 every 초마다 하나 · 놓쳐도 벌 없음 (유능감 원칙)
 export const EVENTS = { first: 70, every: [100, 160], minOpen: 4,
   complain: { name: '컴플레인 손님', sec: 25, bonus: 60 },   /* 사장님이 다가가 사과하면 단골 기분 + 보너스 */
@@ -139,19 +120,19 @@ export const MASTERY_K = 0.06;
 export const MOOD = { happy: 10, ok: 25, tip: 0.15 };
 // 꾸미기: 지점마다 놓는 소품 · 사기 전에 자리를 반투명으로 미리 보고(#13) 놓은 뒤에도 옮길 수 있음(#14) — 자리는 S.decoPos[지점][id]
 //   wall: 벽에 거는 것(뒷벽 back · 왼벽 left, 옮기면 가까운 벽에 붙음) · pos 없음(꽃병) = 테이블마다 놓여 옮기지 않음 · score = 「베이글 향」 (손님이 더 자주 + 팁 확률)
-//   pos: 1호점 배치 기준 좌표 (모든 지점이 같은 배치) · r: 부딪힘 반지름 (0 = 바닥/벽이라 안 부딪힘)
+//   pos: 기본 자리 (모든 지점이 같은 배치 · v2 방 배치 · 그 방이 아직 안 열렸으면 가까운 빈 곳) · r: 부딪힘 반지름 (0 = 바닥/벽이라 안 부딪힘) · 벽 소품은 뒷벽(z -1150)
 export const DECO = [
-  { id: 'monstera', name: '큰 몬스테라 화분', icon: '🪴', cost: 220, score: 10, pos: [-690, 690], r: 45, desc: '가게 구석이 싱그러워져요' },
-  { id: 'rug', name: '라탄 러그', icon: '🟫', cost: 320, score: 12, pos: [-240, 490], r: 0, desc: '테이블 사이 따뜻한 바닥' },
-  { id: 'bench', name: '창가 쿠션 벤치', icon: '🛋', cost: 470, score: 16, pos: [-700, 500], r: 0, wall: 'left', desc: '벽을 따라 놓인 긴 의자' },
-  { id: 'lamp', name: '스탠드 조명', icon: '💡', cost: 540, score: 15, pos: [-700, -460], r: 30, desc: '반죽기 옆을 밝혀요' },
-  { id: 'shelf', name: '베이글 벽 선반', icon: '🥯', cost: 650, score: 18, pos: [300, -735], r: 0, wall: 'back', desc: '갓 구운 베이글을 벽에 진열' },
-  { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 760, score: 18, pos: [600, 640], r: 30, desc: '문 앞 손글씨 칠판' },
-  { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 860, score: 20, pos: [-733, -480], r: 0, wall: 'left', desc: '요요기 본점의 아침 풍경' },
+  { id: 'monstera', name: '큰 몬스테라 화분', icon: '🪴', cost: 220, score: 10, pos: [-200, 400], r: 45, desc: '가게 구석이 싱그러워져요' },
+  { id: 'rug', name: '라탄 러그', icon: '🟫', cost: 320, score: 12, pos: [-450, 100], r: 0, desc: '테이블 사이 따뜻한 바닥' },
+  { id: 'bench', name: '창가 쿠션 벤치', icon: '🛋', cost: 470, score: 16, pos: [-420, -1100], r: 0, wall: 'left', desc: '벽을 따라 놓인 긴 의자' },
+  { id: 'lamp', name: '스탠드 조명', icon: '💡', cost: 540, score: 15, pos: [-590, -400], r: 30, desc: '반죽기 옆을 밝혀요' },
+  { id: 'shelf', name: '베이글 벽 선반', icon: '🥯', cost: 650, score: 18, pos: [320, -1135], r: 0, wall: 'back', desc: '갓 구운 베이글을 벽에 진열' },
+  { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 760, score: 18, pos: [-210, -410], r: 30, desc: '문 앞 손글씨 칠판' },
+  { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 860, score: 20, pos: [-160, -1135], r: 0, wall: 'left', desc: '요요기 본점의 아침 풍경' },
   { id: 'vase', name: '테이블 꽃병', icon: '💐', cost: 970, score: 22, pos: null, r: 0, desc: '열린 테이블마다 꽃 한 송이' },
-  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 1150, score: 24, pos: [690, 690], r: 45, desc: '입구가 숲처럼' },
-  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 1620, score: 30, pos: [-300, 930], r: 0, desc: '가게 앞 바깥 자리' },
-  { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [-733, 250], r: 0, wall: 'left', desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
+  { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 1150, score: 24, pos: [1150, -540], r: 45, desc: '입구가 숲처럼' },
+  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 1620, score: 30, pos: [-20, 630], r: 0, desc: '가게 앞 바깥 자리' },
+  { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [820, -1135], r: 0, wall: 'left', desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
 ];
 // 단골: 하루 한 번 찾아오는 동네 사람 · fav = 좋아하는 메뉴 칸(bagel 플레인 · cream 특별 · coffee 크림치즈 · drink 커피)
 //   하트 단계 = 호감 [1, 3, 6, 10, 15] · 단계마다 사연 한 줄 · 2·4단계는 꾸미기 선물
@@ -176,3 +157,51 @@ export const REGULARS = [
     hi: '창가 자리 비었나요?', gift: ['vase', 'gallery'],
     story: ['여기서 쓴 글이 제일 잘 써져요.', '반죽 냄새가 문장을 부드럽게 해요.', '이 가게를 배경으로 소설을 쓰고 있어요.', '책이 나왔어요! 첫 장에 이 가게가 나와요.', '사인한 책 한 권 놓고 갈게요. 선반에 둬 주세요.'] },
 ];
+
+// ── BM (2026-11-09 계획안 4장 · 대표 결정: 광고 게임당 10 · 수익 배수 판매 허용(과금 속도 무과금의 2배 이하) · 실물 쿠폰은 골드 · 광고로 주지 않음)
+// 보상형 광고 자리 10곳 · 바구니 하나 (하루 AD_DAY) · cap = 그 자리 하루 상한 · gold = 광고를 다 쓰면 같은 효과의 골드 상품(없으면 숨김)
+export const AD_PLACES = {
+  crew_free: { name: '크루룸 무료 단계', cap: 2, gold: 'free_lv' }, boss_free: { name: '사장실 무료 단계', cap: 2, gold: 'free_lv' },
+  balloon: { name: '베이글 풍선', cap: 3 }, offline2x: { name: '금고 ×2', cap: 1, gold: 'safe2x' },
+  build_now: { name: '공사 즉시 완성', cap: 2, gold: 'inst' }, idle_up: { name: '쉬는 동안 수익 단계', cap: 2, gold: 'idle_up' },
+  event2x: { name: '이벤트 보상 ×2', cap: 1 }, outfit_ad: { name: '유니폼 열기', cap: 1 }, gift2x: { name: '창고 선물 ×2', cap: 1 },
+  hud: { name: '📺 보상', cap: 2, gold: 'boost' },
+};
+/* 원어데이 골드 상품 (가격은 서버 oneaday/server/api/_lib/gold.js SHOP.bagel 이 기준 · 여기 값은 화면 미리 보기 · 서버 표에 없으면(off) 버튼을 숨김) */
+export const GOLD = {
+  starter: { name: '오픈 축하 세트', gold: 250, desc: '1시간치 돈 · 마루미 주황 유니폼 · 공사 즉시 완성권 3장', free: '유니폼은 광고 3편 · 공사는 기다리기', days: 7 },
+  vip7: { name: '마루미 VIP 7일', gold: 200, days: 7, free: '광고 수익 2배 · 쉬는 동안 수익 단계' },
+  vip30: { name: '마루미 VIP 30일', gold: 600, days: 30, free: '광고 수익 2배 · 쉬는 동안 수익 단계' },
+  cash10: { name: '금고 꾸러미 (작은)', gold: 20, min: 10, free: '광고 「돈 바로」 · 플레이' },
+  cash60: { name: '금고 꾸러미 (중간)', gold: 100, min: 60, free: '광고 「돈 바로」 · 플레이' },
+  cash240: { name: '금고 꾸러미 (큰)', gold: 300, min: 240, free: '광고 「돈 바로」 · 플레이' },
+  idle_up: { name: '쉬는 동안 수익 +10%', gold: 60, free: '광고 3편 = 1단계' },
+  free_lv: { name: '강화 1단계 바로', gold: 20, free: '광고 · 게임 돈' },
+  safe2x: { name: '금고 2배', gold: 20, free: '광고 1편' },
+  boost: { name: '📺 보상 (광고 대신)', gold: 20, free: '광고 1편' },
+  manager: { name: '베테랑 점장', gold: 400, free: '4호점 완성 보상으로 무료' },
+  pass_s1: { name: '마루미 시즌 패스 · 시즌 1', gold: 500, free: '무료 줄 (보상의 대부분)' },
+};
+export const VIP = { mult: 1.3, idleH: 3, maxDays: 28, boxMin: 5 };   /* 수익 ×1.3 (쉬는 동안 포함) · 쉬는 동안 쌓이는 시간 2 → 3시간 · 매일 창고 VIP 상자(장사 5분치) — 계획안 ×1.5 · 8시간이면 과금 속도가 무과금의 2배를 넘어(tools/growth_sim.mjs) 대표 결정 2 에 맞춰 낮춤 */
+export const IDLE = { baseH: 2, managerH: 2, upK: 0.1, upMax: 5, upAds: 3, off: 0.25 };   /* off: 쉬는 동안 수익 = 장사 기준(0.9 × 지점 배수 × (1 + 열린 칸/10))의 25% — 실제 장사(봇 측정 약 3배)가 늘 더 큼 · growth_sim 으로 맞춤 */   /* 쉬는 동안 쌓이는 시간 · 점장 +2시간 · 지점 영구 단계 +10% (최대 5 · 광고 3편 = 1단계) */
+// 지점 테마 세트 (능력치 0 · 겉모습만) — 무과금 길: 단골 ♥5 마다 하나씩 · 시즌 무료 줄 1종
+export const THEME_SETS = [
+  { id: 'set_lake', name: '석촌호수 벚꽃', icon: '🌸', gold: 300, floor: ['#FBEFF1', '#F2D3DA'], wall: 0xF6E4E8, trim: 0xD88AA0, petals: 0xF6B8C8 },
+  { id: 'set_winter', name: '겨울 마루미', icon: '❄️', gold: 300, floor: ['#F2F5F8', '#DDE5EC'], wall: 0xEEF2F6, trim: 0x8AA0B8, petals: 0xFFFFFF },
+  { id: 'set_camp', name: '숲속 캠핑', icon: '🏕', gold: 300, floor: ['#D8C29A', '#C6AC80'], wall: 0xB8C8A0, trim: 0x6A5A3A, petals: 0x8AB86A },
+  { id: 'set_neon', name: 'TOKYO 네온', icon: '🌃', gold: 300, floor: ['#3A3A44', '#2E2E36'], wall: 0x3A3A46, trim: 0xFF6720, petals: 0xFF6720 },
+];
+// 프리미엄 유니폼 (능력치 0) — 무과금 길: 광고 3편 (날 넘겨도 쌓임)
+export const OUTFITS_PRO = [
+  { id: 'out_sakura', name: '벚꽃 핑크 셰프', icon: '🌸', gold: 200, body: 0xF2B8C6, apronC: 0xFFFFFF, hat: 'beret', cap: 0xE8829A, desc: '석촌호수 봄 한정' },
+  { id: 'out_denim', name: '데님 워크 에이프런', icon: '👖', gold: 250, body: 0xF3E7D6, apronC: 0x3A5A8A, hat: 'cap', cap: 0x3A5A8A, desc: '도쿄 골목 작업복' },
+  { id: 'out_gold', name: '골드 마스터 셰프', icon: '🏅', gold: 300, body: 0x2A2A2E, apronC: 0xE8B23A, hat: 'bandana', cap: 0xE8B23A, desc: '4호점 사장님 감성' },
+];
+// 시즌 패스 (4~6주 · 실제 신메뉴 출시와 맞춤 — 지금은 시즌 1) · XP = 시즌 동안 판 베이글 · 무료 줄이 보상의 대부분
+export const SEASON = { id: 's1', name: '시즌 1 · 마루미 겨울', from: '2026-11-09', to: '2026-12-21', xp: [0, 60, 160, 300, 480, 700, 960, 1260, 1600, 2000],
+  free: [{ coins: 10 }, { inst: 1 }, { coins: 20 }, { safe: 1 }, { coins: 30 }, { inst: 1 }, { coins: 45 }, { set: 'set_winter' }, { coins: 60 }, { inst: 2 }],
+  paid: [{ outfit: 'out_denim' }, { coins: 20 }, { inst: 2 }, { coins: 40 }, { set: 'set_camp' }, { coins: 60 }, { inst: 3 }, { coins: 90 }, { outfit: 'out_gold' }, { set: 'set_neon' }] };
+/* 시즌 보상 coins = 그 지점 「분」치 돈 · inst = 공사 즉시 완성권 · safe = 금고 꾸러미(10분치) */
+// 매장 찾기 (사장실 지도 · 지점 완성 창) — 지도 앱 검색 링크
+export const STORE_MAP = BRANCH_INFO.map(a => 'https://map.naver.com/p/search/' + encodeURIComponent('마루미베이글 ' + a.split(' ').slice(2, 4).join(' ')));
+

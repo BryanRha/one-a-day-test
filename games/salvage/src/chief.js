@@ -3,9 +3,9 @@
 //  패턴 3 (모두 예고) + 호루라기: 닻 내던지기(줄) · 닻 내려찍기(원 → 닻이 박혀 2.2초 = 등 코어 약점 ×2) · 수류탄 셋(떨어질 자리 원) · 60% 아래 호루라기(소총수 2)
 //  쓰러뜨리면 이야기 조각 '두목의 물길 지도'(5장 복선) — 숫자 data/enemies.js M4_BOSS.chief
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.12';
-import { RS } from './plan.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
+import { BOSS } from './data.js?v=0.99.13';
+import { RS } from './plan.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -21,7 +21,7 @@ function spawn(R) {
   const cx = rm.x0 + RS / 2, cz = rm.z0 + RS / 2;
   const e = R.makeEnemy({ kind: 'chief', x: cx, z: cz, zone: Math.max(2, rm.zone) }, 4000); R.collide(e.pos, 1.1); R.enemies.push(e); R.chief = e; e.roamT = 6; e.home.set(cx, 0, cz);
   for (let k = 0; k < 2; k++) { const a = k * Math.PI + 0.6; const m = R.makeEnemy({ kind: 'raider', x: cx + Math.cos(a) * 2, z: cz + Math.sin(a) * 2, zone: rm.zone, squad: SQ }, 4001 + k); R.collide(m.pos, 0.5); m.escort = e; R.enemies.push(m); }
-  sfx.roar?.(0, 'captain'); R.shake = Math.max(R.shake, 0.3);
+  sfx.roar?.(0, 'captain'); sfx.chiefHorn?.(); R.shake = Math.max(R.shake, 0.3); /* 검수 M4 Top 10: 등장 호루라기 + 뱃고동 */
   (R.aiSt ||= {}).chief = 1; R.ui.event('검은 닻 두목이 나타났어요 — 방 사이를 떠돌아요 (붉은 닻 표시)', 'boss');
 }
 /* 매 프레임 (raid.updateMapFx 뒤) */
@@ -45,11 +45,11 @@ export function chiefTick(R, dt) {
 /* 패턴 고르기 · 예고 (raid.bossWind 가 부름) */
 export function chiefWind(R, e, dist, rage) {
   const pl = R.pl, B = BOSS.chief; const ang = Math.atan2(pl.pos.x - e.pos.x, pl.pos.z - e.pos.z);
-  if (e.hp < e.maxHp * B.whistle.below && e.pcd <= 0) { e.pat = 'whistle'; e.windMax = e.wind = 0.8; e.pcd = B.whistle.cd; e.anim?.play('Taunt', { once: true, fade: 0.05, speed: 1, force: true }); sfx.roar?.(); }
+  if (e.hp < e.maxHp * B.whistle.below && e.pcd <= 0) { e.pat = 'whistle'; e.windMax = e.wind = 0.8; e.pcd = B.whistle.cd; e.anim?.play('Taunt', { once: true, fade: 0.05, speed: 1, force: true }); }
   else if (dist < 4.2) { e.pat = 'slam'; e.windMax = e.wind = B.slam.wind / rage; e.lockFace = e.face; R.warnDisc(e, B.slam.r, 0xff4a30); e.anim?.play('1H_Melee_Attack_Chop', { once: true, fade: 0.05, speed: 0.75 * rage, force: true }); }
   else if (dist < 9.5 && R.los(e.pos, pl.pos) && !R.chiefAnchor) { e.pat = 'throw'; e.windMax = e.wind = B.throw.wind / rage; e.lockFace = ang; e.face = ang; R.warnLine(e, B.throw.len, B.throw.w, 0xffa060); e.anim?.play('Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.6, force: true }); }
   else { e.pat = 'volley'; e.windMax = e.wind = B.volley.wind; e.lockFace = ang; e.face = ang; e.anim?.play('Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.9, force: true }); }
-  e.cd = e.D.cd / rage; sfx.warn?.();
+  e.cd = e.D.cd / rage; sfx.chiefWarn?.(e.pat, e.windMax); /* 검수 M4 Top 10: 패턴마다 전용 예고음 */
 }
 export function chiefAttack(R, e, dist) {
   const pl = R.pl, B = BOSS.chief;

@@ -6,13 +6,13 @@
 //  · 판정 · 이동 · 공격 예고는 raid.js 것을 그대로 · 새 적 공격 모양은 foes.js · 두목은 chief.js
 //  · 모든 큰 공격은 예고(바닥 원 · 줄 · 떨어질 자리) — 예고를 띄우면 e.teleT0 (raid.warnDisc/warnLine) → raid.hurt 가 '예고 없는 큰 피해' 자동 검사
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.12';
-import { LOB } from './data/map_factory.js?v=0.99.12';
-import { AI2, NADE } from './data/enemies.js?v=0.99.12';
-import { SOLID } from './plan.js?v=0.99.12';
-import { glowSprite } from './enemy3d.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
-import { foeWind } from './foes.js?v=0.99.12';
+import { ENEMIES } from './data.js?v=0.99.13';
+import { LOB } from './data/map_factory.js?v=0.99.13';
+import { AI2, NADE } from './data/enemies.js?v=0.99.13';
+import { SOLID } from './plan.js?v=0.99.13';
+import { glowSprite } from './enemy3d.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
+import { foeWind } from './foes.js?v=0.99.13';
 
 export const FACTION = { drone: 'machine', boss: 'machine', smelter: 'machine', skel: 'moss', lamp: 'moss', miner: 'moss', captain: 'moss', crab: 'beast', jelly: 'beast', eel: 'beast' };
 export const facOf = kind => ENEMIES[kind]?.fac || FACTION[kind] || 'machine';
@@ -236,7 +236,7 @@ export class AI {
   startAttack(e, ang, tp) {
     const R = this.R, D = e.D; e.wind = e.windMax = D.wind; e.cd = D.cd * (0.85 + Math.random() * 0.3); e.lockFace = ang; e.face = ang;
     if (D.atk === 'burst') { e.pat = 'burst'; R.warnLine(e, Math.min(D.range, dist2(e.pos, tp || (e.foe ? e.foe.pos : R.pl.pos)) + 1.5), 0.32, 0xff4a3a); }
-    else if (D.atk === 'melee') { e.pat = 'melee'; R.warnDisc(e, D.radius > 0.65 ? 2.1 : 1.9, 0xff6a3a, true); e.warn.position.set(e.pos.x + Math.sin(ang) * 1.1, 0.22, e.pos.z + Math.cos(ang) * 1.1); e.warnFollow = false; }
+    else if (D.atk === 'melee') { e.pat = 'melee'; R.warnDisc(e, D.radius > 0.65 ? 2.1 : 1.9, 0xff6a3a, true); e.warn.position.set(e.pos.x + Math.sin(ang) * 1.1, 0.22, e.pos.z + Math.cos(ang) * 1.1); e.warnFollow = false; if (e.kind === 'hermit') sfx.foeWarn?.(e); }
     else if (D.atk === 'lob') { e.pat = 'lob'; e.lobTo = (tp || (e.foe ? e.foe.pos : R.pl.pos)).clone(); }
     else if (foeWind(R, e, ang, tp || (e.foe ? e.foe.pos : R.pl.pos))) return;
     if (e.anim) e.anim.play(D.atk === 'melee' ? '1H_Melee_Attack_Chop' : D.atk === 'lob' ? 'Unarmed_Melee_Attack_Punch_A' : 'Aim', { once: D.atk !== 'burst', fade: 0.06, speed: D.atk === 'melee' ? 0.95 : 1.1, force: true }) || e.anim.play('Idle_Combat', { force: false });

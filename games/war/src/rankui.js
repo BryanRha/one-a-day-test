@@ -1,6 +1,6 @@
 // 순위표 창 (전쟁실 · 오늘의 작전)
-import { T, C, btn, popup } from './pui.js?v=0.99.12';
-import { top, nick, askNick, submit, rankOn } from './rank.js?v=0.99.12';
+import { T, C, btn, popup } from './pui.js?v=0.99.13';
+import { top, nick, askNick, submit, rankOn } from './rank.js?v=0.99.13';
 
 export function rankPopup(scene, board, title, show = r => `${r.score}점`) {
   const p = popup(scene, title, 920, 1300);

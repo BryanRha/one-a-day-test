@@ -3,10 +3,10 @@
 //  그리기 최소: 보이는 시설을 전부 한 지오메트리로 합침 → 재질 2개(빛 받음 · 빛남) = 그리기 2 (+ 그림자 1). 단계가 바뀔 때만 다시 합침
 //  완성 연출(app.hideCam): 1.0초 다가감 → 1.6초 머묾(빛 웅덩이 번쩍 · 불티 · 반짝 소리) → 0.9초 제자리. 누르면 바로 끝. 빛은 미리 만든 점광 하나(개수 안 바뀜 = 셰이더 다시 안 만듦)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.12';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.12';
-import { FACILITIES } from './data.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.13';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.13';
+import { FACILITIES } from './data.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
 
 /* 자리 [x, z, 바라보는 방향, 크기] — 은신처 좌표(main.js buildHideout · 인물 SPOT 과 안 겹치게). 뒷벽 z −6 · 바닥 원 반지름 9 */
 export const SLOT = {
@@ -53,9 +53,14 @@ export class HomeFac {
   constructor(app) {
     this.app = app; this.g = new THREE.Group(); this.g.name = 'homefac'; this.key = ''; this.seen = null; this.cine = null; this.pending = null;
     this.mats = { pal: new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), glow: new THREE.MeshBasicMaterial({ vertexColors: true }) };
-    this.meshes = {}; this.lookK = 0; this.LOOK = { y: 10, z: 6, ly: -3.8, lz: 1.6 };
+    this.meshes = {}; this.lookK = 0; this.LOOK = { y: 8.3, z: 4.6, ly: -3.5, lz: 2.3 }; /* 검수 M4 Top 8: 약 10% 당김 · 보는 점을 앞으로(아래 물가 · 부두까지 화면 안) */
     /* 은신처 카메라 갈래: 완성 연출 > '초소 보기'(방 전체 — 양옆 시설까지) > 평소(main.js 숨쉬기) */
-    app.hideCam = (cam, t, dt) => this.cine ? this.camTick(cam, dt) : this.lookCam(cam, t, dt);
+    app.hideCam = (cam, t, dt) => {
+      /* 검수 M4 Top 9: 은신처를 떠나면(출격 준비 · 출격) 연출 · 띠를 바로 끝내고, 못 본 연출은 다음 은신처에서 다시 */
+      if (!this.onHome()) { if (this.cine) this.abort(); }
+      else if (!this.cine && this.pending && MODELS.o_build) { const k = this.pending; this.pending = null; this.celebrate(k); }
+      return this.cine ? this.camTick(cam, dt) : this.lookCam(cam, t, dt);
+    };
     /* 완성 연출 빛: 처음부터 있고 세기만 0 (빛 개수가 안 바뀌어 셰이더를 다시 만들지 않음) */
     this.flash = new THREE.PointLight(0xffd890, 0, 6, 1.6); this.flash.position.set(0, -50, 0); this.g.add(this.flash);
     /* 불티: 점 48개 한 덩어리(그리기 1) — 연출 때만 보임 */
@@ -85,13 +90,22 @@ export class HomeFac {
       for (const k of ['pal', 'glow']) { const m = this.meshes[k]; if (m) { this.g.remove(m); m.geometry.dispose(); delete this.meshes[k]; }
         if (G[k]) { const mesh = new THREE.Mesh(G[k], this.mats[k]); mesh.name = 'fac_' + k; mesh.castShadow = k === 'pal'; mesh.receiveShadow = k === 'pal'; this.meshes[k] = mesh; this.g.add(mesh); } }
     }
-    if (this.pending) { const k = this.pending; this.pending = null; this.celebrate(k); }
+    /* 연출 시작은 hideCam 에서 (은신처 화면이 보일 때만 — 출격 준비 · 판 안에서는 기다림) */
+  }
+  onHome() { const a = this.app; return !a.raid && a.ui?.root?.className === 'scr-hideout' && !!a.scene?.getObjectByName('hideout')?.visible; }
+  /* 연출 즉시 끝내기 — 띠 · 번쩍 · 불티 · 누르기 듣기 · 초소 보기 되돌림. 못 본 시설은 pending 으로 남겨 다음 은신처에서 다시 */
+  abort() {
+    const c = this.cine; if (!c) return; this.cine = null;
+    if (c.t < 2.6) this.pending = c.k;
+    this.bannerEl?.remove(); this.bannerEl = null; document.querySelectorAll('.facdone').forEach(d => d.remove());
+    this.flash.intensity = 0; this.sparks.visible = false; if (this.stopFn) { removeEventListener('pointerdown', this.stopFn, { capture: true }); this.stopFn = null; }
+    const home = this.app.story?.home; if (!c.wasLook && home?.look) { home.look = false; home.el?.classList.remove('look'); home.el?.querySelector('.lookcap')?.remove(); } this.lookK = 0;
   }
   /* 공사 끝 연출 — 카메라가 그 자리로 다가가 번쩍 · 불티 · 반짝 소리 → 제자리 */
   celebrate(k) {
     if (!SLOT[k]) return; const [x, z] = SLOT[k]; const h = { gym: 0.2, dock: 0.4 }[k] ?? 0.8;
     const at = new THREE.Vector3(x, h, z); const dir = new THREE.Vector3(-x * 0.3, 0, 9.4 - z).normalize();
-    this.cine = { k, t: 0, at, eye: at.clone().addScaledVector(dir, 6.6).add(new THREE.Vector3(0, 4.4, 0)), from: null, look0: null, rang: false };
+    this.cine = { k, t: 0, at, eye: at.clone().addScaledVector(dir, 3.4).add(new THREE.Vector3(0, 7.0, 0)) /* 검수 M4 Top 8: 더 내려다봄 → 앞 소품이 아래 '초소' 카드 위로 크게 뜨지 않음 */, from: null, look0: null, rang: false, dir };
     this.flash.position.set(x, h + 1.2, z + 0.4);
     /* 평소 화면은 아래 판이 3D 를 거의 덮음 → 연출 동안만 '초소 보기'로 (끝나면 원래대로) */
     const home = this.app.story?.home; const el = home?.el;
@@ -113,7 +127,7 @@ export class HomeFac {
     if (!c.from) { c.from = cam.position.clone(); const f = new THREE.Vector3(); cam.getWorldDirection(f); c.look0 = c.from.clone().addScaledVector(f, 12); }
     c.t += dt; const T1 = 1.0, T2 = 2.6, T3 = 3.5; const ease = u => u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
     /* 보는 점 = 시설 조금 아래 (시설이 화면 위 1/3 쯤 — 아래는 '초소' 글 · 버튼) */
-    const look = c.at.clone().add(new THREE.Vector3(0, -0.6, 0));
+    const look = c.at.clone().add(new THREE.Vector3(0, -0.6, 0)).addScaledVector(c.dir, 0.3); /* 위에서 내려다봄 — 시설은 화면 가운데 (금빛 띠 아래 · 초소 카드 위) */
     let k;
     if (c.t < T1) k = ease(c.t / T1); else if (c.t < T2) k = 1; else k = 1 - ease(Math.min(1, (c.t - T2) / (T3 - T2)));
     cam.position.lerpVectors(c.from, c.eye, k); const L = c.look0.clone().lerp(look, k); cam.lookAt(L);

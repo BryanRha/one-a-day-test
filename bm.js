@@ -1,10 +1,12 @@
 // 게임 안 BM 규칙: 실험 그룹 · 광고 하루 한도 · 전면 광고 조건 (team/dev/tasks/261027-ingame-bm/summary.md)
 //   A = 지금 그대로(대조) · B = 보상형 광고 + 골드 · C = B + 약한 전면 광고
 //   소장자: 전면 없음 · 보상형 혜택은 광고 없이 바로 (하루 횟수는 같음)
-import { PROD } from './rules.js?v=0.99.12';
+import { PROD } from './rules.js?v=0.99.13';
 const KEY = 'oad_bm';
 /* 실서버: 그룹은 기기 번호로 정한 무작위 그대로 고정 (설정의 '테스트:' 바꾸기 버튼 없음 · 테스트에서 바꿔 둔 값도 무시) */
-export const LIMIT = { rewardGame: 5, rewardApp: 15, interGame: 4, interApp: 8, interEvery: 3, interGapMs: 3 * 60e3, interFromPlay: 3 };
+export const LIMIT = { rewardGame: 5, rewardApp: 15, interGame: 4, interApp: 8, interEvery: 3, interGapMs: 3 * 60e3, interFromPlay: 3, rewardBy: { bagel: 10, gamsung: 10 } };
+/* 게임별 보상형 하루 한도 (2026-11-09 대표: 브랜드 게임 마루미 · 감성커피 = 10 · 앱 전체 rewardApp 15 는 그대로) — 없으면 rewardGame · 서버 gold.js ADS.rewardBy 로 바꿀 수 있음 */
+export const rewardCap = id => { const v = LIMIT.rewardBy && LIMIT.rewardBy[id]; return Number.isFinite(v) ? v : LIMIT.rewardGame; };
 
 export function group() {
   if (!PROD) try { const o = localStorage.getItem('oad_bm_group'); if (o === 'A' || o === 'B' || o === 'C') return o; } catch { /* */ }
@@ -31,7 +33,7 @@ function st() {
 const save = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* */ } };
 const gs = (s, id) => s.g[id] || (s.g[id] = { r: 0, i: 0, plays: 0, lastI: 0 });
 
-export const rewardLeft = id => { const s = st(), g = gs(s, id); return Math.max(0, Math.min(LIMIT.rewardGame - g.r, LIMIT.rewardApp - s.r)); };
+export const rewardLeft = id => { const s = st(), g = gs(s, id); return Math.max(0, Math.min(rewardCap(id) - g.r, LIMIT.rewardApp - s.r)); };
 export function useReward(id) { const s = st(), g = gs(s, id); g.r++; s.r++; save(s); }
 export function countPlay(id) { const s = st(); gs(s, id).plays++; save(s); }
 // 전면 광고를 지금 보여도 되나: C 그룹 · 비소장 · 처음 쓴 날이 아님 · 그 게임 3번째 판부터 3판에 1번 · 3분 간격 · 하루 한도

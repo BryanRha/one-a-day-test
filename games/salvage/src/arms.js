@@ -3,8 +3,8 @@
 //   여기서는 R.R()(판 씨앗 난수)를 부르지 않음 — 효과는 Math.random 만 (봇 · 시뮬 재현 그대로)
 //  근접 휘두르기(렌치) · 감전 연쇄(전류) · 조명탄(터짐 + 불 + 빛 웅덩이) · 물속 특화(잠수) · 탄약 × 적 방어/방패/기계
 import * as THREE from 'three';
-import { AMMO, ARMOR, MACHINE, WEAPONS, FEEL, SHAKE_MAX, AMMO_FX } from './data.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
+import { AMMO, ARMOR, MACHINE, WEAPONS, FEEL, SHAKE_MAX, AMMO_FX } from './data.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -54,7 +54,7 @@ export function zap(R, e0, dmg) {
     R.fx.streak(a, b, { w: 0.26, life: 0.17, color: 0x6fd0ff, zig: 0.55, seg: sg, shrink: 0.3 }); R.fx.streak(a, b, { w: 0.08, life: 0.12, color: 0xffffff, zig: 0.5, seg: sg, shrink: 0.2 });
     R.fx.burst(best.pos.x, 1.1, best.pos.z, 6, 0x9fe8ff, 4, 0.06, 0.3, 4); sfx.zap?.(0, i + 1);
     best.stagger = Math.max(best.stagger || 0, C.stun);
-    R.damage(best, dmg * C.mul, best.pos.clone().sub(cur.pos).setY(0).normalize(), best.pos.clone().setY(1.0), 0, true, { gun: true, chain: true }); cur = best;
+    R.damage(best, dmg * C.mul, best.pos.clone().sub(cur.pos).setY(0).normalize(), best.pos.clone().setY(1.0), 0, true, { gun: true, chain: true, chainTo: e0 }); cur = best; /* v0.7.1 검수 M4 Top 2: 숫자는 첫 적에 합계 하나 */
   }
 }
 /* 조명탄: 맞은 곳(또는 사거리 끝 · 벽)에서 터짐 → 둘레 피해 · 불(적만) · 빛 웅덩이 */

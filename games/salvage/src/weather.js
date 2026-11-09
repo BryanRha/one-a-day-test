@@ -6,11 +6,11 @@
 //  · 독수: 초록 독 웅덩이 → 독 게이지(쌓이면 초마다 아픔 · 아주 천천히 빠짐) → 연고 · 붕대 · 해독제 · 소독 샤워로 씻음 — 해독 필터 = 1/3 · 빨리 빠짐
 //  모든 큰 피해 예고 규칙: 판 상태 피해는 게이지가 먼저 보이고(30 · 55 경고), 작은 피해만 천천히 (hurtRaw · 한 번에 3 이하)
 import * as THREE from 'three';
-import { WEATHER, WX_OF, COLD, TOXIC, LAMP_GEAR, wxPlan } from './data/weather.js?v=0.99.12';
-import { ITEMS } from './data.js?v=0.99.12';
-import { sfx } from './audio.js?v=0.99.12';
-import { glowSprite } from './enemy3d.js?v=0.99.12';
-import { flarePools } from './arms.js?v=0.99.12';
+import { WEATHER, WX_OF, COLD, TOXIC, LAMP_GEAR, wxPlan } from './data/weather.js?v=0.99.13';
+import { ITEMS } from './data.js?v=0.99.13';
+import { sfx } from './audio.js?v=0.99.13';
+import { glowSprite } from './enemy3d.js?v=0.99.13';
+import { flarePools } from './arms.js?v=0.99.13';
 
 const tv = new THREE.Vector3(), tm = new THREE.Matrix4(), tq = new THREE.Quaternion(), ts = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 let ICE_T = null, TOX_T = null;
@@ -36,7 +36,8 @@ export function wxStart(R) {
   R.wxVis = (mg === 'hlamp' && (wx === 'night' || wx === 'fog' || R.night > 0.5)) ? LAMP_GEAR.vision : 1; R.wxDark = mg === 'hlamp' ? LAMP_GEAR.dark : 1;
   if (!W) return;
   /* 판 상태 띠 (지도 상태 띠 다음 · 지도 상태가 곧 날씨면 그것으로 끝) */
-  if (!WX_OF[R.cond]) setTimeout(() => R.alive && R.ui.event(`${W.icon} ${W.name} · ${W.band}${W.gear && mg === W.gear ? ' — 장비 덕에 덜해요' : ''}`, 'warn cond'), R.map === 'ware' ? 600 : 2700);
+  if (!WX_OF[R.cond]) setTimeout(() => R.alive && R.ui.event(`${W.icon} ${W.name} · ${W.band}${W.gear && mg === W.gear ? ' — 장비 덕에 덜해요' : ''}`, 'warn cond'), R.map === 'ware' ? 2900 : 3100); /* v0.7.1: 날씨 카드 뒤로 */
+  wxFx(R, wx, W, mg); /* v0.7.1 검수 M4 Top 4: 판 시작 날씨 카드 + 판 내내 보이는 화면 층 */
   const P = R.P, plan = wxPlan(P, wx, R.opt.seed); const S = R.WX = { wx, plan, temp: COLD.max, poison: 0, hurtT: 0, breathT: 1, told: {}, hud: null, suit: mg === 'drysuit', filter: mg === 'filter' };
   const own = m => { R.ownMats.push(m); return m; };
   if (wx === 'cold') {
@@ -60,6 +61,40 @@ export function wxStart(R) {
       g.traverse(o => { if (o.isMesh) o.userData.own = true; }); R.root.add(g); }
   }
   if (wx === 'cold' || wx === 'toxic') R.mods.push({ name: 'wx', pre: dt => wxPre(R, dt), player: dt => wxPlayer(R, dt), tick: dt => wxTick(R, dt), healed: k => wxHealed(R, k), dispose: () => { S.hud?.remove(); S.hud = null; } });
+}
+/* v0.7.1 검수 M4 Top 4 — 날씨가 첫눈에 갈리게
+ *  · 판 시작 2초 '날씨 카드'(큰 아이콘 + 판 상태 띠와 같은 말투 한 줄)
+ *  · 판 내내 보이는 화면 층(DOM · CSS 만 — WebGL 그리기 0): 한파 = 서리 비네트 · 반짝임 / 독수 = 옅은 녹색 안개 틴트 · 떠다니는 거품 / 안개 = 흐르는 안개 띠 2층 · 가장자리 흐림 / 밤 · 폭풍은 원래 화면이 이미 다름(카드만)
+ *  · 체온 · 독 게이지는 원래대로 판 시작부터 늘 보임(wxTick) */
+let FROST_URL = null;
+function frostUrl() {
+  if (FROST_URL) return FROST_URL; const c = document.createElement('canvas'); c.width = 256; c.height = 512; const x = c.getContext('2d');
+  let s = 11; const r = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  const g = x.createRadialGradient(128, 256, 120, 128, 256, 300); g.addColorStop(0, 'rgba(220,240,255,0)'); g.addColorStop(0.55, 'rgba(210,236,255,0.18)'); g.addColorStop(1, 'rgba(235,248,255,0.62)'); x.fillStyle = g; x.fillRect(0, 0, 256, 512);
+  x.lineCap = 'round';
+  for (let i = 0; i < 70; i++) { /* 가장자리에서 안쪽으로 자라는 서리 가지 */
+    const side = i % 4; let px = side === 0 ? 0 : side === 1 ? 256 : r() * 256, py = side === 2 ? 0 : side === 3 ? 512 : r() * 512; const len = 18 + r() * 46;
+    const ang = side === 0 ? (r() - 0.5) * 1.6 : side === 1 ? Math.PI + (r() - 0.5) * 1.6 : side === 2 ? Math.PI / 2 + (r() - 0.5) * 1.6 : -Math.PI / 2 + (r() - 0.5) * 1.6;
+    x.strokeStyle = `rgba(245,252,255,${0.35 + r() * 0.4})`; x.lineWidth = 0.8 + r() * 1.4; x.beginPath(); x.moveTo(px, py); const ex = px + Math.cos(ang) * len, ey = py + Math.sin(ang) * len; x.lineTo(ex, ey); x.stroke();
+    for (let k = 1; k < 4; k++) { const t = k / 4, bx = px + (ex - px) * t, by = py + (ey - py) * t, bl = len * (0.35 - t * 0.06); for (const sg of [-1, 1]) { const a2 = ang + sg * 0.7; x.lineWidth *= 0.8; x.beginPath(); x.moveTo(bx, by); x.lineTo(bx + Math.cos(a2) * bl, by + Math.sin(a2) * bl); x.stroke(); } }
+  }
+  return FROST_URL = c.toDataURL('image/png');
+}
+function wxFx(R, wx, W, mg) {
+  let layer = null, card = null; const soft = W.gear && mg === W.gear;
+  const mk = host => {
+    if (wx === 'cold' || wx === 'toxic' || wx === 'fog') {
+      layer = document.createElement('div'); layer.className = `wxfx wx-${wx}${soft ? ' soft' : ''}`;
+      if (wx === 'cold') { layer.style.backgroundImage = `url(${frostUrl()})`; layer.innerHTML = '<i class="glint"></i><i class="glint g2"></i><i class="glint g3"></i>'; }
+      else if (wx === 'toxic') layer.innerHTML = Array.from({ length: 9 }, (_, i) => `<b style="left:${6 + i * 11}%;animation-delay:${-(i * 1.37) % 6}s;animation-duration:${5 + (i * 7) % 4}s;--s:${0.6 + ((i * 5) % 7) / 8}"></b>`).join('');
+      else layer.innerHTML = '<i class="band b1"></i><i class="band b2"></i>';
+      host.prepend(layer);
+    }
+    card = document.createElement('div'); card.className = `wxcard wx-${wx}`; card.innerHTML = `<i>${W.icon}</i><b>${W.name}</b><span>${W.band}${soft ? ' — 장비 덕에 덜해요' : ''}</span>`; host.appendChild(card);
+    setTimeout(() => card?.remove(), 2600);
+  };
+  R.mods.push({ name: 'wxfx', tick: () => { if (card) { if (layer && !layer.isConnected) document.querySelector('.raidui')?.prepend(layer); return; } const host = document.querySelector('.raidui'); if (host) mk(host); },
+    dispose: () => { layer?.remove(); card?.remove(); layer = null; } });
 }
 const inRect = (p, c) => p.x > c.x0 && p.x < c.x1 && p.z > c.z0 && p.z < c.z1;
 /* 움직임 전: 얼음 = 미끄러짐 · 체온 낮음 = 느려짐 */
