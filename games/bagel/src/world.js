@@ -2,9 +2,9 @@
 //   지점마다 확실히 다르게 (계획안 2-2) + 실제 매장 공통 요소(회색 벽 흰 로고 · 흰 세로 타일 진열대 · 테라조 · 검은 칠판 가격표 · 주황 m 상자 선반)는 모든 지점
 //   모든 모델은 코드로 (새 그림 리소스 없음) · 작은 소품은 그림자를 안 드리움(가벼움)
 import * as THREE from 'three';
-import { M, box, cyl, sph, mesh } from './models.js?v=0.99.14';
-import { ROOMS, STAIRS, inRect } from './layout.js?v=0.99.14';
-import { BRAND, THEME_SETS } from './data.js?v=0.99.14';
+import { M, box, cyl, sph, mesh } from './models.js?v=0.99.15';
+import { ROOMS, STAIRS, inRect } from './layout.js?v=0.99.15';
+import { BRAND, THEME_SETS } from './data.js?v=0.99.15';
 
 const T = {};   /* 무늬 텍스처 캐시 */
 const LOGO = (() => { const im = new Image(); im.src = 'assets/brand/logo.png'; return im; })();

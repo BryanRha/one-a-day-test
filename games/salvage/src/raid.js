@@ -1,26 +1,26 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.14';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.14';
-import { mapOf } from './plan.js?v=0.99.14';
-import { prop, charClone } from './assets.js?v=0.99.14';
-import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.14'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.14';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.14';
-import { sfx, ambience } from './audio.js?v=0.99.14';
-import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.14'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
-import { AI, facOf } from './ai.js?v=0.99.14'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
-import { populate, chiefRoll } from './threat.js?v=0.99.14'; /* M4-A 위협 곡선 */
-import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.14'; /* M4-A 새 적 5 */
-import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.14'; /* M4-A 검은 닻 두목 */
-import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.14';
-import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.14'; /* M4-B 심해 연구소 */
-import { wxStart } from './weather.js?v=0.99.14'; /* M4-B 공통 판 상태 5 */
-import { rimify, rimHit } from './rim.js?v=0.99.14'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
-import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.14';
-import { HitNums } from './nums.js?v=0.99.14'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
-import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.14'; /* M3-B 가라앉은 공장 */
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.15';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.15';
+import { mapOf } from './plan.js?v=0.99.15';
+import { prop, charClone } from './assets.js?v=0.99.15';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.15'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.15';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.15';
+import { sfx, ambience } from './audio.js?v=0.99.15';
+import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.15'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
+import { AI, facOf } from './ai.js?v=0.99.15'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
+import { populate, chiefRoll } from './threat.js?v=0.99.15'; /* M4-A 위협 곡선 */
+import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.15'; /* M4-A 새 적 5 */
+import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.15'; /* M4-A 검은 닻 두목 */
+import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.15';
+import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.15'; /* M4-B 심해 연구소 */
+import { wxStart } from './weather.js?v=0.99.15'; /* M4-B 공통 판 상태 5 */
+import { rimify, rimHit } from './rim.js?v=0.99.15'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
+import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.15';
+import { HitNums } from './nums.js?v=0.99.15'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
+import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.15'; /* M3-B 가라앉은 공장 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tmp = V(), tmp2 = V(), tmp3 = V();

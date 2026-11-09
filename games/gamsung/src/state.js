@@ -1,6 +1,7 @@
-// 저장 (localStorage 'gamsung_v1'): 돈 · 마음 · 경험치 · 원두 · 매장별 가구/머신/진열 · 동료 · 단골 · 오늘(판매·주문서·출석·쿠폰)
-import { XP, ORDER_POOL, COUPON, FURN } from './data.js?v=0.99.14';
-const KEY = 'gamsung_v1';
+// 저장 (localStorage 'gamsung_v2' · 0.2.0 개편): 돈 · 마음 · 경험치 · 원두 · 지점별 가구/머신/진열/열린 단계/공사/금고 · 동료 · 사장님 강화 · 단골 · 광고 바구니 · 골드 상품 · 오늘(판매·주문서·출석·쿠폰)
+//   저장 이사: 예전 'gamsung_v1' 이 있으면 처음 열 때 v2 로 옮김 (돈 · ♥ · 레벨 · 단골 · 시 · 동료 · 꾸미기 위치 그대로 · 지금 방 = 각 지점의 0단계) · 옛 키는 남김(되돌리기용)
+import { XP, ORDER_POOL, COUPON, FURN, STORES } from './data.js?v=0.99.15';
+export const KEY = 'gamsung_v2', OLD_KEY = 'gamsung_v1';
 /* 시계: 시험용 배속(?speed)일 때 머신·로스터 시간도 같이 빨라지게 */
 let skew = 0; export const now = () => Date.now() + skew; export const addSkew = ms => { skew += ms; };
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -9,16 +10,27 @@ export const START_FURN = () => [
   { uid: 1, id: 'table2', x: -250, z: 150, r: 0 }, { uid: 2, id: 'table2', x: 150, z: 150, r: 0 },
   { uid: 3, id: 'window', x: -650, z: 450, r: 0 }, { uid: 4, id: 'plant', x: 550, z: 550, r: 0 },
 ];
-export const newStore = () => ({ furn: START_FURN(), wall: { 1: 'board' }, mach: {}, roast: null, bar: {}, dirty: {}, uid: 10, coinsAt: {} });   /* coinsAt: 테이블에 남은 찻값 (가구 uid_자리) */
-const fresh = () => ({ v: 1, coins: 150, hearts: 5, xp: 0, lv: 1, beans: 40, si: 0, stores: { 0: newStore() }, inv: {}, staff: {}, reg: {}, menuSold: {},
+export const newStore = () => ({ furn: START_FURN(), wall: { 1: 'board' }, mach: {}, roast: null, bar: {}, dirty: {}, uid: 10, coinsAt: {},   /* coinsAt: 테이블에 남은 찻값 (가구 uid_자리) */
+  open: [0], build: {}, bags: 0, case: {}, idle: { up: 0, ad: 0 }, safe: 0, safeAt: 0, tasks: [], plants: {}, visit: 0, time: 0 });   /* 0.2.0: open 열린 단계 · build {단계: 끝나는 시각} · bags 로스팅실 원두 자루 · case 베이커리 진열장 · idle 지도 영구 단계 · safe 금고(떠난 동안 지점장이 쌓음) · tasks 순회 일감 · plants 화분 물 준 날 · time 머문 초 */
+const fresh = () => ({ v: 2, coins: 150, hearts: 5, xp: 0, lv: 1, beans: 40, si: 0, stores: { 0: newStore() }, inv: {}, staff: {}, reg: {}, menuSold: {},
   day: '', sold: 0, soldBy: {}, orders: [], att: { last: '', streak: 0 }, coupon: null, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), tut: 0,
-  fg: 0, art: {}, poem: { i: 0, n: 0 }, poems: [], jeong: 0, best: 0, cheer: { day: '', n: 0 }, owe: 0 });   /* 2026-10-28: cheer 응원 원두(하루 횟수) · owe 외상 원두값 */   /* 2026-10-27 추가: fg 손가락 안내 단계 · art 라떼아트 도감 · poem 오늘의 시 진행 · poems 완성한 시 · jeong 정성 한 잔 수 · best 최고 연속 */
+  fg: 0, art: {}, poem: { i: 0, n: 0 }, poems: [], jeong: 0, best: 0, cheer: { day: '', n: 0 }, owe: 0,
+  /* 0.2.0 개편 */ boss: { walk: 0, hand: 0, tip: 0, greet: 0 }, ads: { day: '', n: 0 }, adp: { day: '', n: {} }, items: [], vipUntil: 0, inst: 0, apron: 'base', aprons: { base: 1 }, apronAd: {},
+  theme: {}, gift: { day: '' }, season: { id: '', xp: 0, got: {} }, truck: { day: '', n: 0, best: 0 }, ostat: { day: '', jobs: {}, fit: 0, out: 0 }, earned: 0, maxSi: 0, done: {}, tip: {}, born: Date.now(), boostUntil: 0, moved: 0 });   /* 2026-10-28: cheer 응원 원두(하루 횟수) · owe 외상 원두값 */   /* 2026-10-27 추가: fg 손가락 안내 단계 · art 라떼아트 도감 · poem 오늘의 시 진행 · poems 완성한 시 · jeong 정성 한 잔 수 · best 최고 연속 */
 export let S = fresh();
+/* 저장 이사 v1 → v2: v1 의 모든 필드를 그대로 두고 새 필드 기본값만 채움 (매장 = 지점 · 지금 방 = 0단계 · 가구 좌표는 0단계 좌표 그대로) */
+export function migrate(o) { const s = { ...o, v: 2, migratedFrom: 1, migratedAt: Date.now() }; s.stores = {}; for (const [i, st] of Object.entries(o.stores || {})) if (STORES[i]) s.stores[i] = { ...st, open: [0], build: {} }; if (!s.stores[0]) s.stores[0] = newStore();
+  s.maxSi = Math.max(0, ...Object.keys(s.stores).map(Number)); if (s.fg == null && (s.xp || 0) > 0) s.fg = 3; return s; }
 export function loadSave() {
-  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.v === 1) { S = Object.assign(fresh(), s); if (s.fg == null && (s.xp || 0) > 0) S.fg = 3; } } catch { /* 깨진 저장은 새로 · 예전 저장(손가락 안내 없던 때)은 안내를 건너뜀 */ }
-  for (const k of ['stores', 'inv', 'staff', 'reg', 'menuSold', 'soldBy', 'att', 'art', 'poem', 'cheer']) if (!S[k] || typeof S[k] !== 'object') S[k] = fresh()[k];
+  try { let s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!s) { const o = JSON.parse(localStorage.getItem(OLD_KEY) || 'null'); if (o && o.v === 1) { s = migrate(o); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* */ } } }
+    if (s && s.v === 2) { S = Object.assign(fresh(), s); if (s.fg == null && (s.xp || 0) > 0) S.fg = 3; } } catch { /* 깨진 저장은 새로 · 예전 저장(손가락 안내 없던 때)은 안내를 건너뜀 */ }
+  for (const k of ['stores', 'inv', 'staff', 'reg', 'menuSold', 'soldBy', 'att', 'art', 'poem', 'cheer', 'boss', 'ads', 'adp', 'aprons', 'apronAd', 'theme', 'gift', 'season', 'truck', 'ostat', 'done', 'tip']) if (!S[k] || typeof S[k] !== 'object' || Array.isArray(S[k])) S[k] = fresh()[k];
+  if (!Array.isArray(S.items)) S.items = []; for (const k of ['walk', 'hand', 'tip', 'greet']) if (!Number.isFinite(S.boss[k])) S.boss[k] = 0; if (!S.adp.n || typeof S.adp.n !== 'object') S.adp.n = {};
+  for (const k of ['vipUntil', 'inst', 'earned', 'maxSi', 'boostUntil', 'moved']) if (!Number.isFinite(S[k])) S[k] = 0;
   if (!Array.isArray(S.poems)) S.poems = []; for (const k of ['fg', 'jeong', 'best', 'owe']) if (!Number.isFinite(S[k])) S[k] = 0; if (!Number.isFinite(S.poem.i)) S.poem.i = 0; if (!Number.isFinite(S.poem.n)) S.poem.n = 0; if (!Number.isFinite(S.poem.p)) S.poem.p = 0;
-  for (const st of Object.values(S.stores)) { const n = newStore(); for (const k of Object.keys(n)) if (st[k] == null || typeof st[k] !== typeof n[k]) st[k] = n[k]; st.furn = st.furn.filter(f => f && FURN[f.id] && Number.isFinite(f.x + f.z)); }
+  for (const [i, st] of Object.entries(S.stores)) { if (!STORES[i] || !st || typeof st !== 'object') { delete S.stores[i]; continue; } const n = newStore(); for (const k of Object.keys(n)) if (st[k] == null || typeof st[k] !== typeof n[k] || Array.isArray(st[k]) !== Array.isArray(n[k])) st[k] = n[k]; st.furn = st.furn.filter(f => f && FURN[f.id] && Number.isFinite(f.x + f.z));
+    st.open = [...new Set([0, ...st.open.filter(x => Number.isInteger(x) && x >= 0 && x < 8)])].sort((a, b) => a - b); for (const k of Object.keys(st.build)) if (!(+k > 0 && +k < 8) || !Number.isFinite(st.build[k]) || st.open.includes(+k)) delete st.build[k]; }
+  if (!S.stores[0]) S.stores[0] = newStore();
   for (const [k, v] of Object.entries(S.staff)) { const l = Math.round(Number(v)); if (!v) delete S.staff[k]; else S.staff[k] = Number.isFinite(l) ? Math.max(1, Math.min(5, l)) : 1; }   /* 2026-10-28: staff 값 = 단계(1~5) · 예전 저장의 1 = 1단계 */
   if (!S.stores[S.si]) S.si = 0; for (const k of ['coins', 'hearts', 'xp', 'beans']) if (!Number.isFinite(S[k])) S[k] = 0;
   S.lv = levelOf(S.xp); dayTick(); return S;

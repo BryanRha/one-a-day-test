@@ -1,13 +1,13 @@
 // 방문형 방 창 (크루룸 · 사장실 · 창고) · 금고 · 공사 · 풍선 · 골드 상품 · 시즌 패스 · 지점 완성 — UI 에 붙임
 //   방 창: 방에 들어가면 아래에서 올라옴 (게임은 멈추지 않음 · 위쪽을 끌면 계속 걸음) · 나가면 닫힘 · 뒤로 = 닫기
 //   모든 광고 자리는 바구니(하루 10) 하나를 나눠 씀 · 다 쓰면 같은 효과의 🪙 로 바뀌거나(1·2·4·6·10) 조용히 숨음(3·7·9)
-import { UI } from './ui.js?v=0.99.14';
-import { S, save, vipOn, has, today } from './state.js?v=0.99.14';
-import { BRANCHES, STAFF, STAFF_JOB, ROOM_UP, ROOM_UP_MAX, OUTFITS_PRO, GOLD, VIP, IDLE, THEME_SETS, SEASON, COUPON, BRAND, STORE_MAP, AD_PLACES, AD_DAY } from './data.js?v=0.99.14';
-import { ROOMS, hms, instGold } from './layout.js?v=0.99.14';
-import { sfx } from './audio.js?v=0.99.14';
-import { pushBack, track } from './oad.js?v=0.99.14';
-import { bm } from './oad_bm.js?v=0.99.14';
+import { UI } from './ui.js?v=0.99.15';
+import { S, save, vipOn, has, today } from './state.js?v=0.99.15';
+import { BRANCHES, STAFF, STAFF_JOB, ROOM_UP, ROOM_UP_MAX, OUTFITS_PRO, GOLD, VIP, IDLE, THEME_SETS, SEASON, COUPON, BRAND, STORE_MAP, AD_PLACES, AD_DAY } from './data.js?v=0.99.15';
+import { ROOMS, hms, instGold } from './layout.js?v=0.99.15';
+import { sfx } from './audio.js?v=0.99.15';
+import { pushBack, track } from './oad.js?v=0.99.15';
+import { bm } from './oad_bm.js?v=0.99.15';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 const day = () => Math.floor(Date.now() / 864e5);

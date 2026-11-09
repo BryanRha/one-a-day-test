@@ -1,18 +1,18 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import * as WXUI from './ui_wx.js?v=0.99.14'; /* M4-B 판 상태 5 · 맵 장비 */
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS } from './data.js?v=0.99.14';
-import { S, save, rollDay } from './save.js?v=0.99.14';
-import * as E from './econ.js?v=0.99.14';
-import { A } from './assets.js?v=0.99.14';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.14';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.14';
-import { Wardrobe } from './wardrobe.js?v=0.99.14';
-import { grantEarned, COS } from './look.js?v=0.99.14';
-import * as BM from './bmflow.js?v=0.99.14';
-import { frac } from './chips.js?v=0.99.14'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import * as GL from './goal.js?v=0.99.14'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
-import * as TU from './threat_ui.js?v=0.99.14'; /* M4-A 오늘 위협 · 주간 변주 */
-import * as G from './ui_grow.js?v=0.99.14'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
+import * as WXUI from './ui_wx.js?v=0.99.15'; /* M4-B 판 상태 5 · 맵 장비 */
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS } from './data.js?v=0.99.15';
+import { S, save, rollDay } from './save.js?v=0.99.15';
+import * as E from './econ.js?v=0.99.15';
+import { A } from './assets.js?v=0.99.15';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.15';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.15';
+import { Wardrobe } from './wardrobe.js?v=0.99.15';
+import { grantEarned, COS } from './look.js?v=0.99.15';
+import * as BM from './bmflow.js?v=0.99.15';
+import { frac } from './chips.js?v=0.99.15'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import * as GL from './goal.js?v=0.99.15'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
+import * as TU from './threat_ui.js?v=0.99.15'; /* M4-A 오늘 위협 · 주간 변주 */
+import * as G from './ui_grow.js?v=0.99.15'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };

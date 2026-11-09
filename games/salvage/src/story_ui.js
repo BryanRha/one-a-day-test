@@ -1,18 +1,18 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.14';
-import * as ST from './story.js?v=0.99.14';
-import * as B from './board.js?v=0.99.14';
-import { frac } from './chips.js?v=0.99.14'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.14';
-import { COS } from './look.js?v=0.99.14';
-import { A } from './assets.js?v=0.99.14';
-import { sfx, unlock } from './audio.js?v=0.99.14';
-import { shakeLabel, cycleShake } from './fx.js?v=0.99.14'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
-import { StoryRaid } from './story_raid.js?v=0.99.14';
-import { NpcHome } from './npc_home.js?v=0.99.14';
-import { ART } from './talk/art.js?v=0.99.14';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import { S, save, today } from './save.js?v=0.99.15';
+import * as ST from './story.js?v=0.99.15';
+import * as B from './board.js?v=0.99.15';
+import { frac } from './chips.js?v=0.99.15'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.15';
+import { COS } from './look.js?v=0.99.15';
+import { A } from './assets.js?v=0.99.15';
+import { sfx, unlock } from './audio.js?v=0.99.15';
+import { shakeLabel, cycleShake } from './fx.js?v=0.99.15'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
+import { StoryRaid } from './story_raid.js?v=0.99.15';
+import { NpcHome } from './npc_home.js?v=0.99.15';
+import { ART } from './talk/art.js?v=0.99.15';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
 
 const Q = new URLSearchParams(location.search);
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
@@ -22,7 +22,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.14'), t1: () => import('./talk/t1.js?v=0.99.14'), t2: () => import('./talk/t2.js?v=0.99.14'), t3: () => import('./talk/t3.js?v=0.99.14'), t4: () => import('./talk/t4.js?v=0.99.14'), t5: () => import('./talk/t5.js?v=0.99.14'), common: () => import('./talk/common.js?v=0.99.14'), memo: () => import('./talk/memo.js?v=0.99.14') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.15'), t1: () => import('./talk/t1.js?v=0.99.15'), t2: () => import('./talk/t2.js?v=0.99.15'), t3: () => import('./talk/t3.js?v=0.99.15'), t4: () => import('./talk/t4.js?v=0.99.15'), t5: () => import('./talk/t5.js?v=0.99.15'), common: () => import('./talk/common.js?v=0.99.15'), memo: () => import('./talk/memo.js?v=0.99.15') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;

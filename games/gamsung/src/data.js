@@ -4,7 +4,7 @@ export const BRAND = {
   name: '감성커피', en: 'GAMSUNG COFFEE', red: '#A92E2B', redHex: 0xA92E2B, ink: '#3B2A20', paper: '#F6EFE4',
   slogan: '마음이 쉬어가는 곳', keywords: ['진심', '정갈함', '여백', '따뜻함', '단아함'], site: 'https://xn--439as41bv4jv9f.com/',
 };
-export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short: '감성커피' };
+export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short: '감성커피', ver: '0.2.0' };
 
 // 메뉴: t = 내리는 시간(초) · n = 한 번에 나오는 잔 수 · bean = 잔당 원두 · lv = 열리는 레벨 · photo = 공식 사진
 //   price = 한 잔 값 · xp = 경험치 · look = 3D 잔 모양 (models.js)
@@ -46,6 +46,7 @@ export const FURN = {
   window: { name: '창가 1인석', cat: 'table', size: [1, 1], cost: 110, score: 8, lv: 2, seats: [[0, 10, Math.PI]], desc: '혼자 오래 머무는 자리' },
   sofa: { name: '리넨 소파 세트', cat: 'table', size: [2, 2], cost: 470, score: 18, lv: 7, seats: [[-40, -30, 0], [40, -30, 0]], desc: '깊이 기대는 쉼' },
   floor: { name: '좌식 마루 자리', cat: 'table', size: [2, 2], cost: 610, score: 22, lv: 10, seats: [[-45, 0, Math.PI / 2], [45, 0, -Math.PI / 2]], desc: '신발 벗고 앉는 마루' },
+  parasol: { name: '파라솔 테이블', cat: 'table', size: [2, 2], cost: 260, score: 9, lv: 1, outdoor: true, seats: [[-55, 0, Math.PI / 2], [55, 0, -Math.PI / 2]], desc: '바깥 바람 아래 둘이 앉는 자리' },
   plant: { name: '올리브 나무 화분', cat: 'green', size: [1, 1], cost: 90, score: 7, lv: 1, desc: '은빛 잎이 바람에 흔들려요' },
   fern: { name: '고사리 화분', cat: 'green', size: [1, 1], cost: 140, score: 9, lv: 3, desc: '그늘을 좋아하는 초록' },
   pine: { name: '분재 소나무', cat: 'green', size: [1, 1], cost: 400, score: 16, lv: 8, desc: '단아한 한 그루' },
@@ -59,13 +60,16 @@ export const FURN = {
   poem: { name: '시 한 줄 액자', cat: 'wall', size: [1, 1], cost: 0, score: 20, lv: 1, wall: true, gift: true, desc: '단골이 남긴 한 줄' },
   calli: { name: '서예 액자', cat: 'wall', size: [1, 1], cost: 180, score: 10, lv: 2, wall: true, desc: '「바람과 함께 쉬어가세요」' },
   board: { name: '나무 메뉴판', cat: 'wall', size: [1, 1], cost: 140, score: 8, lv: 1, wall: true, desc: '손글씨 메뉴' },
+  catphoto: { name: '돌담 고양이 사진', cat: 'wall', size: [1, 1], cost: 0, score: 9, lv: 1, wall: true, gift: true, desc: '강정점 돌담 위 귤이' },
   photo: { name: '흑백 사진 액자', cat: 'wall', size: [1, 1], cost: 0, heart: 60, score: 12, lv: 4, wall: true, desc: '동네의 오래된 풍경' },
 };
 export const FURN_CATS = [['table', '자리'], ['green', '초록'], ['stone', '돌'], ['light', '빛'], ['deco', '소품'], ['wall', '벽']];
 
 // 레벨: 필요한 경험치 · 레벨이 오르면 메뉴 · 원두 · 가구 · 머신 · 동료가 열림
-export const XP = [0, 30, 110, 240, 440, 850, 1500, 2500, 3980, 6130, 9080, 13230, 18820, 26350, 35900, 48720, 65340, 87140, 114060, 148510];   /* 밸런스 2026-10-27: 원래 표 × 1.6~3.2 */
-export const MACHINES = { espresso: [1, 1, 5], oven: [4, 12] };   /* 몇 레벨에 몇 번째 머신이 생기는지 · 2026-10-27 처음부터 2대 */
+/* 0.2.0 개편: 레벨 60 · 1~11은 예전 표 그대로(첫날 느낌) · 12부터는 지점 문턱(2호점 Lv12 · 3호점 20 · … · 7호점 52)이 무과금 · 하루 20분 플레이의 돈 흐름과 맞게
+     tools/growth_sim.mjs 의 누적 경험치(장사 + 구역 완성 · 지점 계약 날의 56% 시점)를 기준점으로 잡고 사이는 고르게 (2026-11-10) */
+export const XP = [0, 30, 110, 240, 440, 850, 1500, 2500, 3980, 6130, 9080, 11530, 12150, 12800, 13490, 14210, 14970, 15780, 16620, 17510, 18780, 20140, 21590, 23150, 24820, 26610, 28540, 30600, 31810, 33060, 34370, 35730, 37140, 38600, 40130, 41710, 42850, 44030, 45230, 46470, 47740, 49050, 50400, 51780, 53170, 54600, 56070, 57580, 59130, 60730, 62360, 64040, 80860, 102100, 128930, 162790, 205550, 259550, 327730, 413820];
+export const MACHINES = { espresso: [1, 1, 5, 16, 26, 38], oven: [4, 12, 24], roaster: [1, 18, 32] };   /* 몇 레벨에 몇 번째 머신이 생기는지 · 2026-10-27 처음부터 2대 · 0.2.0: 에스프레소 4번부터는 베이커리가 열려 오븐이 이사한 뒤(바 자리) · 로스터 2 · 3번은 로스팅실이 열린 뒤 (볶는 시간 단축) */
 /* 동료 (2026-10-28 대표 승인 · team/dev/tasks/261028-gamsung-staff): 잡일은 동료가, 정성은 사장이
      · 한 번 고용하면 끝(급여 없음) · 모든 매장 공통 · 고용 = 1단계 → STAFF_UP 로 5단계까지 · 저장은 S.staff[k] = 단계
      · lvx(단계) = 그 단계의 효과 (game.js 가 읽음) · up(단계) = 가게 창에 쓰는 한 줄 */
@@ -76,6 +80,13 @@ export const STAFF = {
     lvx: l => ({ low: 30 + (l - 1) * 15, bonus: (l - 1) * 0.05 }), up: l => { const x = STAFF.roaster.lvx(l); return `원두 ${x.low}잔분 아래면 볶기${x.bonus ? ` · 원두 +${Math.round(x.bonus * 100)}%` : ''}`; } },
   hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '테이블을 닦고 찻값을 모아 와요',
     lvx: l => ({ sp: 280 * (1 + (l - 1) * 0.15), bonus: (l - 1) * 0.05 }), up: l => { const x = STAFF.hall.lvx(l); return x.bonus ? `걸음 +${Math.round((x.sp / 280 - 1) * 100)}% · 찻값 +${Math.round(x.bonus * 100)}%` : '테이블 닦고 찻값 모으기'; } },
+  /* 0.2.0 개편 (EXPANSION_PLAN 3-5): 구역이 열려야(kind) 함께할 수 있음 · 사장님이 직접 하면 보상이 더 큼 */
+  server: { name: '서빙 동료 · 은재', lv: 10, cost: 3600, kind: 'far', body: 0xE3D3C0, hair: 0x3A2418, bun: true, desc: '테라스 · 2층 · 루프탑 손님에게 쟁반을 가져다 드려요 · 사장님이 가져가면 팁이 더 커요',
+    lvx: l => ({ sp: 300 * (1 + (l - 1) * 0.12) }), up: l => `걸음 +${Math.round((l - 1) * 12)}% · 먼 자리 서빙` },
+  baker: { name: '베이커 동료 · 보람', lv: 8, cost: 2800, kind: 'bakery', body: 0xF1E3CC, hair: 0x6A4A2A, desc: '오븐에서 디저트를 굽고 진열장에서 바로 날라요',
+    lvx: l => ({ tick: 2.4 - (l - 1) * 0.3 }), up: l => `디저트 판단 ${(2.4 - (l - 1) * 0.3).toFixed(1)}초마다` },
+  takeout: { name: '포장 동료 · 태민', lv: 14, cost: 5200, kind: 'annex', body: 0xC9D2C8, hair: 0x1E1A16, desc: '드라이브스루 · 배달 창구에 포장을 건네요',
+    lvx: l => ({ sp: 300 * (1 + (l - 1) * 0.12) }), up: l => `걸음 +${Math.round((l - 1) * 12)}% · 포장 건네기` },
 };
 /* 무진의 손 로스팅(수망): 사장님이 고른 긴 로스팅(스페셜티 · 밤샘)이 로스터를 쓰는 동안 원두가 low 아래로 떨어지면
      작은 망으로 t초에 beans잔분씩 볶아 줌 · 값은 하우스 블렌드 한 봉지(다 볶은 뒤에 냄 → 중간에 나가도 잃는 것 없음) · 원두 0 구간을 없애는 장치 (10-28 봇: 스페셜티 기다리며 8분 원두 0) */
@@ -86,11 +97,17 @@ export const STAFF_UP = { max: 5, cost: [0, 600, 1000, 1700, 2900] };   /* cost[
 export const OFFLINE = { need: 2, min: 120, cap: 7200, perMin: 20, step: 0.1 };
 
 // 매장: 실제 감성커피 매장 (부산에서 시작) · mult = 값 배수
+//   0.2.0 개편: 7지점 (EXPANSION_PLAN 2-4) · 4~7번은 지역만 정한 가칭(tmp) — 비브라더스 매장 목록의 실제 이름으로 바꿀 것 · 구역 · 인테리어는 layout.js
 export const STORES = [
-  { id: 'yeongdo', name: '영도대교점', city: '부산 영도구', lv: 1, mult: 1, photo: 'hero-storefront-original-restored', desc: '바다 바람이 머무는 첫 가게' },
-  { id: 'jangnim', name: '장림장평로점', city: '부산 사하구', lv: 12, mult: 3, photo: 'territory-storefront', desc: '동네 사람들의 사랑방' },
-  { id: 'gangjeong', name: '서귀포강정점', city: '제주 서귀포시', lv: 18, mult: 8, photo: 'interior-bar', desc: '돌담 너머 귤밭 바람' },
+  { id: 'yeongdo', name: '영도대교점', city: '부산 영도구', lv: 1, mult: 1, xpK: 1, photo: 'hero-storefront-original-restored', desc: '바다 바람이 머무는 첫 가게', map: [0.735, 0.765] },
+  { id: 'jangnim', name: '장림장평로점', city: '부산 사하구', lv: 12, mult: 3, xpK: 1.8, photo: 'territory-storefront', desc: '동네 사람들의 사랑방', map: [0.70, 0.775] },
+  { id: 'gangjeong', name: '서귀포강정점', city: '제주 서귀포시', lv: 20, mult: 7, xpK: 2.8, photo: 'interior-bar', desc: '돌담 너머 귤밭 바람', map: [0.34, 0.95] },
+  { id: 'jeonju', name: '전주 한옥점', tmp: true, city: '전북 전주시', lv: 28, mult: 14, xpK: 4, photo: 'interior-wide', desc: '여백이 말을 하는 한옥', map: [0.39, 0.60] },
+  { id: 'gangneung', name: '강릉 해변점', tmp: true, city: '강원 강릉시', lv: 36, mult: 26, xpK: 5.4, photo: 'interior-bar', desc: '솔숲 너머 로스터리', map: [0.70, 0.25] },
+  { id: 'seongsu', name: '서울 성수점', tmp: true, city: '서울 성동구', lv: 44, mult: 44, xpK: 7, photo: 'interior-wide', desc: '붉은 벽돌 공장의 시 낭독', map: [0.40, 0.25] },
+  { id: 'gyeongju', name: '경주 황리단길점', tmp: true, city: '경북 경주시', lv: 52, mult: 70, xpK: 8.8, photo: 'hero-storefront-original-restored', desc: '능이 보이는 기와 루프탑', map: [0.70, 0.64] },
 ];
+export const STORE_TMP = '가칭 · 실제 매장 이름으로 바뀌어요';
 
 // 손님 기분: 주문하고 받기까지(초) · 빨리 받으면 마음(♥) + 팁 · 오래 걸려도 벌 없음
 export const MOOD = { happy: 20, ok: 50, tip: 0.2 };
@@ -173,3 +190,88 @@ export const POEMS = ['바람이 잠시 머무는 곳', '오늘도 수고한 당
   '비 오는 날의 작은 등불', '말없이 건네는 위로', '여백에 머무는 향기', '오래된 의자의 기억', '새벽 숲을 닮은 한 모금', '그대 웃음이 피는 자리', '돌아오는 길의 쉼터', '마음에도 볕이 들어요', '한결같이 그 자리에', '바다를 건너온 이야기'];
 // 손편지: 손님이 가끔 테이블에 남기는 한 줄
 export const LETTERS = ['오늘 커피 덕분에 하루가 따뜻했어요', '창가 자리, 또 앉으러 올게요', '사장님 손길이 느껴지는 맛이었어요', '조용해서 좋았어요. 고마워요', '라떼 위 그림, 사진 찍어 갔어요', '지친 오후에 쉼표 하나 받아 가요', '바다 냄새랑 커피 냄새, 최고예요', '다음엔 친구랑 같이 올게요', '천천히 마셔도 된다는 게 좋았어요', '덕분에 마음이 맑아졌어요'];
+
+// ── 0.2.0 개편 「동네 한 칸에서 전국의 감성커피로」 (EXPANSION_PLAN.md · 대표 승인 2026-11-09 · 결정 team/decisions.md)
+// 사장 동선 (3장): 「머신은 시간을 쓰고, 사장은 발을 쓴다」 — 바를 떠나 홀 일을 하고 잔이 나올 때 맞춰 돌아오면 「딱 맞춤」 · 일을 이어 가면 동선 ×N (바에 돌아올 때 한꺼번에)
+//   hand 손 칸(쟁반 · 원두 자루 · 디저트 상자) · sp 걸음 · fit 딱 맞춤 팁(바로 그 머신 잔 값 대비) · grace 머신이 끝난 뒤 늦어도 되는 초 · chainK 동선 보너스(일 보상 대비) · chainMax
+//   far 먼 자리(테라스 · 2층 · 루프탑)에 가져다 드리면 팁 · farWait 아무도 안 가져가면 손님이 직접 내려오는 초 · greetR 첫인사 거리 · dwell 칸 위에서 머물러야 일어나는 초(0.3.1 마루미 원칙)
+export const OWNER = { hand: 3, sp: 330, fit: 0.15, grace: 4, chainK: 0.2, chainMax: 5, far: 0.2, farWait: 40, greetR: 330, dwell: 0.4, bag: 30, wake: 0.3, wakeT: 180, restAfter: [70, 130], restLen: 30 };
+/* 사장님이 하는 일 10가지 (계획안 3-3) — 레일 · 지표 gs_owner 의 이름 */
+export const OWNER_JOBS = {
+  bean: { name: '원두 나르기', icon: '🫘', sub: '로스팅실 → 바' }, serve: { name: '가져다 드리기', icon: '🧺', sub: '먼 자리 팁 +20%' }, clean: { name: '치우기 · 찻값', icon: '🧽', sub: '찻값 · 손편지' },
+  greet: { name: '첫인사', icon: '👋', sub: '손님 마음 +1' }, seat: { name: '자리 안내', icon: '👥', sub: '단체 주문 ×1.5' }, takeout: { name: '포장 건네기', icon: '🚗', sub: '포장 값 + 별점' },
+  wake: { name: '동료 깨우기', icon: '💤', sub: '응원 +30%' }, event: { name: '돌발 일', icon: '⚡', sub: '큰 보너스' }, story: { name: '단골 사연', icon: '💌', sub: '사연 · 시 액자' },
+  plant: { name: '화분 돌보기', icon: '🪴', sub: '감성 지수 보너스' }, dessert: { name: '디저트 나르기', icon: '🧁', sub: '공방 → 작업대' },
+};
+/* 돌발 일 8가지 (계획안 3-3 · 2~3분에 하나 · 놓쳐도 사라질 뿐 · 벌 없음) — at: 생기는 곳(door 문 앞 · seat 손님 자리 · floor 빈 바닥 · far 먼 구역) · t 기다리는 초 · coin 보상(분치 돈) · heart · poem 오늘의 시 글자 */
+export const EVENTS = [
+  { id: 'group', name: '단체 손님 6명', icon: '👥', at: 'door', t: 45, min: 1.5, heart: 1, seat: 6, say: '여섯 명이에요 · 같이 앉을 자리 있을까요?' },
+  { id: 'rain', name: '비 오는 날 우산꽂이', icon: '☂️', at: 'door', t: 50, min: 0.8, heart: 1, say: '우산이 젖었어요 · 꽂을 데가 있을까요?' },
+  { id: 'dog', name: '강아지 손님 물그릇', icon: '🐶', at: 'seat', t: 50, min: 0.8, heart: 2, say: '강아지가 목이 마른가 봐요' },
+  { id: 'poem', name: '바람에 날린 시 원고 줍기', icon: '📜', at: 'floor', t: 60, min: 0.6, heart: 1, poem: 2, n: 3, say: '바람에 원고가 흩어졌어요!' },
+  { id: 'spill', name: '쏟은 커피 닦기', icon: '🧽', at: 'floor', t: 45, min: 0.6, heart: 1, say: '앗, 커피를 쏟았어요' },
+  { id: 'photo', name: '사진 찍는 손님', icon: '📸', at: 'seat', t: 45, min: 1, heart: 1, rush: 45, say: '가게 사진 올려도 될까요? 한 장 같이 찍어요!' },
+  { id: 'tour', name: '길 묻는 관광객', icon: '🗺️', at: 'door', t: 50, min: 0.8, heart: 1, tour: [2, 6], say: '여기서 가까운 볼거리가 어디예요?' },
+  { id: 'flower', name: '꽃집 미나의 꽃 배달', icon: '💐', at: 'door', t: 60, min: 1, heart: 2, vase: true, say: '꽃 배달 왔어요 · 창가에 꽂아 주세요!' },
+];
+export const EVENT_GAP = [120, 180];
+/* 동료가 다 모이면 사장님 일은 6가지로 (계획안 3-5) */
+export const OWNER_CORE = ['greet', 'seat', 'story', 'event', 'jeong', 'visit'];
+// 지점장 · 쉬는 동안 (마루미와 같은 틀 · 2026-11-09 결정 2: 과금 속도는 무과금의 2배 이하 → growth_sim 으로 맞춤)
+//   baseH 쉬는 동안 쌓이는 시간 · managerH 베테랑 지점장 +시간 · upK 지점 영구 단계 +10%(최대 upMax · 광고 upAds 편 = 1단계) · off 쉬는 동안 수익 = 장사 기준의 비율
+export const IDLE = { baseH: 2, managerH: 2, upK: 0.1, upMax: 5, upAds: 3, off: 0.25 };
+export const VIP = { mult: 1.3, idleH: 3, maxDays: 28, boxMin: 5 };   /* 마루미와 같은 값으로 시작 (계획 ×1.5 · 8시간 → 2배 규칙) — growth_sim 결과로 확정 */
+export const MANAGER = { name: '지점장', perMin: 20, tasks: 3 };   /* 떠난 지점: 지점장이 쉬는 동안 수익을 쌓고(사장실 금고) · 사장님이 들르면 순회 일감 3개 */
+// 체인 단계 (계획안 2-3): 연 지점 수 · 감성 지수 합
+export const CHAIN = [{ n: 1, name: '동네 가게' }, { n: 2, name: '부산의 감성커피' }, { n: 3, name: '바다 건너 제주' }, { n: 5, name: '전국의 감성커피' }];
+// ── BM (계획안 5장 · 마루미와 같은 틀 · 감성커피는 ♥(마음)을 팔지 않음)
+// 보상형 광고 자리 10곳 · 바구니 하나 (하루 AD_DAY = shell/bm.js LIMIT.rewardBy.gamsung) · cap = 그 자리 하루 상한 · gold = 다 쓰면 같은 효과 골드(없으면 숨김)
+export const AD_DAY = 10;
+export const AD_PLACES = {
+  crew_free: { name: '동료 쉼터 무료 단계', cap: 2, gold: 'free_lv' }, boss_free: { name: '사장실 무료 단계', cap: 2, gold: 'free_lv' },
+  poem_fly: { name: '바람에 날려 온 시 한 장', cap: 3 }, offline2x: { name: '금고 ×2', cap: 1, gold: 'safe2x' },
+  finish: { name: '즉시 완성', cap: 2, gold: 'inst' }, idle_up: { name: '쉬는 동안 수익 단계', cap: 2, gold: 'idle_up' },
+  event2x: { name: '돌발 일 · 트럭 보상 ×2', cap: 1 }, outfit_ad: { name: '앞치마 열기', cap: 1 }, gift2x: { name: '원두 창고 선물 ×2', cap: 1 },
+  boost2x: { name: '📺 보상', cap: 2, gold: 'boost' },
+};
+/* 원어데이 골드 상품 (가격은 서버 oneaday/server/api/_lib/gold.js SHOP.gamsung 이 기준 · 여기 값은 화면 미리 보기 · 서버 표에 없으면(off) 버튼을 숨김) · 모든 상품에 무료 길 */
+export const GOLD = {
+  starter: { name: '오픈 기념 세트', gold: 250, desc: '1시간치 돈 · 붉은 린넨 앞치마 · 즉시 완성권 3장', free: '앞치마는 광고 3편 · 공사는 기다리기', days: 7 },
+  vip7: { name: '감성 VIP 7일', gold: 200, days: 7, free: '광고 수익 2배 · 지도 영구 단계' },
+  vip30: { name: '감성 VIP 30일', gold: 600, days: 30, free: '광고 수익 2배 · 지도 영구 단계' },
+  cash10: { name: '금고 꾸러미 (작은)', gold: 20, min: 10, free: '광고 · 플레이' }, cash60: { name: '금고 꾸러미 (중간)', gold: 100, min: 60, free: '광고 · 플레이' }, cash240: { name: '금고 꾸러미 (큰)', gold: 300, min: 240, free: '광고 · 플레이' },
+  idle_up: { name: '쉬는 동안 수익 +10%', gold: 60, free: '광고 3편 = 1단계' }, free_lv: { name: '강화 1단계 바로', gold: 20, free: '광고 · 게임 돈' },
+  safe2x: { name: '금고 2배', gold: 20, free: '광고 1편' }, boost: { name: '📺 보상 (광고 대신)', gold: 20, free: '광고 1편' },
+  manager: { name: '베테랑 지점장', gold: 400, free: '7지점 완성 보상으로 무료' }, truck: { name: '커피트럭 한 번 더', gold: 20, free: '하루 무료 1판 + 광고 1' },
+  story: { name: '단골 다음 화 바로', gold: 30, free: '내일 무료' }, pet: { name: '돌담 고양이 귤이', gold: 500, free: '강정점 완성 때 「돌담 고양이 사진」 액자' },
+  pass_s1: { name: '계절 메뉴 패스 · 시즌 1', gold: 500, free: '무료 줄 (보상의 대부분)' },
+};
+// 지점 계절 세트 (능력치 0 · 감성 지수는 같은 칸 무료 가구와 같음) — 무과금 길: 단골 시 액자 완성 · 시즌 무료 줄 1종
+export const THEME_SETS = [
+  { id: 'set_cherry', name: '벚꽃 영도', icon: '🌸', gold: 300, floor: ['#F4EEEC', '#ECE2E0'], wall: 0xF6E8EA, trim: 0xD88AA0, petals: 0xF6B8C8 },
+  { id: 'set_tangerine', name: '귤 수확 강정', icon: '🍊', gold: 300, floor: ['#F2ECE2', '#EAE2D4'], wall: 0xF3E4CC, trim: 0xD8843A, petals: 0xF0A040 },
+  { id: 'set_snow', name: '눈 오는 한옥', icon: '❄️', gold: 300, floor: ['#F2F4F6', '#E6EAEE'], wall: 0xF4F4F2, trim: 0x6B4A30, petals: 0xFFFFFF },
+  { id: 'set_xmas', name: '성탄 성수', icon: '🎄', gold: 300, floor: ['#ECE6E0', '#E2DAD2'], wall: 0x9A4A36, trim: 0x2E5A3A, petals: 0xD8343A },
+];
+// 사장 앞치마 (겉모습만) — 무과금 길: 광고 3편 앞치마(날 넘겨도 쌓임) · 게임 돈 앞치마
+export const APRONS = [
+  { id: 'base', name: '감성 레드 앞치마', icon: '🟥', apron: 0xA92E2B, body: 0xF4EEE4 },
+  { id: 'linen', name: '붉은 린넨 앞치마', icon: '🧺', apron: 0xC0504A, body: 0xF6F0E6, ad: 3 },
+  { id: 'ink', name: '먹색 앞치마', icon: '🖌', apron: 0x3B3028, body: 0xEFE8DC, coins: 3000 },
+  { id: 'out_hanbok', name: '한복 앞치마', icon: '🎎', apron: 0x2E4A6A, body: 0xF6EFE4, gold: 200 },
+  { id: 'out_galot', name: '제주 갈옷', icon: '🍂', apron: 0xB5652A, body: 0xD8B48A, gold: 250 },
+  { id: 'out_denim', name: '성수 데님', icon: '👖', apron: 0x3A5A8A, body: 0xF3E7D6, gold: 300 },
+  { id: 'vip', name: '금빛 앞치마 (VIP)', icon: '👑', apron: 0xC8A04A, body: 0xF6EFE4, vip: true },
+];
+// 계절 메뉴 패스 (4~6주 · 실제 신메뉴 출시 주에 시작) · XP = 시즌 동안 내린 잔 · 무료 줄이 보상의 대부분 (하루 20분이면 80~90%)
+export const SEASON = { id: 's1', name: '시즌 1 · 감성 겨울', from: '2026-11-09', to: '2026-12-21', xp: [0, 80, 200, 380, 600, 860, 1160, 1500, 1880, 2300],
+  free: [{ coins: 10 }, { inst: 1 }, { coins: 20 }, { safe: 1 }, { coins: 30 }, { inst: 1 }, { coins: 45 }, { set: 'set_snow' }, { coins: 60 }, { inst: 2 }],
+  paid: [{ apron: 'out_denim' }, { coins: 20 }, { inst: 2 }, { coins: 40 }, { set: 'set_tangerine' }, { coins: 60 }, { inst: 3 }, { coins: 90 }, { apron: 'out_galot' }, { set: 'set_xmas' }] };
+/* 시즌 보상 coins = 그 지점 「분」치 돈 · inst = 즉시 완성권 · safe = 금고 꾸러미(10분치) */
+// 매장 찾기 (지도 · 지점 완성 창) — 공식 매장 찾기 (위치 권한 안 씀)
+export const STORE_FIND = BRAND.site;
+// 커피트럭 (계획안 2-3 · Lv.15 · 영도 별관 차고): 주마다 출동지 · 3분 작은 판 · 하루 무료 1 + 광고 1 + 골드
+export const TRUCK = { lv: 15, sec: 180, free: 1, spots: [
+  { id: 'jinhae', name: '진해 벚꽃', icon: '🌸', menu: ['latte', 'vanilla', 'berry'] }, { id: 'haeundae', name: '해운대 여름', icon: '🏖', menu: ['americano', 'coldbrew', 'jeju'] },
+  { id: 'boseong', name: '보성 녹차밭', icon: '🍵', menu: ['latte', 'dawn', 'tea'] }, { id: 'daegwallyeong', name: '대관령 눈', icon: '❄️', menu: ['americano', 'latte', 'mygamsung'] },
+  { id: 'festival', name: '지역 축제', icon: '🏮', menu: ['americano', 'vanilla', 'croffle'] }] };

@@ -1,13 +1,13 @@
 // 판 안 이야기 — 무전(짧은 자막 + 몽이 반응) · 튜토리얼 무전 · 이야기 물건(금빛 고리 상자) · 녹음기 · 벽 낙서
 //  raid.js 는 건드리지 않고 판 상태를 매 프레임 지켜봄 (main.js 가 attach · tick · detach)
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.14';
-import * as ST from './story.js?v=0.99.14';
-import { boardWants } from './board.js?v=0.99.14';
-import { ITEMS } from './data.js?v=0.99.14';
-import { RS } from './plan.js?v=0.99.14';
-import { sfx } from './audio.js?v=0.99.14';
-import { T, talk, portrait } from './story_ui.js?v=0.99.14';
+import { S, save } from './save.js?v=0.99.15';
+import * as ST from './story.js?v=0.99.15';
+import { boardWants } from './board.js?v=0.99.15';
+import { ITEMS } from './data.js?v=0.99.15';
+import { RS } from './plan.js?v=0.99.15';
+import { sfx } from './audio.js?v=0.99.15';
+import { T, talk, portrait } from './story_ui.js?v=0.99.15';
 
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

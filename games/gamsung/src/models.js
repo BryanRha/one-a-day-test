@@ -1,9 +1,9 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND, MENU } from './data.js?v=0.99.14';
+import { BRAND, MENU } from './data.js?v=0.99.15';
 
-const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+export const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
 export const M = c => mats[c] ||= new THREE.MeshToonMaterial({ color: c, gradientMap: gm });
 export function mesh(g, m, x = 0, y = 0, z = 0, p) { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; if (p) p.add(o); return o; }
@@ -11,7 +11,7 @@ const G = {}; const geo = (k, f) => G[k] ||= f();
 export const box = (w, h, d, c, x, y, z, p) => mesh(geo(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d)), M(c), x, y + h / 2, z, p);
 export const cyl = (rt, rb, h, c, x, y, z, p, s = 16) => mesh(geo(`c${rt},${rb},${h},${s}`, () => new THREE.CylinderGeometry(rt, rb, h, s)), M(c), x, y + h / 2, z, p);
 export const sph = (r, c, x, y, z, p, ws = 14, hs = 10) => mesh(geo(`s${r},${ws}`, () => new THREE.SphereGeometry(r, ws, hs)), M(c), x, y, z, p);
-const cvTex = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), c); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+export const cvTex = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), c); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
 export const C = { wood: 0xA67A50, woodD: 0x7A5234, woodL: 0xC8A27A, wall: 0xEDE3D3, wallB: 0xE4D8C6, linen: 0xF4EEE4, stone: 0xA9A39A, stoneD: 0x8A857C, leaf: 0x6E8F5A, leaf2: 0x87A86E, pot: 0xE6DCCB, ink: 0x3B2A20, red: BRAND.redHex };
 
 // ── 사람 (마루미 베이글과 같은 몸) · sit = 앉은 자세
@@ -65,6 +65,7 @@ export function tray(look, items) { const g = new THREE.Group(); box(54, 4, 38, 
 export const ROOM = { W: 1400, D: 1400 };
 export function room(sc, theme = {}) {
   const W = ROOM.W, D = ROOM.D;
+  if (theme.shell !== false) {   /* 0.2.0: 바닥 · 벽 · 창은 world.js 가 지점 인테리어로 그림 (shell: false) */
   const ft = cvTex(256, 256, x => { x.fillStyle = theme.floor || '#D2B08A'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? (theme.floorA || '#CBA77F') : (theme.floorB || '#D8B892'); x.fillRect(0, i * 32, 256, 31); x.fillStyle = '#B8936C'; x.fillRect((i * 97) % 256, i * 32, 2, 32); x.fillRect((i * 97 + 128) % 256, i * 32, 2, 32); } });
   ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(5.5, 5.5);
   const fl = mesh(new THREE.BoxGeometry(W, 20, D), new THREE.MeshToonMaterial({ map: ft, gradientMap: gm }), 0, -10, 0, sc); fl.castShadow = false; fl.name = 'floor';
@@ -76,6 +77,7 @@ export function room(sc, theme = {}) {
   /* 큰 창 + 리넨 커튼 (바람) */
   const win = (z) => { box(8, 190, 280, 0xDCEAEA, -W / 2 + 18, 70, z, sc); for (const dz of [-140, 0, 140]) box(14, 200, 10, C.woodD, -W / 2 + 22, 65, z + dz, sc); for (const y of [65, 265]) box(14, 10, 290, C.woodD, -W / 2 + 22, y, z, sc); box(6, 210, 50, C.linen, -W / 2 + 30, 60, z + 110, sc); };
   win(-80); win(330);
+  }
   /* 나무 기둥 (고정) */
   const tree = new THREE.Group(); tree.position.set(-560, 0, -230); sc.add(tree); cyl(34, 42, 330, 0x8E6038, 0, 0, 0, tree, 14);
   for (let i = 0; i < 4; i++) { const b = cyl(9, 22, 170, 0x8E6038, 0, 0, 0, tree, 10); b.position.set(Math.cos(i * 1.57 + 0.4) * 40, 250, Math.sin(i * 1.57 + 0.4) * 40); b.rotation.set(Math.sin(i * 1.57 + 0.4) * 0.9, 0, -Math.cos(i * 1.57 + 0.4) * 0.9); }
@@ -86,7 +88,7 @@ export function room(sc, theme = {}) {
     document.fonts && document.fonts.ready.then(() => { draw(st.image.getContext('2d'), im); st.needsUpdate = true; });
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(440, 129), new THREE.MeshBasicMaterial({ map: st, transparent: true })); sg.position.set(0, 80, 6); hd.add(sg); box(456, 140, 10, C.woodD, 0, 10, 0, hd); for (const sx of [-140, 140]) box(12, 40, 12, C.woodD, sx, -30, 0, hd); }
   /* 서예 (고정, 뒷벽): 「이 한잔으로 마음을 달랠 수만 있다면」 */
-  callig(sc, '이한잔으로/마음을/달랠수만/있다면', -150, 285, -D / 2 + 18, 0, 120, 200);
+  callig(sc, theme.callig || '이한잔으로/마음을/달랠수만/있다면', -150, 285, -D / 2 + 18, 0, 120, 200);
   /* 제작 공간: 타일 바닥 · 뒷벽 작업대(머신 · 오븐) · 선반 · 메뉴판 */
   const tt = cvTex(128, 128, x => { x.fillStyle = '#E8E2D8'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#CFC6B8'; x.lineWidth = 3; for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32, 128); x.stroke(); x.beginPath(); x.moveTo(0, i * 32); x.lineTo(128, i * 32); x.stroke(); } });
   tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(10, 1.6); mesh(new THREE.BoxGeometry(W - 30, 2, 200), new THREE.MeshToonMaterial({ map: tt, gradientMap: gm }), 15, 1, -D / 2 + 115, sc).castShadow = false;
@@ -128,11 +130,13 @@ export const STATION = {
   roaster(p) { box(130, 120, 110, C.red, 0, 0, 0, p); cyl(52, 52, 74, 0x3B3B42, 0, 120, 0, p, 18); cyl(34, 20, 56, 0xC9C9CF, 0, 194, 0, p, 14); box(70, 10, 60, 0x2A2A30, 0, 70, 60, p); cyl(46, 46, 6, 0x5A3A22, 0, 60, 80, p, 18); },
 };
 
-// ── 가구 (중심 기준 · 회전은 world.js 에서)
-const chair = (p, x, z, ry, c = C.woodL) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g); box(46, 42, 46, c, 0, 0, 0, g); box(46, 50, 8, c, 0, 42, -20, g); for (const s of [-1, 1]) box(6, 42, 6, C.woodD, s * 18, 0, 18, g); return g; };
+// ── 가구 (중심 기준 · 회전은 world.js 에서) · 0.2.0: 의자는 바닥보다 짙게 (tools/floor_check.mjs 대비 1.5 이상)
+export const CHAIR = 0x8E6440;
+const chair = (p, x, z, ry, c = CHAIR) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g); box(46, 42, 46, c, 0, 0, 0, g); box(46, 50, 8, c, 0, 42, -20, g); for (const s of [-1, 1]) box(6, 42, 6, C.woodD, s * 18, 0, 18, g); return g; };
 const potPlant = (p, x, z, s = 1, leaf = C.leaf) => { cyl(26 * s, 20 * s, 40 * s, C.pot, x, 0, z, p, 12); sph(34 * s, leaf, x, 72 * s, z, p, 10, 8); sph(24 * s, C.leaf2, x + 16 * s, 94 * s, z + 8 * s, p, 10, 8); };
 export const FURN_MODEL = {
   table2(p) { cyl(46, 46, 8, C.wood, 0, 72, 0, p, 20); cyl(7, 12, 72, C.woodD, 0, 0, 0, p, 10); chair(p, -60, 0, Math.PI / 2); chair(p, 60, 0, -Math.PI / 2); },
+  parasol(p) { cyl(46, 46, 8, C.wood, 0, 72, 0, p, 20); cyl(7, 12, 72, C.woodD, 0, 0, 0, p, 10); chair(p, -60, 0, Math.PI / 2); chair(p, 60, 0, -Math.PI / 2); const u = new THREE.Group(); u.userData.occ = true; p.add(u); cyl(3, 3, 210, 0xF2ECE2, 0, 80, 0, u, 6); const c = cyl(4, 120, 34, 0xF2ECE2, 0, 270, 0, u, 12); c.castShadow = true; cyl(122, 122, 4, BRAND.redHex, 0, 266, 0, u, 12); },
   table4(p) { box(200, 8, 100, C.wood, 0, 72, 0, p); for (const [x, z] of [[-90, -40], [90, -40], [-90, 40], [90, 40]]) box(8, 72, 8, C.woodD, x, 0, z, p); for (const [x, z, r] of [[-80, -82, 0], [80, -82, 0], [-80, 82, Math.PI], [80, 82, Math.PI]]) chair(p, x, z, r); },
   window(p) { box(90, 8, 46, C.wood, 0, 90, -24, p); for (const x of [-40, 40]) box(6, 90, 6, C.woodD, x, 0, -40, p); const c = chair(p, 0, 22, Math.PI); c.scale.set(0.95, 1.25, 0.95); },
   sofa(p) { box(180, 40, 70, 0xE8DFD0, 0, 0, -50, p); box(180, 60, 20, 0xE8DFD0, 0, 40, -80, p); for (const x of [-95, 95]) box(16, 56, 70, 0xD8CDBC, x, 0, -50, p); for (const x of [-40, 40]) box(70, 14, 60, 0xF4EEE4, x, 40, -46, p); box(110, 40, 60, C.wood, 0, 0, 50, p); cyl(6, 8, 18, 0xFFFFFF, 20, 40, 50, p, 10); },
@@ -150,6 +154,7 @@ export const FURN_MODEL = {
   /* 벽에 거는 것: 벽 자리 기준 (뒤로 붙임) */
   calli(p) { callig(p, '바람과함께/쉬어가세요', 0, 230, 0, 0, 100, 160); },
   board(p) { box(90, 120, 8, 0x6B4A30, 0, 110, 0, p); box(74, 100, 2, 0x3B3028, 0, 120, 5, p); for (let k = 0; k < 5; k++) box(50 - k * 4, 3, 1, 0xF4ECDD, 0, 205 - k * 18, 6.5, p); },
+  catphoto(p) { box(80, 70, 6, 0x2A2420, 0, 150, 0, p); box(68, 58, 2, 0x4A4644, 0, 156, 4, p); box(40, 20, 3, 0xF09A30, 0, 160, 6, p); box(10, 10, 3, 0xF09A30, -12, 172, 6, p); box(10, 10, 3, 0xF09A30, 12, 172, 6, p); },
   photo(p) { for (let i = 0; i < 2; i++) { box(66, 80, 6, 0x2A2420, -36 + i * 72, 150 + i * 30, 0, p); box(54, 66, 2, [0xC8C2B8, 0x9A948A][i], -36 + i * 72, 157 + i * 30, 4, p); } },
 };
 export function poemFrame(p, txt) { callig(p, txt, 0, 240, 0, 0, 100, 170, true); }
