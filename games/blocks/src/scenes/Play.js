@@ -1,18 +1,20 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.99.11';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.99.11';
-import { choose } from '../core/ai.js?v=0.99.11';
-import { makeLevel } from '../core/levels.js?v=0.99.11';
-import { TINT, THEMES } from './Boot.js?v=0.99.11';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load, save } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.99.11';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.11';
-import { bm } from '../oad_bm.js?v=0.99.11';
-import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.99.11';
-import { roundOver, afterRound, track, helpOn } from '../bmflow.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.99.12';
+import { choose } from '../core/ai.js?v=0.99.12';
+import { makeLevel } from '../core/levels.js?v=0.99.12';
+import { TINT, THEMES } from './Boot.js?v=0.99.12';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { sky } from '../sky.js?v=0.99.12';
+import { load, save } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.99.12';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.12';
+import { bm } from '../oad_bm.js?v=0.99.12';
+import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.99.12';
+import { roundOver, afterRound, track, helpOn, itemPrice, buyUse, swapAdLeft, swapAdUsed, adShown, adReady, failMsg } from '../bmflow.js?v=0.99.12';
+import { ITEMS, itemsOn, left as itemLeft, area as itemArea, AD_DAY } from '../core/items.js?v=0.99.12';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };
@@ -45,10 +47,15 @@ export class PlayScene extends Phaser.Scene {
     }
     this.shown = 0; this.busy = false; this.paused = false; this.newBest = false; this.drag = null; this.revived = false;
     this.conts = 0; this.contGold = false; this.roundStars = 0; this.contPop = null; this.assisted = false;
-    this.BX = (W - BW) / 2; this.BY = Math.round(470 + Math.max(0, (H - 470 - 1420) / 2));
-    this.trayY = Math.min(H - 210, this.BY + BW + 250);
+    /* 클래식 도구 줄 (QA 시트 #2 · #6): 판과 조각 사이 여백에 [폭탄][한 줄] 아이템 + [광고 보고 블록 바꾸기] — 원어데이 안 클래식만 */
+    this.items = itemsOn(this.mode, this.bot) ? ITEMS.filter(it => itemPrice(it.sku) > 0) : [];
+    this.used = {}; this.pick = null; this.swapDone = false; this.swapBtn = null; this.swapPulse = null; this.toolBar = null; this.runId = (this.runId || 0) + 1;   /* 씬 재사용: 지난 판 값 · 옛 결제/광고 응답 무시 */
+    this.toolsOn = itemsOn(this.mode, this.bot) && (this.items.length > 0 || adShown());
+    this.BX = (W - BW) / 2;
+    if (this.toolsOn) { this.BY = Math.round(470 + Math.max(0, (H - 470 - 1540) / 2)); this.toolY = this.BY + BW + 88; this.trayY = this.BY + BW + 318; }
+    else { this.BY = Math.round(470 + Math.max(0, (H - 470 - 1420) / 2)); this.trayY = Math.min(H - 210, this.BY + BW + 250); }
 
-    this.bg = this.add.image(W / 2, H / 2, `bg_t${this.theme}`).setDisplaySize(W, Math.max(H, W * 1300 / 540));
+    this.skyObj = sky(this, this.theme, { calm: true }); this.bg = this.skyObj.bg;   /* 블록 하늘 (QA 시트 #9) — 판 화면은 구름 · 보석이 적고 흐리게 */
     this.makeHud(d);
     this.boardG = this.add.graphics().setDepth(5);
     this.cellImgs = [];
@@ -65,8 +72,9 @@ export class PlayScene extends Phaser.Scene {
     this.burst = this.add.particles(0, 0, 'spark', { lifespan: { min: 300, max: 650 }, speed: { min: 180, max: 560 }, scale: { start: 0.5, end: 0 }, alpha: { start: 1, end: 0 }, rotate: { min: 0, max: 360 }, blendMode: 'ADD', emitting: false }).setDepth(60);
     this.chips = this.add.particles(0, 0, 'blk_0', { lifespan: { min: 450, max: 800 }, speedX: { min: -320, max: 320 }, speedY: { min: -620, max: -200 }, gravityY: 1600, scale: { start: 0.3, end: 0.05 }, rotate: { min: -180, max: 180 }, emitting: false }).setDepth(59);
     this.makeInput();
+    if (this.toolsOn) this.makeTools();
     audio.music('bgm_game', this);
-    this.cameras.main.fadeIn(260, 8, 10, 24);
+    this.cameras.main.fadeIn(260, 20, 12, 40);
     if (!d.tips.drag && !this.bot) this.time.delayedCall(600, () => this.dragHint());
     /* 응원 선물: 다음 판 시작 때 (이어하기를 권하는 '판 끝' 순간과 겹치지 않음) */
     this.helpBadge = null;
@@ -93,7 +101,7 @@ export class PlayScene extends Phaser.Scene {
       const gs = this.b.goals, gw = 220, x0 = W / 2 - (gs.length - 1) * gw / 2;
       gs.forEach((g, i) => {
         const x = x0 + i * gw, y = 260, c = this.add.container(x, y).setDepth(D);
-        const bgc = this.add.graphics(); bgc.fillStyle(0x0E1535, 0.85).fillRoundedRect(-95, -70, 190, 140, 28).lineStyle(2, 0xFFFFFF, 0.1).strokeRoundedRect(-95, -70, 190, 140, 28);
+        const bgc = this.add.graphics(); bgc.fillStyle(0x1E1240, 0.85).fillRoundedRect(-95, -70, 190, 140, 28).lineStyle(2, 0xFFFFFF, 0.1).strokeRoundedRect(-95, -70, 190, 140, 28);
         c.add(bgc);
         let icon;
         if (g.type === 'gem') icon = this.add.image(0, -18, `gem_${g.g}`).setDisplaySize(70, 70);
@@ -195,7 +203,7 @@ export class PlayScene extends Phaser.Scene {
   nextTheme() {
     this.theme = (this.theme + 1) % THEMES.length;
     if (this.mode === 'classic') { const d = load(); d.theme = this.theme; save(); }
-    const nb = this.add.image(W / 2, H / 2, `bg_t${this.theme}`).setDisplaySize(W, Math.max(H, W * 1300 / 540)).setAlpha(0).setDepth(-1);
+    const nb = this.add.image(W / 2, H / 2, `bg_t${this.theme}`).setDisplaySize(W, Math.max(H, W * 1300 / 540)).setAlpha(0).setDepth(-2.5);
     this.tweens.add({ targets: nb, alpha: 1, duration: 700, onComplete: () => { this.bg.destroy(); this.bg = nb; } });
     this.drawBoard();
     toast(this, `테마 · ${THEMES[this.theme].name}`, C.sub, this.BY - 60);
@@ -215,7 +223,7 @@ export class PlayScene extends Phaser.Scene {
   // ── 조각 칸 ──
   makeTray() {
     const tg = this.add.graphics().setDepth(4);
-    tg.fillStyle(0x0E1535, 0.55).fillRoundedRect(36, this.trayY - 168, W - 72, 336, 40).lineStyle(2, 0xFFFFFF, 0.08).strokeRoundedRect(36, this.trayY - 168, W - 72, 336, 40);
+    tg.fillStyle(0x1E1240, 0.55).fillRoundedRect(36, this.trayY - 168, W - 72, 336, 40).lineStyle(2, 0xFFFFFF, 0.08).strokeRoundedRect(36, this.trayY - 168, W - 72, 336, 40);
     this.slots = [190, 540, 890].map(x => ({ x, y: this.trayY, piece: null }));
     this.fillTray(false);
   }
@@ -245,8 +253,9 @@ export class PlayScene extends Phaser.Scene {
   // ── 끌어 놓기 ──
   makeInput() {
     this.input.on('pointerdown', p => {
+      if (this.pick) return this.pickDown(p);
       if (this.busy || this.paused || this.b.over || this.bot) return;
-      const sl = this.slots.find(s => s.piece && s.piece.active && !s.piece.t.used && Math.abs(p.x - s.x) < 175 && Math.abs(p.y - s.y) < 190);
+      const sl = this.slots.find(s => s.piece && s.piece.active && !s.piece.t.used && Math.abs(p.x - s.x) < 175 && Math.abs(p.y - s.y) < (this.toolsOn ? 168 : 190));
       if (!sl) return;
       this.drag = { sl, piece: sl.piece, lift: p.wasTouch ? LIFT : LIFT_MOUSE };   /* 터치만 손가락 위로 띄움 (Phaser 는 마우스 · 터치 이벤트를 따로 받음 — pointerType 없음) */
       audio.play('sfx_pick', { volume: 0.5 });
@@ -256,7 +265,7 @@ export class PlayScene extends Phaser.Scene {
       this.moveDrag(p);
       if (this.hint) { this.hint.destroy(); this.hint = null; const d = load(); d.tips.drag = 1; save(); }
     });
-    this.input.on('pointermove', p => { if (this.drag) this.moveDrag(p); });
+    this.input.on('pointermove', p => { if (this.drag) this.moveDrag(p); else if (this.pick) this.pickHover(p); });
     this.input.on('pointerup', () => { if (this.drag) this.dropDrag(); });
   }
   snapOf(piece) {
@@ -376,12 +385,12 @@ export class PlayScene extends Phaser.Scene {
     // 거대한 글자: 한 글자씩 떨어져 튀어오름
     const word = 'ALL CLEAR', size = 132, chars = [...word], gap = size * 0.66, x0 = cx - (chars.length - 1) * gap / 2;
     const letters = chars.map((ch, i) => {
-      const t = T(this, x0 + i * gap, cy - 60 - 500, ch, size, ['#FFE07A', '#7CFFB2', '#9BE7FF', '#FF9BD2', '#C9A6FF'][i % 5], { w: 900, stroke: '#0B1026', thick: 14 }).setDepth(90);
+      const t = T(this, x0 + i * gap, cy - 60 - 500, ch, size, ['#FFE07A', '#7CFFB2', '#9BE7FF', '#FF9BD2', '#C9A6FF'][i % 5], { w: 900, stroke: '#1A0F33', thick: 14 }).setDepth(90);
       this.tweens.add({ targets: t, y: cy - 60, duration: 520, delay: 120 + i * 60, ease: 'Bounce.easeOut' });
       return t;
     });
     const sub = T(this, cx, cy + 70, 'PERFECT BOARD', 44, C.text, { w: 900, ls: 10 }).setDepth(90).setAlpha(0);
-    const bonus = T(this, cx, cy + 150, `+${fmt(1000)}   ★ +10`, 56, C.gold, { w: 900, stroke: '#0B1026', thick: 8 }).setDepth(90).setAlpha(0).setScale(0.5);
+    const bonus = T(this, cx, cy + 150, `+${fmt(1000)}   ★ +10`, 56, C.gold, { w: 900, stroke: '#1A0F33', thick: 8 }).setDepth(90).setAlpha(0).setScale(0.5);
     this.tweens.add({ targets: sub, alpha: 1, delay: 800, duration: 300 });
     this.tweens.add({ targets: bonus, alpha: 1, scale: 1, delay: 1000, duration: 320, ease: 'Back.easeOut' });
     // 불꽃놀이 6발
@@ -408,7 +417,7 @@ export class PlayScene extends Phaser.Scene {
     const col = q >= 97 ? '#7CFFB2' : q >= 85 ? '#9BE7FF' : q >= 65 ? '#FFE07A' : '#FFB0A0';
     const cx = Phaser.Math.Clamp(x, 170, W - 170), cy = y + 46;
     const c = this.add.container(cx, cy).setDepth(77);
-    const bgc = this.add.graphics(); bgc.fillStyle(0x0B1026, 0.82).fillRoundedRect(-118, -44, 236, 88, 26).lineStyle(2, Phaser.Display.Color.HexStringToColor(col).color, 0.7).strokeRoundedRect(-118, -44, 236, 88, 26);
+    const bgc = this.add.graphics(); bgc.fillStyle(0x1A0F33, 0.82).fillRoundedRect(-118, -44, 236, 88, 26).lineStyle(2, Phaser.Display.Color.HexStringToColor(col).color, 0.7).strokeRoundedRect(-118, -44, 236, 88, 26);
     const tag = T(this, -84, 0, 'AI', 24, C.sub, { w: 900, ls: 2 });
     const num = T(this, 22, 0, '00%', 48, C.text, { w: 900 });
     c.add([bgc, tag, num]); c.setScale(0.7).setAlpha(0);
@@ -504,12 +513,12 @@ export class PlayScene extends Phaser.Scene {
     this.tweens.add({ targets: g, displayWidth: vertical ? w * 0.9 : w * 1.05, displayHeight: vertical ? h * 1.05 : h * 0.9, alpha: 0, duration: 420, ease: 'Cubic.easeOut', onComplete: () => g.destroy() });
   }
   bigWord(str, color, size, y = this.BY + BW * 0.38) {
-    const t = T(this, W / 2, y, str, size, color, { w: 900, ls: 2, stroke: '#0B1026', thick: Math.round(size * 0.1) }).setDepth(80).setScale(0.4).setAlpha(0);
+    const t = T(this, W / 2, y, str, size, color, { w: 900, ls: 2, stroke: '#1A0F33', thick: Math.round(size * 0.1) }).setDepth(80).setScale(0.4).setAlpha(0);
     this.tweens.add({ targets: t, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
     this.tweens.add({ targets: t, y: y - 80, alpha: 0, delay: 650, duration: 380, onComplete: () => t.destroy() });
   }
   floatText(x, y, str, color, size) {
-    const t = T(this, x, y, str, size, color, { w: 900, stroke: '#0B1026', thick: 6 }).setDepth(75);
+    const t = T(this, x, y, str, size, color, { w: 900, stroke: '#1A0F33', thick: 6 }).setDepth(75);
     this.tweens.add({ targets: t, y: y - 110, alpha: 0, duration: 800, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   }
   updateCombo() {
@@ -532,7 +541,7 @@ export class PlayScene extends Phaser.Scene {
 
   goalIntro() {
     const c = this.add.container(W / 2, this.BY + BW / 2).setDepth(90);
-    const g = this.add.graphics(); g.fillStyle(0x0B1026, 0.92).fillRoundedRect(-400, -150, 800, 300, 36).lineStyle(2, 0xFFFFFF, 0.12).strokeRoundedRect(-400, -150, 800, 300, 36); c.add(g);
+    const g = this.add.graphics(); g.fillStyle(0x1A0F33, 0.92).fillRoundedRect(-400, -150, 800, 300, 36).lineStyle(2, 0xFFFFFF, 0.12).strokeRoundedRect(-400, -150, 800, 300, 36); c.add(g);
     c.add(T(this, 0, -90, `레벨 ${this.n}`, 56, C.text, { w: 900 }));
     let x = -((this.b.goals.length - 1) * 220) / 2;
     for (const goal of this.b.goals) {
@@ -551,6 +560,111 @@ export class PlayScene extends Phaser.Scene {
     c.add([this.add.circle(0, 0, 42, 0xFFFFFF, 0.3).setStrokeStyle(5, 0xFFFFFF), T(this, W / 2 - sl.x, -150, '조각을 끌어 판에 놓으세요', 40, C.text, { w: 800 })]);
     this.hint = c;
     this.tweens.add({ targets: c.list[0], x: { from: 0, to: W / 2 - sl.x }, y: { from: 0, to: this.BY + BW / 2 - sl.y }, duration: 1200, repeat: -1, repeatDelay: 300, ease: 'Sine.easeInOut' });
+  }
+  // ── 클래식 도구 줄 (QA 시트 #2 아이템 · #6 광고) ──
+  makeTools() {
+    const D = 45, y = this.toolY, g = this.add.graphics().setDepth(D - 1);
+    g.fillStyle(0x1A0F33, 0.62).fillRoundedRect(36, y - 52, W - 72, 104, 34).lineStyle(2, 0xFFFFFF, 0.14).strokeRoundedRect(36, y - 52, W - 72, 104, 34);
+    this.toolBar = this.items.map((it, i) => {
+      const x = 160 + i * 232, c = this.add.container(x, y).setDepth(D), bg = this.add.graphics();
+      const ic = this.add.image(-74, 0, it.id === 'bomb' ? 'i_bomb' : 'i_line').setDisplaySize(40, 40).setTint(it.id === 'bomb' ? 0xFF9A7A : 0x7FE7FF);
+      const nm = T(this, -44, -16, it.name, 26, C.text, { ox: 0, w: 900, shadow: false }), pr = T(this, -44, 18, '', 22, C.gold, { ox: 0, w: 900, shadow: false });
+      const bc = this.add.circle(96, -34, 14, 0xFF6F8E).setStrokeStyle(2, 0x1A0F33), bt = T(this, 96, -34, '', 17, '#FFFFFF', { w: 900, shadow: false });
+      c.add([bg, ic, nm, pr, bc, bt]); c.setSize(216, 88).setInteractive({ useHandCursor: true });
+      c.on('pointerdown', () => c.setScale(0.95)); c.on('pointerout', () => c.setScale(1));
+      c.on('pointerup', () => { c.setScale(1); this.useItem(it); });
+      return { it, c, bg, pr, bc, bt };
+    });
+    if (adShown()) this.makeSwapAd(W - 36 - 24 - 190, y);
+    this.drawTools();
+  }
+  drawTools() {
+    for (const b of this.toolBar || []) {
+      const rest = itemLeft(b.it, this.used), on = this.pick && this.pick.it === b.it;
+      b.bg.clear().fillStyle(on ? 0xFF9A7A : 0xFFFFFF, on ? 0.22 : 0.08).fillRoundedRect(-108, -42, 216, 84, 26).lineStyle(on ? 3 : 2, on ? 0xFFD36A : 0xFFFFFF, on ? 1 : 0.2).strokeRoundedRect(-108, -42, 216, 84, 26);
+      b.pr.setText(rest > 0 ? `🪙${itemPrice(b.it.sku)}` : '다 썼어요').setColor(rest > 0 ? C.gold : C.dim);
+      b.bt.setText(String(rest)); b.bc.setVisible(rest > 0); b.bt.setVisible(rest > 0);
+      b.c.setAlpha(rest > 0 ? 1 : 0.45);
+    }
+  }
+  // 광고 보고 블록 바꾸기: 아래 조각 3개를 새로 (판마다 1번 · 하루 AD_DAY 번 · 소장자는 광고 없이)
+  makeSwapAd(x, y) {
+    if (this.swapBtn) this.swapBtn.destroy();
+    const own = !!bm.info.owned, dayLeft = swapAdLeft(AD_DAY), ok = !this.swapDone && dayLeft > 0 && adReady();
+    const label = this.swapDone ? '블록 바꿈 완료' : !dayLeft ? '오늘 광고 끝' : !adReady() ? '광고 준비 중' : own ? '무료로 블록 바꾸기' : '광고 보고 블록 바꾸기';
+    this.swapBtn = btn(this, x, y, 380, 84, label, () => this.swapAd(), { style: 'ad', icon: ok ? (own ? 'i_shuffle' : 'i_film') : null, size: 27, ls: 0 }).setDepth(46);
+    this.swapBtn.setEnabled(ok);
+    if (ok && !this.swapPulse) { const gl = this.add.image(x, y, 'glow').setTint(0xC77DFF).setBlendMode('ADD').setScale(4.4, 1.4).setAlpha(0.35).setDepth(44); this.swapPulse = gl; this.tweens.add({ targets: gl, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 }); }
+    if (!ok && this.swapPulse) { this.swapPulse.destroy(); this.swapPulse = null; }
+  }
+  async swapAd() {
+    if (this.busy || this.paused || this.b.over || this.pick || this.swapDone || !swapAdLeft(AD_DAY)) return;
+    this.busy = true; this.cancelPick();
+    const run = this.runId = (this.runId || 0) + 1, r = await bm.rewardedAd('blocks_swap');
+    if (run !== this.runId || !this.scene.isActive()) return;
+    this.busy = false;
+    if (!r || !r.ok) { const m = failMsg(r); if (m) toast(this, m, C.sub, this.toolY - 120); this.makeSwapAd(this.swapBtn.x, this.swapBtn.y); return; }
+    swapAdUsed(); this.swapDone = true; this.assisted = true;   /* 명예의 전당: 도움 받은 판 */
+    track('swap_ad', { game: 'blocks' });
+    this.b.redeal(); audio.play('sfx_deal', { volume: 0.6 }); this.fillTray(true); this.analyze();
+    this.bigWord('새 블록!', '#E6B8FF', 84, this.trayY - 200);
+    this.makeSwapAd(this.swapBtn.x, this.swapBtn.y);
+  }
+  useItem(it) {
+    if (this.busy || this.paused || this.b.over || this.drag) return;
+    if (this.pick) { const same = this.pick.it === it; this.cancelPick(); if (same) return; }
+    if (itemLeft(it, this.used) <= 0) return toast(this, `${it.name}은 한 판에 ${it.cap}번까지예요`, C.sub, this.toolY - 120);
+    if (!this.b.g.some(row => row.some(v => v >= 0))) return toast(this, '판이 비어 있어요 · 지금도 잘하고 있어요!', C.sub, this.toolY - 120);
+    // 칸 고르기: 판 위 안내 줄 (+ 한 줄은 가로/세로) · 다시 누르거나 취소 = 그만 (골드 그대로)
+    const L = this.add.container(0, 0).setDepth(66), bar = this.add.container(W / 2, this.BY - 66), bg = this.add.graphics();
+    bg.fillStyle(0x1A0F33, 0.94).fillRoundedRect(-490, -46, 980, 92, 30).lineStyle(3, 0xFFD36A, 0.9).strokeRoundedRect(-490, -46, 980, 92, 30);
+    bar.add([bg, T(this, it.id === 'line' ? -260 : -120, 0, it.id === 'bomb' ? '비울 곳을 눌러요 · 3×3' : '비울 줄을 눌러요', 30, C.text, { w: 900, shadow: false })]);
+    this.pick = { it, orient: 'row', L, marks: [] };
+    if (it.id === 'line') {
+      const tg = (o, x, name) => { const b2 = btn(this, x, -2, 130, 66, name, () => { this.pick.orient = o; this.pick.tg.forEach(t => t.b.setAlpha(t.o === o ? 1 : 0.5)); this.pickMark(this.pick.last); }, { style: 'indigo', size: 26 }); bar.add(b2); return { o, b: b2 }; };
+      this.pick.tg = [tg('row', 40, '가로'), tg('col', 180, '세로')]; this.pick.tg[1].b.setAlpha(0.5);
+    }
+    bar.add(btn(this, 390, -2, 170, 66, '취소', () => this.cancelPick(), { style: 'ghost', size: 26 }));
+    L.add(bar);
+    this.drawTools();
+  }
+  cancelPick() { if (!this.pick) return; this.pick.marks.forEach(m => m.destroy()); this.pick.L.destroy(); this.pick = null; this.drawTools(); }
+  cellAt(p) { const c = Math.floor((p.x - this.BX) / CELL), r = Math.floor((p.y - this.BY) / CELL); return r >= 0 && c >= 0 && r < N && c < N ? [r, c] : null; }
+  pickMark(rc) {
+    const pk = this.pick; if (!pk) return; pk.marks.forEach(m => m.destroy()); pk.marks = []; pk.last = rc; if (!rc) return;
+    for (const [y, x] of itemArea(pk.it, rc[0], rc[1], pk.orient)) pk.marks.push(this.add.rectangle(this.cx(x), this.cy(y), CELL - 8, CELL - 8, 0xFFD36A, 0.28).setStrokeStyle(4, 0xFFD36A, 0.9).setDepth(15));
+  }
+  pickHover(p) { const rc = this.cellAt(p); if (rc) this.pickMark(rc); }
+  async pickDown(p) {
+    const pk = this.pick; if (!pk || this.busy) return;
+    if (p.y < this.BY - 20) return;   /* 위 안내 줄 버튼은 그쪽에서 처리 */
+    const rc = this.cellAt(p); if (!rc) { if (p.y > this.BY + BW + 20 && Math.abs(p.y - this.toolY) > 60) this.cancelPick(); return; }
+    this.pickMark(rc);
+    const cells = itemArea(pk.it, rc[0], rc[1], pk.orient);
+    if (!cells.some(([y, x]) => this.b.g[y][x] >= 0)) return toast(this, '거기엔 비울 블록이 없어요', C.sub, this.BY - 150);
+    const it = pk.it, orient = pk.orient; this.busy = true;
+    const run = this.runId = (this.runId || 0) + 1, r = await buyUse(it.sku);
+    if (run !== this.runId || !this.scene.isActive()) return;
+    this.busy = false;
+    if (!r.ok) { const m = failMsg(r); if (m) toast(this, m, C.sub, this.BY - 150); this.cancelPick(); return; }
+    this.cancelPick();
+    this.used[it.id] = (this.used[it.id] || 0) + 1; this.assisted = true;   /* 명예의 전당: 도움 받은 판 */
+    this.applyClear(it, rc, cells, orient);
+    this.drawTools();
+  }
+  // 아이템 효과: 블록이 깨져 흩어짐 (점수 · 콤보 없음) → 판세 다시 계산
+  applyClear(it, [r0, c0], cells, orient) {
+    const out = this.b.clearCells(cells), ox = this.cx(c0), oy = this.cy(r0);
+    audio.play(it.id === 'bomb' ? 'sfx_clear_3' : 'sfx_clear_1', { volume: 0.65 }); buzz(it.id === 'bomb' ? 60 : 30);
+    if (it.id === 'bomb') { const ring = this.add.image(ox, oy, 'glow').setTint(0xFF9A7A).setBlendMode('ADD').setScale(0.4).setDepth(57); this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 420, onComplete: () => ring.destroy() }); this.cameras.main.shake(220, 0.008); }
+    else this.beam(ox, oy, orient === 'col', 0x7FE7FF);
+    for (const [y, x, col] of out) {
+      const s2 = this.cells[y][x]; this.cells[y][x] = null; const gs = this.gemS[y][x]; if (gs) { this.gemS[y][x] = null; gs.destroy(); }
+      if (!s2) continue;
+      this.shatter(s2.x, s2.y, col, ox, oy); this.burst.setParticleTint(TINT[col]); this.burst.emitParticleAt(s2.x, s2.y, 3); s2.destroy();
+    }
+    this.floatText(ox, oy - 40, it.id === 'bomb' ? '펑!' : '싹!', '#FFD36A', 64);
+    this.analyze(); this.dimUnfit();
   }
   botStep() {
     if (this.busy || this.paused || this.b.over || this.drag) return;
@@ -590,8 +704,8 @@ export class PlayScene extends Phaser.Scene {
   }
   // 받은 선물은 화면에 보이게: '★ 응원 조각 · 남은 N수'
   showHelpBadge() {
-    const y = this.BY + BW + 46;
-    const t = T(this, W / 2, y, '', 30, C.gold, { w: 800 }).setDepth(40);
+    const y = this.toolsOn ? this.trayY + 196 : this.BY + BW + 46;   /* 도구 줄이 있으면 조각 칸 아래 */
+    const t = T(this, W / 2, Math.min(H - 30, y), '', 30, C.gold, { w: 800 }).setDepth(40);
     this.helpBadge = t;
     const upd = () => {
       const left = (this.b.help || 0) - this.b.moves;
@@ -704,11 +818,12 @@ export class PlayScene extends Phaser.Scene {
     if (d.todayBest.date !== M.dayKey()) d.todayBest = { date: M.dayKey(), score: 0 };
     d.todayBest.score = Math.max(d.todayBest.score, b.score);
     const base = roundStars(b.score); d.stars += base; this.roundStars += base;   /* 판 끝 기본 별 조각 (점수 구간) */
+    const bonus = M.bestBonus(b.score, prev); if (bonus) { d.stars += bonus; this.roundStars += bonus; }   /* QA 시트 #5: 신기록 갱신 폭에 비례한 별 조각 (200점마다 1 · 2~50) */
     save();
     M.track('games'); M.track('score', b.score);
     const st = this.stats;
     roundOver();
-    this.leave('Result', { assisted: this.assisted, conts: this.conts, contGold: this.contGold, stars: this.roundStars, score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
+    this.leave('Result', { assisted: this.assisted, conts: this.conts, contGold: this.contGold, stars: this.roundStars, score: b.score, best: d.best, newBest: b.score > prev && b.score > 0, prev, bonus, lines: b.lines, combo: b.bestCombo, moves: b.moves, acc: st.n ? Math.round(st.qSum / st.n) : 0, bestMoves: st.best });
   }
   advWin() {
     audio.play('sfx_best', { volume: 0.8 }); buzz([30, 40, 60]); this.voice('levelclear', 3);
@@ -723,12 +838,12 @@ export class PlayScene extends Phaser.Scene {
     const left = this.b.goals.map(g => g.type === 'score' ? `${fmt(Math.max(0, g.target - this.b.score))}점` : `${Math.max(0, g.count - g.have)}개`).join(' · ');
     pop.content.add(T(this, 0, -90, `남은 목표 ${left}`, 34, C.sub, { w: 700 }));
     pop.content.add(btn(this, 0, 40, 520, 130, '다시 하기', () => { pop.close(); afterRound().then(() => this.scene.restart({ mode: 'adv', n: this.n })); }, { style: 'gold', icon: 'i_retry', size: 42 }));
-    pop.content.add(btn(this, 0, 180, 420, 100, '그림으로', () => { pop.close(); afterRound().then(() => this.leave('Adventure', {})); }, { style: 'ghost', size: 34 }));
+    pop.content.add(btn(this, 0, 180, 420, 100, '홈으로', () => { pop.close(); afterRound().then(() => this.leave('Home')); }, { style: 'ghost', icon: 'i_home', size: 34 }));   /* QA 시트 #8: '그림으로' → '홈으로' */
   }
-  leave(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(300, 8, 10, 24); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
+  leave(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(300, 20, 12, 40); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 
   // 뒤로가기 (One a Day): 게임 중이면 일시정지 창
-  onBack() { if (!this.b.over && !this.paused) this.pause(); return true; }
+  onBack() { if (this.pick) { this.cancelPick(); return true; } if (!this.b.over && !this.paused) this.pause(); return true; }
   pause() {
     if (this.paused || this.b.over) return;
     this.paused = true;

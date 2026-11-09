@@ -1,9 +1,9 @@
 // 보상 길: 원정마다 명성이 쌓이고 단계마다 보상 (10단계마다 전설 확정권) — 끌어서 위아래로 보기
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
 
 const ROW = 150;
 
@@ -75,7 +75,7 @@ export class RoadScene extends Phaser.Scene {
     const p = popup(this, `${k}단계까지 명성 ${fmt(Math.max(1, need))}`, 860, 700), c = p.content;
     c.add(T(this, 0, -195, '한 판마다 웨이브 × 10 + 보스 × 8 명성이 쌓여요', 26, C.sub, { w: 800 }));
     const go = (k2, data) => { p.close(); this.time.delayedCall(150, () => this.go(k2, data)); };
-    c.add(btn(this, 0, -85, 560, 120, '메인 원정 출정', () => go('Play', { mode: 'run' }), { style: 'gold', icon: 'i_play', size: 36 }));
+    c.add(btn(this, 0, -85, 560, 120, '메인 원정 입장', () => go('Play', { mode: 'run' }), { style: 'gold', icon: 'i_play', size: 36 }));
     c.add(btn(this, 0, 45, 560, 104, '오늘의 도전 · 명성 +30', () => go('Play', { mode: 'daily' }), { style: 'indigo', size: 30 }));
     c.add(btn(this, 0, 165, 560, 104, '아케이드', () => go('Arcade'), { style: 'ghost', size: 30 }));
   }

@@ -1,14 +1,15 @@
 // 은신처 성장 화면 (M3-A · v0.6) — 시설 카드 · 무기대(무기 10 · 탄약 3 · 개조 5칸) · 장비(5단 · 부적 2칸) · 상인 3 · 업적 · 난이도
 //  ui.js 의 탭이 여기를 부름. 글자 목록 대신 그림 · 단계 점 · '다음' 한 구절 · 모자란 것은 빨간 점 (QUALITY_M2 Top 7)
-import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.11';
-import { S, save } from './save.js?v=0.99.11';
-import * as E from './econ.js?v=0.99.11';
-import { A } from './assets.js?v=0.99.11';
-import { sfx, unlock } from './audio.js?v=0.99.11';
-import { COS } from './look.js?v=0.99.11';
-import * as BM from './bmflow.js?v=0.99.11';
-import * as GL from './goal.js?v=0.99.11'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
-import { costChips } from './chips.js?v=0.99.11'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
+import * as WXUI from './ui_wx.js?v=0.99.12'; /* M4-B 맵 장비 */
+import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.12';
+import { S, save } from './save.js?v=0.99.12';
+import * as E from './econ.js?v=0.99.12';
+import { A } from './assets.js?v=0.99.12';
+import { sfx, unlock } from './audio.js?v=0.99.12';
+import { COS } from './look.js?v=0.99.12';
+import * as BM from './bmflow.js?v=0.99.12';
+import * as GL from './goal.js?v=0.99.12'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
+import { costChips } from './chips.js?v=0.99.12'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -172,6 +173,7 @@ export function tabGear(ui, body) {
     ${Object.entries(GEAR).map(([g, G]) => { const cur = S.gear[g]; const nx = G.tiers[cur + 1];
       return `<div class="grow gearrow"><div><b>${G.name} ${ROMAN[cur] || ''} ${dots(cur, G.tiers.length - 1)}</b><small>${G.tiers[cur].txt}</small>${nx ? `<small class="next">다음: ${nx.txt}</small><div class="cost">${costChips(nx.cost)}</div>` : ''}</div>
         ${nx ? `<button class="btn sm ${bench >= nx.bench ? '' : 'dim'}" data-g="${g}">${bench >= nx.bench ? '제작' : `작업대 ${nx.bench}단계`}</button>` : '<small class="max">최고</small>'}</div>`; }).join('')}
+    ${WXUI.gearHtml()}
     <div class="sec">부적 <small>${slots ? `${slots}칸 · 건져 온 이야기 물건으로 만들어요` : '기억 진열장을 지으면 열려요'}</small></div>
     <div class="cslots">${[0, 1].map(i => { const k = eq[i]; return `<div class="cslot ${i < slots ? '' : 'lock'}">${k ? `<b>${CHARMS[k].name}</b><small>${CHARMS[k].txt}</small>` : `<small>${i < slots ? '빈 칸' : i === 0 ? '진열장 1단계' : '진열장 2단계'}</small>`}</div>`; }).join('')}</div>
     <div class="cgrid">${CHARM_KEYS.map(k => { const C = CHARMS[k]; const have = E.charmHave(S, k), can = E.charmCan(S, k), on = eq.includes(k);
@@ -182,6 +184,7 @@ export function tabGear(ui, body) {
     ${kl ? `<div class="sec">주방 <small>다음 출격 한 번 · 하나만</small></div>
       ${S.meal ? `<div class="note good">${MEALS[S.meal].name} 준비됨 — ${MEALS[S.meal].txt}</div>` : Object.entries(MEALS).map(([k, M]) => `<div class="grow"><div><b>${M.name}</b><small>${M.txt}</small><div class="cost">${costChips(M.cost)}</div></div><button class="btn sm ${kl >= M.lv ? '' : 'dim'}" data-meal="${k}">${kl >= M.lv ? '요리' : `주방 ${M.lv}`}</button></div>`).join('')}` : ''}`;
   body.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const g = b.dataset.g; const c = GEAR[g].tiers[S.gear[g] + 1].cost; let r = E.craftGear(S, g); if (!r.ok && r.why === 'cost' && E.lackPrice(S, c).ok) { E.buyLack(S, c); r = E.craftGear(S, g); } if (!r.ok) return why(ui, r); save(); sfx.build(); ui.toast(`${GEAR[g].name} ${ROMAN[S.gear[g]]}! ${GEAR[g].tiers[S.gear[g]].txt}`, 'good'); ui.hideout(); });
+  WXUI.gearBind(ui, body); /* M4-B 맵 장비 */
   body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const r = E.craftItem(S, b.dataset.c, 1); if (!r.ok) return why(ui, r); save(); sfx.pick(3); ui.toast(`${ITEMS[b.dataset.c].name} +1`, 'good'); ui.hideout(); });
   body.querySelectorAll('[data-meal]').forEach(b => b.onclick = () => { const r = E.cook(S, b.dataset.meal); if (!r.ok) return why(ui, r); save(); sfx.build(); ui.toast(`${MEALS[b.dataset.meal].name} 완성! 다음 출격에 효과`, 'good'); ui.hideout(); });
   body.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { sfx.ui(); charmSheet(ui, b.dataset.ch); });

@@ -1,16 +1,18 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS } from './data.js?v=0.99.11';
-import { S, save, rollDay } from './save.js?v=0.99.11';
-import * as E from './econ.js?v=0.99.11';
-import { A } from './assets.js?v=0.99.11';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.11';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.11';
-import { Wardrobe } from './wardrobe.js?v=0.99.11';
-import { grantEarned, COS } from './look.js?v=0.99.11';
-import * as BM from './bmflow.js?v=0.99.11';
-import { frac } from './chips.js?v=0.99.11'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import * as GL from './goal.js?v=0.99.11'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
-import * as G from './ui_grow.js?v=0.99.11'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
+import * as WXUI from './ui_wx.js?v=0.99.12'; /* M4-B 판 상태 5 · 맵 장비 */
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS } from './data.js?v=0.99.12';
+import { S, save, rollDay } from './save.js?v=0.99.12';
+import * as E from './econ.js?v=0.99.12';
+import { A } from './assets.js?v=0.99.12';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.12';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.12';
+import { Wardrobe } from './wardrobe.js?v=0.99.12';
+import { grantEarned, COS } from './look.js?v=0.99.12';
+import * as BM from './bmflow.js?v=0.99.12';
+import { frac } from './chips.js?v=0.99.12'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import * as GL from './goal.js?v=0.99.12'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
+import * as TU from './threat_ui.js?v=0.99.12'; /* M4-A 오늘 위협 · 주간 변주 */
+import * as G from './ui_grow.js?v=0.99.12'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -23,7 +25,7 @@ const pct = x => Math.round(x * 100) + '%';
 const WHY = { cost: '재료가 모자라요', bench: '작업대 단계가 모자라요', rack: '무기대 단계가 모자라요', busy: '공사는 한 번에 하나씩', locked: '의뢰를 먼저 끝내요', fac: '시설이 필요해요', full: '창고가 가득', have: '이미 요리가 있어요', max: '최고 단계', owned: '이미 있어요' };
 
 /* 판 상태 띠 — 판 안엔 한 구절 + 아이콘, 배율 · 자세한 설명은 출격 준비 ⓘ (v0.5.1 · 검수 Top 8) */
-export const COND_UI = { storm: ['⛈', '소리가 묻혀요'], fog: ['🌫', '가까이 와야 보여요'], clear: ['🌙', '서로 멀리 보여요'], dark: ['🔦', '발전기를 찾아요'], rapids: ['🌊', '물살이 세요'], calm: ['💧', '산소만 조심'] };
+export const COND_UI = { leak: ['💧', '수압 문이 자주 닫혀요'], bloom: ['🌿', '이끼 자리가 넓어요 — 불로 태워요'], lockdown: ['🔒', '경비 기계가 많아요'], storm: ['⛈', '소리가 묻혀요'], fog: ['🌫', '가까이 와야 보여요'], clear: ['🌙', '서로 멀리 보여요'], dark: ['🔦', '발전기를 찾아요'], rapids: ['🌊', '물살이 세요'], calm: ['💧', '산소만 조심'] };
 /* 판 안 위쪽 한 줄 (v0.5.1 · 검수 Top 1): 보스 경고(3) > 무전(2~2.6) > 판 상태 · 사건(1) — 한 번에 하나만.
  *  더 높은 것이 오면 지금 것은 0.35초 뒤 비키고(덜 보였으면 뒤로 다시 줄 섬), 같거나 낮은 것은 최대 2초 기다린 뒤 지금 것을 줄임(최소 1.2초는 보임).
  *  칭찬은 줄에 안 서고 주인공 머리 위 (ui.praise) */
@@ -212,14 +214,14 @@ export class UI {
     const open = E.openMaps(S); let mk = S.corpse ? (S.corpse.map || 'ware') : open.includes(S.mapSel) ? S.mapSel : 'ware'; this.mapKey = mk; const MP = MAPS[mk];
     const lockQ = m => QUESTS.findIndex(q => q.id === MAPS[m].unlock) + 1;
     const mapRow = MAP_KEYS.map(m => { const on = open.includes(m); return `<button class="mapbtn m-${m} ${m === mk ? 'on' : ''} ${on ? '' : 'locked'}" data-m="${m}" ${S.corpse && m !== mk ? 'disabled' : ''}><span>${MAPS[m].icon}</span><b>${MAPS[m].name}</b><small>${on ? (m === 'ware' ? '기본' : '열림') : MAPS[m].lock || `의뢰 ${lockQ(m)}에서 열려요`}</small></button>`; }).join('');
-    const exitTxt = m => m === 'tunnel' ? `${MP.exits.early}(물 닿으면 잠김) · ${MP.exits.power}(전원) · ${MP.exits.sub}` : m === 'harbor' ? `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}(신호탄 → 7초)` : `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}`;
+    const exitTxt = m => m === 'lab' ? `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}(관제 터미널 2곳 승인)` : m === 'tunnel' ? `${MP.exits.early}(물 닿으면 잠김) · ${MP.exits.power}(전원) · ${MP.exits.sub}` : m === 'harbor' ? `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}(신호탄 → 7초)` : `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}`;
     const el = h('div', 'prep', `
       <header class="topbar"><button class="back" id="back">‹</button><div class="brand"><b>출격 준비</b><small>${MP.name} · ${fmt(RAID.time)} 안에 탈출</small></div><div class="money">${shell(S.shells)}</div></header>
       <div class="maprow">${mapRow}</div>
       <div class="mapcard m-${mk}"><div class="mapart"><i class="z3"></i><i class="z2"></i><i class="z1"></i></div><div><b>${MP.name} 3단</b>
         <p>${MP.blurb}<br>출구: ${exitTxt(mk)}<br>${MP.tips}${mk !== 'ware' ? `<br><em>판마다 상태가 달라요: ${Object.keys(MP.conds).map(c => `${COND_UI[c]?.[0] || ''}${CONDS[c].name}`).join(' · ')}</em> <button class="infob" id="condInfo" aria-label="판 상태 자세히">ⓘ</button>` : ''}</p>
         ${mk !== 'ware' ? `<div class="condinfo" id="condBox" hidden>${Object.keys(MP.conds).map(c => `<p><b>${COND_UI[c]?.[0] || ''} ${CONDS[c].name}</b> ${CONDS[c].txt}</p>`).join('')}</div>` : ''}</div></div>
-      ${corpse}${this.app.story?.prepNote(mk) || ''}${G.prepGoal()}
+      ${WXUI.prepHtml(mk)}${corpse}${this.app.story?.prepNote(mk) || ''}${G.prepGoal()}${TU.prepHtml(S, mk)}
       <div class="card"><div class="fh"><b>장비</b><span class="lv">체력 ${L.hp} · 방어 ${pct(L.armor)}</span></div>
         <div class="loadout"><span><small>주무기</small><b>${w[0].name}</b></span>${w[1] ? `<span><small>보조</small><b>${w[1].name}</b></span>` : ''}<span><small>가방</small><b>${L.bag.w}×${L.bag.h} · ${L.bag.comfy}kg</b></span>${L.pet ? `<span><small>몽이 주머니</small><b>${L.pet.w}×${L.pet.h}${L.pet.safe ? ' · 지켜 줌' : ''}</b></span>` : ''}</div>
         ${meal ? `<small class="hint good">🍲 ${meal.name}: ${meal.txt}</small>` : ''}${L.kit ? `<small class="hint">창고 보너스: 연고 ${L.kit}개 공짜로 넣고 출발</small>` : ''}</div>
@@ -231,8 +233,8 @@ export class UI {
           <button class="slot ${this.safePick.length ? '' : 'on'}" data-k=""><span class="none">비움</span><small>빈 칸</small></button></div></div>
       <div class="bmrow bmprep">${BM.insureHtml()}${BM.sortieHtml()}</div>
       <button class="btn cta" id="sortie">${this.app.nolimit ? '출격! <small>(테스트 · 무제한)</small>' : S.sorties > 0 ? `출격! <small>(오늘 ${S.sorties}회 남음)</small>` : '오늘 출격 끝 — 내일 다시'}</button>`);
-    this.root.appendChild(el);
-    el.querySelectorAll('.slot').forEach(b => b.onclick = () => { this.safeTouched = true; const k = b.dataset.k; sfx.ui();
+    this.root.appendChild(el); WXUI.prepBind(this, el); /* M4-B 예보 · 맵 장비 */
+    el.querySelectorAll('.slot:not(.mg)').forEach(b => b.onclick = () => { this.safeTouched = true; const k = b.dataset.k; sfx.ui();
       if (!k) this.safePick = []; else if (this.safePick.includes(k)) this.safePick.splice(this.safePick.indexOf(k), 1);
       else { const n = this.safePick.concat(k); const bb = mkBag(L.safe[0], L.safe[1]); if (n.every(x => autoAdd(bb, mkItem(x))) && n.filter(x => x === k).length <= E.count(S, k)) this.safePick = n; else this.safePick = [k]; }
       this.prep(); });
@@ -286,7 +288,7 @@ export class UI {
     hold($('#bNade'), () => R.throwItem('nade'));
     hold($('#bSmoke'), () => R.throwItem('smoke'));
     $('#ammo').onclick = () => R.switchWeapon();
-    this.app.showHideout(false);
+    this.app.showHideout(false); TU.raidBand(this, R);
   }
   event(t, kind = '') {
     if (!$('#evt')) return; const boss = kind.split(' ').includes('boss');
@@ -325,7 +327,7 @@ export class UI {
     const w = R.w; const ah = `${w.short}${!w.melee && L.ammo && L.ammo !== 'normal' ? ' · ' + AMMO[L.ammo].short : ''}${R.ws.length > 1 ? ' ⇄' : ''}`; const ak = (pl.reload > 0 ? 'r' : w.melee ? 'm' : pl.mags[R.wi]) + ah; if (ak !== this._ak) { this._ak = ak; $('#ammo').innerHTML = (pl.reload > 0 ? '<b class="rl">장전 중</b>' : w.melee ? '<b>근접</b>' : `<b>${pl.mags[R.wi]}</b><small>/${w.mag}</small>`) + `<em>${ah}</em>`; } /* v0.6 탄약 · 근접 */
     /* 상황 버튼 */
     const act = $('#bAct'); const n = R.near; act.classList.toggle('show', !!n && !pl.searching && !pl.dead);
-    if (n) { const c = n.c; $('#actTxt').textContent = n.type === 'gen' ? '전원 켜기' : n.type === 'lamp' ? (n.L.lit ? '등불 끄기' : '등불 켜기') : n.type === 'flare' ? (n.label || '신호탄 쏘기') : n.type === 'gate' ? (n.g.door.lock === 'vault' ? (R.hasItem('vkey') ? '금고 열기' : '금고 · 열쇠 필요') : '전원 문') : c.searched ? (c.items?.length ? '다시 보기' : '빈 곳') : (c.corpse ? '내 가방 찾기' : '뒤지기'); }
+    if (n) { const c = n.c; $('#actTxt').textContent = n.type === 'mod' ? n.label /* M4-B 장치 */ : n.type === 'gen' ? '전원 켜기' : n.type === 'lamp' ? (n.L.lit ? '등불 끄기' : '등불 켜기') : n.type === 'flare' ? (n.label || '신호탄 쏘기') : n.type === 'gate' ? (n.g.door.lock === 'vault' ? (R.hasItem('vkey') ? '금고 열기' : '금고 · 열쇠 필요') : '전원 문') : c.searched ? (c.items?.length ? '다시 보기' : '빈 곳') : (c.corpse ? '내 가방 찾기' : '뒤지기'); }
     act.classList.toggle('gold', !!(n?.c?.corpse || n?.type === 'gen' || n?.type === 'flare' || (n?.type === 'gate' && R.hasItem('vkey'))));
     $('#bMed').classList.toggle('show', R.hasItem('med') || R.hasItem('bandage'));
     for (const k of ['nade', 'smoke']) { const c = R.carried().reduce((s, b) => s + b.items.filter(p => p.it.key === k).length, 0); const b = $(k === 'nade' ? '#bNade' : '#bSmoke'); b.classList.toggle('show', c > 0); $(k === 'nade' ? '#nadeN' : '#smokeN').textContent = c; }
@@ -334,7 +336,7 @@ export class UI {
     const sr = $('#search'); sr.classList.toggle('show', !!pl.searching); if (pl.searching) { sr.firstChild.style.width = (pl.searching.prog * 100) + '%'; sr.lastChild.textContent = pl.searching.txt || { gen: '전원 켜는 중…', lamp: '등불 만지는 중…', flare: '신호탄 준비…' }[pl.searching.kind] || '뒤지는 중…'; }
     const ex = $('#exitbar'); const x = R.exitHere; const showEx = !!x && x.open && !R.over; ex.classList.toggle('show', showEx); if (showEx) ex.firstChild.style.width = (x.hold / x.need * 100) + '%';
     /* 보스 체력 */
-    const B = R.boss; const bb = $('#bossbar'); const showB = B && !B.dead && B.state === 'chase'; bb.classList.toggle('show', !!showB); if (showB) bb.lastChild.firstChild.style.width = (B.hp / B.maxHp * 100) + '%';
+    const B = R.chief && !R.chief.dead && R.chief.state === 'chase' ? R.chief : R.boss; const bb = $('#bossbar'); const showB = B && !B.dead && B.state === 'chase'; if (showB && bb.firstChild.textContent !== B.D.name) bb.firstChild.textContent = B.D.name; /* M4-A 두목도 */ bb.classList.toggle('show', !!showB); if (showB) bb.lastChild.firstChild.style.width = (B.hp / B.maxHp * 100) + '%';
     this.drawArrows(R);
     if (R.over && !this.el.querySelector('.banner')) {
       const t = R.over === 'extract' ? ['탈출!', '들고 나온 건 이제 내 것'] : R.over === 'tide' ? ['물이 다 찼어요', '가방은 이 자리에 남아요'] : ['쓰러졌어요', '가방은 이 자리에 — 다음 출격에 한 번 찾을 수 있어요'];
@@ -473,7 +475,7 @@ export class UI {
     const story = this.app.story; const sh = story?.resultHtml(res) || '';
     const qdone = !story && res.quests?.length ? `<div class="card qdone">${res.quests.map(q => `<div><b>의뢰 완료 · ${q.name}</b><small>${q.unlock ? FACILITIES[q.unlock].name + ' 해금! ' : ''}보상을 받았어요</small></div>`).join('')}</div>` : '';
     const el = h('div', 'result ' + (ok ? 'ok' : 'ko'), `<div class="rscroll">
-      <div class="rh"><small>${ok ? '탈출 성공 · ' + exitName : '인양 실패'}</small><h2>${praise}</h2><small class="sub">${MP.icon} ${MP.name}${res.map && res.map !== 'ware' ? ' · ' + CONDS[res.cond].name : ''} · 가장 깊이: ${zn}${res.power ? ' · 전원 복구' : ''}${res.vaultOpened ? ' · 금고실' : ''}${res.minO2 != null ? ` · 최저 산소 ${res.minO2}` : ''}</small></div>
+      <div class="rh"><small>${ok ? '탈출 성공 · ' + exitName : '인양 실패'}</small><h2>${praise}</h2><small class="sub">${MP.icon} ${MP.name}${res.map && res.map !== 'ware' ? ' · ' + CONDS[res.cond].name : ''}${WXUI.wxName(res.wx, res.cond)} · 가장 깊이: ${zn}${res.power ? ' · 전원 복구' : ''}${res.vaultOpened ? ' · 금고실' : ''}${res.minO2 != null ? ` · 최저 산소 ${res.minO2}` : ''}</small></div>
       <div class="rstats"><div class="rval"><b data-n="${ok ? res.value : 0}">${ok ? res.value : 0}</b><small>가져온 가치</small></div><div><b>${res.killN}</b><small>처치${res.kills.boss ? ' (보스!)' : ''}</small></div><div><b>${fmt(res.time)}</b><small>걸린 시간</small></div><div><b>${res.shots ? Math.round(res.hits / res.shots * 100) : 0}%</b><small>명중</small></div></div>
       ${sh}${qdone}
       <div class="card"><div class="fh"><b>${ok ? '창고로 들어온 것' : '지킨 것 (안전 칸)'}</b><span class="lv">${list.length}개</span></div>

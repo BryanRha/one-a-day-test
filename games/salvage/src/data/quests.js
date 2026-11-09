@@ -97,12 +97,55 @@ export const BOARD = [
   { id: 'q58', giver: 'moru', kind: 'story', ch: 4, name: '공방 가는 길', txt: '가라앉은 공장 깊은 구역에 들어갔다 탈출', req: { beat: 'b_ch4', map: 'factory' }, goal: { t: 'zone', map: 'factory', zone: 2 }, reward: { shells: 180, bolt: 8 }, tip: '공장은 쇳물 웅덩이가 뜨거워요' },
   { id: 'q59', giver: 'seori', kind: 'char', ch: 4, name: '미완성 랜턴', txt: '용광로 구역에서 미완성 랜턴을 들고 탈출', req: { beat: 'b_ch4', map: 'factory' }, goal: { t: 'carry', item: 'lantern_u', map: 'factory', zone: 2 }, reward: { shells: 150, glass: 4 }, tip: '금빛 고리 상자 — 노을 랜턴과 같은 틀' },
   { id: 'q60', giver: 'moru', kind: 'boss', ch: 4, name: '공장의 감독', txt: '가라앉은 공장 보스 쓰러뜨리기', req: { prev: 'q58', map: 'factory' }, goal: { t: 'boss', map: 'factory', n: 1 }, reward: { core: 2, shells: 300 }, tip: '예고 원이 보이면 굴러서 빠져요' },
+  /* ───── v0.7 (M4-C) 의뢰 60 → 90: 4장 공장 18 · 5장 연구소 12 ─────
+   *  연결: q61(4장 끝 → 연구소 해금 'map_lab' = M4-B data/map_lab.js MAP_UNLOCK) · 검은 닻 두목(M4-A 적 키 'chief' — 없으면 안 보임)
+   *        맵 장비(M4-B MAP_GEAR — mg: S.gear[k]) · 날씨(M4-B 판 상태 — goal.conds 중 게임에 있는 게 하나도 없으면 안 보임 · res.cond 또는 res.weather 로 셈) · 연구소 지도(없으면 안 보임) */
+  /* 4장 — 연구소 여는 auto (q57 과 같은 방식) */
+  { id: 'q61', giver: 'moru', kind: 'story', ch: 4, auto: true, name: '깊은 물길로', txt: '4장 끝 — 대수문 회로의 서명', req: { map: 'lab' }, goal: { t: 'beat', id: 'b_ch4end' }, reward: { shells: 150 }, map: 'lab', tip: '파수 채널이 시작되는 곳 = 심해 연구소' },
+  /* 곰방 — 공방 사람들 · 고철 값 */
+  { id: 'q62', giver: 'gombang', kind: 'char', ch: 4, name: '공방 도장', txt: '공방 도장 2개 납품', req: { beat: 'b_ch4', map: 'factory' }, goal: { t: 'deliver', item: 'stamp', n: 2 }, reward: { shells: 160, glass: 2 }, tip: '공방 작업대에서 가끔 나와요' },
+  { id: 'q63', giver: 'gombang', kind: 'repeat', ch: 4, repeat: true, name: '주간 쇳물 고철', txt: '쇳물 찌꺼기 3개 납품 (매주)', req: { prev: 'q62', map: 'factory' }, goal: { t: 'deliver', item: 'slag', n: 3 }, reward: { shells: 70, bolt: 6 }, tip: '녹이면 볼트가 돼요 — 공방 작업대에 많아요' },
+  { id: 'q64', giver: 'gombang', kind: 'chal', ch: 4, name: '공장 시세', txt: '공장에서 가치 500 이상 들고 탈출', req: { prev: 'q62', map: 'factory' }, goal: { t: 'value', map: 'factory', n: 500 }, reward: { shells: 220, spring: 2 }, tip: '동력 코어실 상자가 값져요' },
+  /* 모루 — 공방 불 · 감독관 · 설계도 */
+  { id: 'q65', giver: 'moru', kind: 'char', ch: 4, name: '공방 불씨', txt: '공장 발전기를 켜고 탈출하기', req: { beat: 'b_ch4', map: 'factory' }, goal: { t: 'power', map: 'factory' }, reward: { wire: 8, bolt: 6 }, tip: '전원이 들어오면 컨베이어가 반출구로 데려다줘요' },
+  { id: 'q66', giver: 'moru', kind: 'char', ch: 4, name: '랜턴 설계도', txt: '랜턴 설계도 1장 납품', req: { prev: 'q65', map: 'factory' }, goal: { t: 'deliver', item: 'blueprint', n: 1 }, reward: { shells: 180, lens: 1 }, tip: '코어 보관대 · 은닉 상자에서 나와요' },
+  { id: 'q67', giver: 'moru', kind: 'boss', ch: 4, name: '다시 달군 국자', txt: '쇳물 감독관 두 번 더 쓰러뜨리기 (누적)', req: { q: 'q60', map: 'factory' }, goal: { t: 'boss', map: 'factory', n: 2 }, reward: { core: 1, shells: 220 }, tip: '내려찍은 뒤 가슴 용광로 문이 열려요 — 그때 두 배' },
+  { id: 'q68', giver: 'moru', kind: 'chal', ch: 4, name: '김 속의 감독', txt: '증기 · 정전 공장에서 감독관 쓰러뜨리기', req: { q: 'q60', map: 'factory' }, goal: { t: 'boss', map: 'factory', conds: ['steam', 'outage'], n: 1 }, reward: { core: 1, shells: 260 }, tip: '증기 속에선 감독관도 나를 잘 못 봐요' },
+  /* 느루 — 공방 식당 · 축제 */
+  { id: 'q69', giver: 'neuru', kind: 'char', ch: 4, name: '공방 도시락', txt: '하역장에서 찌그러진 도시락 통을 들고 탈출', req: { beat: 'b_ch4', map: 'factory' }, goal: { t: 'carry', item: 'lunchtin', map: 'factory', zone: 1 }, reward: { shells: 140, herb: 6 }, tip: '금빛 고리 상자 — 하역장 쪽' },
+  { id: 'q70', giver: 'neuru', kind: 'char', ch: 4, name: '등롱 유리', txt: '바다 유리 2개 납품', req: { prev: 'q69' }, goal: { t: 'deliver', item: 'gem', n: 2 }, reward: { shells: 160, cloth: 6 }, tip: '축제 등롱의 깨진 유리 — 깊은 상자에서 나와요' },
+  /* 해담 — 화상 · 공방 사람들 */
+  { id: 'q71', giver: 'haedam', kind: 'chal', ch: 4, name: '데지 말고', txt: '과열된 공장에서 탈출하기', req: { beat: 'b_ch4', map: 'factory' }, goal: { t: 'cond', map: 'factory', conds: ['overheat'] }, reward: { bandage: 2, shells: 180 }, tip: '쇳물 도랑은 굴러서 건너면 안 데어요' },
+  { id: 'q72', giver: 'haedam', kind: 'char', ch: 4, name: '공방 출근부', txt: '용광로 구역에서 출근부를 들고 탈출', req: { prev: 'q71', beat: 'b_workshop' }, goal: { t: 'carry', item: 'crewlist', map: 'factory', zone: 2 }, reward: { shells: 170, bandage: 1 }, tip: '금빛 고리 상자 — 공방 사람 일곱 이름' },
+  /* 서리 — 도감 · 녹음기 */
+  { id: 'q73', giver: 'seori', kind: 'char', ch: 4, name: '도감 마흔 칸', txt: '기억 도감 40칸 채우기', req: { prev: 'q52', beat: 'b_ch4' }, goal: { t: 'codex', n: 40 }, reward: { lens: 1, shells: 160 }, tip: '처음 들고 나온 물건이 한 칸씩' },
+  { id: 'q74', giver: 'seori', kind: 'char', ch: 4, name: '녹음기 아홉', txt: '녹음기 9개 듣기', req: { prev: 'q51', beat: 'b_ch4' }, goal: { t: 'tapes', n: 9 }, reward: { glass: 4, shells: 150 }, tip: '지도마다 셋 — 깊은 구역 상자에 가끔' },
+  /* 바람 — 검은 닻 · 여울 */
+  { id: 'q75', giver: 'baram', kind: 'char', ch: 4, name: '화약 냄새', txt: '검은 닻 화약꾼 4 쓰러뜨리기 (누적)', req: { prev: 'q55', enemy: 'bomber' }, goal: { t: 'kill', kind: 'bomber', n: 4 }, reward: { shells: 200, powder: 6 }, tip: '불병은 떨어질 자리에 원이 먼저 떠요' },
+  { id: 'q76', giver: 'baram', kind: 'boss', ch: 4, name: '검은 닻 두목', txt: '검은 닻 두목 쓰러뜨리기', req: { beat: 'b_baram', enemy: 'chief' }, goal: { t: 'kill', kind: 'chief', n: 1 }, reward: { core: 1, shells: 320 }, tip: '밤 판에 나타나요 — 부하를 먼저 떼어 내요' },
+  { id: 'q77', giver: 'baram', kind: 'char', ch: 4, name: '여울의 쪽지', txt: '코어실에서 여울의 쪽지를 들고 탈출', req: { prev: 'q75', beat: 'b_pencil' }, goal: { t: 'carry', item: 'yeoulnote', map: 'factory', zone: 3 }, reward: { shells: 220, spring: 2 }, tip: '금빛 고리 상자 — 은닉처 구석' },
+  { id: 'q78', giver: 'baram', kind: 'repeat', ch: 4, repeat: true, name: '주간 닻 배지', txt: '검은 닻 배지 2개 납품 (매주)', req: { prev: 'q55' }, goal: { t: 'deliver', item: 'anchorpin', n: 2 }, reward: { shells: 80, powder: 4 }, tip: '배지가 줄면 장부의 번호도 줄어요' },
+  /* 5장 — 심해 연구소 (지도 = M4-B data/map_lab.js · 없으면 안 보임) */
+  { id: 'q79', giver: 'seori', kind: 'char', ch: 5, name: '연구원 출입증', txt: '연구동 입구에서 연구원 출입증을 들고 탈출', req: { beat: 'b_ch5', map: 'lab' }, goal: { t: 'carry', item: 'labcard', map: 'lab', zone: 1 }, reward: { shells: 200, glass: 3 }, tip: '금빛 고리 상자 — 입구 쪽 서랍장' },
+  { id: 'q80', giver: 'seori', kind: 'char', ch: 5, name: '도감 쉰 칸', txt: '기억 도감 50칸 채우기', req: { prev: 'q73', beat: 'b_tank' }, goal: { t: 'codex', n: 50 }, reward: { lens: 2, shells: 200 }, tip: '연구소 물건도 한 칸씩' },
+  { id: 'q81', giver: 'seori', kind: 'char', ch: 5, name: '보관 목록', txt: '관제실에서 보관 목록 출력지를 들고 탈출', req: { prev: 'q79', beat: 'b_pasu', map: 'lab' }, goal: { t: 'carry', item: 'holdlist', map: 'lab', zone: 3 }, reward: { glass: 6, shells: 260 }, tip: '금빛 고리 상자 — 기록 보관함' },
+  { id: 'q82', giver: 'pasu', kind: 'story', ch: 5, name: '전력 복구 요망', txt: '연구소 발전기를 켜고 탈출하기', req: { beat: 'b_mother', map: 'lab' }, goal: { t: 'power', map: 'lab' }, reward: { wire: 10, shells: 200 }, tip: '파수의 무전: "전력 부족. 보관품 손상 우려."' },
+  { id: 'q83', giver: 'pasu', kind: 'story', ch: 5, name: '반환 요청', txt: '작은 금고 1개 납품 (주인에게 반환)', req: { beat: 'b_pasu' }, goal: { t: 'deliver', item: 'chest', n: 1 }, reward: { shells: 260, core: 1 }, tip: '깊은 구역 보물 상자에서 나와요' },
+  { id: 'q84', giver: 'haedam', kind: 'char', ch: 5, name: '해독 필터', txt: '맵 장비 해독 필터 만들기', req: { beat: 'b_moss' }, goal: { t: 'gear', k: 'filter', lv: 1, mg: true }, reward: { bandage: 3, shells: 200 }, tip: '독수 판: 독이 1/3만 올라요 — 출격 준비에서 고르기' },
+  { id: 'q85', giver: 'haedam', kind: 'chal', ch: 5, name: '독물 속으로', txt: '독수가 퍼진 판에서 탈출하기', req: { beat: 'b_tank' }, goal: { t: 'cond', conds: ['toxic'] }, reward: { bandage: 2, herb: 8, shells: 200 }, tip: '독물 칸은 짧게 지나요 — 연고를 손에' },
+  { id: 'q86', giver: 'baram', kind: 'chal', ch: 5, name: '얼음 물길', txt: '한파 판에서 탈출하기', req: { beat: 'b_tank' }, goal: { t: 'cond', conds: ['cold'] }, reward: { cloth: 8, shells: 200 }, tip: '물에 오래 있으면 몸이 굳어요' },
+  { id: 'q87', giver: 'baram', kind: 'boss', ch: 5, name: '두목 한 번 더', txt: '검은 닻 두목 두 번 더 (누적)', req: { prev: 'q76', beat: 'b_mother' }, goal: { t: 'kill', kind: 'chief', n: 2 }, reward: { core: 1, shells: 380 }, tip: '두목이 휘파람 불면 부하가 옆으로 돌아요' },
+  { id: 'q88', giver: 'moru', kind: 'char', ch: 5, name: '방한 잠수복', txt: '맵 장비 방한 잠수복 만들기', req: { beat: 'b_ch5' }, goal: { t: 'gear', k: 'drysuit', lv: 1, mg: true }, reward: { spring: 3, shells: 180 }, tip: '연구소는 춥다 — 한파 판에서 체온이 1/3만 줄어요' },
+  { id: 'q89', giver: 'gombang', kind: 'repeat', ch: 5, repeat: true, name: '주간 심해 고철', txt: '심해 배터리 2개 납품 (매주)', req: { beat: 'b_ch5' }, goal: { t: 'deliver', item: 'battery', n: 2 }, reward: { shells: 90, wire: 4 }, tip: '터널 · 연구소 기계 상자에 있어요' },
+  { id: 'q90', giver: 'neuru', kind: 'char', ch: 5, name: '연구소 머그', txt: '연구소에서 국 주문 쪽지 붙은 머그를 들고 탈출', req: { beat: 'b_moss', map: 'lab' }, goal: { t: 'carry', item: 'mug', map: 'lab', zone: 2 }, reward: { shells: 200, herb: 6 }, tip: '금빛 고리 상자 — 수조 옆 휴게실' },
 ];
-/* 의뢰 60 = 본 사슬 28 + 판 의뢰 32 */
+/* 의뢰 90 = 본 사슬 28 + 판 의뢰 62 (v0.6 32 + v0.7 30) */
 export const QALL = [...QUESTS, ...BOARD];
 export const QBY = Object.fromEntries(QALL.map(q => [q.id, q]));
 /* 가라앉은 공장 지도를 여는 의뢰 — 끝내면 MAPS.factory.unlock(M3-B 'map_factory')을 done 에 넣음 (board.js) */
 export const FACTORY_UNLOCK = 'q57';
+/* 심해 연구소 지도를 여는 의뢰 (v0.7 · 4장 끝) — 끝내면 MAPS.lab.unlock(M4-B 'map_lab')을 done 에 */
+export const LAB_UNLOCK = 'q61';
 
 /* ───── 이야기 물건 (cat memo · M3-C) — 열린 이야기 걸음 · 판 의뢰가 그 지도 · 구역 상자 하나에 넣음 · 들고 나오면 창고 대신 기억 도감 ───── */
 export const STORY_ITEMS = {
@@ -113,4 +156,9 @@ export const STORY_ITEMS = {
   recipe:    { name: '레시피 반쪽',   cat: 'memo', w: 1, h: 1, wt: 0.1, val: 1, model: 'ticket', color: '#f0e2c0', desc: '찢어진 국 레시피 위쪽 반.' },
   dutylog:   { name: '역무원 근무표', cat: 'memo', w: 1, h: 1, wt: 0.2, val: 1, model: 'book',   color: '#c9b07a', desc: '마지막 열차 날의 근무표.' },
   yarn:      { name: '털실 뭉치',     cat: 'memo', w: 1, h: 1, wt: 0.2, val: 1, model: 'orbS',   color: '#e8d6b0', desc: '크림색 털실. 몽이 목도리와 같은 색.' },
+  /* v0.7 (M4-C) 4장 공장 · 5장 연구소 (연구소 이야기 물건 4 — coralnote · noeulrec · holdlist · labcard — 는 M4-B data/map_lab.js) */
+  lunchtin:  { name: '찌그러진 도시락 통', cat: 'memo', w: 1, h: 1, wt: 0.4, val: 1, model: 'can_a', color: '#b9c2c8', desc: '뚜껑에 이름 일곱이 긁혀 있다.' },
+  crewlist:  { name: '공방 출근부',   cat: 'memo', w: 1, h: 1, wt: 0.2, val: 1, model: 'book',   color: '#c9a36a', desc: '축제 날 출근 칸이 다 차 있다.' },
+  yeoulnote: { name: '여울의 쪽지',   cat: 'memo', w: 1, h: 1, wt: 0.1, val: 1, model: 'ticket', color: '#d8d0c0', desc: '삐뚤빼뚤한 글씨. 바람에게.' },
+  mug:       { name: '연구소 머그',   cat: 'memo', w: 1, h: 1, wt: 0.3, val: 1, model: 'can_b',  color: '#f0a060', desc: '손잡이에 국 주문 쪽지가 감겨 있다.' },
 };

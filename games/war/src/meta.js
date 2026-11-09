@@ -1,7 +1,7 @@
 // 진행 · 재방문: 계급(경험치) · 캠페인 별 · 지휘관 해금 · 연속 출석 · 오늘의 미션 · 오늘의 작전
-import { load, save } from './save.js?v=0.99.11';
-import { MAPS, WAR } from './core/maps.js?v=0.99.11';
-import { JOINS } from './story.js?v=0.99.11';
+import { load, save } from './save.js?v=0.99.12';
+import { MAPS, WAR } from './core/maps.js?v=0.99.12';
+import { JOINS } from './story.js?v=0.99.12';
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
@@ -53,7 +53,7 @@ const POOL = [
   { id: 'build6', kind: 'build', goal: 6, text: '유닛 6기 생산', reward: 2 },
   { id: 'power1', kind: 'power', goal: 1, text: '지휘관 필살기 1번', reward: 2 },
   { id: 'star3', kind: 'stars3', goal: 1, text: '별 3개로 승리', reward: 3 },
-  { id: 'daily', kind: 'daily', goal: 1, text: '오늘의 작전 참여', reward: 2 },
+  { id: 'daily', kind: 'daily', goal: 1, text: '특수 작전 참여', reward: 2 },
 ];
 function pick(day) {
   let h = 0; for (const ch of day) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -99,7 +99,8 @@ export function finish(r) {
   d.battles++; if (r.win) d.wins++; d.kills += r.kills; d.captures += r.captures;
   let stars = 0, newStars = 0, unlocked = null;
   if (r.mode === 'campaign' && st) {
-    stars = starsOf(r, st.par); const prev = d.stars[st.id] || 0;
+    stars = starsOf(r, st.par); if (r.auto) stars = Math.min(stars, 1);   /* 자동 작전은 승리 별만 */
+    const prev = d.stars[st.id] || 0;
     if (stars > prev) { newStars = stars - prev; d.stars[st.id] = stars; }
     if (r.win && st.unlockCo && !d.cos[st.unlockCo]) { d.cos[st.unlockCo] = 1; unlocked = st.unlockCo; }
     if (r.win && (!d.bestDays[st.id] || r.day < d.bestDays[st.id])) d.bestDays[st.id] = r.day;

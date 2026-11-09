@@ -1,9 +1,9 @@
 // BM 화면 조각: 힌트 광고 창 · 하트 이어하기 창 · 다음 화 바로 보기 창 · 응원 선물 창
 //   감정 원칙: 칭찬 먼저 → 희망 한 줄 → 카운트다운 8초+ → 끝나면 조용히 결과로 · 광고 버튼 옆엔 같은 크기로 가격
-import { W, H } from './config.js?v=0.99.11';
-import { T, C, btn, popup, toast } from './ui.js?v=0.99.11';
-import { audio } from './audio.js?v=0.99.11';
-import { bm, oadOn, owner, price, adLeft, adLabel, watchAd, failText, waitLeft, fmtWait, buyNext, nextPrice, track, HINT_COST } from './bm.js?v=0.99.11';
+import { W, H } from './config.js?v=0.99.12';
+import { T, C, btn, popup, toast } from './ui.js?v=0.99.12';
+import { audio } from './audio.js?v=0.99.12';
+import { bm, oadOn, owner, price, adLeft, adLabel, watchAd, failText, waitLeft, fmtWait, buyNext, nextPrice, track, HINT_COST, skipShow, skipByAd } from './bm.js?v=0.99.12';
 
 // 코인이 모자랄 때 힌트: [광고 보고 힌트] [● 10 코인] (원어데이 밖 · 광고 다 씀이면 예전처럼 안내만)
 export function hintOffer(sc, coins, onGet, onClose) {
@@ -56,10 +56,11 @@ export function continueOffer(sc, { found, total, nth = 0 }, onRevive, onGiveUp)
   return p;
 }
 
-// 다음 화 기다리기 창: 남은 시간 · [🪙50 바로 보기] [기다릴게요]
+// 다음 화 기다리기 창: 남은 시간 · [광고 보고 바로 보기] [🪙N 바로 보기] (같은 크기) · 아래 [기다릴게요]
+//   광고 바로 보기 = 4화부터 하루 2번 (QA 시트 #7) · 둘 다 10초 미만이면 숨김 · 둘 다 없으면 [기다릴게요] 하나
 export function nextOffer(sc, ep, epNoText, onOpen) {
-  const ms = waitLeft(ep);
-  const p = popup(sc, 880, 660);
+  const ms = waitLeft(ep), g0 = ms === Infinity ? 0 : nextPrice(ms), adOk = ms !== Infinity && skipShow(ep), n = (g0 ? 1 : 0) + (adOk ? 1 : 0);
+  const p = popup(sc, 880, n ? 800 : 660);
   p.content.add(T(sc, 0, -250, `${epNoText}화 · ${ep.title}`, 40, C.ink, { w: 900, wrap: 800 }));
   p.content.add(T(sc, 0, -190, ep.teaser, 26, '#C25A80', { w: 800, wrap: 780 }));
   if (ms === Infinity) {
@@ -72,15 +73,21 @@ export function nextOffer(sc, ep, epNoText, onOpen) {
   p.content.add(T(sc, 0, 40, '기다리면 언제나 무료 · 기다리기 싫다면 바로 볼 수도 있어요', 22, C.dim, { w: 800, wrap: 760 }));
   let busy = false;
   /* 바로 보기 = 남은 시간 비례 (🪙50 × 남은 비율) · 값은 1초마다 따라 내려감 · 10초 미만이면 버튼 없이 '곧 열려요' */
-  const g0 = nextPrice(ms), two = !!g0;
-  p.content.add(btn(sc, two ? -200 : 0, 180, 360, 120, '기다릴게요', () => p.close(), { style: 'cream', size: 30 }));
-  const nb = two ? btn(sc, 200, 180, 360, 120, `🪙${g0} 바로 보기`, async () => {
+  const gx = adOk ? 200 : 0;
+  p.content.add(btn(sc, 0, n ? 310 : 180, n ? 320 : 360, n ? 96 : 120, '기다릴게요', () => p.close(), { style: 'cream', size: n ? 28 : 30 }));
+  const ab = adOk ? btn(sc, g0 ? -200 : 0, 170, 360, 120, adLabel('바로 보기'), async () => {
+    if (busy) return; busy = true; const r = await skipByAd(ep); busy = false;
+    if (!r.ok) { if (r.reason === 'open') { p.close(); return onOpen(); } const m = failText(r); if (m) toast(sc, m); return; }
+    audio.play('sfx_clear', { volume: 0.5 }); p.close(); toast(sc, '다음 화가 열렸어요!'); onOpen();
+  }, { size: 30 }) : null;
+  if (ab) { p.content.add(ab); p.content.add(T(sc, g0 ? -200 : 0, 250, `오늘 ${adLeft('skip')}번 남음`, 20, C.dim, { w: 800 })); }
+  const nb = g0 ? btn(sc, gx, 170, 360, 120, `🪙${g0} 바로 보기`, async () => {
     if (busy) return; busy = true; const r = await buyNext(ep); busy = false;
     if (!r.ok) { if (r.reason === 'open') { p.close(); return onOpen(); } const m = failText(r); if (m) toast(sc, m); return; }
     audio.play('sfx_clear', { volume: 0.5 }); p.close(); onOpen();
   }, { style: 'gold', size: 30 }) : null;
   if (nb) p.content.add(nb);
-  const tick = sc.time.addEvent({ delay: 1000, loop: true, callback: () => { if (!tt.scene) return tick.remove(); const m = waitLeft(ep); if (m <= 0) { tick.remove(); p.close(); toast(sc, '다음 화가 열렸어요!'); onOpen(); } else { tt.setText(`${fmtWait(m)} 뒤 무료로 열려요`); if (nb && nb.scene && !busy) { const g = nextPrice(m); if (g) nb.setLabel(`🪙${g} 바로 보기`); else nb.setVisible(false); } } } });
+  const tick = sc.time.addEvent({ delay: 1000, loop: true, callback: () => { if (!tt.scene) return tick.remove(); const m = waitLeft(ep); if (m <= 0) { tick.remove(); p.close(); toast(sc, '다음 화가 열렸어요!'); onOpen(); } else { tt.setText(`${fmtWait(m)} 뒤 무료로 열려요`); if (nb && nb.scene && !busy) { const g = nextPrice(m); if (g) nb.setLabel(`🪙${g} 바로 보기`); else nb.setVisible(false); } if (ab && ab.scene && !busy && m < 10e3) ab.setVisible(false); } } });
   return p;
 }
 

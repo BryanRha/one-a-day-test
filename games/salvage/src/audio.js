@@ -83,6 +83,8 @@ const ROOMS = {
   tunnel: { len: 3.0, rt: 2.4, damp: 1.3, flutter: 19, er: [9, 19, 28], erA: 0.4, ring: [[92, 0.6], [151, 0.4]], send: 0.62 },
   /* 가라앉은 공장(M3-B): 높은 쇠 지붕 큰 홀 — 늦은 반사 · 쇠 울림 · 꼬리 김 */
   factory: { len: 2.6, rt: 1.9, damp: 1.5, er: [14, 23, 37, 52, 71, 95], erA: 0.5, ring: [[118, 0.45], [263, 0.35], [541, 0.2]], send: 0.55 },
+  /* 심해 연구소(M4-B): 넓은 유리 · 타일 홀 — 늦고 넓은 반사 · 차가운 높은 울림 · 꼬리 가장 김 */
+  lab: { len: 3.4, rt: 2.8, damp: 1.7, er: [17, 29, 46, 68, 97, 131], erA: 0.42, ring: [[523, 0.22], [1046, 0.14], [1568, 0.08]], send: 0.62 },
 };
 const IRS = {}; let roomNow = null, roomG = null;
 function smear(d, at, a, w) { for (let k = 0; k < w; k++) { const i = at + k; if (i >= 0 && i < d.length) d[i] += a * Math.exp(-k / (w * 0.35)) * (1 - 0.5 * Math.random()); } }
@@ -294,6 +296,21 @@ export const sfx = {
     thud(t, 105 * k, rnd(0.04, 0.07), 0.06); nz({ t, kind: 'pink', dur: rnd(0.02, 0.04), ft: 'highpass', ff: 2200 * k, peak: 0.012 });
     if (m === 'harbor') os({ t, f0: 210 * k, f1: 170 * k, dur: 0.06, peak: 0.03, wave: 'triangle', lp: 900 });
     else if ((m === 'tunnel' || m === 'factory') && Math.random() < 0.45) metal(t, rnd(900, 1250), 0.05, 0.006, 0, 0.12, 0.3); },
+  /* M4-B 심해 연구소: 수압 문(삑삑 · 쿵 · 쉬익) · 배양조 유리(톡 · 와장창) · 파수 신호음(두 음 · 차갑게 울림) · 경보 · 포자 · 수압 탄 · 덩굴 / 판 상태: 떨림(한파) · 독 */
+  doorWarn(pan = 0) { if (!ctx) return; const t = now(); for (let i = 0; i < 3; i++) os({ t: t + i * 0.28, f0: 1320, dur: 0.12, peak: 0.07, wave: 'square', lp: 2600, pan, j: 0 }); },
+  doorShut(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.35, a: 0.02, ft: 'bandpass', ff: 2400, ff1: 900, q: 0.8, peak: 0.12, pan }); thud(t + 0.3, 70, 0.3, 0.32, pan); metal(t + 0.3, 210, 0.7, 0.05, pan, 0.4, 0.4); },
+  doorOpen(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'white', dur: 0.5, a: 0.03, ft: 'bandpass', ff: 3200, ff1: 1600, q: 0.9, peak: 0.1, pan, wet: 0.3 }); clk(t, 900, 0.08, pan); },
+  glassTick() { if (!ctx) return; const t = now(); metal(t, rnd(2600, 3400), 0.18, 0.04, 0, 0.2, 1); },
+  glass() { if (!ctx) return; const t = now(); for (let i = 0; i < 9; i++) metal(t + i * rnd(0.01, 0.05), rnd(2200, 5200), rnd(0.2, 0.5), 0.05, rnd(-0.5, 0.5), 0.3, 1); nz({ t, kind: 'white', dur: 0.35, ft: 'highpass', ff: 2500, peak: 0.22 }); nz({ t: t + 0.05, kind: 'brown', dur: 0.9, a: 0.04, ft: 'lowpass', ff: 700, ff1: 250, peak: 0.35, wet: 0.3 }); for (let i = 0; i < 6; i++) plip(t + 0.2 + i * rnd(0.06, 0.15), rnd(500, 900), 0.03, rnd(-0.4, 0.4), 0.3); },
+  beacon() { if (!ctx) return; const t = now(); duck(0.5, 1.4); mar(t, MIDI(81), 0.12, 0.7, 0, 0.5); mar(t + 0.22, MIDI(88), 0.1, 1.1, 0, 0.6); os({ t, f0: MIDI(57), dur: 1.0, peak: 0.05, wave: 'triangle', wet: 0.6, j: 0 }); },
+  alarm(pan = 0) { if (!ctx) return; const t = now(); for (let i = 0; i < 4; i++) os({ t: t + i * 0.32, f0: 880, f1: 660, glide: 0.28, dur: 0.3, peak: 0.08, wave: 'sawtooth', lp: 2200, pan, wet: 0.3, j: 0 }); },
+  sporeWarn(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.7, a: 0.5, ft: 'bandpass', ff: 500, ff1: 1400, q: 1.2, peak: 0.07, pan }); for (let i = 0; i < 4; i++) plip(t + i * 0.16, rnd(300, 500), 0.03, pan, 0.2); },
+  spore(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.45, a: 0.01, ft: 'lowpass', ff: 1800, ff1: 400, peak: 0.28, pan, wet: 0.25 }); thud(t, 110, 0.12, 0.12, pan); },
+  beamWarn(pan = 0) { if (!ctx) return; const t = now(); os({ t, f0: 300, f1: 1800, glide: 0.6, dur: 0.65, peak: 0.05, wave: 'sawtooth', lp: 2400, pan, j: 0 }); },
+  beam(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'white', dur: 0.22, ft: 'bandpass', ff: 3000, ff1: 900, q: 1, peak: 0.25, pan }); thud(t, 160, 0.1, 0.18, pan); os({ t, f0: 1400, f1: 300, dur: 0.18, peak: 0.06, wave: 'square', lp: 2000, pan }); },
+  lash() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.25, a: 0.12, ft: 'bandpass', ff: 600, ff1: 1600, q: 0.8, peak: 0.2 }); nz({ t: t + 0.2, kind: 'brown', dur: 0.6, ft: 'lowpass', ff: 500, ff1: 150, peak: 0.45, wet: 0.35 }); },
+  shiver() { if (!ctx) return; const t = now(); for (let i = 0; i < 8; i++) clk(t + i * 0.045, 2600 + (i % 2) * 400, 0.04); nz({ t, kind: 'white', dur: 0.5, a: 0.1, ft: 'highpass', ff: 5000, peak: 0.05 }); },
+  toxic() { if (!ctx) return; const t = now(); for (let i = 0; i < 7; i++) plip(t + i * rnd(0.05, 0.11), rnd(180, 380), 0.05, rnd(-0.3, 0.3), 0.15); os({ t, f0: 140, f1: 90, dur: 0.6, peak: 0.06, wave: 'triangle' }); },
   /* M3-B 공장 증기: 예고(작게 칙칙) · 뿜음(쉬익 길게) · 쇳물 붓기(끓음) */
   steamWarn(pan = 0) { if (!ctx) return; const t = now(); for (let i = 0; i < 4; i++) nz({ t: t + i * 0.18, dur: 0.05, ft: 'bandpass', ff: 4200, q: 1.5, peak: 0.05 + i * 0.015, pan }); },
   steam(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'white', dur: 1.6, a: 0.04, ft: 'bandpass', ff: 4800, ff1: 2200, q: 0.7, peak: 0.22, pan, wet: 0.3 }); nz({ t, kind: 'pink', dur: 0.6, a: 0.02, ft: 'highpass', ff: 1500, peak: 0.12, pan }); },
@@ -395,8 +412,8 @@ for (const k of Object.keys(sfx)) { const fn = sfx[k], tuned = TUNED.test(k), g 
   sfx[k] = function (...a) { if (!ctx) return; const prev = EV; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; try { return fn.apply(this, a); } finally { EV = prev; } }; }
 
 /* 지도 환경음 (판 중에만 · 배경음을 꺼도 남음) — assets/audio/env.js 를 판 시작 때 늦게 받음 · 구역 · 날씨 · 정전 · 급류 · 침수 따라 바뀜 */
-function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.11').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
-const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
+function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.12').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
+const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', wx: r?.wx || 'none', /* M4-B 판 상태 → 날씨 소리 */ dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
 export function ambience(on) {
   ambOn = !!on; if (!ctx) return; /* 소리가 아직 안 풀렸으면 기억만 → 첫 탭 뒤 tick 이 받음 */
   if (on) loadEnv(); else if (env) env.stop(ctx.currentTime);
@@ -408,7 +425,7 @@ function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gai
    장면: 은신처(처음 · 하루 끝) · 침수 창고 · 밤의 항구 · 해저 터널 · 보스전(지도 색)
    긴장 단계: 0 평소 → 1 적 발견(쫓는 적이 있음 · 4초 여운) → 2 탈출 카운트다운(물 차기 1분 전) */
 let seenRaid = false, chaseT = 0;
-function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.11').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.12').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
 function scene() {
   const r = R();
   if (!r || !r.alive) return { id: seenRaid ? 'dusk' : 'hideout', lv: 0 };

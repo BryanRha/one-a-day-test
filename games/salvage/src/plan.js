@@ -3,8 +3,9 @@
 //  ※ 'ware'(침수 창고)는 v0.3 과 같은 seed → 같은 지도 (지난번 쓰러진 자리를 다시 열어야 함) — 새 난수는 다른 지도 갈래 안에서만 뽑음
 //  1칸(tile) = 4m · 방 = 4×4칸(16m) · 격자 3열 × 7행 · 아래(+z)가 카메라 쪽 · 시작은 맨 아래 가운데
 //  문 잠금: 창고→기관실 '전원 문'(발전기) · 금고실 문(금고 열쇠)
-import { ZONES, LOOT_TABLE, MAPS, CONDS, ENEMIES } from './data.js?v=0.99.11';
-import { F_COVERS, F_DECOS, F_SOLID, factoryRoom, factoryExits, factorySquad, noAnchor } from './plan_factory.js?v=0.99.11'; /* M3-B 가라앉은 공장 */
+import { ZONES, LOOT_TABLE, MAPS, CONDS, ENEMIES } from './data.js?v=0.99.12';
+import { F_COVERS, F_DECOS, F_SOLID, factoryRoom, factoryExits, factorySquad, noAnchor } from './plan_factory.js?v=0.99.12'; /* M3-B 가라앉은 공장 */
+import { L_TYPES, L_COVERS, L_DECOS, L_SOLID, labPre, labRoom, labExits, labFoes } from './plan_lab.js?v=0.99.12'; /* M4-B 심해 연구소 */
 
 export const T = 4, RT = 4, COLS = 3, ROWS = 7, RS = T * RT;
 export const zoneOfRow = r => (r >= 5 ? 1 : r >= 2 ? 2 : 3);
@@ -18,21 +19,22 @@ const TYPES = {
   harbor: { 1: ['pier', 'pier', 'shed', 'pier'], 2: ['yard', 'yard', 'office', 'yard'], 3: ['crane', 'yard', 'crane'], boss: 'crane' },
   tunnel: { 1: ['platform', 'hall', 'platform'], 2: ['track', 'passage', 'track', 'passage'], 3: ['passage', 'control', 'track'], boss: 'reservoir' },
   factory: { 1: ['loading', 'loading', 'store', 'loading'], 2: ['furnace', 'conveyor', 'foundry', 'conveyor', 'workshop'], 3: ['core', 'fcontrol', 'core'], boss: 'crucible' }, /* M3-B 가라앉은 공장 */
+  lab: L_TYPES, /* M4-B 심해 연구소 */
 };
 const COVERS = { dock: ['k_cont_a', 'k_cont_b', 'crates', 'barrels', 'cont'], storage: ['crates', 'k_crate', 'k_boxwide', 'pallet_s', 'box_large'], office: ['table', 'cabinet', 'box_large', 'k_screen'], pump: ['k_machine', 'k_hopper', 'k_tank', 'barrels'], cold: ['crate_r', 'k_crate', 'box_large'], engine: ['k_machine', 'k_tank', 'k_hopper', 'k_boxwide'], vault: ['shelf', 'trunk', 'box_large'],
   pier: ['barrels', 'crates', 'h_cont_c', 'k_cont_a', 'h_tank'], shed: ['crates', 'k_crate', 'box_large', 'h_cont_c'], yard: ['k_cont_a', 'k_cont_b', 'h_cont_c', 'cont', 'crates'], crane: ['k_cont_a', 'h_tank', 'k_machine', 'k_boxwide'],
   platform: ['t_bench', 'cabinet', 'box_large', 't_bench'], hall: ['t_machine', 'box_large', 'cabinet', 't_bench'], track: ['k_crate', 'k_boxwide', 't_machine'], passage: ['t_machine', 'k_tank', 'barrels'], control: ['t_machine', 'k_screen', 'cabinet', 'k_machine'], reservoir: ['k_tank', 't_machine'],
-  ...F_COVERS };
+  ...F_COVERS, ...L_COVERS };
 const DECOS = { pier: ['h_planks', 'h_fish', 'h_stand', 'k_bucket', 'can_a'], shed: ['bottle_b', 'trunk', 'can_a', 'h_fish'], yard: ['box_a', 'cont_a', 'pallet', 'h_planks'], crane: ['h_magnet', 'k_pipe', 'k_bucket', 'h_planks'],
   platform: ['can_a', 'box_a', 't_lever', 'bottle_b', 't_sign'], hall: ['can_a', 'box_a', 't_sign', 'trunk'], track: ['t_pipe', 'k_bucket', 't_lever', 'can_a'], passage: ['t_pipe', 'k_bucket', 't_lever'], control: ['t_pipe', 't_lever', 'k_screen'], reservoir: ['t_pipe', 'k_bucket'],
-  ...F_DECOS };
+  ...F_DECOS, ...L_DECOS };
 /* 해저 터널 '좁은 통로': 방 네 모서리 칸(4×4m)을 막아 + 모양 통로(폭 8m)만 남김 — 문(가운데 두 칸)은 늘 통로 위 */
 const NARROW = { passage: 1, platform: 1, control: 1 };
 export const mapOf = k => MAPS[k] ? k : 'ware';
 /* 판정 크기(엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 (map.js 가 그대로 씀 · node 시험의 길 찾기 검사도 같은 값) */
-export const SOLID = { h_cont_c: [1.1, 2.4, 1], h_tank: [1.6, 1.5, 1], t_machine: [0.9, 1.2, 1], t_bench: [1.1, 0.45, 0], k_cont_a: [1.15, 2.45, 1], k_cont_b: [1.15, 2.45, 1], k_machine: [0.9, 1.1, 1], k_hopper: [0.9, 0.9, 1], k_tank: [1.7, 1.05, 1], k_boxwide: [0.75, 1.25, 1], k_crate: [0.7, 1.25, 1], k_screen: [0.75, 0.4, 1], crates: [1.1, 1.1, 1], box_large: [0.8, 0.8, 1], pallet_s: [1, 1, 1], barrel: [0.9, 0.9, 1], barrels: [0.95, 0.55, 1], cont: [1.65, 1.65, 1], table: [1, 1, 0], cabinet: [1.05, 0.55, 1], crate_r: [1, 1, 1], keg: [0.9, 1, 1], chest: [0.85, 0.75, 1], locker: [1.05, 0.55, 1], crate: [0.8, 0.8, 1], shelf: [1.4, 0.5, 1], trunk: [0.8, 0.5, 1], ...F_SOLID };
+export const SOLID = { h_cont_c: [1.1, 2.4, 1], h_tank: [1.6, 1.5, 1], t_machine: [0.9, 1.2, 1], t_bench: [1.1, 0.45, 0], k_cont_a: [1.15, 2.45, 1], k_cont_b: [1.15, 2.45, 1], k_machine: [0.9, 1.1, 1], k_hopper: [0.9, 0.9, 1], k_tank: [1.7, 1.05, 1], k_boxwide: [0.75, 1.25, 1], k_crate: [0.7, 1.25, 1], k_screen: [0.75, 0.4, 1], crates: [1.1, 1.1, 1], box_large: [0.8, 0.8, 1], pallet_s: [1, 1, 1], barrel: [0.9, 0.9, 1], barrels: [0.95, 0.55, 1], cont: [1.65, 1.65, 1], table: [1, 1, 0], cabinet: [1.05, 0.55, 1], crate_r: [1, 1, 1], keg: [0.9, 1, 1], chest: [0.85, 0.75, 1], locker: [1.05, 0.55, 1], crate: [0.8, 0.8, 1], shelf: [1.4, 0.5, 1], trunk: [0.8, 0.5, 1], ...F_SOLID, ...L_SOLID };
 
-export function plan(seed, mapKey = 'ware') {
+export function plan(seed, mapKey = 'ware', opt = {}) { /* opt.cond: 판 예보로 지도 상태를 정함(항구 — M4-B 판 상태 5) · 없으면 seed 로 */
   const map = mapOf(mapKey); const ware = map === 'ware'; const MZ = MAPS[map].zones; const TY = TYPES[map];
   const R = rng(seed); const ri = (a, b) => a + Math.floor(R() * (b - a + 1)); const pick = a => a[Math.floor(R() * a.length)];
   const wpick = w => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = R() * tot; for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -104,15 +106,18 @@ export function plan(seed, mapKey = 'ware') {
   const subRoom = z3.filter(k => k !== vault && k !== bossRoom).sort((a, b) => d3[b] - d3[a])[0] ?? z3seed;
   const exits = [['early', earlyRoom], ['power', powerRoom], ['sub', subRoom]].map(([kind, k]) => { const r = byId[k]; return { kind, room: k, zone: r.zone, x: r.x0 + RS / 2 + (R() < 0.5 ? -3.5 : 3.5), z: r.z0 + RS / 2 - 3.5 }; });
   if (map === 'factory') factoryExits(exits, byId, doors); /* 컨베이어 반출구(벽 옆 시작 발판 → 반출구) · 크레인 바구니 */
+  if (map === 'lab') labExits(exits); /* M4-B 파수 반출 해치 = 관제 터미널 승인 */
   const gr = byId[genRoom]; const generator = { room: genRoom, x: gr.x0 + RS / 2, z: gr.z0 + 4.2 };
   const br = byId[bossRoom]; const boss = { room: bossRoom, x: br.x0 + RS / 2, z: br.z0 + RS / 2 };
   /* 방 안 물건: 4×4 칸 격자에서 문 앞 · 출구 · 발전기 둘레 비우기 */
   const props = [], loots = [], enemies = [], waters = [];
   const keepOut = [...exits.map(e => [e.x, e.z, 4]), ...exits.flatMap(e => e.keep || []), [generator.x, generator.z, 3.2], [boss.x, boss.z, 3]];
   /* v0.4 지도별 특수: 등불(항구) · 좁은 통로 막음 · 화물칸 · 잠긴 방 · 공기 방울 · 물살(터널) · 등대 — 'ware' 는 안 뽑음 */
-  const RC = rng(mix32(seed * 31 + 7) || 1); /* 이웃 seed 끼리 상태가 몰리지 않게 섞어서 */ const cond = ware ? 'normal' : (() => { const w = MAPS[map].conds; const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = RC() * tot; for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; } return Object.keys(w)[0]; })();
-  const feat = { lamps: [], airs: [], currents: [], flooded: [], blocks: [], cars: [], lighthouse: null, belts: [], vents: [], molten: [], camps: [] };
+  const RC = rng(mix32(seed * 31 + 7) || 1); /* 이웃 seed 끼리 상태가 몰리지 않게 섞어서 */ let cond = ware ? 'normal' : (() => { const w = MAPS[map].conds; const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = RC() * tot; for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; } return Object.keys(w)[0]; })();
+  if (opt.cond && !ware && MAPS[map].conds[opt.cond]) cond = opt.cond;
+  const feat = { lamps: [], airs: [], currents: [], flooded: [], blocks: [], cars: [], lighthouse: null, belts: [], vents: [], molten: [], camps: [], terms: [], moss: [] };
   const roomDoors = rm => doors.filter(d => d.a === rm.id || d.b === rm.id);
+  const pre = map === 'lab' ? labPre({ R, z2, z3, z2seed, genRoom, vault, bossRoom, exits, doors, links, byId, cond }) : null; /* M4-B 터미널 방 · 수압 문 */
   for (const rm of roomList) {
     const cells = []; for (let j = 0; j < RT; j++) for (let i = 0; i < RT; i++) cells.push([i, j]);
     const free = cells.filter(([i, j]) => !(i >= 1 && i <= 2 && j >= 1 && j <= 2) || R() < 0.25);
@@ -138,6 +143,7 @@ export function plan(seed, mapKey = 'ware') {
           feat.currents.push(ax === 'z' ? { x0: rm.x0 + 4, x1: rm.x0 + 12, z0: rm.z0, z1: rm.z0 + RS, dx: 0, dz: sg, room: rm.id } : { x0: rm.x0, x1: rm.x0 + RS, z0: rm.z0 + 4, z1: rm.z0 + 12, dx: sg, dz: 0, room: rm.id });
         }
       } else if (map === 'factory') { factoryRoom({ rm, R, ri, at, take, occ, feat, exits, genRoom, bossRoom, start, roomDoors, cond, keepOut, props });
+      } else if (map === 'lab') { labRoom({ rm, R, take, feat, start, bossRoom, cond, keepOut, waters, pre });
       } else if (map === 'harbor') {
         if (exits.some(e => e.kind === 'sub' && e.room === rm.id)) { const p = take(); if (p) feat.lighthouse = { x: p[0], z: p[1], room: rm.id }; }
         const nL = rm.id === start ? 1 : rm.type === 'vault' ? 0 : ri(1, 2);
@@ -159,7 +165,7 @@ export function plan(seed, mapKey = 'ware') {
       for (let n = 0; n < ne; n++) { const x = rm.x0 + 3 + R() * (RS - 6), z = rm.z0 + 3 + R() * (RS - 6);
         if (ware) { enemies.push({ kind: R() < 0.5 ? 'drone' : 'skel', x, z, room: rm.id, zone: rm.zone, elite: !!Z.elite }); continue; }
         if (map === 'factory' && feat.camps.some(c => c.room === rm.id)) { if (n === 0) factorySquad(enemies, rm, x, z, R, !!Z.elite); continue; } /* 검은 닻 무리 = 그 방 적 전부 */
-        const kind = wpick(map === 'factory' ? noAnchor(Z.foes) : Z.foes); const nn = ENEMIES[kind].pack || 1;
+        const kind = wpick(map === 'factory' ? noAnchor(Z.foes) : map === 'lab' ? labFoes(Z.foes, cond) : Z.foes); const nn = ENEMIES[kind].pack || 1;
         for (let m = 0; m < nn; m++) enemies.push({ kind, x: x + (m ? (R() - 0.5) * 3 : 0), z: z + (m ? 1.2 + R() : 0), room: rm.id, zone: rm.zone, elite: !!Z.elite }); }
     }
     /* 장식 (판정 없음) */
@@ -182,7 +188,7 @@ function unblock(rm, A) {
   for (let t = 0; t < RT; t++) for (const [x, z, h] of [[rm.x0 + t * T + T / 2, rm.z0, 1], [rm.x0 + t * T + T / 2, rm.z0 + RS, 1], [rm.x0, rm.z0 + t * T + T / 2, 0], [rm.x0 + RS, rm.z0 + t * T + T / 2, 0]]) {
     if (myDoors.some(d => Math.abs(d.x - x) < 0.1 && Math.abs(d.z - z) < 0.1)) continue; fixed.push(h ? addB(x, z, T / 2, 0.5) : addB(x, z, 0.5, T / 2)); }
   for (const l of A.loots) if (inRoom(l.x, l.z)) fixed.push(addB(l.x, l.z, 0.6, 0.6));
-  for (const L of A.feat.lamps) if (inRoom(L.x, L.z)) fixed.push(addB(L.x, L.z, 0.28, 0.28)); if (A.feat.lighthouse && inRoom(A.feat.lighthouse.x, A.feat.lighthouse.z)) fixed.push(addB(A.feat.lighthouse.x, A.feat.lighthouse.z, 1.1, 1.1));
+  for (const L of A.feat.lamps) if (inRoom(L.x, L.z)) fixed.push(addB(L.x, L.z, 0.28, 0.28)); for (const t of A.feat.terms) if (t.room === rm.id) fixed.push(addB(t.x, t.z, 0.45, 0.35)); /* M4-B 관제 터미널 */ if (A.feat.lighthouse && inRoom(A.feat.lighthouse.x, A.feat.lighthouse.z)) fixed.push(addB(A.feat.lighthouse.x, A.feat.lighthouse.z, 1.1, 1.1));
   for (const b of A.feat.blocks) if (b.room === rm.id) fixed.push(addB(b.x, b.z, 1.85, 1.85)); for (const c of A.feat.cars) if (c.room === rm.id) fixed.push(addB(c.x, c.z, 1.1, 3.7));
   const G = A.generator; if (A.genRoom === rm.id) fixed.push([G.x - 0.9, G.z - 1.4, G.x + 0.9, G.z + 0.5]);
   const covers = A.props.filter(p => !p.deco && inRoom(p.x, p.z));
@@ -190,7 +196,7 @@ function unblock(rm, A) {
   const starts = myDoors.map(d => d.axis === 'x' ? [d.x, d.z + (d.z <= rm.z0 + 0.1 ? 1.2 : -1.2), 0.6] : [d.x + (d.x <= rm.x0 + 0.1 ? 1.2 : -1.2), d.z, 0.6]);
   if (rm.id === A.start) starts.push([A.spawn.x, A.spawn.z, 0.6]);
   const goals = [...(A.ware ? [] : starts), ...A.loots.filter(l => inRoom(l.x, l.z)).map(l => [l.x, l.z, 1.9]), ...A.exits.filter(e => e.room === rm.id).map(e => [e.x, e.z, 1.8]), ...(A.genRoom === rm.id ? [[G.x, G.z, 2.4]] : []),
-    ...A.feat.airs.filter(a => a.room === rm.id).map(a => [a.x, a.z, 1.5]), ...A.feat.lamps.filter(L => inRoom(L.x, L.z)).map(L => [L.x, L.z, 1.85]), ...(A.bossRoom === rm.id ? [[A.boss.x, A.boss.z, 2.5]] : [])];
+    ...A.feat.airs.filter(a => a.room === rm.id).map(a => [a.x, a.z, 1.5]), ...A.feat.lamps.filter(L => inRoom(L.x, L.z)).map(L => [L.x, L.z, 1.85]), ...A.feat.terms.filter(t => t.room === rm.id).map(t => [t.x, t.z, 1.8]), ...(A.bossRoom === rm.id ? [[A.boss.x, A.boss.z, 2.5]] : [])];
   if (!starts.length) return;
   const test = list => {
     const block = new Uint8Array(N * N);

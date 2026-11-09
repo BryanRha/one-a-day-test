@@ -1,18 +1,18 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.11';
-import * as ST from './story.js?v=0.99.11';
-import * as B from './board.js?v=0.99.11';
-import { frac } from './chips.js?v=0.99.11'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.11';
-import { COS } from './look.js?v=0.99.11';
-import { A } from './assets.js?v=0.99.11';
-import { sfx, unlock } from './audio.js?v=0.99.11';
-import { shakeLabel, cycleShake } from './fx.js?v=0.99.11'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
-import { StoryRaid } from './story_raid.js?v=0.99.11';
-import { NpcHome } from './npc_home.js?v=0.99.11';
-import { ART } from './talk/art.js?v=0.99.11';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import { S, save, today } from './save.js?v=0.99.12';
+import * as ST from './story.js?v=0.99.12';
+import * as B from './board.js?v=0.99.12';
+import { frac } from './chips.js?v=0.99.12'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.12';
+import { COS } from './look.js?v=0.99.12';
+import { A } from './assets.js?v=0.99.12';
+import { sfx, unlock } from './audio.js?v=0.99.12';
+import { shakeLabel, cycleShake } from './fx.js?v=0.99.12'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
+import { StoryRaid } from './story_raid.js?v=0.99.12';
+import { NpcHome } from './npc_home.js?v=0.99.12';
+import { ART } from './talk/art.js?v=0.99.12';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
 
 const Q = new URLSearchParams(location.search);
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
@@ -22,11 +22,11 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.11'), t1: () => import('./talk/t1.js?v=0.99.11'), t2: () => import('./talk/t2.js?v=0.99.11'), t3: () => import('./talk/t3.js?v=0.99.11'), t4: () => import('./talk/t4.js?v=0.99.11'), common: () => import('./talk/common.js?v=0.99.11'), memo: () => import('./talk/memo.js?v=0.99.11') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.12'), t1: () => import('./talk/t1.js?v=0.99.12'), t2: () => import('./talk/t2.js?v=0.99.12'), t3: () => import('./talk/t3.js?v=0.99.12'), t4: () => import('./talk/t4.js?v=0.99.12'), t5: () => import('./talk/t5.js?v=0.99.12'), common: () => import('./talk/common.js?v=0.99.12'), memo: () => import('./talk/memo.js?v=0.99.12') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;
-export const CH_MAX = 4; /* 대사 파일이 있는 마지막 장 */
+export const CH_MAX = 5; /* 대사 파일이 있는 마지막 장 */
 const tk = ch => 't' + Math.min(CH_MAX, ch);
 const beatTalk = async b => (await talk(tk(b.ch))).BEAT[b.id] || {};
 
@@ -319,9 +319,10 @@ export class Story {
     if (b?.goal) return `<div class="qcard story"><small>이야기 의뢰 · ${b.ch}장 「${esc(ST.CHAPTERS[b.ch].name)}」${b.goal.map ? ` · ${MAPS[b.goal.map].icon} ${MAPS[b.goal.map].name}` : ''}</small><h3>${esc(b.name)}</h3>
       ${bt?.ask && ST.present(S, b.giver) ? `<div class="giver">${portrait(b.giver)}<p><b>${esc(whoName(b.giver))}</b> ${esc(say(bt.ask))}</p></div>` : ''}<p>${esc(b.txt || '')}</p>${b.reward ? '<small class="hint">보상: 은신처에서 이야기와 함께</small>' : ''}</div>`;
     if (st.tut < 4) return '';
-    const nx = ST.beatNow(S); if (!nx) return '<div class="note good st-note">4장 도입까지 봤어요. 4장 「불을 만든 곳」은 다음 업데이트에서 이어져요.</div>';
-    if (ST.waitsMap(S, nx)) return `<div class="note good st-note">이야기 1~3장을 모두 봤어요. ${nx.ch}장 「${esc(ST.CHAPTERS[nx.ch].name)}」은 다음 업데이트에서.</div>`;
-    const qn = nx.need?.q && QUESTS.find(q => q.id === nx.need.q).name; const wait = qn && !S.quests.done.includes(nx.need.q) ? `의뢰 '${qn}'${ST.say('{name:을/를}', qn).slice(qn.length)} 끝내면` : '내일';
+    const nx = ST.beatNow(S); const last = ST.BEATS[ST.BEATS.length - 1].ch;
+    if (!nx) return `<div class="note good st-note">${last}장까지 모두 봤어요. ${last + 1}장 「${esc(ST.CHAPTERS[last + 1]?.name || '')}」은 다음 업데이트에서 이어져요.</div>`;
+    if (ST.waitsMap(S, nx)) return `<div class="note good st-note">이야기 1~${nx.ch - 1}장을 모두 봤어요. ${nx.ch}장 「${esc(ST.CHAPTERS[nx.ch].name)}」은 다음 업데이트에서.</div>`;
+    const qn = nx.need?.q && B.QBY[nx.need.q]?.name; const wait = qn && !S.quests.done.includes(nx.need.q) ? `의뢰 '${qn}'${ST.say('{name:을/를}', qn).slice(qn.length)} 끝내면` : '내일';
     return `<div class="note st-note">다음 이야기: <b>${wait}</b> 열려요 · 은포는 하루에 조금씩 열려요</div>`;
   }
   /* 인물 의뢰 — 와 있는 인물이 주는 의뢰 (앞에서 4개 + 매주 납품) · 납품 버튼은 decorate 의 위임 클릭 */
@@ -390,7 +391,7 @@ export class Story {
       let body = '';
       if (tab === 'memo') body = `<div class="cgrid">${ST.CODEX_KEYS.map(k => { const n = st.codex[k] || 0; return `<button class="cc ${n ? '' : 'no'} ${ITEMS[k].cat === 'memo' ? 'story' : ''}" data-k="${k}">${n ? `<img src="${A.icons[k] || ''}" alt="">` : '<span>?</span>'}${n >= 3 && M.MEMO[k]?.[1] ? '<i class="three">✦</i>' : ''}</button>`; }).join('')}</div><div class="cdetail" id="cdet"><small class="hint">칸을 누르면 사연이 보여요 · 같은 물건을 세 번 건지면 한 줄 더</small></div>`;
       if (tab === 'key') body = `<div class="lampbox">${lamps}</div><small class="hint center">세 등불은 열쇠 기억을 누구에게 맡겼는지, 장 끝에 무엇을 골랐는지에 따라 밝아져요</small>${this.endingHtml()}<div class="klist">${Object.entries(ST.KEYMEM).map(([id, K]) => { const w = st.keyMem[id]; return `<div class="kl ${w ? '' : 'no'}"><i class="lampdot" style="--c:${w ? ST.SIDES[ST.SIDE_OF[w]].color : '#3a4a52'}"></i><div><b>${w ? esc(K.name) : '???'}</b><small>${w ? `${K.ch}장 · ${esc(whoName(w))}에게 맡김` : `${K.ch}장에서`}</small></div></div>`; }).join('')}${Array.from({ length: ST.KEY_TOTAL - Object.keys(ST.KEYMEM).length }, (_, i) => `<div class="kl no"><i class="lampdot"></i><div><b>???</b><small>${4 + Math.floor(i / 2)}장에서 (다음 업데이트)</small></div></div>`).join('')}</div>`;
-      if (tab === 'tape') body = `<div class="sec">녹음기 <small>${st.tapes.length}/${ST.TAPE_N}</small></div><div class="tlist">${Object.keys(M.TAPE).map(id => { const has = st.tapes.includes(id); return `<button class="tl ${has ? '' : 'no'}" data-t="${id}" ${has ? '' : 'disabled'}><b>${has ? esc(M.TAPE[id].who) : '???'}</b><small>${MAPS[Object.keys(ST.TAPES).find(m2 => ST.TAPES[m2].includes(id))].name}</small></button>`; }).join('')}</div>
+      if (tab === 'tape') body = `<div class="sec">녹음기 <small>${st.tapes.length}/${ST.TAPE_N}</small></div><div class="tlist">${Object.keys(M.TAPE).map(id => { const has = st.tapes.includes(id); return `<button class="tl ${has ? '' : 'no'}" data-t="${id}" ${has ? '' : 'disabled'}><b>${has ? esc(M.TAPE[id].who) : '???'}</b><small>${MAPS[Object.keys(ST.TAPES).find(m2 => ST.TAPES[m2].includes(id))]?.name || ''}</small></button>`; }).join('')}</div>
         <div class="sec">벽 낙서 <small>${st.graf.length}/${Object.keys(M.GRAF).length * ST.GRAF_N}</small></div><div class="glist">${st.graf.length ? st.graf.map(g => { const [mp, i] = g.split(':'); return `<p>“${esc(M.GRAF[mp]?.[+i] || '')}”<small>${esc(MAPS[mp]?.name || '')}</small></p>`; }).join('') : '<small class="hint">판 안에서 반짝이는 낙서 위를 지나가면 기록돼요</small>'}</div>`;
       m.innerHTML = `<div class="sheet big"><div class="ch"><div><small class="kick">${seori ? '기록관 서리' : '곰방의 메모 — 사연은 기록관이 오면 더'}</small><h3>${seori ? '서리의 기록 도감' : '기억 조각'}</h3></div><button class="x" id="cxX">✕</button></div>
         <p class="cprog"><b>${found}</b> / ${ST.CODEX_KEYS.length}칸 · 은포가 ${found}칸만큼 덜 잊혔어요</p>

@@ -5,11 +5,11 @@
 //   응원 선물(6장 · 단계형): 같은 캠페인 작전 3연속 패배 → 다음 도전 시작 때 지원 부대 · 6번째부터 조금 더
 //     3번째 패배부터는 응원 선물이 광고 보급 보너스 자리를 대신 (선물을 줄 수 없을 때만 — 꺼짐 그룹 · 하루 한도 — 광고가 다시 보임)
 //   전면 광고: 작전 사이(결과 → 다음 작전)에서만 bm.interstitial('round_end')
-import { bm } from './oad_bm.js?v=0.99.11';
-import { inOAD } from './oad.js?v=0.99.11';
-import { load, save } from './save.js?v=0.99.11';
+import { bm } from './oad_bm.js?v=0.99.12';
+import { inOAD } from './oad.js?v=0.99.12';
+import { load, save } from './save.js?v=0.99.12';
 
-export const BMW = { ownerUndo: 3, supplyPerDay: 2, helpPerDay: 2, streak: 3, streak2: 6, minDay: 3, firstBattles: 3 };
+export const BMW = { ownerUndo: 3, supplyPerDay: 2, helpPerDay: 2, streak: 3, streak2: 6, minDay: 3, firstBattles: 3, autoFails: 2, autoPerDay: 2 };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const autoRun = () => /[?&]auto(=|&|$)/.test(location.search);
 
@@ -18,7 +18,7 @@ export function track(name, p = {}) { if (!inOAD) return; try { window.parent.po
 
 function day() {
   const d = load(), k = dayKey();
-  if (!d.bm || d.bm.day !== k) d.bm = { day: k, undoFree: 0, supply: 0 };
+  if (!d.bm || d.bm.day !== k) d.bm = { day: k, undoFree: 0, supply: 0, auto: 0 };
   if (!d.help || d.help.day !== k) d.help = { day: k, n: 0, fails: (d.help && d.help.fails) || {} };
   return d;
 }
@@ -41,6 +41,8 @@ export function noteResult(r) {
   if (r.mode !== 'campaign') return 0;
   const d = day(), f = d.help.fails;
   if (r.win) f[r.mapId] = 0; else if (counted(r)) f[r.mapId] = (f[r.mapId] || 0) + 1;
+  const L = d.lose || (d.lose = {});   /* 자동 작전용 실패 수 (날이 바뀌어도 남음 · 이기면 0) */
+  if (r.win) delete L[r.mapId]; else if (counted(r)) L[r.mapId] = (L[r.mapId] || 0) + 1;
   save(); return f[r.mapId] || 0;
 }
 export const fails = mapId => day().help.fails[mapId] || 0;
@@ -75,3 +77,16 @@ export async function takeSupply() {
 
 // 작전 사이 전면 광고 (앱이 그룹 · 간격 · 소장 · 첫날을 판단) — 자동 시험 판은 건너뜀
 export async function between() { if (autoRun()) return; try { await bm.interstitial('round_end'); } catch { /* */ } }
+
+// ── 자동 작전 (v0.12 · 테스터 시트 #9) ──
+//   같은 일반 작전을 2번 이상 실패(3일 이상 버틴 판) → [광고 보고 자동 작전] → 적 AI 와 같은 두뇌(core/ai.js)가 아군을 지휘
+//   하루 2번 · 소장자 '바로' · 서버 가격표에 'auto' 가 있으면 골드 버튼도 같은 크기로 · 자동으로 이긴 판은 별 1개(승리)까지 — 나머지 별은 직접 지휘로
+export const loseCount = mapId => (load().lose || {})[mapId] || 0;
+export const autoLeft = () => Math.max(0, BMW.autoPerDay - (day().bm.auto || 0));
+export const autoShow = (mode, mapId) => shopOn() && !autoRun() && mode === 'campaign' && loseCount(mapId) >= BMW.autoFails;
+export async function takeAuto(via) {
+  if (via !== 'gold' && !autoLeft()) return { ok: false, reason: 'limit' };   /* 광고만 하루 2번 · 골드는 서버 perDay */
+  const r = via === 'gold' ? await bm.spend('auto') : await bm.rewardedAd('auto');
+  if (r.ok) { const d = day(); if (via !== 'gold') d.bm.auto = (d.bm.auto || 0) + 1; save(); track('auto_take', { via: via === 'gold' ? 'gold' : r.via }); }
+  return r;
+}

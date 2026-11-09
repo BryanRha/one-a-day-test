@@ -1,15 +1,18 @@
 // 홈: 계급 · 캠페인 · 오늘의 작전 · 자유 대전 · 지휘관 · 오늘의 미션 · 연속 출석
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { COS } from '../core/data.js?v=0.99.11';
-import { rankOn } from '../rank.js?v=0.99.11';
-import { rankPopup } from '../rankui.js?v=0.99.11';
-import { bm } from '../oad_bm.js?v=0.99.11';
-import { shopOn } from '../bmwar.js?v=0.99.11';
-import { COLORS, COLOR_ORDER, colorOpen, teamColor, setColor, buyColor, paintKey } from '../color.js?v=0.99.11';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { COS } from '../core/data.js?v=0.99.12';
+import { rankOn } from '../rank.js?v=0.99.12';
+import { rankPopup } from '../rankui.js?v=0.99.12';
+import { bm } from '../oad_bm.js?v=0.99.12';
+import { shopOn } from '../bmwar.js?v=0.99.12';
+import { COLORS, COLOR_ORDER, colorOpen, teamColor, setColor, buyColor, paintKey } from '../color.js?v=0.99.12';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.12';
+import { KITS, KIT_ORDER, SHOPW, kitCount, adLeft, adOn, buyKit, coGold, recruit, restoreCos, failMsg, owned } from '../shop.js?v=0.99.12';
+import { modeGuide } from '../guide.js?v=0.99.12';
 
 // 계급장: 이병~병장 갈매기 · 부사관 · 장교 다이아 · 장성 별
 export function insignia(scene, x, y, k, s = 1) {
@@ -27,15 +30,19 @@ function star(g, x, y, r, col) { const pts = []; for (let i = 0; i < 10; i++) { 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
   create() {
-    const d = load(), ci = M.checkIn(), sp = Math.max(0, (H - 1920) / 6); this.mBox = null;
+    restoreCos();   /* 골드로 영입한 지휘관 (계정 items) */
+    const d = load(), ci = M.checkIn(), sp = Math.max(0, (H - 1920) / 6); this.mBox = null; this.shopP = null;
     this.add.rectangle(W / 2, H / 2, W, H, 0x262A14);
     // 키 아트 + 아래로 배경색에 스며들게 + 제목
     const k = this.add.image(W / 2, 150, 'key_art').setOrigin(0.5, 0); k.setScale(W / k.width);
     const fade = this.add.graphics(); const kb = 150 + k.displayHeight;
     for (let i = 0; i < 40; i++) fade.fillStyle(0x262A14, i / 40).fillRect(0, kb - 200 + i * 5, W, 5);
     fade.fillStyle(0x262A14, 1).fillRect(0, kb, W, H);
-    T(this, W / 2, 230, TITLE, 96, C.text, { w: 900, stroke: '#2B2416', thick: 12 });
-    T(this, W / 2, 312, TITLE_EN, 28, C.gold, { w: 900, ls: 12, stroke: '#2B2416', thick: 6 });
+    T(this, W / 2, 262, TITLE, 96, C.text, { w: 900, stroke: '#2B2416', thick: 12 });
+    T(this, W / 2, 344, TITLE_EN, 28, C.gold, { w: 900, ls: 12, stroke: '#2B2416', thick: 6 });
+    // 원어데이로 (v0.12 · 시트 #3 — 룬 다이스와 같은 방식) · 보급 상점 (시트 #1)
+    btn(this, 140, 196, 230, 74, '‹ 원어데이', () => this.toOAD(), { style: 'ghost', size: 28 });
+    btn(this, W - 150, 196, 250, 74, '보급 상점', () => this.shopPop(), { style: 'gold', size: 28 });
     // 위: 계급 · 훈장 · 출석
     const r = M.rank();
     this.add.existing(panel(this, W / 2, 84, W - 24, 140, { r: 24 }));
@@ -51,10 +58,12 @@ export class HomeScene extends Phaser.Scene {
     let y = Math.max(610, 150 + k.displayHeight - 40) + sp;
     { const n = Object.keys(COS).length, extra = n > 12 ? 146 : 0; y = Math.max(520, Math.min(y, H - 1085 - extra - 3 * sp)); }   // 짧은 화면: 그림을 덜 보이고 아래 내용이 다 들어가게
     this.add.existing(panel(this, W / 2, y, 1000, 270, { tone: 'paper' }));
-    T(this, 76, y - 92, 'CAMPAIGN', 22, '#6B5A2A', { ox: 0, w: 900, ls: 6, shadow: false });
-    T(this, 76, y - 44, '캠페인 작전', 52, '#2B2416', { ox: 0, w: 900, shadow: false });
+    T(this, 76, y - 92, 'OPERATIONS', 22, '#6B5A2A', { ox: 0, w: 900, ls: 6, shadow: false });
+    T(this, 76, y - 44, '일반 작전', 52, '#2B2416', { ox: 0, w: 900, shadow: false });
     T(this, 76, y + 22, `다음: ${M.STAGES[next].n}. ${M.STAGES[next].name}`, 28, '#4A3E1E', { ox: 0, w: 800, shadow: false });
     T(this, 76, y + 70, `★ ${M.totalStars()} / ${M.STAGES.length * 3}`, 30, '#9A6A10', { ox: 0, w: 900, shadow: false });
+    T(this, 250, y + 72, '이야기 · 별 · 지휘관 합류', 22, '#6B5A2A', { ox: 0, w: 800, shadow: false });
+    { const gb = btn(this, 410, y - 96, 170, 58, '모드 안내', () => modeGuide(this), { style: 'ghost', size: 22 }); gb.label.setColor('#FFF8E6'); }
     btn(this, W - 230, y - 34, 320, 120, '출격', () => this.go('Brief', { mode: 'campaign' }), { style: 'gold', icon: 'i_play', size: 44 });
     const wr = Object.values(d.war || {}), wS = wr.filter(o => o.rank === 'S').length;
     btn(this, W - 230, y + 80, 320, 78, wr.length ? `전쟁실 · S ${wS}/${M.WAR.length}` : '전쟁실 · 점수 도전', () => this.go('Brief', { mode: 'war' }), { style: 'olive', size: 26 });
@@ -69,11 +78,11 @@ export class HomeScene extends Phaser.Scene {
     y += 300 + sp;
     const op = M.dailyOp(), hw = 488;
     this.add.existing(panel(this, W / 2 - hw / 2 - 6, y, hw, 270, { tone: 'gold' }));
-    T(this, 60, y - 96, 'DAILY OPERATION', 20, C.gold, { ox: 0, w: 900, ls: 3 });
-    T(this, 60, y - 52, '오늘의 작전', 40, C.text, { ox: 0, w: 900 });
-    T(this, 60, y - 4, `${op.map.name} · 어려움`, 24, C.sub, { ox: 0, w: 800 });
+    T(this, 60, y - 96, 'SPECIAL OPERATION', 20, C.gold, { ox: 0, w: 900, ls: 3 });
+    T(this, 60, y - 52, '특수 작전', 40, C.text, { ox: 0, w: 900 });
+    T(this, 60, y - 4, `매일 새 지도 · ${op.map.name}`, 24, C.sub, { ox: 0, w: 800 });
     btn(this, W / 2 - hw / 2 - 6 - (rankOn() ? 60 : 0), y + 80, hw - 70 - (rankOn() ? 120 : 0), 90, op.best ? `도전 · 최단 ${op.best}일` : '도전', () => this.go('Brief', { mode: 'daily' }), { style: 'gold', size: 30 });
-    if (rankOn()) btn(this, W / 2 - 6 - 80, y + 80, 110, 90, '순위', () => rankPopup(this, `daily:${M.dayKey()}`, '오늘의 작전 순위', x => `${x.extra.day}일 · 손실 ${x.extra.lost}`), { style: 'ghost', size: 24 });
+    if (rankOn()) btn(this, W / 2 - 6 - 80, y + 80, 110, 90, '순위', () => rankPopup(this, `daily:${M.dayKey()}`, '특수 작전 순위', x => `${x.extra.day}일 · 손실 ${x.extra.lost}`), { style: 'ghost', size: 24 });
     this.add.existing(panel(this, W / 2 + hw / 2 + 6, y, hw, 270));
     T(this, W / 2 + 36, y - 96, 'SKIRMISH', 20, C.green, { ox: 0, w: 900, ls: 3 });
     T(this, W / 2 + 36, y - 52, '자유 대전', 40, C.text, { ox: 0, w: 900 });
@@ -121,8 +130,72 @@ export class HomeScene extends Phaser.Scene {
     p.content.add(T(this, 40, 0, `초필살기 · ${co.superp}`, 26, '#FF8A6A', { ox: 0, w: 900 }));
     p.content.add(T(this, 40, 36, co.sdesc, 22, C.text, { ox: 0, w: 800, wrap: 380 }));
     const st = M.STAGES.find(s => s.unlockCo === k);
-    if (!own) p.content.add(T(this, 40, 130, st ? `캠페인 ${st.n}. ${st.name} 승리로 합류` : '', 26, C.sub, { ox: 0, w: 800, wrap: 380 }));
-    else p.content.add(btn(this, 0, 320, 440, 110, d.co === k ? '출전 중' : '이 지휘관으로 출전', () => { d.co = k; import('../save.js?v=0.99.11').then(m => m.save()); p.close(); this.scene.restart(); }, { style: d.co === k ? 'ghost' : 'gold', size: 32 }));
+    if (!own) {
+      p.content.add(T(this, 40, 130, st ? `일반 작전 ${st.n}. ${st.name} 승리로 합류` : '', 26, C.sub, { ox: 0, w: 800, wrap: 380 }));
+      // 영입 (v0.12 · 시트 #1): 작전에서도 합류하는 지휘관을 먼저 데려옴 — 훈장 · 원어데이 골드
+      p.content.add(T(this, 0, 222, `지금 영입하기 · 보유 훈장 ${d.medals}`, 24, C.gold, { w: 800 }));
+      const gold = coGold(k), xs = gold ? [-200, 200] : [0];
+      const done = r => { if (r.ok) { audio.play('sfx_captured', { volume: 0.6 }); toast(this, `${co.name} 지휘관 합류!`, C.gold); p.close(); if (this.shopP) this.shopP.close(); this.time.delayedCall(700, () => this.scene.restart()); return true; } const m = failMsg(r); if (m) toast(this, m, C.sub); return false; };
+      const b1 = btn(this, xs[0], 320, 360, 110, `훈장 ${SHOPW.coMedal}`, async () => { b1.setEnabled(false); if (!done(await recruit(k, 'medal'))) b1.setEnabled(true); }, { style: d.medals >= SHOPW.coMedal ? 'gold' : 'ghost', size: 32 }); p.content.add(b1);
+      if (gold) { const b2 = btn(this, xs[1], 320, 360, 110, `🪙${gold}`, async () => { b2.setEnabled(false); if (!done(await recruit(k, 'gold'))) b2.setEnabled(true); }, { style: 'olive', size: 32, ls: 0 }); p.content.add(b2); }
+    }
+    else p.content.add(btn(this, 0, 320, 440, 110, d.co === k ? '출전 중' : '이 지휘관으로 출전', () => { d.co = k; import('../save.js?v=0.99.12').then(m => m.save()); p.close(); this.scene.restart(); }, { style: d.co === k ? 'ghost' : 'gold', size: 32 }));
+  }
+  /* 원어데이로: 원어데이 안이면 SDK 나가기(oad.js exitToOAD = oad:exit) · 단독 링크면 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+  toOAD() {
+    if (inOAD) return exitToOAD();
+    const h = location.hostname, site = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/';
+    audio.stopMusic(); location.href = site;
+  }
+  // 보급 상점 (v0.12 · 시트 #1 · #2): 보급품(한 판 소모) 훈장 · 골드 · 광고 / 지휘관 영입 훈장 · 골드
+  shopPop() {
+    if (this.shopP && this.shopP.active && !this.shopP.closing) return;
+    const p = this.shopP = popup(this, '보급 상점', 1000, 1560);
+    const draw = () => {
+      p.content.removeAll(true);
+      const d = load();
+      const mg = this.add.graphics(); mg.fillStyle(0x14160A, 0.6).fillRoundedRect(-440, -650, 880, 90, 45); p.content.add(mg);
+      p.content.add(T(this, -400, -605, `보유 훈장 ${d.medals}`, 34, C.gold, { ox: 0, w: 900 }));
+      p.content.add(T(this, 400, -605, '오늘의 미션 · 출석으로 모여요', 22, C.sub, { ox: 1, w: 800 }));
+      p.content.add(T(this, -440, -510, '보급품 · 한 판에 하나씩', 30, C.text, { ox: 0, w: 900 }));
+      p.content.add(T(this, 440, -510, '일반 작전 · 자유 대전', 20, C.sub, { ox: 1, w: 800 }));
+      KIT_ORDER.forEach((k, i) => {
+        const K = KITS[k], y = -370 + i * 270, n = kitCount(k), g = this.add.graphics();
+        g.fillStyle(0x14160A, 0.55).fillRoundedRect(-440, y - 115, 880, 230, 28).lineStyle(2, 0x6E7A40, 1).strokeRoundedRect(-440, y - 115, 880, 230, 28); p.content.add(g);
+        const im = this.add.image(-350, y - 30, paintKey(this, K.icon)); im.setScale(120 / Math.max(im.width, im.height)); p.content.add(im);
+        p.content.add(T(this, -350, y + 62, `보유 ${n}`, 24, n ? C.gold : C.sub, { w: 900 }));
+        p.content.add(T(this, -260, y - 70, K.name, 36, C.text, { ox: 0, w: 900 }));
+        p.content.add(T(this, -260, y - 26, K.desc, 22, C.sub, { ox: 0, w: 800, wrap: 640 }));
+        const opts = [['medal', `훈장 ${K.medal}`, d.medals >= K.medal ? 'gold' : 'ghost']];
+        if (bm.price(K.sku)) opts.push(['gold', `🪙${bm.price(K.sku)}`, 'olive']);
+        if (adOn()) opts.push(['ad', owned() ? '소장 · 받기' : '광고 받기', 'blue']);
+        const bw = opts.length === 3 ? 196 : 260;
+        opts.forEach(([via, label, style], j) => {
+          const b = btn(this, -260 + bw / 2 + j * (bw + 14), y + 58, bw, 84, label, async () => {
+            b.setEnabled(false); const r = await buyKit(k, via);
+            if (r.ok) { audio.play('sfx_captured', { volume: 0.6 }); toast(this, `${K.name} +1`, C.gold); draw(); return; }
+            b.setEnabled(true); const m = failMsg(r); if (m) toast(this, m, C.sub);
+          }, { style, icon: via === 'ad' && !owned() ? 'i_film' : null, size: 26, ls: 0 });
+          p.content.add(b);
+        });
+      });
+      if (shopOn()) p.content.add(T(this, 0, 60, adOn() ? `광고 보상 오늘 ${adLeft()}번 남음` : adLeft() ? '' : '오늘 광고 보상은 다 받았어요 · 내일 다시', 22, C.sub, { w: 800 }));
+      // 지휘관 영입
+      p.content.add(T(this, -440, 140, '지휘관 영입', 30, C.text, { ox: 0, w: 900 }));
+      p.content.add(T(this, 440, 140, '작전에서도 합류해요 · 먼저 데려오기', 20, C.sub, { ox: 1, w: 800 }));
+      const locked = Object.keys(COS).filter(k => !d.cos[k]);
+      if (!locked.length) p.content.add(T(this, 0, 300, '모든 지휘관이 합류했어요!', 32, C.gold, { w: 900 }));
+      const per = 6, step = 146, sz = 120;
+      locked.slice(0, 18).forEach((k, i) => {
+        const x = -((Math.min(per, locked.length) - 1) * step) / 2 + (i % per) * step, y = 250 + Math.floor(i / per) * 186;
+        const fr = this.add.image(x, y, `co_${k}`), fw = fr.width; fr.setCrop(0, 0, fw, fw * 0.92).setOrigin(0.5, (fw * 0.46) / fr.height).setScale(sz / fw); p.content.add(fr);
+        const g = this.add.graphics(); g.lineStyle(3, COS[k].color, 1).strokeRoundedRect(x - sz / 2, y - sz / 2, sz, sz, 16); p.content.add(g);
+        p.content.add(T(this, x, y + sz / 2 + 22, COS[k].name, 22, C.text, { w: 900 }));
+        const z = this.add.zone(x, y, sz, sz).setInteractive({ useHandCursor: true }); z.on('pointerup', () => this.coInfo(k)); p.content.add(z);
+      });
+      if (locked.length > 18) p.content.add(T(this, 0, 700, `외 ${locked.length - 18}명 · 홈 지휘관 줄에서도 영입할 수 있어요`, 22, C.sub, { w: 800 }));
+    };
+    draw();
   }
   // 부대 색 고르기: 기본 · 골드(🪙 서버 가격) · 소장자 전용 — 겉모습만, 능력치 없음
   colorPop() {
@@ -168,7 +241,7 @@ export class HomeScene extends Phaser.Scene {
   settings() {
     const d = load(), pop = popup(this, '설정', 760, 900);
     const row = (y, label, on, fn) => { pop.content.add(T(this, -260, y, label, 40, C.text, { ox: 0 })); const b = btn(this, 200, y, 220, 96, on ? '켜짐' : '꺼짐', () => { fn(); b.setLabel(b.label.text === '켜짐' ? '꺼짐' : '켜짐'); }, { style: on ? 'green' : 'ghost', size: 34 }); pop.content.add(b); };
-    row(-90, '효과음', d.sfx, () => audio.toggleSfx()); row(30, '배경음악', d.music, () => audio.toggleMusic()); row(150, '전투 장면', d.cutscene !== false, () => { d.cutscene = d.cutscene === false; import('../save.js?v=0.99.11').then(m => m.save()); }); row(270, '지휘관 테마곡', d.coTheme !== false, () => { d.coTheme = d.coTheme === false; import('../save.js?v=0.99.11').then(m => m.save()); }); row(390, '전투 대사', d.talk !== false, () => { d.talk = d.talk === false; import('../save.js?v=0.99.11').then(m => m.save()); });
+    row(-90, '효과음', d.sfx, () => audio.toggleSfx()); row(30, '배경음악', d.music, () => audio.toggleMusic()); row(150, '전투 장면', d.cutscene !== false, () => { d.cutscene = d.cutscene === false; import('../save.js?v=0.99.12').then(m => m.save()); }); row(270, '지휘관 테마곡', d.coTheme !== false, () => { d.coTheme = d.coTheme === false; import('../save.js?v=0.99.12').then(m => m.save()); }); row(390, '전투 대사', d.talk !== false, () => { d.talk = d.talk === false; import('../save.js?v=0.99.12').then(m => m.save()); });
   }
   go(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(220, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

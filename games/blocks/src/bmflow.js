@@ -2,9 +2,9 @@
 //   · 시작 때 hello 한 번 (결과는 bm.info 로 바로 읽음 · 원어데이 밖이면 ok = false → 골드 · 광고 버튼 숨김)
 //   · 판 끝 전면 광고: 판이 끝나면 roundOver(), 다음 화면으로 넘어갈 때 afterRound() 를 기다림 → 판마다 한 번만 앱에 물어봄
 //   · 광고 · 확인 창 동안 소리 멈춤
-import { bm } from './oad_bm.js?v=0.99.11';
-import { load, save } from './save.js?v=0.99.11';
-import { dayKey, SKINS } from './meta.js?v=0.99.11';
+import { bm } from './oad_bm.js?v=0.99.12';
+import { load, save } from './save.js?v=0.99.12';
+import { dayKey, SKINS } from './meta.js?v=0.99.12';
 
 let hp = null;
 // hello 는 한 번만 (Boot 가 스킨을 그리기 전에 기다림 · 원어데이 밖이면 바로 ok=false)
@@ -12,6 +12,7 @@ export function helloOnce() {
   return hp || (hp = bm.hello().then(h => {
     /* ?oadtest=1 가짜 지갑엔 스킨 가격이 없어 시험용으로만 채움 (실제 가격은 서버 SHOP.blocks.skin) */
     if (h && h.test && h.prices && !h.prices.skin) h.prices.skin = 250;
+    if (h && h.test && h.prices) { if (!h.prices.bomb) h.prices.bomb = 20; if (!h.prices.line) h.prices.line = 10; }   /* 판 안 아이템 시험값 (실제는 SHOP.blocks) */
     return h;
   }));
 }
@@ -61,3 +62,25 @@ export function track(name, p = {}) {
 }
 // 응원 선물 실험이 켜져 있나 (꺼짐 그룹이면 선물 없음 · 원어데이 밖은 켜짐)
 export const helpOn = () => bm.helpOn();
+
+// ── 클래식 판 안 아이템 · 광고 (2026-11-09 QA 시트 #2 · #6) ──
+//   가격은 서버 표만 — 값이 없으면(원어데이 밖 · 표에 없음) 0 → 화면에서 숨김 · 한 번 쓸 때마다 앱 확인 창 → 골드 차감 → 성공이면 게임이 효과
+export const itemPrice = sku => (bm.info.ok ? bm.price(sku) : 0);
+export async function buyUse(sku) {
+  const r = await bm.spend(sku);
+  if (r && r.ok) track('item_use', { game: 'blocks', sku });
+  return r || { ok: false, reason: 'error' };
+}
+// 판 안 광고 '블록 바꾸기': 하루 횟수(게임 쪽) — 앱 한도는 앱이 따로 셈
+export function swapAdLeft(max) { const d = load(); if (!d.items || d.items.date !== dayKey()) d.items = { date: dayKey(), ad: 0 }; return Math.max(0, max - d.items.ad); }
+export function swapAdUsed() { const d = load(); if (!d.items || d.items.date !== dayKey()) d.items = { date: dayKey(), ad: 0 }; d.items.ad++; save(); }
+export const adShown = () => !!bm.info.ok;
+export const adReady = () => !!(bm.info.ok && (bm.info.owned || (bm.info.ads && bm.info.ads.reward)));
+export function failMsg(r) {
+  const why = r && r.reason;
+  if (why === 'short') return '골드가 조금 모자라요';
+  if (why === 'login') return '로그인하면 쓸 수 있어요';
+  if (why === 'limit') return '오늘은 여기까지예요 · 내일 다시';
+  if (why === 'cancel' || why === 'off') return '';
+  return '지금은 쓸 수 없어요 · 잠시 뒤에 다시';
+}

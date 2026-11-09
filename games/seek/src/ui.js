@@ -1,7 +1,7 @@
 // 사진관 UI: 크림색 인화지 패널 · 짙은 나무색 · 금박 포인트 (모두 코드로 그림)
-import { W, H } from './config.js?v=0.99.11';
-import { audio } from './audio.js?v=0.99.11';
-import { pushBack } from './oad.js?v=0.99.11';
+import { W, H } from './config.js?v=0.99.12';
+import { audio } from './audio.js?v=0.99.12';
+import { pushBack } from './oad.js?v=0.99.12';
 
 export const C = { ink: '#3A2431', text: '#FFF6F8', cream: '#FCEFF2', paper: '#FFF8FA', brown: '#7A3E58', sub: '#D9B4C4', dim: '#9A7A8A', gold: '#F0B65A', rose: '#E86A8E', plum: '#2E1A2A', red: '#D9573B', green: '#6FAE5A', blue: '#4E86C6' };
 export const FONT = 'Pretendard, sans-serif';
@@ -50,11 +50,13 @@ export function iconBtn(sc, x, y, glyph, onClick, size = 96, o = {}) {
   const key = `ib_${size}_${o.dark ? 'd' : 'l'}`;
   tex(sc, key, size + 20, size + 24, g => { g.translate(10, 8); g.shadowColor = 'rgba(30,15,5,0.4)'; g.shadowBlur = 10; g.shadowOffsetY = 5; g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); g.fillStyle = o.dark ? 'rgba(46,26,42,0.85)' : '#FFFFFF'; g.fill(); g.shadowColor = 'transparent'; g.lineWidth = 3; g.strokeStyle = o.dark ? 'rgba(255,170,200,0.6)' : 'rgba(232,106,142,0.45)'; g.stroke(); });
   const c = sc.add.container(x, y), col = o.dark ? '#FFB6CB' : '#E8628A', ik = `ic_${glyph}_${size}_${o.dark ? 'd' : 'l'}`;
-  // 선 아이콘 (글자 대신 그림): back · hint(돋보기) · gear
-  const drawn = ['back', 'hint', 'gear'].includes(glyph);
+  // 선 아이콘 (글자 대신 그림): back · hint(돋보기) · gear · ad(재생 화면) · eye(미리 보기)
+  const drawn = ['back', 'hint', 'gear', 'ad', 'eye'].includes(glyph);
   if (drawn) tex(sc, ik, size, size, g => { const u = size / 100; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 9 * u; g.lineCap = 'round'; g.lineJoin = 'round';
     if (glyph === 'back') { g.beginPath(); g.moveTo(58 * u, 28 * u); g.lineTo(36 * u, 50 * u); g.lineTo(58 * u, 72 * u); g.stroke(); }
     if (glyph === 'hint') { g.beginPath(); g.arc(44 * u, 44 * u, 20 * u, 0, Math.PI * 2); g.stroke(); g.lineWidth = 12 * u; g.beginPath(); g.moveTo(59 * u, 59 * u); g.lineTo(74 * u, 74 * u); g.stroke(); g.fillStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.arc(38 * u, 38 * u, 6 * u, 0, Math.PI * 2); g.fill(); }
+    if (glyph === 'ad') { g.lineWidth = 7 * u; rr(g, 22 * u, 28 * u, 56 * u, 42 * u, 9 * u); g.stroke(); g.beginPath(); g.moveTo(44 * u, 39 * u); g.lineTo(58 * u, 49 * u); g.lineTo(44 * u, 59 * u); g.closePath(); g.fill(); g.beginPath(); g.moveTo(38 * u, 78 * u); g.lineTo(62 * u, 78 * u); g.stroke(); }
+    if (glyph === 'eye') { g.lineWidth = 7 * u; g.beginPath(); g.moveTo(18 * u, 50 * u); g.quadraticCurveTo(50 * u, 16 * u, 82 * u, 50 * u); g.quadraticCurveTo(50 * u, 84 * u, 18 * u, 50 * u); g.closePath(); g.stroke(); g.beginPath(); g.arc(50 * u, 50 * u, 11 * u, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(46 * u, 46 * u, 4 * u, 0, Math.PI * 2); g.fill(); }
     if (glyph === 'gear') { // 톱니바퀴: 굵은 톱니 8개가 붙은 바퀴 + 가운데 구멍
       g.beginPath(); for (let i = 0; i < 16; i++) { const a0 = i * Math.PI / 8 - Math.PI / 16, a1 = a0 + Math.PI / 8, R = i % 2 ? 23 * u : 31 * u; g.lineTo(50 * u + Math.cos(a0 + 0.06) * R, 50 * u + Math.sin(a0 + 0.06) * R); g.lineTo(50 * u + Math.cos(a1 - 0.06) * R, 50 * u + Math.sin(a1 - 0.06) * R); } g.closePath(); g.fill();
       g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(50 * u, 50 * u, 10 * u, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over'; } });

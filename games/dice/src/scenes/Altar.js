@@ -1,18 +1,18 @@
 // 룬 제단 (뽑기): 게임에서 번 수정·열쇠·매일 무료 1회로만 · 확률 공개 · 천장 · 10회 영웅 보장 · 중복은 등급업 카드
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load, save, syncPity } from '../save.js?v=0.99.11';
-import * as BM from '../bmflow.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load, save, syncPity } from '../save.js?v=0.99.12';
+import * as BM from '../bmflow.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.99.12';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 
 export class AltarScene extends Phaser.Scene {
   constructor() { super('Altar'); }
   create(data = {}) {
-    this.busy = false; this.leaving = false;   /* 씬 재사용: 지난번 뽑기 연출 중에 나갔으면 busy 가 남아 있음 (main.js 에서도 초기화) */
+    this.busy = false; this.leaving = false; this.runId = (this.runId || 0) + 1;   /* 씬 재사용: 지난번 뽑기 연출 중에 나갔으면 busy 가 남아 있음 (main.js 에서도 초기화) · runId 로 옛 광고 · 결제 응답 무시 */
     if (syncPity()) save();   /* 다른 기기에서 쌓은 천장 기록이 더 나중이면 그쪽으로 (save.js) */
     const d = load();
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
@@ -39,10 +39,14 @@ export class AltarScene extends Phaser.Scene {
     this.b1 = btn(this, W / 2 - 200, by + 170, 360, 130, `1회  ◆${M.DRAW_COST}`, () => this.pull('one'), { style: 'indigo', size: 38 });
     this.b10 = btn(this, W / 2 + 200, by + 170, 360, 130, `10회  ◆${M.DRAW10_COST}`, () => this.pull('ten'), { style: 'gold', size: 38 });
     T(this, W / 2 + 200, by + 262, '영웅 이상 1개 보장 · 10% 할인', 22, C.gold, { w: 800 });
-    btn(this, W / 2 - 170, by + 360, 300, 84, '확률 정보', () => this.odds(), { style: 'ghost', size: 26 });
-    btn(this, W / 2 + 170, by + 360, 300, 84, '오늘의 상점', () => this.shop(), { style: 'ghost', size: 26 });
+    /* 아래 줄: 확률 정보 · [광고 보고 열쇠](QA 23 · 원어데이 안에서만) · 오늘의 상점(QA 24 장밋빛) */
+    const adOn = BM.oadOn(), sx = adOn ? 345 : 170, sw = adOn ? 250 : 300;
+    btn(this, W / 2 - sx, by + 360, sw, 84, '확률 정보', () => this.odds(), { style: 'ghost', size: 26 });
+    btn(this, W / 2 + sx, by + 360, sw, 84, '오늘의 상점', () => this.shop(), { style: 'shop', icon: adOn ? null : 'i_bag', size: 26 });
+    this.keyAd = null;
+    if (adOn) this.makeKeyAd(W / 2, by + 360);
     this.shopDot = null;
-    if (M.shopGift()) { const dt = this.add.circle(W / 2 + 306, by + 330, 13, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: dt, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); this.shopDot = dt; }
+    if (M.shopGift()) { const dt = this.add.circle(W / 2 + sx + sw / 2 - 14, by + 330, 13, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: dt, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); this.shopDot = dt; }
     this.refresh();
     if (data.shop) this.time.delayedCall(260, () => { if (!this.busy) this.shop(); });   /* 홈 · 컬렉션의 '오늘의 상점' 입구 (QA 13) */
     audio.music('bgm_lobby', this);
@@ -106,6 +110,31 @@ export class AltarScene extends Phaser.Scene {
       if (nw) L.add(btn(this, W / 2 + 240, ey + 150, 440, 130, '덱으로 이동', () => this.go('Deck'), { style: 'gold', icon: 'i_grid', size: 36 }));
     });
   }
+  /* QA 23 광고 보고 열쇠: 하루 BM.AD.key 번 · 소장자는 광고 없이 바로(횟수 같음) · 받은 열쇠는 위 '열쇠로 뽑기'에 바로 반영
+     눈에 띄게: 하늘빛 버튼 + 은은한 빛 + 남은 횟수 꼬리표. 다 쓰면 '내일 다시'로 꺼짐 */
+  makeKeyAd(x, y) {
+    const own = BM.owned(), left = BM.keyLeft(), ready = own || BM.adReady();
+    const glow = this.add.image(x, y - 4, 'glow').setTint(0x5EE3FF).setBlendMode('ADD').setScale(3.6, 1.3).setAlpha(left && ready ? 0.45 : 0);
+    if (left && ready) this.tweens.add({ targets: glow, alpha: 0.15, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const label = !left ? '내일 다시' : !ready ? '오늘 광고 끝' : own ? '소장 혜택 열쇠' : '광고 보고 열쇠';
+    const b = btn(this, x, y, 300, 84, label, () => this.takeKey(), { style: 'ad', icon: left && ready ? (own ? 'i_key' : 'i_film') : null, size: 26, ls: 0 });
+    b.setEnabled(!!(left && ready));
+    const tag = this.add.container(x + 118, y - 44); const tg = this.add.graphics(); tg.fillStyle(0x0B1026, 1).fillRoundedRect(-34, -17, 68, 34, 17).lineStyle(2, 0x5EE3FF, 1).strokeRoundedRect(-34, -17, 68, 34, 17);
+    tag.add([tg, T(this, 0, 0, `${left}/${BM.AD.key}`, 20, '#8FE3FF', { w: 900, shadow: false })]);
+    this.keyAd = { b, glow, tag };
+    window.__keyAd = this.keyAd;
+  }
+  async takeKey() {
+    if (this.busy || !BM.keyLeft()) return;
+    this.busy = true; const run = this.runId, r = await BM.keyAd(); if (run !== this.runId) return; this.busy = false;
+    if (!r.ok) { const m = BM.failMsg(r); if (m) toast(this, m, C.sub); this.redoKeyAd(); return; }
+    audio.play('sfx_awaken', { volume: 0.6 });
+    const { b } = this.keyAd, k = this.add.image(b.x, b.y, 'i_key').setDisplaySize(70, 70).setTint(0xFFE08A).setDepth(60);
+    this.tweens.add({ targets: k, x: this.bFree.x, y: this.bFree.y, scale: k.scale * 1.4, duration: 520, ease: 'Cubic.easeInOut', onComplete: () => { k.destroy(); this.tweens.add({ targets: this.bFree, scale: 1.06, duration: 110, yoyo: true }); } });
+    toast(this, '열쇠 +1 · 지금 바로 뽑아 보세요!', C.gold);
+    this.refresh(); this.redoKeyAd();
+  }
+  redoKeyAd() { if (!this.keyAd) return; const { b, glow, tag } = this.keyAd, x = b.x, y = b.y; this.tweens.killTweensOf(glow); [b, glow, tag].forEach(o => o.destroy()); this.makeKeyAd(x, y); }
   shop() {
     // 원어데이 안: 무료 상자(광고 · 하루 1) · 수정 100(🪙100) 두 줄 더 — 뽑기를 광고 · 골드로 직접 주지는 않음
     const oad = BM.oadOn(), items = M.shop(), extra = oad ? 2 : 0, ph = 1100 + extra * 206;
@@ -151,7 +180,7 @@ export class AltarScene extends Phaser.Scene {
     const p = popup(this, '확률 정보', 900, 1100), c = p.content;
     const d = load();
     [0, 1, 2, 3].forEach(k => { const all = RUNE_ORDER.filter(r => RARITY[r] === k), own = all.filter(r => d.unlocked[r]).length; c.add(T(this, 0, -330 + k * 100, `${RARITY_NAME[k]}  ${Math.round(M.ODDS[k] * 100)}%   ·   ${all.length}종 (보유 ${own})`, 34, hex(RARITY_COLOR[k]), { w: 900 })); });
-    c.add(T(this, 0, 220, `· ${M.PITY}회 안에 전설이 반드시 나와요\n· 10회 뽑기는 영웅 이상 1개 보장\n· 같은 등급 안에서는 아직 없는 룬이 더 잘 나와요\n· 이미 가진 룬은 등급업 카드가 돼요\n· ${BM.oadOn() ? '수정은 게임에서 얻고, 원어데이 골드로도 살 수 있어요\n  (골드로 바로 뽑지는 않아요)' : '수정은 게임 안에서만 얻어요 (구매 없음)'}`, 28, C.sub, { w: 700, lh: 14 }));
+    c.add(T(this, 0, 220, `· ${M.PITY}회 안에 전설이 반드시 나와요\n· 10회 뽑기는 영웅 이상 1개 보장\n· 같은 등급 안에서는 아직 없는 룬이 더 잘 나와요\n· 이미 가진 룬은 등급업 카드가 돼요\n· ${BM.oadOn() ? '수정은 게임에서 얻고, 원어데이 골드로도 살 수 있어요\n  (골드로 바로 뽑지는 않아요)\n· 광고로 받은 열쇠도 같은 확률 · 같은 천장이에요' : '수정은 게임 안에서만 얻어요 (구매 없음)'}`, 28, C.sub, { w: 700, lh: 14 }));
   }
   go(k) { if (this.leaving) return; this.leaving = true; audio.stopMusic(); this.cameras.main.fadeOut(200, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
 }

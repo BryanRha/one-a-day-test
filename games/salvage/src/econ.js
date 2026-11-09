@@ -1,7 +1,7 @@
 // 경제 · 성장 계산 (화면 · three 없이 — node 시뮬 · 시험에서도 그대로 씀)
 //  S = 저장 상태(save.js). 모든 함수는 S 를 직접 바꾸고 { ok, why } 를 돌려줌
 import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2,
-  AMMO, MOD_MAX, freshMods, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS } from './data.js?v=0.99.11';
+  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS } from './data.js?v=0.99.12';
 
 export const kstDay = (t = Date.now()) => new Date(t + 324e5).toISOString().slice(0, 10);
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -112,6 +112,13 @@ export function craftGear(S, slot) {
   if (facLvl(S, 'bench') < nx.bench) return { ok: false, why: 'bench' };
   if (!pay(S, nx.cost)) return { ok: false, why: 'cost' };
   S.gear[slot] = cur + 1; return { ok: true };
+}
+/* M4-B 맵 장비: 한 번 만들면 계속 (S.gear[키] = 1) · 처음 만들면 바로 챙김 */
+export function craftMapGear(S, k) {
+  const G = MAP_GEAR[k]; if (!G) return { ok: false, why: 'max' }; if (S.gear?.[k]) return { ok: false, why: 'max' };
+  if (facLvl(S, 'bench') < G.bench) return { ok: false, why: 'bench' };
+  if (!pay(S, G.cost)) return { ok: false, why: 'cost' };
+  S.gear[k] = 1; if (!S.mgSel) S.mgSel = k; return { ok: true };
 }
 export function craftItem(S, key, n = 1) {
   const C = CRAFTS[key]; let made = 0;
@@ -240,13 +247,14 @@ export function loadout(S) {
     speed: (meal?.speed || 1) * (gym?.speed || 1), water: 1 + (cf.water || 0), search: (meal?.search || 1) * (1 + (cf.search || 0)), meal: S.meal,
     hold: 1 - (cf.hold || 0), boss: 1 + (cf.boss || 0), loot: (1 + (cf.loot || 0)) * D.loot, keep: (cf.keep || 0) + (dock?.rescue || 0),
     ammo, diff: S.diff || 'normal', foeHp: D.foeHp, foeDmg: D.foeDmg,
+    mgear: S.mgSel && MAP_GEAR[S.mgSel] && S.gear?.[S.mgSel] ? S.mgSel : null, /* M4-B 맵 장비 하나 */
   };
 }
 /* 장비 점수 (시뮬 · 의뢰 난이도 가늠용): 주무기 DPS(7m) × 체력 ÷ (1-방어) */
 export function power(S) { const L = loadout(S); const w = L.weapons[0]; return Math.round(ttk(w, 1000, w.melee ? 2 : 7).dps * (L.hp / 100) / (1 - L.armor)); }
 
 /* ═════ M3-A 성장 뼈대 (v0.6): 탄약 · 부적 · 상인 · 업적 · 난이도 — 숫자는 data/*.js ═════ */
-import { COS } from './look.js?v=0.99.11';
+import { COS } from './look.js?v=0.99.12';
 const ITEM_LIST = Object.keys(ITEMS);
 /* ───── 탄약 상자 (관통 · 전기) — 한 판에 1상자, 출격 때 씀 ───── */
 export const ammoCount = (S, k) => (S.ammo?.[k] || 0);

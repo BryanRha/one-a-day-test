@@ -1,15 +1,15 @@
-// 오늘의 다꾸 v0.1 — 시작 · 화면 잇기 · 판 끝 보상
+// 오늘의 다꾸 v0.2.0 — 시작 · 화면 잇기 · 판 끝 보상 (메인 다꾸 · 스피드 다꾸 · 자유 다꾸)
 //   오늘의 페이지(하루 3판 → 날짜 도장 페이지 한 장) · 자유 다꾸(무제한 · 스티커 서랍 · 테마 노트) · 진행 맵 30단계
-import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.99.11';
-import { S, load, save, day, dayKey, give } from './save.js?v=0.99.11';
-import * as A from './audio.js?v=0.99.11';
-import * as Game from './game.js?v=0.99.11';
-import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.99.11';
-import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.99.11';
-import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.99.11';
-import { bm } from './oad_bm.js?v=0.99.11';
-import { installBack } from './oad.js?v=0.99.11';
-import { cur, closeSheets } from './screens.js?v=0.99.11';
+import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.99.12';
+import { S, load, save, day, dayKey, give } from './save.js?v=0.99.12';
+import * as A from './audio.js?v=0.99.12';
+import * as Game from './game.js?v=0.99.12';
+import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.99.12';
+import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.99.12';
+import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.99.12';
+import { bm } from './oad_bm.js?v=0.99.12';
+import { installBack } from './oad.js?v=0.99.12';
+import { cur, closeSheets } from './screens.js?v=0.99.12';
 
 const Q = new URLSearchParams(location.search);
 window.__errs = [];
@@ -25,19 +25,21 @@ let mode = null;
 function play(m, cfg, seed, label, key, lucky = null, tutorial = false) {
   mode = m; S.plays++; save();
   show('game'); $('#result').classList.remove('on'); $('#preview').classList.remove('on');
-  Game.start({ cfg, seed, label, key, lucky, tutorial, onEnd: r => onEnd(m, r), onQuit: () => show(m.kind === 'map' ? 'map' : 'home') });
+  Game.start({ cfg, seed, label, key, lucky, tutorial, timed: m.kind === 'map', onEnd: r => onEnd(m, r), onQuit: () => show(m.kind === 'map' ? 'map' : 'home') });
 }
 const go = {
   daily() {
     const dd = day(); if (dd.done) return openDay(dayKey());
     const w = dd.wins; dd.tries = (dd.tries || 0) + 1;
     const tag = ['쉬움', '보통', '<span class="hardtag">어려움</span>'][w];
-    play({ kind: 'daily', w }, dailyCfg(dayKey(), w, S.fails['daily' + w] || 0), hash(dayKey()) + w * 101 + dd.tries * 7, `오늘 페이지 <b>${w + 1}/3</b> · ${tag}`, 'daily' + w, dailySet(dayKey()).lucky, !S.tut && w === 0);
+    play({ kind: 'daily', w }, dailyCfg(dayKey(), w, S.fails['daily' + w] || 0), hash(dayKey()) + w * 101 + dd.tries * 7, `메인 다꾸 <b>${w + 1}/3</b> · ${tag}`, 'daily' + w, dailySet(dayKey()).lucky, !S.tut && w === 0);
   },
   map(n) {
     const intro = { 11: ['얼음이 나와요', '얼음에 싸인 스티커는 칸에 스티커를 몇 장 더 담으면 녹아요. 숫자가 남은 장 수예요.'], 21: ['사슬이 나와요', '사슬에 묶인 스티커는 같은 줄 바로 옆 스티커를 먼저 떼면 풀려요.'] }[n];
     const k = stageKind(n), tag = k === 'hard' ? ' · <span class="hardtag">어려운 판 · 보상 2배</span>' : k === 'boss' ? ' · <span class="hardtag boss">최고 난도</span>' : '';
-    const run = () => { S.mapTry = (S.mapTry || 0) + 1; play({ kind: 'map', n, diff: k }, stageCfg(n, S.fails['map' + n] || 0), n * 7919 + S.mapTry * 31, `진행 맵 <b>${n}단계</b>${tag}`, 'map' + n); };
+    const run = () => { S.mapTry = (S.mapTry || 0) + 1; play({ kind: 'map', n, diff: k }, stageCfg(n, S.fails['map' + n] || 0), n * 7919 + S.mapTry * 31, `스피드 다꾸 <b>${n}단계</b>${tag}`, 'map' + n); };
+    /* 스피드 다꾸 처음 한 번: 시계 안내 (시간이 지나도 실패 없음) */
+    if (!S.speedIntro) return modal(`<h3>스피드 다꾸</h3><p>판마다 넉넉한 시간이 주어져요. 시간 안에 깨면 <b class="gstar">★★★</b>, 조금 넘으면 ★★, 더 넘어도 ★ 하나는 꼭 받아요.</p><p class="sub">시간이 지나도 실패는 없어요 · 처음 ★★★ 이면 스티커 한 장 더 · 멈춤 창이 떠 있는 동안 시계도 쉬어요</p><button class="btn main" data-a="go">좋아요, 시작!</button>`, a => { if (a === 'go') { S.speedIntro = 1; save(); closeModal(); go.map(n); } });
     if (intro && S.map < n) modal(`<h3>새로운 재미 · ${intro[0]}</h3><p>${intro[1]}</p><p class="sub">막힐 것 같으면 원어데이가 하나 풀어 드려요.</p><button class="btn main" data-a="go">알겠어요</button>`, a => { if (a === 'go') { closeModal(); run(); } });
     else run();
   },
@@ -75,11 +77,15 @@ function onEnd(m, r) {
   if (m.kind === 'daily') {
     const dd = day(); m.prevGot = [...new Set(dd.got)]; dd.wins = Math.min(3, dd.wins + 1); dd.got.push(...r.cleared);
     if (dd.wins >= 3) { completeToday(); extra = 'page'; }
-    else { msg = `오늘 페이지 ${dd.wins}/3 · ${3 - dd.wins}판만 더 깨면 날짜 도장이 찍혀요`; btns = `<button class="btn main" data-n="next">다음 판</button><button class="btn" data-n="home">홈</button>`; }
+    else { msg = `메인 다꾸 ${dd.wins}/3 · ${3 - dd.wins}판만 더 깨면 오늘 페이지에 날짜 도장이 찍혀요`; btns = `<button class="btn main" data-n="next">다음 판</button><button class="btn" data-n="home">홈</button>`; }
   }
   if (m.kind === 'map') {
     const first = m.n > S.map; S.map = Math.max(S.map, m.n);
-    msg = `진행 맵 ${m.n}단계 통과`;
+    S.stars = S.stars || {}; const was = S.stars[m.n] || 0, st = r.stars || 1;
+    if (st > was) S.stars[m.n] = st;
+    if (st === 3 && was < 3) { const id = r.cleared[Math.floor(Math.random() * r.cleared.length)]; give(id); got.push(id); }
+    const tl = `<span class="timeline"><i class="bigst">${'★'.repeat(st)}<u>${'★'.repeat(3 - st)}</u></i>${Game.fmtTime(r.time)} / ${Game.fmtTime(r.limit)}</span>`;
+    msg = tl + `스피드 다꾸 ${m.n}단계 통과 · ` + (st === 3 ? (was < 3 ? '시간 안에 깔끔하게! 별 세 개 보너스 스티커 +1' : '이번에도 시간 안에, 손이 빨라요!') : st === 2 ? '조금 넘었지만 멋지게 깼어요 · 다음엔 별 셋도 금방이에요' : '끝까지 해낸 게 대단해요 · 다시 하면 별을 더 받을 수 있어요');
     if (first && m.n % 10 === 0) { const nb = NOTES[2 + m.n / 10]; msg += ` · 새 노트 「${nb.name}」가 열렸어요`; give('f' + nb.sig, 1); }
     if (first && m.n === 10) msg += ' · 다음 단계부터 얼음이 나와요';
     if (first && m.n === 20) msg += ' · 다음 단계부터 사슬이 나와요';
@@ -193,4 +199,4 @@ window.__back = back;
 
 /* 시험용: 지난날 페이지 만들기 */
 const mkDay = (k, mood = 'sun', line = '') => { const x = S.days[k] = { wins: 3, got: dailySet(k).set.slice(), done: true, mood, line }; x.tpl = dailySet(k).tpl; x.stickers = pickStickers(x.got, k); };
-window.__game = { mkDay, get G() { return Game.G; }, Game, S, go, show, save };
+window.__game = { version: "0.2.0", mkDay, get G() { return Game.G; }, Game, S, go, show, save };

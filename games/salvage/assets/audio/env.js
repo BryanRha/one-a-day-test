@@ -159,7 +159,33 @@ export function createEnv({ ctx, out, rev }) {
       fire: { thump: (b, t) => thump(b, t, 0.12), clang: (b, t) => clang(b, t, 0.045), hiss: (b, t) => hiss(b, t, 0.045), drip: (b, t) => drip(b, t, { v: 0.05, d: rnd(0.3, 1) }),
         spark: (b, t) => crackle(b, t, { v: 0.05, far: rnd(0.4, 0.9) }), chain: (b, t) => creak(b, t, { v: 0.05, f: rnd(600, 1100), modes: [[1, 18, 1], [2.7, 14, 0.5]], wet: 0.6 }), gurgle: (b, t) => gurgle(b, t, 0.04) },
     },
+    /* 심해 연구소 (M4-B): 넓은 타일 홀 — 낮은 냉각기 웅(두 음 맥놀이) · 유리 수조 거품 · 먼 파수 신호음(두 음 · 아주 작게) · 수압 문 삐걱 · 물방울 · 높은 형광 지잉 */
+    lab: { gain: 0.72,
+      beds: {
+        cool: { drone: 1, hz: [[55, 1], [55.6, 0.8], [110, 0.35], [330, 0.08, 'triangle']], cut: 380, wet: 0.45, wander: { every: [1.5, 3.5], g: [0.7, 1.2], tc: 0.8 } },
+        flow: { kind: 'brown', f: [['bandpass', 300, 0.6], ['lowpass', 900, 0.5]], wide: true, wet: 0.45, wander: { every: [1.5, 3.5], f: [0.8, 1.2], g: [0.8, 1.15], tc: 1.2 } },
+        tube: { drone: 1, hz: [[1760, 0.4, 'sine'], [3520, 0.12]], cut: 5000, wet: 0.5, wander: { every: [2, 5], g: [0.5, 1.2] } },
+      },
+      lv: s => ({ cool: s.dark ? 0.01 : 0.026 + s.zone * 0.004, flow: 0.05 + (s.flood ? 0.05 : 0) + (s.cond === 'leak' ? 0.03 : 0), tube: s.dark ? 0 : 0.0035 }),
+      ev: s => ({ bub: 0.6 + (s.cond === 'bloom' ? 0.4 : 0), drip: 0.9 + s.zone * 0.2, ping: 0.05, groan: 0.05 + (s.cond === 'lockdown' ? 0.06 : 0), spark: s.dark ? 0.1 : 0.02, gurgle: s.flood ? 0.15 : 0.05 }),
+      fire: { bub: (b, t) => gurgle(b, t, 0.02), drip: (b, t) => drip(b, t, { v: 0.05, d: rnd(0.3, 1) }),
+        ping: (b, t) => { for (const [f, d] of [[880, 0], [1318.5, 0.22]]) { const o = c.createOscillator(), g = gn(0.0001), p = pan(rnd(-0.6, 0.6)); o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.linearRampToValueAtTime(0.012, t + d + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 1.4); o.connect(g); g.connect(p); p.connect(b); send(g, 0.9); o.start(t + d); o.stop(t + d + 1.5); } },
+        groan: (b, t) => creak(b, t, { v: 0.05, f: rnd(140, 260), modes: [[1, 20, 1], [1.7, 14, 0.4]], wet: 0.7 }), spark: (b, t) => crackle(b, t, { v: 0.04, far: rnd(0.5, 1) }), gurgle: (b, t) => gurgle(b, t, 0.035) },
+    },
   };
+  /* M4-B 판 상태 5 겹침 (어느 지도든): 한파 = 찬 바람 휘파람 · 얼음 우지끈 / 독수 = 걸쭉한 거품 · 낮은 웅 / 폭풍(항구 밖) = 빗소리 */
+  const WXL = {
+    beds: {
+      icew: { kind: 'pink', f: [['bandpass', 1500, 2.2], ['highpass', 700, 0.5]], wide: true, wet: 0.4, wander: { every: [0.4, 1.4], f: [0.7, 1.4], g: [0.4, 1.4], tc: 0.3 } },
+      toxh: { drone: 1, hz: [[73.4, 0.8, 'sawtooth'], [74.2, 0.6]], cut: 260, wet: 0.3, wander: { every: [2, 4], g: [0.7, 1.2] } },
+      rainw: { kind: 'pink', f: [['highpass', 2200, 0.5], ['lowpass', 9000, 0.5]], wide: true, wet: 0.2, wander: { every: [0.5, 1.5], f: [0.9, 1.1], g: [0.8, 1.2], tc: 0.4 } },
+    },
+    lv: s => ({ icew: s.wx === 'cold' ? 0.022 : 0, toxh: s.wx === 'toxic' ? 0.014 : 0, rainw: s.wx === 'storm' && s.map !== 'harbor' ? 0.03 : 0 }),
+    ev: s => ({ ice: s.wx === 'cold' ? 0.35 : 0, tox: s.wx === 'toxic' ? 0.9 : 0 }),
+    fire: { ice: (b, t) => { creak(b, t, { v: 0.05, f: rnd(1800, 2600), modes: [[1, 30, 1], [2.3, 22, 0.5]], wet: 0.5 }); crackle(b, t + 0.05, { v: 0.03, far: 0.3 }); },
+      tox: (b, t) => { for (let i = 0; i < 3; i++) gurgle(b, t + i * rnd(0.04, 0.12), 0.025); } },
+  };
+  for (const M of Object.values(MAPS)) { Object.assign(M.beds, WXL.beds); const lv = M.lv, ev = M.ev; M.lv = s => ({ ...lv(s), ...WXL.lv(s) }); M.ev = s => ({ ...ev(s), ...WXL.ev(s) }); Object.assign(M.fire, WXL.fire); }
 
   /* ───── 엔진 ───── */
   let cur = null;
@@ -170,7 +196,7 @@ export function createEnv({ ctx, out, rev }) {
     return { map, M, bus, beds, next: {}, st: null };
   }
   function stopCur(at) { if (!cur) return; const k = cur; cur = null; k.bus.gain.setTargetAtTime(0.0001, at, 0.5); for (const b of Object.values(k.beds)) b.stop(at); }
-  const key = s => [s.zone, s.cond, s.dark, s.surge, s.flood].join();
+  const key = s => [s.zone, s.cond, s.dark, s.surge, s.flood, s.wx].join();
   return {
     /* 상태: { map, zone 1~3, cond normal|storm|fog|clear|dark|rapids|calm, dark 정전 · 등불 꺼짐, surge 급류 25초, flood 침수 시작 } */
     set(s, at = c.currentTime) {

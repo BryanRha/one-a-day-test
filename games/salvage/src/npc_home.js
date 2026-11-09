@@ -4,12 +4,13 @@
 //  몽이: 가끔 인물 하나에게 깡충깡충 다가가 마주 보고(인물도 몽이 쪽으로 몸을 돌림) 다시 제자리 · 인물을 누르면 그 발치로 먼저 달려감
 //  main.js 를 건드리지 않음: 은신처 묶음(scene 'hideout')에 붙고, 은신처가 보일 때만 자기 rAF 로 움직임
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.11';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.11';
-import { heroMat, HERO_SCALE } from './hero.js?v=0.99.11';
-import { S, today } from './save.js?v=0.99.11';
-import * as ST from './story.js?v=0.99.11';
-import { sfx, unlock } from './audio.js?v=0.99.11';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.12';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.12';
+import { heroMat, HERO_SCALE } from './hero.js?v=0.99.12';
+import { S, today } from './save.js?v=0.99.12';
+import * as ST from './story.js?v=0.99.12';
+import { sfx, unlock } from './audio.js?v=0.99.12';
+import { FACILITIES, FAC_TOTAL } from './data.js?v=0.99.12';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 /* 자리 [x, z, 바라보는 방향] — 은신처 카메라(main.js: 높이 7.2 · 뒤 9.4)에 세로 폰에서 다 보이게 (뒤 줄 x ±3 · 앞 줄 ±2.4)
@@ -54,9 +55,16 @@ export class NpcHome {
   setLook(el, on, quiet) {
     this.look = on; el.classList.toggle('look', on); el.querySelector('.lookcap')?.remove();
     if (!on) return;
-    const cap = document.createElement('div'); cap.className = 'lookcap'; cap.innerHTML = `<div class="lookhead"><b>등불 수색대 초소</b><small>인물을 누르면 이야기를 나눠요</small></div><button class="btn lookback" id="lookBack">돌아가기</button>`; el.appendChild(cap);
+    const cap = document.createElement('div'); cap.className = 'lookcap'; cap.innerHTML = `<div class="lookhead"><b>등불 수색대 초소</b><small>인물을 누르면 이야기를 나눠요</small>${this.facLine()}</div><button class="btn lookback" id="lookBack">돌아가기</button>`; el.appendChild(cap);
     cap.addEventListener('click', e => { if (e.target.closest('#lookBack')) { e.stopPropagation(); try { sfx.ui?.(); } catch { /* */ } this.setLook(el, false); return; } const id = this.pick(e.clientX, e.clientY); if (id) this.tapNpc(id); });
     if (!quiet) this.next = Math.min(this.next, 1.2); /* 들어오면 몽이가 곧 누군가에게 다가감 */
+  }
+  /* 초소 보기 아래 빈자리: 초소 살림 진행 · 지금 공사 (M4-D — 시설 단계 소품이 위 3D 에 보임) */
+  facLine() {
+    const ks = Object.keys(FACILITIES); const lv = ks.reduce((a, k) => a + Math.min(S.fac?.[k] || 0, FACILITIES[k].levels.length), 0); const full = ks.filter(k => (S.fac?.[k] || 0) >= FACILITIES[k].levels.length).length;
+    const b = S.build && FACILITIES[S.build.k]; const left = b ? Math.max(0, S.build.until - Date.now()) / 1000 : 0;
+    const t = left >= 3600 ? `${Math.floor(left / 3600)}시간 ${Math.floor(left % 3600 / 60)}분` : `${Math.ceil(left / 60)}분`;
+    return `<span class="lookfac"><i style="width:${(lv / FAC_TOTAL * 100).toFixed(1)}%"></i></span><small class="lookfacn">초소 살림 ${lv} / ${FAC_TOTAL}단계 · 완성한 시설 ${full} / ${ks.length}${b ? ` · ${b.icon} ${b.name} 공사 중 (${t} 남음)` : ''}</small>`;
   }
   async add(id) {
     this.npcs[id] = { id, root: null, pending: true };
@@ -143,6 +151,7 @@ export class NpcHome {
       const a = this.v.set(N.root.position.x, N.h - 0.05 + N.root.position.y, N.root.position.z).project(cam); const x = Math.max(42, Math.min(er.width - 42, (a.x + 1) / 2 * r.width + r.left - er.left)), y = (1 - a.y) / 2 * r.height + r.top - er.top;
       html += this.look ? `<i class="npctag ${due ? 'due' : ''}" data-who="${N.id}" style="transform:translate(${x.toFixed(0)}px,${y.toFixed(0)}px)">${ST.CAST[N.id].name}${due ? '<em>…</em>' : ''}</i>`
         : `<i class="npcdot" data-who="${N.id}" style="transform:translate(${x.toFixed(0)}px,${y.toFixed(0)}px)">…</i>`; }
+    const cine = !!this.app.homeFac?.cine; if (this.dots._cine !== cine) { this.dots._cine = cine; this.dots.classList.toggle('cine', cine); } /* M4 마무리: 공사 끝 연출 동안 이름표를 숨김 (위쪽 금빛 띠와 겹침) */
     if (this.dots._h !== html) { this.dots.innerHTML = html; this.dots._h = html; this.dots.querySelectorAll('.npcdot, .npctag').forEach(b => b.onclick = e => { e.stopPropagation(); this.tapNpc(b.dataset.who); }); }
   }
   hideDots() { if (this.dots) { this.dots.remove(); this.dots = null; } }

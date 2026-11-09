@@ -1,13 +1,16 @@
 // 지원 부대: 작전 시작 때 아군 본부 가까이에 유닛을 더 배치 (화면과 무관 — Node 봇에서도 씀)
 //   광고 보급 보너스(작전 실패 1~2번째) · 응원 선물(같은 작전 3연속 패배 · 6번째 조금 더)이 같은 방식을 씀
 //   크기 근거: tools/help_bot.mjs (봇 승률 변화) — 응원 선물은 보급 보너스 효과의 ½ 이하
-import { TERRAIN, UNITS } from './data.js?v=0.99.11';
-import { TCH } from './sim.js?v=0.99.11';
+import { TERRAIN, UNITS } from './data.js?v=0.99.12';
+import { TCH } from './sim.js?v=0.99.12';
 
 export const SUPPORT = {
   supply: { units: ['ltank', 'inf'], name: '보급 보너스', desc: '경전차 · 소총병 지원' },   /* 광고 1회 (작전 실패 후 '같은 배치로 다시') */
   gift: { units: ['inf:50'], name: '응원 선물', desc: '소총병 반 분대(체력 5) 지원' },    /* 같은 작전 3연속 패배 */
   gift2: { units: ['inf'], name: '응원 선물', desc: '소총병 1기 지원' },                 /* 6번째 패배부터 조금 더 */
+  /* 보급품 측정 (2026-11-09 · help_bot 40판 같은 8작전): kit_fund +12.2%p(보급의 0.87배) · kit_tank +8.8%p(0.62배) → 한 출격에 하나만 */
+  kit_fund: { units: [], funds: 5000, name: '작전 자금', desc: '시작 자금 +5,000' },      /* 보급 상점 (v0.12) — 한 판 소모 */
+  kit_tank: { units: ['ltank'], name: '경전차 지원', desc: '경전차 1기 합류' },           /* 보급 상점 (v0.12) — 한 판 소모 */
   /* 측정 (2026-10-28 · node tools/help_bot.mjs 40 easy m4,m5,m8,m13,m14,m15,m20,m25 — 아군 봇 쉬움 · 지는 판이 있는 작전 8곳 × 40판):
      기본 76.6% → 보급 +14.1%p · 선물 +3.4%p(보급의 0.24배) · 선물+ +6.9%p(0.49배) — 기준 ½ 이하
      (소총병 1기 = 경전차 1기만큼 효과가 커서 선물은 반 분대로, 보급은 경전차+소총병으로 정함 · 보급트럭은 효과 0) */

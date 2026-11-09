@@ -1,6 +1,6 @@
 // 시험 봇 (?bot=N&free&seed=…&fast=3) — 화면 버튼을 눌러 출격 → 뒤지기 · 싸우기 · 탈출 → 결과 → 다시. N판 연속
 //  기록: window.__salvage.botLog (판마다 결과 · fps · 메모리) · 오류는 window.__salvage.errors
-import { ITEMS, MAPS } from './data.js?v=0.99.11';
+import { ITEMS, MAPS } from './data.js?v=0.99.12';
 export function installBot(app) {
   const Q = new URLSearchParams(location.search); const N = +Q.get('bot') || 3; app.timeScale = +(Q.get('fast') || 1);
   /* ?map=harbor|tunnel — 그 지도를 열어 두고(시험용) 그 지도로만 출격 */
@@ -24,7 +24,7 @@ export function installBot(app) {
     const R = app.raid; if (!R) { /* 판 끝 → 결과 기록 */
       const r = app.lastResult; const fl = fpsAcc.length ? fpsAcc : [0];
       const m = app.mem(); if (!firstMem) firstMem = m;
-      log.push({ n: log.length + 1, map: r.map, cond: r.cond, minO2: r.minO2, out: r.outcome, val: r.value, kills: r.killN, zone: r.zoneMax, power: r.power, exit: r.exit, time: Math.round(r.time), fpsAvg: Math.round(fl.reduce((a, b) => a + b, 0) / fl.length), fpsMin: Math.min(...fl), geo: m.geo, tex: m.tex, heap: m.heap, nodes: m.nodes, corpse: r.corpseTaken, why: r.outcome === 'dead' ? JSON.stringify(r.dmgLog) : '' });
+      log.push({ n: log.length + 1, map: r.map, cond: r.cond, wx: r.wx, minO2: r.minO2, out: r.outcome, val: r.value, kills: r.killN, zone: r.zoneMax, power: r.power, exit: r.exit, time: Math.round(r.time), fpsAvg: Math.round(fl.reduce((a, b) => a + b, 0) / fl.length), fpsMin: Math.min(...fl), geo: m.geo, tex: m.tex, heap: m.heap, nodes: m.nodes, corpse: r.corpseTaken, why: r.outcome === 'dead' ? JSON.stringify(r.dmgLog) : '' });
       st = 'menu'; t = 0; return; }
     raidT += dt; if (app.stats.fps) fpsAcc.push(app.stats.fps);
     if (R.over) { R.input.mx = R.input.mz = 0; return; }

@@ -1,12 +1,12 @@
 // 아케이드: 보스 러시 · 랜덤 아레나 · 단일 룬 시련 · 심연 광산 (원작 아케이드 모드를 혼자 하는 버전으로)
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load, save } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import * as BM from '../bmflow.js?v=0.99.11';
-import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.99.11';
-import { DESC } from './Deck.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load, save } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import * as BM from '../bmflow.js?v=0.99.12';
+import { RUNES, RARITY, RARITY_NAME, RARITY_COLOR } from '../core/sim.js?v=0.99.12';
+import { DESC } from './Deck.js?v=0.99.12';
 
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const LOOK = { rush: ['boss_serpent', 0xFF5A7A], arena: ['die_echo', 0xB59BFF], mono: ['die_flame', 0xFF8A3D], abyss: ['boss_statue', 0x5EE3FF] };
@@ -37,7 +37,7 @@ export class ArcadeScene extends Phaser.Scene {
       const best = d.arcade[k] || 0;
       T(this, 330, y + ch / 2 - 46, best ? `최고 ${A.unit} ${best}` : '아직 기록 없음', 28, best ? C.gold : C.dim, { ox: 0, w: 800 });
       const left = k === 'abyss' ? M.abyssLeft() : null;
-      const b = btn(this, W - 170, y + 10, 230, 110, '도전', () => this.start(k), { style: k === 'rush' ? 'gold' : 'indigo', size: 38 });
+      const b = btn(this, W - 170, y + 10, 230, 110, '입장', () => this.start(k), { style: k === 'rush' ? 'gold' : 'indigo', size: 38 });
       if (left != null) {
         T(this, W - 170, y + 90, left ? `오늘 ${left}번 남음` : '내일 다시 3번', 24, left ? C.sub : C.pink, { w: 800 });
         // 다 쓴 날: 원어데이 안이면 '한 번 더'(🪙20 · 무료 길 = 내일 다시) · 밖이면 예전처럼 잠김

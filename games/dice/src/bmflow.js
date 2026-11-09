@@ -1,11 +1,11 @@
 // 룬 다이스 ↔ 원어데이 BM 연결 (게임 쪽 도우미 — 공통 파일 oad_bm.js 는 고치지 않음)
 //   가격은 서버 표(SHOP.dice)만 기준: crystal100(수정 100) · abyss(심연 한 번 더) · arena(전장 배경, item)
-//   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로 뽑기를 주지 않음
+//   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로는 열쇠만 하루 1개(QA 23 · 2026-11-09) — 골드로는 여전히 뽑기 X
 //   광고 보상: 판 보상 2배(하루 3) · 무료 상자(하루 1, 수정 + 등급업 카드) — 소장자는 광고 없이 바로(횟수 같음)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 전장 전부 숨김, 게임은 그대로
-import { bm } from './oad_bm.js?v=0.99.11';
-import { load, save } from './save.js?v=0.99.11';
-import { HELP, roll, note, eligible, used } from './core/help.js?v=0.99.11';
+import { bm } from './oad_bm.js?v=0.99.12';
+import { load, save } from './save.js?v=0.99.12';
+import { HELP, roll, note, eligible, used } from './core/help.js?v=0.99.12';
 
 export { bm };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -148,10 +148,12 @@ export function failMsg(r) {
 }
 
 // ── 보상형 광고 (게임 쪽 하루 횟수 · 앱 한도는 앱이 따로 셈) ──
-export const AD = { x2: 3, box: 1, x2Cap: 100 };
-function ads() { const d = load(); if (!d.ads || d.ads.date !== dayKey()) { d.ads = { date: dayKey(), x2: 0, box: 0 }; save(); } return d.ads; }
+//   key: 룬 제단 '광고 보고 열쇠'(QA 23 · 2026-11-09 대표 QA 시트) — 열쇠 1 = 뽑기 1회 · 하루 1번 (게임 광고 합계 2배 3 + 상자 1 + 열쇠 1 = 5 = 앱 게임당 하루 한도 · docs/bm-policy.md 3장)
+export const AD = { x2: 3, box: 1, key: 1, x2Cap: 100 };
+function ads() { const d = load(); if (!d.ads || d.ads.date !== dayKey()) { d.ads = { date: dayKey(), x2: 0, box: 0, key: 0 }; save(); } return d.ads; }
 export const x2Left = () => Math.max(0, AD.x2 - ads().x2);
 export const boxLeft = () => Math.max(0, AD.box - ads().box);
+export const keyLeft = () => Math.max(0, AD.key - (ads().key || 0));
 export const adReady = () => oadOn() && !!(bm.info.ads && bm.info.ads.reward);
 // 판 보상 2배: 이번 판 수정만큼 한 번 더 (최대 100)
 export async function doubleReward(crystals) {
@@ -168,6 +170,15 @@ export async function freeBox() {
   const d = load(), own = Object.keys(d.unlocked), rune = own[Math.floor(Math.random() * own.length)];
   ads().box++; d.crystals += 20; d.cards[rune] = (d.cards[rune] || 0) + 1; save();
   return { ...r, crystals: 20, rune };
+}
+
+// 열쇠 1개 (룬 제단 · QA 23): 광고 1회(소장자는 바로) → 뽑기 열쇠 +1 · 확률 · 천장은 그대로
+export async function keyAd() {
+  if (!keyLeft()) return { ok: false, reason: 'limit' };
+  const r = await bm.rewardedAd('key');
+  if (!r || !r.ok) return r || { ok: false, reason: 'error' };
+  const d = load(), a = ads(); a.key = (a.key || 0) + 1; d.keys += 1; save(); track('ad_key', { left: keyLeft() });
+  return { ...r, keys: d.keys };
 }
 
 // ── 판 끝 전면 광고: 판이 끝나면 roundOver(), 결과에서 다음 화면으로 넘어갈 때 afterRound() (판마다 한 번만 앱에 물어봄 · 실패 순간엔 안 부름) ──

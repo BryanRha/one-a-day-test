@@ -1,20 +1,22 @@
 // 전투 화면: 지도 · 유닛 선택 → 이동(파란 칸) → 행동(공격 · 점령 · 하차 · 대기) · 기지 생산 · 지휘관 필살기 · 상대 AI 턴
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load, save } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.99.11';
-import { Sim, dist, hpOf } from '../core/sim.js?v=0.99.11';
-import { AI, apply } from '../core/ai.js?v=0.99.11';
-import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.99.11';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.11';
-import { STORY } from '../story.js?v=0.99.11';
-import { TALK, RADIO } from '../talk.js?v=0.99.11';
-import { withSupport, SUPPORT } from '../core/support.js?v=0.99.11';
-import { COLORS, teamColor, paintKey } from '../color.js?v=0.99.11';
-import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.99.11';
-import { bm } from '../oad_bm.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load, save } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.99.12';
+import { Sim, dist, hpOf } from '../core/sim.js?v=0.99.12';
+import { AI, apply } from '../core/ai.js?v=0.99.12';
+import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.99.12';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.12';
+import { STORY } from '../story.js?v=0.99.12';
+import { TALK, RADIO } from '../talk.js?v=0.99.12';
+import { withSupport, SUPPORT } from '../core/support.js?v=0.99.12';
+import { COLORS, teamColor, paintKey } from '../color.js?v=0.99.12';
+import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.99.12';
+import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.12';
+import { runDemo, demoWanted } from '../demo.js?v=0.99.12';
+import { bm } from '../oad_bm.js?v=0.99.12';
 
 const TOP = 196, BOTTOM = 360;
 const TEAM = { 1: 0x3E7FD8, 2: 0xD9472E }, TEAMS = { 1: 'b', 2: 'r' };
@@ -30,13 +32,18 @@ export class PlayScene extends Phaser.Scene {
   create(data = {}) {
     const d = load();
     // 판마다 새로 시작 (Phaser 는 같은 화면 객체를 다시 쓰므로 지난 판 값이 남으면 끝나지 않거나 멈춤)
-    Object.assign(this, { fogG: null, pendingEvs: null, unloadList: [], ended: false, ending: false, said: {}, talking: false, tileImg: null, seamT: null, wxLayer: null, wxKind: null, wxParts: null, paused: false, winWhy: null, enemySum: null, holdFast: false, dragFrom: null, dragged: false, nextIdx: -1, ghost: null, pending: null, tgts: [], spots: null, spotsCache: null, reach: null, autoAi: null, powers0: 0, captures: 0, hinted: false, powerHintObj: null, frozen: null, pw: null, danger: false, supportShown: false, undoPop: null, endAsk: null });
+    Object.assign(this, { fogG: null, pendingEvs: null, unloadList: [], ended: false, ending: false, said: {}, talking: false, tileImg: null, seamT: null, wxLayer: null, wxKind: null, wxParts: null, paused: false, winWhy: null, enemySum: null, holdFast: false, dragFrom: null, dragged: false, nextIdx: -1, ghost: null, pending: null, tgts: [], spots: null, spotsCache: null, reach: null, autoAi: null, powers0: 0, captures: 0, hinted: false, powerHintObj: null, frozen: null, pw: null, danger: false, supportShown: false, undoPop: null, endAsk: null, demoOn: false, demoSkip: false, riverHint: false, autoBar: null });
     this.mode = data.mode || 'free';
     this.map = data.custom || MAPS.find(m => m.id === data.mapId) || WAR.find(m => m.id === data.mapId) || MAPS[0];
     this.simMap = ['campaign', 'daily', 'war'].includes(this.mode) ? campaignMap(this.map) : this.map;
     // 지원 부대 (광고 보급 보너스 · 응원 선물): 새로 시작할 때만 지도에 더함 (이어하기는 저장된 판에 이미 있음)
     this.support = data.support || (data.resume && data.resume.support) || null;
     if (data.support && !data.resume && SUPPORT[data.support] && !['daily', 'war', 'versus'].includes(this.mode)) this.simMap = withSupport(this.simMap, data.support);
+    // 보급 상점 보급품 (v0.12): 새로 시작할 때만 · 일반 작전 · 자유 대전(AI)만 — Brief 에서 이미 꺼낸 것
+    this.kits = (data.kits || (data.resume && data.resume.kits) || []).filter(k => SUPPORT['kit_' + k]);
+    if (this.kits.length && !data.resume && ['campaign', 'free'].includes(this.mode)) for (const k of this.kits) this.simMap = withSupport(this.simMap, 'kit_' + k);
+    // 자동 작전 (v0.12 · 같은 작전 2번 실패 + 광고): 아군도 적 AI 와 같은 두뇌가 지휘 · 한 번이라도 켜면 별은 승리 1개까지
+    this.autoplay = this.mode === 'campaign' && !!(data.autoplay || (data.resume && data.resume.autoplay)); this.autoUsed = this.autoplay || !!(data.resume && data.resume.autoUsed);
     // 되돌리기: 아군 턴 시작 상태 (화면을 다시 만들어도 이어받음)
     this.snaps = (data.undo && data.undo.snaps) || []; this.undoN = (data.undo && data.undo.n) || 0;
     // 부대 색 (꾸미기): 2인 대전은 파랑 · 빨강 그대로
@@ -362,6 +369,8 @@ export class PlayScene extends Phaser.Scene {
     this.info.add(T(this, ix + 124, y0 + 22, tr.name, 30, C.text, { ox: 0, w: 900 }));
     for (let k = 0; k < 4; k++) this.info.add(T(this, ix + 124 + k * 30, y0 + 62, '★', 28, k < tr.def ? C.gold : '#4A4A30', { ox: 0, w: 900, shadow: false }));
     this.info.add(T(this, ix + 250, y0 + 62, `방어 ${tr.def}`, 24, C.sub, { ox: 0, w: 800 }));
+    const RULE = { river: '보병만 걸어서 건넘 · 차량은 다리로', mountain: '보병만 오름 · 차량은 못 감', sea: '배 · 하늘 유닛만', bridge: '차량도 강을 건너는 곳', reef: '배 · 하늘 유닛만 · 숨기 좋음', beach: '상륙정이 내리는 곳' }[t.t];
+    if (RULE && !tr.prop && !u) this.info.add(T(this, ix + 124, y0 + 98, RULE, 22, C.cyan, { ox: 0, w: 800 }));
     if (tr.prop) this.info.add(T(this, ix + 124, y0 + 98, `${t.owner === this.me ? '아군' : t.owner ? '적군' : '중립'}${t.cap < 20 ? ` · 점령 ${20 - t.cap}/20` : ''}`, 24, t.owner === 1 ? C.blue : t.owner === 2 ? C.red : C.sub, { ox: 0, w: 800 }));
     // 유닛
     if (u) {
@@ -460,18 +469,20 @@ export class PlayScene extends Phaser.Scene {
   doUndo(idx) {
     const to = this.snaps[idx], keep = this.snaps.slice(0, idx);
     this.ended = true; audio.play('sfx_page', { volume: 0.6 });
-    this.scene.restart({ ...this.data0, support: null, resume: { sim: to.sim, captures: to.captures, powers: to.powers, support: this.support }, undo: { snaps: keep, said: to.said, n: this.undoN + 1 } });
+    this.scene.restart({ ...this.data0, support: null, resume: { sim: to.sim, captures: to.captures, powers: to.powers, support: this.support, kits: this.kits, autoplay: this.autoplay, autoUsed: this.autoUsed }, undo: { snaps: keep, said: to.said, n: this.undoN + 1 } });
   }
   // 지원 부대 알림: 본부 옆에 합류한 유닛을 반짝
   showSupport() {
-    const sp = SUPPORT[this.support]; if (!sp || this.ended) return;
-    toast(this, `${sp.name} · ${sp.desc} — 본부 옆에 합류했어요`, C.gold, TOP + 140);
+    if (this.ended) return;
+    const names = [this.support, ...this.kits.map(k => 'kit_' + k)].map(k => SUPPORT[k]).filter(Boolean).map(sp => `${sp.name} · ${sp.desc}`);
+    if (!names.length) return;
+    toast(this, `${names.join(' / ')} — 합류했어요`, C.gold, TOP + 140);
     for (const u of this.s.units.filter(u => u.p === 1 && u.support)) { const c = this.views.get(u.id); if (!c) continue; this.follow(u.x, u.y); this.tweens.add({ targets: c, scale: 1.25, duration: 220, yoyo: true, repeat: 3 }); }
   }
   // 이어하기 저장 (아군 턴 시작마다)
   autosave() {
     if (this.auto || this.mode === 'versus' || this.map.custom) return;
-    try { localStorage.setItem('front_tactics_resume', JSON.stringify({ mode: this.mode, mapId: this.map.id, level: this.level, co: this.co, enemyCo: this.enemyCo, tag: this.tagCo, captures: this.captures, powers: this.powers, support: this.support, sim: this.s.snapshot(), at: Date.now() })); } catch { /* */ }
+    try { localStorage.setItem('front_tactics_resume', JSON.stringify({ mode: this.mode, mapId: this.map.id, level: this.level, co: this.co, enemyCo: this.enemyCo, tag: this.tagCo, captures: this.captures, powers: this.powers, support: this.support, kits: this.kits, autoplay: this.autoplay, autoUsed: this.autoUsed, sim: this.s.snapshot(), at: Date.now() })); } catch { /* */ }
   }
 
   // ── 범위 칸 ──
@@ -487,13 +498,19 @@ export class PlayScene extends Phaser.Scene {
     if (s.turn === 1 && this.enemySum) { const m = this.enemySum; this.enemySum = null; this.time.delayedCall(900, () => toast(this, m, m.includes('없음') ? C.green : C.pink, TOP + 60)); }
     if (this.resumed) { this.resumed = false; toast(this, `이어하기 · DAY ${s.day}`, C.gold, TOP + 60); }
     if (this.undone) { this.undone = false; toast(this, `한 턴 되돌렸어요 · DAY ${s.day}`, C.gold, TOP + 60); }
-    if (this.support && s.day === 1 && s.turn === 1 && !this.supportShown) { this.supportShown = true; this.time.delayedCall(1200, () => this.showSupport()); }
+    if ((this.support || this.kits.length) && s.day === 1 && s.turn === 1 && !this.supportShown) { this.supportShown = true; this.time.delayedCall(1200, () => this.showSupport()); }
     if (this.mode === 'versus') { await this.handoff(); this.syncAll(); }
     else await this.banner(s.turn === 1 ? `DAY ${s.day}` : '적군 턴', s.turn === 1 ? '아군 턴 · 작전을 시작하세요' : COS[this.enemyCo].name + ' 장군이 움직여요', s.turn === 1 ? C.blue : C.red);
     this.themeMusic();
     await this.turnTalk();
     if (!this.human(s.turn)) { this.themeMusic(); this.speed = 2; this.setActs(null); [this.endBtn, this.nextBtn, this.dangerBtn, this.undoBtn].forEach(b => b && b.setVisible(false)); this.skipBtn.setVisible(true); await this.enemyTurn(); }
-    else { this.themeMusic(); this.speed = 1; this.skipBtn.setVisible(false); if (this.undoBtn) this.pushSnap(); this.setActs(null); this.autosave(); this.drawDanger(); if (this.auto) return this.enemyTurn(1); if (!load().tips.war) this.tutorial(); }
+    else {
+      this.themeMusic(); this.speed = 1; this.skipBtn.setVisible(false); if (this.undoBtn) this.pushSnap(); this.setActs(null); this.autosave(); this.drawDanger();
+      if (this.auto) return this.enemyTurn(1);
+      if (this.autoplay) { this.autoBarShow(); this.speed = 2; [this.endBtn, this.nextBtn, this.dangerBtn, this.undoBtn].forEach(b => b && b.setVisible(false)); return this.enemyTurn(1); }
+      if (demoWanted(this)) return runDemo(this);   /* 첫 출전: AI 가 첫 턴을 천천히 시범 (v0.12 · 시트 #4) */
+      if (!load().tips.war) this.tutorial();
+    }
   }
   // ── 전투 중 대화 (원작처럼 짧은 대사 장면) ──
   talkOn() { return load().talk !== false && !this.auto && this.speed <= 2; }
@@ -584,6 +601,8 @@ export class PlayScene extends Phaser.Scene {
     const ai = p === 2 ? this.ai : (this.autoAi ||= new AI('hard'));
     let guard = 0;
     while (this.s.turn === p && !this.s.over && guard++ < 400) {
+      if (p === 1 && !this.auto && !this.autoplay) { this.busy = false; this.autoBarShow(); this.setActs(null); this.updateHud(); return; }   /* 자동 작전을 끄면 그 자리부터 직접 지휘 */
+      while (this.paused) await sleep(this, 200);
       let a = { kind: 'end' };
       try { a = ai.next(this.s); apply(this.s, a); await this.drain(a); }
       catch (err) { console.warn('적 턴 오류 — 턴을 넘김', err); this.s.events.length = 0; if (this.s.turn === p) this.s.endTurn(); this.s.events.length = 0; break; }
@@ -775,6 +794,7 @@ export class PlayScene extends Phaser.Scene {
     list.push(['취소', () => this.cancelSel(), 'ghost']);
     this.setActs(list);
     if (UNITS[u.type].indirect) toast(this, here.length ? '[공격]을 누르면 바로 포격해요' : '빨간 테두리 = 사거리 · 움직이면 이번 턴엔 못 쏴요', C.sub, TOP + 60);
+    else if (!this.riverHint && ['tire', 'tread'].includes(UNITS[u.type].mt) && this.s.tiles.some(t => t.t === 'river')) { this.riverHint = true; toast(this, '전차 · 차량은 강에 못 들어가요 · 다리(=)로 건너거나 보병을 보내세요', C.cyan, TOP + 60); }
   }
   showEnemyRange(u) {
     this.clearHl(); const r = this.s.rangeOf(u); if (!r) return;
@@ -927,17 +947,30 @@ export class PlayScene extends Phaser.Scene {
     if (tg) { const t2 = COS[this.s.tag[me]]; opt(2, `합동 필살기 · ${co.superp} + ${t2.superp}`, `두 지휘관의 초필살기를 한꺼번에! (${co.name} · ${t2.name})`, 'gold', 3, C.gold); }
   }
   async firePower(lvl) { if (this.busy || !this.human(this.s.turn)) return; this.busy = true; this.s.usePower(lvl); await this.drain(); this.busy = false; this.updateHud(); }
-  tutorial() {
+  tutorial(head) {
     const d = load(); d.tips.war = 1; save();
-    const p = popup(this, '작전 안내', 940, 900);
+    const p = popup(this, head ? '잘 보셨어요!' : '작전 안내', 940, 900);
+    if (head) p.content.add(T(this, 0, -300, head, 26, C.gold, { w: 800, wrap: 820 }));
     const lines = ['① 아군 유닛을 누르면 갈 수 있는 칸이 파랗게', '② 칸을 누르면 이동 → 공격 · 점령 · 대기', '③ 공격 전에 정확한 피해와 반격이 보여요', '④ 야포·로켓포: 움직이지 않고 [공격] (사거리 빨간 칸)', '⑤ 보병으로 도시 점령 → 매일 자금 · 기지에서 생산', '적 본부를 점령하거나 적을 모두 무찌르면 승리!'];
     lines.forEach((s, i) => p.content.add(T(this, -390, -250 + i * 78, s, 30, i === 5 ? C.gold : C.text, { ox: 0, w: 800 })));
-    if (this.map.tip) p.content.add(T(this, 0, 240, `팁 · ${this.map.tip}`, 26, C.green, { w: 800, wrap: 820 }));
-    p.content.add(btn(this, 0, 350, 420, 110, '작전 시작', () => p.close(), { style: 'gold', size: 36 }));
+    const adv = mapAdvice(this.simMap);
+    if (adv.river) p.content.add(T(this, 0, 225, '강 건너기 · 소총병·바주카병은 걸어서 · 전차·차량은 다리(=)로 · 헬기는 날아서', 24, C.cyan, { w: 800, wrap: 840 }));
+    else if (this.map.tip) p.content.add(T(this, 0, 225, `팁 · ${this.map.tip}`, 26, C.green, { w: 800, wrap: 820 }));
+    p.content.add(btn(this, 0, 350, 420, 110, head ? '직접 지휘하기' : '작전 시작', () => p.close(), { style: 'gold', size: 36 }));
   }
 
   // ── 일시정지 ──
   onBack() { if (!this.paused && !this.s.over) this.pause(); return true; }
+  // 자동 작전 띠: 지도 위 '자동 작전 중' + [직접 지휘] (끄면 다음 행동부터 내가 지휘)
+  autoBarShow() {
+    if (this.autoBar) { this.autoBar.destroy(); this.autoBar = null; }
+    if (!this.autoplay || this.s.over) return;
+    const c = this.autoBar = this.add.container(0, 0).setDepth(850), y = TOP + 56;
+    const g = this.add.graphics(); g.fillStyle(0x14160A, 0.88).fillRoundedRect(40, y - 40, W - 80, 80, 40).lineStyle(3, 0xFFD45A, 0.8).strokeRoundedRect(40, y - 40, W - 80, 80, 40); c.add(g);
+    const t = T(this, 80, y - 2, '자동 작전 중 · 아군 AI 가 지휘해요', 28, C.gold, { ox: 0, w: 900 }); c.add(t);
+    this.tweens.add({ targets: t, alpha: 0.55, duration: 700, yoyo: true, repeat: -1 });
+    c.add(btn(this, W - 190, y - 2, 260, 66, '직접 지휘', () => { this.autoplay = false; track('auto_stop', { m: this.map.id, day: this.s.day }); c.destroy(); this.autoBar = null; toast(this, '이번 행동이 끝나면 직접 지휘해요', C.sub, TOP + 140); }, { style: 'ghost', size: 26 }));
+  }
   pause() {
     if (this.paused) return; this.paused = true;
     const resume = () => { p.close(); this.time.delayedCall(150, () => { this.paused = false; }); };
@@ -1012,7 +1045,7 @@ export class PlayScene extends Phaser.Scene {
       this.time.delayedCall(surrender ? 100 : 900, () => { this.cameras.main.fadeOut(500, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', r)); });
       return;
     }
-    const r = { mode: this.mode, mapId: this.map.id, win, day: s.day, lost: s.stats.lost[1], kills: s.stats.kills[1], captures: this.captures, built: s.stats.built[1], powers: this.powers, co: this.co, tag: this.tagCo, why: surrender ? 'surrender' : this.winWhy, dealt: s.stats.dealt.slice(), units0: (this.simMap.units || []).filter(u => u.p === 1 && !u.support).length, support: this.support, undos: this.undoN, custom: this.map.custom ? this.map : null, enemyTag: this.data0.enemyTag, limit: this.data0.limit };
+    const r = { mode: this.mode, mapId: this.map.id, win, day: s.day, lost: s.stats.lost[1], kills: s.stats.kills[1], captures: this.captures, built: s.stats.built[1], powers: this.powers, co: this.co, tag: this.tagCo, why: surrender ? 'surrender' : this.winWhy, dealt: s.stats.dealt.slice(), units0: (this.simMap.units || []).filter(u => u.p === 1 && !u.support).length, support: this.support, kits: this.kits, auto: this.autoUsed, undos: this.undoN, custom: this.map.custom ? this.map : null, enemyTag: this.data0.enemyTag, limit: this.data0.limit };
     const res = M.finish(r); r.fails = noteResult(r);
     const rd = { ...r, ...res, level: this.level, enemyCo: this.enemyCo }, st = this.mode === 'campaign' && win && STORY[this.map.id], d = load();
     const to = st && st.win && !(d.seenWin || {})[this.map.id] ? (((d.seenWin ||= {})[this.map.id] = 1), save(), ['Story', { lines: st.win, foe: this.enemyCo, title: '작전 성공', next: ['Result', rd] }]) : ['Result', rd];

@@ -1,11 +1,11 @@
 // 모델 불러오기 · 복제 · 전리품 아이콘(3D 모델을 찍어 만듦)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.11';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.11';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.11';
-import { ITEMS } from './data.js?v=0.99.11';
-import { initHero } from './hero.js?v=0.99.11';
-import { loadEnemyPack, enemyReady } from './enemy3d.js?v=0.99.11';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.12';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.12';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.12';
+import { ITEMS } from './data.js?v=0.99.12';
+import { initHero } from './hero.js?v=0.99.12';
+import { loadEnemyPack, enemyReady } from './enemy3d.js?v=0.99.12';
 
 export const A = { props: {}, hero: null, skel: null, icons: {}, bytes: 0, chars: {}, packs: {}, packBytes: 0 };
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
@@ -40,7 +40,7 @@ export async function loadAll(progress) {
 /* v0.4 지도 묶음: 해금된 지도만 늦게 받음 (첫 진입 용량에 안 들어감) — 소품은 A.props 에 더하고, 해골 새 몸은 A.chars
    두 번 불러도 한 번만 받음 (Promise 공유) */
 /* v0.5 레벨 아트: 지도마다 꾸밈 소품 · 랜드마크 묶음(dress_<지도>.glb · tools/props3d) — 창고도 묶음이 생김(첫 화면 뒤 바로 받기 시작) */
-const PACK_FILES = { ware: { props: ['dress_ware.glb'], chars: {} }, harbor: { props: ['map_harbor.glb', 'dress_harbor.glb'], chars: {} }, tunnel: { props: ['map_tunnel.glb', 'dress_tunnel.glb'], chars: {} }, factory: { props: ['map_factory.glb', 'dress_factory.glb'], chars: {} } }; /* v0.5.x: 등불 · 광부 해골 몸은 enemy_<지도>.glb 에 빛이끼와 같이 구워 넣음 → skel_rogue · skel_warrior 안 받음 */
+const PACK_FILES = { ware: { props: ['dress_ware.glb'], chars: {} }, harbor: { props: ['map_harbor.glb', 'dress_harbor.glb'], chars: {} }, tunnel: { props: ['map_tunnel.glb', 'dress_tunnel.glb'], chars: {} }, factory: { props: ['map_factory.glb', 'dress_factory.glb'], chars: {} }, lab: { props: ['dress_lab.glb'], chars: {} } }; /* M4-B 연구소: 벽 · 바닥 · 소품 모두 dress_lab 하나 */ /* v0.5.x: 등불 · 광부 해골 몸은 enemy_<지도>.glb 에 빛이끼와 같이 구워 넣음 → skel_rogue · skel_warrior 안 받음 */
 const charLoads = {};
 export const packReady = m => (!PACK_FILES[m] || A.packs[m] === true) && enemyReady(m);
 /* v0.5.x 적 · 보스 전용 모델(enemy_<지도>.glb · tools/enemy3d)도 같은 때 받음 — 출격은 둘 다 받은 뒤 */

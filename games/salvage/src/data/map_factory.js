@@ -11,7 +11,7 @@ export const F_MAP = {
   blurb: '하역장 → 용광로 · 컨베이어 → 동력 코어실', tips: '검은 닻(약탈단)이 기계 · 해골과도 싸워요 — 엄폐물 뒤에서 몸을 내밀 때가 기회. 전원을 켜면 컨베이어가 돌아 반출구로 나갈 수 있어요',
   zones: {
     1: { name: '하역장', short: '하역장', hp: 1.4, dmg: 1.25, boxes: { crate: 25, bench: 25, locker: 25, stash: 25 }, nLoot: [1, 2], nEnemy: [1, 2], foes: { anchor: 40, drone: 30, skel: 30 } },
-    2: { name: '용광로 · 컨베이어', short: '용광로', hp: 1.75, dmg: 1.45, boxes: { bench: 35, toolbox: 25, stash: 20, locker: 20 }, nLoot: [2, 3], nEnemy: [1, 2], foes: { anchor: 30, drone: 40, skel: 30 } },
+    2: { name: '용광로 · 컨베이어', short: '용광로', hp: 1.75, dmg: 1.4, boxes: { bench: 35, toolbox: 25, stash: 20, locker: 20 }, nLoot: [2, 3], nEnemy: [1, 2], foes: { anchor: 30, drone: 40, skel: 30 } },
     3: { name: '동력 코어실', short: '코어실', hp: 2.15, dmg: 1.7, boxes: { corebox: 45, toolbox: 20, chest: 35 }, nLoot: [2, 3], nEnemy: [2, 2], elite: true, foes: { anchor: 25, drone: 45, skel: 30 } } },
   exits: { early: '하역장 사다리', power: '컨베이어 반출구', sub: '크레인 바구니' },
   conds: { steam: 35, overheat: 30, outage: 35 }, loot: 1.7,

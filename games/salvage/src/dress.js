@@ -2,7 +2,7 @@
 //  방마다: 주제 소품 1 (벽에 붙임) · 바닥 무늬 2~3종 · 벽 장식 1 (윗벽 그림 조각 · 옆벽 배관) / 구역마다: 랜드마크 1 (빈 칸 · 지도 밖 물 위)
 //  ※ plan() 의 난수를 쓰지 않음(따로 seed) → 지도 · 상자 · 적 · 쓰러진 자리는 그대로. 소품은 문 · 상자 · 엄폐물 · 출구 · 발전기 · 등불 · 공기 방울과 떨어뜨림
 //  판정: 주제 소품 일부만 작은 판정(solid) — 벽 쪽으로 붙여 길을 막지 않음 (tools/reach.mjs 가 같이 검사)
-import { T, RT, RS, COLS, ROWS, zoneOfRow, mix32, rng, SOLID } from './plan.js?v=0.99.11';
+import { T, RT, RS, COLS, ROWS, zoneOfRow, mix32, rng, SOLID } from './plan.js?v=0.99.12';
 
 /* 벽 [높이, 두께] — map.js STYLE 과 같은 값 (꾸밈 위치 계산용) */
 const WALL = {
@@ -10,18 +10,22 @@ const WALL = {
   harbor: (z, low) => low ? [0.95, 0.2] : z === 2 ? [2.3, 2.0] : z === 1 ? [1.8, 0.22] : [2.4, 0.4],
   tunnel: (z, low) => low ? [0.9, 0.7] : [3.0, 0.7],
   factory: (z, low) => low ? [0.9, 0.7] : [3.0, 0.7],
+  lab: (z, low) => low ? [0.9, 0.5] : [3.2, 0.5], /* M4-B 심해 연구소 */
 };
 /* 바닥 무늬 (그림 조각 이름 · 크기 m) — 방 종류마다 고르는 후보 */
 export const FLOOR = {
   grime: [5.0, 7.0], debris: [1.8, 2.4], patch: [4.0, 4.0], bayzone: [4.4, 5.2], crack: [2.6, 3.6], rust: [2.0, 3.0], silt: [3.2, 4.4], scuff: [2.2, 3.2], tags: [2.0, 2.6], lane: [3.4, 3.8], bay: [1.5, 1.8], drain: [1.0, 1.2], flow: [2.6, 3.2],
   oil: [2.2, 3.0], weed: [2.2, 3.0], edge: [3.0, 3.6], tire: [3.2, 3.8], tactile: [3.4, 3.8], ticket: [1.8, 2.4], sleeper: [3.4, 3.8], rope: [1.6, 2.0],
   slag: [2.2, 3.2], hazard: [3.2, 3.8],
+  mossd: [2.6, 3.6], frost: [2.4, 3.2], lgrid: [3.6, 4.0], toxd: [2.0, 2.8], /* M4-B 연구소 (lab 아틀라스) */
 };
 const FLOORS = {
   ware: { entry: ['lane', 'silt', 'tags'], dock: ['lane', 'tags', 'rust', 'drain'], storage: ['tags', 'lane', 'bay', 'crack'], office: ['tags', 'crack', 'scuff'], pump: ['drain', 'rust', 'flow'], cold: ['crack', 'silt', 'scuff'], engine: ['rust', 'drain', 'oil', 'flow'], vault: ['crack', 'scuff'] },
   harbor: { entry: ['weed', 'edge', 'rope'], pier: ['weed', 'oil', 'edge', 'rope'], shed: ['scuff', 'oil', 'tags'], yard: ['tire', 'oil', 'bay', 'crack'], crane: ['oil', 'edge', 'rust'], office: ['scuff', 'crack', 'tags'], vault: ['crack', 'scuff'] },
   tunnel: { entry: ['tactile', 'ticket', 'crack'], platform: ['tactile', 'ticket', 'crack'], hall: ['ticket', 'crack', 'scuff'], track: ['sleeper', 'flow', 'rust'], passage: ['flow', 'crack', 'silt'], control: ['scuff', 'crack', 'rust'], reservoir: ['flow', 'silt', 'rust'], vault: ['crack', 'scuff'] },
   factory: { entry: ['lane', 'oil', 'hazard'], loading: ['lane', 'bay', 'oil', 'hazard'], store: ['tags', 'scuff', 'crack', 'bay'], furnace: ['slag', 'rust', 'oil', 'crack'], conveyor: ['hazard', 'oil', 'scuff', 'drain'], foundry: ['slag', 'rust', 'drain', 'oil'], workshop: ['scuff', 'crack', 'tags'], core: ['drain', 'hazard', 'rust', 'flow'], fcontrol: ['scuff', 'crack', 'drain'], crucible: ['slag', 'rust', 'oil'], vault: ['crack', 'scuff'] },
+  lab: { entry: ['lgrid', 'scuff', 'tactile'], lobby: ['lgrid', 'scuff', 'tags'], dorm: ['scuff', 'crack', 'tags'], decon: ['drain', 'lgrid', 'flow'], tankhall: ['mossd', 'drain', 'flow', 'lgrid'], culture: ['mossd', 'lgrid', 'drain'], coldroom: ['frost', 'drain', 'crack'],
+    records: ['scuff', 'crack', 'lgrid'], lcontrol: ['lgrid', 'scuff', 'drain'], corehall: ['mossd', 'hazard', 'drain', 'lgrid'], basin: ['mossd', 'flow', 'silt'], vault: ['crack', 'scuff'] },
 };
 /* 윗벽 그림 조각 (이야기 장소 — 창고 = 맡긴 짐 · 대피 / 항구 = 마지막 배 · 축제 / 터널 = 역 · 섬 방향) [이름, 가로, 세로] */
 const WALLART = {
@@ -29,6 +33,7 @@ const WALLART = {
   harbor: [['p_fest', 1.2, 0.9], ['p_ferry', 1.4, 0.9], ['tide', 1.0, 0.9], ['graf', 1.6, 0.8]],
   tunnel: [['p_line', 1.8, 0.8], ['p_exit', 1.1, 0.55], ['graf_isle', 1.7, 0.8], ['tile', 2.4, 0.5]],
   factory: [['p_lampw', 1.3, 1.0], ['p_rule', 1.2, 1.0], ['anchor', 1.6, 1.0], ['p_lampw', 1.3, 1.0], ['p_evac', 1.5, 1.0]], /* 등불 공방 포스터 · 작업 수칙 · 검은 닻 낙서 */
+  lab: [['p_coral', 1.1, 1.1], ['p_lrule', 1.0, 1.1], ['p_noeul', 1.1, 1.0], ['p_exit', 1.1, 0.55], ['p_coral', 1.1, 1.1]], /* 산호 복원 포스터 · 연구 수칙 · 노을의 등불 표식 */
 };
 /* 주제 소품 [키, 가로, 깊이, 판정(0 = 없음 · 1 = 낮은 엄폐 · 2 = 총알도 막음)] — 뒤질 상자와 다른 모양 · 색 */
 const THEME = {
@@ -36,22 +41,26 @@ const THEME = {
   harbor: { entry: ['h_buoys'], pier: ['h_net', 'h_rowboat', 'h_buoys'], shed: ['h_net', 'h_buoys'], yard: ['h_rowboat', 'h_buoys'], crane: ['h_net', 'h_buoys'], office: ['h_buoys'] },
   tunnel: { entry: ['t_seats'], platform: ['t_seats', 't_slab'], hall: ['t_seats', 't_slab'], track: ['t_slab', 't_seats'], passage: ['t_slab'], control: ['t_seats'], reservoir: ['t_slab'] },
   factory: { entry: ['f_lockers'], loading: ['f_sacks', 'f_lockers', 'f_carts'], store: ['f_sacks', 'f_shelf'], furnace: ['f_ladles', 'f_ingots'], conveyor: ['f_ingots', 'f_carts'], foundry: ['f_ladles', 'f_ingots'], workshop: ['f_lanterns', 'f_lanterns', 'f_shelf'], core: ['f_cells', 'f_ingots'], fcontrol: ['f_desk', 'f_cells'], crucible: ['f_ingots'] },
+  lab: { entry: ['l_desk'], lobby: ['l_desk', 'l_jars'], dorm: ['l_bunks'], decon: ['l_coolers'], tankhall: ['l_jars', 'l_coolers'], culture: ['l_jars'], coldroom: ['l_coolers'], records: ['l_files'], lcontrol: ['l_monitors'], corehall: ['l_cables', 'l_monitors'], basin: ['l_cables'] },
 };
 export const DRESS_SIZE = { w_luggage: [2.3, 0.65, 2], w_bags: [1.9, 1.0, 1], w_evac: [1.1, 0.4, 1], h_net: [2.1, 1.3, 0], h_buoys: [1.6, 0.9, 1], h_rowboat: [3.0, 1.35, 1], t_seats: [2.2, 0.75, 1], t_slab: [1.5, 0.75, 0],
-  f_sacks: [2.0, 0.9, 1], f_lockers: [2.2, 0.6, 2], f_carts: [2.0, 1.0, 1], f_shelf: [2.2, 0.6, 2], f_ladles: [1.6, 0.7, 1], f_ingots: [1.8, 0.8, 1], f_lanterns: [2.4, 0.7, 2], f_cells: [1.8, 0.8, 1], f_desk: [2.2, 0.8, 1] };
+  f_sacks: [2.0, 0.9, 1], f_lockers: [2.2, 0.6, 2], f_carts: [2.0, 1.0, 1], f_shelf: [2.2, 0.6, 2], f_ladles: [1.6, 0.7, 1], f_ingots: [1.8, 0.8, 1], f_lanterns: [2.4, 0.7, 2], f_cells: [1.8, 0.8, 1], f_desk: [2.2, 0.8, 1],
+  l_desk: [2.2, 0.8, 1], l_jars: [2.2, 0.6, 2], l_bunks: [2.2, 0.9, 1], l_coolers: [2.0, 0.8, 1], l_files: [2.2, 0.6, 2], l_monitors: [2.2, 0.7, 1], l_cables: [1.8, 0.8, 0] };
 /* 잡동사니 (이미 받은 모델 · 크기 배수) */
 const CLUTTER = { ware: [['bottle_b', 0.8], ['bottle_g', 0.8], ['box_large', 0.35], ['trunk', 0.6], ['bottle_b', 0.7]], harbor: [['h_planks', 2.6], ['h_fish', 2.6], ['h_stand', 2.4], ['bottle_b', 0.8], ['box_large', 0.35]], tunnel: [['t_lever', 1.4], ['bottle_b', 0.8], ['bottle_g', 0.8], ['box_large', 0.35], ['trunk', 0.6]],
-  factory: [['f_ingot1', 1], ['bottle_b', 0.8], ['f_ingot1', 0.9], ['box_large', 0.35], ['trunk', 0.6]] }; /* 지도마다 이미 그리는 아틀라스 · 삼각형 적은 것만 (그리기 횟수 · 정점 그대로) */
+  factory: [['f_ingot1', 1], ['bottle_b', 0.8], ['f_ingot1', 0.9], ['box_large', 0.35], ['trunk', 0.6]],
+  lab: [['bottle_g', 0.8], ['bottle_b', 0.7], ['box_large', 0.35], ['book', 0.9], ['bottle_g', 0.6]] }; /* 지도마다 이미 그리는 아틀라스 · 삼각형 적은 것만 (그리기 횟수 · 정점 그대로) */
 /* 반쯤 잠긴 짐 [키, 크기, 높이(물에 잠김)] — 이미 받은 모델 */
 const FLOTSAM = { ware: [['box_large', 1, -0.6], ['trunk', 1.3, -0.4], ['barrel', 1, -0.9], ['box_large', 1.4, -0.8]],
   harbor: [['k_cont_a', 6, -1.1], ['k_cont_b', 6, -1.1], ['h_planks', 3.5, -0.35], ['box_large', 1.2, -0.7]],
   tunnel: [['k_cont_a', 6, -1.2], ['box_large', 1.2, -0.7], ['trunk', 1.3, -0.4], ['barrel', 1, -0.9]],
-  factory: [['k_cont_b', 6, -1.2], ['box_large', 1.2, -0.7], ['barrel', 1, -0.9], ['f_crate', 1.2, -0.8]] };
-const FALLBACK = { ware: 'w_bags', harbor: 'h_net', tunnel: 't_slab', factory: 'f_ingots' };
+  factory: [['k_cont_b', 6, -1.2], ['box_large', 1.2, -0.7], ['barrel', 1, -0.9], ['f_crate', 1.2, -0.8]],
+  lab: [['k_tank', 2.4, -1.0], ['box_large', 1.2, -0.7], ['barrel', 1, -0.9], ['cabinet', 1.1, -0.7]] };
+const FALLBACK = { ware: 'w_bags', harbor: 'h_net', tunnel: 't_slab', factory: 'f_ingots', lab: 'l_cables' };
 /* 랜드마크 (구역 1 · 2 · 3) — 빈 칸 가운데나 지도 밖(옆 · 위) 물 위 */
-export const MARKS = { ware: ['lm_pile', 'lm_wheel', 'lm_boiler'], harbor: ['lm_booth', 'lm_gantry', 'lm_light'], tunnel: ['lm_clock', 'lm_train', 'lm_hatch'], factory: ['lm_anchor', 'lm_furnace', 'lm_relay'] }; /* 공장: 검은 닻 표식 · 꺼진 용광로 · 파수 관제 연결선 */
+export const MARKS = { ware: ['lm_pile', 'lm_wheel', 'lm_boiler'], harbor: ['lm_booth', 'lm_gantry', 'lm_light'], tunnel: ['lm_clock', 'lm_train', 'lm_hatch'], factory: ['lm_anchor', 'lm_furnace', 'lm_relay'], lab: ['lm_noeul', 'lm_origin', 'lm_screens'] }; /* 공장: 검은 닻 표식 · 꺼진 용광로 · 파수 관제 연결선 / 연구소(M4-B): 노을의 흔적 · 빛이끼 기원 수조 · '보관 중' 화면 벽 */
 /* 랜드마크 몸 반폭 [가로, 깊이] m */
-const MARK_FOOT = { lm_pile: [3.2, 2.6], lm_wheel: [3.4, 0.8], lm_boiler: [2.6, 3.0], lm_booth: [3.6, 1.6], lm_gantry: [6.6, 2.4], lm_light: [2.2, 2.2], lm_clock: [3.0, 0.4], lm_train: [1.5, 5.6], lm_hatch: [4.2, 0.8], lm_anchor: [2.4, 1.2], lm_furnace: [3.0, 3.0], lm_relay: [2.6, 1.4] };
+const MARK_FOOT = { lm_pile: [3.2, 2.6], lm_wheel: [3.4, 0.8], lm_boiler: [2.6, 3.0], lm_booth: [3.6, 1.6], lm_gantry: [6.6, 2.4], lm_light: [2.2, 2.2], lm_clock: [3.0, 0.4], lm_train: [1.5, 5.6], lm_hatch: [4.2, 0.8], lm_anchor: [2.4, 1.2], lm_furnace: [3.0, 3.0], lm_relay: [2.6, 1.4], lm_noeul: [2.2, 1.0], lm_origin: [3.0, 3.0], lm_screens: [3.6, 0.8] };
 const ZROWS = { 1: [5, 6], 2: [2, 4], 3: [0, 1] };
 
 export function dress(P) {
@@ -111,7 +120,7 @@ export function dress(P) {
       const segs = []; for (let t = 0; t < RT; t++) { const zc = rm.z0 + t * T + T / 2; if (!doorAt(wx, zc)) segs.push(zc); }
       const runs = []; let cur = null; for (let t = 0; t < RT; t++) { const zc = rm.z0 + t * T + T / 2; if (segs.includes(zc)) { if (!cur) runs.push(cur = [zc - T / 2, zc + T / 2]); else cur[1] = zc + T / 2; } else cur = null; }
       const run = runs.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0];
-      if (run && run[1] - run[0] >= 8) pipes.push({ k: { ware: 'x_pipe_w', harbor: 'x_pipe_h', tunnel: 'x_pipe_t', factory: 'x_pipe_f' }[map], x: wx + (side ? -1 : 1) * (Math.max(0.5, st / 2) + 0.12), z0: run[0] + 0.6, z1: run[1] - 0.6, y: Math.max(1.2, sh - 0.55), zone: z, valve: R() < 0.5 });
+      if (run && run[1] - run[0] >= 8) pipes.push({ k: { ware: 'x_pipe_w', harbor: 'x_pipe_h', tunnel: 'x_pipe_t', factory: 'x_pipe_f', lab: 'x_pipe_l' }[map], x: wx + (side ? -1 : 1) * (Math.max(0.5, st / 2) + 0.12), z0: run[0] + 0.6, z1: run[1] - 0.6, y: Math.max(1.2, sh - 0.55), zone: z, valve: R() < 0.5 });
     }
     /* ── 잡동사니 무더기 1~2 (작은 것 3~4개 · 판정 없음 · 벽 · 구석 쪽) ── */
     for (let g = ri(1, 2); g > 0; g--) for (let t = 0; t < 10; t++) {
@@ -124,6 +133,8 @@ export function dress(P) {
     if (map === 'factory') { const hot = rm.type === 'furnace' || rm.type === 'foundry' || rm.type === 'crucible';
       for (let t = 0; t < 12; t++) { const x = rm.x0 + 4 + R() * (RS - 8), zz = rm.z0 + 4 + R() * (RS - 8); if (circ.some(([cx, cz, r]) => Math.hypot(cx - x, cz - zz) < Math.min(r, 3) && r >= 2.5)) continue; glows.push({ c: 'g_pool', x, z: zz, s: 7 + R() * 2.5 }); break; }
       if (hot) glows.push({ c: 'g_red', x: rm.x0 + RS / 2 + (R() - 0.5) * 6, z: rm.z0 + RS / 2 + (R() - 0.5) * 6, s: 9 }); }
+    /* ── 연구소(M4-B): 천장 청록 조명 빛 웅덩이 1 (수조 · 배양실은 둘) — 그림만 ── */
+    if (map === 'lab') for (let g = rm.type === 'tankhall' || rm.type === 'culture' || rm.type === 'basin' ? 2 : 1; g > 0; g--) for (let t = 0; t < 12; t++) { const x = rm.x0 + 4 + R() * (RS - 8), zz = rm.z0 + 4 + R() * (RS - 8); if (circ.some(([cx, cz, r]) => Math.hypot(cx - x, cz - zz) < Math.min(r, 3) && r >= 2.5)) continue; glows.push({ c: g > 1 ? 'g_teal' : 'g_pool', x, z: zz, s: 6.5 + R() * 2.5 }); break; }
     /* ── 주제 소품 1 (벽 쪽으로 붙임) ── */
     const th = THEME[map][type]; if (!th) continue;
     const k = pick(th); const [w, d, solid] = DRESS_SIZE[k]; let placed = false;

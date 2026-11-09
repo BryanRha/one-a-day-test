@@ -2,11 +2,14 @@
 //  데이터 = data/quests.js BOARD · 대사 = talk/common.js QTALK · 화면 = story_ui.js (의뢰 탭 '인물 의뢰' · 결과 화면 금빛 카드)
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀
 //  저장: S.quests.board = { prog: { 의뢰: 누적 }, rep: { 반복 의뢰: 끝낸 주 } } (salvage_v4 그대로 · 없으면 여기서 만듦) · 끝낸 판 의뢰 id 는 S.quests.done 에 같이 들어감
-import { ITEMS, MAPS, ENEMIES, MATS } from './data.js?v=0.99.11';
-import { BOARD, QBY } from './data/quests.js?v=0.99.11';
-import * as ST from './story.js?v=0.99.11';
+import { ITEMS, MAPS, ENEMIES, MATS, CONDS } from './data.js?v=0.99.12';
+import * as D from './data.js?v=0.99.12'; /* D.MAP_GEAR (M4-B 맵 장비 — 없으면 그 의뢰는 안 보임) */
+import { BOARD, QBY } from './data/quests.js?v=0.99.12';
+import * as ST from './story.js?v=0.99.12';
 
 export { BOARD, QBY };
+/* v0.7 공통 판 상태 5 (M4-B data/weather.js WX_KEYS 와 같은 키 — ROADMAP M4 고정) · 판 결과 res.wx 로 옴 */
+export const WX5 = new Set(['night', 'storm', 'fog', 'cold', 'toxic']);
 export const ACTIVE_MAX = 4;   /* 한 번에 보이는 인물 의뢰 (반복 납품은 따로) */
 const HOME_GOALS = new Set(['deliver', 'fac', 'weapon', 'mod', 'gear', 'codex', 'tapes', 'graf', 'beat']);
 export const isHome = q => HOME_GOALS.has(q.goal.t);
@@ -37,12 +40,22 @@ export function reqMet(S, q) {
   if (r.map && !MAPS[r.map]) return false;
   if (r.enemy && !ENEMIES[r.enemy]) return false;
   const g = q.goal; if (g.map && !MAPS[g.map]) return false; if (g.item && !ITEMS[g.item]) return false;
+  if (g.kind && !ENEMIES[g.kind]) return false;
+  if (g.mg && !D.MAP_GEAR?.[g.k]) return false;
+  /* v0.7 날씨 의뢰(M4-B 판 상태): 고른 상태 중 게임에 있는 게 하나도 없으면 안 보임 (지도가 정해진 의뢰는 그 지도의 상태로) */
+  if (g.conds && !g.conds.some(c => (g.map && MAPS[g.map].conds?.[c]) || WX5.has(c) || (!g.map && CONDS[c]))) return false;
   return true;
 }
 export const available = (S, today) => BOARD.filter(q => !isDone(S, q, today) && reqMet(S, q));
 /* 지금 진행 중인 것: 인물 의뢰 앞에서 4개 + 반복 납품 전부 (auto 는 카드 없이 조건만) */
+/* 열린 이야기 걸음이 기다리는 판 의뢰(goal.t 'quest' — 4장 q59 · q60)와 그 앞 의뢰는 늘 앞으로 (네 칸 뒤에 밀려 이야기가 막히지 않게) */
+function beatWants(S) {
+  const out = new Set(); let id = ST.openBeat(S)?.goal?.t === 'quest' ? ST.openBeat(S).goal.q : null;
+  for (let g = 0; id && QBY[id] && g < 6; g++) { out.add(id); id = QBY[id].req?.prev; }
+  return out;
+}
 export function active(S, today) {
-  const av = available(S, today); const once = av.filter(q => !q.repeat && !q.auto).slice(0, ACTIVE_MAX);
+  const bw = beatWants(S); const av = available(S, today).sort((a, b) => bw.has(b.id) - bw.has(a.id)); const once = av.filter(q => !q.repeat && !q.auto).slice(0, ACTIVE_MAX);
   return [...once, ...av.filter(q => q.repeat)];
 }
 export const waiting = (S, today) => Math.max(0, available(S, today).filter(q => !q.repeat && !q.auto).length - ACTIVE_MAX);
@@ -87,7 +100,7 @@ export function boardRaid(S, res, today) {
   const kept = ex ? [...(res.items || []), ...(res.safe || []), ...(res.pet || [])] : [];
   for (const q of active(S, today)) {
     const g = q.goal; if (isHome(q) || (g.map && g.map !== rm)) continue; let done = false;
-    const condOk = !g.conds || g.conds.includes(res.cond);
+    const wx = res.wx || res.weather; const condOk = !g.conds || g.conds.includes(res.cond) || (!!wx && g.conds.includes(wx)); /* v0.7 판 상태 5(M4-B — 지도 상태와 따로 옴)도 */
     if (g.t === 'extract') done = ex;
     else if (g.t === 'zone') done = ex && res.zoneMax >= g.zone && condOk;
     else if (g.t === 'power') done = ex && !!res.power;

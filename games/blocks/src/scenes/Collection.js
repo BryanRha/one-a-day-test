@@ -1,18 +1,19 @@
 // 컬렉션: 블록 스킨(별 조각으로 해금 · 원어데이 안에서는 소장자 전용 1 · 골드 1 추가) · 지난 주 그림 갤러리 · 기록
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load, save } from '../save.js?v=0.99.11';
-import { SKINS } from '../meta.js?v=0.99.11';
-import { makeSkinPreview, makeBlockTextures } from './Boot.js?v=0.99.11';
-import { special, skinShown, skinOpen, effSkin, buySkin } from '../bmflow.js?v=0.99.11';
-import { bm } from '../oad_bm.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { sky } from '../sky.js?v=0.99.12';
+import { load, save } from '../save.js?v=0.99.12';
+import { SKINS } from '../meta.js?v=0.99.12';
+import { makeSkinPreview, makeBlockTextures } from './Boot.js?v=0.99.12';
+import { special, skinShown, skinOpen, effSkin, buySkin } from '../bmflow.js?v=0.99.12';
+import { bm } from '../oad_bm.js?v=0.99.12';
 
 export class CollectionScene extends Phaser.Scene {
   constructor() { super('Collection'); }
   create(data = {}) {
     const d = load(); this.busy = false;
-    const bg = this.add.image(W / 2, H / 2, `bg_t${d.theme % 5}`); bg.setDisplaySize(W, Math.max(H, W * 1300 / 540));
+    sky(this, d.theme, { cubes: 5 });
     iconBtn(this, 80, 92, 'i_home', () => this.go('Home'), 96);
     T(this, W / 2, 92, '컬렉션', 44, C.text, { w: 900 });
     this.add.image(W - 220, 92, 'i_star').setDisplaySize(44, 44).setTint(0xF5C451);
@@ -20,7 +21,7 @@ export class CollectionScene extends Phaser.Scene {
     this.tab = data.tab || 'skin';
     ['skin', 'record'].forEach((k, i) => btn(this, W / 2 - 170 + i * 340, 210, 300, 88, k === 'skin' ? '블록 스킨' : '기록 · 갤러리', () => this.scene.restart({ tab: k }), { style: this.tab === k ? 'indigo' : 'ghost', size: 32 }));
     if (this.tab === 'skin') this.skins(); else this.records();
-    this.cameras.main.fadeIn(200, 8, 10, 24);
+    this.cameras.main.fadeIn(200, 20, 12, 40);
   }
   skins() {
     const d = load(), list = SKINS.filter(skinShown), cur = effSkin();
@@ -78,5 +79,5 @@ export class CollectionScene extends Phaser.Scene {
       T(this, x, y + 120, gi.trophy ? `🏆 ${gi.cleared}/96` : `${gi.cleared}/96`, 26, gi.trophy ? C.gold : C.sub, { w: 800 });
     });
   }
-  go(k) { this.cameras.main.fadeOut(200, 8, 10, 24); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
+  go(k) { this.cameras.main.fadeOut(200, 20, 12, 40); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k)); }
 }

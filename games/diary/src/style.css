@@ -425,3 +425,24 @@ body.gray { filter: grayscale(1); }
 .pagebox .head { right: auto; }
 .pagebox .head .hl { display: block; margin-top: 6px; min-height: 2.3em; font-family: 'Nanum Pen Script', cursive; font-style: normal; font-size: 24px; line-height: 1.15; color: #4b3f35; word-break: keep-all; }
 .pagebox .stamp { right: auto; } .pagebox .mood { right: auto; }
+
+/* ---------- 스피드 다꾸 시계 (v0.2.0) — 판 이름 아래 가운데 · 시간이 지나도 실패 없이 별만 줄어듦 ---------- */
+#gtime { display: none; position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--paper); box-shadow: 0 1px 0 #e2d3bb, 0 3px 8px rgba(70,50,30,.14); font-size: 14px; font-variant-numeric: tabular-nums; pointer-events: none; transition: background .3s, color .3s; }
+#gtime.on { display: flex; }
+#gtime .stars { font-style: normal; color: var(--gold); letter-spacing: 1px; font-size: 13px; }
+#gtime .stars u { text-decoration: none; color: #d9ccb6; }
+#gtime b { font-weight: 800; min-width: 38px; text-align: right; }
+#gtime.low b { color: var(--stamp); animation: gtpulse 1s ease-in-out infinite; }
+#gtime.over { background: #f3ebde; color: var(--ink2); }
+@keyframes gtpulse { 50% { opacity: .55; } }
+.node .mst { font-style: normal; font-size: 12px; color: var(--gold); letter-spacing: 1px; white-space: nowrap; }
+.node .mst u { text-decoration: none; color: #d9ccb6; }
+.timeline { display: flex; justify-content: center; gap: 10px; align-items: center; margin: 2px 0 6px; font-size: 14px; color: var(--ink2); }
+.timeline .bigst { font-size: 26px; color: var(--gold); letter-spacing: 3px; }
+.timeline .bigst u { text-decoration: none; color: #d9ccb6; }
+.rw.pg { display: flex; justify-content: center; gap: 10px; margin: 8px 0; }
+.rw.pg img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(70,50,30,.2)); }
+.rw.pg .tl { width: 64px; height: 64px; border-radius: 16px; background: var(--paper); display: grid; place-items: center; box-shadow: 0 2px 6px rgba(70,50,30,.14); font-size: 12px; color: var(--ink2); }
+.rw.pg .tl b { display: block; font-size: 20px; color: var(--ink); }
+.ehint { font-size: 11px; color: var(--ink2); }
+.gstar { color: var(--gold); letter-spacing: 1px; }

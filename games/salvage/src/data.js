@@ -1,7 +1,9 @@
 // 수달 인양단 — 데이터 · 숫자 (조정은 여기서만). three 없이 읽힘 → node 시뮬 · 시험에서도 씀
 export const VERSION = '0.6.1';
-import { F_MAP, F_ENEMIES, F_BOSS, F_VARIANTS, F_CONDS, F_ITEMS, F_LOOT, F_DAILY } from './data/map_factory.js?v=0.99.11'; /* 맵 4 가라앉은 공장 (M3-B) */
-import { STORY_ITEMS } from './data/quests.js?v=0.99.11'; /* M3-C 이야기 물건 (ITEMS 끝에 붙음) */
+import { F_MAP, F_ENEMIES, F_BOSS, F_VARIANTS, F_CONDS, F_ITEMS, F_LOOT, F_DAILY } from './data/map_factory.js?v=0.99.12'; /* 맵 4 가라앉은 공장 (M3-B) */
+import { M4_ENEMIES, M4_BOSS, M4_VARIANTS, M4_ITEMS, M4_LOOT } from './data/enemies.js?v=0.99.12'; /* M4-A 새 적 5 · 검은 닻 두목 */
+import { L_MAP, L_ENEMIES, L_BOSS, L_VARIANTS, L_CONDS, L_ITEMS, L_LOOT, L_DAILY } from './data/map_lab.js?v=0.99.12'; /* 맵 5 심해 연구소 (M4-B) */
+import { STORY_ITEMS } from './data/quests.js?v=0.99.12'; /* M3-C 이야기 물건 (ITEMS 끝에 붙음) */
 
 /* ───── 재료 (창고 숫자로만 셈 · 분해해서 얻음) ───── */
 export const MATS = {
@@ -71,6 +73,8 @@ export const ITEMS = {
   lboot:    { name: '고무 장화(왼쪽)', cat: 'memo', w: 1, h: 2, wt: 1.0, val: 1, model: 'bottle_b', color: '#5d6b4a', desc: '열차 좌석 밑에 있던 한 짝.' },
   tape:     { name: '녹음기',        cat: 'memo', w: 1, h: 1, wt: 0.3, val: 1, model: 'battery',  color: '#8a9aa6', desc: '은신처에서 들어 볼 수 있다.' },
   ...F_ITEMS,
+  ...M4_ITEMS,
+  ...L_ITEMS,
   ...STORY_ITEMS,
 };
 export const ITEM_KEYS = Object.keys(ITEMS);
@@ -97,6 +101,8 @@ export const LOOT_TABLE = {
   jelly:   { name: '해파리 잔해', n: [0, 1], w: { battery: 2, kelp: 2, o2: 1 } },
   bossT:   { name: '터널 장어 잔해', n: [2, 3], w: { fang: 2, pearl: 2, battery: 2, compass: 1, core: 2 }, fixed: ['vkey', 'core'] },
   ...F_LOOT,
+  ...L_LOOT,
+  ...M4_LOOT,
 };
 /* 깊은 곳 사물함 · 공구함에서 금고 열쇠가 나올 확률 */
 export const VKEY_CHANCE = { 2: 0.025, 3: 0.05 };
@@ -126,19 +132,20 @@ export const MAPS = {
     zones: {
       1: { name: '부두', short: '부두', hp: 1.15, dmg: 1.1, boxes: { crate: 30, net: 35, barrel: 20, locker: 15 }, nLoot: [1, 2], nEnemy: [1, 2], foes: { crab: 45, skel: 30, drone: 25 } },
       2: { name: '컨테이너 야적장', short: '야적장', hp: 1.45, dmg: 1.3, boxes: { cargo: 40, locker: 25, toolbox: 25, net: 10 }, nLoot: [2, 3], nEnemy: [1, 2], foes: { lamp: 35, crab: 25, drone: 20, skel: 20 } },
-      3: { name: '등대 · 크레인', short: '등대', hp: 1.85, dmg: 1.55, boxes: { cargo: 25, toolbox: 25, chest: 50 }, nLoot: [2, 3], nEnemy: [2, 2], elite: true, foes: { lamp: 40, skel: 30, drone: 30 } } },
+      3: { name: '등대 · 크레인', short: '등대', hp: 1.85, dmg: 1.65, boxes: { cargo: 25, toolbox: 25, chest: 50 }, nLoot: [2, 3], nEnemy: [2, 2], elite: true, foes: { lamp: 40, skel: 30, drone: 30 } } },
     exits: { early: '부두 사다리', power: '화물 크레인', sub: '등대 신호 보트' },
     conds: { storm: 35, fog: 30, clear: 35 }, loot: 1.25 },
   tunnel: { name: '해저 터널', short: '터널', icon: '🚇', unlock: 'q19', pack: 'tunnel', bossKind: 'eel', night: 0.5,
     blurb: '역 승강장 → 잠긴 선로 → 해저 통로 · 제어실', tips: '잠긴 곳(짙은 물)에선 산소가 줄어요 — 공기 방울 기둥에서 채워요. 물살은 몸을 밀어요. 1분 30초부터 침수 · 역 계단은 물이 닿으면 잠김',
     zones: {
-      1: { name: '역 승강장', short: '승강장', hp: 1.3, dmg: 1.2, boxes: { kiosk: 40, crate: 25, locker: 35 }, nLoot: [1, 2], nEnemy: [1, 2], foes: { skel: 40, drone: 30, jelly: 30 } },
-      2: { name: '잠긴 선로', short: '선로', hp: 1.65, dmg: 1.4, boxes: { cart: 45, locker: 25, kiosk: 15, toolbox: 15 }, nLoot: [2, 3], nEnemy: [1, 2], foes: { jelly: 40, miner: 30, drone: 30 } },
-      3: { name: '해저 통로 · 제어실', short: '제어실', hp: 2.0, dmg: 1.65, boxes: { cart: 30, toolbox: 20, chest: 50 }, nLoot: [2, 3], nEnemy: [2, 2], elite: true, foes: { miner: 40, jelly: 35, drone: 25 } } },
+      1: { name: '역 승강장', short: '승강장', hp: 1.4, dmg: 1.2, boxes: { kiosk: 40, crate: 25, locker: 35 }, nLoot: [1, 2], nEnemy: [1, 2], foes: { skel: 40, drone: 30, jelly: 30 } },
+      2: { name: '잠긴 선로', short: '선로', hp: 1.75, dmg: 1.5, boxes: { cart: 45, locker: 25, kiosk: 15, toolbox: 15 }, nLoot: [2, 3], nEnemy: [1, 2], foes: { jelly: 40, miner: 30, drone: 30 } },
+      3: { name: '해저 통로 · 제어실', short: '제어실', hp: 2.0, dmg: 1.75, boxes: { cart: 30, toolbox: 20, chest: 50 }, nLoot: [2, 3], nEnemy: [2, 2], elite: true, foes: { miner: 40, jelly: 35, drone: 25 } } },
     exits: { early: '역 계단', power: '정비 열차', sub: '해저 도크 잠수정' },
     conds: { dark: 35, rapids: 35, calm: 30 }, loot: 1.5,
     floodAt: 90, floodSpeed: 0.2 },
   factory: F_MAP,
+  lab: L_MAP,
 };
 export const MAP_KEYS = Object.keys(MAPS);
 /* 판마다 다른 상태 — 설명 · 숫자 (raid.js 가 읽음) */
@@ -151,6 +158,7 @@ export const CONDS = {
   rapids: { name: '급류', txt: '물살이 세요(1.8배) · 물살 칸이 많아요', current: 1.8, more: 1 },
   calm:   { name: '잔잔', txt: '물살이 약해요 — 산소만 조심', current: 0.8 },
   ...F_CONDS,
+  ...L_CONDS,
 };
 /* 산소 (해저 터널) — 짙은 물(잠긴 방 · 차오른 물) 안에서 줄고, 공기 방울 기둥에서 빠르게 참 · 0 이면 체력이 줆
    기본 100 + 헬멧(체력 보너스와 같은 값) · 깊은 구역은 수압으로 더 빨리 줆 */
@@ -200,6 +208,8 @@ export const ENEMIES = {
   miner: { name: '광부 해골', hp: 160, speed: 1.7, chase: 4.6, sight: 8, fov: 1.4, hear: 1.3, atk: 'melee', dmg: 18, range: 1.6, cd: 1.5, radius: 0.55, loot: 'body', wind: 0.6, shield: 0.55 },
   eel:   { name: '터널 장어', hp: 1050, speed: 2.2, chase: 3.4, sight: 14, fov: 6.3, hear: 1.8, atk: 'eel', dmg: 22, range: 11, cd: 2.0, radius: 0.9, loot: 'bossT', boss: true },
   ...F_ENEMIES,
+  ...L_ENEMIES,
+  ...M4_ENEMIES,
 };
 /* 보스 패턴 숫자 (예고 시간 · 반경 · 피해) — raid.js bossWind/enemyAttack
  *  수문지기: slam(가까이) · wave(멀리) · 체력 절반부터 1.25배
@@ -212,12 +222,16 @@ export const BOSS = {
   captain: { hook: { wind: 0.8, len: 11, dmg: 16, pull: 4.2 }, slam: { wind: 0.85, r: 3.0, dmg: 24, fire: 4, fireDps: 9 }, douse: { wind: 1.0, dark: 5, adds: 2, below: 0.6 }, weak: 1.4, weakMul: 2 },
   eel: { charge: { wind: 0.9, len: 13, speed: 17, dmg: 22, stun: 2.0 }, shock: { wind: 0.9, r: 4.2, dmg: 18, wet: 1.4 }, surge: { wind: 0.8, n: 8, dmg: 10, push: 7, below: 0.6 }, weakMul: 2 },
   ...F_BOSS,
+  ...L_BOSS,
+  ...M4_BOSS,
 };
 /* 지도마다 기존 적 변형 (이름 · 숫자 배수 · 색) */
 export const VARIANTS = {
-  harbor: { drone: { name: '탐조 드론', sight: 1.3, spot: true, color: 0x5d6f80 }, skel: { name: '젖은 선원 해골', hp: 1.1, tint: [0.62, 0.72, 0.8] } },
-  tunnel: { drone: { name: '수중 드론', hp: 1.15, color: 0x4f7a78 }, skel: { name: '물때 해골', hp: 1.05, speed: 0.9, tint: [0.62, 0.8, 0.66] } },
-  factory: F_VARIANTS,
+  ware: M4_VARIANTS.ware,
+  harbor: { drone: { name: '탐조 드론', sight: 1.3, spot: true, color: 0x5d6f80 }, skel: { name: '젖은 선원 해골', hp: 1.1, tint: [0.62, 0.72, 0.8] }, ...M4_VARIANTS.harbor },
+  tunnel: { drone: { name: '수중 드론', hp: 1.15, color: 0x4f7a78 }, skel: { name: '물때 해골', hp: 1.05, speed: 0.9, tint: [0.62, 0.8, 0.66] }, ...M4_VARIANTS.tunnel },
+  factory: { ...F_VARIANTS, ...M4_VARIANTS.factory },
+  lab: L_VARIANTS,
 };
 
 /* 무게: 편한 무게를 넘으면 느려짐 (편한 무게 2배에서 최대 −35%) · 구르기 기력 +50% */
@@ -238,14 +252,14 @@ export const MEALS = {
 };
 
 /* ───── M3-A 성장 뼈대 (새 파일 · 여기선 다시 내보내기만) — 무기 10 · 개조 5칸 · 탄약 3 · 장비 5단 · 부적 · 난이도 · 시설 12 · 상인 3 · 업적 20 ───── */
-export * from './data/weapons.js?v=0.99.11';
-export * from './data/gear.js?v=0.99.11';
-export * from './data/facilities.js?v=0.99.11';
-export * from './data/merchants.js?v=0.99.11';
-export * from './data/achievements.js?v=0.99.11';
+export * from './data/weapons.js?v=0.99.12';
+export * from './data/gear.js?v=0.99.12';
+export * from './data/facilities.js?v=0.99.12';
+export * from './data/merchants.js?v=0.99.12';
+export * from './data/achievements.js?v=0.99.12';
 
 /* ───── 의뢰 — data/quests.js 로 옮김 (M3-C · 본 사슬 28 + 판 의뢰) ───── */
-export { QUESTS } from './data/quests.js?v=0.99.11';
+export { QUESTS } from './data/quests.js?v=0.99.12';
 
 /* ───── 오늘의 인양 목록 (한국 날짜마다 3개) — 창고에서 납품하면 값의 1.6배 + 재료 ───── */
 export const DAILY_POOL = [
@@ -261,4 +275,5 @@ export const DAILY_MAP = {
   harbor: [{ item: 'rope', n: 2, mat: { cloth: 3 } }, { item: 'fish', n: 3, mat: { herb: 3 } }, { item: 'spyglass', n: 1, mat: { glass: 2 } }, { item: 'kelp', n: 5, mat: { cloth: 3 } }],
   tunnel: [{ item: 'rail', n: 2, mat: { wire: 3 } }, { item: 'ticket', n: 2, mat: { bolt: 4 } }, { item: 'battery', n: 1, mat: { powder: 3 } }, { item: 'o2', n: 2, mat: { herb: 3 } }],
   factory: F_DAILY,
+  lab: L_DAILY,
 };

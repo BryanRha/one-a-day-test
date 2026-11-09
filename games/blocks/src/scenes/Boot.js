@@ -1,10 +1,10 @@
 // 로딩 + 코드로 그리는 그림들: 블록 스킨 7종 × 7색 · 보석 3종 · 배경 테마 · 아이콘
-import { W, H, TITLE } from '../config.js?v=0.99.11';
-import { SFX } from '../audio.js?v=0.99.11';
-import { makeTextures } from '../fx.js?v=0.99.11';
-import { makeIcons } from '../pui.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import { helloOnce, effSkin } from '../bmflow.js?v=0.99.11';
+import { W, H, TITLE } from '../config.js?v=0.99.12';
+import { SFX } from '../audio.js?v=0.99.12';
+import { makeTextures } from '../fx.js?v=0.99.12';
+import { makeIcons } from '../pui.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import { helloOnce, effSkin } from '../bmflow.js?v=0.99.12';
 
 // 블록 색: [기본, 밝은 면, 어두운 면]
 export const PALETTE = [
@@ -18,13 +18,15 @@ export const PALETTE = [
 ];
 export const TINT = PALETTE.map(p => parseInt(p[0].slice(1), 16));
 
-// 배경 테마: 판을 다 비울 때마다 바뀜 (원작처럼)
+// 배경 테마 = '블록 하늘' 5가지 (2026-11-09 QA 시트 #1 · #9): 판을 다 비울 때마다 바뀜
+//   노을 · 새벽 · 오로라 밤 · 라벤더 구름 · 별빛 — 하늘 그라데이션 + 해/달 빛 + 구름 띠 (떠다니는 보석 블록 · 흐르는 구름은 sky.js 가 움직임)
+//   판은 자두빛 유리라 블록 색이 가장 먼저 보임 · 룬 다이스(어두운 신전)와 한눈에 다르게
 export const THEMES = [
-  { name: '미드나이트', top: '#0B1026', bot: '#18215A', glow: 'rgba(80,110,255,0.35)', board: 0x0E1535, cell: '#1B2350' },
-  { name: '딥 퍼플', top: '#140A26', bot: '#3A1D6B', glow: 'rgba(180,90,255,0.32)', board: 0x170D33, cell: '#2A1B4F' },
-  { name: '오션', top: '#05182A', bot: '#0D4566', glow: 'rgba(40,200,255,0.30)', board: 0x08203A, cell: '#143457' },
-  { name: '에메랄드', top: '#04160F', bot: '#0D4535', glow: 'rgba(60,230,150,0.26)', board: 0x061F18, cell: '#123A2E' },
-  { name: '선셋', top: '#1A0A16', bot: '#5A1E3A', glow: 'rgba(255,120,120,0.30)', board: 0x210B1C, cell: '#3A1530' },
+  { name: '노을 하늘', stops: [[0, '#1B1140'], [0.36, '#47297C'], [0.66, '#B4568C'], [0.86, '#F28C86'], [1, '#FFC79A']], sun: [0.5, 0.8, 0.5, 'rgba(255,214,150,0.55)'], cloud: [255, 196, 214], stars: 0.35, board: 0x1E1240, cell: '#2E1E58', drift: 0xFFC2D8 },
+  { name: '새벽 하늘', stops: [[0, '#0E1A40'], [0.4, '#2E4C8E'], [0.7, '#7EA6D8'], [0.9, '#F4C9C0'], [1, '#FFE2BE']], sun: [0.72, 0.84, 0.42, 'rgba(255,236,200,0.6)'], cloud: [236, 240, 255], stars: 0.25, board: 0x14204A, cell: '#22336A', drift: 0xD6E6FF },
+  { name: '오로라 밤', stops: [[0, '#050B22'], [0.45, '#0C2446'], [0.8, '#13445A'], [1, '#1C6266']], sun: [0.3, 0.2, 0.3, 'rgba(200,230,255,0.35)'], aurora: true, cloud: [120, 200, 210], stars: 0.6, board: 0x0B1E36, cell: '#163452', drift: 0x8CFFE0 },
+  { name: '라벤더 구름', stops: [[0, '#21143E'], [0.38, '#563C8C'], [0.72, '#A88BD2'], [1, '#F3C8E2']], sun: [0.25, 0.74, 0.45, 'rgba(255,230,250,0.5)'], cloud: [255, 236, 250], stars: 0.2, board: 0x24164A, cell: '#36245E', drift: 0xF0D2FF },
+  { name: '별빛 하늘', stops: [[0, '#08061C'], [0.5, '#1E164C'], [1, '#3C2A74']], sun: [0.78, 0.18, 0.28, 'rgba(255,240,210,0.45)'], cloud: [150, 130, 220], stars: 1, moon: true, board: 0x180F38, cell: '#2A1D52', drift: 0xFFE7A8 },
 ];
 
 function rr(g, x, y, w, h, r) { r = Math.max(0, Math.min(r, w / 2, h / 2)); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -130,23 +132,44 @@ export function makeSkinPreview(scene, skin) {
   c.refresh(); return k;
 }
 
+// 하늘 한 장 그리기 (테마마다 같은 모양이 나오게 고정 난수)
+function paintSky(g, w, h, th, seed) {
+  let a = 1234567 + seed * 7919; const R = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
+  const gr = g.createLinearGradient(0, 0, 0, h); for (const [p, col] of th.stops) gr.addColorStop(p, col); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  // 별 (위쪽일수록 많이)
+  for (let n = 0; n < 160 * th.stars; n++) { const y = Math.pow(R(), 1.8) * h * 0.6; g.fillStyle = `rgba(255,255,255,${0.15 + R() * 0.6})`; g.beginPath(); g.arc(R() * w, y, R() * 1.4 + 0.3, 0, Math.PI * 2); g.fill(); }
+  // 해 · 달 빛
+  const [sx, sy, sr, sc] = th.sun, rg = g.createRadialGradient(w * sx, h * sy, 0, w * sx, h * sy, w * sr * 1.6); rg.addColorStop(0, sc); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, w, h);
+  if (th.moon) { g.fillStyle = 'rgba(255,246,220,0.95)'; g.beginPath(); g.arc(w * sx, h * sy, 26, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(w * sx + 12, h * sy - 8, 24, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over'; }
+  // 오로라 띠
+  if (th.aurora) for (let k = 0; k < 3; k++) {
+    const y0 = h * (0.16 + k * 0.08), bg = g.createLinearGradient(0, y0 - 80, 0, y0 + 120); bg.addColorStop(0, 'rgba(80,255,200,0)'); bg.addColorStop(0.5, k === 1 ? 'rgba(170,120,255,0.22)' : 'rgba(80,255,200,0.24)'); bg.addColorStop(1, 'rgba(80,255,200,0)');
+    g.fillStyle = bg; g.beginPath(); g.moveTo(0, y0 + 40); for (let x = 0; x <= w; x += 20) g.lineTo(x, y0 + Math.sin(x / 70 + k * 2) * 40); for (let x = w; x >= 0; x -= 20) g.lineTo(x, y0 + 120 + Math.sin(x / 90 + k) * 30); g.closePath(); g.fill();
+  }
+  // 구름 띠: 뒤(옅고 높음) → 앞(짙고 낮음) · 동그라미를 겹쳐 뭉게구름
+  const [cr, cg, cb] = th.cloud;
+  [[0.5, 0.1, 22], [0.64, 0.16, 26], [0.8, 0.22, 30], [0.93, 0.3, 34]].forEach(([yb, al, rad], L) => {
+    for (let x = -40; x < w + 60; x += rad * (0.9 + R() * 0.6)) {
+      const y = h * yb + Math.sin(x / 60 + L) * 18 + (R() - 0.5) * 20, r = rad * (1.2 + R() * 1.4);
+      const cgd = g.createRadialGradient(x, y - r * 0.3, r * 0.1, x, y, r); cgd.addColorStop(0, `rgba(${cr},${cg},${cb},${al + 0.08})`); cgd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      g.fillStyle = cgd; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+  });
+  // 아래쪽 은은한 빛 안개
+  const fg = g.createLinearGradient(0, h * 0.82, 0, h); fg.addColorStop(0, 'rgba(255,255,255,0)'); fg.addColorStop(1, `rgba(${cr},${cg},${cb},0.18)`); g.fillStyle = fg; g.fillRect(0, h * 0.82, w, h * 0.18);
+}
+
 export function makeThemeTextures(scene) {
   const T = scene.textures;
   THEMES.forEach((th, i) => {
     const k = `bg_t${i}`; if (T.exists(k)) return;
     const w = 540, h = 1300, c = T.createCanvas(k, w, h), g = c.getContext();
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, th.top); gr.addColorStop(1, th.bot); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-    const rg = g.createRadialGradient(w / 2, h * 0.42, 0, w / 2, h * 0.42, w * 0.9); rg.addColorStop(0, th.glow); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, w, h);
-    // 아주 옅은 대각선 결
-    g.strokeStyle = 'rgba(255,255,255,0.025)'; g.lineWidth = 1;
-    for (let x = -h; x < w; x += 22) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + h, h); g.stroke(); }
-    // 별가루
-    for (let n = 0; n < 70; n++) { g.fillStyle = `rgba(255,255,255,${0.05 + Math.random() * 0.25})`; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, Math.random() * 1.6 + 0.3, 0, Math.PI * 2); g.fill(); }
+    paintSky(g, w, h, th, i);
     c.refresh();
     // 빈 칸
     const ck = `cell_t${i}`, S = 128, cc = T.createCanvas(ck, S, S), cg = cc.getContext();
     rr(cg, 6, 6, S - 12, S - 12, S * 0.12); cg.fillStyle = th.cell; cg.fill();
-    rr(cg, 6, 6, S - 12, S - 12, S * 0.12); cg.lineWidth = 2; cg.strokeStyle = 'rgba(255,255,255,0.05)'; cg.stroke();
+    rr(cg, 6, 6, S - 12, S - 12, S * 0.12); cg.lineWidth = 2; cg.strokeStyle = 'rgba(255,255,255,0.08)'; cg.stroke();
     const ig = cg.createLinearGradient(0, 6, 0, 30); ig.addColorStop(0, 'rgba(0,0,0,0.28)'); ig.addColorStop(1, 'rgba(0,0,0,0)'); rr(cg, 6, 6, S - 12, 30, S * 0.12); cg.fillStyle = ig; cg.fill();
     cc.refresh();
   });

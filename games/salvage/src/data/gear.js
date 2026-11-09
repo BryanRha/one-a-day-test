@@ -54,3 +54,12 @@ export const DIFF = {
   deep:   { name: '깊게',   txt: '적이 세고 더 아파요 · 보상 +10%', foeHp: 1.2, foeDmg: 1.3, loot: 1.1, icon: '🌀' },
 };
 export const DIFF_KEYS = Object.keys(DIFF);
+
+/* ───── 맵 장비 3 (M4-B · 판 상태 대응) — 작업대에서 한 번 만들면 계속 · 출격 준비에서 하나만 챙김(S.mgSel) · 예보에 맞는 것을 '권장' ─────
+ *  가진 것: S.gear[키] = 1 (저장 옮기기 그대로) · 효과 숫자는 data/weather.js (COLD.suit · TOXIC.filter · LAMP_GEAR) */
+export const MAP_GEAR = {
+  drysuit: { name: '방한 잠수복', icon: '🧥', wx: ['cold'], txt: '한파: 체온이 1/3만 줄고 얼음에 덜 미끄러워요', bench: 2, cost: { shells: 220, cloth: 10, wire: 4 } },
+  filter:  { name: '해독 필터', icon: '😷', wx: ['toxic'], txt: '독수: 독이 1/3만 오르고 2.5배 빨리 빠져요', bench: 2, cost: { shells: 200, glass: 3, herb: 6 } },
+  hlamp:   { name: '고성능 헤드램프', icon: '🔦', wx: ['night', 'fog'], txt: '밤 · 안개 · 정전: 시야 +25% · 어둠이 옅어져요', bench: 3, cost: { shells: 320, lens: 1, wire: 6, glass: 2 } },
+};
+export const MAP_GEAR_KEYS = Object.keys(MAP_GEAR);

@@ -6,14 +6,18 @@
 //   outfit  특별 코디 🪙200 (item) : 오늘의 코디 옷장 · hello().items 로 복원
 //   choiceN 특별 선택지 🪙30 (item, 화별) : special.js — 첫 1회 맛보기 무료
 //   선택지는 광고로 열지 않음 (이야기 가치 보호)
-import { bm } from './oad_bm.js?v=0.99.11';
-import { inOAD } from './oad.js?v=0.99.11';
-import { load, save } from './save.js?v=0.99.11';
-import { EPISODES } from './episodes.js?v=0.99.11';
+//   peek    그림 미리 보기 🪙20 (use, 하루 10) : 숨은 물건 — 아래 칸 물건 전부의 자리를 3초 반짝 (QA 시트 #3, 2026-11-09) · 무료 길 = 코인 힌트 · 광고 단서 · 서버 표에 없으면 버튼 숨김
+//   clue    광고 보고 단서 자리 (하루 3) : 숨은 물건 돋보기 옆 — 아래 칸의 주요 단서(분홍) 자리를 짚어 줌 (QA 시트 #5)
+//   skip    광고 보고 다음 화 바로 (하루 2) : 4화부터 3시간 기다림 창 — 골드 instN 버튼 옆 같은 크기 (QA 시트 #7)
+import { bm } from './oad_bm.js?v=0.99.12';
+import { inOAD } from './oad.js?v=0.99.12';
+import { load, save } from './save.js?v=0.99.12';
+import { EPISODES } from './episodes.js?v=0.99.12';
 
 export { bm };
 export const HINT_COST = 10;                   // 힌트 = 게임 코인 10 (골드 상품 아님)
-export const AD_DAY = { hint: 3, heart: 2 };   // 게임 쪽 자리별 하루 횟수 (앱 한도와 별개로 둘 다 지킴)
+export const AD_DAY = { hint: 3, heart: 2, clue: 3, skip: 2 };   // 게임 쪽 자리별 하루 횟수 (앱 한도 · 게임당 5와 별개로 둘 다 지킴)
+export const PEEK_SEC = 3;                     // 그림 미리 보기 반짝이는 시간
 export const GATE = { free: 3, waitH: 3 };     // 처음 3화는 기다림 없이 · 그다음부터 앞 화를 끝내고 3시간 뒤 무료
 export const today = () => { const t = new Date(); return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`; };
 
@@ -27,13 +31,14 @@ export const gold = () => (bm.info.ok ? bm.info.gold ?? 0 : 0);
 export function track(name, p = {}) { if (!inOAD) return; try { window.parent.postMessage({ type: 'oad:track', name, p: { game: 'seek', ...p } }, '*'); } catch { /* */ } }
 
 // ── 보상형 광고 (자리별 하루 횟수)
-function adDay() { const d = load(); if (!d.ads || d.ads.day !== today()) d.ads = { day: today(), hint: 0, heart: 0 }; return d.ads; }
-export const adLeft = kind => (oadOn() && bm.info.ads && bm.info.ads.reward !== false ? Math.max(0, AD_DAY[kind] - (adDay()[kind] || 0)) : 0);
+function adDay() { const d = load(); if (!d.ads || d.ads.day !== today()) d.ads = { day: today(), hint: 0, heart: 0, clue: 0, skip: 0 }; return d.ads; }
+/* 자리별 남은 횟수 = min(게임 자리 한도, 앱이 알려 준 오늘 남은 광고 수) — 'N번 남음'이 실제와 같게 */
+export const adLeft = kind => { const a = bm.info.ads; if (!oadOn() || !a || a.reward === false) return 0; const app = a.rewardLeft == null ? Infinity : a.rewardLeft; return Math.max(0, Math.min(AD_DAY[kind] - (adDay()[kind] || 0), app)); };
 // 광고 버튼 글자: 소장자는 광고 없이 바로 (횟수는 같음)
 export const adLabel = what => (owner() ? `소장 혜택 · ${what} 바로` : `광고 보고 ${what}`);
 export async function watchAd(kind) {
   if (adLeft(kind) <= 0) return { ok: false, reason: 'limit' };
-  const r = await bm.rewardedAd(kind === 'hint' ? 'hint' : 'heart');
+  const r = await bm.rewardedAd(kind);
   if (r.ok) { const a = adDay(); a[kind] = (a[kind] || 0) + 1; save(); }
   return r;
 }
@@ -63,6 +68,19 @@ export async function buyNext(ep) {
   if (r.ok) { const d = load(); (d.gate ||= {})[ep.id] = Date.now(); save(); track('next_buy', { ep: ep.id, gold: g }); }
   return r;
 }
+
+// 광고 보고 다음 화 바로 (4화부터 · 하루 2) — 골드 버튼과 같은 조건(10초 미만 남으면 숨김)
+export const skipShow = ep => { const ms = waitLeft(ep); return ms !== Infinity && ms >= INST_MIN && adLeft('skip') > 0; };
+export async function skipByAd(ep) {
+  if (!skipShow(ep)) return { ok: false, reason: waitLeft(ep) ? 'limit' : 'open' };
+  const r = await watchAd('skip');
+  if (r.ok) { const d = load(); (d.gate ||= {})[ep.id] = Date.now(); save(); track('next_ad', { ep: ep.id, via: r.via }); }
+  return r;
+}
+
+// ── 그림 미리 보기 (숨은 물건 · 골드)
+export const peekPrice = () => (oadOn() ? price('peek') : 0);
+export async function buyPeek(ep) { const r = await bm.spend('peek'); if (r.ok) track('peek_buy', { ep: ep.id }); return r; }
 
 // ── 특별 코디 (item) · 소장자 코디
 let boughtOutfit = false;   /* 이번 실행에서 산 것 (다음 실행부터는 hello().items) */

@@ -1,24 +1,25 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.11';
-import { audio } from './audio.js?v=0.99.11';
-import { WindFX } from './fx.js?v=0.99.11';
-import { BootScene } from './scenes/Boot.js?v=0.99.11';
-import { HomeScene } from './scenes/Home.js?v=0.99.11';
-import { AdventureScene } from './scenes/Adventure.js?v=0.99.11';
-import { CollectionScene } from './scenes/Collection.js?v=0.99.11';
-import { PlayScene } from './scenes/Play.js?v=0.99.11';
-import { ResultScene } from './scenes/Result.js?v=0.99.11';
-import { installBack } from './oad.js?v=0.99.11';
-import { initBM } from './bmflow.js?v=0.99.11';
+import { W, BASE_H, setH } from './config.js?v=0.99.12';
+import { audio } from './audio.js?v=0.99.12';
+import { WindFX } from './fx.js?v=0.99.12';
+import { BootScene } from './scenes/Boot.js?v=0.99.12';
+import { HomeScene } from './scenes/Home.js?v=0.99.12';
+import { AdventureScene } from './scenes/Adventure.js?v=0.99.12';
+import { CollectionScene } from './scenes/Collection.js?v=0.99.12';
+import { PlayScene } from './scenes/Play.js?v=0.99.12';
+import { ResultScene } from './scenes/Result.js?v=0.99.12';
+import { MissionsScene } from './scenes/Missions.js?v=0.99.12';
+import { installBack } from './oad.js?v=0.99.12';
+import { initBM } from './bmflow.js?v=0.99.12';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }
   const game = new Phaser.Game({
-    type: Phaser.AUTO, parent: 'game', width: W, height: BASE_H, backgroundColor: '#0B1026',
+    type: Phaser.AUTO, parent: 'game', width: W, height: BASE_H, backgroundColor: '#1A0F33',
     scale: { mode: innerHeight / innerWidth > BASE_H / W ? Phaser.Scale.EXPAND : Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     render: { antialias: true, powerPreference: 'high-performance' },
     input: { activePointers: 2 }, fps: { target: 60 },
     pipeline: { WindFX },
-    scene: [BootScene, HomeScene, AdventureScene, CollectionScene, PlayScene, ResultScene],
+    scene: [BootScene, HomeScene, AdventureScene, CollectionScene, PlayScene, ResultScene, MissionsScene],
   });
   audio.attach(game);
   setH(game.scale.height);

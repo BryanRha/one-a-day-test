@@ -1,7 +1,7 @@
 // 프리미엄 UI 키트: 깔끔한 글자 · 유리 패널 · 그라데이션 버튼 · 선 아이콘 (모두 코드로 그림 — 선명하고 가벼움)
-import { W, H, FONT } from './config.js?v=0.99.11';
-import { audio } from './audio.js?v=0.99.11';
-import { pushBack } from './oad.js?v=0.99.11';
+import { W, H, FONT } from './config.js?v=0.99.12';
+import { audio } from './audio.js?v=0.99.12';
+import { pushBack } from './oad.js?v=0.99.12';
 
 export const C = {
   ink: '#0B1026', text: '#F4F6FF', sub: '#9AA3D6', dim: '#5E679A', gold: '#F5C451', cyan: '#5EE3FF', pink: '#FF6FAE', green: '#5BE39A',
@@ -49,6 +49,9 @@ const STY = {
   indigo: { a: '#7B8CFF', b: '#4F5FE0', c: '#3240B0', text: '#FFFFFF' },
   green: { a: '#8BF3B9', b: '#36C77B', c: '#21935A', text: '#06301B' },
   ghost: { a: 'rgba(255,255,255,0.10)', b: 'rgba(255,255,255,0.06)', c: 'rgba(255,255,255,0.25)', text: '#F4F6FF' },
+  /* QA 24: 오늘의 상점 전용 (룬 컬렉션 ghost 와 한눈에 구분) · QA 23: 광고 보상 전용 (제단 화면에서 가장 먼저 눈에 띄게) */
+  shop: { a: '#FFA8BE', b: '#EE5A84', c: '#B23860', text: '#FFFFFF' },
+  ad: { a: '#8CF6FF', b: '#22C3EC', c: '#0B86B4', text: '#03263A' },
 };
 export function btn(scene, x, y, w, h, label, onClick, o = {}) {
   const st = STY[o.style || 'gold'], r = o.r ?? h / 2, key = `btn2_${o.style || 'gold'}_${w}_${h}`;
@@ -155,6 +158,9 @@ export function makeIcons(scene) {
   ic('i_trash', g => { g.lineWidth = 7; g.strokeRect(20, 20, 56, 56); g.beginPath(); g.moveTo(34, 34); g.lineTo(62, 62); g.moveTo(62, 34); g.lineTo(34, 62); g.stroke(); });
   ic('i_swap', g => { g.lineWidth = 8; g.beginPath(); g.arc(48, 48, 26, -Math.PI * 0.85, Math.PI * 0.35); g.stroke(); g.beginPath(); g.moveTo(66, 74); g.lineTo(70, 56); g.lineTo(52, 58); g.closePath(); g.fill(); g.beginPath(); g.arc(48, 48, 7, 0, Math.PI * 2); g.fill(); });
   ic('i_bomb', g => { g.beginPath(); g.arc(44, 56, 28, 0, Math.PI * 2); g.fill(); g.lineWidth = 6; g.beginPath(); g.moveTo(62, 34); g.quadraticCurveTo(70, 18, 82, 20); g.stroke(); g.beginPath(); g.arc(84, 16, 6, 0, Math.PI * 2); g.fill(); });
+  /* 열쇠(QA 23 광고 보상) · 가방(QA 24 오늘의 상점) */
+  ic('i_key', g => { g.lineWidth = 9; g.beginPath(); g.arc(32, 48, 16, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.moveTo(48, 48); g.lineTo(84, 48); g.moveTo(72, 48); g.lineTo(72, 62); g.moveTo(82, 48); g.lineTo(82, 60); g.stroke(); });
+  ic('i_bag', g => { g.beginPath(); g.moveTo(18, 36); g.lineTo(78, 36); g.lineTo(72, 82); g.lineTo(24, 82); g.closePath(); g.fill(); g.lineWidth = 7; g.beginPath(); g.arc(48, 34, 14, Math.PI, 0); g.stroke(); });
 }
 
 /* 손가락 힌트 그림 (QA 19 '끌어서 합치기'): 검지를 편 손 · 흰 몸통 + 짙은 테두리 · 손끝이 (38%, 8%) */

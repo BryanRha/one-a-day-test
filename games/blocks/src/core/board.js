@@ -199,6 +199,19 @@ export class Board {
     res.over = this.over;
     return res;
   }
+  // 아이템으로 칸 비우기 (클래식 폭탄 · 한 줄 — core/items.js): 점수 · 콤보 · 줄 수는 그대로 · 돌려줌 [[r, c, 색]]
+  clearCells(list) {
+    const out = [];
+    for (const [r, c] of list) {
+      if (r < 0 || c < 0 || r >= N || c >= N || this.g[r][c] < 0) continue;
+      out.push([r, c, this.g[r][c]]); this.g[r][c] = -1; this.gem[r][c] = -1;
+      if (this.orig[r][c]) { this.orig[r][c] = false; const ca = this.goals.find(g => g.type === 'clearAll'); if (ca) ca.have++; }
+    }
+    if (out.length) { this.over = false; this.checkOver(); }
+    return out;
+  }
+  // 아래 조각 바꾸기 (판 안 광고 · QA 시트 #6): 새 묶음 3개 (놓을 수 있는 묶음을 고르는 규칙 그대로)
+  redeal() { this.deal(); return this.tray; }
   checkOver() { this.over = !this.tray.some(t => !t.used && this.anyFit(t.shape)); return this.over; }
   // 이어하기: 가운데 4×4 를 비워 줌 (광고 보상 자리)
   revive() { this.revived = true; for (let r = 2; r < 6; r++) for (let c = 2; c < 6; c++) { if (this.orig[r][c]) { this.orig[r][c] = false; const ca = this.goals.find(g => g.type === 'clearAll'); if (ca) ca.have++; } this.g[r][c] = -1; this.gem[r][c] = -1; } this.over = false; this.checkOver(); if (this.over) this.deal(); }

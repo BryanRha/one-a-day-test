@@ -1,18 +1,25 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.11';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.11';
-import { mapOf } from './plan.js?v=0.99.11';
-import { prop, charClone } from './assets.js?v=0.99.11';
-import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.11'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.11';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.11';
-import { sfx, ambience } from './audio.js?v=0.99.11';
-import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.11'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
-import { AI } from './ai.js?v=0.99.11'; /* M3-B 진영 · 엄폐 · 무리 */
-import { HitNums } from './nums.js?v=0.99.11'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
-import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.11'; /* M3-B 가라앉은 공장 */
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.12';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.12';
+import { mapOf } from './plan.js?v=0.99.12';
+import { prop, charClone } from './assets.js?v=0.99.12';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.12'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.12';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.12';
+import { sfx, ambience } from './audio.js?v=0.99.12';
+import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.12'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
+import { AI } from './ai.js?v=0.99.12'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
+import { populate, chiefRoll } from './threat.js?v=0.99.12'; /* M4-A 위협 곡선 */
+import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.12'; /* M4-A 새 적 5 */
+import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.12'; /* M4-A 검은 닻 두목 */
+import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.12';
+import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.12'; /* M4-B 심해 연구소 */
+import { wxStart } from './weather.js?v=0.99.12'; /* M4-B 공통 판 상태 5 */
+import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.12';
+import { HitNums } from './nums.js?v=0.99.12'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
+import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.12'; /* M3-B 가라앉은 공장 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tmp = V(), tmp2 = V(), tmp3 = V();
@@ -94,10 +101,11 @@ export class Raid {
   constructor(env) { Object.assign(this, env); /* scene camera fx ui renderer */ this.alive = false; }
 
   start(opt) {
-    this.opt = opt; const L = this.L = opt.L; const map = this.map = mapOf(opt.map); const P = this.P = plan(opt.seed, map);
-    const MP = this.M = MAPS[map]; this.Z = MP.zones; this.cond = P.cond || 'normal'; this.C = CONDS[this.cond]; this.lootBonus = (MP.loot || 1) * (opt.L.loot || 1) - 1; /* v0.6 부적 · 난이도 */
+    this.opt = opt; const L = this.L = opt.L; const map = this.map = mapOf(opt.map); const P = this.P = plan(opt.seed, map, { cond: opt.corpse ? (opt.corpse.cond || null) : condFor(map, opt.wx ?? forecast(null, map, opt.seed), opt.seed) }); /* M4-B: 예보가 지도 상태를 정함(M4 마무리: 항구만 → 모든 지도 · 남은 가방 판은 그때 상태) */
+    const MP = this.M = MAPS[map]; this.Z = MP.zones; this.cond = P.cond || 'normal'; this.wx = opt.wxForce && (WEATHER[opt.wx] || opt.wx === 'none') ? opt.wx : wxFor(map, this.cond, opt.wx ?? forecast(null, map, opt.seed)); /* ?wx= 시험은 지도 상태보다 우선 (카드와 같게) */ this.C = mergeWx(CONDS[this.cond], this.wx, this.cond); this.night = Math.max(MP.night || 0, WEATHER[this.wx]?.night || 0); /* M4-B 판 상태 5 (지도 상태 × 날씨) */ this.lootBonus = (MP.loot || 1) * (opt.L.loot || 1) - 1; /* v0.6 부적 · 난이도 */
     this.floodAt = MP.floodAt ?? RAID.floodAt; this.floodSpeed = MP.floodSpeed ?? RAID.floodSpeed;
-    this.R = rng(opt.seed * 7 + 3); this.hn?.clear(); this.hn = new HitNums(this.fx.hud);
+    this.R = rng(opt.seed * 7 + 3); this.mods = []; /* M4-B 지도 · 날씨 장치 (pre · player · tick · near · act · pools · wallHit · kill · healed · dispose) */ this.hn?.clear(); this.hn = new HitNums(this.fx.hud);
+    this.T = opt.threat || null; this.Anim = Anim; this.variant = k => VARIANTS[this.map]?.[k]; this.unwarned = []; this.tele = null; this.bigHits = 0; /* M4-A 위협 · 예고 검사 */
     this.root = new THREE.Group(); this.scene.add(this.root);
     const M = build(P, this.root); this.boxes = M.boxes; this.water = M.water; this.gates = M.gates; this.gen = M.generator; this.X = M.extra;
     this.time = RAID.time; this.t = 0; this.over = null; this.hitstop = 0; this.shake = 0; this.kick = V(); this.slow = 1;
@@ -160,21 +168,25 @@ export class Raid {
       const lt = new THREE.PointLight(0x7dffb2, 9, 9, 1.5); lt.position.y = 2; g.add(lt);
       let deco;
       if (map === 'factory') deco = exitDeco(this, e);
+      else if (map === 'lab') deco = labExitDeco(this, e);
       else if (map === 'harbor' && e.kind !== 'power') { deco = makeBoat(); deco.position.set(0, 0, -3.2); deco.rotation.y = Math.PI / 2; deco.traverse(o => { if (o.isMesh) { o.userData.own = true; this.ownMats.push(o.material); } }); }
       else { const dk = map === 'harbor' ? 'h_crane' : map === 'tunnel' ? (e.kind === 'sub' ? 'k_tank' : e.kind === 'power' ? 'k_cont_a' : 't_sign') : (e.kind === 'sub' ? 'k_tank' : e.kind === 'power' ? 'k_screen' : 'pallet_s');
         deco = prop(dk); deco.scale.setScalar({ h_crane: 2.3, k_cont_a: 4.2, t_sign: 1.8, k_tank: 2.2, k_screen: 1.4, pallet_s: 0.6 }[dk] || 1); deco.position.set(0, dk === 't_sign' ? 2.2 : 0, dk === 'h_crane' ? -3.4 : -2.7); if (dk === 'k_cont_a') deco.rotation.y = Math.PI / 2; }
       g.add(deco);
       /* 항구 신호 보트: 신호탄을 쏴야 7초 뒤 옴 */
       const call = map === 'harbor' && e.kind === 'sub' ? 'idle' : null; if (call) deco.visible = false;
-      this.root.add(g); return { ...e, name: X.name, need: X.hold * (L.hold || 1), pos: V(e.x, 0, e.z), g, ring, ringM, fill, beam, lt, hold: 0, open: true, call, deco, belt: e.belt || null, crane: !!e.crane };
+      this.root.add(g); return { ...e, name: X.name, need: X.hold * (L.hold || 1), pos: V(e.x, 0, e.z), g, ring, ringM, fill, beam, lt, hold: 0, open: true, call, deco, belt: e.belt || null, crane: !!e.crane, term: !!e.term };
     });
     /* 적 */
+    this.pop = this.T ? populate(P, map, this.T, opt.seed) : null; /* M4-A: 위협 Lv 만큼 적 섞기 · 늘리기 · 검은 닻 순찰 (지도 생성은 그대로) */
     this.enemies = P.enemies.map((e, i) => this.makeEnemy(e, i));
-    this.ai = map === 'factory' ? new AI(this) : null; /* 진영이 셋인 지도만 (다른 지도는 전과 같음) */
+    this.ai = new AI(this, this.T); /* M3-B 진영 · M4-A 2단계 — 모든 지도 (1단계 = 전과 같음) */
+    chiefStart(this, this.T ? chiefRoll(this.T, opt.seed, map, this.cond) : null); this.bossAt = RAID.bossAt - (this.T?.bossEarly || 0);
     if (map === 'factory') factoryStart(this);
+    if (map === 'lab') labStart(this); wxStart(this); /* M4-B 연구소 장치 · 판 상태(한파 · 독수 · 헤드램프) */
     this.alive = true; this.paused = false;
     ambience(true);
-    this.fx.weather?.(map === 'harbor' && this.C.rain ? 'rain' : null);
+    this.fx.weather?.(this.C.rain ? 'rain' : null); /* M4-B: 폭풍은 어느 지도든 비 */
     this.ui.raidStart(this);
     if (map !== 'ware') setTimeout(() => this.alive && this.ui.condBand(MP, this.cond), 600); /* 판 상태 띠 한 구절 (v0.5.1 · 자세한 건 출격 준비 ⓘ) */
   }
@@ -183,7 +195,7 @@ export class Raid {
     const lt = this.lights; if (!lt) return; const sc = this.scene;
     if (on) { this._look = { bg: sc.background.getHex(), fog: [sc.fog.color.getHex(), sc.fog.near, sc.fog.far], hemi: [lt.hemi.intensity, lt.hemi.color.getHex(), lt.hemi.groundColor.getHex()], sun: [lt.sun.intensity, lt.sun.color.getHex()] }; }
     else if (this._look) { const k = this._look; sc.background.setHex(k.bg); sc.fog.color.setHex(k.fog[0]); sc.fog.near = k.fog[1]; sc.fog.far = k.fog[2]; lt.hemi.intensity = k.hemi[0]; lt.hemi.color.setHex(k.hemi[1]); lt.hemi.groundColor.setHex(k.hemi[2]); lt.sun.intensity = k.sun[0]; lt.sun.color.setHex(k.sun[1]); return; }
-    this.lookBase = this.map === 'harbor' ? { bg: 0x060d1a, hemi: [1.05, 0x8fb0e0, 0x1a2434], sun: [1.0, 0xb0c8ff] } : this.map === 'tunnel' ? { bg: 0x071114, hemi: [0.95, 0x9fd0d0, 0x1a2426], sun: [1.0, 0xcfe8ff] } : this.map === 'factory' ? factoryLook : null;
+    this.lookBase = this.map === 'harbor' ? { bg: 0x060d1a, hemi: [1.05, 0x8fb0e0, 0x1a2434], sun: [1.0, 0xb0c8ff] } : this.map === 'tunnel' ? { bg: 0x071114, hemi: [0.95, 0x9fd0d0, 0x1a2426], sun: [1.0, 0xcfe8ff] } : this.map === 'factory' ? factoryLook : this.map === 'lab' ? labLook : null;
     if (!this.lookBase) return; const b = this.lookBase; sc.background.setHex(b.bg); sc.fog.color.setHex(b.bg);
     lt.hemi.color.setHex(b.hemi[1]); lt.hemi.groundColor.setHex(b.hemi[2]); lt.sun.color.setHex(b.sun[1]); this.updateLook(0);
   }
@@ -192,21 +204,22 @@ export class Raid {
     const lt = this.lights, b = this.lookBase; if (!lt || !b) return; const sc = this.scene;
     const darkK = this.dark > 0 ? (this.map === 'tunnel' ? 0.55 : 0.6) : 1; const bolt = this.flash > 0 ? 3.2 * (this.flash / 0.25) : 0;
     lt.hemi.intensity = b.hemi[0] * darkK * (this.douse > 0 ? 0.55 : 1) + bolt; lt.sun.intensity = b.sun[0] * darkK + bolt * 0.6;
-    if (this.map === 'tunnel' || this.map === 'factory') lt.hemi.color.setHex(this.dark > 0 ? 0xc87a70 : b.hemi[1]);
+    if (this.map === 'tunnel' || this.map === 'factory' || this.map === 'lab') lt.hemi.color.setHex(this.dark > 0 ? 0xc87a70 : b.hemi[1]);
     const f = this.C.fog || [22, 48]; sc.fog.near = f[0] * (this.dark > 0 ? 0.92 : 1); sc.fog.far = f[1] * (this.dark > 0 ? 0.92 : 1);
   }
   makeEnemy(e, i) {
     const base = ENEMIES[e.kind]; const VR = VARIANTS[this.map]?.[e.kind]; const D = VR ? { ...base, name: VR.name, sight: base.sight * (VR.sight || 1), speed: base.speed * (VR.speed || 1) } : base;
-    const Z = this.Z[e.zone || 3]; const boss = !!D.boss; const hpMul = (boss ? 1 : Z.hp * (e.elite ? 1.15 : 1) * (VR?.hp || 1)) * (this.L.foeHp || 1); /* v0.6 난이도 */
-    const en = { kind: e.kind, D, zone: e.zone, elite: !!e.elite, dmgMul: boss ? 1 : Z.dmg, pos: V(e.x, 0, e.z), vel: V(), face: this.R() * 6.28, hp: D.hp * hpMul, maxHp: D.hp * hpMul, state: 'idle', alert: 0, t: this.R() * 3, cd: 1 + this.R(), home: V(e.x, 0, e.z), target: null, flash: 0, dead: false, wind: 0, id: i, mark: 0, stagger: 0, seen: 0, sleep: false, weakT: 0, pcd: 0 };
-    if (e.kind === 'drone') { const d = enemyBody('drone', this.map, e.elite) || makeDrone(e.elite); en.root = d.root; en.d = d; en.mats = d.mats; if (VR?.color && !d.custom) d.mats[0].color.setHex(VR.color);
+    const Z = this.Z[e.zone || 3]; const boss = !!D.boss; const hpMul = (boss ? 1 : Z.hp * (e.elite ? 1.15 : 1) * (VR?.hp || 1) * (this.T?.hp || 1)) * (this.L.foeHp || 1); /* v0.6 난이도 · M4-A 위협 Lv */
+    const en = { kind: e.kind, D, zone: e.zone, elite: !!e.elite, dmgMul: boss ? 1 : Z.dmg * (this.T?.dmg || 1), pos: V(e.x, 0, e.z), vel: V(), face: this.R() * 6.28, hp: D.hp * hpMul, maxHp: D.hp * hpMul, state: 'idle', alert: 0, t: this.R() * 3, cd: 1 + this.R(), home: V(e.x, 0, e.z), target: null, flash: 0, dead: false, wind: 0, id: i, mark: 0, stagger: 0, seen: 0, sleep: false, weakT: 0, pcd: 0 };
+    if (PRIM[e.kind]) foeBody(this, en, e); /* M4-A 기뢰 · 소라게 · 문어 */
+    else if (e.kind === 'drone') { const d = enemyBody('drone', this.map, e.elite) || makeDrone(e.elite); en.root = d.root; en.d = d; en.mats = d.mats; if (VR?.color && !d.custom) d.mats[0].color.setHex(VR.color);
       if (VR?.spot) { /* 탐조 드론: 앞으로 비추는 빛 부채꼴 (이 안에 들면 바로 알아챔) */ const sm = new THREE.MeshBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
         const cone = new THREE.Mesh(new THREE.CircleGeometry(7, 18, Math.PI / 2 - 0.3, 0.6), sm); cone.rotation.x = -Math.PI / 2; cone.position.y = 0.18; d.root.add(cone); en.spot = cone; en.mats.push(sm); } }
     else if (e.kind === 'crab') { const c = enemyBody('crab', this.map, e.elite) || makeCrab(e.elite); en.root = c.root; en.c = c; en.mats = c.mats; }
     else if (e.kind === 'jelly') { const j = enemyBody('jelly', this.map, e.elite) || makeJelly(e.elite); en.root = j.root; en.j = j; en.mats = j.mats; }
     else if (e.kind === 'eel') { const l = enemyBody('eel', this.map) || makeEel(); en.root = new THREE.Group(); en.vis = this.visGroup(en.root, e.kind); en.vis.add(l.root); en.l = l; en.mats = l.mats; l.root.position.set(0, 0, 0); this.eelInit = false; }
     else {
-      const body = { lamp: 'rogue', miner: 'warrior', captain: 'warrior' }[e.kind] || 'skel';
+      const body = { lamp: 'rogue', miner: 'warrior', captain: 'warrior', signal: 'rogue', chief: 'warrior' }[e.kind] || 'skel';
       const c = enemyBody(e.kind, this.map, e.elite) || charClone(body); en.root = new THREE.Group(); (boss ? en.vis = this.visGroup(en.root, e.kind) : en.root).add(c.root); if (c.scale) c.root.scale.setScalar(c.scale); else fitHeight(c.root, boss ? 3.1 : e.kind === 'miner' ? 1.95 : 1.8); en.cust = c; en.anim = new Anim(c.root, c.clips); en.anim.play('Idle_Combat', { speed: boss ? 0.6 : 0.8 }); en.mats = [];
       const tint = c.custom ? null : e.kind === 'boss' ? [0.55, 0.85, 0.75] : e.kind === 'captain' ? [0.85, 0.72, 0.55] : e.kind === 'miner' ? [0.9, 0.82, 0.62] : e.kind === 'smelter' ? [0.95, 0.55, 0.3] : D.fac === 'anchor' ? [0.32, 0.3, 0.3] : VR?.tint || (e.elite ? [0.75, 0.68, 0.6] : null);
       c.root.traverse(o => { if (o.isMesh) { en.mats.push(o.material); if (tint) o.material.color.setRGB(...tint); } }); this.ownMats.push(...en.mats); en.anim.mixer.setTime(this.R() * 2);
@@ -217,9 +230,9 @@ export class Raid {
       if (e.kind === 'captain' && !c.custom) { const hook = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.07, 6, 12, Math.PI * 1.3), new THREE.MeshLambertMaterial({ color: 0x9aa4ad })); hook.position.set(-0.9, 1.9, 0.4); (en.vis || en.root).add(hook); en.mats.push(hook.material); }
       if (e.kind === 'miner' && !c.custom) { const lampM = new THREE.MeshBasicMaterial({ color: 0xfff1b0 }); const hl = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), lampM); hl.position.set(0, 1.78, 0.2); en.root.add(hl); en.mats.push(lampM); }
     }
-    en.custom = [en.d, en.c, en.j, en.l, en.cust].find(x => x?.custom) || null;
+    en.custom = [en.d, en.c, en.j, en.l, en.cust].find(x => x?.custom) || null; if (D.cloak) en.hidden = true;
     en.root.position.copy(en.pos); this.root.add(en.root);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex(), transparent: true, depthTest: false })); sp.scale.set(0.9, 0.9, 1); sp.position.y = boss ? ({ boss: 2.9, captain: 3.25, eel: 1.6, smelter: 3.4 }[e.kind] || 3) * (en.vis?.scale.x || 1) + 1 : e.kind === 'crab' ? 1.4 : 2.6; /* 보스: 설계 키 × 화면 배율 + 1m (커진 머리 위) */ sp.visible = false; sp.renderOrder = 10; en.root.add(sp); en.markSp = sp;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex(), transparent: true, depthTest: false })); sp.scale.set(0.9, 0.9, 1); sp.position.y = boss ? ({ boss: 2.9, captain: 3.25, eel: 1.6, smelter: 3.4, mother: 2.6, chief: 3.0 }[e.kind] || 3) * (en.vis?.scale.x || 1) + 1 : e.kind === 'crab' || e.kind === 'mine' ? 1.4 : e.kind === 'hermit' ? 1.9 : 2.6; /* 보스: 설계 키 × 화면 배율 + 1m (커진 머리 위) */ sp.visible = false; sp.renderOrder = 10; en.root.add(sp); en.markSp = sp;
     if (e.squad != null) en.squad = e.squad; this.ai?.join(en); /* M3-B: 판 중에 생긴 적(보스 · 부름)도 진영 */
     return en;
   }
@@ -239,15 +252,13 @@ export class Raid {
     p.x = clamp(p.x, 0.6, this.P.W - 0.6); p.z = clamp(p.z, 0.6, this.P.H - 0.6);
   }
   /* 선분이 막히는가 (총알 막는 것만) — 맞은 거리 비율 */
-  rayBlock(a, b, bulletOnly = true) {
-    let best = 1; const dx = b.x - a.x, dz = b.z - a.z;
+  rayBlock(a, b, bulletOnly = true) { /* M4-A 성능: 같은 결과 · 배열 안 만듦 · 선분 상자 밖은 건너뜀 (적 AI 가 많이 부름) */
+    let best = 1; const ax = a.x, az = a.z, dx = b.x - ax, dz = b.z - az; const mnx = Math.min(ax, b.x), mxx = Math.max(ax, b.x), mnz = Math.min(az, b.z), mxz = Math.max(az, b.z);
     for (const bx of this.boxes) {
-      if (bx.off || (bulletOnly && !bx.bullet)) continue;
+      if (bx.off || (bulletOnly && !bx.bullet) || bx.x1 < mnx || bx.x0 > mxx || bx.z1 < mnz || bx.z0 > mxz) continue;
       let t0 = 0, t1 = best;
-      for (const [o, d, lo, hi] of [[a.x, dx, bx.x0, bx.x1], [a.z, dz, bx.z0, bx.z1]]) {
-        if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) { t0 = 2; break; } continue; }
-        let ta = (lo - o) / d, tb = (hi - o) / d; if (ta > tb) [ta, tb] = [tb, ta]; t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) break;
-      }
+      if (Math.abs(dx) < 1e-9) { if (ax < bx.x0 || ax > bx.x1) continue; } else { let ta = (bx.x0 - ax) / dx, tb = (bx.x1 - ax) / dx; if (ta > tb) { const q = ta; ta = tb; tb = q; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) continue; }
+      if (Math.abs(dz) < 1e-9) { if (az < bx.z0 || az > bx.z1) continue; } else { let ta = (bx.z0 - az) / dz, tb = (bx.z1 - az) / dz; if (ta > tb) { const q = ta; ta = tb; tb = q; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; }
       if (t0 <= t1 && t0 < best && t0 >= 0) best = t0;
     }
     return best;
@@ -266,6 +277,7 @@ export class Raid {
     if (door.distanceTo(from) < 1.3) { const N = this.P.rooms.find(r => r.id === k); const c = V(N.x0 + RS / 2, 0, N.z0 + RS / 2); return door.add(c.sub(door).setY(0).normalize().multiplyScalar(2.6)); }
     return door;
   }
+  modHit(p, d) { for (const m of this.mods) if (m.wallHit?.(p, d)) return true; return false; } /* M4-B 막힌 탄 → 장치(배양조) */
   noise(p, r, src = 'player') { this.noises.push({ p: p.clone(), r, src, t: 0 }); }
   weight() { return bagWeight(this.bag) + bagWeight(this.safe); }
   speedMul() { const w = this.weight(), c = this.L.bag.comfy; return 1 - WEIGHT.slowMax * clamp((w - c) / c, 0, 1); }
@@ -273,10 +285,11 @@ export class Raid {
     /* 터널 '역 계단'은 시간이 아니라 차오르는 물이 닿으면 잠김 (지도마다 닫히는 때가 다름) */
     if (x.kind === 'early') return this.map === 'tunnel' ? this.floodZ > x.pos.z + 1.5 : this.elapsed < RAID.earlyClose;
     if (x.kind === 'power') return this.power && !(this.dark > 0);
+    if (x.cond) return x.cond(); /* M4-B 반출 해치 = 관제 승인 */
     if (x.call) return x.call === 'ready';
     return true;
   }
-  exitWhy(x) { if (x.kind === 'early' && !this.exitOpen(x)) return this.map === 'tunnel' ? '물에 잠김' : '잠김'; if (x.kind === 'power' && !this.power) return '전원 필요'; if (x.kind === 'power' && this.dark > 0) return '정전 중';
+  exitWhy(x) { if (x.why && !this.exitOpen(x)) return x.why(); if (x.kind === 'early' && !this.exitOpen(x)) return this.map === 'tunnel' ? '물에 잠김' : '잠김'; if (x.kind === 'power' && !this.power) return '전원 필요'; if (x.kind === 'power' && this.dark > 0) return '정전 중';
     if (x.call === 'idle') return x.crane ? '레버로 부르기' : '신호탄 필요'; if (x.call === 'wait') return `${x.crane ? '바구니' : '보트'} 오는 중 ${Math.ceil(x.arrive)}초`; return ''; }
   isBoss(e) { return !!e.D.boss; }
   /* 빛 웅덩이(켜진 등불 · 랜턴 든 적 · 불붙은 기름 · 공기 방울) — 화면 시야 · 적 보임 · '빛 속이면 더 잘 보임' */
@@ -286,13 +299,14 @@ export class Raid {
     for (const h of this.hazards) out.push({ x: h.x, z: h.z, r: h.r + 1.2 });
     for (const a of this.airs) out.push({ x: a.x, z: a.z, r: 2.6 });
     out.push(...flarePools(this)); /* v0.6 조명탄 */
+    for (const m of this.mods) m.pools?.(out); /* M4-B 빛이끼 · 터미널 */
     return out;
   }
   inLight(p, pad = 0) { for (const L of this.lightPools()) if ((p.x - L.x) ** 2 + (p.z - L.z) ** 2 < (L.r + pad) ** 2) return true; return false; }
   /* 화면 가리개 숫자: 어둠 · 시야 배수 (ui.drawVeil) */
   veilParams() {
-    const night = this.M.night || 0; let dark = this.darkPerm ? (this.L.blackout < 1 ? 0.7 : 0.78) : this.dark > 0 ? (this.L.blackout < 1 ? 0.74 : 0.86) : 0.62 + night * 0.12;
-    let vis = this.L.vision * (this.dark > 0 || this.darkPerm || night ? this.L.dark || 1 : 1) * (this.dark > 0 && this.L.blackout >= 1 ? 0.75 : 1) * (this.C.vis || 1) * (night ? 0.92 : 1);
+    const night = this.night || 0; let dark = this.darkPerm ? (this.L.blackout < 1 ? 0.7 : 0.78) : this.dark > 0 ? (this.L.blackout < 1 ? 0.74 : 0.86) : 0.62 + night * 0.12;
+    let vis = this.L.vision * (this.dark > 0 || this.darkPerm || night ? this.L.dark || 1 : 1) * (this.dark > 0 && this.L.blackout >= 1 ? 0.75 : 1) * (this.C.vis || 1) * (night ? 0.92 : 1) * (this.wxVis || 1); if (night || this.dark > 0) dark *= this.wxDark || 1; /* M4-B 고성능 헤드램프 */
     if (this.douse > 0) { dark = Math.max(dark, 0.9); vis *= 0.55; }
     if (this.flash > 0) { dark *= 0.25; vis *= 2; }
     return { dark: Math.min(0.93, dark), vis, pools: this.lightPools() };
@@ -311,7 +325,7 @@ export class Raid {
       if (this.time <= RAID.warnAt && !this.warned) { this.warned = true; sfx.siren(); this.ui.toast(this.map === 'harbor' ? '만조 1분 전! 열린 출구로' : '물이 다 차기 1분 전! 열린 출구로', 'warn'); }
       if (this.time <= 10 && Math.floor(this.time) !== this.lastTick) { this.lastTick = Math.floor(this.time); sfx.tick(); }
       if (this.time <= 0) { this.time = 0; this.die('tide'); } }
-    this.updatePlayer(dt); this.updateEnemies(dt); this.updateShots(dt); this.updateThrows(dt); this.updateExits(dt); this.updateGates(dt); this.updateMapFx(dt);
+    this.updatePlayer(dt); this.updateEnemies(dt); this.updateShots(dt); this.updateThrows(dt); this.updateExits(dt); this.updateGates(dt); this.updateMapFx(dt); chiefTick(this, dt);
     for (let i = this.noises.length - 1; i >= 0; i--) if ((this.noises[i].t += dt) > 0.1) this.noises.splice(i, 1);
     this.water.material.uniforms.uTime.value += dt;
     this.ui.raidHud(this);
@@ -336,13 +350,13 @@ export class Raid {
     /* 터널 급류: 한 번, 25초 동안 물살 2배 */
     if (el >= this.surgeAt && !E.surge) { E.surge = true; this.surge = 25; this.ui.event('급류가 몰려와요! 물살이 두 배 — 25초', 'warn'); sfx.warn(); }
     if (this.surge > 0) { this.surge -= dt; if (this.surge <= 0) this.ui.event('물살이 잦아들었어요', 'good'); }
-    if (!E.boss && (el >= RAID.bossAt || this.zone === 3)) this.spawnBoss();
+    if (!E.boss && (el >= (this.bossAt ?? RAID.bossAt) || this.zone === 3)) this.spawnBoss();
   }
   spawnBoss() {
     this.events.boss = true; const B = this.P.boss; const kind = this.M.bossKind; const e = this.makeEnemy({ kind, x: B.x, z: B.z, zone: 3 }, 999);
     e.state = this.zone === 3 ? 'chase' : 'idle'; e.target = this.pl.pos.clone(); this.enemies.push(e); this.boss = e;
     sfx.roar(); this.shake = Math.max(this.shake, 0.5); this.fx.burst(B.x, 0.3, B.z, 30, 0xbfe8ee, 7, 0.14, 1, 18);
-    const tip = { boss: '바닥 경고 원을 조심 · 내려찍은 뒤 가슴 보관함이 약점', captain: '바닥 줄은 옆으로 · 내려찍은 뒤 랜턴이 약점', eel: '돌진을 벽으로 유도하면 기절 · 물속 방전 조심', smelter: '쇳물 줄은 옆으로 · 내려찍은 뒤 가슴 용광로가 약점' }[kind];
+    const tip = { boss: '바닥 경고 원을 조심 · 내려찍은 뒤 가슴 보관함이 약점', captain: '바닥 줄은 옆으로 · 내려찍은 뒤 랜턴이 약점', eel: '돌진을 벽으로 유도하면 기절 · 물속 방전 조심', smelter: '쇳물 줄은 옆으로 · 내려찍은 뒤 가슴 용광로가 약점', mother: '덩굴 줄은 옆으로 · 내려친 뒤 심장 산호가 약점 · 불이 이끼를 태워요' }[kind];
     const ig = e.D.name + josa(e.D.name, '이', '가'); this.ui.event(this.zone === 3 ? `${ig} 깨어났어요! ${tip}` : `깊은 곳에서 ${ig} 깨어났어요`, 'boss');
   }
   updatePlayer(dt) {
@@ -351,6 +365,7 @@ export class Raid {
     pl.stam = Math.min(PLAYER.stamMax + (L.stamMax || 0), pl.stam + PLAYER.stamRegen * L.stam * dt * (pl.roll > 0 ? 0 : 1));
     const wet = pl.wet = this.water.userData.mask(pl.pos.x, pl.pos.z) > 0.15; armsTick(this, dt);
     const heavy = this.weight() > L.bag.comfy;
+    pl.slowMul = 1; pl.grip = 1; pl.lit = false; for (const m of this.mods) m.pre?.(dt); /* M4-B 이끼 자리 · 얼음 · 체온 */
     /* 이동 */
     let mx = inp.mx, mz = inp.mz; const ml = Math.hypot(mx, mz); if (ml > 1) { mx /= ml; mz /= ml; }
     const rollCost = PLAYER.rollCost * (heavy ? 1 + WEIGHT.rollExtra : 1) * (L.roll || 1);
@@ -368,22 +383,23 @@ export class Raid {
       pl.roll -= dt;
       if (pl.roll <= 0) { pl.roll = 0; pl.vel.copy(pl.rollDir).multiplyScalar(ml > 0.1 ? PLAYER.speed * 0.6 : 0); }
     } else {
-      const speed = PLAYER.speed * L.speed * this.speedMul() * (wet ? 0.78 : 1) * (pl.searching ? 0 : 1) * (pl.reload > 0 ? 0.85 : 1);
+      const speed = PLAYER.speed * L.speed * this.speedMul() * (wet ? 0.78 : 1) * (pl.searching ? 0 : 1) * (pl.reload > 0 ? 0.85 : 1) * pl.slowMul;
       /* 가속 · 감속: 출발은 바로 45% 에서 시작해 약 0.08초에 최고 속도 · 멈춤은 약 0.12m 만 밀림 · 반대 방향은 멈춤 빠르기로 */
       const tx = mx * speed, tz = mz * speed, tl = Math.hypot(tx, tz), vl = Math.hypot(pl.vel.x, pl.vel.z);
-      if (tl > 0.01 && vl < 0.25 * tl) { pl.vel.x = tx * PLAYER.kick; pl.vel.z = tz * PLAYER.kick; }
+      if (tl > 0.01 && vl < 0.25 * tl && pl.grip >= 1) { pl.vel.x = tx * PLAYER.kick; pl.vel.z = tz * PLAYER.kick; }
       const dot = pl.vel.x * tx + pl.vel.z * tz;
-      const k = tl < 0.01 ? PLAYER.dec : dot < 0 ? PLAYER.turn : PLAYER.acc;
+      const k = (tl < 0.01 ? PLAYER.dec : dot < 0 ? PLAYER.turn : PLAYER.acc) * pl.grip; /* M4-B 얼음 = 미끄러짐 */
       const a = 1 - Math.exp(-k * dt); pl.vel.x += (tx - pl.vel.x) * a; pl.vel.z += (tz - pl.vel.z) * a;
       if (tl < 0.01 && Math.hypot(pl.vel.x, pl.vel.z) < 0.05) pl.vel.set(0, 0, 0);
       pl.pos.x += pl.vel.x * dt; pl.pos.z += pl.vel.z * dt; pl.moving = ml > 0.12 && !pl.searching;
-      if (pl.moving) { pl.step -= dt * ml * (PLAYER.speed / 5.2); if (pl.step <= 0) { pl.step = 0.32; if (wet) { sfx.splash(); this.fx.ring(pl.pos.x, pl.pos.z, 0.5); this.fx.burst(pl.pos.x, 0.15, pl.pos.z, 3, 0xcfeef2, 2, 0.06, 0.35); } else sfx.step(); this.noise(pl.pos, wet ? 6 : 3.2); } }
+      if (pl.moving) { pl.step -= dt * ml * (PLAYER.speed / 5.2); if (pl.step <= 0) { pl.step = 0.32; if (wet) { sfx.splash(); this.fx.ring(pl.pos.x, pl.pos.z, 0.5); this.fx.burst(pl.pos.x, 0.15, pl.pos.z, 3, 0xcfeef2, 2, 0.06, 0.35); } else sfx.step(); this.noise(pl.pos, (wet ? 6 : 3.2) * ((this.ai?.lv || 1) >= 2 ? AI2.step[0] + (AI2.step[1] - AI2.step[0]) * Math.min(1, ml) : 1)); } } /* M4-A: 살살 걸으면 발소리 작게 */
     }
     /* v0.4 물살(터널) · 갈고리 끌림(선장) · 물결 밀림(장어) */
     if (this.currents.length) { const k = CURRENT.speed * (this.C.current || 1) * (this.surge > 0 ? 2 : 1); pl.inCurrent = null; for (const c of this.currents) if (pl.pos.x > c.x0 && pl.pos.x < c.x1 && pl.pos.z > c.z0 && pl.pos.z < c.z1) { pl.pos.x += c.dx * k * dt; pl.pos.z += c.dz * k * dt; pl.inCurrent = c; } }
     if (pl.pull) { const st = Math.min(pl.pull.left, 18 * dt); pl.pos.addScaledVector(pl.pull.dir, st); pl.pull.left -= st; if (pl.pull.left <= 0.01) pl.pull = null; }
     if (pl.push) { pl.pos.addScaledVector(pl.push, dt); pl.push.multiplyScalar(Math.pow(0.02, dt)); if (pl.push.length() < 0.2) pl.push = null; }
     if (this.F) factoryPlayer(this, dt); /* 공장: 벨트 · 쇳물 · 증기 · 반출구 타기 */
+    for (const m of this.mods) m.player?.(dt); /* M4-B 체온 · 독 */
     this.rollPose(dt);
     this.collide(pl.pos, PLAYER.radius);
     /* 구역 */
@@ -404,7 +420,7 @@ export class Raid {
     for (const hz of this.hazards) if ((pl.pos.x - hz.x) ** 2 + (pl.pos.z - hz.z) ** 2 < hz.r * hz.r && pl.roll <= 0) { hz.tick += dt; if (hz.tick >= 0.5) { hz.tick = 0; this.hurtRaw(hz.dps * 0.5, '불이 붙었어요 — 비켜요!'); } }
     /* 조준: 보이는 가장 가까운 적 */
     const w = this.w; let best = null, bd = w.range;
-    for (const e of this.enemies) { if (e.dead || e.sleep) continue; const d = e.pos.distanceTo(pl.pos); if (d < bd && this.los(pl.pos, e.pos)) { bd = d; best = e; } }
+    for (const e of this.enemies) { if (e.dead || e.sleep || e.hidden) continue; const d = e.pos.distanceTo(pl.pos); if (d < bd && this.los(pl.pos, e.pos)) { bd = d; best = e; } } /* M4-A 숨은 문어는 못 노림 */
     pl.aim = best;
     let want = pl.face;
     if (best) want = Math.atan2(best.pos.x - pl.pos.x, best.pos.z - pl.pos.z); else if (pl.moving) want = Math.atan2(mx, mz);
@@ -426,7 +442,7 @@ export class Raid {
     pl.root.position.copy(pl.pos); pl.root.rotation.y = pl.face;
     const fl = pl.flash > 0 ? 1 : 0; for (const m of pl.mats) m.emissive?.setRGB(fl * 0.9, fl * 0.25, fl * 0.2);
     /* 뒤지기 · 전원 켜기 진행 */
-    if (pl.searching) { const s = pl.searching; s.prog += dt / s.need; if (s.prog >= 1) { pl.searching = null; if (s.kind === 'gen') this.powerOn(); else if (s.kind === 'lamp') this.toggleLamp(s.L); else if (s.kind === 'flare') { if (s.x.crane) callCrane(this, s.x); else this.fireFlare(s.x); } else this.openContainer(s.c); } }
+    if (pl.searching) { const s = pl.searching; s.prog += dt / s.need; if (s.prog >= 1) { pl.searching = null; if (s.kind === 'gen') this.powerOn(); else if (s.kind === 'lamp') this.toggleLamp(s.L); else if (s.kind === 'flare') { if (s.x.crane) callCrane(this, s.x); else this.fireFlare(s.x); } else if (s.kind === 'mod') s.done(); else this.openContainer(s.c); } }
     /* 가까운 할 일: 상자 · 발전기 · 잠긴 문 */
     let near = null, nd = 2.1;
     for (const c of this.containers) { const d = c.pos.distanceTo(pl.pos); if (d < nd && (!c.searched || (c.items && c.items.length))) { nd = d; near = { type: 'loot', c }; } }
@@ -435,6 +451,7 @@ export class Raid {
     if (!this.power) for (const g of this.gates) if (!g.open && g.door.lock === 'power' && Math.hypot(g.door.x - pl.pos.x, g.door.z - pl.pos.z) < 2.6 && !near) near = { type: 'gate', g };
     if (!near) for (const L of this.lamps) if (Math.hypot(L.x - pl.pos.x, L.z - pl.pos.z) < 2.0) { near = { type: 'lamp', L }; break; }
     for (const x of this.exits) if (x.call === 'idle' && x.pos.distanceTo(pl.pos) < 2.4) near = { type: 'flare', x, label: x.crane ? '바구니 부르기' : null };
+    for (const m of this.mods) if (m.near) near = m.near(near); /* M4-B 관제 터미널 */
     this.near = near;
   }
   /* 앞구르기 몸 자세: 웅크림(납작) → 진행 방향 옆축으로 360도 · 몸을 공처럼(작게) → 착지(납작) → 원래대로 튕겨 돌아옴
@@ -454,7 +471,7 @@ export class Raid {
   switchWeapon() { if (this.ws.length < 2 || this.pl.dead) return; this.wi = (this.wi + 1) % this.ws.length; setWeapon(this.pl.hero, this.wi); this.pl.reload = 0; this.pl.fireCd = 0.25; this.pl.spread = this.w.spread; sfx.reload(); this.ui.toast(this.w.name, 'soft'); }
   startReload() { const pl = this.pl; if (pl.reload > 0) return; pl.reload = this.w.reload; sfx.reload(); this.noise(pl.pos, 5); }
   fire(target) {
-    const pl = this.pl, w = this.w; pl.fireCd = 1 / w.rate; this.shots++;
+    const pl = this.pl, w = this.w; pl.fireCd = 1 / w.rate; this.shots++; pl.shotT = this.t; /* M4-A: 눌림(엄폐한 적이 덜 내밂) */
     if (w.melee) return swing(this, target); /* v0.6 렌치: 탄 없음 */
     pl.mags[this.wi]--; const wm = waterMul(this, w); const RNG = w.range * (wm?.range || 1), DM = wm?.dmg || 1; let boomAt = null;
     const base = target ? Math.atan2(target.pos.x - pl.pos.x, target.pos.z - pl.pos.z) : pl.face;
@@ -474,6 +491,7 @@ export class Raid {
       shotSig(this, w, k, n, muzzle, hit, dir, take, tb); /* v0.6.1 무기 서명 효과 · 총구 · 탄피 · 궤적 (arms.js) */
       if (w.blast) { boomAt = hit.clone(); if (take.length) boomAt.copy(take[0].e.pos); hitAny = take.length > 0; continue; } /* 조명탄: 아래에서 터짐 */
       for (const h of take) { const dd = w.dmg * DM * (0.9 + this.R() * 0.2); this.damage(h.e, dd, dir, pl.pos.clone().lerp(end, h.t).setY(1.0), w.crit, n > 1, { gun: true }); if (w.chain) zap(this, h.e, dd); hitAny = true; }
+      if (!take.length && tb < 0.999 && this.mods.length) this.modHit(hit, w.dmg * DM); /* M4-B 배양조 유리 */
       if (!take.length && tb < 0.999 && k % 2 === 0) { this.fx.burst(hit.x, hit.y, hit.z, 5, 0xd9c7a0, 4, 0.09, 0.45, 22, V(-dir.x, 0, -dir.z)); if (k === 0) sfx.cover(); }
     }
     if (boomAt) lob(this, boomAt); /* v0.6.1 조명탄은 날아가서 터짐 */
@@ -510,22 +528,28 @@ export class Raid {
     const boss = !!e.D.boss;
     e.dead = true; if (!by) { this.kills[e.kind] = (this.kills[e.kind] || 0) + 1; if (boss && e.kind !== 'boss') this.kills.boss++; this.killN++; } else this.infightKills = (this.infightKills || 0) + 1; /* 진영끼리 쓰러뜨린 건 처치 수에 안 셈 */ this.hitstop = Math.max(this.hitstop, 0.11); this.shake = Math.max(this.shake, boss ? 0.9 : 0.35); this.slow = 0.35; this.slowT = boss ? 0.6 : 0.18;
     if (boss) this.bossKind = e.kind;
+    for (const m of this.mods) m.kill?.(e); /* M4-B 포자낭 이끼 · 어미 시듦 */
+    if (FOE[e.kind]) foeKill(this, e, by); /* M4-A: 기뢰 터짐/퐁 · 문어 먹물 */
     if (e.warn) { this.root.remove(e.warn); e.warn.material.dispose(); e.warn = null; } e.charging = null; e.weakT = 0; e.burstLeft = 0; if (e.rain) clearRain(this, e); this.ai?.release(e);
     sfx.kill(); this.fx.ring(e.pos.x, e.pos.z, boss ? 3 : 1.4, 0xffe6a8);
     if (e.kind === 'drone') { this.fx.burst(e.pos.x, 1.2, e.pos.z, 26, 0xffb347, 8, 0.1, 0.6, 18); this.fx.burst(e.pos.x, 1.2, e.pos.z, 14, 0x3a4148, 6, 0.18, 1.2, 26); this.fx.burst(e.pos.x, 1.2, e.pos.z, 10, 0x8c96a0, 6, 0.16, 1.2, 26); e.fall = 0; }
     else if (e.kind === 'crab') { this.fx.burst(e.pos.x, 0.4, e.pos.z, 16, 0xd0532f, 6, 0.1, 0.6, 22, dir); }
     else if (e.kind === 'jelly') { this.fx.burst(e.pos.x, 1.1, e.pos.z, 22, 0x9ff0ff, 6, 0.08, 0.6, 4); this.fx.ring(e.pos.x, e.pos.z, 2, 0x9ff0ff); e.fall = 0; }
     else if (e.kind === 'eel') { this.fx.burst(e.pos.x, 0.8, e.pos.z, 50, 0x8fb08a, 10, 0.14, 0.9, 20, dir); this.fx.burst(e.pos.x, 0.8, e.pos.z, 30, 0x7dffd8, 8, 0.08, 0.7, 6); }
-    else { this.fx.burst(e.pos.x, 1.0, e.pos.z, boss ? 50 : 18, 0xf2ecd8, boss ? 10 : 7, 0.12, 0.9, 24, dir); e.anim.play('Death_C_Skeletons', { once: true, fade: 0.05, force: true }); }
+    else if (e.kind !== 'mine') { this.fx.burst(e.pos.x, 1.0, e.pos.z, boss ? 50 : 18, 0xf2ecd8, boss ? 10 : 7, 0.12, 0.9, 24, dir); e.anim?.play('Death_C_Skeletons', { once: true, fade: 0.05, force: true }); }
     e.markSp.visible = false; if (e.lantern) e.lantern.g.visible = false;
-    if (boss) { this.ui.event(`${e.D.name}${josa(e.D.name, '을', '를')} 쓰러뜨렸어요! 잔해에 금고 열쇠가`, 'good'); sfx.rare(); }
+    if (boss && e.kind === 'chief') chiefDown(this, e); /* M4-A 떠돌이 보스: 이야기 조각 */
+    else if (boss) { this.ui.event(`${e.D.name}${josa(e.D.name, '을', '를')} 쓰러뜨렸어요! 잔해에 금고 열쇠가`, 'good'); sfx.rare(); }
     else if (!by) this.ui.praise(['깔끔해요!', '한 방 더 정확하게!', '좋은 조준!', '인양단 솜씨!'][this.killN % 4]); /* 칭찬은 머리 위 (v0.5.1) */
     const kind = e.D.loot || 'body';
-    this.containers.push({ kind, zone: e.zone || 3, pos: e.pos.clone(), obj: null, items: rollLoot(kind, e.zone || 3, this.R), searched: false, name: boss ? e.D.name + ' 잔해' : LOOT_TABLE[kind]?.name && kind !== 'body' ? LOOT_TABLE[kind].name : e.D.name + ' 잔해', best: 0 });
+    const items = rollLoot(kind, e.zone || 3, this.R); if (boss && this.T?.bossLoot) items.push(...rollLoot(kind, 3, this.R).filter(k => !(LOOT_TABLE[kind].fixed || []).includes(k)).slice(0, this.T.bossLoot)); /* 보스 주간: 잔해 +1 */
+    this.containers.push({ kind, zone: e.zone || 3, pos: e.pos.clone(), obj: null, items, searched: false, name: boss ? e.D.name + ' 잔해' : LOOT_TABLE[kind]?.name && kind !== 'body' ? LOOT_TABLE[kind].name : e.D.name + ' 잔해', best: 0 });
   }
   kickCam(dir, s) { this.kick.addScaledVector(dir, -s); }
   hurt(dmg, from) {
     const pl = this.pl; if (pl.dead || pl.inv > 0) return false;
+    /* M4-A '예고 없는 큰 피해 0': 큰 공격(BIG_HIT 이상)은 예고(원 · 줄 · 떨어질 자리)가 TELE_MIN 넘게 보였어야 — 아니면 기록 (deeptest 가 0 인지 봄) */
+    { const raw = dmg * (this.L.foeDmg || 1); if (raw >= BIG_HIT) { this.bigHits++; const tl = this.tele; if (!tl || !(tl.t >= TELE_MIN)) this.unwarned.push({ t: Math.round(this.elapsed * 10) / 10, dmg: Math.round(raw), k: tl?.k || '?', tele: tl ? Math.round(tl.t * 100) / 100 : null }); } }
     dmg = Math.max(1, Math.round(dmg * (1 - this.L.armor) * (this.L.foeDmg || 1))); /* v0.6 난이도 */
     (this.dmgLog ||= []).push([Math.round(this.elapsed), dmg, from ? Math.round(from.distanceTo(pl.pos) * 10) / 10 : 0]);
     pl.hp -= dmg; pl.flash = 0.12; pl.inv = 0.25; this.shake = Math.max(this.shake, 0.45); this.hitstop = Math.max(this.hitstop, 0.05); sfx.hurt(); this.ui.hurtFlash();
@@ -542,9 +566,10 @@ export class Raid {
     if (this.slowT > 0) { this.slowT -= dt / Math.max(0.2, this.slow); if (this.slowT <= 0) this.slow = 1; }
     const plSmoke = this.inSmoke(pl.pos); const darkMul = this.dark > 0 ? 0.6 : 1;
     /* 밤(항구): 어두운 곳의 나는 덜 보이고, 빛 속에 서면 더 멀리서 보임 · 날씨(안개 · 맑은 밤) · 폭풍은 소리가 묻힘 */
-    const night = this.M.night || 0; const plLit = night ? this.inLight(pl.pos) : false;
-    const sightMul = darkMul * (this.C.sight || 1) * (night ? (plLit ? LAMP.seenMul : 1 - 0.2 * night) : 1) * (this.douse > 0 ? 0.6 : 1);
-    const hearMul = this.C.hear || 1;
+    const night = this.night || 0; const lv2 = (this.ai?.lv || 1) >= 2; const plLit = night || (lv2 && this.dark > 0) ? this.inLight(pl.pos) : false;
+    /* M4-A 2단계: 정전 중엔 빛 속의 나는 1.5배 멀리서 · 어둠 속이면 0.75배 · 어두우면 귀를 씀(1.3배) · 안개는 1.15배 */
+    const sightMul = darkMul * (this.C.sight || 1) * (night ? (plLit ? LAMP.seenMul : 1 - 0.2 * night) : lv2 && this.dark > 0 ? (plLit ? AI2.litSeen : 0.75) : 1) * (this.douse > 0 ? 0.6 : 1);
+    const hearMul = (this.C.hear || 1) * (lv2 ? (this.dark > 0 || night >= 1 ? AI2.darkHear : (this.C.vis || 1) < 1 ? AI2.fogHear : 1) : 1);
     this.ai?.update(dt); /* M3-B 무리 경보 · 불병 */
     for (const e of this.enemies) {
       if (e.dead) { enemyTick(e, dt, this);
@@ -552,6 +577,8 @@ export class Raid {
         else if (e.kind === 'jelly') { e.fall = (e.fall || 0) + dt; e.j.body.position.y = Math.max(0.2, 1.15 - e.fall * 2); e.j.body.scale.setScalar(Math.max(0.3, 1 - e.fall)); }
         else if (e.kind === 'crab') { e.c.body.rotation.z = Math.min(Math.PI, (e.c.body.rotation.z || 0) + dt * 9); }
         else if (e.kind === 'eel') { for (const sg of e.l.segs) sg.m.position.y = Math.max(0.2, sg.m.position.y - dt); }
+        else if (e.kind === 'hermit' && e.fz) { e.fz.body.rotation.z = Math.min(Math.PI * 0.6, (e.fz.body.rotation.z || 0) + dt * 5); }
+        else if (e.kind === 'octo' && e.fz) { e.fall = (e.fall || 0) + dt; e.fz.root.scale.setScalar(Math.max(0.4, 1 - e.fall)); }
         else if (e.root.visible && e.anim) e.anim.mixer.update(dt);
         continue;
       }
@@ -568,11 +595,11 @@ export class Raid {
       const spotted = e.spot && !pl.dead && !plSmoke && dist < 7 && Math.abs(angDiff(e.face, angToP)) < 0.32 && this.los(e.pos, pl.pos);
       if (spotted) sees = true;
       if (sees) { e.alert = Math.min(1, e.alert + dt * (spotted ? 4 : dist < 4 ? 3 : 1.4)); e.seen = 0.6; } else { e.seen -= dt; if (e.state !== 'chase') e.alert = Math.max(0, e.alert - dt * 0.25); }
-      for (const n of this.noises) { if (n.src !== 'player') continue; const d = n.p.distanceTo(e.pos); if (d < n.r * D.hear * hearMul && e.state !== 'chase') { e.state = 'investigate'; e.target = n.p.clone(); e.alert = Math.max(e.alert, 0.5); if (e.mark <= 0) { e.mark = 1.2; e.markType = '?'; } } }
+      this.ai.hear(e, D, hearMul); /* 소리: 1단계 = 내 소리만 · 2단계 = 벽 너머 0.6배 · 다른 적 총소리 · 구조 요청 (ai.js) */
       if (e.alert >= 1 && e.state !== 'chase') { e.state = 'chase'; e.mark = 1.2; e.markType = '!'; sfx.alert((e.pos.x - pl.pos.x) / 12); if (e.anim && !boss) e.anim.play('Taunt', { once: true, fade: 0.1, speed: 1.6, force: true }), e.taunt = 0.5; if (boss) sfx.roar(); }
       if (e.state === 'chase') { if (sees) e.target = pl.pos.clone(); else if (e.seen < -5) { e.state = 'investigate'; } }
       /* M3-B 진영끼리: 가까이 보이는 적 진영을 노림 (주인공이 더 가까우면 주인공) — 이 뒤로 목표 · 거리 · 보임은 그 적 기준 */
-      if (this.ai) { const fo = this.ai.foe(e, dt, sees, dist); if (fo) { if (e.state !== 'chase' || !sees) { e.state = 'fight'; e.alert = Math.max(e.alert, 0.6); } toP.copy(fo.pos).sub(e.pos); dist = toP.length(); angToP = Math.atan2(toP.x, toP.z); sees = this.los(e.pos, fo.pos); e.target = fo.pos.clone(); } else if (e.state === 'fight') { e.state = 'idle'; e.home.copy(e.pos); } }
+      if (this.ai) { const fo = this.ai.foe(e, dt, sees, dist); if (fo) { if (e.state !== 'chase' || !sees) { e.state = 'fight'; e.alert = Math.max(e.alert, 0.6); } toP.copy(fo.pos).sub(e.pos); dist = toP.length(); angToP = Math.atan2(toP.x, toP.z); if (!(e.foeLosT > this.t) || e.foeLosO !== fo) { e.foeLosV = this.los(e.pos, fo.pos); e.foeLosT = this.t + 0.12; e.foeLosO = fo; } sees = e.foeLosV; e.target = fo.pos.clone(); } /* M4-A: 진영 상대 보임은 0.12초마다 (성능) */ else if (e.state === 'fight') { e.state = 'idle'; e.home.copy(e.pos); } }
       let goal = null, spd = D.speed; const rage = boss && e.hp < e.maxHp * 0.5 ? (e.kind === 'boss' ? 1.25 : 1.2) : 1;
       if (e.state === 'idle') { if (!e.wander || e.pos.distanceTo(e.wander) < 0.6 || e.t > 4) { e.t = 0; e.wander = e.home.clone().add(V((this.R() - 0.5) * 7, 0, (this.R() - 0.5) * 7)); } goal = e.wander; spd *= 0.5; }
       else if (e.state === 'investigate') { goal = e.target; if (e.pos.distanceTo(e.target) < 0.8) { e.state = 'idle'; e.home.copy(e.pos); } }
@@ -591,11 +618,12 @@ export class Raid {
         if (e.wind <= 0) { this.enemyAttack(e, dist); e.lockFace = null; }
         goal = null;
       } else if (e.ai && (e.state === 'chase' || e.state === 'fight') && !(e.taunt > 0)) { /* M3-B 검은 닻: 엄폐 · 몸 내밀기 · 돌아 들기 · 불병 (ai.js) */
-        const o = this.ai.anchor(e, dt, e.foe && !e.foe.dead ? e.foe.pos : pl.pos, dist, sees, angToP); goal = o.goal; spd = o.spd; if (o.face != null) wantFace = o.face;
+        const o = this.ai.role(e, dt, e.foe && !e.foe.dead ? e.foe.pos : pl.pos, dist, sees, angToP); goal = o.goal; spd = o.spd; if (o.face != null) wantFace = o.face;
       } else if (canAttack && e.cd <= 0 && e.stagger <= 0 && !(e.taunt > 0)) {
         if (boss) this.bossWind(e, dist, rage);
         else { e.wind = e.windMax = D.wind ?? (e.kind === 'drone' ? 0.42 : 0.38); e.cd = D.cd;
-          if (D.atk === 'pulse') this.warnDisc(e, D.range, 0x6fd8ff, true);
+          if (D.atk === 'pulse') this.warnDisc(e, D.range, 0x6fd8ff, true); else if (LAB_KIND[e.kind]) labWind(this, e, angToP); /* M4-B 포자 원 · 수압 탄 줄 */
+          else if (D.dmg * e.dmgMul * (this.L.foeDmg || 1) >= BIG_HIT) this.bigTele(e, dist, angToP); /* M4-A: 큰 공격은 모두 예고 (해골 깊은 구역 내려침 · 등불 던지기) */
           if (e.anim) e.anim.play(D.atk === 'throw' ? 'Unarmed_Melee_Attack_Punch_A' : this.R() < 0.5 ? 'Unarmed_Melee_Attack_Punch_A' : '1H_Melee_Attack_Chop', { once: true, fade: 0.05, speed: e.kind === 'miner' ? 0.85 : 1.15, force: true }); }
         goal = null;
       } else if (canAttack && (e.kind === 'drone' || e.kind === 'lamp') && dist < D.range * 0.6) {
@@ -604,6 +632,7 @@ export class Raid {
       else if (canAttack && e.kind === 'jelly' && dist < 1.5) goal = null;
       else if (canAttack && e.kind === 'eel' && dist < 4.5) goal = e.pos.clone().addScaledVector(toP.clone().normalize(), -2);
       else if (canAttack && boss && dist < 2.4) goal = null;
+      if (!e.ai && !boss && !(e.wind > 0) && !stunned && !e.charging) { const o = this.ai.steer(e, dt, goal, spd, dist, sees); if (o) { goal = o.goal; spd = o.spd; } } /* M4-A 2단계: 양쪽 끼기 · 구조 요청 · 후퇴 · 빛으로 */
       if (e.taunt > 0) { e.taunt -= dt; goal = null; wantFace = angToP; }
       if (goal && e.stagger <= 0 && !e.charging) {
         const wp = this.los(e.pos, goal) ? goal : this.waypoint(e.pos, goal);
@@ -613,17 +642,19 @@ export class Raid {
         else if (e.state !== 'idle') { e.state = 'idle'; e.home.copy(e.pos); } /* 닫힌 문 너머 — 포기 */
       }
       if ((e.state === 'chase' || e.state === 'fight') && sees && !(e.wind > 0 && e.lockFace != null) && !e.charging && !stunned && !(e.burstLeft > 0)) wantFace = angToP;
-      e.face += angDiff(e.face, wantFace) * Math.min(1, dt * (boss ? 3 : e.kind === 'crab' ? 10 : 7));
+      e.face += angDiff(e.face, wantFace) * Math.min(1, dt * (D.turn || (boss ? 3 : e.kind === 'crab' ? 10 : 7)));
       e.pos.addScaledVector(e.vel, dt); e.vel.multiplyScalar(Math.pow(0.002, dt));
       for (const o of this.enemies) if (o !== e && !o.dead && !o.sleep) { const dx = e.pos.x - o.pos.x, dz = e.pos.z - o.pos.z, d = Math.hypot(dx, dz), m = D.radius + o.D.radius; if (d < m && d > 0.01) { e.pos.x += dx / d * (m - d) * 0.5; e.pos.z += dz / d * (m - d) * 0.5; } }
       if (!e.charging) this.collide(e.pos, D.radius);
       e.root.position.copy(e.pos); if (e.kind !== 'eel') e.root.rotation.y = e.face;
       const moving = goal && e.stagger <= 0;
-      if (e.kind === 'drone') { const d = e.d; d.body.position.y = 1.25 + Math.sin(e.t * 3 + e.id) * 0.1; d.body.rotation.z = clamp(-e.vel.x * 0.15, -0.5, 0.5); for (const r of d.rotors) r.rotation.y += dt * 40; if (e.wind <= 0) d.eyeM.color.setRGB(1, e.state === 'chase' ? 0.25 : 0.55, e.state === 'chase' ? 0.2 : 0.25); }
+      if (PRIM[e.kind]) foeTick(this, e, dt, moving); /* M4-A 기뢰 · 소라게 · 문어 */
+      else if (e.kind === 'drone') { const d = e.d; d.body.position.y = 1.25 + Math.sin(e.t * 3 + e.id) * 0.1; d.body.rotation.z = clamp(-e.vel.x * 0.15, -0.5, 0.5); for (const r of d.rotors) r.rotation.y += dt * 40; if (e.wind <= 0) d.eyeM.color.setRGB(1, e.state === 'chase' ? 0.25 : 0.55, e.state === 'chase' ? 0.2 : 0.25); }
       else if (e.kind === 'crab') { const c = e.c; const w = moving ? Math.sin(e.t * 22) : 0; c.legs.forEach((l, k) => { l.rotation.y = w * 0.5 * (k % 2 ? 1 : -1); }); c.body.position.y = 0.32 + Math.abs(w) * 0.04; if (e.wind <= 0) for (const cl of c.claws) cl.rotation.x *= Math.pow(0.001, dt); }
       else if (e.kind === 'jelly') { const j = e.j; j.body.position.y = 1.15 + Math.sin(e.t * 2.2 + e.id) * 0.18; const p = 1 + Math.sin(e.t * 4.4 + e.id) * 0.08; j.body.scale.set(p, 2 - p, p); j.tents.forEach((t, k) => { t.rotation.z = Math.sin(e.t * 3 + k) * 0.25; }); if (e.wind <= 0) j.coreM.color.setRGB(0.87, 0.98, 1); }
       else if (e.kind === 'eel') this.eelPose(e, dt);
       else { const n = e.anim.curName; const busy = (/Attack|Hit_A|Taunt|Shoot/.test(n) && e.anim.cur.isRunning()) || (n === 'Aim' && e.wind > 0); if (!busy) e.anim.play(stunned && e.anim.clips.Stun ? 'Stun' : moving ? (e.state === 'chase' || e.state === 'fight' ? 'Running_A' : 'Walking_D_Skeletons') : e.ai?.mode === 'hide' && e.anim.clips.Crouch ? 'Crouch' : 'Idle_Combat', { speed: (e.state === 'chase' ? 1.1 : 0.9) * (boss ? 0.65 * rage : e.kind === 'miner' ? 0.8 : 1) * (stunned ? 0.2 : 1) }); e.anim.mixer.update(dt); }
+      if (FOE[e.kind] && !PRIM[e.kind]) foeTick(this, e, dt, moving); /* 저격수 겨냥 줄 따라오기 */
       enemyTick(e, dt, this); /* 전용 모델: 예고 자세 · 약점 빛 · 맞음 */
       if (e.lantern) { const k = e.weakT > 0 ? 1 : 0; e.lantern.m.color.setRGB(1, 0.78 + 0.2 * k, 0.44 + 0.5 * k); e.lantern.halo.scale.setScalar((boss ? 2.2 : 1.3) * (1 + k * 0.6 + Math.sin(e.t * 9) * 0.05)); e.lantern.g.visible = this.douse <= 0 || boss; }
       const f = e.flash > 0 ? 1 : 0; for (const m of e.mats) { if (m.emissive) m.emissive.setRGB(f, f, f); }
@@ -633,11 +664,16 @@ export class Raid {
   /* 보스 보이는 모델 묶음: 화면 배율만 (판정 · 예고 원 · 이동은 en.root/en.pos 그대로) */
   visGroup(root, kind) { const g = new THREE.Group(); g.scale.setScalar(bossVis(kind)); root.add(g); return g; }
   /* 경고 표시: 바닥 원(warnDisc) · 바닥 줄(warnLine) — 예고 시간 동안 커지며 깜빡임 */
-  warnDisc(e, r, color, follow = false) { const m = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.setScalar(0.5); this.root.add(m); e.warn = m; e.warnR = r; e.warnFollow = follow; }
-  warnLine(e, len, w, color) { const m = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide })); m.userData.line = true; m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, e.lockFace, 0); m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.set(w * 0.4, len, 1); this.root.add(m); e.warn = m; e.warnW = w; e.warnFollow = false; }
+  warnDisc(e, r, color, follow = false) { e.teleT0 = this.t; const m = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.setScalar(0.5); this.root.add(m); e.warn = m; e.warnR = r; e.warnFollow = follow; }
+  warnLine(e, len, w, color) { e.teleT0 = this.t; const m = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide })); m.userData.line = true; m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, e.lockFace, 0); m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.set(w * 0.4, len, 1); this.root.add(m); e.warn = m; e.warnW = w; e.warnFollow = false; }
+  /* M4-A: 일반 적 큰 공격 예고 — 근접 = 앞 원 · 던지기/쏘기 = 겨냥 줄 */
+  bigTele(e, dist, ang) { const D = e.D;
+    if (D.atk === 'melee') { this.warnDisc(e, Math.max(1.6, D.range + 0.35), 0xff6a3a, false); e.warn.position.set(e.pos.x + Math.sin(ang) * D.range * 0.6, 0.22, e.pos.z + Math.cos(ang) * D.range * 0.6); }
+    else if (D.atk === 'throw' || D.atk === 'shoot') { e.lockFace = ang; this.warnLine(e, Math.min(D.range + 1, dist + 1.5), 0.28, 0xffa060); } }
   /* 보스 패턴 고르기 · 예고 시작 */
   bossWind(e, dist, rage) {
-    const pl = this.pl; e.lockFace = null;
+    const pl = this.pl; e.lockFace = null; e.teleT0 = this.t; /* 보스 패턴은 모두 예고 (원 · 줄 · 떨어질 자리) */
+    if (e.kind === 'chief') return chiefWind(this, e, dist, rage);
     if (e.kind === 'boss') {
       const slam = dist < 4.2; e.pat = slam ? 'slam' : 'wave'; e.windMax = e.wind = (slam ? 0.85 : 0.6) / rage; e.cd = e.D.cd / rage; if (slam) e.lockFace = e.face;
       e.anim.play(slam ? '1H_Melee_Attack_Chop' : 'Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.75 * rage, force: true });
@@ -650,6 +686,7 @@ export class Raid {
       else { e.pat = 'hook'; e.windMax = e.wind = B.hook.wind / rage; e.lockFace = angToP; e.face = angToP; this.warnLine(e, B.hook.len, 1.1, 0xffa060); e.anim.play('Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.6, force: true }); }
       e.cd = e.D.cd / rage; sfx.warn(); return; }
     if (e.kind === 'smelter') return smelterWind(this, e, dist, rage);
+    if (e.kind === 'mother') return motherWind(this, e, dist, rage); /* M4-B 청록 어미 */
     if (e.kind === 'eel') { const B = BOSS.eel;
       if (e.hp < e.maxHp * B.surge.below && e.pcd <= 0) { e.pat = 'surge'; e.windMax = e.wind = B.surge.wind; e.pcd = 9; this.warnDisc(e, 5, 0x6fd8ff, true); }
       else if (dist < 4.6) { e.pat = 'shock'; e.windMax = e.wind = B.shock.wind / rage; this.warnDisc(e, B.shock.r, 0x9ff0ff, true); }
@@ -660,7 +697,7 @@ export class Raid {
   eelCharge(e, dt) {
     const c = e.charging, B = BOSS.eel.charge; const st = Math.min(c.left, B.speed * dt); const before = e.pos.clone();
     e.pos.addScaledVector(c.dir, st); this.collide(e.pos, e.D.radius); const moved = e.pos.distanceTo(before); c.left -= st;
-    if (!c.hit && this.pl.pos.distanceTo(e.pos) < 1.4) { c.hit = true; this.hurt(B.dmg, e.pos); if (!this.pl.dead) { this.pl.push = c.dir.clone().multiplyScalar(6); } }
+    if (!c.hit && this.pl.pos.distanceTo(e.pos) < 1.4) { c.hit = true; this.tele = { t: this.t - (c.t0 ?? this.t), k: 'eel' }; this.hurt(B.dmg, e.pos); this.tele = null; if (!this.pl.dead) { this.pl.push = c.dir.clone().multiplyScalar(6); } }
     if (moved < st * 0.45 && c.left > 0.5) { e.charging = null; e.stun = B.stun; e.weakT = B.stun; e.l.glowM.color.setHex(0xffe07a); this.shake = Math.max(this.shake, 0.6); sfx.slam(); this.fx.burst(e.pos.x, 0.8, e.pos.z, 26, 0xd9c7a0, 7, 0.14, 0.8); this.ui.event('벽에 박혔어요! 지금 약점 — 피해 2배', 'good'); return; }
     if (c.left <= 0) e.charging = null;
     if (this.R() < 0.5) this.fx.burst(e.pos.x, 0.3, e.pos.z, 2, 0xcfeef2, 2.5, 0.08, 0.35);
@@ -675,7 +712,9 @@ export class Raid {
     head.m.rotation.y = e.face + sw * 0.3;
     for (let i = 1; i < l.segs.length; i++) { const a = l.segs[i - 1].m.position, b = l.segs[i].m.position; l.segs[i].m.rotation.y = Math.atan2(a.x - b.x, a.z - b.z); }
   }
-  enemyAttack(e, dist) {
+  /* 예고 끝 → 공격: 이 공격의 예고가 보인 시간을 this.tele 로 (맞으면 raid.hurt 가 검사) */
+  enemyAttack(e, dist) { const t0 = e.teleT0; e.teleT0 = null; this.tele = { t: t0 != null ? this.t - t0 : 0, t0, k: e.kind }; try { this.enemyAttack0(e, dist); } finally { this.tele = null; } }
+  enemyAttack0(e, dist) {
     const pl = this.pl; const D = e.D;
     if (e.warn) { this.root.remove(e.warn); e.warn.material.dispose(); e.warn = null; }
     const tp = e.foe && !e.foe.dead ? e.foe.pos : pl.pos; /* M3-B: 다른 진영을 노리면 그쪽으로 */
@@ -683,11 +722,14 @@ export class Raid {
       for (let i = 0; i < n; i++) { const a = a0 + (n > 1 ? (spread >= 6 ? i / n * Math.PI * 2 : (i / (n - 1) - 0.5) * spread) : (this.R() - 0.5) * 0.12);
         const m = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 6), new THREE.MeshBasicMaterial({ color })); m.position.set(e.pos.x, 1.15, e.pos.z); this.root.add(m);
         const glow = glowSprite(glowC, 0.6, size * 4.5); m.add(glow);
-        this.enemyShots.push({ m, dir: V(Math.sin(a), 0, Math.cos(a)), sp, t: 0, dmg, from: e.pos.clone(), r, src: e, ...extra }); }
+        this.enemyShots.push({ m, dir: V(Math.sin(a), 0, Math.cos(a)), sp, t: 0, dmg, from: e.pos.clone(), r, src: e, tele0: this.tele?.t0, ...extra }); }
       sfx.enemyShot((e.pos.x - pl.pos.x) / 12); this.fx.burst(e.pos.x + Math.sin(a0) * 0.5, 1.15, e.pos.z + Math.cos(a0) * 0.5, 4, 0xffa070, 3, 0.07, 0.25); };
     const wet = this.water.userData.mask(pl.pos.x, pl.pos.z) > 0.15 || this.inDeep(pl.pos);
     if (e.kind === 'smelter') return smelterAttack(this, e, dist);
-    if (this.ai && e.F === 'anchor' && this.ai.attack(e, dist)) return;
+    if (LAB_KIND[e.kind]) { labAttack(this, e, dist); return; } /* M4-B 포자낭 · 경비 기계 · 청록 어미 */
+    if (e.kind === 'chief') return chiefAttack(this, e, dist);
+    if (FOE[e.kind] && foeAttack(this, e, dist)) return; /* M4-A 새 적 */
+    if (this.ai && e.ai && this.ai.attack(e, dist)) return;
     if (e.kind === 'drone') shoot(1, 0, 0.16, 0xff7a4a, 0xff8a50, 11, D.dmg * e.dmgMul, 0.55);
     else if (e.kind === 'lamp') shoot(1, 0, 0.2, 0xffc870, 0xffb860, 10, D.dmg * e.dmgMul, 0.6);
     else if (e.kind === 'boss' && e.pat === 'wave') shoot(5, 1.0, 0.3, 0x6fe0ff, 0x9ff0ff, 8, 14, 0.7);
@@ -701,7 +743,7 @@ export class Raid {
       else if (e.pat === 'douse') { this.douse = B.douse.dark; sfx.roar(); this.shake = Math.max(this.shake, 0.5); this.ui.event('선장이 등불을 다 껐어요! 게가 몰려와요', 'boss');
         for (let k = 0; k < B.douse.adds; k++) { const a = this.R() * 6.28; const ad = this.makeEnemy({ kind: 'crab', x: e.pos.x + Math.cos(a) * 3, z: e.pos.z + Math.sin(a) * 3, zone: 3 }, 2000 + this.enemies.length); ad.state = 'chase'; ad.alert = 1; ad.target = pl.pos.clone(); this.collide(ad.pos, 0.5); this.enemies.push(ad); } } }
     else if (e.kind === 'eel') { const B = BOSS.eel;
-      if (e.pat === 'charge') { e.charging = { dir: V(Math.sin(e.lockFace), 0, Math.cos(e.lockFace)), left: B.charge.len, hit: false }; sfx.roll(); }
+      if (e.pat === 'charge') { e.charging = { dir: V(Math.sin(e.lockFace), 0, Math.cos(e.lockFace)), left: B.charge.len, hit: false, t0: this.tele?.t0 }; sfx.roll(); }
       else if (e.pat === 'shock') { sfx.hitMetal(); sfx.slam(); this.fx.ring(e.pos.x, e.pos.z, B.shock.r, 0x9ff0ff); this.fx.burst(e.pos.x, 0.8, e.pos.z, 30, 0xdffaff, 9, 0.06, 0.35, 0); this.flash = Math.max(this.flash, 0.08); if (dist < B.shock.r) this.hurt(B.shock.dmg * (wet ? B.shock.wet : 1), e.pos); }
       else if (e.pat === 'surge') { shoot(B.surge.n, 6.3, 0.26, 0x9fe8ff, 0xcff6ff, 7, B.surge.dmg, 0.65); if (dist < 9) this.pl.push = tmp2.copy(pl.pos).sub(e.pos).setY(0).normalize().multiplyScalar(B.surge.push).clone(); this.fx.ring(e.pos.x, e.pos.z, 5, 0x9fe8ff); this.ui.toast('물살에 밀려요!', 'warn'); } }
     else {
@@ -715,8 +757,8 @@ export class Raid {
   updateShots(dt) {
     for (let i = this.enemyShots.length - 1; i >= 0; i--) {
       const s = this.enemyShots[i]; s.t += dt; const p = s.m.position; const prev = p.clone(); p.addScaledVector(s.dir, s.sp * dt);
-      let gone = s.t > (s.life || 2.6) || this.rayBlock(prev, p) < 1;
-      if (!gone && !this.pl.dead && p.distanceTo(tmp.set(this.pl.pos.x, 1.15, this.pl.pos.z)) < s.r) { if (this.hurt(s.dmg, s.from)) { gone = true;
+      let gone = s.t > (s.life || 2.6) || this.rayBlock(prev, p) < 1; if (gone && this.mods.length && s.t <= (s.life || 2.6)) this.modHit(p, s.dmg); /* M4-B 적 탄도 배양조를 깸 */
+      if (!gone && !this.pl.dead && p.distanceTo(tmp.set(this.pl.pos.x, 1.15, this.pl.pos.z)) < s.r) { this.tele = { t: s.tele0 != null ? this.t - s.tele0 : 0, k: s.src?.kind }; const hit = this.hurt(s.dmg, s.from); this.tele = null; if (hit) { gone = true;
           /* 갈고리: 선장 쪽으로 끌려감 */
           if (s.hook && !s.hook.dead) { const d = tmp2.copy(s.hook.pos).sub(this.pl.pos).setY(0); const l = d.length(); this.pl.pull = { dir: d.normalize().clone(), left: Math.max(0, Math.min(BOSS.captain.hook.pull, l - 1.8)) }; this.ui.toast('갈고리에 끌려가요!', 'warn'); } }
         else if (this.pl.roll > 0 && !s.dodged) { s.dodged = true; this.ui.praise('회피!'); } }
@@ -805,12 +847,14 @@ export class Raid {
     for (let i = this.hazards.length - 1; i >= 0; i--) { const h = this.hazards[i]; h.t -= dt; h.m.material.opacity = Math.min(0.55, h.t) * (0.8 + Math.sin(this.t * 20 + i) * 0.2); if (this.R() < dt * 10) this.fx.burst(h.x + (this.R() - 0.5) * h.r, 0.3, h.z + (this.R() - 0.5) * h.r, 2, 0xffb347, 2, 0.08, 0.5, -3);
       if (h.t <= 0) { this.root.remove(h.m); h.m.material.dispose(); this.hazards.splice(i, 1); } }
     if (this.F) factoryTick(this, dt);
+    for (const m of this.mods) m.tick?.(dt); /* M4-B 수압 문 · 이끼 · 배양조 · 판 상태 게이지 */
     for (const x of this.exits) if (x.call === 'wait') { x.arrive -= dt; if (x.arrive <= 0) { x.call = 'ready'; x.deco.visible = true; this.ui.event(`${x.name} 도착! 초록 원에서 버텨요`, 'good'); sfx.extract(); } }
     this.updateLook(dt);
   }
   /* ───── 상호작용 ───── */
   act() {
     const n = this.near, pl = this.pl; if (!n || pl.searching || pl.dead) return;
+    if (n.type === 'mod') return n.m.act(n); /* M4-B 관제 터미널 */
     const threat = this.enemies.find(e => !e.dead && e.state === 'chase' && e.pos.distanceTo(pl.pos) < 7);
     if (n.type === 'gen') { if (threat) { this.ui.toast('적이 가까워요 — 먼저 정리하고 켜요', 'soft'); return; } pl.searching = { kind: 'gen', prog: 0, need: RAID.powerTime }; sfx.search(); this.noise(pl.pos, 6); pl.anim.play('Interact', { fade: 0.1, speed: 1.2, force: true }); return; }
     if (n.type === 'lamp') { if (this.dark > 0 && this.map === 'harbor') { this.ui.toast('전기가 나가 등불이 안 켜져요', 'soft'); return; } pl.searching = { kind: 'lamp', L: n.L, prog: 0, need: LAMP.lightTime * (n.L.lit ? 0.5 : 1) }; sfx.search(); pl.anim.play('Interact', { fade: 0.1, speed: 1.4, force: true }); return; }
@@ -847,11 +891,11 @@ export class Raid {
     c.items.push(it.key); return c;
   }
   useMed() {
-    const pl = this.pl; if (pl.hp >= pl.maxHp) { this.ui.toast('체력이 가득해요', 'soft'); return; }
-    const miss = pl.maxHp - pl.hp; const order = miss >= 70 ? ['bandage', 'med'] : ['med', 'bandage'];
+    const pl = this.pl; if (pl.hp >= pl.maxHp && !(this.WX?.poison > 0.5)) { this.ui.toast('체력이 가득해요', 'soft'); return; }
+    const miss = pl.maxHp - pl.hp; const order = this.WX?.poison > 0.5 && miss < 40 ? ['antitox', 'med', 'bandage'] : miss >= 70 ? ['bandage', 'med', 'antitox'] : ['med', 'bandage', 'antitox']; /* M4-B 해독제 */
     const k = order.find(k => this.hasItem(k)); if (!k) { this.ui.toast('회복약이 없어요', 'soft'); return; }
     this.takeOne(k); this.used.push(k);
-    const hv = Math.round(ITEMS[k].heal * (this.L.heal || 1)); pl.hp = Math.min(pl.maxHp, pl.hp + hv); sfx.pick(3); this.fx.burst(pl.pos.x, 1.2, pl.pos.z, 12, 0x8ef0a8, 3, 0.08, 0.6, -2); this.fx.num(pl.pos, '+' + hv, 'heal');
+    const hv = Math.round(ITEMS[k].heal * (this.L.heal || 1)); pl.hp = Math.min(pl.maxHp, pl.hp + hv); sfx.pick(3); this.fx.burst(pl.pos.x, 1.2, pl.pos.z, 12, 0x8ef0a8, 3, 0.08, 0.6, -2); this.fx.num(pl.pos, '+' + hv, 'heal'); for (const m of this.mods) m.healed?.(k); /* M4-B 독 씻김 */
   }
   /* ───── 끝 ───── */
   extract(x) {
@@ -869,10 +913,11 @@ export class Raid {
     return { outcome: this.over, items, safe, pet, petSafe: !!this.L.pet?.safe, value: all.reduce((s, k) => s + ITEMS[k].val, 0), kills: { ...this.kills }, killN: this.killN, time: this.elapsed,
       seed: this.opt.seed, deathPos: { x: this.pl.pos.x, z: this.pl.pos.z }, corpseTaken: !!this.corpseTaken, dmgLog: (this.dmgLog || []).slice(-6), shots: this.shots, hits: this.hits,
       zoneMax: this.zoneMax, power: this.power, vaultOpened: this.vaultOpened, vkeyOut: all.includes('vkey'), exit: this.exitUsed || null, used: this.used.slice(),
-      map: this.map, cond: this.cond, bossKind: this.bossKind || null, minO2: this.o2 != null ? Math.round(this.minO2) : null, keep: this.L.keep || 0, diff: this.L.diff || 'normal', ammo: this.L.ammo || 'normal', infight: this.infightKills || 0 };
+      map: this.map, cond: this.cond, wx: this.wx, bossKind: this.bossKind || null, minO2: this.o2 != null ? Math.round(this.minO2) : null, keep: this.L.keep || 0, diff: this.L.diff || 'normal', ammo: this.L.ammo || 'normal', infight: this.infightKills || 0,
+      threat: this.T ? { lv: this.T.lv, ai: this.T.ai, week: this.T.week } : null, chief: this.chief ? (this.chief.dead ? 'down' : 'met') : null, unwarned: this.unwarned.length, bigHits: this.bigHits };
   }
   dispose() {
-    this.alive = false; ambience(false); this.applyLook(false); this.fx.weather?.(null); this.ai?.dispose(); if (this.boss?.rain) clearRain(this, this.boss);
+    this.alive = false; for (const m of this.mods || []) m.dispose?.(); ambience(false); this.applyLook(false); this.fx.weather?.(null); this.ai?.dispose(); chiefDispose(this); if (this.boss?.rain) clearRain(this, this.boss);
     for (const g of this.X.geos) g.dispose();
     this.scene.remove(this.root);
     const skels = new Set(); this.root.traverse(o => { if (o.isSkinnedMesh) skels.add(o.skeleton); }); for (const k of skels) k.dispose();

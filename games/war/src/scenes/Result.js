@@ -1,17 +1,17 @@
 // 작전 결과: 승패 · 별 · 전과 · 경험치 · 계급 · 새 지휘관
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { COS } from '../core/data.js?v=0.99.11';
-import { MAPS } from '../core/maps.js?v=0.99.11';
-import { insignia } from './Home.js?v=0.99.11';
-import { rankOn } from '../rank.js?v=0.99.11';
-import { rankPopup, postScore } from '../rankui.js?v=0.99.11';
-import { bm } from '../oad_bm.js?v=0.99.11';
-import { supplyShow, supplyLeft, takeSupply, owned, between, track } from '../bmwar.js?v=0.99.11';
-import { SUPPORT } from '../core/support.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { COS } from '../core/data.js?v=0.99.12';
+import { MAPS } from '../core/maps.js?v=0.99.12';
+import { insignia } from './Home.js?v=0.99.12';
+import { rankOn } from '../rank.js?v=0.99.12';
+import { rankPopup, postScore } from '../rankui.js?v=0.99.12';
+import { bm } from '../oad_bm.js?v=0.99.12';
+import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.12';
+import { SUPPORT } from '../core/support.js?v=0.99.12';
 
 const PRAISE = ['완벽한 작전!', '훌륭한 지휘였어요!', '전선이 무너졌어요, 대승!', '역시 명지휘관!'];
 export class ResultScene extends Phaser.Scene {
@@ -25,7 +25,9 @@ export class ResultScene extends Phaser.Scene {
     if (win) { const ry = this.add.image(W / 2, top + 120, 'rays').setTint(0xFFD45A).setAlpha(0.35).setScale(2.2).setBlendMode('ADD'); this.tweens.add({ targets: ry, angle: 360, duration: 20000, repeat: -1 }); }
     T(this, W / 2, top, win ? 'VICTORY' : 'DEFEAT', 30, win ? C.gold : C.red, { w: 900, ls: 10 });
     T(this, W / 2, top + 110, win ? '작전 성공' : r.why === 'time' ? '작전 기한 종료' : '작전 실패', 110, C.text, { w: 900, stroke: '#2B2416', thick: 10 });
-    T(this, W / 2, top + 200, win ? (r.stars === 3 ? PRAISE[0] : PRAISE[1 + (r.day % 3)]) : '전력을 정비하고 다시 도전해요', 32, win ? C.green : C.sub, { w: 900 });
+    const autoTip = !win && autoShow(r.mode, r.mapId);   /* 같은 작전 2번 넘게 막힘 → 출격 준비에서 자동 작전 (v0.12) */
+    T(this, W / 2, top + 200, win ? (r.auto ? '자동 작전 성공 · 다음 작전이 열렸어요' : r.stars === 3 ? PRAISE[0] : PRAISE[1 + (r.day % 3)]) : autoTip ? '끝까지 잘 버텼어요 · 막히면 자동 작전도 있어요' : '전력을 정비하고 다시 도전해요', 32, win ? C.green : autoTip ? C.gold : C.sub, { w: 900 });
+    if (win && r.auto && r.mode === 'campaign') T(this, W / 2, top + 250, '별 ★★ 는 직접 지휘로 더 받을 수 있어요', 24, C.sub, { w: 800 });
     // 별
     if (r.mode === 'campaign') for (let i = 0; i < 3; i++) {
       const on = i < r.stars, sx = W / 2 + (i - 1) * 140, st = T(this, sx, top + 320, '★', 120, on ? C.gold : '#4A4A30', { w: 900, shadow: on });
@@ -41,8 +43,8 @@ export class ResultScene extends Phaser.Scene {
     if (supplyShow(r)) { this.supplyCard(r, y + 140); y += 310; }
     const by = Math.min(H - 130, y + 90);
     const next = win && r.mode === 'campaign' ? M.STAGES[M.STAGES.findIndex(s => s.id === r.mapId) + 1] : null;
-    if (rankOn() && r.mode === 'daily') { const board = `daily:${M.dayKey()}`; if (win) postScore(board, -(r.day * 100 + r.lost), { day: r.day, lost: r.lost, co: r.co }); btn(this, W / 2, Math.min(H - 70, by + 150), 420, 96, '오늘의 순위', () => rankPopup(this, board, '오늘의 작전 순위', x => `${x.extra.day}일 · 손실 ${x.extra.lost}`), { style: 'blue', size: 30 }); }
-    btn(this, W / 2 + 90, by, 560, 140, next ? '다음 작전' : '다시 도전', () => this.go('Brief', { mode: r.mode, mapId: next ? next.id : r.mapId }, win), { style: 'gold', icon: 'i_play', size: 42 });
+    if (rankOn() && r.mode === 'daily') { const board = `daily:${M.dayKey()}`; if (win) postScore(board, -(r.day * 100 + r.lost), { day: r.day, lost: r.lost, co: r.co }); btn(this, W / 2, Math.min(H - 70, by + 150), 420, 96, '특수 작전 순위', () => rankPopup(this, board, '특수 작전 순위', x => `${x.extra.day}일 · 손실 ${x.extra.lost}`), { style: 'blue', size: 30 }); }
+    btn(this, W / 2 + 90, by, 560, 140, next ? '다음 작전' : '다시 도전', () => this.go('Brief', { mode: r.mode, mapId: next ? next.id : r.mapId, sheet: autoTip || undefined }, win), { style: 'gold', icon: 'i_play', size: 42 });
     iconBtn(this, W / 2 - 300, by, 'i_home', () => this.go('Home'), 130);
     this.cameras.main.fadeIn(300, 20, 22, 10);
     window.__result = r;

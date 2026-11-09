@@ -1,11 +1,11 @@
 // 판 플레이 — 7칸 · 도구 3 · 얼음 · 사슬 · 실패 → 무료 돌려받기 → 이어하기(광고 · 골드) · 응원 선물
 //   한 판마다 start() 가 상태를 처음부터 다시 만듦 (지난 판의 상태가 남지 않게 — 씬 재사용 주의)
-import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.99.11';
-import { img, helpOf } from './data.js?v=0.99.11';
-import * as A from './audio.js?v=0.99.11';
-import { S, save } from './save.js?v=0.99.11';
-import { bm } from './oad_bm.js?v=0.99.11';
-import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.99.11';
+import { makeLevel, covers, assign, verify, rng, neighbors, isCoveredIn } from './level.js?v=0.99.12';
+import { img, helpOf, timeLimit } from './data.js?v=0.99.12';
+import * as A from './audio.js?v=0.99.12';
+import { S, save } from './save.js?v=0.99.12';
+import { bm } from './oad_bm.js?v=0.99.12';
+import { $, sp, toast, modal, closeModal, burst, praise, app, ICON, coin, buzz } from './ui.js?v=0.99.12';
 
 const SLOTS = 7;
 const stage = $('#stage');
@@ -20,7 +20,7 @@ function measure() {
   TRAY.w = SL * SLOTS + 12; TRAY.h = SL + 12; TRAY.x = (W - TRAY.w) / 2;
   const toolsY = H - 22 - toolsH;
   TRAY.y = toolsY - gap - TRAY.h;
-  const top = 64, bottom = TRAY.y - 22;
+  const top = 64 + (G?.opts.timeLimit ? 34 : 0), bottom = TRAY.y - 22;
   if (G) { const xs = G.tiles.map(t => t.x), ys = G.tiles.map(t => t.y); BB = { x0: Math.min(...xs), y0: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs) + 1, h: Math.max(...ys) - Math.min(...ys) + 1 }; }
   const zmax = G ? Math.max(...G.tiles.map(t => t.z)) : 2;
   T = Math.floor(Math.min((W - 14) / (BB.w + 0.1 + zmax * 0.09), (bottom - top) / (BB.h + 0.35 + zmax * 0.14), 64));
@@ -47,6 +47,7 @@ export const canTap = (t, list = onBoard()) => t.where === 'board' && !isCovered
 export function start(opts) {
   stage.innerHTML = ''; closeModal(); $('#big').style.opacity = 0; $('#tray').classList.remove('tight'); $('#game').classList.remove('won'); $('#tutor')?.remove();
   const lv = makeLevel(opts.seed, opts.cfg);
+  if (opts.timed) opts.timeLimit = timeLimit(lv.tiles.length, opts.cfg.kind);
   G = { opts, tiles: lv.tiles, solution: lv.solution, tray: [], pend: new Set(), hist: [], combo: 0, lastPop: 0, cleared: [], rescue: helpOf(opts.cfg.kind).rescue, cont: 0, over: false, taps: 0, used: 0, warned: false, gift: 0, fails: 0 };
   $('#glabel').innerHTML = opts.label;
   measure();
@@ -59,7 +60,7 @@ export function start(opts) {
     stage.appendChild(el); place(t, boardPos(t));
     el.addEventListener('pointerdown', e => { e.preventDefault(); A.unlock(); tapTile(t); });
   }
-  refresh(); toolBadges(); intro();
+  refresh(); toolBadges(); intro(); clock();
   if (opts.tutorial) setTimeout(() => tutorial(), sp(900)); else helpGift();
 }
 /* 시작 연출: 타일이 위에서 종이처럼 내려앉음 */
@@ -170,7 +171,8 @@ function checkEnd() {
 }
 function win() {
   const g = G; S.fails[g.opts.key] = 0; save(); $('#game').classList.add('won');
-  g.opts.onEnd({ win: true, cleared: g.cleared.slice(), perfect: g.used === 0 && g.fails === 0 && g.cont === 0 });
+  const lim = g.opts.timeLimit, sec = Math.round(g.el / 1000);
+  g.opts.onEnd({ win: true, cleared: g.cleared.slice(), perfect: g.used === 0 && g.fails === 0 && g.cont === 0, time: lim ? sec : null, limit: lim || null, stars: lim ? starsOf(sec, lim) : null });
 }
 function fail() {
   G.over = true; G.fails++; buzz(20);
@@ -305,4 +307,26 @@ function peel(t, type) {
 }
 export function relayout() { if (!G) return; measure(); for (const t of G.tiles) { if (t.where === 'gone') continue; t.el.style.width = t.el.style.height = T + 'px'; if (t.where === 'board') place(t, boardPos(t)); } layoutTray(); }
 export function quit() { if (G) { G.over = true; failCount(); } }
+/* ---------- 스피드 다꾸 시계 ----------
+   opts.timeLimit(초)이 있을 때만 · 창(멈춤 · 실패 · 선물)이 떠 있거나 화면이 안 보일 때는 멈춤
+   시간이 지나도 실패 없음 — 별만 하나씩 줄어듦 (제한 안 ★3 · 1.5배 안 ★2 · 그 뒤 ★1) */
+export const starsOf = (sec, lim) => (sec <= lim ? 3 : sec <= lim * 1.5 ? 2 : 1);
+export const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function clock() {
+  clearInterval(window.__clk); const el = $('#gtime'), lim = G.opts.timeLimit;
+  G.el = 0; G.overWarned = false;
+  if (!lim) { el.classList.remove('on'); return; }
+  el.className = 'on'; let last = performance.now(); const g = G;
+  const draw = () => { const sec = g.el / 1000, left = lim - sec, st = starsOf(Math.ceil(sec), lim);
+    el.innerHTML = `<i class="stars">${'★'.repeat(st)}<u>${'★'.repeat(3 - st)}</u></i><b>${left >= 0 ? fmtTime(Math.ceil(left)) : '+' + fmtTime(-left)}</b>`;
+    el.classList.toggle('low', left >= 0 && left <= 15); el.classList.toggle('over', left < 0); };
+  draw();
+  window.__clk = setInterval(() => {
+    const now = performance.now(), dt = Math.min(1000, now - last); last = now;
+    if (G !== g || g.over && !$('#modal.on')) { if (G !== g) clearInterval(window.__clk); return; }
+    if (g.over || $('#modal.on') || document.visibilityState === 'hidden' || !$('#game.on')) return;
+    g.el += dt * (window.__timeScale || 1); draw();
+    if (!g.overWarned && g.el / 1000 > lim) { g.overWarned = true; toast('시간이 지나도 괜찮아요 · 끝까지 깨면 별을 받아요'); }
+  }, 200);
+}
 export const geom = () => ({ T, SL, TRAY, W, H });

@@ -1,13 +1,13 @@
-// 홈: 메인 원정 · 오늘의 도전 · 아케이드 · 덱 · 미션 · 연속 출석 (카드마다 받을 보상 한 줄)
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, pillBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.11';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import * as BM from '../bmflow.js?v=0.99.11';
-import { guidePop } from '../guide.js?v=0.99.11';
-import { RUNES } from '../core/sim.js?v=0.99.11';
+// 홈: 메인 원정 · 오늘의 도전 · 아케이드 · 덱 · 미션 · 연속 출석 (카드마다 받을 보상 한 줄) · 들어가는 버튼은 모두 '입장'(QA 25)
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, pillBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.12';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import * as BM from '../bmflow.js?v=0.99.12';
+import { guidePop } from '../guide.js?v=0.99.12';
+import { RUNES } from '../core/sim.js?v=0.99.12';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -40,7 +40,7 @@ export class HomeScene extends Phaser.Scene {
     T(this, 160, cy + 8, `최고 웨이브 ${d.best}`, 34, C.gold, { ox: 0, w: 800 });
     /* 보상 (QA 8 → 20): '보상' 꼬리표 + 한 줄에 한 항목 · 둘째 줄 = 다음 이정표 */
     this.rwRun = rewardBlock(this, 110, cy + 62, [...M.REWARD.run, M.milestoneLine(nm)], { gap: 38 });
-    btn(this, W - 260, cy + 6, 300, 130, '출정', () => this.go('Play', { mode: 'run' }), { style: 'gold', icon: 'i_play', size: 44 });
+    btn(this, W - 260, cy + 6, 300, 130, '입장', () => this.go('Play', { mode: 'run' }), { style: 'gold', icon: 'i_play', size: 44 });
     // 오늘의 도전
     const dc = M.dailyChallenge(), dy = cy + 320 + sp;
     // 오늘의 도전 (왼쪽) · 아케이드 (오른쪽) — 버튼이 카드 안에 들어오게 여유 있게
@@ -50,7 +50,7 @@ export class HomeScene extends Phaser.Scene {
     T(this, lx - hw / 2 + 36, dy - 60, '오늘의 도전', 42, C.text, { ox: 0, w: 900 });
     dc.deck.forEach((r, i) => { const x = lx - hw / 2 + 70 + i * 74; this.add.image(x, dy - 4, `die_${r}`).setDisplaySize(62, 62); this.add.image(x, dy - 4, `rune_${r}`).setDisplaySize(36, 36); });
     this.rwDaily = rewardBlock(this, lx - hw / 2 + 36, dy + 56, M.REWARD.daily, { size: 21, gap: 34 });
-    btn(this, lx, dy + 170, hw - 80, 84, dc.tries ? `도전 · 기록 ${dc.best}` : '도전', () => this.go('Play', { mode: 'daily' }), { style: 'gold', size: 30 });
+    btn(this, lx, dy + 170, hw - 80, 84, dc.tries ? `입장 · 기록 ${dc.best}` : '입장', () => this.go('Play', { mode: 'daily' }), { style: 'gold', size: 30 });
     this.add.existing(panel(this, rx, cy2, hw, chh));
     T(this, rx - hw / 2 + 36, dy - 106, 'ARCADE', 20, '#B59BFF', { ox: 0, w: 900, ls: 4 });
     T(this, rx - hw / 2 + 36, dy - 60, '아케이드', 42, C.text, { ox: 0, w: 900 });
@@ -60,8 +60,8 @@ export class HomeScene extends Phaser.Scene {
     // 덱 미리보기 + 버튼
     const ky = dy + 360 + sp;
     T(this, 110, ky - 60, '내 덱', 34, C.text, { ox: 0, w: 900 });
-    // 오늘의 상점 입구 (QA 13: 등급업용 룬 카드 · 무료 선물이 남았으면 빨간 점)
-    btn(this, 390, ky - 62, 260, 64, '오늘의 상점', () => this.go('Altar', { shop: true }), { style: 'ghost', size: 24 });
+    // 오늘의 상점 입구 (QA 13: 등급업용 룬 카드 · 무료 선물이 남았으면 빨간 점) — QA 24: 룬 컬렉션(유리)과 다른 장밋빛 + 가방 아이콘
+    btn(this, 390, ky - 62, 260, 64, '오늘의 상점', () => this.go('Altar', { shop: true }), { style: 'shop', icon: 'i_bag', size: 24 });
     d.deck.forEach((r, i) => { const x = 130 + i * 116; this.add.image(x, ky + 20, `die_${r}`).setDisplaySize(100, 100); this.add.image(x, ky + 20, `rune_${r}`).setDisplaySize(56, 56); T(this, x, ky + 86, `★${d.tiers[r] || 1}`, 22, C.sub, { w: 800 }); });
     const dot = (x, y) => { const c = this.add.circle(x, y, 13, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: c, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); };
     btn(this, W - 180, ky - 62, 260, 84, '룬 컬렉션', () => this.go('Deck'), { style: 'ghost', icon: 'i_grid', size: 28 });

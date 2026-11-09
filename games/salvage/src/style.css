@@ -80,10 +80,11 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .b.down { transform: scale(.92); }
 .b.fire { right: 22px; bottom: calc(env(safe-area-inset-bottom) + 40px); width: 104px; height: 104px; font-size: 17px; background: radial-gradient(circle at 50% 35%, rgba(255, 170, 80, .9), rgba(220, 90, 40, .85)); border-color: rgba(255, 220, 170, .7); box-shadow: 0 6px 22px rgba(255, 120, 40, .35); }
 .b.fire small { font-size: 12px; opacity: .8; font-weight: 600; } .b.fire.aim { box-shadow: 0 0 0 4px rgba(255, 200, 120, .35), 0 6px 22px rgba(255, 120, 40, .45); }
-.b.roll { right: 136px; bottom: calc(env(safe-area-inset-bottom) + 34px); width: 66px; height: 66px; } .b.roll.dim { opacity: .45; }
-.b.bag { right: 132px; bottom: calc(env(safe-area-inset-bottom) + 112px); width: 54px; height: 54px; font-size: 12px; }
+/* v0.7.0 테스터 시트 #1: 자주 쓰는 구르기 = 쏘기 바로 위(옛 뒤지기 자리) · 덜 쓰는 가방 = 옛 구르기 자리 · 뒤지기(상자 앞에서만 뜸)는 구르기 왼쪽 — 서로 안 겹침 */
+.b.roll { right: 41px; bottom: calc(env(safe-area-inset-bottom) + 152px); width: 66px; height: 66px; } .b.roll.dim { opacity: .45; }
+.b.bag { right: 142px; bottom: calc(env(safe-area-inset-bottom) + 40px); width: 54px; height: 54px; font-size: 12px; }
 .b.med { right: 26px; bottom: calc(env(safe-area-inset-bottom) + 218px); width: 50px; height: 50px; font-size: 12px; display: none; background: rgba(60, 140, 90, .8); } .b.med.show { display: flex; }
-.b.act { right: 64px; bottom: calc(env(safe-area-inset-bottom) + 158px); width: auto; height: 46px; padding: 0 18px; border-radius: 999px; display: none; background: linear-gradient(180deg, #ffffff, #d9ecf0); color: #11252e; border: 0; box-shadow: 0 4px 16px rgba(0, 0, 0, .35); animation: bob 1s infinite alternate; }
+.b.act { right: 114px; bottom: calc(env(safe-area-inset-bottom) + 150px); width: auto; white-space: nowrap; height: 46px; padding: 0 18px; border-radius: 999px; display: none; background: linear-gradient(180deg, #ffffff, #d9ecf0); color: #11252e; border: 0; box-shadow: 0 4px 16px rgba(0, 0, 0, .35); animation: bob 1s infinite alternate; }
 .b.act.show { display: flex; } .b.act.gold { background: linear-gradient(180deg, #ffd27a, #ff9a3d); }
 @keyframes bob { to { transform: translateY(-3px); } }
 .search, .exitbar { position: absolute; left: 50%; top: 42%; transform: translate(-50%, 0); width: 150px; height: 26px; border-radius: 13px; background: rgba(0, 0, 0, .6); overflow: hidden; display: none; border: 1px solid rgba(255, 255, 255, .2); }
@@ -302,6 +303,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* ───────── v0.5 이야기 (story_ui.js · story_raid.js) ───────── */
 #story.story { /* id 로 한정 — .note.story · .qcard.story 가 덮개처럼 뜨던 것 (v0.5.1) */  position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; user-select: none; -webkit-user-select: none; animation: stin .25s; }
 #story.out { opacity: 0; transition: opacity .25s; }
+.npcdots.cine { opacity: 0; } .npcdots.cine > * { pointer-events: none; }
 @keyframes stin { from { opacity: 0; } }
 .st-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(3, 8, 12, 0) 30%, rgba(3, 8, 12, .55) 58%, rgba(3, 8, 12, .92) 100%); pointer-events: none; }
 #story.cutting .st-shade { background: linear-gradient(180deg, rgba(3, 8, 12, 0) 45%, rgba(3, 8, 12, .7) 75%, rgba(3, 8, 12, .95) 100%); }
@@ -512,7 +514,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .bqb .qbar { margin: 2px 0; }
 .bqb .bdel { align-self: flex-start; margin-top: 4px; }
 .bqb .bdel.dim { opacity: .45; }
-.npcdots { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; }
+.npcdots { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; transition: opacity .25s; }
 .npcdot { position: absolute; left: -15px; top: -14px; width: 30px; height: 22px; border-radius: 11px; background: #fff3dc; color: #3a2a18; font: 700 15px/16px sans-serif; text-align: center; font-style: normal; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); cursor: pointer; animation: npcdot 1.6s ease-in-out infinite; }
 .npcdot::after { content: ''; position: absolute; left: 11px; bottom: -5px; border: 4px solid transparent; border-top-color: #fff3dc; }
 @keyframes npcdot { 50% { margin-top: -3px; } }
@@ -527,6 +529,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .lookcap { position: absolute; inset: 0; z-index: 2; }
 .lookhead { position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 92px); text-align: center; color: #ffe2b8; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
 .lookhead b { display: block; font-size: 16px; } .lookhead small { opacity: .8; font-size: 12px; }
+.lookfac { display: block; height: 6px; margin: 12px auto 6px; max-width: 260px; border-radius: 3px; background: rgba(255, 226, 184, .16); overflow: hidden; } .lookfac i { display: block; height: 100%; background: linear-gradient(90deg, #d9a43a, #ffd88a); } .lookhead .lookfacn { display: block; opacity: .9; } /* M4-D 초소 살림 */
 .lookback { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 22px); min-width: 160px; }
 .npctag { position: absolute; left: 0; top: 0; margin: -20px 0 0 -40px; width: 80px; text-align: center; font: 700 12.5px/1 sans-serif; font-style: normal; color: #fff3dc; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); cursor: pointer; z-index: 3; pointer-events: auto; }
 .npctag em { display: inline-block; margin-left: 4px; padding: 1px 6px 3px; border-radius: 8px; background: #fff3dc; color: #3a2a18; font-style: normal; text-shadow: none; animation: npcdot 1.6s ease-in-out infinite; }

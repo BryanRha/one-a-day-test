@@ -118,6 +118,10 @@ export function stageCfg(n, ease = 0) {
     reward: n % 10 === 0 ? 'note' : 'sticker',
   };
 }
+/* 스피드 다꾸 시계 (v0.2.0 · 시트 #4): 너그럽게 — 기본 30초 + 타일 한 장당 구분별 초 · 10초 단위로 올림
+   제한 안 ★3 · 1.5배 안 ★2 · 그 뒤 ★1 (실패 없음) · 처음 ★3 이면 스티커 +1 */
+export const SPEED = { base: 30, per: { practice: 2.2, normal: 2.6, hard: 3.0, boss: 2.8 } };
+export const timeLimit = (tiles, kind) => Math.ceil((SPEED.base + tiles * (SPEED.per[kind] || 2.6)) / 10) * 10;
 export const OBSTACLE_AT = { 11: 'ice', 21: 'chain' };
 
 /* 오늘의 판 · 자유 다꾸 난이도별 판 모양 7종(돌아가며) · 그림 종류 */

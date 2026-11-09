@@ -1,7 +1,7 @@
 // 진행·재방문 장치: 연속 출석 · 오늘의 미션 · 어드벤처 시즌(주간 96레벨 그림) · 블록 스킨 · 기록
-import { load, save } from './save.js?v=0.99.11';
-import { seasonInfo, SEASON_LEVELS } from './core/levels.js?v=0.99.11';
-import * as H from './core/help.js?v=0.99.11';
+import { load, save } from './save.js?v=0.99.12';
+import { seasonInfo, SEASON_LEVELS } from './core/levels.js?v=0.99.12';
+import * as H from './core/help.js?v=0.99.12';
 
 export const PICS = 10;   // 주간 그림 수 (assets season_0~9, 주마다 돌아감)
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -45,19 +45,73 @@ export function missions() {
   if (d.missions.date !== day) { d.missions = { date: day, list: pickMissions(day) }; save(); }
   return d.missions.list.map(m => { const def = POOL.find(p => p.id === m.id); return { ...def, ...m, done: m.prog >= def.goal }; });
 }
-// 진행 기록: 누적형(lines·adv·gems·games·allclear)은 더하고, 최고형(combo·multi·score)은 최댓값
+// 진행 기록: 누적형(lines·adv·gems·games·allclear)은 더하고, 최고형(combo·multi·score)은 최댓값 — 오늘 · 이번 주 미션 함께
+const BEST_KIND = ['combo', 'multi', 'score'];
 export function track(kind, v = 1) {
-  const d = load(); missions();
+  const d = load(); missions(); weekly();
   let newly = 0;
-  for (const m of d.missions.list) {
-    const def = POOL.find(p => p.id === m.id); if (def.kind !== kind) continue;
-    const before = m.prog >= def.goal;
-    m.prog = ['combo', 'multi', 'score'].includes(kind) ? Math.max(m.prog, v) : m.prog + v;
-    if (!before && m.prog >= def.goal) newly++;
-  }
+  const upd = (list, pool) => { for (const m of list) { const def = pool.find(p => p.id === m.id); if (!def || def.kind !== kind) continue; const before = m.prog >= def.goal; m.prog = BEST_KIND.includes(kind) ? Math.max(m.prog, v) : m.prog + v; if (!before && m.prog >= def.goal) newly++; } };
+  upd(d.missions.list, POOL); upd(d.week.list, WPOOL);
+  if (kind === 'adv') d.advTotal = (d.advTotal || 0) + v;
   save();
   return newly;
 }
+
+// ── 이번 주 미션 (QA 시트 #4 · 2026-11-09): 월요일마다 5개 · 오늘의 미션보다 크고 보상도 큼 · 5개 모두 받으면 주간 상자 ──
+const WPOOL = [
+  { id: 'w_lines150', kind: 'lines', goal: 150, text: '줄 150개 지우기', reward: 80 },
+  { id: 'w_lines300', kind: 'lines', goal: 300, text: '줄 300개 지우기', reward: 120 },
+  { id: 'w_games10', kind: 'games', goal: 10, text: '10판 플레이하기', reward: 60 },
+  { id: 'w_adv12', kind: 'adv', goal: 12, text: '어드벤처 12레벨 깨기', reward: 120 },
+  { id: 'w_clear3', kind: 'allclear', goal: 3, text: '판 전체 비우기 3번', reward: 100 },
+  { id: 'w_combo12', kind: 'combo', goal: 12, text: '콤보 12 달성하기', reward: 80 },
+  { id: 'w_score15k', kind: 'score', goal: 15000, text: '클래식 한 판 15,000점', reward: 100 },
+  { id: 'w_gems80', kind: 'gems', goal: 80, text: '보석 80개 모으기', reward: 80 },
+  { id: 'w_multi4', kind: 'multi', goal: 4, text: '한 번에 4줄 지우기', reward: 90 },
+];
+export const WEEK_CHEST = 150;
+export const weekKey = (t = new Date()) => { const d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d); };
+export function weekly() {
+  const d = load(), wk = weekKey();
+  if (!d.week || d.week.key !== wk) {
+    let h = 7; for (const ch of wk) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+    const kinds = new Set(), list = [];
+    for (let i = 0; list.length < 5 && i < 60; i++) { const m = WPOOL[(h + i * 5) % WPOOL.length]; if (kinds.has(m.kind)) continue; kinds.add(m.kind); list.push({ id: m.id, prog: 0, claimed: false }); }
+    d.week = { key: wk, list, chest: false }; save();
+  }
+  return d.week.list.map(m => { const def = WPOOL.find(p => p.id === m.id); return { ...def, ...m, done: m.prog >= def.goal }; });
+}
+export const weekDaysLeft = () => { const n = new Date(), k = (n.getDay() + 6) % 7; return 7 - k; };
+export function claimWeek(id) {
+  const d = load(); weekly(); const m = d.week.list.find(x => x.id === id), def = WPOOL.find(p => p.id === id);
+  if (!m || m.claimed || m.prog < def.goal) return 0;
+  m.claimed = true; d.stars += def.reward; save(); return def.reward;
+}
+export const chestReady = () => { const d = load(); weekly(); return !d.week.chest && d.week.list.every(m => m.claimed); };
+export function claimChest() { if (!chestReady()) return 0; const d = load(); d.week.chest = true; d.stars += WEEK_CHEST; save(); return WEEK_CHEST; }
+
+// ── 누적 업적 (QA 시트 #4): 평생 기록이 단계마다 별 조각 — 언제 와도 받을 게 남아 있게 (단계가 오를수록 보상 ↑) ──
+export const ACH = [
+  { id: 'lines', name: '줄 지우기', unit: '줄', steps: [100, 500, 1500, 4000, 10000], reward: [20, 50, 100, 200, 400], val: d => d.lines },
+  { id: 'plays', name: '플레이', unit: '판', steps: [10, 50, 150, 400, 1000], reward: [20, 50, 100, 200, 400], val: d => d.plays },
+  { id: 'clears', name: '판 전체 비우기', unit: '번', steps: [1, 5, 20, 50, 120], reward: [20, 50, 100, 200, 400], val: d => d.allClears || 0 },
+  { id: 'best', name: '클래식 최고 기록', unit: '점', steps: [3000, 10000, 25000, 50000, 100000], reward: [20, 50, 100, 200, 400], val: d => d.best },
+  { id: 'adv', name: '어드벤처 레벨', unit: '레벨', steps: [10, 40, 96, 250, 500], reward: [20, 50, 100, 200, 400], val: d => d.advTotal || 0 },
+  { id: 'combo', name: '최고 콤보', unit: '콤보', steps: [5, 10, 15, 20, 30], reward: [20, 50, 100, 200, 400], val: d => d.bestCombo },
+];
+export function achList() {
+  const d = load(), got = d.ach || {};
+  return ACH.map(a => { const k = got[a.id] || 0, v = a.val(d), done = k >= a.steps.length; return { ...a, k, v, done, goal: done ? a.steps[a.steps.length - 1] : a.steps[k], reward: done ? 0 : a.reward[k], ready: !done && v >= a.steps[k] }; });
+}
+export function claimAch(id) {
+  const d = load(), a = achList().find(x => x.id === id); if (!a || !a.ready) return 0;
+  d.ach = d.ach || {}; d.ach[id] = a.k + 1; d.stars += a.reward; save(); return a.reward;
+}
+// 홈 미션 버튼 빨간 점: 오늘 · 이번 주 · 상자 · 업적 중 받을 것
+export const anyClaim = () => unclaimed() || weekly().some(m => m.done && !m.claimed) || chestReady() || achList().some(a => a.ready);
+
+// ── 신기록 보너스 (QA 시트 #5): 갱신 폭에 비례 · 200점마다 별 1 (최소 2 · 최대 50) ──
+export const bestBonus = (score, prev) => (score > prev && score > 0 ? Math.min(50, Math.max(2, Math.round((score - prev) / 200))) : 0);
 export function claim(id) {
   const d = load(), m = d.missions.list.find(x => x.id === id), def = POOL.find(p => p.id === id);
   if (!m || m.claimed || m.prog < def.goal) return 0;

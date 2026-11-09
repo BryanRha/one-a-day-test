@@ -1,19 +1,23 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
+import { forecast, setWxTest } from './data/weather.js?v=0.99.12'; /* M4-B 판 상태 5 */
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.11';
-import { FX, shakeMul } from './fx.js?v=0.99.11';
-import { Raid } from './raid.js?v=0.99.11';
-import { UI } from './ui.js?v=0.99.11';
-import { S, load, save, stashCap } from './save.js?v=0.99.11';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.11';
-import * as E from './econ.js?v=0.99.11';
-import { installBack } from './oad.js?v=0.99.11';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.11';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.11';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.11';
-import { Story, artUrl } from './story_ui.js?v=0.99.11';
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.12';
+import { FX, shakeMul } from './fx.js?v=0.99.12';
+import { Raid } from './raid.js?v=0.99.12';
+import { UI } from './ui.js?v=0.99.12';
+import { S, load, save, stashCap } from './save.js?v=0.99.12';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.12';
+import * as E from './econ.js?v=0.99.12';
+import { installBack } from './oad.js?v=0.99.12';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.12';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.12';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.12';
+import { Story, artUrl } from './story_ui.js?v=0.99.12';
+import { HomeFac } from './home_fac.js?v=0.99.12';
+import * as TH from './threat.js?v=0.99.12'; /* M4-A 위협 곡선 · 주간 변주 */
 
 const Q = new URLSearchParams(location.search);
+setWxTest({ wx: Q.get('wx'), week: Q.has('week') ? Q.get('week') : undefined }); /* ?wx= · ?week= 시험값 → 출격 준비 예보 카드와 실제 판이 같은 값 (M4 마무리) */
 const app = window.__salvage = { free: Q.has('free'), bot: Q.has('bot'), stats: { frames: 0, slow: 0, fpsLog: [] } };
 /* 출격 제한: 실서버(oneaday.kr)에서만 하루 3회 · 테스트 서버·로컬은 완성될 때까지 무제한 (대표 2026-11-05) */
 app.nolimit = app.free || !Q.has('limit') && location.hostname !== 'oneaday.kr' && location.hostname !== 'www.oneaday.kr';   /* ?limit = 시험에서 실서버처럼 제한 */
@@ -52,27 +56,19 @@ function buildHideout() {
   const add = (k, x, z, ry = 0, s = 1) => { const o = prop(k); o.position.set(x, 0, z); o.rotation.y = ry; o.scale.setScalar(s); o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); g.add(o); return o; };
   for (let i = -2; i <= 2; i++) add('floor_wood', i * 4, 0); for (let i = -1; i <= 1; i++) add('floor_wood', i * 4, -4);
   add('wall', -4, -6, 0); add('wall', 0, -6, 0); add('wall', 4, -6, 0);
-  add('k_bench', -2.8, -4.4, 0, 5.5); add('k_anvil', -0.6, -4.8, 0.3, 4.5); add('k_cont_a', 7.5, -3, 1.4, 5); add('k_bedroll', 3.6, -0.4, 0.9, 4); add('shelf_b', 2.8, -5.3, 0); add('cabinet', 5.3, -4, -Math.PI / 2, 0.9);
-  add('crates', 5.5, -1.2, 0.4, 0.8); add('barrels', -5.6, -1.6, 0.6, 0.9); add('rug', 0, -1.6, 0, 1.2); add('lamp', -5.2, -4.6, 0); add('armchair', 2.4, -2.6, -0.5, 0.9);
-  add('torch', -1, -5.45, 0); add('torch', 3, -5.45, 0);
-  const lamp = new THREE.PointLight(0xffb870, 10, 12, 1.4); lamp.position.set(-3, 3, -3); g.add(lamp);
+  /* M4-D: 작업대 · 창고 · 선반 · 등은 시설 단계 소품(home_fac.js)이 맡음 — 여기엔 늘 있는 것만 */
+  add('rug', 0, -1.6, 0, 1.2); add('armchair', 2.4, -2.6, -0.5, 0.9);
+  add('torch', -1.6, -5.75, 0); add('torch', 2.4, -5.75, 0);
+  const lamp = new THREE.PointLight(0xffb870, 10, 12, 1.4); lamp.position.set(-3, 3, -3); g.add(lamp); g.userData.lamp = lamp;
   g.userData.mats = [];
   /* 시설이 생기면 은신처에 보임 (단계마다 조금씩) */
   const fac = new THREE.Group(); g.add(fac); g.userData.fac = fac; g.userData.add = add;
   return g;
 }
-const FAC_PROPS = {
-  rack: [['k_blaster', -4.6, -3.2, 0.6, 3.2], ['shelf', -6.4, -3.6, 0.5, 0.9]],
-  clinic: [['bed', 6.6, 0.6, -1.2, 0.9], ['bottle_g', 5.6, 1.6, 0, 1.4]],
-  lab: [['table', 4.2, -2.2, 0.2, 0.9], ['k_screen', 4.2, -3.0, 0.2, 1]],
-  kitchen: [['w_table', -5.8, -2.8, 0.3, 0.75], ['k_bucket', -6.6, -1.6, 0, 4]],
-  aquarium: [['k_tank', 6.8, -1.8, 1.2, 3.2]],
-  lights: [['lamp', 4.4, -4.8, 0, 1], ['lamp', -3.6, 1.4, 0, 1], ['lights', 0, -5.6, 0, 1]],
-  store: [['crates', 7.4, 1.4, 0.2, 0.8], ['cont_a', 6.2, 2.6, 0.4, 3]],
-};
+/* 시설 12 × 3단 소품 · 공사 끝 카메라 연출 (M4-D · home_fac.js) */
+const homeFac = app.homeFac = new HomeFac(app);
 function syncHideoutProps() {
-  if (!hide) return; const f = hide.userData.fac; while (f.children.length) f.remove(f.children[0]);
-  for (const [k, list] of Object.entries(FAC_PROPS)) { const lv = S.fac[k] || 0; const need = k === 'store' ? 2 : 1; list.forEach((p, i) => { if (lv >= need + (i ? Math.min(i, 1) : 0)) { const o = hide.userData.add(...p); hide.remove(o); f.add(o); } }); }
+  if (!hide) return; homeFac.sync(hide, S);
   syncHideoutHero();
 }
 /* 은신처 수달 · 몽이 (반려 수달 = 같은 몸 · 털 그대로 · 장식 2칸): 겉모습 · 장비가 바뀔 때만 다시 합침 */
@@ -124,12 +120,15 @@ function startRaidNow({ safeItems = [], carry = [], map }) {
   const safe = safeItems.filter(take), bring = carry.filter(take);
   const seed = S.corpse ? S.corpse.seed : (Q.has('seed') ? +Q.get('seed') + seedN++ : (Date.now() % 1e9) + seedN++);
   const q = E.questNow(S); const want = [...E.dailyList(S.daily.day, S.daily.maps || []).filter((o, i) => !S.daily.done[i]).map(o => o.item), ...(q?.goal.item ? [q.goal.item] : []), ...(q?.goal.t === 'vkey' ? ['vkey'] : [])];
+  const wx = forecast(S, mapFor({ map })); /* M4-B 이번 판 예보 (출격 준비 카드와 같은 함수 — ?wx= · 이번 주 변주 · 남은 가방 판 포함, 출격 수를 올리기 전에) */
   S.meal = null; S.stats.raids++; save();
   if (hide) hide.visible = false;
   const mk = mapFor({ map }); if (!packReady(mk)) { console.warn('지도 묶음 없음 → 창고', mk); }
+  const rmap = packReady(mk) ? mk : 'ware'; TH.noteDay(S, S.day || E.kstDay()); const threat = Q.has('nothreat') ? null : TH.threatOf(S, rmap, S.day || E.kstDay(), { ...(Q.has('threat') ? { lv: +Q.get('threat') } : {}), ...(Q.has('week') ? { week: TH.weekNamed(Q.get('week')) } : {}), ...(Q.has('chief') ? { chiefAt: +Q.get('chief') || 5 } : {}) }); /* ?threat=N · ?week=night|storm|boss · ?chief=초 = 시험용 */ /* M4-A 오늘 위협 (?nothreat = M3 그대로) */
+  const rseed = seed; save(); /* M4 마무리: 주간 변주는 예보 가중치로 (data/weather.js wxTable) — 예보가 지도 상태를 정하므로 seed 다시 뽑기(pickSeed)는 뺌 */
   raid = app.raid = new Raid({ scene, camera, fx, ui, renderer, lights: { hemi, sun } });
   attachRaid(raid);   /* 원어데이: 가방 보험 · 이어하기 (bmflow) */
-  raid.start({ seed, map: packReady(mk) ? mk : 'ware', corpse: S.corpse, L, safeItems: safe, carry: bring, kit: Array(L.kit).fill('med'), want, hero: resolve(lookOf(S, { both: true })) });
+  raid.start({ seed: rseed, threat, map: rmap, corpse: S.corpse, wx, wxForce: Q.has('wx'), L, safeItems: safe, carry: bring, kit: Array(L.kit).fill('med'), want, hero: resolve(lookOf(S, { both: true })) });
   story.raidStart(raid);
   const p = raid.pl.pos; camPos.set(p.x, 30, p.z + 18); camLook.copy(p);
 }
@@ -141,7 +140,7 @@ function endRaid() {
   if (res.corpseTaken || (S.corpse && res.seed === S.corpse.seed)) S.corpse = null; /* 한 번만 */
   if (res.outcome === 'extract') { intoStash([...res.items, ...res.safe, ...res.pet]); S.stats.extracts++; S.stats.best = Math.max(S.stats.best, res.value); }
   else { const keep = [...res.items].sort((a, b) => ITEMS[b].val - ITEMS[a].val).slice(0, res.keep || 0); res.kept = keep.slice(); /* v0.6 돌아올 표 부적 · 구조 보트 */
-    intoStash([...res.safe, ...(res.petSafe ? res.pet : []), ...keep]); S.stats.deaths++; const lost = [...res.items.filter((k, i, a) => { const j = keep.indexOf(k); if (j < 0) return true; keep.splice(j, 1); return false; }), ...(res.petSafe ? [] : res.pet)]; if (lost.length) S.corpse = { seed: res.seed, map: res.map, x: res.deathPos.x, z: res.deathPos.z, items: lost }; }
+    intoStash([...res.safe, ...(res.petSafe ? res.pet : []), ...keep]); S.stats.deaths++; const lost = [...res.items.filter((k, i, a) => { const j = keep.indexOf(k); if (j < 0) return true; keep.splice(j, 1); return false; }), ...(res.petSafe ? [] : res.pet)]; if (lost.length) S.corpse = { seed: res.seed, map: res.map, cond: res.cond, wx: res.wx, x: res.deathPos.x, z: res.deathPos.z, items: lost }; }
   S.stats.kills += res.killN; S.stats.drones += res.kills.drone; S.stats.bosses += res.kills.boss; if (res.vaultOpened && res.outcome === 'extract') S.stats.vaults++; S.stats.zoneMax = Math.max(S.stats.zoneMax, res.zoneMax);
   if (res.diff === 'deep' && res.outcome === 'extract') S.stats.deepExt = (S.stats.deepExt || 0) + 1;
   /* v0.4 지도별 기록 · 보스 종류 (의뢰 28 '인양단장') */
@@ -184,7 +183,7 @@ function frame(now) {
     ui.drawVeil(raid, camera); story.raidTick(rdt); ui.topTick(rdt);   /* 위쪽 한 줄 대기열 · 머리 위 칭찬 (v0.5.1) */
   } else {
     /* 은신처 카메라: 천천히 숨쉬기 */
-    const t = now / 1000; camera.position.set(Math.sin(t * 0.15) * 0.8, 7.2, 9.4); camera.lookAt(0, -1.4, -1.8);
+    const t = now / 1000; if (!app.hideCam?.(camera, t, rdt)) { camera.position.set(Math.sin(t * 0.15) * 0.8, 7.2, 9.4); camera.lookAt(0, -1.4, -1.8); }
     sun.position.set(6, 14, 8); sun.target.position.set(0, 0, -2);
     if (hide) { const U = hide.userData; U.mixer?.update(rdt); U.pet?.m.update(rdt); if (U.hero) tailWag(U.hero, rdt, 0); if (U.pet) tailWag(U.pet.h, rdt, 0); }
     ui.drawVeil(null, camera);
@@ -212,7 +211,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.11'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.12'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

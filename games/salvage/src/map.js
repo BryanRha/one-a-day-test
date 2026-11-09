@@ -1,17 +1,18 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.11';
-import { prop } from './assets.js?v=0.99.11';
-import { buildDress, farWater } from './dress_art.js?v=0.99.11';
-import { buildFactory } from './factory.js?v=0.99.11'; /* M3-B 가라앉은 공장 */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.12';
+import { prop } from './assets.js?v=0.99.12';
+import { buildDress, farWater } from './dress_art.js?v=0.99.12';
+import { buildFactory } from './factory.js?v=0.99.12'; /* M3-B 가라앉은 공장 */
+import { buildLab } from './lab.js?v=0.99.12'; /* M4-B 심해 연구소 */
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.11';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.12';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */
 /* 뒤질 곳 모델 */
-export const LOOT_MODEL = { crate: 'k_boxopen', barrel: 'k_barrel', locker: 'cabinet', chest: 'k_chest', toolbox: 'k_crate', vault: 'chest', net: 'k_bucket', cargo: 'cont_b', kiosk: 'cabinet', cart: 'k_crate', bench: 'k_bench', stash: 'f_stash', corebox: 'f_corebox' };
+export const LOOT_MODEL = { crate: 'k_boxopen', barrel: 'k_barrel', locker: 'cabinet', chest: 'k_chest', toolbox: 'k_crate', vault: 'chest', net: 'k_bucket', cargo: 'cont_b', kiosk: 'cabinet', cart: 'k_crate', bench: 'k_bench', stash: 'f_stash', corebox: 'f_corebox', lshelf: 'l_specimen', labcab: 'l_drawer', culture: 'l_culture', archive: 'l_archive' };
 export const LOOT_SCALE = { k_boxopen: 4.2, k_barrel: 5, k_chest: 5.5, k_crate: 1.6, chest: 1.3, k_bucket: 5.5, cont_b: 3.2, k_bench: 5 };
 /* 지도 모양: 바닥(방 종류 · 칸) · 벽(구역 · 카메라 쪽 낮은 벽) — [키, 세로 배수, 크기 배수, 회전 더함] */
 const STYLE = {
@@ -24,6 +25,8 @@ const STYLE = {
     wall: (z, low) => low ? ['t_wall', 0.9, 'z', 0.7] : ['t_wall', 3.0, 'z', 0.7] },
   factory: { floor: (rm, i, j) => (rm.type === 'furnace' || rm.type === 'foundry' || rm.type === 'crucible') && (i + j) % 2 ? 'floor_grate' : rm.type === 'workshop' || rm.type === 'fcontrol' || rm.type === 'vault' ? 'floor_wood' : 'f_floor',
     wall: (z, low) => low ? ['f_wall', 0.9, 'z', 0.7] : ['f_wall', 3.0, 'z', 0.7] },
+  lab: { floor: (rm, i, j) => rm.type === 'tankhall' || rm.type === 'basin' || rm.type === 'decon' ? ((i + j) % 2 ? 'floor_grate' : 'l_floor') : rm.type === 'records' || rm.type === 'dorm' || rm.type === 'vault' ? 'floor_wood' : 'l_floor',
+    wall: (z, low) => low ? ['l_wall', 0.9, 'z', 0.5] : ['l_wall', 3.2, 'z', 0.5] }, /* M4-B 연구소: 흰 패널 벽 · 청록 줄 */
 };
 const dimCache = {};
 function dimsOf(k) { if (dimCache[k]) return dimCache[k]; const o = prop(k); o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o); const v = b.getSize(new THREE.Vector3()); return dimCache[k] = { x: Math.max(0.01, v.x), y: Math.max(0.01, v.y), z: Math.max(0.01, v.z) }; }
@@ -68,13 +71,15 @@ export function build(P, scene) {
   const corners = new Set();
   for (const rm of P.rooms) for (const [x, z] of [[rm.x0, rm.z0], [rm.x0 + RS, rm.z0], [rm.x0, rm.z0 + RS], [rm.x0 + RS, rm.z0 + RS]]) { const k = x + ',' + z; if (corners.has(k)) continue; corners.add(k); put('pillar', x, z, 0, z === Math.min(...P.rooms.map(r => r.z0)) ? 1 : 0.3, 0.7); }
   /* 엄폐물 */
+  const tanks = [];
   for (const p of P.props) {
+    if (p.k === 'l_tank') { const s = SOLID[p.k]; addBox(p.x, p.z, s[0], s[1], s[2], p.ry); tanks.push({ ...p, box: boxes[boxes.length - 1] }); continue; } /* M4-B 배양조 = 깨지는 엄폐물 (lab.js 가 그림) */
     const o = put(p.k, p.x, p.z, p.ry); if (p.deco) continue;
     const s = SOLID[p.k] || [0.8, 0.8, 1]; addBox(p.x, p.z, s[0], s[1], s[2], p.ry);
     if (p.k === 'cont') { o.scale.y *= 1; }
   }
   /* v0.4 지도 특수물 (정적인 것은 아래 합치기에 들어감) */
-  const extra = buildExtras(P, map, statics, group, put, addBox);
+  const extra = buildExtras(P, map, statics, group, put, addBox, boxes, tanks);
   /* v0.5 레벨 아트: 바닥 무늬 · 벽 그림 · 주제 소품 · 옆벽 배관 · 구역 랜드마크 (dress.js 계획 · dress_art.js 그림) */
   buildDress(P, map, statics, group, addBox, extra);
   /* 물: 전체 얕은 물(반투명) + 웅덩이(진한 물) — 한 장의 셰이더 평면 */
@@ -114,7 +119,7 @@ export function build(P, scene) {
  *  터널: 모서리 막음 덩어리 · 화물칸 + 레일 · 공기 방울 기둥 · 물살 화살(움직임은 raid 가) */
 const M3 = {};
 function mat3(key, make) { return M3[key] ||= make(); }
-function buildExtras(P, map, statics, group, put, addBox) {
+function buildExtras(P, map, statics, group, put, addBox, boxes, tanks) {
   const out = { lamps: [], airs: [], currents: [], beams: [], mats: [], geos: [] };
   const own = (m) => { out.mats.push(m); return m; };
   const add = (mesh, dyn = true) => { (dyn ? group : statics).add(mesh); if (!dyn) mesh.userData.zone = zoneOfRow(Math.max(0, Math.min(ROWS - 1, Math.floor(mesh.position.z / RS)))); else mesh.userData.own = true; return mesh; };
@@ -172,6 +177,7 @@ function buildExtras(P, map, statics, group, put, addBox) {
     P.currents.forEach((c, ci) => { const arrows = []; for (let i = 0; i < NA; i++) arrows.push({ idx: ci * NA + i, k: i / NA, off: (i % 3 - 1) * 2.2 }); out.currents.push({ ...c, arrows, rot: Math.atan2(-c.dx, c.dz) + Math.PI }); });
   }
   if (map === 'factory') buildFactory(P, statics, group, put, addBox, out, add, own);
+  if (map === 'lab') buildLab(P, statics, group, put, addBox, out, add, own, boxes, tanks);
   return out;
 }
 function radial(c0, c1) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, c0); g.addColorStop(1, c1); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }

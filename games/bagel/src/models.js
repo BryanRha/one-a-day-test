@@ -1,6 +1,6 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (사람 · 베이글 · 커피 · 설비 · 가게)
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.99.11';
+import { BRAND } from './data.js?v=0.99.12';
 
 const gm = (() => { const d = new Uint8Array([95, 190, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -35,10 +35,15 @@ export function item(kind) {
 export function person(o = {}) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   mesh(geo('pbody', () => new THREE.CapsuleGeometry(30, 34, 6, 12)), M(o.body || 0xF28C38), 0, 62, 0, body);
-  if (o.apron) mesh(geo('papron', () => new THREE.CapsuleGeometry(31, 20, 6, 12)), M(0xFFFFFF), 0, 54, 4, body).scale.set(0.96, 1, 0.92);
+  if (o.apron) mesh(geo('papron', () => new THREE.CapsuleGeometry(31, 20, 6, 12)), M(o.apronC || 0xFFFFFF), 0, 54, 4, body).scale.set(0.96, 1, 0.92);
+  if (o.scarf) { mesh(geo('pscarf', () => new THREE.TorusGeometry(24, 6, 6, 16).rotateX(Math.PI / 2)), M(o.scarf), 0, 98, 0, body); box(14, 18, 6, o.scarf, 6, 80, 27, body).rotation.z = 0.3; }   /* 사장님 목수건 */
   sph(32, 0xFFDDBF, 0, 128, 0, body, 18, 14);
   mesh(geo('phair', () => new THREE.SphereGeometry(33, 18, 14, 0, 6.28, 0, 1.4)), M(o.hair || 0x5A3A22), 0, 132, -2, body);
-  if (o.cap) { cyl(30, 32, 22, o.cap, 0, 150, 0, body); cyl(22, 22, 4, o.cap, 0, 150, 24, body); }
+  const hat = o.hat || (o.cap ? 'cap' : null), hc = o.cap || 0xFFFFFF;
+  if (hat === 'cap') { cyl(30, 32, 22, hc, 0, 150, 0, body); cyl(22, 22, 4, hc, 0, 150, 24, body); }
+  else if (hat === 'toque') { cyl(30, 31, 16, 0xFFFFFF, 0, 148, 0, body); cyl(34, 28, 46, 0xFFFFFF, 0, 162, 0, body); sph(36, 0xFFFFFF, 0, 214, 0, body, 16, 10).scale.set(1, 0.62, 1); cyl(31.5, 31.5, 6, hc, 0, 150, 0, body); }   /* 사장님 셰프 모자 (직원은 캡 → 실루엣으로 구분) */
+  else if (hat === 'beret') { const b = sph(34, hc, 4, 156, -2, body, 16, 8); b.scale.set(1.05, 0.38, 1.05); b.rotation.z = -0.18; sph(4, hc, 4, 170, -2, body, 6, 4); }
+  else if (hat === 'bandana') { cyl(33.5, 33.5, 12, hc, 0, 140, 0, body); sph(36, hc, 0, 146, -4, body, 16, 8).scale.set(0.98, 0.5, 0.98); sph(7, hc, 0, 142, -34, body, 6, 4); }
   for (const s of [-1, 1]) { sph(4, 0x2A1A10, s * 11, 130, 29, body, 8, 6); sph(5, 0xFFB3A0, s * 20, 120, 24, body, 8, 6); }
   const legs = [-1, 1].map(s => { const L = new THREE.Group(); L.position.set(s * 14, 26, 0); g.add(L); mesh(geo('pleg', () => new THREE.CapsuleGeometry(10, 12, 4, 8)), M(o.pants || 0x6A4A3A), 0, -12, 0, L); return L; });
   const arms = [-1, 1].map(s => { const A = new THREE.Group(); A.position.set(s * 31, 88, 0); body.add(A); mesh(geo('parm', () => new THREE.CapsuleGeometry(8, 20, 4, 8)), M(o.body || 0xF28C38), 0, -16, 0, A); return A; });
@@ -111,3 +116,26 @@ export const DECO_MODEL = {
   terrace(p) { for (const x of [-170, 170]) { cyl(70, 70, 8, 0xFFFFFF, x, 70, 0, p, 20); cyl(8, 12, 70, WOOD, x, 0, 0, p, 8); cyl(4, 4, 200, 0xE8E0D0, x, 70, 0, p, 6); const u = mesh(new THREE.ConeGeometry(130, 50, 12), M(x < 0 ? BRAND.accentHex : 0xFFFFFF), x, 285, 0, p); u.castShadow = true; for (const s of [-1, 1]) cyl(24, 24, 10, LIGHT, x + s * 95, 40, 0, p); } box(560, 4, 200, 0xE6D2B4, 0, 0, 0, p); },
   photo(p) { for (let i = 0; i < 6; i++) { const z = -120 + (i % 3) * 110, y = 200 - Math.floor(i / 3) * 90; box(6, 76, 90, 0xFFFFFF, 0, y - 38, z, p); box(8, 60, 74, [0xF6D6A0, 0xBFE3F2, 0xE6F2C8, 0xF6D6E8, 0xFFE9B8, 0xD8E8C8][i], 2, y - 30, z, p); } box(6, 14, 100, BRAND.accentHex, 0, 230, 0, p); },
 };
+
+// ── 사장님 발밑 표시: 브랜드 주황 고리 (어디 있는지 한눈에)
+export function ownerRing() { const g = new THREE.Group(); const r = new THREE.Mesh(new THREE.RingGeometry(40, 52, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: BRAND.accentHex, transparent: true, opacity: 0.85, depthWrite: false }));
+  r.position.y = 3; g.add(r); const d = new THREE.Mesh(new THREE.CircleGeometry(40, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: BRAND.accentHex, transparent: true, opacity: 0.18, depthWrite: false })); d.position.y = 2.5; g.add(d); g.userData.ring = r; return g; }
+// ── 설비 단계 외형 (업그레이드 Lv 3 · 6 · 9 에서 바뀜): 1 브랜드 띠 · 2 스테인리스 + 브랜드 판 · 3 금색 테 + 별
+//   sz: [가로, 높이, 깊이] 설비 몸통 크기 · 단계마다 앞의 장식을 쌓음
+const GOLD = 0xE8B23A, STEEL = 0xD6DDE2;
+export function tierDeco(type, tier, sz) {
+  const g = new THREE.Group(); if (!tier) return g; const [w, h, d] = sz;
+  box(w + 6, 12, d + 6, BRAND.accentHex, 0, Math.round(h * 0.2), 0, g);   /* 1: 브랜드 주황 띠 */
+  if (type === 'oven') box(60, 8, 8, 0xFFFFFF, 0, h - 26, d / 2 + 3, g);
+  if (tier >= 2) { box(w + 10, 8, d + 10, STEEL, 0, h + 2, 0, g); const lp = logoPanel(Math.min(110, w * 0.6), Math.min(34, w * 0.19)); lp.position.set(0, Math.round(h * 0.2) + 6, d / 2 + 4.5); g.add(lp);   /* 2: 스테인리스 상판 + 로고 판 */
+    if (type === 'oven') { box(w - 30, 40, d - 20, 0xB04A30, 0, h + 10, 0, g); mesh(new THREE.BoxGeometry(90, 18, 4), new THREE.MeshBasicMaterial({ color: 0xFFC46A }), 0, h + 30, d / 2 - 8, g); }   /* 오븐 2단 */
+    if (type === 'mixer') cyl(48, 40, 10, STEEL, 10, 60, 10, g, 18);
+    if (type === 'espresso') { cyl(6, 6, 18, 0x2A2A30, 0, 120, 32, g, 8); box(40, 8, 30, STEEL, 0, 107, 30, g); }
+    if (type === 'kettle') cyl(56, 56, 6, STEEL, 0, 128, 0, g, 20); }
+  if (tier >= 3) { for (const sy of [0, h - 4]) box(w + 14, 5, d + 14, GOLD, 0, sy, 0, g);   /* 3: 금색 테 + 꼭대기 별 */
+    const st = new THREE.Mesh(new THREE.OctahedronGeometry(14), new THREE.MeshToonMaterial({ color: 0xFFD24A, gradientMap: gm, emissive: 0x8A5A00 })); st.position.set(0, h + 46, 0); st.userData.spin = true; g.add(st); }
+  return g;
+}
+// ── 미리보기(반투명 그림자): 모델을 통째로 반투명 단색으로 · ok=false 면 빨강
+export function ghostify(g, ok = true) { const col = ok ? 0x5FCB6A : 0xE8504A; g.traverse(o => { if (o.isMesh) { o.material = (ok ? GH.ok : GH.no); o.castShadow = false; } if (o.isLight) o.visible = false; }); return g; }
+const GH = { ok: new THREE.MeshBasicMaterial({ color: 0x6FD07A, transparent: true, opacity: 0.45, depthWrite: false }), no: new THREE.MeshBasicMaterial({ color: 0xE8504A, transparent: true, opacity: 0.45, depthWrite: false }) };

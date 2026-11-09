@@ -1,18 +1,19 @@
 // 서재 (Choices 식): 작품 표지 · 화 목록(진행·잠금) · 곧 공개 모드(냥카페 · 오늘의 코디) · 코인
-import { W, H, TITLE, TITLE_EN, VERSION } from '../config.js?v=0.99.11';
-import { T, C, btn, iconBtn, panel, popup, toast } from '../ui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import { SERIES, EPISODES, SEASONS, seasonOf, epNo } from '../episodes.js?v=0.99.11';
-import { loadEp } from './Boot.js?v=0.99.11';
-import { medal, TIERS } from '../replay.js?v=0.99.11';
-import { cafeData } from '../cafe/state.js?v=0.99.11';
-import { coordData, todayTheme, doneToday, wearNow } from '../coord/state.js?v=0.99.11';
-import { buildLook } from '../coord/look.js?v=0.99.11';
-import { waitLeft, fmtWait } from '../bm.js?v=0.99.11';
-import { nextOffer } from '../bmui.js?v=0.99.11';
-import { oadOn } from '../bm.js?v=0.99.11';
-import { SPECIAL, hasCard } from '../special.js?v=0.99.11';
+import { W, H, TITLE, TITLE_EN, VERSION } from '../config.js?v=0.99.12';
+import { T, C, btn, iconBtn, panel, popup, toast } from '../ui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import { SERIES, EPISODES, SEASONS, seasonOf, epNo } from '../episodes.js?v=0.99.12';
+import { loadEp } from './Boot.js?v=0.99.12';
+import { medal, TIERS } from '../replay.js?v=0.99.12';
+import { cafeData } from '../cafe/state.js?v=0.99.12';
+import { coordData, todayTheme, doneToday, wearNow } from '../coord/state.js?v=0.99.12';
+import { buildLook } from '../coord/look.js?v=0.99.12';
+import { waitLeft, fmtWait } from '../bm.js?v=0.99.12';
+import { nextOffer } from '../bmui.js?v=0.99.12';
+import { oadOn } from '../bm.js?v=0.99.12';
+import { SPECIAL, hasCard } from '../special.js?v=0.99.12';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.12';
 
 export class LibraryScene extends Phaser.Scene {
   constructor() { super('Library'); }
@@ -28,7 +29,9 @@ export class LibraryScene extends Phaser.Scene {
     const g = this.add.graphics(); for (let i = 0; i < 60; i++) g.fillStyle(0x2E1A2A, i / 60).fillRect(0, 380 + i * 10, W, 10); g.fillStyle(0x2E1A2A, 1).fillRect(0, 980, W, H);
     // 위 막대(코인 · 설정): 스크롤해도 화면 위에 고정 (tick 에서 카메라 위치를 따라감)
     const head = this.head = this.add.container(0, 0).setDepth(20), hbg = this.add.graphics(); hbg.fillStyle(0x2E1A2A, 1).fillRect(0, 0, W, 150).fillStyle(0xFF9DB6, 0.35).fillRect(0, 147, W, 3); hbg.setAlpha(0.55);
-    head.add([hbg, T(this, 50, 76, `● ${d.coins}`, 34, C.gold, { ox: 0, w: 900, shadow: true }), iconBtn(this, W - 76, 76, 'gear', () => this.settings(), 88, { dark: true })]);
+    // 왼쪽 위 '원어데이' (QA 시트 #1 · 룬 다이스 홈과 같은 방식) · 코인은 그 옆 · 오른쪽 설정
+    this.exitBtn = btn(this, 160, 74, 240, 88, '↩ 원어데이', () => this.toOAD(), { style: 'brown', size: 28 });
+    head.add([hbg, this.exitBtn, T(this, 310, 76, `● ${d.coins}`, 34, C.gold, { ox: 0, w: 900, shadow: true }), iconBtn(this, W - 76, 76, 'gear', () => this.settings(), 88, { dark: true })]);
     this.cameras.main.setBackgroundColor(0x2E1A2A); this.modal = false;
     T(this, 60, 760, `로맨스 미스터리 · 시즌 ${SS.n}`, 28, '#FFB6CB', { ox: 0, w: 800, shadow: true });
     T(this, 56, 840, SS.title, 104, '#FFFFFF', { ox: 0, w: 900, shadow: true });
@@ -140,5 +143,12 @@ export class LibraryScene extends Phaser.Scene {
   }
   play(ep) { if (waitLeft(ep)) { audio.play('sfx_page', { volume: 0.5 }); this.modal = true; const p = nextOffer(this, ep, epNo(ep), () => this.scene.restart({ auto: ep.id })); p.root.once('destroy', () => { this.modal = false; }); return; }
     if ((load().ep[ep.id] || {}).step === 'done') { audio.play('sfx_page', { volume: 0.6 }); return this.replayMenu(ep); } audio.play('sfx_page', { volume: 0.6 }); const st = (load().ep[ep.id] || {}).step; this.cameras.main.fadeOut(250, 30, 10, 26); this.cameras.main.once('camerafadeoutcomplete', () => loadEp(this, ep, () => st === 'hunt' ? this.scene.start('Hunt', { id: ep.id }) : this.scene.start('Story', { id: ep.id, part: st === 'mid' || st === 'evidence' ? 'mid' : st === 'after' || st === 'toon' ? 'after' : st === 'hunt' ? 'hunt' : 'intro' }))); }
+  /* 원어데이로: 원어데이 안이면 SDK 나가기(oad.js exitToOAD = oad:exit) · 단독 링크면 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+  toOAD() {
+    if (this.dragged) return;
+    if (inOAD) return exitToOAD();
+    const h = location.hostname, site = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/';
+    location.href = site;
+  }
   settings() { this.modal = true; const d = load(), p = popup(this, 700, 420, { onClose: () => { this.modal = false; } }); p.content.add(T(this, 0, -120, '설정', 44, C.ink, { w: 900 })); const b = btn(this, 0, 40, 420, 110, d.sfx ? '효과음 켜짐' : '효과음 꺼짐', () => { const on = audio.toggleSfx(); b.setLabel(on ? '효과음 켜짐' : '효과음 꺼짐'); }, { style: 'cream' }); p.content.add(b); }
 }

@@ -1,74 +1,102 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa } from './data.js?v=0.99.11';
-import { starOf, favLv } from './game.js?v=0.99.11';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult } from './state.js?v=0.99.11';
-import { sfx, setAudio } from './audio.js?v=0.99.11';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.11';
-import { bm } from './oad_bm.js?v=0.99.11';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.12';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.12';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today } from './state.js?v=0.99.12';
+import { sfx, setAudio } from './audio.js?v=0.99.12';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.12';
+import { bm } from './oad_bm.js?v=0.99.12';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
 const SLOT = 'marumi_slot_';
 /* 광고 보상: 원어데이 쪽 자리 이름 (bm.rewardedAd) · 수익 2배 길이 */
-const PLACE = { boost: 'boost2x', offline: 'offline2x' }, BOOST_MS = 180000;
+const PLACE = { boost: 'boost2x', offline: 'offline2x', speed: 'speed', coins: 'coins' }, BOOST_MS = 180000, FX_MS = 180000;
+const mmss = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`, hex = c => '#' + c.toString(16).padStart(6, '0');
 const slotInfo = n => { try { const v = JSON.parse(localStorage.getItem(SLOT + n) || 'null'); if (!v) return ''; const d = JSON.parse(v.d), t = new Date(v.at); return `${['1호점', '2호점', '3호점', '4호점'][d.bi || 0]} · 돈 ${fmt(d.coins || 0)} · ${t.getMonth() + 1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`; } catch { return ''; } };
+const NT_DZ = { oven: 80, counter: 66, coffee: 58, espresso: 58, mixer: 52, kettle: 62, cc: 62, bin: 46, drive: 0 };   /* 이름표: 설비 앞쪽 바닥 (동작 칸과 몸통 사이) */
 const ICON = { bagel: '🥯', cream: '🥯', coffee: '🥣', drink: '☕' }, SHORT = new Proxy({}, { get: (_, k) => MENU[k]?.short || '' });
 export class UI {
   constructor(app) {
     this.app = app; this._adBusy = false; const h = $('#hud');
     h.innerHTML = `<div class="top"><div class="coin"><i class="c"></i><b id="cn">0</b></div><div class="scent" id="scent" title="베이글 향">🌿<b id="scv">0</b></div><div class="lvl"><b id="bn"></b><em id="bl"></em><div class="pb"><s id="bp"></s></div></div></div>
       <div class="cp" id="cp"><b>🎟 매장 쿠폰까지</b><div class="pb"><s id="cpb"></s></div><span id="cpt"></span></div>
-      <div class="lside"><button class="sb deco" id="bDeco"><b>🪴</b>꾸미기<i class="dot" id="decoDot"></i></button><button class="sb" id="bReg"><b>💌</b>단골<i class="dot" id="regDot"></i></button><button class="sb" id="bMenu"><b>📖</b>메뉴</button></div>
-      <div class="side"><button class="sb ad" id="bAd"><b>×2</b><span id="adT">광고 보고</span></button><button class="sb up" id="bUp"><b>⬆</b>업그레이드<i class="dot" id="upDot"></i></button><button class="sb" id="bMs"><b>📋</b>미션<i class="dot" id="msDot"></i></button><button class="sb" id="bMap"><b>🗺</b>지점<i class="dot" id="mapDot"></i></button><button class="sb" id="bSet"><b>⚙</b>설정</button>${inOAD ? '<button class="sb" id="bExit"><b>↩</b>원어데이</button>' : ''}</div>
+      <div class="lside"><button class="sb deco" id="bDeco"><b>🪴</b>꾸미기<i class="dot" id="decoDot"></i></button><button class="sb shop" id="bShop"><b>🛍</b>상점<i class="dot" id="shopDot"></i></button><button class="sb" id="bReg"><b>💌</b>단골<i class="dot" id="regDot"></i></button><button class="sb" id="bMenu"><b>📖</b>메뉴</button></div>
+      <div class="evb" id="evb" hidden></div><div class="buffs" id="buffs"></div>
+      <div class="side"><button class="sb ad" id="bAd"><b>📺</b><span id="adT">광고 보상</span><i class="cnt" id="adN"></i></button><button class="sb up" id="bUp"><b>⬆</b>업그레이드<i class="dot" id="upDot"></i></button><button class="sb" id="bMs"><b>📋</b>미션<i class="dot" id="msDot"></i></button><button class="sb" id="bMap"><b>🗺</b>지점<i class="dot" id="mapDot"></i></button><button class="sb" id="bSet"><b>⚙</b>설정</button>${inOAD ? '<button class="sb" id="bExit"><b>↩</b>원어데이</button>' : ''}</div>
       <div class="joy" id="joy"><i id="knob"></i></div><div class="hint" id="hint">어디든 끌어서 움직여요</div>`;
     this.tags = $('#tags'); this.floats = $('#floats');
     $('#bDeco').onclick = () => this.decoShop(); $('#bReg').onclick = () => this.regulars(); $('#bMenu').onclick = () => this.menuBook(); $('#scent').onclick = () => this.decoShop();
-    $('#bAd').onclick = () => this.ad('boost'); $('#bUp').onclick = () => this.upgrades(); $('#bMs').onclick = () => this.missions(); $('#bMap').onclick = () => this.map(); $('#bSet').onclick = () => this.settings(); $('#cp').onclick = () => this.coupon();
+    $('#bAd').onclick = () => this.adPick(); $('#bShop').onclick = () => this.shop(); $('#bUp').onclick = () => this.upgrades(); $('#bMs').onclick = () => this.missions(); $('#bMap').onclick = () => this.map(); $('#bSet').onclick = () => this.settings(); $('#cp').onclick = () => this.coupon();
     if ($('#bExit')) $('#bExit').onclick = () => exitToOAD();
     this.joy(); this.progress();
     bm.hello().then(() => this.adUi());   /* 원어데이 그룹 A(광고 꺼짐)면 광고 버튼을 숨김 */
   }
   joy() {
     const area = $('#app'), base = $('#joy'), knob = $('#knob'); let id = null, cx = 0, cy = 0; const R = 50;
-    const down = e => { if (e.target.closest('button, .modal, .cp, .scent, .regcard')) return; const t = e.changedTouches ? e.changedTouches[0] : e; id = e.changedTouches ? t.identifier : 'm'; cx = t.clientX; cy = t.clientY; base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.classList.add('on'); };
-    const move = e => { if (id === null) return; const t = e.changedTouches ? [...e.changedTouches].find(q => q.identifier === id) : e; if (!t) return; let dx = t.clientX - cx, dy = t.clientY - cy; const l = Math.hypot(dx, dy); if (l > R) { dx *= R / l; dy *= R / l; } IN.x = dx / R; IN.y = dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`; e.cancelable && e.preventDefault(); };
-    const up = e => { if (id === null) return; if (e.changedTouches && ![...e.changedTouches].some(q => q.identifier === id)) return; id = null; IN.x = IN.y = 0; base.classList.remove('on'); knob.style.transform = ''; };
+    /* 꾸미기 자리 고르기: 끈 만큼 그림자가 바닥을 따라 움직임 (손가락이 가리지 않게 상대 이동) */ let pg = null;
+    const down = e => { if (e.target.closest('button, .modal, .cp, .scent, .regcard, .placebar')) return; const t = e.changedTouches ? e.changedTouches[0] : e; id = e.changedTouches ? t.identifier : 'm'; cx = t.clientX; cy = t.clientY;
+      const g = this.app.game; if (g.placing) { const h = this.groundAt(cx, cy); pg = h && { h, x: g.placing.x, z: g.placing.z }; return; } base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.classList.add('on'); };
+    const move = e => { if (id === null) return; const t = e.changedTouches ? [...e.changedTouches].find(q => q.identifier === id) : e; if (!t) return;
+      const g = this.app.game; if (g.placing) { if (pg) { const h = this.groundAt(t.clientX, t.clientY); if (h) { g.movePlace(pg.x + h.x - pg.h.x, pg.z + h.z - pg.h.z); this.placeUi(); } } e.cancelable && e.preventDefault(); return; }
+      let dx = t.clientX - cx, dy = t.clientY - cy; const l = Math.hypot(dx, dy); if (l > R) { dx *= R / l; dy *= R / l; } IN.x = dx / R; IN.y = dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`; e.cancelable && e.preventDefault(); };
+    const up = e => { if (id === null) return; if (e.changedTouches && ![...e.changedTouches].some(q => q.identifier === id)) return; id = null; pg = null; IN.x = IN.y = 0; base.classList.remove('on'); knob.style.transform = ''; };
     area.addEventListener('touchstart', down, { passive: true }); area.addEventListener('touchmove', move, { passive: false }); area.addEventListener('touchend', up); area.addEventListener('touchcancel', up);
     area.addEventListener('mousedown', down); addEventListener('mousemove', move); addEventListener('mouseup', up);
-    const keys = new Set(); addEventListener('keydown', e => { if (e.code === 'Escape') { const b = document.querySelector('#modal .mback'); b && b.click(); return; } keys.add(e.code); kb(); });   /* Esc: 창 닫기 (바깥 누르기와 같음) */ addEventListener('keyup', e => { keys.delete(e.code); kb(); });
-    const kb = () => { if (id !== null) return; let x = 0, y = 0; if (keys.has('KeyA') || keys.has('ArrowLeft')) x--; if (keys.has('KeyD') || keys.has('ArrowRight')) x++; if (keys.has('KeyW') || keys.has('ArrowUp')) y--; if (keys.has('KeyS') || keys.has('ArrowDown')) y++; const l = Math.hypot(x, y) || 1; IN.x = x / l; IN.y = y / l; };
+    const keys = new Set(); addEventListener('keydown', e => { if (e.code === 'Escape') { if (this.app.game.placing) { this.placeBack(); return; } const b = document.querySelector('#modal .mback'); b && b.click(); return; }
+      const g = this.app.game; if (g.placing) { const st = { ArrowLeft: [-1, 1], ArrowRight: [1, -1], ArrowUp: [-1, -1], ArrowDown: [1, 1], KeyA: [-1, 1], KeyD: [1, -1], KeyW: [-1, -1], KeyS: [1, 1] }[e.code]; if (st) { g.movePlace(g.placing.x + st[0] * 25, g.placing.z + st[1] * 25); this.placeUi(); } if (e.code === 'Enter') $('#plOk')?.click(); return; }   /* PC: 화살표로 옮기고 Enter 로 정함 */
+      keys.add(e.code); kb(); });   /* Esc: 창 닫기 (바깥 누르기와 같음) */ addEventListener('keyup', e => { keys.delete(e.code); kb(); });
+    const kb = () => { if (id !== null || this.app.game.placing) { IN.x = IN.y = 0; return; } let x = 0, y = 0; if (keys.has('KeyA') || keys.has('ArrowLeft')) x--; if (keys.has('KeyD') || keys.has('ArrowRight')) x++; if (keys.has('KeyW') || keys.has('ArrowUp')) y--; if (keys.has('KeyS') || keys.has('ArrowDown')) y++; const l = Math.hypot(x, y) || 1; IN.x = x / l; IN.y = y / l; };
   }
   bubble() { const d = document.createElement('div'); d.className = 'bub'; this.tags.append(d); return d; }
   tag() { const d = document.createElement('div'); d.className = 'tag lock'; this.tags.append(d); return d; }
+  nameTag(t, o) { const d = document.createElement('div'); d.className = 'nt'; d.textContent = t; d._o = o; this.tags.prepend(d); return d; }   /* 설비 이름표 (말풍선보다 아래 층) */
+  evTag(t) { const d = document.createElement('div'); d.className = 'evp'; d.textContent = t; this.tags.append(d); return d; }
+  evBar(E) { const b = $('#evb'); if (!b) return; this._ev = E; b.hidden = !E; if (!E) return; const T = { complain: ['😤', '컴플레인 · 다가가서 사과해요'], group: ['👥', `단체 주문 · ${E.cust ? `${MENU[E.cust.order[0].k].short} ${E.cust.order[0].n}개 · 값 ×1.6` : ''}`], influencer: ['📸', '인플루언서 · 손님 두 배 · 팁 듬뿍'] }[E.type];
+    b.innerHTML = `<b>${T[0]}</b><span>${T[1]}</span>${E.T ? '<em id="evt"></em>' : ''}`; b.className = 'evb ' + E.type; }
+  /* 화면 좌표 → 바닥(y=0) 좌표 */
+  groundAt(x, y) { const g = this.app.game, r = (this._ray ||= new THREE.Raycaster()); r.setFromCamera(new THREE.Vector2(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1), g.cam); const o = new THREE.Vector3(); return r.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), o) ? o : null; }
   float(t, pos, cls) { const d = document.createElement('div'); d.className = 'float ' + cls; d.textContent = t; d._p = pos.clone(); d._t = 0; this.floats.append(d); }
   /* 수익 2배 끝나는 시각은 저장에 (S.boostUntil · 다시 열어도 남은 시간 그대로) · 시계를 뒤로 돌려 너무 길어지면 3분으로 */
   get boostUntil() { const n = Date.now(), u = +S.boostUntil || 0; if (u > n + BOOST_MS) S.boostUntil = n + BOOST_MS; return +S.boostUntil || 0; }
   boost() { return Date.now() < this.boostUntil; }
   /* 광고를 쓸 수 있나: 단독 실행(원어데이 밖)은 시험 창 · 원어데이 안은 그룹 A 가 아니고 남은 횟수가 있을 때 */
-  adOn() { const h = bm.info; return !h.ok || (h.group !== 'A' && !!(h.ads && h.ads.reward)); }
-  adUi() { const b = $('#bAd'); if (!b) return; const h = bm.info; b.hidden = !!(h.ok && h.group === 'A'); b.classList.toggle('spent', !this.adOn() && !this.boost()); }
+  /* 광고 하루 한도: 원어데이 안 = 앱이 센 남은 횟수(게임당 5) · 밖 = 이 기기에서 하루 AD_DAY 번 */
+  adLeft() { const h = bm.info; if (h.ok) return h.group === 'A' ? 0 : Math.max(0, (h.ads && h.ads.rewardLeft) || 0); if (S.ads.day !== today()) S.ads = { day: today(), n: 0 }; return Math.max(0, AD_DAY - S.ads.n); }
+  adOn() { const h = bm.info; return h.ok ? (h.group !== 'A' && !!(h.ads && h.ads.reward)) : this.adLeft() > 0; }
+  adUi() { const b = $('#bAd'); if (!b) return; const h = bm.info; b.hidden = !!(h.ok && h.group === 'A'); b.classList.toggle('spent', !this.adOn() && !this.boost()); const n = $('#adN'); if (n) n.textContent = this.adOn() ? this.adLeft() : ''; }
   hint(t) { const h = $('#hint'); if (t) { h.textContent = t; h.classList.remove('off'); } else if (h.textContent !== '어디든 끌어서 움직여요') h.classList.add('off'); }
   frame(g) {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
     for (const p of g.padList()) { v.set(p.s.x, 30, p.s.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
     for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.6; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; d.style.opacity = Math.max(0, 1 - d._t / 1.1); if (d._t > 1.1) d.remove(); }
     for (const c of g.cust) { if (!c.tag) continue; const o = c.order[0], left = o.n - o.got, show = (c.state === 'queue' || c.state === 'walkQ') && c.qi < 4; c.tag.style.display = show ? '' : 'none'; if (!show) continue;
-      v.set(c.pos.x, 215, c.pos.z).project(cam); c.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const mood = c.w > 25 ? '😐 ' : c.w > 10 ? '' : ''; const html = `${c.reg ? `<i class="rn">💌 ${c.reg.name}</i>` : ''}${mood}<b>${ICON[o.k]}</b><span>${SHORT[o.k]}</span><em>×${left}</em>`; if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('front', c.qi === 0); c.tag.classList.toggle('reg', !!c.reg); }
+      v.set(c.pos.x, 188, c.pos.z).project(cam); c.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const mood = c.w > 25 ? '😐 ' : c.w > 10 ? '' : ''; const html = `${c.reg ? `<i class="rn">💌 ${c.reg.name}</i>` : ''}${c.group ? '<i class="rn gp">👥 단체</i>' : ''}${mood}<b>${ICON[o.k]}</b><span>${SHORT[o.k]}</span><em>×${left}</em>`; if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('front', c.qi === 0); c.tag.classList.toggle('reg', !!c.reg); }
     for (const cr of g.cars || []) { if (!cr.tag) continue; const show = cr.state === 'wait' || cr.state === 'in'; cr.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(cr.g.position.x, 190, cr.g.position.z).project(cam);
       cr.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = Object.entries(cr.order).map(([k, n]) => `<b>${ICON[k]}</b><em>${n - (cr.got[k] || 0)}</em>`).join(' '); if (cr.tag._h !== html) { cr.tag.innerHTML = '🚗 ' + html; cr.tag._h = html; } }
     /* 손에 든 것 표시 (머리 위): 아이콘 · 이름 · 개수 · 가득 차면 MAX */
     const pl = g.pl, hl = (this._held ||= Object.assign(document.createElement('div'), { className: 'held' })); if (!hl.isConnected) this.tags.append(hl);
-    if (pl.stack.length) { const k = pl.kind, nb = pl.stack.filter(x => x.m.userData.b).length, nm = k === 'trash' ? '쓰레기' : k === 'dough' ? (nb === pl.stack.length ? '데친 반죽' : '반죽') : k === 'bagel' && pl.stack.some(x => x.m.userData.prem) ? '쫄깃 베이글' : MENU[k]?.short || k;
-      const ic = k === 'trash' ? '🗑' : k === 'dough' ? '⚪' : ICON[k] || ''; const full = pl.stack.length >= pl.cap; const html = `${ic} ${nm} <em>${full ? 'MAX' : pl.stack.length}</em>`; if (hl._h !== html) { hl.innerHTML = html; hl._h = html; hl.classList.toggle('trash', k === 'trash'); hl.classList.toggle('max', full); }
+    if (pl.stack.length) { const k = pl.kind, nb = pl.stack.filter(x => x.m.userData.b).length, nm = k === 'trash' ? '쓰레기' : k === 'dough' ? (nb === pl.stack.length ? '데친 반죽' : '반죽') : k === 'bagel' && pl.stack.some(x => x.m.userData.prem) ? `쫄깃 ${MENU.bagel.short}` : MENU[k]?.short || k;
+      const ic = k === 'trash' ? '🗑' : k === 'dough' ? '⚪' : ICON[k] || '';   /* 이름 통일 (테스터 #2): 손님 말풍선 「플레인」 = 손에 든 「플레인」 · 데친 것은 「쫄깃 플레인」 */ const full = pl.stack.length >= pl.cap; const html = `${ic} ${nm} <em>${full ? 'MAX' : pl.stack.length}</em>`; if (hl._h !== html) { hl.innerHTML = html; hl._h = html; hl.classList.toggle('trash', k === 'trash'); hl.classList.toggle('max', full); }
       v.set(pl.pos.x, 230 + pl.stack.length * 15, pl.pos.z).project(cam); hl.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; hl.style.display = ''; } else hl.style.display = 'none';
-    const b = this.boostUntil - Date.now(); $('#adT').textContent = b > 0 ? `${Math.floor(b / 60000)}:${String(Math.floor(b / 1000) % 60).padStart(2, '0')}` : '광고 보고'; $('#bAd').classList.toggle('on', b > 0); if (b <= 0 && this._wasB) this.adUi(); this._wasB = b > 0;
+    const b = this.boostUntil - Date.now(); $('#adT').textContent = b > 0 ? mmss(b) : '광고 보상'; $('#bAd').classList.toggle('on', b > 0); if (b <= 0 && this._wasB) this.adUi(); this._wasB = b > 0;
+    /* 설비 이름표 (테스터 #9): 설비 앞 바닥 · 외형 단계가 오르면 별 */
+    for (const d of this.tags.querySelectorAll('.nt')) { const o = d._o; if (!o || !g.st[o.s.id]) { d.remove(); continue; } const t = Math.max(0, o.tier || 0), h = `${stName(o.s.id)}${t ? ` <i>${'★'.repeat(t)}</i>` : ''}`; if (d._h !== h) { d.innerHTML = h; d._h = h; }
+      v.set(o.x, 4, o.z + (NT_DZ[o.s.id] ?? 80)).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; }
+    /* 쉬는 직원 💤 (테스터 #10) */
+    for (const w of g.staff) { if (w.rest) { if (!w.zz || !w.zz.isConnected) { w.zz = document.createElement('div'); w.zz.className = 'zz'; w.zz.innerHTML = `💤 <span>${STAFF[w.k].name} 쉬는 중</span>`; this.tags.append(w.zz); } v.set(w.pos.x, 215, w.pos.z).project(cam); w.zz.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; }
+      else if (w.zz) { w.zz.remove(); w.zz = null; } }
+    /* 돌발 이벤트 (테스터 #12) */
+    const E = g.ev; if (E && E.tag) { v.set(E.pos.x, 215, E.pos.z).project(cam); E.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; }
+    const et = $('#evt'); if (et && E) et.textContent = Math.max(0, Math.ceil(E.t));
+    /* 켜진 시간 효과 (상점 물품 · 광고 보상) */
+    if ((this._bf = (this._bf || 0) + 1) % 10 === 0) { const now = Date.now(), on = Object.keys(FX).filter(k => k !== 'boost' && (+S.fx[k] || 0) > now), html = on.map(k => `<span>${FX[k].icon} ${mmss(Math.min(FX_MS, S.fx[k] - now))}</span>`).join(''); const bf = $('#buffs'); if (bf._h !== html) { bf.innerHTML = html; bf._h = html; } }
   }
   progress() {
     const g = this.app.game; if (!g || !g.unl) return; const B = BRANCHES[S.bi], all = B.slots.filter(s => !s.free).length, done = B.slots.filter(s => !s.free && g.unl.has(s.id)).length;
     $('#bn').textContent = B.name; $('#bl').textContent = `${done} / ${all}`; $('#bp').style.width = done / all * 100 + '%';
     const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '오늘 쿠폰 받았어요 · 눌러서 보기' : couponReady() ? '쿠폰 받기!' : `베이글 ${S.sold} / ${COUPON.goal}개 팔기`;
-    $('#cp').classList.toggle('ready', couponReady()); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
+    $('#cp').classList.toggle('ready', couponReady()); $('#shopDot') && ($('#shopDot').style.display = this.giftReady() ? 'block' : 'none'); this.adUi(); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
   }
   toast(t) { let el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 1800); }
   modal(html, onClose) { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.innerHTML = html; const f = this._oc; this._oc = onClose; if (f && f !== onClose) f(); return m; }   /* 덮인 창의 닫힘 처리도 불러 줌 (광고 취소 · 쉬는 동안 1배 받기) */   /* 이미 열린 창은 내용만 바꿈 (깜빡임 없음) */
@@ -88,13 +116,19 @@ export class UI {
   async ad(kind, done) {
     if (this._adBusy) return false;
     if (kind === 'boost' && this.boost()) { this.toast('수익 2배가 이미 켜져 있어요'); return false; }
+    if (kind === 'speed' && fxOn('speed')) { this.toast('빨리 걷기가 이미 켜져 있어요'); return false; }
     this._adBusy = true;
     try {
       const h = await bm.hello();
+      if (!h.ok && this.adLeft() <= 0) { this.toast('오늘 볼 수 있는 광고를 다 봤어요 · 내일 또 만나요'); return false; }
+      if (h.ok && $('#adpick')) this.close();   /* 원어데이 광고 창이 뜨기 전에 고르기 창은 닫음 */
       const ok = h.ok ? await this.oadAd(kind) : await this.testAd(kind);
       if (!ok) return false;
+      if (!h.ok) { this.adLeft(); S.ads.n++; }
       sfx('reward');
       if (kind === 'boost') { S.boostUntil = Date.now() + BOOST_MS; save(true); this.toast('3분 동안 수익 2배!'); }
+      if (kind === 'speed') { S.fx.speed = Date.now() + FX_MS; save(true); this.toast('3분 동안 빨리 걸어요! 👟'); }
+      if (kind === 'coins') { const v = this.adCoins(); S.coins += v; S.earned += v; save(true); sfx('coin'); this.toast(`광고 보상 +${fmt(v)}`); this.app.game.ui.float('+' + fmt(v), this.app.game.pl.pos, 'cash'); }
       try { done && done(); } catch (e) { console.error(e); }
       return true;
     } finally { this._adBusy = false; this.adUi(); }
@@ -107,7 +141,7 @@ export class UI {
     return false;
   }
   testAd(kind) {
-    const what = kind === 'boost' ? '3분 동안 수익 2배' : kind === 'offline' ? '쉬는 동안 번 돈 2배' : '보상';
+    const what = kind === 'boost' ? '3분 동안 수익 2배' : kind === 'offline' ? '쉬는 동안 번 돈 2배' : kind === 'speed' ? '3분 동안 빨리 걷기' : kind === 'coins' ? `돈 +${fmt(this.adCoins())}` : '보상';
     return new Promise(res => {
       const end = Date.now() + 3000; let fin = false, tm = 0;
       const stop = ok => { if (fin) return; fin = true; clearInterval(tm); removeEventListener('visibilitychange', tick); res(ok); };
@@ -119,6 +153,32 @@ export class UI {
       tm = setInterval(tick, 250); addEventListener('visibilitychange', tick);
     });
   }
+  /* 광고 보상 크기: 지금 가게 규모 (지점 배수 · 열린 칸) */
+  adCoins() { const g = this.app.game; return Math.round(150 * BRANCHES[S.bi].mult * (1 + g.unl.size / 10) / 10) * 10; }
+  giftCoins() { const g = this.app.game; return Math.round(GIFT * BRANCHES[S.bi].mult * (1 + g.unl.size / 10) / 10) * 10; }
+  // ── 광고 보상 고르기 (테스터 #4): 게임 화면 📺 버튼 · 수익 2배 / 빨리 걷기 / 돈 · 하루 한도는 원어데이와 같게
+  adPick() {
+    if (this._adBusy) return; if (!this.adOn()) { this.toast('오늘 볼 수 있는 광고를 다 봤어요 · 내일 또 만나요'); return; }
+    const now = Date.now(), rows = AD_REWARDS.map(r => { const left = r.id === 'boost' ? this.boostUntil - now : r.id === 'speed' ? (+S.fx.speed || 0) - now : 0, on = left > 0;
+      return `<button class="adc ${on ? 'off' : ''}" data-ad="${r.id}"><i>${r.icon}</i><b>${r.name}</b><span>${r.id === 'coins' ? `+${fmt(this.adCoins())}` : r.desc}</span><em>${on ? `켜짐 ${mmss(Math.min(FX_MS, left))}` : '📺 보기'}</em></button>`; }).join('');
+    const m = this.modal(`<h3>📺 광고 보고 받기</h3><p class="sm" id="adpick">하나를 골라요 · 오늘 <b>${this.adLeft()}번</b> 남음</p><div class="adcs">${rows}</div><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+    m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { const k = b.dataset.ad; if (b.classList.contains('off')) { this.toast(k === 'boost' ? '수익 2배가 이미 켜져 있어요' : '빨리 걷기가 이미 켜져 있어요'); return; } this.ad(k); }); }
+  // ── 상점 (테스터 #5): 가게 물품(게임 돈) · 돈 받기(하루 선물 · 광고) — 브랜드 게임이라 원어데이 골드 판매는 의뢰사 계약 뒤 (docs/bm-policy.md)
+  itemCost(it) { return Math.round(it.cost * BRANCHES[S.bi].mult / 10) * 10; }
+  giftReady() { return S.gift !== today(); }
+  shop() {
+    const g = this.app.game, tab = this._stab || 'item', now = Date.now();
+    const items = SHOP_ITEMS.map(it => { const c = this.itemCost(it), left = it.fx ? (+S.fx[it.fx] || 0) - now : 0, room = it.id === 'batch' ? g.ovenRoom() : 1, noStaff = it.staff && !g.staff.length;
+      const why = left > 0 ? `켜짐 ${mmss(Math.min(FX_MS, left))}` : noStaff ? '직원이 없어요' : !room ? '오븐이 가득' : '';
+      return `<div class="upr"><i>${it.icon}</i><div><b>${it.name}</b><span>${it.desc}</span></div><button class="btn sm ${why || S.coins < c ? 'off' : ''}" data-it="${it.id}">${why || `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('');
+    const ad = this.adOn(), money = `<div class="upr gift"><i>🎁</i><div><b>오늘의 선물</b><span>하루 한 번 · 사장님 힘내세요!</span></div><button class="btn sm ${this.giftReady() ? '' : 'off'}" id="shGift">${this.giftReady() ? `<i class="c"></i>${fmt(this.giftCoins())}` : '내일 또'}</button></div>
+      <div class="upr"><i>📺</i><div><b>광고 보고 돈 받기</b><span>${ad ? `오늘 ${this.adLeft()}번 남음` : bm.info.ok && bm.info.group === 'A' ? '지금은 광고 보상이 없어요' : '오늘 광고를 다 봤어요'}</span></div><button class="btn sm ${ad ? '' : 'off'}" id="shAd"><i class="c"></i>${fmt(this.adCoins())}</button></div>`;
+    const md = this.modal(`<h3>🛍 마루미 상점</h3><div class="tabs"><button class="${tab === 'item' ? 'on' : ''}" data-t="item">가게 물품</button><button class="${tab === 'money' ? 'on' : ''}" data-t="money">돈 받기${this.giftReady() ? ' •' : ''}</button></div><div class="uplist">${tab === 'item' ? items : money}</div><p class="sm">${tab === 'item' ? '물품은 이 지점에서 바로 써요 · 시간 효과는 화면 위에 남은 시간이 보여요' : '선물은 날마다 새로 · 광고 보상은 하루 5번까지'}</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+    md.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._stab = b.dataset.t; this.shop(); });
+    md.querySelectorAll('[data-it]').forEach(b => b.onclick = () => { const it = SHOP_ITEMS.find(x => x.id === b.dataset.it), c = this.itemCost(it); if (b.classList.contains('off') || S.coins < c) return; S.coins -= c;
+      if (it.fx) S.fx[it.fx] = Date.now() + it.sec * 1000; if (it.id === 'batch') g.ovenBatch(10); save(); sfx('unlock', { vol: 0.6 }); this.toast(`${it.icon} ${it.name}!`); this.progress(); this.shop(); });
+    const gb = $('#shGift'); if (gb) gb.onclick = () => { if (!this.giftReady()) return; const v = this.giftCoins(); S.gift = today(); S.coins += v; S.earned += v; save(true); sfx('reward'); this.toast(`오늘의 선물 +${fmt(v)}`); this.progress(); this.shop(); };
+    const ab = $('#shAd'); if (ab) ab.onclick = async () => { if (ab.classList.contains('off')) return; const ok = await this.ad('coins'); if (ok) { this.progress(); } }; }
   missions() {
     const html = MISSIONS.map(m => { const v = Math.min(m.goal, S.miss[m.id] || 0), d = S.missDone[m.id], ok = v >= m.goal; return `<div class="ms ${d ? 'done' : ''}"><div><b>${m.name}</b><div class="pb"><s style="width:${v / m.goal * 100}%"></s></div><em>${fmt(v)} / ${fmt(m.goal)}</em></div><button class="btn sm ${ok && !d ? '' : 'off'}" data-m="${m.id}">${d ? '완료' : `<i class="c"></i>${fmt(m.coins * mult())}`}</button></div>`; }).join('');
     const m = this.modal(`<h3>📋 오늘의 미션</h3>${html}<button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
@@ -132,26 +192,51 @@ export class UI {
   cheapUp() { const m = BRANCHES[S.bi].mult; return this.upList().some(u => this.lv(u.id) < UP_MAX && S.coins >= upCost(u, this.lv(u.id), m)) || this.app.game.staff.some(w => this.slv(w.k) < STAFF_UP.max && S.coins >= this.sCost(w.k)); }
   upgrades() {
     const m = BRANCHES[S.bi].mult; const L = this.upList();
-    const html = L.map(u => { const lv = this.lv(u.id), max = lv >= UP_MAX, c = upCost(u, lv, m); return `<div class="upr"><i>${u.icon}</i><div><b>${u.name} <em>Lv.${lv}</em></b><span>${u.desc}</span><div class="pips">${'<s class="on"></s>'.repeat(lv)}${'<s></s>'.repeat(UP_MAX - lv)}</div></div>
+    /* 설비 이름 (테스터 #9) · 다음 외형 단계 (테스터 #6) */ const stTag = u => { if (!u.st) return ''; const sl = stLv(u.st), t = tierOf(sl), nx = TIER_AT[t]; return `<small class="stn">${stName(u.st)} · ${TIER_NAME[t]}${nx ? ` <i>Lv.${nx} 「${TIER_NAME[t + 1]}」 외형</i>` : ' <i>최고 외형</i>'}</small>`; };
+    const html = L.map(u => { const lv = this.lv(u.id), max = lv >= UP_MAX, c = upCost(u, lv, m); return `<div class="upr"><i>${u.icon}</i><div>${stTag(u)}<b>${u.name} <em>Lv.${lv}</em></b><span>${u.desc}</span><div class="pips">${'<s class="on"></s>'.repeat(lv)}${'<s></s>'.repeat(UP_MAX - lv)}</div></div>
       <button class="btn sm ${max || S.coins < c ? 'off' : ''}" data-u="${u.id}">${max ? 'MAX' : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('');
     const tab = this._tab || 'shop', staff = this.app.game.staff;
     const sh = staff.map(w => { const d = STAFF[w.k], lv = this.slv(w.k), max = lv >= STAFF_UP.max, c = this.sCost(w.k); return `<div class="upr"><i class="sw" style="background:#${d.body.toString(16).padStart(6, '0')}">👤</i><div><b>${d.name} <em>Lv.${lv}</em></b><span>${d.up} 올리기</span><div class="pips">${'<s class="on"></s>'.repeat(lv)}${'<s></s>'.repeat(STAFF_UP.max - lv)}</div></div>
       <button class="btn sm ${max || S.coins < c ? 'off' : ''}" data-s="${w.k}">${max ? 'MAX' : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('') || '<p class="sm">바닥의 「직원 뽑기」 칸을 열면 직원이 생겨요</p>';
     const md = this.modal(`<h3>⬆ ${BRANCHES[S.bi].name} 업그레이드</h3><div class="tabs"><button class="${tab === 'shop' ? 'on' : ''}" data-t="shop">가게 · 설비</button><button class="${tab === 'staff' ? 'on' : ''}" data-t="staff">직원 ${staff.length}</button></div><div class="uplist">${tab === 'shop' ? html : sh}</div><p class="sm">설비를 더 열면 업그레이드도 늘어나요</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
     md.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { const u = UPGRADES.find(x => x.id === b.dataset.u), lv = this.lv(u.id), c = upCost(u, lv, m); if (lv >= UP_MAX || S.coins < c) return; S.coins -= c;
-      const br = (S.branch[S.bi] ||= { unl: [], staff: [], paid: {} }); (br.lv ||= {})[u.id] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${u.name} Lv.${lv + 1}!`); this.progress(); this.upgrades(); });
+      const br = (S.branch[S.bi] ||= { unl: [], staff: [], paid: {} }); (br.lv ||= {})[u.id] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${u.st ? stName(u.st) + ' · ' : ''}${u.name} Lv.${lv + 1}!`); if (u.st) this.app.game.restyle(u.st); this.progress(); this.upgrades(); });
     md.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._tab = b.dataset.t; this.upgrades(); });
     md.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s, lv = this.slv(k), c = this.sCost(k); if (lv >= STAFF_UP.max || S.coins < c) return; S.coins -= c; const br = S.branch[S.bi]; (br.slv ||= {})[k] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${STAFF[k].name} Lv.${lv + 1}!`); this.progress(); this.upgrades(); }); }
   // ── 꾸미기: 지점마다 정해진 자리에 소품 · 「베이글 향」 = 손님 더 자주 + 팁
   decoCost(d) { return Math.round(d.cost * BRANCHES[S.bi].mult / 10) * 10; }
   cheapDeco() { const own = S.deco[S.bi] || []; return DECO.some(d => !d.gift && !own.includes(d.id) && S.coins >= this.decoCost(d)); }
   decoShop() {
-    const own = S.deco[S.bi] || [], g = this.app.game, sc = g.scent();
-    const list = DECO.filter(d => !d.gift || own.includes(d.id)).map(d => { const has = own.includes(d.id), c = this.decoCost(d);
-      return `<div class="upr ${has ? 'own' : ''}"><i>${d.icon}</i><div><b>${d.name} <em>향 +${d.score}</em></b><span>${d.desc}</span></div><button class="btn sm ${has || S.coins < c ? 'off' : ''}" data-d="${d.id}">${has ? '놓음' : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('');
-    const md = this.modal(`<h3>🪴 ${BRANCHES[S.bi].name} 꾸미기</h3><div class="scentbar">🌿 베이글 향 <b>${sc}</b><span>손님 +${Math.round(sc / 3)}% · 팁 확률 +${(sc / 20).toFixed(1)}%</span></div><div class="uplist">${list}</div><p class="sm">소품은 이 지점에 놓여요 · 단골이 선물로 주기도 해요</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+    const own = S.deco[S.bi] || [], g = this.app.game, sc = g.scent(), tab = this._dtab || 'deco';
+    /* 소품: 안 산 것 = 누르면 놓일 자리를 반투명으로 미리 보고(#13) 그 자리에서 사기 · 산 것 = 옮기기(#14) · 꽃병은 테이블마다라 바로 사기 */
+    const list = DECO.filter(d => !d.gift || own.includes(d.id)).map(d => { const has = own.includes(d.id), c = this.decoCost(d), mv = !!d.pos;
+      const btn = has ? (mv ? `<button class="btn sm ghost2" data-mv="${d.id}">↔ 옮기기</button>` : '<button class="btn sm off">놓음</button>') : mv ? `<button class="btn sm ${S.coins < c ? 'look' : ''}" data-pv="${d.id}">${S.coins < c ? '👁 미리 보기' : `<i class="c"></i>${fmt(c)}`}</button>` : `<button class="btn sm ${S.coins < c ? 'off' : ''}" data-d="${d.id}"><i class="c"></i>${fmt(c)}</button>`;
+      return `<div class="upr ${has ? 'own' : ''}"><i>${d.icon}</i><div><b>${d.name} <em>향 +${d.score}</em></b><span>${d.desc}</span></div>${btn}</div>`; }).join('');
+    /* 직원 (테스터 #7): 유니폼 · 모든 지점 공통 · 한 번 사면 언제든 바꿔 입힘 */
+    const outfits = OUTFITS.map(o => { const has = S.outfits.includes(o.id), on = S.outfit === o.id, sw = o.id === 'basic' ? 'conic-gradient(#5A8AE0 0 25%, #7A4A2A 0 50%, #E2A020 0 75%, #6AB07A 0)' : `linear-gradient(135deg, ${hex(o.body)} 0 55%, ${hex(o.apronC)} 55%)`;
+      return `<div class="upr ${on ? 'cur' : ''}"><i class="sw2" style="background:${sw}"></i><div><b>${o.name}</b><span>${o.desc}</span></div><button class="btn sm ${on ? 'off' : !has && S.coins < o.cost ? 'off' : ''}" data-of="${o.id}">${on ? '입는 중' : has ? '입히기' : `<i class="c"></i>${fmt(o.cost)}`}</button></div>`; }).join('');
+    const md = this.modal(`<h3>🪴 ${BRANCHES[S.bi].name} 꾸미기</h3><div class="tabs"><button class="${tab === 'deco' ? 'on' : ''}" data-t="deco">가게 소품</button><button class="${tab === 'staff' ? 'on' : ''}" data-t="staff">직원 꾸미기</button></div>
+      ${tab === 'deco' ? `<div class="scentbar">🌿 베이글 향 <b>${sc}</b><span>손님 +${Math.round(sc / 3)}% · 팁 확률 +${(sc / 20).toFixed(1)}%</span></div><div class="uplist">${list}</div><p class="sm">사기 전에 놓일 자리를 미리 보고 끌어서 옮길 수 있어요 · 단골이 선물로 주기도 해요</p>` : `<div class="uplist">${outfits}</div><p class="sm">유니폼은 모든 지점 직원이 같이 입어요 · 사장님은 늘 셰프 모자</p>`}<button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
+    md.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._dtab = b.dataset.t; this.decoShop(); });
     md.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const d = DECO.find(x => x.id === b.dataset.d), c = this.decoCost(d); if ((S.deco[S.bi] || []).includes(d.id) || S.coins < c) return; S.coins -= c; this.app.game.addDeco(d.id); sfx('unlock', { vol: 0.6 }); this.toast(`${d.name} 놓았어요 · 향 +${d.score}`); this.progress(); this.decoShop(); });
+    md.querySelectorAll('[data-pv]').forEach(b => b.onclick = () => this.place(b.dataset.pv, 'buy'));
+    md.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => this.place(b.dataset.mv, 'move'));
+    md.querySelectorAll('[data-of]').forEach(b => b.onclick = () => { const o = OUTFITS.find(x => x.id === b.dataset.of); if (S.outfit === o.id) return; if (!S.outfits.includes(o.id)) { if (S.coins < o.cost) return; S.coins -= o.cost; S.outfits.push(o.id); sfx('unlock', { vol: 0.6 }); }
+      S.outfit = o.id; save(); this.app.game.restaff(); this.toast(`직원들이 「${o.name}」을 입었어요`); this.progress(); this.decoShop(); });
   }
+  // ── 꾸미기 자리 고르기: 창을 닫고 바닥에 반투명 그림자 · 아래 막대에서 정하기/그만두기 · 뒤로 = 꾸미기 창으로 (바로 전 단계)
+  place(id, mode) { const g = this.app.game; this.close(); if (!g.startPlace(id, mode)) return; $('#app').classList.add('placing');
+    const d = DECO.find(x => x.id === id), bar = document.createElement('div'); bar.className = 'placebar'; bar.id = 'placebar';
+    bar.innerHTML = `<div class="pt"><i>${d.icon}</i><div><b>${d.name}</b><span id="plMsg"></span></div></div><div class="btns"><button class="btn ghost" id="plNo">그만두기</button><button class="btn" id="plOk"></button></div>`; $('#hud').append(bar);
+    this._pbk = pushBack(() => { this.placeBack(); return true; });
+    $('#plNo').onclick = () => this.placeBack(); $('#plOk').onclick = () => this.placeOk(); this.placeUi(); }
+  placeUi() { const g = this.app.game, P = g.placing, ok = $('#plOk'), msg = $('#plMsg'); if (!P || !ok) return; const c = this.decoCost(P.d), buy = P.mode === 'buy', poor = buy && S.coins < c;
+    msg.textContent = !P.ok ? '여기엔 놓을 수 없어요 · 설비 · 통로와 겹쳐요' : poor ? `돈이 ${fmt(c - S.coins)} 모자라요 · 자리는 미리 볼 수 있어요` : P.d.wall ? '끌어서 벽을 따라 옮겨요 · 초록이면 OK' : '바닥을 끌어서 옮겨요 · 초록이면 OK';
+    msg.classList.toggle('bad', !P.ok || poor); ok.innerHTML = buy ? `<i class="c"></i>${fmt(c)} 사서 놓기` : '여기에 놓기'; ok.classList.toggle('off', !P.ok || poor); }
+  placeOk() { const g = this.app.game, P = g.placing; if (!P || !P.ok) return; if (P.mode === 'buy') { const c = this.decoCost(P.d); if (S.coins < c) return; const at = [Math.round(P.x), Math.round(P.z)]; g.cancelPlace(); S.coins -= c; g.addDeco(P.id, at); sfx('unlock', { vol: 0.6 }); this.toast(`${P.d.name} 놓았어요 · 향 +${P.d.score}`); }
+    else { g.confirmPlace(); sfx('drop', { vol: 0.4 }); this.toast(`${P.d.name} 옮겼어요`); } this.placeEnd(); this.progress(); }
+  placeBack() { this.app.game.cancelPlace(); this.placeEnd(); this.decoShop(); }
+  placeEnd() { $('#placebar')?.remove(); $('#app').classList.remove('placing'); this._pbk && this._pbk(); this._pbk = null; }
   // ── 단골
   regulars() {
     const opened = [...this.app.game.unl].filter(id => !BRANCHES[S.bi].slots.find(s => s.id === id)?.free).length;
@@ -192,7 +277,7 @@ export class UI {
     $('#o1').onclick = () => this.close();
     const o2 = $('#o2'); if (o2) o2.onclick = async () => { if (this._adBusy) return; got = true; this.close();
       const ok = await this.ad('offline', () => { S.coins += v * 2; save(); this.toast(`+${fmt(v * 2)}`); }); if (!ok) this.offline(v); }; }
-  settings() { const m = this.modal(`<h3>⚙ 설정</h3><div class="tg"><button data-k="sfx" class="${S.set.sfx ? 'on' : ''}">효과음</button><button data-k="bgm" class="${S.set.bgm ? 'on' : ''}">배경음</button></div><p class="sm">${GAME.title} · ${BRAND.name} 공식 게임<br>“${BRAND.slogan}”<br>메뉴·매장·사진 ${BRAND.name} 제공</p><a class="btn ghost" href="${BRAND.insta}" target="_blank" rel="noopener">📷 인스타그램 보기</a>
+  settings() { const m = this.modal(`<h3>⚙ 설정</h3><div class="tg"><button data-k="sfx" class="${S.set.sfx ? 'on' : ''}">효과음</button><button data-k="bgm" class="${S.set.bgm ? 'on' : ''}">배경음</button></div><p class="sm">${GAME.title} v${GAME.ver} · ${BRAND.name} 공식 게임<br>“${BRAND.slogan}”<br>메뉴·매장·사진 ${BRAND.name} 제공</p><a class="btn ghost" href="${BRAND.insta}" target="_blank" rel="noopener">📷 인스타그램 보기</a>
       <div class="dev"><b>🧪 테스트 도구 (출시 전에만)</b>${[1, 2, 3].map(n => { const v = slotInfo(n); return `<div class="slot"><span>슬롯 ${n}<small>${v || '비어 있음'}</small></span><button class="btn sm" data-sv="${n}">저장</button><button class="btn sm ${v ? '' : 'off'}" data-ld="${n}">불러오기</button></div>`; }).join('')}
       <div class="btns"><button class="btn sm" id="dvMoney">돈 +10,000</button><button class="btn sm danger" id="dvReset">처음부터</button></div></div><button class="btn ghost" id="mOk">닫기</button>`);
     m.querySelectorAll('.tg button').forEach(b => b.onclick = () => { S.set[b.dataset.k] = !S.set[b.dataset.k]; setAudio(S.set); save(); b.classList.toggle('on'); }); $('#mOk').onclick = () => this.close();

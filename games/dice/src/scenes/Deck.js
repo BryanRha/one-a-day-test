@@ -1,11 +1,11 @@
 // 룬 컬렉션: 덱 3개(프리셋) · 칸 골라 룬 넣기 · 덱 조합 보너스 · 24룬 (희귀도) · 카드+수정으로 등급업
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR, SYNERGY, synergiesOf } from '../core/sim.js?v=0.99.11';
-import * as P from '../core/predict.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR, SYNERGY, synergiesOf } from '../core/sim.js?v=0.99.12';
+import * as P from '../core/predict.js?v=0.99.12';
 
 export const DESC = {
   flame: '맞은 적 주변까지 불태워요', frost: '맞은 적을 느리게 해요', storm: '근처 적 둘에게 번개가 이어져요', venom: '독이 쌓여 계속 피해를 줘요',
@@ -43,7 +43,7 @@ export class DeckScene extends Phaser.Scene {
     this.add.image(172, 92, 'i_star').setDisplaySize(40, 40).setTint(0x8FE3FF);
     T(this, 200, 92, fmt(d.crystals), 32, '#8FE3FF', { ox: 0, w: 900 });
     // 오늘의 상점 입구 (QA 13: 등급업 카드는 룬 제단 › 오늘의 상점에서 수정으로)
-    btn(this, W - 140, 92, 220, 76, '오늘의 상점', () => this.go('Altar', { shop: true }), { style: 'ghost', size: 24 });
+    btn(this, W - 140, 92, 220, 76, '오늘의 상점', () => this.go('Altar', { shop: true }), { style: 'shop', size: 24 });   /* QA 24 장밋빛 */
     if (M.shopGift()) { const dt = this.add.circle(W - 40, 62, 12, 0xFF5A7A).setStrokeStyle(3, 0x0B1026); this.tweens.add({ targets: dt, scale: 1.25, duration: 500, yoyo: true, repeat: -1 }); }
     // 덱 1·2·3
     [0, 1, 2].forEach(i => btn(this, W / 2 - 290 + i * 200, 196, 180, 72, `덱 ${i + 1}`, () => { M.selectDeck(i); this.scene.restart({ slot: this.slot, filter: this.filter, y: this.grid ? this.grid.y : 0 }); }, { style: d.deckIdx === i ? 'gold' : 'ghost', size: 28 }));

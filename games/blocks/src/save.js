@@ -7,6 +7,7 @@ function fresh() {
     stars: 0, skin: 'jewel', skins: { jewel: true }, streak: { last: '', count: 0 }, missions: { date: '', list: [] },
     adv: { season: -1, cleared: 0, winStreak: 0 }, gallery: [], trophies: 0, theme: 0, recent: [], todayBest: { date: '', score: 0 },
     help: { date: '', shown: 0, adv: { n: 0, fails: 0, at: 0 }, short: 0 },
+    week: null, ach: {}, advTotal: 0, items: { date: '', ad: 0 },   /* 2026-11-09 QA 시트: 이번 주 미션 · 누적 업적 · 어드벤처 누적 · 판 안 광고 하루 횟수 */
   };
 }
 export function load() {

@@ -1,11 +1,11 @@
 // 결과: 도달 웨이브 · 처치 · 보스 · 최고 눈 · 받은 수정 · 새 해금
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import * as BM from '../bmflow.js?v=0.99.11';
-import { RUNES } from '../core/sim.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import * as BM from '../bmflow.js?v=0.99.12';
+import { RUNES } from '../core/sim.js?v=0.99.12';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -48,7 +48,7 @@ export class ResultScene extends Phaser.Scene {
       }, { style: 'green', icon: own ? 'i_crown' : 'i_film', size: 32 });
       T(this, W / 2, by - 98, `오늘 ${BM.x2Left()}번 남음`, 22, C.dim, { w: 800 });
     }
-    btn(this, W / 2 + 90, by, 560, 140, A ? '아케이드로' : '다시 출정', () => A ? this.go('Arcade') : this.go('Play', { mode: r.mode === 'daily' ? 'run' : r.mode }), { style: 'gold', icon: 'i_retry', size: 44 });
+    btn(this, W / 2 + 90, by, 560, 140, A ? '아케이드로' : '다시 입장', () => A ? this.go('Arcade') : this.go('Play', { mode: r.mode === 'daily' ? 'run' : r.mode }), { style: 'gold', icon: 'i_retry', size: 44 });
     iconBtn(this, W / 2 - 300, by - 4, 'i_home', () => this.go('Home'), 130);
     this.cameras.main.fadeIn(300, 5, 6, 26);
     window.__result = r;

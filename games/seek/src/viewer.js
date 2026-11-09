@@ -99,5 +99,6 @@ export class Viewer {
     this.zt?.stop(); this.zt = this.sc.tweens.add({ targets: o, k: 1, duration: 220, ease: 'Cubic.easeOut', onUpdate: () => { this.zoom = from.z + (z - from.z) * o.k; const tx = z > from.z ? ip.x : this.iw / 2, ty = z > from.z ? ip.y : this.ih / 2; this.cx = from.cx + (tx - from.cx) * o.k; this.cy = from.cy + (ty - from.cy) * o.k; this.apply(); } });
   }
   // 정답 쪽으로 화면 이동 (힌트)
-  focus(ix, iy, z = 1.8) { const from = { z: this.zoom, cx: this.cx, cy: this.cy }, o = { k: 0 }; this.zt?.stop(); this.zt = this.sc.tweens.add({ targets: o, k: 1, duration: 450, ease: 'Cubic.easeInOut', onUpdate: () => { this.zoom = from.z + (Math.max(from.z, z) - from.z) * o.k; this.cx = from.cx + (ix - from.cx) * o.k; this.cy = from.cy + (iy - from.cy) * o.k; this.apply(); } }); }
+  /* out: 지금보다 물러서는 것도 허용 (그림 미리 보기 — 맵 전체가 보이게) */
+  focus(ix, iy, z = 1.8, out = false) { const from = { z: this.zoom, cx: this.cx, cy: this.cy }, o = { k: 0 }, to = out ? z : Math.max(from.z, z); this.zt?.stop(); this.zt = this.sc.tweens.add({ targets: o, k: 1, duration: 450, ease: 'Cubic.easeInOut', onUpdate: () => { this.zoom = from.z + (to - from.z) * o.k; this.cx = from.cx + (ix - from.cx) * o.k; this.cy = from.cy + (iy - from.cy) * o.k; this.apply(); } }); }
 }

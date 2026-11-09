@@ -1,20 +1,21 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.99.11';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.11';
-import { audio } from '../audio.js?v=0.99.11';
-import { load } from '../save.js?v=0.99.11';
-import * as M from '../meta.js?v=0.99.11';
-import { bm } from '../oad_bm.js?v=0.99.11';
-import { canDouble } from '../core/cont.js?v=0.99.11';
-import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.99.11';
-import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.99.11';
+import { W, H } from '../config.js?v=0.99.12';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.12';
+import { audio } from '../audio.js?v=0.99.12';
+import { sky } from '../sky.js?v=0.99.12';
+import { load } from '../save.js?v=0.99.12';
+import * as M from '../meta.js?v=0.99.12';
+import { bm } from '../oad_bm.js?v=0.99.12';
+import { canDouble } from '../core/cont.js?v=0.99.12';
+import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.99.12';
+import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.99.12';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(r) {
     this.going = false; window.__dbl = null;
     const d = load();
-    const bg = this.add.image(W / 2, H / 2, `bg_t${d.theme % 5}`); bg.setDisplaySize(W, Math.max(H, W * 1300 / 540));
+    sky(this, d.theme);
     const top = 240 + Math.max(0, (H - 1920) / 3);
     if (r.newBest) { this.add.image(W / 2, top - 30, 'i_crown').setDisplaySize(90, 90).setTint(0xF5C451); }
     const title = T(this, W / 2, top + 60, r.newBest ? (r.conts ? '역전! NEW BEST' : 'NEW BEST') : 'GOOD GAME', 34, r.newBest ? C.gold : C.sub, { w: 900, ls: 10 });
@@ -30,7 +31,13 @@ export class ResultScene extends Phaser.Scene {
     });
     // 오늘의 미션 진행 (재방문 동기)
     const ms = M.missions(), done = ms.filter(m => m.done).length, ready = ms.filter(m => m.done && !m.claimed).length;
-    T(this, W / 2, cy + 250, ready ? `🎁 받을 미션 보상 ${ready}개 — 홈에서 받으세요` : `오늘의 미션 ${done}/3 완료`, 32, ready ? C.gold : C.sub, { w: 800 });
+    if (!r.bonus) T(this, W / 2, cy + 250, ready ? `🎁 받을 미션 보상 ${ready}개 — 홈 › 미션에서 받으세요` : `오늘의 미션 ${done}/3 완료`, 32, ready ? C.gold : C.sub, { w: 800 });
+    // 신기록 보너스 (QA 시트 #5): 얼마나 넘었는지 + 그만큼 별 조각 — 칭찬 넉넉히
+    if (r.bonus) {
+      const by2 = cy + 250, bt = T(this, W / 2, by2, `최고 기록 +${fmt(r.score - (r.prev || 0))}점 돌파!  ★ +${r.bonus} 보너스`, 34, C.gold, { w: 900 }).setScale(0);
+      this.time.delayedCall(700, () => { this.tweens.add({ targets: bt, scale: 1, duration: 380, ease: 'Back.easeOut' }); audio.play('sfx_praise_2', { volume: 0.5 }); });
+      window.__bonus = r.bonus;
+    }
     if (r.newBest) { audio.play('sfx_best', { volume: 0.7 }); this.time.delayedCall(200, () => this.cameras.main.flash(250, 255, 240, 200)); title.setScale(0); this.tweens.add({ targets: title, scale: 1, duration: 400, ease: 'Back.easeOut' }); }
     // 별 조각 2배 (이번 판에 받은 별이 있을 때 · 광고 1회 · 하루 3번 · 원어데이 안에서만)
     let dbl = null;
@@ -48,7 +55,7 @@ export class ResultScene extends Phaser.Scene {
     const by = Math.min(H - 150, cy + 420 + (dbl || r.stars ? 75 : 0));
     btn(this, W / 2 + 90, by, 560, 140, '다시 하기', () => this.go('Play', { mode: 'classic' }), { style: 'gold', icon: 'i_retry', size: 46 });
     iconBtn(this, W / 2 - 300, by - 4, 'i_home', () => this.go('Home'), 130);
-    this.cameras.main.fadeIn(260, 8, 10, 24);
+    this.cameras.main.fadeIn(260, 20, 12, 40);
     // 이번 주 명예의 전당 (원어데이 안에서만): 점수 올리기 → 한 줄 안내 + 보기 버튼
     if (hallShown()) {
       const hy = by + 130;
@@ -63,5 +70,5 @@ export class ResultScene extends Phaser.Scene {
     window.__result = r;
   }
   go(k, data) { if (this.going) return; this.going = true; afterRound().then(() => this.fade(k, data)); }
-  fade(k, data) { this.cameras.main.fadeOut(220, 8, 10, 24); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
+  fade(k, data) { this.cameras.main.fadeOut(220, 20, 12, 40); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }
