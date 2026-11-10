@@ -87,7 +87,7 @@ export const AI2 = {
  *  Lv 마다: AI 단계 · 방마다 적 +1 확률(구역별) · 체력 · 피해 배수 · 새 적 섞임 · 다른 지도 검은 닻 순찰(4장~) · 두목
  *  '몰래' 올리지 않음 — 출격 준비 · 판 시작에 '오늘 위협 Lv N' 과 무엇이 늘었는지 보여 줌 */
 export const THREAT_K = {
-  days: 5.4, fac: 3.2, dayCap: 45, diff: { easy: -2, normal: 0, deep: 2 },
+  days: 5.5, fac: 3.2, dayCap: 45, floor: [10, 4], /* floor: 논 날 10일부터 Lv 4 아래로 안 내려감 */ /* M5-C 5.4 → 5.5 · 보스 주간 깊은 곳 0.26 → 0.19 (BALANCE 8-5: 11일 94% · 45일 84% 를 85~92% 안으로) */ diff: { easy: -2, normal: 0, deep: 2 },
   ai: [1, 1, 2, 2, 2, 3, 3, 3, 3, 3],                     /* Lv 1~10 → AI 단계 */
   extra: { 1: [3, 0.05, 0.25], 2: [2, 0.08, 0.6], 3: [2, 0.1, 0.7] },  /* 구역: [시작 Lv, Lv 당, 상한] → 방마다 적 +1 확률 */
   hp: 0.025, dmg: 0.035,                                  /* Lv 당 체력 · 피해 (+) */
@@ -103,6 +103,6 @@ export const WEEK_FROM = 7;
 export const WEEK_CYCLE = ['night', 'storm', 'boss'];
 export const WEEKS = {
   night: { name: '밤 주간', icon: '🌙', txt: '밤 · 정전 판이 잦아요 — 검은 닻 두목이 밤 물길을 자주 떠돌아요', cond: 'night', wx: { night: 3 }, chief: 1.1 },
-  storm: { name: '폭풍 주간', icon: '⛈️', txt: '폭풍 · 안개 · 증기 판이 잦아요 — 소리가 묻히고 기뢰 · 소라게가 많아요 · 두목이 궂은 날에도 나와요', cond: 'storm', wx: { storm: 2.5, fog: 2.5 }, mix: 1.5, extra3: 0.1, chiefDay: 0.07 },
-  boss:  { name: '보스 주간', icon: '👑', txt: '보스가 1분 일찍 깨어나요 · 깊은 곳 호위가 늘어요 · 두목은 낮에도 나와요 · 보스 잔해 +1', bossEarly: 60, extra3: 0.26, extra2: 0.1, chief: 1.5, chiefDay: 0.12, bossLoot: 1 },
+  storm: { name: '폭풍 주간', icon: '⛈️', txt: '폭풍 · 안개 · 증기 판이 잦아요 — 소리가 묻히고 기뢰 · 소라게가 많아요 · 두목이 궂은 날에도 나와요', cond: 'storm', wx: { storm: 2.1, fog: 2.1 }, mix: 1.5, extra3: 0.1, chiefDay: 0.07 }, /* M5-C 예보 가중 2.5 → 2.1 (12일 · 첫 폭풍 주간 월요일 84%) */
+  boss:  { name: '보스 주간', icon: '👑', txt: '보스가 1분 일찍 깨어나요 · 깊은 곳 호위가 늘어요 · 두목은 낮에도 나와요 · 보스 잔해 +1', bossEarly: 60, extra3: 0.19, extra2: 0.1, chief: 1.5, chiefDay: 0.12, bossLoot: 1 },
 };

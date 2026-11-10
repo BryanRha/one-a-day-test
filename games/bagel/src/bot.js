@@ -1,10 +1,11 @@
 // 시험용 자동 플레이 (?bot=1): 굽기 → 진열 → 계산 → 돈 줍기 → 열기 칸 · 크림치즈 · 커피 · 쓰레기
 import * as THREE from 'three';
-import { IN } from './ui.js?v=0.99.15';
-import { S } from './state.js?v=0.99.15';
-import { SIZE } from './game.js?v=0.99.15';
+import { IN } from './ui.js?v=0.99.16';
+import { S } from './state.js?v=0.99.16';
+import { SIZE } from './game.js?v=0.99.16';
+const SPD = +(new URLSearchParams(location.search).get('speed') || 1);
 export function startBot(app) {
-  let goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
+  let padGoal = null, padT = 0, goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
   const me = { get pos() { return app.game.pl.pos; } };
   /* 길 찾기 (봇 전용): 25 칸 격자 · 벽 · 잠긴 방 · 설비 몸통을 피해 BFS → 보이는 가장 먼 칸 */
   let grid = null, gkey = '', plan = null, planT = 0; const C = 25, GX = -1300, GZ = -1200, NX = 112, NZ = 100;
@@ -23,7 +24,7 @@ export function startBot(app) {
     if (side > 0) { side -= 0.1; const sx = (-(z - p.z) - (x - p.x)) / Math.SQRT2, sy = ((-(z - p.z)) + (x - p.x)) / Math.SQRT2, mm = Math.hypot(sx, sy) || 1; IN.x = sx / mm; IN.y = sy / mm; return false; }
     if (lastP && Math.hypot(p.x - lastP[0], p.z - lastP[1]) < 3 && Math.hypot(x - p.x, z - p.z) > 40) { if ((stuck += 0.1) > 0.8) { stuck = 0; side = 0.7; } } else stuck = 0; lastP = [p.x, p.z];
     const dx = x - p.x, dz = z - p.z, l = Math.hypot(dx, dz); if (fin || l < 4) { IN.x = IN.y = 0; return fin; }
-    /* 세계 방향 → 화면 방향 (RIGHT=(1,-1)/√2, DOWN=(1,1)/√2) */ const sx = (dx - dz) / Math.SQRT2, sy = (dx + dz) / Math.SQRT2, m = Math.hypot(sx, sy); IN.x = sx / m; IN.y = sy / m; return false; };
+    /* 세계 방향 → 화면 방향 (RIGHT=(1,-1)/√2, DOWN=(1,1)/√2) */ const sx = (dx - dz) / Math.SQRT2, sy = (dx + dz) / Math.SQRT2, m = Math.hypot(sx, sy); const k = Math.max(0.12, Math.min(1, Math.hypot(fx - p.x, fz - p.z) / (120 * SPD))); IN.x = sx / m * k; IN.y = sy / m * k; return false; };   /* 목표 가까이선 천천히 (배속이어도 칸 위에 멈춰 설 수 있게 · 0.3.2 바닥 칸은 멈춰야 동작) */
   setInterval(() => {
     const g = app.game; if (!g || !g.st) return; const pl = g.pl, c = g.st.counter, ov = g.st.oven; wait -= 0.1;
     if (document.querySelector('#modal').firstChild) { const b = document.querySelector('#modal #mOk') || document.querySelector('#modal #s1') || document.querySelector('#modal .btn'); b && b.click(); return; }
@@ -45,6 +46,10 @@ export function startBot(app) {
       else if (need && need.k === 'coffee' && g.st.coffee) t = [g.st.coffee.Z.out.x, g.st.coffee.Z.out.z];
       else if (pile) t = [pile.x, pile.z + 20];
       else t = [ov.x, ov.z + 130]; }
+    if (pad && t && t[0] === pad.x && t[1] === pad.z && g.pads.includes(pad)) { if (padGoal !== pad) { padGoal = pad; padT = g.t; } }   /* 칸으로 가기로 했으면 도착할 때까지 (지나가며 붓기가 없어져서) */
+    if (padGoal && g.pads.includes(padGoal) && S.coins > 0 && !pl.stack.length && g.t - padT < 10) t = [padGoal.x, padGoal.z]; else padGoal = null;
+    const onPad = g.pads.find(q => Math.hypot(pl.pos.x - q.x, pl.pos.z - q.z) < 45);   /* 칸 위에 섰으면 다 부을 때까지 머묾 (멈춰야 붓기 · 0.3.2) */
+    if (onPad && S.coins > 0 && !pl.stack.length && (g.pads.includes(onPad) ? onPad.paid < onPad.s.cost : true) && (!onPad.u || (onPad.u.eq ? g.eqCost(onPad) < S.coins : true))) t = [onPad.x, onPad.z];
     window.botT = t; go(t[0], t[1]);
   }, 100);
   setInterval(() => { const g = app.game; log.push({ t: Math.round(performance.now() / 1000), coins: S.coins, earned: S.earned, unl: g.unl.size, sold: S.totalSold, bi: S.bi }); window.botLog = log; console.log('#bot', JSON.stringify(log[log.length - 1])); }, 10000);

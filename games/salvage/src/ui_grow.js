@@ -1,15 +1,16 @@
 // 은신처 성장 화면 (M3-A · v0.6) — 시설 카드 · 무기대(무기 10 · 탄약 3 · 개조 5칸) · 장비(5단 · 부적 2칸) · 상인 3 · 업적 · 난이도
 //  ui.js 의 탭이 여기를 부름. 글자 목록 대신 그림 · 단계 점 · '다음' 한 구절 · 모자란 것은 빨간 점 (QUALITY_M2 Top 7)
-import * as WXUI from './ui_wx.js?v=0.99.15'; /* M4-B 맵 장비 */
-import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.15';
-import { S, save } from './save.js?v=0.99.15';
-import * as E from './econ.js?v=0.99.15';
-import { A } from './assets.js?v=0.99.15';
-import { sfx, unlock } from './audio.js?v=0.99.15';
-import { COS } from './look.js?v=0.99.15';
-import * as BM from './bmflow.js?v=0.99.15';
-import * as GL from './goal.js?v=0.99.15'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
-import { costChips } from './chips.js?v=0.99.15'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
+import * as WXUI from './ui_wx.js?v=0.99.16'; /* M4-B 맵 장비 */
+import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.16';
+import { S, save } from './save.js?v=0.99.16';
+import * as E from './econ.js?v=0.99.16';
+import { A } from './assets.js?v=0.99.16';
+import { sfx, unlock } from './audio.js?v=0.99.16';
+import { COS } from './look.js?v=0.99.16';
+import * as BM from './bmflow.js?v=0.99.16';
+import * as GL from './goal.js?v=0.99.16'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
+import { costChips } from './chips.js?v=0.99.16'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
+import * as M5C from './ui_m5c.js?v=0.99.16'; /* M5-C 무기 19 계열 줄 · 단련 ★ · 반려 2 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -20,7 +21,7 @@ const shell = n => `<span class="shell"></span>${n}`;
 const mat = (k, n) => `<span class="mat" style="--c:${MATS[k].color}"></span>${n}`;
 const pct = x => Math.round(x * 100) + '%';
 const dots = (n, max, cls = '') => `<span class="ldots ${cls}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
-export const WHY2 = { cost: '재료가 모자라요', bench: '작업대 단계가 모자라요', rack: '무기대 단계가 모자라요', busy: '공사는 한 번에 하나씩', locked: '아직 잠겨 있어요', fac: '시설이 필요해요', full: '창고가 가득', have: '이미 요리가 있어요', max: '최고 단계', owned: '이미 있어요', soldout: '오늘은 다 팔렸어요', slot: '이 무기엔 그 칸이 없어요' };
+export const WHY2 = { forge: '정밀 공방 단계가 모자라요', petcap: '시설을 더 지어야 커요', noweapon: '무기가 없어요', cost: '재료가 모자라요', bench: '작업대 단계가 모자라요', rack: '무기대 단계가 모자라요', busy: '공사는 한 번에 하나씩', locked: '아직 잠겨 있어요', fac: '시설이 필요해요', full: '창고가 가득', have: '이미 요리가 있어요', max: '최고 단계', owned: '이미 있어요', soldout: '오늘은 다 팔렸어요', slot: '이 무기엔 그 칸이 없어요' };
 /* 모자란 것: 빨간 점 + 개수 (조개로 채울 수 있으면 주황) */
 /* v0.6.1 (검수 M3 Top 1): 빨간 점 대신 진행 막대 + % (조개로 채울 수 있으면 주황) */
 function lackDots(cost) {
@@ -54,6 +55,9 @@ const ART = {
   gym: '<path d="M4 42q7-6 14 0t14 0t14 0t14 0v14H4z"/><circle cx="34" cy="24" r="6" fill="#fff"/><path d="M22 36q8-10 22-6" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>',
   shelf: '<rect x="8" y="10" width="48" height="44" rx="3" opacity=".35"/><path d="M8 30h48M8 50h48" stroke="#fff6" stroke-width="3"/><rect x="14" y="16" width="8" height="13" rx="3"/><circle cx="32" cy="23" r="6"/><path d="M42 29l5-12 5 12z"/><rect x="16" y="38" width="10" height="11" rx="2"/><circle cx="40" cy="44" r="5"/>',
   dock: '<path d="M4 46q7-5 14 0t14 0t14 0t14 0v10H4z" opacity=".6"/><path d="M14 38h36l-6 8H20z"/><path d="M30 38V10l14 22H30" fill="#fff8"/>',
+  /* M5-C 정밀 공방(모루 · 모루대 + 망치 + 불티) · 반려 쉼터(바구니 + 발자국) */
+  forge: '<path d="M12 36h40l-6 8H18z"/><rect x="22" y="44" width="20" height="10" rx="2" opacity=".8"/><path d="M38 12l10 10-4 4-10-10z" fill="#fff"/><path d="M41 21l-14 14" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="28" r="2" fill="#ffd27a"/><circle cx="26" cy="22" r="1.6" fill="#ffd27a"/><circle cx="16" cy="20" r="1.4" fill="#ffd27a"/>',
+  den: '<path d="M8 36h48l-5 16a4 4 0 0 1-4 3H17a4 4 0 0 1-4-3z"/><path d="M8 36q24-8 48 0" stroke="#fff8" stroke-width="3" fill="none"/><ellipse cx="32" cy="20" rx="6" ry="5" fill="#fff"/><circle cx="23" cy="13" r="3" fill="#fff"/><circle cx="29" cy="9" r="3" fill="#fff"/><circle cx="35" cy="9" r="3" fill="#fff"/><circle cx="41" cy="13" r="3" fill="#fff"/>',
 };
 export const facArt = (k, cls = '') => `<span class="fart ${cls}" style="--c:${FACILITIES[k].tint || '#8fa6ae'}"><svg viewBox="0 0 64 64" fill="var(--c)">${ART[k] || ART.store}</svg></span>`;
 
@@ -99,7 +103,7 @@ export function facSheet(ui, k) {
 
 /* ───── 무기대: 무기 10 (2줄) · 탄약 · 개조 5칸 ───── */
 export function tabGun(ui, body) {
-  const wk = ui.wsel && WEAPONS[ui.wsel] ? ui.wsel : (ui.wsel = S.equip.main); const W = WEAPONS[wk]; const own = S.weapons[wk]; const ws = E.weaponStats(wk, own || undefined);
+  const wk = ui.wsel && WEAPONS[ui.wsel] ? ui.wsel : (ui.wsel = S.equip.main); const W = WEAPONS[wk]; const own = S.weapons[wk]; const ws = E.weaponStats(wk, own || undefined, E.starOf(S, wk));
   const rack = E.facCur(S, 'rack'); const mk = E.rackMk(S);
   const killT = st => [['drone', 2, 10], ['skel', 2, 4.5], ['boss', 3, 8]].map(([k, z, d]) => { const hp = k === 'boss' ? ENEMIES.boss.hp : ENEMIES[k].hp * ZONES[z].hp; const r = E.ttk(st, hp / (k === 'boss' ? st.boss || 1 : 1), d); return { k, t: r.t, hit: r.hit }; });
   const kt = killT(ws); const acc = W.melee ? 1 : E.ttk(ws, 400, 10).hit;
@@ -110,8 +114,7 @@ export function tabGun(ui, body) {
   const modN = own ? W.slots.reduce((s, m) => s + Math.min(3, own[m] || 0), 0) : 0;
   const bench = E.facLvl(S, 'bench');
   body.innerHTML = `
-    <div class="wsel w10">${WEAPON_KEYS.map(k => { const o = S.weapons[k]; const W2 = WEAPONS[k]; const can = !o && bench >= W2.bench && E.canPay(S, W2.cost);
-      return `<button data-w="${k}" class="${k === wk ? 'on' : ''} ${o ? '' : 'no'} ${can ? 'can' : ''}" style="--c:${W2.color}"><b>${W2.short}</b><small>${S.equip.main === k ? '주무기' : S.equip.side === k ? '보조' : o ? '보유' : bench >= W2.bench ? '제작' : '🔒' + W2.bench}</small></button>`; }).join('')}</div>
+    ${M5C.wselHtml(ui, wk)}
     <div class="wcard">
       <div class="fh"><b>${W.name}</b><span class="lv">${own ? `개조 ${modN}/${W.slots.length * 3}` : '아직 없음'}</span></div>
       <div class="role" style="--c:${W.color}">${W.role}</div><small class="hint">${W.desc}</small>
@@ -129,8 +132,10 @@ export function tabGun(ui, body) {
       : `<div class="craft"><div class="cost">${costChips(W.cost)}</div><button class="btn ${bench >= W.bench ? '' : 'dim'}" id="mkW">${bench >= W.bench ? '제작' : `작업대 ${W.bench}단계 필요`}</button></div>`}
     </div>
     ${ammoHtml()}
-    ${own ? `<div class="sec">개조 <small>무기대 ${mk ? mk + '단계' : '없음'} · 특수 부품은 4단계 · 보스 보물로</small></div><div class="mods">${W.slots.map(m => modRow(wk, m, own, ws, kt, acc, killT)).join('')}</div>` : ''}`;
+    ${own ? `<div class="sec">개조 <small>무기대 ${mk ? mk + '단계' : '없음'} · 특수 부품은 4단계 · 보스 보물로</small></div><div class="mods">${W.slots.map(m => modRow(wk, m, own, ws, kt, acc, killT)).join('')}</div>` : ''}
+    ${M5C.starHtml(wk)}`;
   body.querySelectorAll('.wsel button').forEach(b => b.onclick = () => { sfx.ui(); ui.wsel = b.dataset.w; ui.hideout(); });
+  M5C.bindWsel(ui, body); M5C.bindStar(ui, body, wk, why);
   $('#mkW', body) && ($('#mkW', body).onclick = () => { let r = E.craftWeapon(S, wk); if (!r.ok && r.why === 'cost' && E.lackPrice(S, W.cost).ok) { E.buyLack(S, W.cost); r = E.craftWeapon(S, wk); } if (!r.ok) return why(ui, r); save(); sfx.build(); ui.toast(`${W.name} 완성!`, 'good'); ui.hideout(); });
   $('#eqMain', body) && ($('#eqMain', body).onclick = () => { if (S.equip.side === wk) S.equip.side = null; S.equip.main = wk; save(); sfx.ui(); ui.hideout(); });
   $('#eqSide', body) && ($('#eqSide', body).onclick = () => { if (isSide) S.equip.side = null; else { if (S.equip.main === wk) return ui.toast('주무기는 보조로 못 해요', 'soft'); S.equip.side = wk; } save(); sfx.ui(); ui.hideout(); });
@@ -169,6 +174,7 @@ export function bindAmmo(ui, root, after) {
 export function tabGear(ui, body) {
   const kl = E.facCur(S, 'kitchen')?.meal || 0; const bench = E.facLvl(S, 'bench'); const slots = E.charmSlots(S); const eq = (S.charms?.eq || []).slice(0, slots);
   body.innerHTML = `
+    ${M5C.petHtml()}
     <div class="sec">장비 <small>한 번 만들면 계속 · 쓰러져도 안 잃어요</small></div>
     ${Object.entries(GEAR).map(([g, G]) => { const cur = S.gear[g]; const nx = G.tiers[cur + 1];
       return `<div class="grow gearrow"><div><b>${G.name} ${ROMAN[cur] || ''} ${dots(cur, G.tiers.length - 1)}</b><small>${G.tiers[cur].txt}</small>${nx ? `<small class="next">다음: ${nx.txt}</small><div class="cost">${costChips(nx.cost)}</div>` : ''}</div>
@@ -188,6 +194,7 @@ export function tabGear(ui, body) {
   body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const r = E.craftItem(S, b.dataset.c, 1); if (!r.ok) return why(ui, r); save(); sfx.pick(3); ui.toast(`${ITEMS[b.dataset.c].name} +1`, 'good'); ui.hideout(); });
   body.querySelectorAll('[data-meal]').forEach(b => b.onclick = () => { const r = E.cook(S, b.dataset.meal); if (!r.ok) return why(ui, r); save(); sfx.build(); ui.toast(`${MEALS[b.dataset.meal].name} 완성! 다음 출격에 효과`, 'good'); ui.hideout(); });
   body.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { sfx.ui(); charmSheet(ui, b.dataset.ch); });
+  M5C.bindPets(ui, body, why); /* M5-C 반려 키우기 */
 }
 function charmSheet(ui, k) {
   const C = CHARMS[k]; const have = E.charmHave(S, k), can = E.charmCan(S, k), on = (S.charms?.eq || []).includes(k); const slots = E.charmSlots(S);

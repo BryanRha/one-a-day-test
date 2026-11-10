@@ -1,16 +1,16 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { UP_MAX, upCost } from './data.js?v=0.99.15';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, OUTFITS_PRO, REST, FX, EVENTS, FINISHED_RATE, ROOM_UP, ROOM_UP_MAX, VIP, THEME_SETS } from './data.js?v=0.99.15';
-import { ROOMS, hms, inRect as inR } from './layout.js?v=0.99.15';
-import { geom, Nav, heightAt } from './nav.js?v=0.99.15';
-import { drawWorld, drawWalls } from './world.js?v=0.99.15';
-import { track, salesAdd } from './oad.js?v=0.99.15';
-import { bm } from './oad_bm.js?v=0.99.15';
+import { UP_MAX, upCost } from './data.js?v=0.99.16';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, OUTFITS_PRO, REST, FX, EVENTS, FINISHED_RATE, ROOM_UP, ROOM_UP_MAX, VIP, THEME_SETS } from './data.js?v=0.99.16';
+import { ROOMS, hms, inRect as inR } from './layout.js?v=0.99.16';
+import { geom, Nav, heightAt } from './nav.js?v=0.99.16';
+import { drawWorld, drawWalls } from './world.js?v=0.99.16';
+import { track, salesAdd } from './oad.js?v=0.99.16';
+import { bm } from './oad_bm.js?v=0.99.16';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, sph, item, person, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.15';
-import { S, save, addSold, mission, today, vipOn } from './state.js?v=0.99.15';
-import { sfx } from './audio.js?v=0.99.15';
+import { M, box, cyl, sph, item, person, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.16';
+import { S, save, addSold, mission, today, vipOn } from './state.js?v=0.99.16';
+import { sfx } from './audio.js?v=0.99.16';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -208,7 +208,7 @@ export class Game {
     /* 설비 강화 칸 (0.3.1 · 원작처럼 몸이 직접 감): 설비 앞 옆 바닥 · 그 설비 업그레이드 중 낮은 것 1단계 · HUD 「설비」 창은 보조로 남김 */
     for (const [sid, [dx, dz]] of Object.entries(EQ_PAD)) { const o = this.st[sid]; if (!o) continue; const us = UPGRADES.filter(u => u.st === sid && u.id !== 'price'); if (!us.length) continue; this.lvPad(null, { id: 'eq_' + sid, eq: sid, us, icon: '⬆', name: stName(sid) }, [o.x + dx, o.z + dz]); }
   }
-  lvPad(room, u, [x, z]) { const g = new THREE.Group(); g.position.set(x, 0, z); this.sc.add(g); const free = u.id === 'free', S2 = u.eq ? 120 : 140;
+  lvPad(room, u, [x, z]) { const g = new THREE.Group(); g.position.set(x, 0, z); this.sc.add(g); const free = u.id === 'free', S2 = u.eq ? 120 : 140;   /* g · S2 는 ring() 이 씀 */
     const base = new THREE.Mesh(new THREE.BoxGeometry(S2, 4, S2), new THREE.MeshToonMaterial({ color: free ? 0x5AB0E8 : u.eq ? 0xF6E6CF : room === 'crew' ? 0xE8A040 : 0xC8904A, transparent: true, opacity: 0.95 })); base.position.y = 7; g.add(base);
     const fill = new THREE.Mesh(new THREE.BoxGeometry(S2 - 22, 6, S2 - 22), M(free ? 0x8ACCF2 : 0xFFD24A)); fill.position.y = 8; fill.scale.z = 0.001; g.add(fill);
     const tag = this.ui.tag(); tag.classList.add('lv'); if (free) tag.classList.add('free'); const p = { room, u, g, fill, tag, x, z, S2, free }; this.lvPads.push(p); this.updLv(p); }
@@ -223,6 +223,8 @@ export class Game {
   levelUp(id, why) { const br = (S.branch[this.bi] ||= { unl: [], staff: [], paid: {}, build: {} }), lv = (br.lv ||= {}); if ((lv[id] || 0) >= ROOM_UP_MAX) return false; lv[id] = (lv[id] || 0) + 1; if (id === 'tip') lv.ads = lv.tip; (br.lvPaid ||= {})[id] = 0;
     const u = [...ROOM_UP.crew, ...ROOM_UP.boss].find(x => x.id === id); sfx('levelup', { vol: 0.5 }); this.ui.toast(`${u.icon} ${u.name} Lv.${lv[id]}!${why ? ' · ' + why : ''}`); this.pl.cap = this.pcap(); const P0 = this.lvPads.find(p => p.u.id === id); if (P0) { this.confetti(P0.x, 60, P0.z); this.updLv(P0); }
     save(); this.ui.progress(); const rm = ROOM_UP.crew.some(x => x.id === id) ? 'crew' : 'boss'; if (!((S.roomStep || {})[rm])) this.ui.roomNext(rm); this.ui.roomSheet && this.ui.roomSheet(this.room, true); return true; }
+  /* 되돌리기 (바닥 칸으로 잘못 올렸을 때 · 몇 초 안): 단계 하나 내리고 낸 돈 돌려줌 */
+  undoLevel(id, cost) { const br = S.branch[this.bi], lv = br?.lv; if (!lv || !(lv[id] > 0)) return false; lv[id]--; if (id === 'tip') lv.ads = lv.tip; S.coins += cost; this.pl.cap = this.pcap(); const st = UPGRADES.find(u => u.id === id)?.st; if (st) this.restyle(st, false); for (const P0 of this.lvPads) this.updLv(P0); save(); this.ui.progress(); this.ui.roomSheet && this.ui.roomSheet(this.room, true); return true; }
   updPad(p) { const u = Math.min(1, p.paid / p.s.cost); p.fill.scale.z = Math.max(0.001, u); p.fill.position.z = -(PAD - 22) / 2 * (1 - u); const s = p.s, R = s.type === 'room' && ROOMS[s.room];
     p.tag.classList.toggle('room', !!R); p.tag.innerHTML = `<i class="c"></i>${fmt(s.cost - p.paid)}<small>${R ? `${s.build ? '🔨 ' : ''}${R.name}${s.build ? ` · ${hms(s.build)}` : ''}` : s.type === 'hire' && this.open.has('crew') ? `👤 ${STAFF[s.staff].name}` : (s.label || NAMES[s.type] || '') + (s.build ? ` · 🔨 ${hms(s.build)}` : '')}</small>`; }
   unlock(p) {
@@ -269,6 +271,7 @@ export class Game {
     this.t += dt; const pl = this.pl; const mult = this.B.mult * this.incK();
     // 이동 (벽 · 잠긴 방에 막힘 → 미끄러짐)
     const mv = new V().addScaledVector(RIGHT, input.x).addScaledVector(DOWN, input.y); const ml = Math.min(1, mv.length()); pl.prev.copy(pl.pos);
+    this.still = ml <= 0.08;   /* 이동 입력이 없을 때만 바닥 칸 시간을 셈 */
     if (ml > 0.08) { mv.normalize(); const sp = this.pspeed() * ml; pl.pos.addScaledVector(mv, sp * dt); pl.P.g.rotation.y = Math.atan2(mv.x, mv.z); this.calmT = 0; } else this.calmT += dt;   /* calmT: 조작 없는 시간 (직원 쉬기) */
     pl.cap = this.pcap();   /* 사장실 들기 단계 + 큰 쟁반 */
     this.collide(pl.pos, 34, pl.prev); pl.pos.y = this.hAt(pl.pos.x, pl.pos.z); pl.P.carry = pl.stack.length > 0; pl.P.anim(dt, ml > 0.08);
@@ -309,7 +312,12 @@ export class Game {
     for (const Z of this.zones) { const on = this.in(pl, Z); if (Z.ring) { Z.inner.material.opacity = on ? 1 : 0.6; continue; } Z.inner.material.color.copy(on ? Z.col : WHITE); Z.inner.material.opacity = on ? 0.85 : 0.55; }
     // 안내: 다음에 할 일 (설비 3개 열 때까지)
     let gd = this.guide(dt); if (gd) { const w = this.nav.next(this.arrow, gd[0], gd[1]); if (w) gd = [w[0], w[1], gd[2]]; }   /* 다른 방이면 문 쪽을 가리킴 */
-    this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], this.hAt(gd[0], gd[1]) + 150 + Math.sin(this.t * 6) * 14, gd[1]); this.arrow.rotation.y += dt * 2; } this.ui.hint(gd && gd[2]);
+    /* 화살표는 휙휙 튀지 않게 (0.3.2 대표): 새 목표가 0.5초 이어질 때만 바꾸고 · 자리는 미끄러지듯 따라감(초당 최대 1600) · 움직임은 위아래 살랑만 */
+    const A = this.arw ||= { tgt: null, cand: null, ct: 0, x: 0, z: 0, on: false };
+    if (!gd) { A.cand = null; A.ct = 0; if (A.tgt && (A.off = (A.off || 0) + dt) > 0.4) { A.tgt = null; } } else { A.off = 0; const same = A.tgt && Math.hypot(gd[0] - A.tgt[0], gd[1] - A.tgt[1]) < 40;
+      if (!A.tgt) { A.tgt = gd; A.x = gd[0]; A.z = gd[1]; } else if (same) A.tgt = gd; else { if (!A.cand || Math.hypot(gd[0] - A.cand[0], gd[1] - A.cand[1]) > 40) { A.cand = gd; A.ct = 0; } A.ct += dt; if (A.ct > 0.5) { A.tgt = gd; A.cand = null; } } }
+    this.arrow.visible = !!A.tgt; if (A.tgt) { const dx = A.tgt[0] - A.x, dz = A.tgt[1] - A.z, l = Math.hypot(dx, dz), st = Math.min(l, Math.max(l * dt * 6, 0) , 1600 * dt); if (l > 0.1) { A.x += dx / l * st; A.z += dz / l * st; }
+      this.arrow.position.set(A.x, this.hAt(A.x, A.z) + 150 + Math.sin(this.t * 4) * 10, A.z); this.arrow.rotation.y += dt * 2; } this.ui.hint(A.tgt && A.tgt[2]);
     // 카메라 · 그림자 따라감
     if (this.fitT) this.camT.copy(this.fitT); else { const tg = (this._ct ||= new V()).copy(this.placing ? this.placing.g.position : pl.pos); if (this.ui.sheetOn && this.ui.sheetOn()) tg.addScaledVector(DOWN, 200); tg.y = 0; this.camT.lerp(tg, Math.min(1, dt * 5)); }   /* 방 창이 아래를 덮으면 방이 위쪽에 보이게 */   /* 꾸미기 자리 고를 땐 그림자를 따라감 */   /* 넓은 화면: 매장 전체 고정 · 폰: 주인공 따라감 */ this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
     this.sun.position.set(this.camT.x - 500, 1200, this.camT.z + 700); this.sun.target.position.copy(this.camT);
@@ -344,12 +352,16 @@ export class Game {
   /* 수익 배수: 광고 수익 2배 · VIP ×1.5 (계획안 4-5: 과금 속도 무과금의 2배 이하) */
   incK() { return (this.ui.boost() ? 2 : 1) * (vipOn() ? VIP.mult : 1); }
   /* 지금 서 있는 방 · 방 바닥 칸 · 금고 */
-  roomUpdate(dt) { const p = this.pl.pos; let rid = null; for (const id of ['crew', 'boss', 'store']) if (this.open.has(id) && inR(ROOMS[id].rect, p.x, p.z)) rid = id;
+  /* 바닥 칸 진행 링 (멈춰 선 시간) */
+  padRing(P0, u) { if (!P0.ringG) { const g = new THREE.Group(), n = 20, r = (P0.S2 || PAD) / 2 - 6; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, m = new THREE.Mesh(RING_G, RING_M); m.position.set(Math.sin(a) * r, 12, -Math.cos(a) * r); m.rotation.y = -a; g.add(m); } P0.g.add(g); P0.ringG = g; }
+    const k = Math.round(Math.max(0, Math.min(1, u)) * P0.ringG.children.length); P0.ringG.children.forEach((m, i) => { m.visible = i < k; }); }
+  roomUpdate(dt) { const p = this.pl.pos;
+    for (const q of this.pads) { const on = Math.abs(p.x - q.x) < PAD / 2 && Math.abs(p.z - q.z) < PAD / 2; if (on && this.still) q.st = (q.st || 0) + dt; else q.st = 0; this.padRing(q, q.st ? q.st / PAD_STAY : 0); }   /* 돈 붓는 칸도 같은 기준 */ let rid = null; for (const id of ['crew', 'boss', 'store']) if (this.open.has(id) && inR(ROOMS[id].rect, p.x, p.z)) rid = id;
     if (rid !== this.room) { const was = this.room; this.room = rid; if (rid) { this.ui.roomSheet(rid); if (rid === 'crew') { const w = this.staff.find(x => !x.rest && inR(ROOMS.crew.rect, x.pos.x, x.pos.z)) || this.staff.find(x => !x.rest); if (w) this.ui.float('사장님 오셨어요! 👋', w.pos.clone().setY(250), 'say'); }   /* 인사는 한 명만 */ } else this.ui.roomSheet(null, false, was); }
     for (const P0 of this.lvPads) { const on = Math.abs(p.x - P0.x) < P0.S2 / 2 && Math.abs(p.z - P0.z) < P0.S2 / 2; if (P0.free) { if (on && !P0.on) { P0.on = true; this.ui.freeLevel(P0.room); } if (!on) P0.on = false; continue; }
-      if (!on) { P0.st = 0; continue; } P0.st = (P0.st || 0) + dt; if (P0.st < 0.3) continue;   /* 강화 칸은 잠깐 서야 (지나가며 돈이 새지 않게) */
+      if (!on || !this.still) { P0.st = 0; if (!on) P0.lock = false; this.padRing(P0, 0); continue; } if (P0.lock) continue; P0.st = (P0.st || 0) + dt; this.padRing(P0, P0.st / PAD_STAY); if (P0.st < PAD_STAY) continue;   /* 멈춰 서서 0.8초 · 한 단계 끝나면 나갔다 들어와야 다음 (0.3.2 대표 「지나가기만 해도 업그레이드」) */
       const eq = !!P0.u.eq; if (!on || S.coins <= 0 || (eq ? !this.eqU(P0) : L(P0.u.id) >= ROOM_UP_MAX)) continue; P0.tk = (P0.tk || 0) - dt; if (P0.tk > 0) continue; P0.tk = 0.03; const br = S.branch[this.bi], lp = (br.lvPaid ||= {}), c = eq ? this.eqCost(P0) : this.lvCost(P0.u.id), paid = lp[P0.u.id] || 0, pay = Math.min(c - paid, S.coins, Math.max(1, Math.ceil(c / 30)));
-      S.coins -= pay; lp[P0.u.id] = paid + pay; sfx('coin', { vol: 0.15, rate: 1.4 }); if (lp[P0.u.id] >= c) eq ? this.eqUp(P0) : this.levelUp(P0.u.id); else this.updLv(P0); }
+      S.coins -= pay; lp[P0.u.id] = paid + pay; sfx('coin', { vol: 0.15, rate: 1.4 }); if (lp[P0.u.id] >= c) { const id = eq ? this.eqU(P0)?.id : P0.u.id; eq ? this.eqUp(P0) : this.levelUp(P0.u.id); P0.lock = true; P0.st = 0; this.padRing(P0, 0); this.ui.undo(id, c); } else this.updLv(P0); }
     if (S.manager && (this.mgT = (this.mgT || 0) + dt) > 3) { this.mgT = 0; let v = 0; for (const q of this.piles) if (q.v > 0) { v += Math.round(q.v); q.v = 0; for (const m of q.meshes) this.sc.remove(m); q.meshes = []; } if (v) { S.coins += v; S.earned += v; this.ui.float('🎖 +' + fmt(v), this.pl.pos.clone().setY(260), 'cash'); } }   /* 베테랑 점장: 바닥 돈 자동 수거 */
     if (this.open.has('boss') && S.safe.v > 0 && Math.hypot(p.x - SAFE_AT[0], p.z - SAFE_AT[1]) < 120) { if (!this.safeOn) { this.safeOn = true; this.ui.safe(); } } else this.safeOn = false; }
   /* 베이글 풍선 (광고 자리 balloon · 2~3분마다 15초): 0.3.1 — 예전엔 커진 베이글이 사장님 옆을 따라다녀(PC 고정 화면에서 대각선으로 둥둥) 버그처럼 보임
@@ -359,7 +371,7 @@ export class Game {
     const p = this.pl.pos; let x = p.x + 120, z = p.z - 120; if (!this.nav.ok(x, z, 10)) { x = p.x; z = p.z; }
     const g = new THREE.Group(); const bl = sph(46, 0xFF8A3C, 0, 40, 0, g, 16, 12); bl.scale.set(1, 1.18, 1); sph(10, 0xFFC8A0, -14, 64, 24, g, 8, 6);
     const str = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 110, 4), M(0x8A6A4A)); str.position.y = -60; g.add(str); const m = item('bagel'); m.position.y = -118; g.add(m);
-    this.sc.add(g); this.balloon = { g, t: 15, x, z }; this.ui.balloon(true); }
+    g.position.set(x, 300, z); this.sc.add(g); this.balloon = { g, t: 15, x, z }; this.ui.balloon(true); }   /* 자리를 먼저 (예전: 첫 프레임은 원점에 그려져 단추가 휙 튐) */
   popBalloon(got) { const b = this.balloon; if (!b) return; this.sc.remove(b.g); this.balloon = null; this.ui.balloon(false); if (got) this.sparkle(b.g.position); }
   near(w, x, z, r = R) { return Math.hypot(w.pos.x - x, w.pos.z - z) < r; }
   // 물건 쌓기 (보관 장소) · 사람 손으로 옮기기
@@ -427,7 +439,7 @@ export class Game {
       sfx('coin', { vol: 0.5 }); this.ui.float('+' + fmt(v), w.pos, 'cash'); save(); return step(); }
     // 열기 칸에 돈 붓기
     if (this.nexting) return;
-    for (const p of this.pads) if (Math.abs(w.pos.x - (p.s.px ?? p.s.x)) < PAD / 2 && Math.abs(w.pos.z - (p.s.pz ?? p.s.z)) < PAD / 2 && S.coins > 0) { const need = p.s.cost - p.paid, pay = Math.min(need, S.coins, Math.max(1, Math.ceil(p.s.cost / 30))); S.coins -= pay; p.paid += pay;
+    for (const p of this.pads) if (Math.abs(w.pos.x - p.x) < PAD / 2 && Math.abs(w.pos.z - p.z) < PAD / 2 && S.coins > 0 && (p.st || 0) >= PAD_STAY) {   /* 멈춰 서서 PAD_STAY 초 뒤부터 (지나가면 안 붓기 · 0.3.2) · 칸 자리는 p.x/p.z (크루룸으로 옮긴 뽑기 칸도) */ const need = p.s.cost - p.paid, pay = Math.min(need, S.coins, Math.max(1, Math.ceil(p.s.cost / 30))); S.coins -= pay; p.paid += pay;
       const br = (S.branch[this.bi] ||= { unl: [], staff: [], paid: {} }); br.paid[p.s.id] = p.paid; this.updPad(p); sfx('coin', { vol: 0.15, rate: 1.4 });
       const m = cyl(10, 10, 4, 0xF2B533, 0, 0, 0, this.sc, 10); m.position.copy(w.pos).setY(120); this.fly.push({ m, from: m.position.clone(), to: new V(p.s.x, 10, p.s.z), t: 0, d: 0.2, done: () => this.sc.remove(m) });
       if (p.paid >= p.s.cost) { this.unlock(p); } w.tick = 0.03; return; }
@@ -663,6 +675,7 @@ const ZONES = {
 };
 const WHITE = new THREE.Color(0xFFFFFF), STEAM_G = new THREE.SphereGeometry(10, 8, 6);
 const EQ_PAD = { oven: [150, 135], mixer: [140, 115], kettle: [-140, 120], cc: [150, 140], coffee: [140, 80], espresso: [150, 40], retard: [140, 210] };   /* 설비 강화 칸 자리 (설비 기준) */
+const PAD_STAY = 0.8, RING_G = new THREE.BoxGeometry(14, 3, 6), RING_M = new THREE.MeshBasicMaterial({ color: 0xFF6720 });
 const OCC_DECO = ['terrace', 'lamp', 'plants2', 'monstera'], DWELL = 0.4, BACK_Z = -1150, DOOR_X = 430, QZ = 440, PAD = 160, LANE = { bagel: -105, cream: -35, coffee: 35, drink: 105 };   /* 열기 칸 크기 */
 /* 크루룸 「새 직원 뽑기」 자리 2 · 방문형 방 강화 칸 자리 (마지막 = 📺 무료) · 금고 앞 */
 const CREW_HIRE = [[-910, -690], [-760, -1010]], LV_PADS = { crew: [[-1090, -880], [-910, -880], [-1090, -690]], boss: [[-1160, -200], [-1160, -20], [-990, -200], [-990, -20], [-1160, 160]] }, SAFE_AT = [-1040, 330];

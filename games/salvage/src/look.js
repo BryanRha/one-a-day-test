@@ -2,8 +2,8 @@
 //   기능 장비(능력치)는 S.gear · S.equip · S.weapons 그대로. 꾸미기(능력치 0)는 S.look(고른 것) · S.owned(가진 것)
 //   규칙(docs/CUSTOMIZE.md): 부위마다 [장착](능력치) + [겉모습](꾸미기 · 비우면 장착한 장비 모습)
 //     · 총 개조 부품은 스킨을 씌워도 항상 보임 · 가방 크기는 늘 실제 단계 · 겉모습 바꾸기는 무료 · 언제든 끔
-import { GEAR_FILES, CELLS, BACK_DECO } from './hero_gen.js?v=0.99.15';
-import { ACHIEVEMENTS } from './data/achievements.js?v=0.99.15';
+import { GEAR_FILES, CELLS, BACK_DECO } from './hero_gen.js?v=0.99.16';
+import { ACHIEVEMENTS } from './data/achievements.js?v=0.99.16';
 
 /* 털 색 6 (털 · 진한 털 · 귀 안 · 밝은 털) */
 export const FUR = {
@@ -17,6 +17,8 @@ export const FUR = {
   gold:     { name: '황금빛', c: ['#c08a3a', '#7a5220', '#9c6c2c', '#f6e2b0'] },
   cream:    { name: '크림',   c: ['#d8c09a', '#9c835e', '#b89d76', '#fbf3e2'] },
   ash:      { name: '잿빛',   c: ['#5d5a57', '#353331', '#4a4744', '#d2ccc4'] },
+  /* M5-D (M5-B 업적 키 ac_fur_moon) */
+  moon:     { name: '달빛',   c: ['#b9bec9', '#7b808c', '#989dab', '#eef1f6'] },
 };
 /* 무늬 4 — 무늬 칸(평소엔 바탕 털 색과 같아 안 보임)에 색을 넣음 */
 export const PATTERN = {
@@ -27,6 +29,8 @@ export const PATTERN = {
   /* v0.6 — 두 칸 같이 */
   spots:  { name: '볼 점 + 흰 꼬리', cell: ['pat_cheek', 'pat_tail'], col: [f => f[1], f => f[3]] },
   mask:   { name: '눈 둘레 + 등 줄', cell: ['pat_eye', 'pat_stripe'], col: [f => f[3], f => f[1]] },
+  /* M5-D (M5-B 도전 키 ch_f_wave) — 등 줄 + 꼬리 끝을 물빛으로 */
+  wave:   { name: '물결 무늬', cell: ['pat_stripe', 'pat_tail', 'pat_cheek'], col: [() => '#cfe9f2', () => '#cfe9f2', () => '#9fd6e6'] },
 };
 /* 총 스킨 (총 몸통 · 줄무늬 색만 — 개조 부품 색 띠는 그대로) */
 export const SKIN = {
@@ -40,6 +44,10 @@ export const SKIN = {
   bone:  { name: '뼈 흰색',  pal: { gun_body: '#d9d2c2', gun_accent: '#7a6a54', gun_grip: '#4a4036' } },
   gold:  { name: '황금',     pal: { gun_body: '#b8892e', gun_accent: '#fff0b8', gun_grip: '#5a3f22' } },
   ice:   { name: '얼음',     pal: { gun_body: '#a9d6e5', gun_accent: '#ffffff', gun_grip: '#4f7a8a' } },
+  /* M5-D */
+  pearl: { name: '진주',     pal: { gun_body: '#e8e0d8', gun_accent: '#f2a6b8', gun_grip: '#8a7a6e' } },
+  medal: { name: '메달 금장', pal: { gun_body: '#c9a040', gun_accent: '#26355a', gun_grip: '#5a3f22' } },
+  abyss: { name: '심연',     pal: { gun_body: '#2a2040', gun_accent: '#b48aff', gun_grip: '#151020' } },
 };
 const SUIT = (s, a, g, k, c) => ({ suit: s, suit_accent: a, glove: g, boot: g, knee: k, cape: c });
 const LAMP = (f, g, l) => ({ lantern_frame: f, lamp_body: f, lantern_glass: g, lamp_lens: l, band: f });
@@ -106,20 +114,67 @@ export const COS = {
   /* 몽이 */
   pet_scarf:  { slot: 'pet', name: '몽이 목도리', mesh: 'f_scarf_coral', part: 'face', get: { t: 'fac', k: 'aquarium', lv: 2 }, gold: 20, sw: '#ff7a59' },
   pet_cap:    { slot: 'pet', name: '몽이 선원 모자', mesh: 'h_sailor', part: 'head', get: { t: 'shells', n: 60 }, gold: 20, sw: '#26355a' },
+
+  /* ═════ M5-D 꾸미기 50 → 80 (2026-11-09 · 메시 tools/hero3d/cos_m5.py · 칸 palette.json 144~) ═════
+   *  내 것 18: 머리 5 · 겉옷 4(메시) · 가방 색 2(새 칸 'bag') · 등불 3 · 총 스킨 1 · 몽이 3 — 조개 · 행상 · 플레이 길 + 골드(SHOP.salvage)
+   *  M5-B 키 12 (data/m5b.js M5B_COS 이름 · 얻는 길 그대로 · 받는 일은 M5-B 코드: 도전 물결 표 · 업적 · 깊은 물) — 골드 판매 X */
+  h_straw:    { slot: 'head', name: '밀짚 모자', get: { t: 'shells', n: 160 }, gold: 30, sw: '#d8b46a' },
+  h_keeper:   { slot: 'head', name: '등대지기 모자', get: { t: 'trader', n: 260 }, gold: 40, sw: '#1f2b44' },
+  h_radio:    { slot: 'head', name: '무전 헤드셋', get: { t: 'raids', n: 60 }, gold: 30, sw: '#3a4048' },
+  h_octo:     { slot: 'head', name: '문어 모자', get: { t: 'shells', n: 300 }, gold: 40, sw: '#c75a7a' },
+  h_earflap:  { slot: 'head', name: '귀달이 털모자', get: { t: 'shells', n: 180 }, gold: 30, sw: '#6a4a3a' },
+  b_poncho:   { slot: 'body', name: '방수 판초', get: { t: 'shells', n: 260 }, gold: 50, sw: '#3f7a6a' },
+  b_parka:    { slot: 'body', name: '털 파카', get: { t: 'trader', n: 380 }, gold: 50, sw: '#c8553a' },
+  b_apron:    { slot: 'body', name: '작업 앞치마', get: { t: 'fac', k: 'bench', lv: 4 }, gold: 50, sw: '#8a6a4a' },
+  b_kelpcloak:{ slot: 'body', name: '해초 망토', get: { t: 'kills', n: 800 }, gold: 50, sw: '#2f6a4a' },
+  g_leather:  { slot: 'bag', name: '가죽 가방', get: { t: 'shells', n: 120 }, gold: 30, sw: '#8a5a34', pal: { bag_a: '#8a5a34', bag_b: '#5e3a20', bag_strap: '#2a1d14', bag_patch: '#c99a4a', bedroll: '#7a3a2e' } },
+  g_navy:     { slot: 'bag', name: '남색 가방', get: { t: 'trader', n: 160 }, gold: 30, sw: '#2c3a5a', pal: { bag_a: '#2c3a5a', bag_b: '#1f2940', bag_strap: '#e8d8b0', bag_patch: '#ffd36b', bedroll: '#c9573e' } },
+  d_jar:      { slot: 'deco', name: '반딧불 병', get: { t: 'shells', n: 220 }, gold: 40, sw: '#d8ff7a' },
+  d_buoy:     { slot: 'deco', name: '부표 등불', get: { t: 'trader', n: 280 }, gold: 40, sw: '#d0403a' },
+  d_shellamp: { slot: 'deco', name: '조개 등불', get: { t: 'vault', n: 25 }, gold: 40, sw: '#f2b8a8' },
+  s_pearl:    { slot: 'skin', name: '총 스킨: 진주', skin: 'pearl', get: { t: 'shells', n: 240 }, gold: 40, sw: '#e8e0d8' },
+  pet_beanie: { slot: 'pet', name: '몽이 비니', mesh: 'h_beanie', part: 'head', get: { t: 'shells', n: 80 }, gold: 20, sw: '#e2672c' },
+  pet_tank:   { slot: 'pet', name: '몽이 산소통', mesh: 'k_tank', part: 'back', get: { t: 'trader', n: 120 }, gold: 20, sw: '#c99a4a' },
+  pet_straw:  { slot: 'pet', name: '몽이 밀짚 모자', mesh: 'h_straw', part: 'head', get: { t: 'fac', k: 'aquarium', lv: 3 }, gold: 20, sw: '#d8b46a' },
+  /* M5-B 키 — 주간 도전 물결 표 */
+  ch_h_crest:   { slot: 'head', name: '물결 투구 장식', get: { t: 'chal', n: 2 }, sw: '#5fd0e0' },
+  ch_l_tide:    { slot: 'deco', name: '조류 등불', lamp: true, get: { t: 'chal', n: 6 }, sw: '#4fe0c0', pal: LAMP('#9aa6ad', '#7ff0d0', '#d8fff4') },
+  ch_b_wave:    { slot: 'body', name: '물결 잠수복', get: { t: 'chal', n: 9 }, sw: '#2a7f9a', pal: SUIT('#2a7f9a', '#f2fbff', '#1d5566', '#2f8aa6', '#25657a') },
+  ch_s_medal:   { slot: 'skin', name: '총 스킨: 메달 금장', skin: 'medal', get: { t: 'chal', n: 15 }, sw: '#e8c25a' },
+  ch_f_wave:    { slot: 'pattern', pattern: 'wave', name: '물결 무늬', get: { t: 'chal', n: 21 } },
+  ch_pet_badge: { slot: 'pet', name: '몽이 도전 메달', mesh: 'ch_pet_badge', part: 'face', get: { t: 'ach', id: 'a_chalW8' }, sw: '#e8c25a' },
+  /* M5-B 키 — 업적 · 깊은 물 */
+  ac_s_abyss:   { slot: 'skin', name: '총 스킨: 심연', skin: 'abyss', get: { t: 'ach', id: 'a_abyssK' }, sw: '#3b2a6a' },
+  ac_l_abyss:   { slot: 'deco', name: '심연 등불', lamp: true, get: { t: 'ach', id: 'a_abyss5' }, sw: '#9a6bff', pal: LAMP('#2a2040', '#b48aff', '#e6d8ff') },
+  ac_b_abyss:   { slot: 'body', name: '심연 잠수복', get: { t: 'ach', id: 'a_abyss15' }, sw: '#24183f', pal: SUIT('#24183f', '#b48aff', '#150e26', '#2e2050', '#1e1534') },
+  ac_h_crown:   { slot: 'head', name: '대수문 관', get: { t: 'ach', id: 'a_ending' }, sw: '#d8c27a' },
+  ac_fur_moon:  { slot: 'fur', fur: 'moon', name: '달빛 털', get: { t: 'ach', id: 'h_last' } },
+  /* M5 통합 — 엔딩 꾸미기 3 (S.story.endings 에 그 길이 있으면 은신처에 들어올 때 받음 · 옛 저장도 · 골드 X) */
+  b_mudboots:   { slot: 'body', name: '진흙 장화', keep: ['cape', 'harness'], get: { t: 'ending', k: 'land' }, sw: '#3f5a3a' },
+  d_festlamp:   { slot: 'deco', name: '축제 등롱', get: { t: 'ending', k: 'lamp' }, sw: '#ff6a4a' },
+  f_farsea:     { slot: 'face', name: '먼 바다 목도리', get: { t: 'ending', k: 'sea' }, sw: '#1f3f78' },
+  ac_pet_lamp:  { slot: 'pet', name: '몽이 심연 꼬마등', mesh: 'ac_pet_lamp', part: 'head', get: { t: 'abyss', n: 3 }, sw: '#9a6bff' },
 };
 for (const k in COS) { const c = COS[k]; if (c.fur) c.sw = FUR[c.fur].c[0]; if (c.pattern) { const P = PATTERN[c.pattern]; c.sw = (Array.isArray(P.col) ? P.col[0] : P.col)(FUR.brown.c); } }
+/* 얻는 길 묶음 (옷장 거르개) — play: 플레이 기록 · shells: 고물상 조개 · trader: 바람 행상 · ach: 업적 · chal: 주간 도전 · 깊은 물 · free · owner */
+export const SRC = { free: 'free', shells: 'shells', trader: 'trader', ach: 'ach', chal: 'chal', abyss: 'chal', ending: 'ach', owner: 'owner' };
+export const srcOf = k => SRC[COS[k]?.get?.t] || 'play';
 export const COS_KEYS = Object.keys(COS);
 export const FREE = COS_KEYS.filter(k => COS[k].get.t === 'free');
 /* 실행 중에만 아는 값 (bmflow 가 원어데이 hello 뒤 채움) — owner: 원어데이 소장자 */
 export const RT = { owner: false };
-export const freshLook = () => ({ head: null, body: null, face: null, deco: null, skin: null, fur: 'fur_brown', pattern: null, pet: [] });
+export const freshLook = () => ({ head: null, body: null, face: null, deco: null, skin: null, bag: null, fur: 'fur_brown', pattern: null, pet: [] });
+/* 겉모습 칸 (fur · pet 빼고) — 저장 정리 · 옷장 저장에 씀 */
+export const LOOK_SLOTS = ['head', 'body', 'face', 'deco', 'skin', 'bag', 'pattern'];
 
 /* 얻는 길 문구 · 진행 */
 const QN = { q10: '의뢰 10 금고실 털이' };
-const ACH_NAME = Object.fromEntries(ACHIEVEMENTS.map(a => [a.id, a.name]));
+const ENDN = { land: '닫힌 수문', lamp: '물 위의 등불', sea: '기억의 바다' };
+const FACN = { aquarium: '수족관', bench: '작업대', rack: '무기대', lights: '조명', dock: '선착장' };
+const ACH_NAME = Object.fromEntries(ACHIEVEMENTS.map(a => [a.id, a.hidden ? '숨은 업적' : a.name]));
 export function getText(k) {
   const g = COS[k].get;
-  return { free: '무료', shells: `조개 ${g.n}`, quest: `${QN[g.id] || g.id} 보상`, boss: g.n > 1 ? `수문지기 ${g.n}회 처치` : '수문지기 첫 처치', daily: `오늘의 인양 납품 ${g.n}번`, raids: `출격 ${g.n}번`, extracts: `탈출 ${g.n}번`, kills: `적 ${g.n}마리`, vault: '금고실 털고 탈출', fac: '수족관 2단계', owner: '원어데이 소장자 전용', trader: `바람 행상 · 조개 ${g.n}`, ach: `업적 '${ACH_NAME[g.id] || g.id}'` }[g.t];
+  return { free: '무료', shells: `조개 ${g.n}`, quest: `${QN[g.id] || g.id} 보상`, boss: g.n > 1 ? `수문지기 ${g.n}회 처치` : '수문지기 첫 처치', daily: `오늘의 인양 납품 ${g.n}번`, raids: `출격 ${g.n}번`, extracts: `탈출 ${g.n}번`, kills: `적 ${g.n}마리`, vault: g.n > 1 ? `금고실 털고 탈출 ${g.n}번` : '금고실 털고 탈출', fac: `${FACN[g.k] || g.k} ${g.lv}단계`, chal: `주간 도전 물결 ${g.n}`, ending: `엔딩 '${ENDN[g.k] || g.k}' 보기`, abyss: `깊은 물 깊이 ${g.n} 탈출`, owner: '원어데이 소장자 전용', trader: `바람 행상 · 조개 ${g.n}`, ach: `업적 '${ACH_NAME[g.id] || g.id}'` }[g.t];
 }
 export function progress(S, k) {
   const g = COS[k].get, st = S.stats || {};
@@ -134,6 +189,7 @@ export function progress(S, k) {
     case 'kills': return [Math.min(g.n, st.kills || 0), g.n];
     case 'vault': return [Math.min(g.n, st.vaults || 0), g.n];
     case 'fac': return [Math.min(g.lv, S.fac?.[g.k] || 0), g.lv];
+    case 'ending': return [S.story?.endings?.[g.k] || S.story?.ending === g.k ? 1 : 0, 1]; /* 본 엔딩 길 (옛 저장: ending 만 있어도) */
   }
   return null;
 }
@@ -144,6 +200,8 @@ export function grantEarned(S) {
   for (const k of COS_KEYS) { if (owns(S, k)) continue; const p = progress(S, k); if (p && p[0] >= p[1]) { S.owned.push(k); got.push(k); } }
   return got;
 }
+/* 플레이 밖에서 주는 꾸미기 (주간 도전 물결 표 · 깊은 물 마일스톤 — M5-B 가 부름) → 새로 받았으면 true */
+export function grantCos(S, k) { if (!COS[k] || owns(S, k)) return false; (S.owned ||= []).push(k); return true; }
 /* 조개로 사기 (고물상) */
 export function buyCos(S, k) {
   const g = COS[k].get; if (owns(S, k)) return { ok: false, why: 'owned' };
@@ -182,7 +240,7 @@ export function resolve({ gear = { vest: 0, helmet: 0, bag: 0 }, look = freshLoo
   const head = L.head && COS[L.head] ? L.head : gear.helmet > 0 ? 'helm' + gear.helmet : null;
   if (head) parts.push({ file: head, off: [0, 0, 0] }); else groups.push('band');
   /* 몸: 겉모습(우비 = 메시 · 청록 잠수복 = 색) > 방어구 단계 > 기본 잠수복(멜빵) */
-  if (L.body === 'b_raincoat') parts.push({ file: 'b_raincoat', off: [0, 0, 0] });
+  if (L.body && GEAR_FILES[L.body]) { parts.push({ file: L.body, off: [0, 0, 0] }); if (COS[L.body]?.keep) groups.push(...COS[L.body].keep); } /* 메시 겉옷(우비 · 판초 · 파카 · 앞치마 · 해초 망토 · 진흙 장화 = 잠수복 · 멜빵 그대로) */
   else if (L.body && COS[L.body]?.pal) { Object.assign(pal, COS[L.body].pal); groups.push('cape', 'harness'); }
   else if (gear.vest > 0) { parts.push({ file: 'vest' + gear.vest, off: [0, 0, 0] }); groups.push('cape'); }
   else groups.push('cape', 'harness');
@@ -193,6 +251,7 @@ export function resolve({ gear = { vest: 0, helmet: 0, bag: 0 }, look = freshLoo
   /* 등: 가방은 늘 실제 단계 크기 · 등 장식(랜턴/산소통)은 가방 옆으로 비킴 */
   const bt = Math.max(0, Math.min(5, back ?? gear.bag ?? 0));
   parts.push({ file: 'bag' + bt, off: [0, 0, 0] });
+  if (L.bag && COS[L.bag]?.pal) Object.assign(pal, COS[L.bag].pal); /* M5-D 가방 색: 크기는 그대로 · 칸 색만 */
   const d0 = BACK0, d1 = BACK[bt]; const off = [d1[0] - d0[0], d1[1] - d0[1], d1[2] - d0[2]];
   if (L.deco && COS[L.deco]?.pal) { groups.push({ name: 'lantern', off }); Object.assign(pal, COS[L.deco].pal); } /* 소장자 금장 · v0.6 등불 색 — 메시 그대로 · 칸 색만 */
   else if (L.deco && COS[L.deco]) parts.push({ file: L.deco, off }); else groups.push({ name: 'lantern', off });

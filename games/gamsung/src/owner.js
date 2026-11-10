@@ -4,13 +4,13 @@
 //   일 10가지(data.js OWNER_JOBS) · 돌발 일 8가지(EVENTS) · 동료(은재 · 보람 · 태민 · 무진 · 도윤)는 같은 일을 대신 함 · 동료는 가끔 쉬고 사장님이 깨우면 응원 +30%
 //   Game.prototype 에 섞어 씀 (game.js 끝)
 import * as THREE from 'three';
-import { MENU, OWNER, OWNER_JOBS, EVENTS, EVENT_GAP, STAFF, BEAN_MAX, BRAND, APRONS, STORES, FURN } from './data.js?v=0.99.15';
-import { S, ST, save, today, now } from './state.js?v=0.99.15';
-import { person, tray, box, cyl, sph, FURN_MODEL } from './models.js?v=0.99.15';
-import { sfx } from './audio.js?v=0.99.15';
-import { FDX, floorOfX, SPOT, gi } from './layout.js?v=0.99.15';
-import { ownerAdd, track } from './oad.js?v=0.99.15';
-import { cx, cz, ci, cj, BAR_PICK, BAR_EXIT, LANE, LANE_X, BIN, DOOR, K, storeMult, fmt, isJeong } from './game.js?v=0.99.15';
+import { MENU, OWNER, OWNER_JOBS, EVENTS, EVENT_GAP, STAFF, BEAN_MAX, BRAND, APRONS, STORES, FURN } from './data.js?v=0.99.16';
+import { S, ST, save, today, now } from './state.js?v=0.99.16';
+import { person, tray, box, cyl, sph, FURN_MODEL } from './models.js?v=0.99.16';
+import { sfx } from './audio.js?v=0.99.16';
+import { FDX, floorOfX, SPOT, gi } from './layout.js?v=0.99.16';
+import { ownerAdd, track } from './oad.js?v=0.99.16';
+import { cx, cz, ci, cj, BAR_PICK, BAR_EXIT, LANE, LANE_X, BIN, DOOR, K, storeMult, fmt, isJeong } from './game.js?v=0.99.16';
 
 const V = THREE.Vector3, rnd = (a, b) => a + Math.random() * (b - a);
 const BAR_DOOR = { x: 640, z: -543 };   /* 바 안 오른쪽 끝 (나가는 곳 · game.js LANE) */
@@ -66,7 +66,7 @@ export const OwnerMixin = {
   /* 첫인사: 손님이 들어올 때 사장님이 문 가까이 있으면 자동 · 아니면 6초 동안 레일에 */
   onEnter(c) { const o = this.owner, d = Math.hypot(o.pos.x - cx(DOOR[0]), o.pos.z - cz(DOOR[1])); c.enterT = this.t; if (o.mode !== 'bar' && d < OWNER.greetR * (1 + this.bossK('greet'))) this.greet(c); },
   greetNear() { if (!this._gT || this.t - this._gT > 0.5) { this._gT = this.t; for (const c of this.cust) if (!c.greet && c.enterT != null && this.t - c.enterT < 8 && ['in', 'queue', 'kiosk'].includes(c.state) && Math.hypot(this.owner.pos.x - c.pos.x, this.owner.pos.z - c.pos.z) < OWNER.greetR * 0.6) this.greet(c); } },
-  greet(c) { if (c.greet) return; c.greet = true; S.hearts += 1; this.ui.float('어서 오세요 ♥+1', c.pos.clone().setY(250), 'heart'); sfx('blip', { vol: 0.35, rate: 1.5 }); this.jobDone('greet', 2 * storeMult()); },
+  greet(c) { if (c.greet) return; c.greet = true; S.hearts += 1; sfx('blip', { vol: 0.35, rate: 1.5 }); this.jobDone('greet', 2 * storeMult()); },
   /* 방문형 방 (동료 쉼터 · 사장실 · 원두 창고): 들어가면 창 */
   roomCheck() { const a = this.cells?.get(K(...this.ownerCell())), v = a && a.visit; if (v && this._room !== v) { this._room = v; this.ui.room && this.ui.room(v); } else if (!v) this._room = null; },
   // ── 동료 쉬기 · 깨우기 (마루미 REST 구조): 가끔 30초 쉼 → 스스로 일어나거나 사장님이 깨우면 3분 응원 +30%

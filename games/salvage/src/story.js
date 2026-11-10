@@ -1,6 +1,7 @@
 // 이야기 규칙 (docs/NARRATIVE.md) — 진행 · 하루 한 걸음 · 인물 합류(창에 불) · 관계 · 기억 도감 · 세 등불 · 열쇠 기억
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀. 대사 글은 talk/*.js (나눠 받음 · story_ui.js 가 불러옴)
-import { ITEMS, MAPS } from './data.js?v=0.99.15';
+import { ITEMS, MAPS, FACILITIES } from './data.js?v=0.99.16';
+import { LAST_PIECES } from './data/map_gate.js?v=0.99.16'; /* M5-A 6장 마지막 인양 다섯 */
 
 /* ───── 인물 6 (창 여섯 = 이 순서) · 말하는 이 ───── */
 export const CAST = {
@@ -12,22 +13,27 @@ export const CAST = {
   baram:   { name: '바람', role: '떠돌이', animal: '족제비', color: '#9a8fb5' },
 };
 export const CAST_KEYS = Object.keys(CAST);
-export const SPEAK = { ...CAST, nole: { name: '노을', role: '목소리', color: '#ffb44a' }, pasu: { name: '파수', role: '목소리', color: '#6fe0d8' }, mongi: { name: '몽이', role: '', color: '#8a6a4c' }, anchor: { name: '검은 닻', role: '낯선 무전', color: '#8a8f99' }, me: { name: '', role: '' } };
+export const SPEAK = { ...CAST, nole: { name: '노을', role: '목소리', color: '#ffb44a' }, pasu: { name: '파수', role: '목소리', color: '#6fe0d8' }, mongi: { name: '몽이', role: '', color: '#8a6a4c' }, bandi: { name: '반디', role: '빛 해마', color: '#9ff0d8' }, /* M5-C 두 번째 반려 (5장 b_tank 뒤 · S.pets.bandi) */ anchor: { name: '검은 닻', role: '낯선 무전', color: '#8a8f99' }, me: { name: '', role: '' } };
 /* 대사 원고의 짧은 이름 */
-export const ALIAS = { g: 'gombang', m: 'moru', n: 'neuru', h: 'haedam', s: 'seori', b: 'baram', o: 'nole', p: 'pasu', y: 'mongi', k: 'anchor' };
+export const ALIAS = { g: 'gombang', m: 'moru', n: 'neuru', h: 'haedam', s: 'seori', b: 'baram', o: 'nole', p: 'pasu', y: 'mongi', k: 'anchor', d: 'bandi' };
 
 /* ───── 세 등불 (엔딩 게이지 — 숫자 없이 은신처 벽 등불 밝기로만) ───── */
 export const SIDES = { land: { name: '땅', txt: '되찾기', color: '#e0a060' }, lamp: { name: '등불', txt: '함께 살기', color: '#ffc861' }, sea: { name: '바다', txt: '돌려보내기', color: '#6fe0d8' } };
 export const SIDE_OF = { gombang: 'land', moru: 'land', neuru: 'lamp', haedam: 'lamp', seori: 'sea', baram: 'sea', box: 'sea' };
-export const LAMP_FULL = 16; /* 이 값이면 가장 밝음 (1~5장 최대: 열쇠 기억 10 × 2 + 장 끝 선택 4 + 인물 1~2 — 한 쪽에 다 모아도 16 언저리) */
+export const LAMP_FULL = 20; /* 이 값이면 가장 밝음 (1~6장 최대: 열쇠 기억 12 × 2 + 장 끝 선택 5 + 인물 1~2 — 한 쪽에 다 모아도 20 언저리 · M5-A 16 → 20) */
 /* 엔딩 분기 (docs/NARRATIVE.md 3-7) — 6장 끝에서 이 문턱을 넘은 등불의 엔딩이 모두 선택지로 (숨은 실패 엔딩 없음 · 가장 밝은 것이 맨 위)
  *  1~5장에서 쌓이는 것: 열쇠 기억 10(맡긴 사람 쪽 +2) · 장 끝 선택(1 · 2 · 4 · 5장 +1, 3장은 관계만) · 곰방 장부 고백(+1) */
 export const ENDING_GATE = 4;
-export const ENDINGS = { land: { name: '닫힌 수문', txt: '물을 빼고 은포를 돌려받는다' }, lamp: { name: '물 위의 등불', txt: '잠긴 도시 위에 등불 마을을 띄운다' }, sea: { name: '기억의 바다', txt: '맡긴 물건을 모두 주인에게 돌려보낸다' } };
+export const ENDINGS = { land: { name: '닫힌 수문', txt: '물을 빼고 은포를 돌려받는다', pasu: '파수는 쉰다', say: '물을 빼. 은포를 돌려받자.' }, lamp: { name: '물 위의 등불', txt: '잠긴 도시 위에 등불 마을을 띄운다', pasu: '파수는 등대를 맡는다', say: '문은 열어 둬. 파수, 등대를 맡아 줘.' }, sea: { name: '기억의 바다', txt: '맡긴 물건을 모두 주인에게 돌려보낸다', pasu: '파수와 함께 돌려준다', say: '412,880점, 전부 주인에게 돌려줘.' } };
 export function endingsOpen(S) { const g = S.story.gauge; return Object.keys(ENDINGS).filter(k => (g[k] || 0) >= ENDING_GATE).sort((a, b) => (g[b] || 0) - (g[a] || 0)); }
+/* M5-A 엔딩 고르기: 문턱(4)을 넘은 등불의 엔딩이 모두 선택지 (가장 밝은 것이 맨 위 · 추천) — 하나도 없으면 가장 밝은 등불 하나(그것도 없으면 등불) · 숨은 실패 엔딩 없음 */
+export function endingChoices(S) { const o = endingsOpen(S); if (o.length) return o; return [brightest(S) || 'lamp']; }
+/* 엔딩을 본 순간 (story_ui 엔딩 장면 끝) — S.story.ending = 지금 고른 길(은신처 꾸밈 · 후일담) · ended = 처음 본 날 · endings = 본 길들 · flags.ending (M5-B 깊은 물 훅: abyss.endingSeen 이 이것들을 봄) */
+export function setEnding(S, k, today) { const st = S.story; if (!ENDINGS[k]) return false; st.ending = k; st.ended ||= today; st.endings[k] ||= today; st.flags.ending = 1; return true; }
+export const ENDING_LAST = '불이 켜진 곳이 있으면, 거기가 누군가 돌아온 곳이다.';
 export const brightest = S => { const g = S.story.gauge; const k = Object.keys(SIDES).sort((a, b) => (g[b] || 0) - (g[a] || 0))[0]; return (g[k] || 0) > 0 ? k : null; };
 
-/* ───── 열쇠 기억 12 (장마다 2) — 1~5장 10개 (6장 둘은 다음 업데이트) · 맡길 수 있는 사람(box = 도감 상자 → 서리 몫, 바다) ───── */
+/* ───── 열쇠 기억 12 (장마다 2) · 맡길 수 있는 사람(box = 도감 상자 → 서리 몫, 바다) — M5-A 6장 둘(파수의 첫 기록 · 곰방 상회 간판) ───── */
 export const KEYMEM = {
   k_tags:    { name: '수문지기 이름표 묶음', ch: 1, to: ['gombang', 'neuru', 'box'] },
   k_nole:    { name: '노을의 짐표',         ch: 1, to: ['moru', 'neuru', 'box'] },
@@ -40,11 +46,14 @@ export const KEYMEM = {
   k_pencil:  { name: '모루의 설계 연필',      ch: 4, to: ['moru', 'neuru', 'seori'] },
   k_coral:   { name: '산호 수조 열쇠',        ch: 5, to: ['moru', 'haedam', 'baram'] },
   k_voice:   { name: '노을의 녹음기',         ch: 5, to: ['gombang', 'neuru', 'seori'] },
+  /* M5-A 6장 */
+  k_first:   { name: '파수의 첫 기록',        ch: 6, to: ['moru', 'haedam', 'seori'] },
+  k_sign:    { name: '곰방 상회 간판',        ch: 6, to: ['gombang', 'neuru', 'baram'] },
 };
 export const KEY_TOTAL = 12;
 
 /* ───── 장 ───── */
-export const CHAPTERS = { 1: { name: '맡겨 둔 짐', map: 'ware' }, 2: { name: '마지막 배', map: 'harbor' }, 3: { name: '멈춘 열차', map: 'tunnel' }, 4: { name: '불을 만든 곳', map: 'factory' }, 5: { name: '파수의 목소리', map: 'lab' }, 6: { name: '대수문', map: null } };
+export const CHAPTERS = { 1: { name: '맡겨 둔 짐', map: 'ware' }, 2: { name: '마지막 배', map: 'harbor' }, 3: { name: '멈춘 열차', map: 'tunnel' }, 4: { name: '불을 만든 곳', map: 'factory' }, 5: { name: '파수의 목소리', map: 'lab' }, 6: { name: '대수문', map: 'gate' } };
 
 /* ───── 이야기 걸음 (하루 한 걸음) ─────
  *  need.q: 그 의뢰(본 사슬 q1~q28)를 끝내야 열림 · nextDay: 앞 걸음을 끝낸 다음 날부터 · join: 열릴 때 은신처에 들어옴(창에 불)
@@ -92,15 +101,27 @@ export const BEATS = [
   { id: 'b_moss',   ch: 5, giver: 'haedam', name: '빛이끼의 시작', goal: { t: 'carry', item: 'coralnote', map: 'lab', zone: 2 }, txt: '수조 구역에서 산호 복원 일지를 들고 탈출', reward: { shells: 180, herb: 6 } },
   { id: 'b_mother', ch: 5, giver: 'baram', name: '청록 어미', goal: { t: 'boss', map: 'lab' }, txt: '심해 연구소 보스 쓰러뜨리기', reward: { core: 2, shells: 300 } },
   { id: 'b_pasu',   ch: 5, giver: 'pasu', name: '412,880', goal: { t: 'carry', item: 'noeulrec', map: 'lab', zone: 3 }, txt: '관제실에서 노을의 녹음기를 들고 탈출', reward: { shells: 250, wire: 6 } },
-  { id: 'b_ch5end', ch: 5, name: '5장의 끝', nextDay: true, cut: ['cut_5_2', 'cut_5_3'], last: true },
+  { id: 'b_ch5end', ch: 5, name: '5장의 끝', nextDay: true, cut: ['cut_5_2', 'cut_5_3'] },
+  /* M5-A 6장 「대수문」 — 걸음 6 (엔딩 = 다섯째 걸음 끝 · 여섯째 = 다음 날 아침 후일담) · 대사 talk/t6.js · ROADMAP 'M5 설계 메모 ①' 게이트 둘:
+   *  (a) 셋째 걸음 = 잠수 훈련장 끝 단계(대수문 깊은 물 · 숨) (b) 최종 보스 = 파수 의뢰 2(q95 → q96) · 엔딩 목표 중앙 48~50일(M5-C 뒤 5장 끝 43일 기준 · 총괄 11-10) */
+  { id: 'b_ch6',    ch: 6, giver: 'pasu', name: '대수문', title: 6, goal: { t: 'zone', map: 'lab', zone: 2 }, txt: '심해 연구소 수조 구역까지 들어갔다 탈출 (대수문 승강로 좌표 받기)', reward: { shells: 240, wire: 6 } },
+  { id: 'b_last',   ch: 6, giver: 'gombang', name: '마지막 인양', goal: { t: 'pieces', n: 5 }, txt: '다섯 지도에서 마지막 조각을 하나씩 들고 탈출 (구역 2 금빛 고리 상자)', reward: { shells: 300, core: 1 } },
+  { id: 'b_dive',   ch: 6, giver: 'haedam', name: '깊은 물 채비', goal: { t: 'fac', k: 'gym', lv: 3 }, txt: '잠수 훈련장 끝 단계 짓기 (대수문 깊은 물 · 숨)', reward: { bandage: 3, herb: 6 } },
+  { id: 'b_pasu6',  ch: 6, giver: 'pasu', name: '파수의 부탁', goal: { t: 'quest', q: 'q96' }, txt: '파수 의뢰 — 승강로 승인 카드 (의뢰 96 · 조력 전원 연결 95 는 따로)' },
+  { id: 'b_final',  ch: 6, giver: 'baram', name: '대수문 꼭대기', opens: 'map_gate', goal: { t: 'boss', map: 'gate' }, txt: '대수문 꼭대기에서 파수 멈추기', reward: { shells: 500 } },
+  { id: 'b_after',  ch: 6, name: '그 뒤의 은포', nextDay: true, cut: ['end_last'], last: true },
 ];
+/* 6장 마지막 인양 다섯 (지도 → 조각) · 모은 조각은 flags['pc_' + 조각] */
+export { LAST_PIECES };
+export const piecesGot = S => Object.values(LAST_PIECES).filter(k => S.story.flags['pc_' + k]);
+export const piecesLeft = S => Object.entries(LAST_PIECES).filter(([m, k]) => !S.story.flags['pc_' + k] && MAPS[m]).map(([m]) => m);
 export const BEAT_IDX = Object.fromEntries(BEATS.map((b, i) => [b.id, i]));
 /* v0.5 저장(걸음 16)의 순서 — 걸음 번호(st.beat)를 새 목록 번호로 옮길 때 (fixStory · bv 2) */
 export const BEATS_V1 = ['b_tut', 'b_moru', 'b_power', 'b_neuru', 'b_gate', 'b_ch1end', 'b_ch2', 'b_haedam', 'b_ledger', 'b_light', 'b_ch2end', 'b_ch3', 'b_freq', 'b_boot', 'b_eel', 'b_ch3end'];
 export const BEAT_V = 2;
 /* 녹음기 (지도마다 3) · 벽 낙서 (지도마다 6) — 글은 talk/memo.js */
-export const TAPES = { ware: ['t_w1', 't_w2', 't_w3'], harbor: ['t_h1', 't_h2', 't_h3'], tunnel: ['t_t1', 't_t2', 't_t3'], factory: ['t_f1', 't_f2', 't_f3'], lab: ['t_l1', 't_l2', 't_l3'] };
-export const TAPE_NOLE = ['t_w3', 't_h3', 't_t3', 't_f3', 't_l3'];
+export const TAPES = { ware: ['t_w1', 't_w2', 't_w3'], harbor: ['t_h1', 't_h2', 't_h3'], tunnel: ['t_t1', 't_t2', 't_t3'], factory: ['t_f1', 't_f2', 't_f3'], lab: ['t_l1', 't_l2', 't_l3'], gate: ['t_g1', 't_g2', 't_g3'] }; /* v0.8 대수문 꼭대기 (M5-A) */
+export const TAPE_NOLE = ['t_w3', 't_h3', 't_t3', 't_f3', 't_l3', 't_g3'];
 export const TAPE_N = Object.values(TAPES).flat().length; /* 지도가 게임에 없으면 그 녹음기는 안 나옴 (tapeLeft) */
 export const GRAF_N = 6;
 /* 기억 도감 칸: 전리품 전부 + 이야기 물건 (녹음기 제외 — 녹음기는 따로) */
@@ -110,13 +131,15 @@ export const relName = n => REL_LV.filter(([v]) => n >= v).pop()[1];
 
 /* ───── 저장 (S.story) ───── */
 export const freshStory = () => ({ v: 1, bv: BEAT_V, tut: 0, tutRaids: 0, beat: 0, open: null, openDay: null, doneQ: [], beatsDone: {}, credits: 0, creditDay: null,
-  joined: [], met: [], rel: {}, gauge: { land: 0, lamp: 0, sea: 0 }, keyMem: {}, keyQ: [], codex: {}, tapes: [], tapeQ: [], graf: [], flags: {}, talkDay: {}, talkIdx: {}, dayEnd: null, choices: {} });
+  joined: [], met: [], rel: {}, gauge: { land: 0, lamp: 0, sea: 0 }, keyMem: {}, keyQ: [], codex: {}, tapes: [], tapeQ: [], graf: [], flags: {}, talkDay: {}, talkIdx: {}, dayEnd: null, choices: {},
+  ending: null, ended: null, endings: {}, rebuild: 0 }); /* M5-A 엔딩 · 엔딩 뒤 '은포 되살리기' 수 (기부 의뢰) */
 /* 저장에서 읽은 값 다듬기 (모르는 값 · 빠진 칸) */
 export function fixStory(o) {
   const n = freshStory(); if (!o || typeof o !== 'object') return n;
   const m = Object.assign(n, o); m.gauge = Object.assign(freshStory().gauge, o.gauge);
   for (const k of ['doneQ', 'joined', 'met', 'keyQ', 'tapes', 'tapeQ', 'graf']) if (!Array.isArray(m[k])) m[k] = [];
-  for (const k of ['beatsDone', 'rel', 'keyMem', 'codex', 'flags', 'talkDay', 'talkIdx', 'choices']) if (!m[k] || typeof m[k] !== 'object') m[k] = {};
+  for (const k of ['beatsDone', 'rel', 'keyMem', 'codex', 'flags', 'talkDay', 'talkIdx', 'choices', 'endings']) if (!m[k] || typeof m[k] !== 'object') m[k] = {};
+  if (m.ending && !ENDINGS[m.ending]) m.ending = null; for (const k of Object.keys(m.endings)) if (!ENDINGS[k]) delete m.endings[k]; m.rebuild = Math.max(0, m.rebuild | 0);
   m.joined = m.joined.filter(k => CAST[k]); m.beat = Math.max(0, Math.min(BEATS.length, m.beat | 0));
   if (m.open && !BEATS.some(b => b.id === m.open)) m.open = null; m.doneQ = m.doneQ.filter(id => BEAT_IDX[id] != null); m.keyQ = m.keyQ.filter(k => KEYMEM[k]);
   for (const k of Object.keys(m.codex)) if (!ITEMS[k]) delete m.codex[k];
@@ -173,6 +196,7 @@ export function finishTut(S, today) { const st = S.story; st.tut = 4; st.beatsDo
 export function startBeat(S, b, today) {
   const st = S.story; st.credits = Math.max(0, st.credits - 1); st.open = b.id; st.openDay = today;
   if (b.join && !st.joined.includes(b.join)) st.joined.push(b.join);
+  if (b.opens && S.quests && !S.quests.done.includes(b.opens)) S.quests.done.push(b.opens); /* M5-A: 걸음이 지도를 엶 (대수문 꼭대기) */
   if (!b.goal) finishBeat(S, b, today, false);
   else if (b.goal.t === 'quest' && (S.quests?.done || []).includes(b.goal.q)) { /* 이미 끝낸 의뢰면 장면 뒤 바로 끝 */ }
 }
@@ -188,6 +212,8 @@ function give(S, r) { for (const [k, n] of Object.entries(r)) { if (k === 'shell
 /* 판 결과로 목표 확인 */
 export function goalMet(S, b, res) {
   const g = b?.goal; if (!g) return false; if (g.t === 'quest') return (S.quests?.done || []).includes(g.q);
+  if (g.t === 'fac') return (S.fac?.[g.k] || 0) >= facNeed(g); /* M5-A 시설 끝 단계 (은신처에서 확인) */
+  if (g.t === 'pieces') return piecesGot(S).length >= Math.min(g.n, Object.keys(LAST_PIECES).filter(m => MAPS[m]).length); /* M5-A 마지막 인양 (판 뒤에 모은 것) */
   if (!res || res.outcome !== 'extract' || (g.map && (res.map || 'ware') !== g.map)) return false;
   const all = [...res.items, ...res.safe, ...res.pet];
   if (g.t === 'carry') return all.includes(g.item);
@@ -198,11 +224,13 @@ export function goalMet(S, b, res) {
   return false;
 }
 /* 은신처에서 확인 (본 사슬 의뢰가 끝났는지) */
+export const facNeed = g => Math.min(g.lv, FACILITIES[g.k]?.levels.length || g.lv); /* 시설 단계 수가 바뀌어도(M5-C) 끝 단계를 넘지 않게 */
+export const HOME_GOAL = new Set(['quest', 'fac', 'pieces']);
 export function storyTick(S, today) {
-  const b = openBeat(S); if (b && b.goal?.t === 'quest' && goalMet(S, b)) { finishBeat(S, b, today); return b; } return null;
+  const b = openBeat(S); if (b && HOME_GOAL.has(b.goal?.t) && goalMet(S, b)) { finishBeat(S, b, today); return b; } return null;
 }
 /* 판에 넣을 이야기 물건: 열린 걸음이 carry 고 그 지도면 { item, zone } */
-export function storyWant(S, map) { const b = openBeat(S); const g = b?.goal; return g && g.t === 'carry' && g.map === map ? { item: g.item, zone: g.zone, beat: b.id } : null; }
+export function storyWant(S, map) { const b = openBeat(S); const g = b?.goal; if (g?.t === 'pieces') { const k = LAST_PIECES[map]; return k && !S.story.flags['pc_' + k] ? { item: k, zone: 1, beat: b.id } : null; } return g && g.t === 'carry' && g.map === map ? { item: g.item, zone: g.zone, beat: b.id } : null; }
 /* 이 걸음이 게임에 아직 없는 지도를 기다리는지 (4장 = 공장) — '다음 업데이트' 안내 */
 export const waitsMap = (S, b = beatNow(S)) => !!b?.need?.map && !MAPS[b.need.map];
 /* 이 지도에서 아직 안 들은 녹음기 */
@@ -221,6 +249,8 @@ export function afterRaid(S, res, today) {
   }
   /* 튜토리얼 판 세기 */
   if (st.tut >= 1 && st.tut <= 3) { st.tutRaids = (st.tutRaids || 0) + 1; out.tut = st.tutRaids; if (!ex) st.flags['tutDied' + st.tutRaids] = 1; if (!ex) st.flags.tutDiedAny = 1; }
+  /* M5-A 마지막 인양: 들고 나온 조각 기록 (걸음이 열려 있을 때) */
+  { const ob = openBeat(S); if (ob?.goal?.t === 'pieces') for (const k of kept) if (Object.values(LAST_PIECES).includes(k) && !st.flags['pc_' + k]) { st.flags['pc_' + k] = 1; (out.pieces ||= []).push(k); } }
   /* 이야기 걸음 목표 */
   const b = openBeat(S); if (b && goalMet(S, b, res)) { finishBeat(S, b, today); out.beatDone = b.id; }
   /* 이야기 물건은 창고로 안 감 */

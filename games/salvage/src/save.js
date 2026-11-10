@@ -2,10 +2,10 @@
 //   v3(0.3.0): look(고른 겉모습 — 머리 · 몸 · 얼굴 · 등 장식 · 총 스킨 · 털 · 무늬 · 몽이) · owned(가진 꾸미기)
 //   v5(0.6.0 · M3-A · 키는 'salvage_v4' 그대로 — 계정 저장 목록 안 바꿈): 무기 개조 grip 칸 · ammo(관통 · 전기 상자 수) · ammoSel · charms{have, eq} · diff · ach(업적 받은 날) · trade(상인 그날 산 수) · 시설 4개 · 장비 5단
 //   v4(0.5.0): story(이야기 진행 · 인물 관계 · 기억 도감 · 세 등불 · 열쇠 기억 — story.js) · 주인공 이름은 저장에 안 넣음(기기에만: 'salvage_name')
-import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS, WEAPONS, freshMods, CHARMS, DIFF } from './data.js?v=0.99.15';
-import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.15';
-import { freshLook, COS } from './look.js?v=0.99.15';
-import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.15';
+import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS, WEAPONS, freshMods, CHARMS, DIFF } from './data.js?v=0.99.16';
+import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.16';
+import { freshLook, COS } from './look.js?v=0.99.16';
+import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.16';
 export const KEY = 'salvage_v4';
 const OLD3 = 'salvage_v3', OLD2 = 'salvage_v2', OLD = 'salvage_v1';
 export const today = () => kstDay();
@@ -18,6 +18,7 @@ export const fresh = () => ({
   stats: { raids: 0, extracts: 0, deaths: 0, kills: 0, drones: 0, best: 0, bosses: 0, vaults: 0, zoneMax: 1, sold: 0, daily: 0 }, firstRun: true, seed: 0, log: [],
   look: freshLook(), owned: [], story: freshStory(),
   ammo: { ap: 0, sp: 0 }, ammoSel: 'normal', charms: { have: [], eq: [] }, diff: 'normal', ach: {}, trade: null,
+  star: {}, pets: { mong: 0, bandi: 0 }, /* M5-C 무기 단련 ★ · 반려 2 단계 */
 });
 export let S = fresh();
 const mem = { store: null };
@@ -33,6 +34,7 @@ export function migrate(o) {
     if (!COS[m.look.fur]) m.look.fur = 'fur_brown'; m.look.pet = (m.look.pet || []).filter(k => COS[k]); m.mats = Object.assign(fresh().mats, o.mats); m.fac = Object.assign(fresh().fac, o.fac); m.stats = Object.assign(fresh().stats, o.stats);
     m.gear = Object.assign(fresh().gear, o.gear); m.equip = Object.assign(fresh().equip, o.equip); m.quests = Object.assign(fresh().quests, o.quests); m.weapons = Object.fromEntries(Object.entries(Object.assign(fresh().weapons, o.weapons)).filter(([k]) => WEAPONS[k]).map(([k, w]) => [k, Object.assign(freshMods(), w)]));
     m.ammo = Object.assign({ ap: 0, sp: 0 }, o.ammo); m.charms = { have: (o.charms?.have || []).filter(k => CHARMS[k]), eq: (o.charms?.eq || []).filter(k => CHARMS[k]) }; if (!DIFF[m.diff]) m.diff = 'normal'; m.ach = o.ach && typeof o.ach === 'object' ? o.ach : {};
+    m.star = Object.fromEntries(Object.entries(o.star || {}).filter(([k, v]) => WEAPONS[k] && v > 0).map(([k, v]) => [k, Math.min(3, v | 0)])); m.pets = Object.assign({ mong: 0, bandi: 0 }, o.pets); /* M5-C */
     m.stash = (o.stash || []).filter(k => ITEMS[k]); return m; }
   /* v1 */
   const refund = { bench: [0, 80, 260, 620], store: [0, 60, 210, 510] };

@@ -2,7 +2,7 @@
 //  방마다: 주제 소품 1 (벽에 붙임) · 바닥 무늬 2~3종 · 벽 장식 1 (윗벽 그림 조각 · 옆벽 배관) / 구역마다: 랜드마크 1 (빈 칸 · 지도 밖 물 위)
 //  ※ plan() 의 난수를 쓰지 않음(따로 seed) → 지도 · 상자 · 적 · 쓰러진 자리는 그대로. 소품은 문 · 상자 · 엄폐물 · 출구 · 발전기 · 등불 · 공기 방울과 떨어뜨림
 //  판정: 주제 소품 일부만 작은 판정(solid) — 벽 쪽으로 붙여 길을 막지 않음 (tools/reach.mjs 가 같이 검사)
-import { T, RT, RS, COLS, ROWS, zoneOfRow, mix32, rng, SOLID } from './plan.js?v=0.99.15';
+import { T, RT, RS, COLS, ROWS, zoneOfRow, mix32, rng, SOLID } from './plan.js?v=0.99.16';
 
 /* 벽 [높이, 두께] — map.js STYLE 과 같은 값 (꾸밈 위치 계산용) */
 const WALL = {
@@ -67,6 +67,7 @@ export function dress(P) {
   const map = P.map || 'ware'; const R = rng(mix32(P.seed * 131 + 17) || 1); const ri = (a, b) => a + Math.floor(R() * (b - a + 1)); const pick = a => a[Math.floor(R() * a.length)];
   const has = (c, r) => P.rooms.some(x => x.c === c && x.r === r);
   const decals = [], props = [], marks = [], pipes = [], glows = [];
+  if (!FLOORS[map]) return { decals, props, marks, pipes, glows }; /* M5-A 대수문 꼭대기: 고정 무대라 꾸밈 계획 없음 (gate.js 가 그림) */
   /* 피할 곳: 원 [x, z, r] · 상자 [x0, z0, x1, z1] */
   const circ = [], rects = [];
   for (const l of P.loots) circ.push([l.x, l.z, 1.55]);

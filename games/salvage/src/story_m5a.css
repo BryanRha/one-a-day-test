@@ -1,0 +1,33 @@
+/* 수달 인양단 M5-A — 6장 · 엔딩 고르기 · 크레딧 · 엔딩 뒤 초소 꾸밈 · 조개 내기 버튼 (story_ui.js 가 붙임 · 공용 style.css 와 따로) */
+/* 엔딩 고르기: 파수의 질문 — 열린 길이 세로로 (가장 밝은 등불 맨 위) */
+.endpick { max-width: 350px; gap: 8px; }
+.endpick > b { font-size: 21px; color: #ffe2b0; letter-spacing: 1px; }
+.endto { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; }
+.endto button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 12px; border-radius: 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 22%, transparent), rgba(255, 255, 255, .04)); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); color: #f4efe4; }
+.endto button:active { transform: scale(.98); }
+.endto button span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.endto button b { font-size: 15px; line-height: 1.35; }
+.endto button small { font-size: 12px; color: color-mix(in srgb, var(--c) 80%, #fff); opacity: .9; }
+.endto .lampdot { width: 14px; height: 14px; }
+/* 크레딧: 마지막 컷 위로 천천히 */
+.credits { position: absolute; inset: 0; z-index: 6; overflow: hidden; background: linear-gradient(180deg, rgba(3, 8, 14, .55), rgba(3, 8, 14, .82) 40%, rgba(3, 8, 14, .9)); transition: opacity .4s; }
+.credits.out { opacity: 0; }
+.crroll { position: absolute; left: 0; right: 0; top: 100%; padding: 0 28px; text-align: center; will-change: transform; }
+.crroll section { margin: 0 0 44px; }
+.crroll section small { display: block; color: var(--amber, #ffc861); font-weight: 800; font-size: 12px; letter-spacing: 3px; margin-bottom: 10px; }
+.crroll section p { margin: 4px 0; color: #ece6d8; font-size: 15px; line-height: 1.5; }
+.crroll section:first-child p { color: #ffe2b0; font-size: 16px; }
+.crroll .crlast { margin-top: 90px; }
+.crroll .crlast b { display: block; font-size: 18px; line-height: 1.6; color: #ffe8c2; text-shadow: 0 0 18px rgba(255, 190, 110, .45); }
+.crtap { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(255, 255, 255, .45); }
+/* 엔딩 뒤 초소 꾸밈 (창 여섯 · 세 등불 아래 한 줄) */
+.enddeco { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 4px; pointer-events: none; }
+.enddeco svg { width: min(220px, 70vw); height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }
+.enddeco small { font-size: 11px; color: #ffd9a0; background: rgba(8, 16, 22, .55); padding: 2px 8px; border-radius: 10px; }
+.enddeco.end-lamp svg ellipse { animation: enlamp 2.6s ease-in-out infinite; }
+.enddeco.end-lamp svg g:nth-child(2n) ellipse { animation-delay: -1.3s; }
+@keyframes enlamp { 50% { opacity: .78; } }
+/* 조개 내기 (조개 쓰는 곳) */
+.bdel.bpay { background: linear-gradient(180deg, #e8b85a, #b8842e); color: #1d1408; }
+.bdel.bpay.dim { background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .5); }
+.rec .endre { border-color: rgba(255, 200, 120, .6); color: #ffd9a0; }

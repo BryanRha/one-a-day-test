@@ -1,12 +1,12 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.15';
-import { ROOMS, hms } from './layout.js?v=0.99.15';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.15';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.15';
-import { sfx, setAudio } from './audio.js?v=0.99.15';
-import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.15';
-import { bm } from './oad_bm.js?v=0.99.15';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.16';
+import { ROOMS, hms } from './layout.js?v=0.99.16';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.16';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.16';
+import { sfx, setAudio } from './audio.js?v=0.99.16';
+import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.16';
+import { bm } from './oad_bm.js?v=0.99.16';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -27,7 +27,7 @@ export class UI {
       <div class="lside"><button class="sb cpb" id="cp"><b>🎟</b><span id="cpt">0/150</span><i class="ring"><s id="cpb"></s></i></button><button class="sb" id="bMenu"><b>📖</b>메뉴</button><button class="sb" id="bReg"><b>💌</b>단골<i class="dot" id="regDot"></i></button><button class="sb" id="bDeco"><b>🪴</b>꾸미기<i class="dot" id="decoDot"></i></button><button class="sb" id="bMs"><b>📋</b>미션<i class="dot" id="msDot"></i></button><div class="scent" id="scent" title="베이글 향">🌿<b id="scv">0</b></div></div>
       <div class="evb" id="evb" hidden></div><div class="buffs" id="buffs"></div>
       <div class="side"><button class="sb" id="bMap"><b>🗺</b>지도<i class="dot" id="mapDot"></i></button><button class="sb" id="bShop"><b>🛍</b>상점<i class="dot" id="shopDot"></i></button><button class="sb ad" id="bAd"><b>📺</b><span id="adT">5/10</span><i class="cnt" id="adN"></i></button><button class="sb up" id="bUp"><b>⬆</b><span id="upT">업그레이드</span><i class="dot" id="upDot"></i></button><button class="sb" id="bSet"><b>⚙</b>설정</button>${inOAD ? '<button class="sb" id="bExit"><b>↩</b>원어데이</button>' : ''}</div>
-      <div class="stamp" id="stamp"></div><button class="balloon" id="balloon" hidden><b>🥯</b><span>탭!</span></button>
+      <div class="stamp" id="stamp"></div><button class="balloon" id="balloon" hidden><i><b>🥯</b><span>탭!</span></i></button>
       <div class="joy" id="joy"><i id="knob"></i></div><div class="hint" id="hint">어디든 끌어서 움직여요</div><div class="sheet" id="sheet" hidden></div>`;
     this.tags = $('#tags'); this.floats = $('#floats');
     $('#bDeco').onclick = () => this.decoShop(); $('#bReg').onclick = () => this.regulars(); $('#bMenu').onclick = () => this.menuBook(); $('#scent').onclick = () => this.decoShop();
@@ -84,7 +84,7 @@ export class UI {
     for (const t of g.rtags || []) { v.set(t.x, 6 + t.y, t.z).project(cam); t.d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; if (t.bd) { const l = g.buildLeft('R_' + t.id); const h = `🔨 ${ROOMS[t.id].name} <em>${hms(l)}</em>`; if (t.d._h !== h) { t.d.innerHTML = h; t.d._h = h; } } }
     for (const r of g.riders || []) { if (!r.tag) continue; const show = r.state === 'wait' || r.state === 'in'; r.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(r.pos.x, 200, r.pos.z).project(cam); r.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = '🛵 ' + Object.entries(r.order).map(([k, n]) => `<b>${ICON[k]}</b><em>${n - (r.got[k] || 0)}</em>`).join(' '); if (r.tag._h !== html) { r.tag.innerHTML = html; r.tag._h = html; } }
     if ((this._bc = (this._bc || 0) + 1) % 15 === 0) { const bd = Object.entries(S.branch[S.bi]?.build || {}), bc = $('#bchip'); bc.hidden = !bd.length; if (bd.length) { const [id] = bd.sort((a, b) => a[1] - b[1])[0], s = BRANCHES[S.bi].slots.find(x => x.id === id), l = g.buildLeft(id); const h = `🔨 ${s?.type === 'room' ? ROOMS[s.room].name : s?.label || ''} <b>${hms(l)}</b>${bd.length > 1 ? ` <small>+${bd.length - 1}</small>` : ''} <em>⚡</em>`; if (bc._h !== h) { bc.innerHTML = h; bc._h = h; } } }
-    const bl = $('#balloon'); if (g.balloon && !bl.hidden) { v.copy(g.balloon.g.position).project(cam); bl.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; }
+    const bl = $('#balloon'); if (g.balloon && this._balOn) { v.copy(g.balloon.g.position).project(cam); bl.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; bl.hidden = false; }
     for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.6; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; d.style.opacity = Math.max(0, 1 - d._t / 1.1); if (d._t > 1.1) d.remove(); }
     for (const c of g.cust) { if (!c.tag) continue; const o = c.order[0], left = o.n - o.got, show = (c.state === 'queue' || c.state === 'walkQ') && c.qi < 4; c.tag.style.display = show ? '' : 'none'; if (!show) continue;
       v.set(c.pos.x, 188, c.pos.z).project(cam); c.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const mood = c.w > 25 ? '😐 ' : c.w > 10 ? '' : ''; const html = `${c.reg ? `<i class="rn">💌 ${c.reg.name}</i>` : ''}${c.group ? '<i class="rn gp">👥 단체</i>' : ''}${mood}<b>${ICON[o.k]}</b><span>${SHORT[o.k]}</span><em>×${left}</em>`; if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('front', c.qi === 0); c.tag.classList.toggle('reg', !!c.reg); }
@@ -119,6 +119,9 @@ export class UI {
     st.textContent = pct >= 100 ? `완성 · 방 ${rooms.length + 1}개 + ${ROOMS[B.feature].name}` : rooms.length ? `${rooms.length + 1}단계 · ${ROOMS[last.slice(2)].name}${ROOMS[last.slice(2)].visit ? '(' + { crew: '인사팀', boss: '업그레이드', store: '배송' }[last.slice(2)] + ')' : ''} 열림` : '1단계 · 작은 가게 (매대)';
     const vc = $('#vchip'); if (vc) { const on = vipOn(); vc.hidden = !on; if (on) vc.textContent = `👑 VIP ${Math.ceil((S.vipUntil - Date.now()) / 864e5)}일`; }
   }
+  /* 되돌리기 버튼 (바닥 칸 강화 직후 4초) */
+  undo(id, cost) { if (!id) return; $('#undo')?.remove(); const d = document.createElement('button'); d.id = 'undo'; d.className = 'undo'; d.innerHTML = `↩ 되돌리기 <small>4초</small>`; $('#hud').append(d); let n = 4; const tm = setInterval(() => { n--; const s0 = d.querySelector('small'); if (s0) s0.textContent = n + '초'; if (n <= 0) { clearInterval(tm); d.remove(); } }, 1000);
+    d.onclick = () => { clearInterval(tm); d.remove(); if (this.app.game.undoLevel(id, cost)) { sfx('drop', { vol: 0.4 }); this.toast(`되돌렸어요 · +${fmt(cost)}`); } }; }
   toast(t) { let el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 1800); }
   modal(html, onClose) { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.innerHTML = html; const f = this._oc; this._oc = onClose; if (f && f !== onClose) f(); return m; }   /* 덮인 창의 닫힘 처리도 불러 줌 (광고 취소 · 쉬는 동안 1배 받기) */   /* 이미 열린 창은 내용만 바꿈 (깜빡임 없음) */
     m.innerHTML = `<div class="mback"><div class="modal">${html}</div></div>`; m.firstChild.onclick = e => { if (e.target === m.firstChild) this.close(); }; this._oc = onClose; this._ub = pushBack(() => { this.close(); return true; }); sfx('tap', { vol: 0.4 }); return m; }

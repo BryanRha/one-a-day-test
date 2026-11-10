@@ -5,21 +5,21 @@
 //  · 재질: pal(빛 받음 · 맞으면 번쩍) · glow(빛남) · eye(게임이 색을 바꾸는 빛 = 약점 · 눈빛 · 코어). 모두 정점 색 → 적 하나 = 그리기 2~3번
 //  · 받기 전이면 null → raid.js 가 예전 모델로 그림(안전망)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.15';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.15';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.15';
-import { A } from './assets.js?v=0.99.15';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.16';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.16';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.16';
+import { A } from './assets.js?v=0.99.16';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 export const EN = { tpl: {}, packs: {}, bytes: 0 };
-const FILES = { ware: 'enemy_ware.glb', harbor: 'enemy_harbor.glb', tunnel: 'enemy_tunnel.glb', factory: 'enemy_factory.glb', lab: 'enemy_lab.glb' };
+const FILES = { ware: 'enemy_ware.glb', harbor: 'enemy_harbor.glb', tunnel: 'enemy_tunnel.glb', factory: 'enemy_factory.glb', lab: 'enemy_lab.glb', gate: 'enemy_gate.glb' }; /* M5-A 대수문 꼭대기 = 파수 + 연구소 묶음(경비 기계 · 드론) */
 /* 해골 계열 몸 키: 종류 → 부착물 (지도마다 물먹은 · 젖은 선원 · 물때) */
 const SKEL = { skel: m => 'att_' + m, lamp: () => 'att_lamp', miner: () => 'att_miner', sniper: () => 'att_sniper' /* M4-A 등대 저격수 */ };
 /* 예전 KayKit 몸의 보이는 크기 그대로 (fitHeight 가 투구 · 두건까지 쟀던 값) */
 const SKEL_SCALE = { att_ware: 1.8 / 2.166, att_harbor: 1.8 / 2.166, att_tunnel: 1.8 / 2.166, att_lamp: 1.8 / 2.308, att_miner: 1.95 / 2.59, att_factory: 1.8 / 2.166, att_lab: 1.8 / 2.166 };
 const COMMON = 'm4'; /* M4-A 새 적 5 + 검은 닻 두목 — 어느 지도든 같이 받음 (enemy_m4.glb) */
 const OLD = typeof location !== 'undefined' && /oldenemy/.test(location.search);
-const DRONE = { ware: 'drone_w', harbor: 'drone_h', tunnel: 'drone_t', factory: 'drone_f', lab: 'drone_l' };
+const DRONE = { ware: 'drone_w', harbor: 'drone_h', tunnel: 'drone_t', factory: 'drone_f', lab: 'drone_l', gate: 'drone_l' };
 const ANCHOR = { raider: 1, brute: 1, bomber: 1 };
 const LABK = { sporer: 1, warden: 1, mother: 1 }; /* M4-B 연구소 적 · 보스 */ /* M3-B 검은 닻 (쥐 · 오소리 · 흰족제비) — 뼈 + 동작 모델 */
 
@@ -29,6 +29,7 @@ const LABK = { sporer: 1, warden: 1, mother: 1 }; /* M4-B 연구소 적 · 보�
  *  터널 장어 1.3: 몸이 이미 6m 넘게 길어 → 굵기만 살짝 (더 키우면 꼬리가 방 벽을 뚫고 나감) */
 export const BOSS_VIS = { boss: 1.4, captain: 1.5, eel: 1.3, smelter: 1.3, mother: 1.2 }; /* 쇳물 감독관 1.3: 국자 팔이 이미 옆으로 넓음 (더 키우면 붓기 줄 시작점이 몸 밖) */
 BOSS_VIS.chief = 1.2; /* M4-A 검은 닻 두목: 이미 둥근 거구 + 닻 */
+BOSS_VIS.pasu = 1.25; /* M5-A 최종 파수: 설계 키 3.6m × 1.25 = 주인공의 약 3배 (팔 끝 수문 판이 무대 폭 3할) */
 export const bossVis = kind => (typeof location !== 'undefined' && /bossbase/.test(location.search)) ? 1 : BOSS_VIS[kind] || 1; /* ?bossbase = 설계 크기(전/후 비교) */
 /* 빛 스프라이트 텍스처 (하양 → 투명 원). 지도 없는 SpriteMaterial 은 네모로 그려짐 → 빛 스프라이트는 꼭 이걸 씀 (v0.5.2 하얀 네모 버그) */
 let glowT = null;
@@ -39,8 +40,8 @@ export function glowTex() {
 }
 export const glowSprite = (color, opacity, scale) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(scale); return s; };
 
-export const enemyReady = m => (!FILES[m] || EN.packs[m] === true) && (EN.packs[COMMON] === true || EN.packs[COMMON] === null); /* 공용 묶음을 못 받으면 코드 도형으로 */
-export function loadEnemyPack(m) { return Promise.all([loadOne(m), loadOne(COMMON)]).then(() => {}); } /* M4-A: 지도 묶음 + 공용(새 적 · 두목) */
+export const enemyReady = m => (!FILES[m] || EN.packs[m] === true) && (EN.packs[COMMON] === true || EN.packs[COMMON] === null) && (m !== 'gate' || EN.packs.lab === true || EN.packs.lab === null); /* 공용 묶음을 못 받으면 코드 도형으로 */
+export function loadEnemyPack(m) { return Promise.all([loadOne(m), loadOne(COMMON), ...(m === 'gate' ? [loadOne('lab')] : [])]).then(() => {}); } /* M4-A: 지도 묶음 + 공용(새 적 · 두목) · M5-A 대수문은 연구소 묶음도 */
 function loadOne(m) {
   const file = m === COMMON ? 'enemy_m4.glb' : FILES[m]; if (!file) return Promise.resolve();
   if (EN.packs[m]) return EN.packs[m] === true ? Promise.resolve() : EN.packs[m];
@@ -109,6 +110,10 @@ export function enemyBody(kind, map, elite) {
     const c = clone(kind); if (!c) return null; if (elite) c.mats.pal.color.setRGB(0.85, 0.95, 1.05);
     const g = new THREE.Group(); g.add(c.root); if (kind !== 'mother') blobShadow(g, kind === 'sporer' ? 0x7dffd8 : 0, kind === 'sporer' ? 0.2 : 0.32, kind === 'sporer');
     return { custom: true, boss: kind === 'mother', key: kind, root: g, clips: c.T.clips, scale: 1, mats: list(c), eyeM: c.mats.eye, meta: c.T.meta, chest: c.bone('core') || c.bone('body'), head: c.bone('head') };
+  }
+  if (kind === 'pasu') { /* M5-A 최종 파수: 뼈 + 동작(KayKit 이름 + Sweep) · glow = 렌즈 · 빛줄 · 화면(단계마다 색) · eye = 가슴 장어 코어(약점) */
+    const c = clone('pasu'); if (!c) return null; const g = new THREE.Group(); g.add(c.root); blobShadow(g, 0, 0.4).scale.setScalar(2.6);
+    return { custom: true, boss: true, key: kind, root: g, clips: c.T.clips, scale: 1, mats: list(c), eyeM: c.mats.eye, glowM: c.mats.glow, meta: c.T.meta, chest: c.bone('core'), head: c.bone('head'), ring: c.bone('ring') };
   }
   if (kind === 'mine' || kind === 'hermit' || kind === 'octo') { /* M4-A 기뢰 · 소라게 · 문어: 뼈 이름 = foes.js 도형과 같음 (body · door · leg0~5 · claw · tent0~5) */
     const c = clone(kind); if (!c) return null; if (elite) c.mats.pal.color.setRGB(0.85, 0.7, 0.68);
@@ -204,6 +209,7 @@ const wp = new THREE.Vector3();
 export function weakPoint(e) {
   const c = e.custom; if (!c) return null;
   if (e.kind === 'chief') return c.core ? c.core.getWorldPosition(wp) : null; /* M4-A */
+  if (e.kind === 'pasu') return c.chest ? c.chest.getWorldPosition(wp) : null; /* M5-A 가슴 장어 코어 */
   const o = e.kind === 'boss' || e.kind === 'smelter' || e.kind === 'mother' ? c.chest : e.kind === 'captain' ? c.lantern : e.kind === 'eel' ? c.segs?.[5]?.m : null;
   return o ? o.getWorldPosition(wp) : null;
 }

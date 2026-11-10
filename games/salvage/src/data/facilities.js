@@ -1,4 +1,5 @@
-// 수달 인양단 — 은신처 시설 12 · 42단계 (M3-A · v0.6) — data.js 가 다시 내보냄
+// 수달 인양단 — 은신처 시설 14 · 50단계 (M3-A · v0.6 → M5-C · v0.8: 정밀 공방 · 반려 쉼터 + 주방 · 조명 끝 단계) — data.js 가 다시 내보냄
+//  x4: 3단 외형 뒤에 붙은 '끝 단계'(4) — 은신처 그림은 3단(완성) 그대로 + 금빛 표식 (home_fac.js stageOf)
 //  S.fac[k] = 지은 단계 수 (0 = 아직 없음). levels[i] = (i+1)단계 짓는 비용 · 시간(초) · 효과(econ.loadout 이 읽음)
 //  cost 키: shells · 재료(MATS) · 부품 아이템(ITEMS 키, 창고에서 꺼냄)
 //  열림: unlock(이 의뢰를 끝내야) 또는 req(시설 단계 · 지도) — 새 시설 4개는 의뢰 번호에 기대지 않음(의뢰는 M3-C 가 늘림)
@@ -9,9 +10,9 @@ export const FACILITIES = {
   bench: { name: '작업대', icon: '🔧', tint: '#c98a4a', who: 'moru', desc: '무기 · 장비 제작', start: 1, levels: [
     { txt: '작살 권총 · 기본 장비', short: '권총' },
     { cost: { shells: 90, bolt: 6 },                         time: 300,   txt: '소총 · 렌치 · 장비Ⅰ 제작', short: '소총 · 장비Ⅰ' },
-    { cost: { shells: 600, bolt: 13, wire: 6, spring: 2 },    time: 72000,  txt: '산탄 · 리벳 · 망원 · 잠수 · 장비Ⅱ 제작', short: '무기 4 · 장비Ⅱ' },
-    { cost: { shells: 1840, bolt: 24, wire: 14, core: 1 },    time: 129600, txt: '대형 작살 · 전류 · 장비Ⅲ 제작', short: '무기 2 · 장비Ⅲ' },
-    { cost: { shells: 7950, bolt: 48, wire: 29, core: 2, motor: 1 }, time: 266400, txt: '조명탄 발사기 · 장비Ⅳ · Ⅴ 제작', short: '조명탄 · 장비Ⅳ·Ⅴ' } ] },
+    { cost: { shells: 600, bolt: 13, wire: 6, spring: 2 },    time: 72000,  txt: '산탄 · 리벳 · 망원 · 잠수 · 쌍발 · 갈고리 · 장비Ⅱ 제작', short: '무기 6 · 장비Ⅱ' },
+    { cost: { shells: 1840, bolt: 24, wire: 14, core: 1 },    time: 129600, txt: '대형 작살 · 전류 · 그물 · 석궁 · 노 · 물대포 · 닻 · 물보라 · 장비Ⅲ 제작', short: '무기 8 · 장비Ⅲ' },
+    { cost: { shells: 7950, bolt: 48, wire: 29, core: 2, motor: 1 }, time: 266400, txt: '조명탄 발사기 · 불꽃 다연장 · 장비Ⅳ · Ⅴ 제작', short: '무기 2 · 장비Ⅳ·Ⅴ' } ] },
   store: { name: '창고', icon: '📦', tint: '#b8925a', who: 'gombang', desc: '보관 칸 · 안전 칸', start: 1, levels: [
     { txt: '보관 30칸 · 안전 1칸', cap: 30, safe: [1, 1], short: '30칸' },
     { cost: { shells: 50, cloth: 3 },                         time: 120,   txt: '보관 50칸 · 출격 때 연고 1개', cap: 50, safe: [1, 1], kit: 1, short: '50칸 · 연고' },
@@ -35,7 +36,8 @@ export const FACILITIES = {
   kitchen: { name: '주방', icon: '🍲', tint: '#d9a66a', who: 'neuru', desc: '출격 전 요리', unlock: 'q5', levels: [
     { cost: { shells: 80, bolt: 4, herb: 6 },                time: 300,   txt: '생선 수프 (기력 회복 +35%)', meal: 1, short: '수프' },
     { cost: { shells: 410, herb: 8, cloth: 5 },              time: 50400,  txt: '해초 주먹밥 (이동 +7%)', meal: 2, short: '주먹밥' },
-    { cost: { shells: 970, herb: 13, glass: 3, core: 1 },     time: 100800, txt: '조개 구이 (뒤지기 1.4배 · 체력 +15)', meal: 3, short: '조개 구이' } ] },
+    { cost: { shells: 970, herb: 13, glass: 3, core: 1 },     time: 100800, txt: '조개 구이 (뒤지기 1.4배 · 체력 +15)', meal: 3, short: '조개 구이' },
+    { cost: { shells: 4600, herb: 26, glass: 6, fish: 6, core: 1 }, time: 190800, txt: '해물 전골 (체력 +20 · 기력 회복 +30% · 뒤지기 1.2배)', meal: 4, short: '해물 전골' } ], x4: true },
   aquarium: { name: '수족관', icon: '🦦', tint: '#6fc7c0', who: 'neuru', desc: '반려 수달 몽이', unlock: 'q7', levels: [
     { cost: { shells: 200, glass: 4, cloth: 6 },              time: 1800,  txt: '몽이 합류 · 주머니 1×2 (무게 0)', pet: [1, 2], short: '몽이 · 1×2' },
     { cost: { shells: 880, glass: 6, cloth: 8 },             time: 97200, txt: '주머니 2×2 · 귀한 상자 알려 줌', pet: [2, 2], sniff: true, short: '2×2 · 냄새' },
@@ -43,7 +45,8 @@ export const FACILITIES = {
   lights: { name: '조명', icon: '💡', tint: '#ffc861', who: 'moru', desc: '시야 · 정전 대비', unlock: 'q8', levels: [
     { cost: { shells: 150, wire: 8, glass: 2 },               time: 1800,  txt: '헤드램프: 시야 +15%', vision: 1.15, short: '시야 +15%' },
     { cost: { shells: 790, wire: 11, glass: 5 },              time: 93600, txt: '정전 때도 반만 어두움 · 원뿔 밖 적 표시', vision: 1.15, blackout: 0.5, sense: true, short: '정전 반 · 적 표시' },
-    { cost: { shells: 2540, wire: 19, glass: 9, core: 1 },   time: 147600, txt: '시야 +30% · 은신처 불빛', vision: 1.3, blackout: 0.5, sense: true, short: '시야 +30%' } ] },
+    { cost: { shells: 2540, wire: 19, glass: 9, core: 1 },   time: 147600, txt: '시야 +30% · 은신처 불빛', vision: 1.3, blackout: 0.5, sense: true, short: '시야 +30%' },
+    { cost: { shells: 5200, wire: 30, glass: 14, battery: 2, core: 1 }, time: 198000, txt: '시야 +40% · 정전 때도 거의 밝음 · 원뿔 밖 적 표시 멀리', vision: 1.4, blackout: 0.35, sense: true, senseR: 1.5, short: '시야 +40%' } ], x4: true },
   /* ── M3-A 새 시설 4 ── */
   ammo: { name: '탄약대', icon: '🧨', tint: '#c9604a', who: 'moru', desc: '관통 · 전기 작살촉', req: { fac: ['bench', 3] }, levels: [
     { cost: { shells: 320, bolt: 9, powder: 3 },             time: 39600,  txt: '관통 작살촉 상자 만들기', ammo: 1, short: '관통탄' },
@@ -62,5 +65,14 @@ export const FACILITIES = {
     { cost: { shells: 1410, bolt: 14, cloth: 11, wire: 6 },   time: 118800, txt: '행상 물건 +2 · 상인 값 −10%', trader: 2, discount: 0.1, short: '물건 +2 · −10%' },
     { cost: { shells: 5140, bolt: 31, wire: 17, core: 1 },    time: 205200, txt: '구조 보트: 쓰러져도 가방에서 가장 값진 것 1개를 건져 옴', trader: 2, discount: 0.1, rescue: 1, short: '구조 보트' } ] },
 };
+/* ── M5-C 새 시설 2 (v0.8) — 후반 조개를 받는 곳 · 하루 공사 1~2개 리듬 유지 (docs/BALANCE.md 8장) ── */
+FACILITIES.forge = { name: '정밀 공방', icon: '⚒️', tint: '#d9a24a', who: 'moru', desc: '무기 단련 ★ (개조 Mk3 위)', req: { fac: ['rack', 3] }, levels: [
+    { cost: { shells: 2400, bolt: 30, wire: 16, core: 1 },             time: 158400, txt: '무기 단련 ★1 (피해 +7% · 장전 −5%)', star: 1, short: '단련 ★1' },
+    { cost: { shells: 4800, bolt: 40, wire: 24, core: 2 },             time: 216000, txt: '무기 단련 ★2', star: 2, short: '단련 ★2' },
+    { cost: { shells: 8400, bolt: 55, wire: 32, core: 2, motor: 1 },   time: 288000, txt: '무기 단련 ★3 · 무기대에 금빛 이름표', star: 3, short: '단련 ★3' } ] };
+FACILITIES.den = { name: '반려 쉼터', icon: '🐾', tint: '#8fc9a0', who: 'neuru', desc: '몽이 · 반디가 크는 곳', req: { fac: ['aquarium', 3] }, levels: [
+    { cost: { shells: 900, cloth: 14, herb: 10, glass: 4 },           time: 86400,  txt: '몽이 4단까지 (놀이 기구 · 쉼 바구니)', petCap: 4, short: '몽이 4단' },
+    { cost: { shells: 2600, cloth: 20, herb: 16, glass: 8 },          time: 162000, txt: '반디 수조 · 반디 2단까지', petCap: 4, bandiCap: 2, short: '반디 수조' },
+    { cost: { shells: 5600, cloth: 28, herb: 22, glass: 12, core: 1 }, time: 230400, txt: '몽이 5단 · 반디 3단까지', petCap: 5, bandiCap: 3, short: '몽이 5단' } ] };
 export const FAC_KEYS = Object.keys(FACILITIES);
 export const FAC_TOTAL = FAC_KEYS.reduce((s, k) => s + FACILITIES[k].levels.length, 0);

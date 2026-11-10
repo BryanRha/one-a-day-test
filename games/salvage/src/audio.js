@@ -214,6 +214,18 @@ Object.assign(GUN, {
   flare(t, p) { gun(t, p, { ck: [0.01, 1500, 0.24], b: [70, 28, 0.3, 0.9], m: [0.14, 900, 380, 0.6], tl: [0.5, 800, 0.07, 0.6] }); },
 });
 Object.assign(RELOAD, { rivet: RELOAD.rifle, longshot: RELOAD.harpoon, diver: RELOAD.pistol, volt: RELOAD.rifle, flare: RELOAD.shotgun, wrench() {} });
+/* M5-C 새 무기 7 소리 — 같은 합성 틀 · 성격만: 쌍발 = 권총 두 겹(4ms 어긋남) · 그물 = 둔한 '퐁' + 줄 풀리는 쉭 · 석궁 = 시위 '팅' + 나무 딱(거의 조용)
+ *  물대포 = 물줄기 쏴아(짧은 잡음 반복) · 닻 = 아주 낮은 '쿵' + 사슬 철컹 · 물보라 = 산탄보다 높고 맑은 껍데기 깨짐 · 불꽃 = 세 번 '퓨웅' */
+Object.assign(GUN, {
+  twin(t, p) { GUN.pistol(t, p - 0.15); gun(t + 0.004, p + 0.15, { v: 0.06, ck: [0.005, 2600, 0.14], b: [190, 70, 0.07, 0.45], m: [0.06, 1250, 520, 0.35], tl: [0.18, 1600, 0.04, 0.4] }); },
+  net(t, p) { thud(t, 130, 0.12, 0.45, p); nz({ t, kind: 'pink', dur: 0.22, ft: 'bandpass', ff: 900, ff1: 2200, q: 1.1, peak: 0.16, pan: p }); for (let i = 0; i < 4; i++) clk(t + 0.05 + i * 0.03, 900 + i * 90, 0.04, p); },
+  crossbow(t, p) { os({ t, f0: 520, f1: 260, dur: 0.12, peak: 0.12, wave: 'triangle', lp: 2600, pan: p }); clk(t, 2200, 0.16, p); thud(t + 0.01, 300, 0.04, 0.12, p); nz({ t: t + 0.01, dur: 0.08, ft: 'bandpass', ff: 3200, ff1: 1500, q: 2, peak: 0.05, pan: p }); },
+  hose(t, p) { nz({ t, kind: 'pink', dur: 0.11, a: 0.01, ft: 'bandpass', ff: rnd(1700, 2300), q: 0.7, peak: 0.13, pan: p }); nz({ t, kind: 'white', dur: 0.08, ft: 'highpass', ff: 4200, peak: 0.04, pan: p }); },
+  anchor(t, p) { gun(t, p, { ck: [0.012, 1400, 0.3], b: [70, 26, 0.38, 1], m: [0.16, 600, 340, 0.7, 1], tl: [0.7, 900, 0.09, 0.8] }); for (let i = 0; i < 6; i++) metal(t + 0.06 + i * 0.045, rnd(700, 950), 0.08, 0.05, p, 0.15, 0.4); },
+  scatter(t, p) { gun(t, p, { ck: [0.009, 2600, 0.3], b: [110, 40, 0.2, 0.85], m: [0.13, 2400, 700, 0.6, 1], tl: [0.5, 1500, 0.08, 0.7] }); for (let i = 0; i < 5; i++) clk(t + 0.02 + i * rnd(0.008, 0.02), rnd(3000, 4500), 0.05, p + rnd(-0.3, 0.3)); },
+  rocket(t, p) { for (let i = 0; i < 3; i++) { const u = t + i * 0.07; nz({ t: u, kind: 'pink', dur: 0.18, a: 0.01, ft: 'bandpass', ff: 1400, ff1: 3200, fdur: 0.18, q: 1.6, peak: 0.12, pan: p + (i - 1) * 0.25 }); thud(u, 160, 0.05, 0.15, p); } },
+});
+Object.assign(RELOAD, { twin: RELOAD.pistol, net: RELOAD.shotgun, crossbow: RELOAD.harpoon, hose: RELOAD.rifle, anchor: RELOAD.harpoon, scatter: RELOAD.shotgun, rocket: RELOAD.shotgun, hook() {}, oar() {} });
 function shell(t, wk) {
   if (wk === 'harpoon') return;
   /* 바닥 따라: 창고 콘크리트(맑게 튐) · 항구 나무 부두(둔하게) · 터널 쇠 격자(길게) · 물 위면 '퐁' */
@@ -305,6 +317,15 @@ export const sfx = {
   enemyShot(pan = 0) { if (!ctx) return; const t = now(); os({ t, f0: 1100, f1: 420, dur: 0.11, peak: 0.12, wave: 'square', lp: 2200, lp1: 700, pan }); nz({ t, kind: 'pink', dur: 0.06, ft: 'bandpass', ff: 1800, q: 1, peak: 0.16, pan });
     nz({ t: t + 0.01, kind: 'pink', dur: 0.2, ft: 'lowpass', ff: 1200, ff1: 300, peak: 0.03, pan, wet: 0.5 }); },
   swing(pan = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.12, a: 0.08, ft: 'bandpass', ff: 400, ff1: 1500, fdur: 0.12, q: 1.2, peak: 0.3, pan }); },
+  /* M5-C 근접 셋 휘두름 · 새 무기 효과음 (렌치는 위 swing 그대로) */
+  swingW(wk, pan = 0) { if (!ctx) return; const t = now();
+    if (wk === 'hook') { nz({ t, kind: 'pink', dur: 0.09, a: 0.02, ft: 'bandpass', ff: 1800, ff1: 900, q: 1.6, peak: 0.24, pan }); metal(t + 0.07, 1300, 0.12, 0.05, pan, 0.1, 0.5); nz({ t: t + 0.1, dur: 0.12, ft: 'bandpass', ff: 700, ff1: 1100, q: 2, peak: 0.08, pan }); return true; }
+    if (wk === 'oar') { nz({ t, kind: 'pink', dur: 0.32, a: 0.12, ft: 'bandpass', ff: 300, ff1: 900, fdur: 0.3, q: 0.9, peak: 0.34, pan }); for (let i = 0; i < 4; i++) plip(t + 0.15 + i * rnd(0.03, 0.05), rnd(500, 800), 0.04, rnd(-0.4, 0.4), 0.3); return true; }
+    return undefined; },
+  net(n = 0) { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.18, ft: 'bandpass', ff: 1200, ff1: 500, q: 1.3, peak: 0.16 }); for (let i = 0; i < 3 + Math.min(3, n); i++) clk(t + 0.03 + i * 0.025, rnd(700, 1100), 0.05); },
+  clank(n = 0) { if (!ctx) return; const t = now(); thud(t, 90, 0.2, 0.5); for (let i = 0; i < 4 + Math.min(4, n); i++) metal(t + 0.04 + i * rnd(0.03, 0.05), rnd(650, 900), 0.1, 0.05, rnd(-0.3, 0.3), 0.2, 0.4); },
+  whoosh() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.25, a: 0.04, ft: 'bandpass', ff: 700, ff1: 2200, fdur: 0.25, q: 1.2, peak: 0.12 }); },
+  pop() { if (!ctx) return; const t = now(); thud(t, 180, 0.08, 0.3); nz({ t, dur: 0.05, ft: 'bandpass', ff: 2600, q: 1, peak: 0.12 }); for (let i = 0; i < 4; i++) clk(t + 0.03 + i * rnd(0.02, 0.05), rnd(2400, 4200), 0.04, rnd(-0.4, 0.4)); },
   /* 구르기: 옷 · 물 휙 + 0.31초 뒤 착지 / 판에서 장어가 돌진 시작이면 물 밀려오는 소리 / 던지기면 휙만 */
   roll() { if (!ctx) return; const t = now(), r = R();
     if (r?.boss?.charging && r.boss.kind === 'eel') { nz({ t, kind: 'brown', dur: 0.9, ft: 'lowpass', ff: 300, ff1: 1400, fdur: 0.4, peak: 0.7, wet: 0.2 }); nz({ t, kind: 'pink', dur: 0.7, ft: 'bandpass', ff: 900, ff1: 2500, q: 0.8, peak: 0.22, a: 0.1 }); return; }
@@ -455,12 +476,12 @@ sfx.window = sfx.windowLight; sfx.memo = sfx.memory;
 const TUNED = /^(chiefHorn|chiefWarn|pick|rare|extract|die|ui|tab|coin|equip|power|build|talk|cut|memory|memo|windowLight|window|bond|chapter|lamp|quest|warn|bossWarn|tape|radio|mong|siren|alert)$/;
 /* 소리마다 음량 손질 (효과음 버스를 사격 · 타격에 맞춰 올렸으므로 큰 사건 · 화음 소리는 덜어 리미터가 덜 일하게 — 5장 측정) */
 const GAIN = { chiefHorn: 0.6, chiefWarn: 0.6, foeWarn: 0.8, boom: 0.5, thunder: 0.4, roar: 0.5, slam: 0.5, gate: 0.5, siren: 0.5, bossWarn: 0.5, warn: 0.55, die: 0.55, extract: 0.55, power: 0.55, cut: 0.55, chapter: 0.55, memory: 0.55, memo: 0.55,
-  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, roll: 0.7, rotate: 0.6, zap: 0.8, fizz: 0.7, bubble: 0.7 };
+  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, swingW: 0.7, net: 0.7, clank: 0.6, whoosh: 0.7, pop: 0.7, roll: 0.7, rotate: 0.6, zap: 0.8, fizz: 0.7, bubble: 0.7 };
 for (const k of Object.keys(sfx)) { const fn = sfx[k], tuned = TUNED.test(k), g = GAIN[k] || 1;
   sfx[k] = function (...a) { if (!ctx) return; const prev = EV; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; try { return fn.apply(this, a); } finally { EV = prev; } }; }
 
 /* 지도 환경음 (판 중에만 · 배경음을 꺼도 남음) — assets/audio/env.js 를 판 시작 때 늦게 받음 · 구역 · 날씨 · 정전 · 급류 · 침수 따라 바뀜 */
-function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.15').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
+function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.16').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
 const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', wx: r?.wx || 'none', /* M4-B 판 상태 → 날씨 소리 */ dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
 export function ambience(on) {
   ambOn = !!on; if (!ctx) return; /* 소리가 아직 안 풀렸으면 기억만 → 첫 탭 뒤 tick 이 받음 */
@@ -473,8 +494,11 @@ function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gai
    장면: 은신처(처음 · 하루 끝) · 침수 창고 · 밤의 항구 · 해저 터널 · 보스전(지도 색)
    긴장 단계: 0 평소 → 1 적 발견(쫓는 적이 있음 · 4초 여운) → 2 탈출 카운트다운(물 차기 1분 전) */
 let seenRaid = false, chaseT = 0;
-function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.15').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.16').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+/* M5-A 이야기 장면 배경음 덮어쓰기 (엔딩 · 크레딧 = 'ending') — null 이면 평소대로 */
+let scoreOv = null; export function setScore(id) { scoreOv = id || null; }
 function scene() {
+  if (scoreOv) return { id: scoreOv, lv: 0 };
   const r = R();
   if (!r || !r.alive) return { id: seenRaid ? 'dusk' : 'hideout', lv: 0 };
   seenRaid = true;
@@ -485,6 +509,7 @@ function scene() {
   const lv = (r.time ?? 999) <= 60 ? 2 : t - chaseT < 4 ? 1 : 0;
   /* 보스: 쫓기 시작했거나 · 맞았거나 · 14m 안이면 보스전 (쓰러질 때까지 유지) */
   if (b && !b.dead && !b.__mus && (b.state === 'chase' || b.hp < b.maxHp || (r.pl && b.pos.distanceTo(r.pl.pos) < 14))) b.__mus = true;
+  if (r.map === 'gate' && b && !b.dead && b.__mus) return { id: 'final', lv: Math.min(2, r.gatePhase || 0) }; /* M5-A 최종 보스 파수 — 단계마다 층 */
   if (b && !b.dead && b.__mus) return { id: 'boss', color, lv };
   /* 검수 M4 Top 10: 떠돌이 두목과 붙으면 결전곡 '두목 색'(뱃고동 · 사슬 · 금관) — 지도 보스전이 먼저 */
   const c = r.chief; if (c && !c.dead && (c.state === 'chase' || c.hp < c.maxHp)) return { id: 'boss', color: 'chief', lv };

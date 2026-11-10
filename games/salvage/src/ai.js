@@ -6,13 +6,13 @@
 //  · 판정 · 이동 · 공격 예고는 raid.js 것을 그대로 · 새 적 공격 모양은 foes.js · 두목은 chief.js
 //  · 모든 큰 공격은 예고(바닥 원 · 줄 · 떨어질 자리) — 예고를 띄우면 e.teleT0 (raid.warnDisc/warnLine) → raid.hurt 가 '예고 없는 큰 피해' 자동 검사
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.15';
-import { LOB } from './data/map_factory.js?v=0.99.15';
-import { AI2, NADE } from './data/enemies.js?v=0.99.15';
-import { SOLID } from './plan.js?v=0.99.15';
-import { glowSprite } from './enemy3d.js?v=0.99.15';
-import { sfx } from './audio.js?v=0.99.15';
-import { foeWind } from './foes.js?v=0.99.15';
+import { ENEMIES } from './data.js?v=0.99.16';
+import { LOB } from './data/map_factory.js?v=0.99.16';
+import { AI2, NADE } from './data/enemies.js?v=0.99.16';
+import { SOLID } from './plan.js?v=0.99.16';
+import { glowSprite } from './enemy3d.js?v=0.99.16';
+import { sfx } from './audio.js?v=0.99.16';
+import { foeWind } from './foes.js?v=0.99.16';
 
 export const FACTION = { drone: 'machine', boss: 'machine', smelter: 'machine', skel: 'moss', lamp: 'moss', miner: 'moss', captain: 'moss', crab: 'beast', jelly: 'beast', eel: 'beast' };
 export const facOf = kind => ENEMIES[kind]?.fac || FACTION[kind] || 'machine';
@@ -218,14 +218,15 @@ export class AI {
     if (!A.cover || (A.re <= 0 && A.mode === 'move') || (A.mode !== 'peek' && R.los({ x: A.cover.x, z: A.cover.z }, tp)) || (this.lv >= 2 && A.peeks >= (D.role === 'sniper' ? 1 : AI2.peekMax) && A.mode !== 'peek')) {
       const rot = this.lv >= 2 && A.peeks >= (D.role === 'sniper' ? 1 : AI2.peekMax); const old = A.cover; this.release(e); A.cover = this.findCover(e, tp, k0, k1, old); A.re = 2.5; A.peeks = 0; if (rot && old && A.cover && old !== A.cover) st(R, 'coverMove'); if (A.cover) { A.mode = 'move'; } else A.mode = 'open'; }
     A.re -= dt;
-    if (hurtNow && A.mode === 'peek' && A.cover) A.mode = 'move';
+    /* M5-D 시험 안정화(근본 원인): 엄폐로 돌아갈 때 '이동 제한 시간'(re)을 새로 — 전엔 숨기 · 내밀기 동안 re 가 다 닳아, 돌아가는 첫 프레임에 엄폐를 다시 골라 내밀기 수가 0 으로 → '두 번 내밀면 다른 엄폐로'가 거의 안 일어남 */
+    if (hurtNow && A.mode === 'peek' && A.cover) { A.mode = 'move'; A.re = 2.5; }
     if (A.mode === 'move') { out.goal = V(A.cover.x, 0, A.cover.z); out.spd = D.chase * (this.lv >= 2 ? 1.15 : 1); if (dist2(e.pos, A.cover) < 0.45) { A.mode = 'hide'; A.t = (0.7 + Math.random() * 0.7) * (e.sq?.signal && this.lv >= 2 ? 0.7 : 1); A.sup = 0; } }
     else if (A.mode === 'hide') { out.goal = null; out.face = angToP;
       if (this.lv >= 2) { if (R.pl.reload > 0 && A.t > 0.12) { A.t = 0.12; st(R, 'reloadPeek'); } /* 장전 중 = 기회 */
         else if (R.pl.aim === e && R.t - (R.pl.shotT || -9) < AI2.suppress && A.sup < 0.6) { if (!A.sup) st(R, 'suppressed'); A.t += dt; A.sup += dt; } } /* 나를 겨누고 쏘는 중 = 눌려 있음 */
       if (A.t <= 0) { A.peek = this.peekOf(A.cover, tp); A.mode = 'peek'; A.t = 2.4; A.peeks++; st(R, 'peek'); } }
     else if (A.mode === 'peek') { out.goal = A.peek; out.spd = D.speed * 1.3; out.face = angToP;
-      if (sees && e.cd <= 0 && dist < D.range) this.startAttack(e, angToP, tp); else if (A.t <= 0) { A.mode = 'move'; } }
+      if (sees && e.cd <= 0 && dist < D.range) this.startAttack(e, angToP, tp); else if (A.t <= 0) { A.mode = 'move'; A.re = 2.5; } }
     else { /* 엄폐 없음: 거리 두고 옆걸음 · 쏨 */
       if (sees && e.cd <= 0 && dist < D.range) this.startAttack(e, angToP, tp);
       else if (dist < Math.max(5, k0 * 0.8)) out.goal = e.pos.clone().addScaledVector(t1.copy(e.pos).sub(tp).setY(0).normalize(), 3);

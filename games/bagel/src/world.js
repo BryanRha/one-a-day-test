@@ -2,9 +2,9 @@
 //   지점마다 확실히 다르게 (계획안 2-2) + 실제 매장 공통 요소(회색 벽 흰 로고 · 흰 세로 타일 진열대 · 테라조 · 검은 칠판 가격표 · 주황 m 상자 선반)는 모든 지점
 //   모든 모델은 코드로 (새 그림 리소스 없음) · 작은 소품은 그림자를 안 드리움(가벼움)
 import * as THREE from 'three';
-import { M, box, cyl, sph, mesh } from './models.js?v=0.99.15';
-import { ROOMS, STAIRS, inRect } from './layout.js?v=0.99.15';
-import { BRAND, THEME_SETS } from './data.js?v=0.99.15';
+import { M, box, cyl, sph, mesh } from './models.js?v=0.99.16';
+import { ROOMS, STAIRS, inRect } from './layout.js?v=0.99.16';
+import { BRAND, THEME_SETS } from './data.js?v=0.99.16';
 
 const T = {};   /* 무늬 텍스처 캐시 */
 const LOGO = (() => { const im = new Image(); im.src = 'assets/brand/logo.png'; return im; })();
@@ -80,11 +80,11 @@ const FURN = {
     box(200, 14, 140, 0xB08A5A, x0 + 300, 0, z1 - 140, g); },
   dough(g, r) { const [x0, z0] = r; for (let i = 0; i < 3; i++) { box(60, 40, 40, 0xF2EAD8, x0 + 560 - i * 30, i * 30, z0 + 60, g); } const rk = new THREE.Group(); rk.position.set(x0 + 70, 0, z0 + 330); g.add(rk); for (const y of [30, 80, 130, 180]) { box(70, 4, 120, 0xC8CED4, 0, y, 0, rk); for (let i = 0; i < 3; i++) sph(12, 0xFFF4E2, 0, y + 8, -40 + i * 40, rk, 8, 6).scale.set(1, 0.6, 1); } noShadow(rk); },
   cream(g, r) { const [x0, z0] = r; box(500, 8, 40, 0x9A643A, x0 + 330, 170, z0 + 26, g); for (let i = 0; i < 9; i++) cyl(14, 14, 30, [0xFFFBF2, 0xB49AD8, 0xF2E2D6, 0xE6F2C8][i % 4], x0 + 110 + i * 55, 178, z0 + 26, g, 10); chalk(g, x0 + 560, 140, z0 + 20, 0, 110); },
-  cafe(g, r) { const [x0, z0] = r; box(360, 90, 70, 0x5A3A22, x0 + 330, 0, z0 + 330, g); box(370, 10, 80, 0x9A643A, x0 + 330, 90, z0 + 330, g); for (let i = 0; i < 5; i++) cyl(10, 8, 22, 0xFFFFFF, x0 + 200 + i * 60, 100, z0 + 330, g, 10); chalk(g, x0 + 420, 130, z0 + 20, 0, 140); },
+  cafe(g, r) { const [x0, z0, x1] = r; box(70, 90, 300, 0x5A3A22, x1 - 55, 0, z0 + 450, g); box(80, 10, 310, 0x9A643A, x1 - 55, 90, z0 + 450, g); for (let i = 0; i < 5; i++) cyl(10, 8, 22, 0xFFFFFF, x1 - 55, 100, z0 + 330 + i * 60, g, 10); chalk(g, x0 + 420, 130, z0 + 20, 0, 140); },   /* 0.3.2: 바 카운터는 오른쪽 벽에 붙임 (방 가운데 = 걷는 길) */
 };
 // ── 지점 소품 세트 (계획안 2-2)
 const PROPS = {
-  oak(g, open) { plant(g, -210, 420, 1.15); plant(g, 610, 410, 0.9); for (const [x, z] of [[-30, 290], [170, 330]]) { const c = new THREE.Group(); c.position.set(x, 0, z); g.add(c); cyl(26, 22, 44, 0xD8B07A, 0, 0, 0, c, 10); cyl(28, 28, 6, 0xC89A60, 0, 44, 0, c, 10); noShadow(c); }   /* 라탄 의자 */
+  oak(g, open) { plant(g, -210, 420, 1.15); plant(g, 610, 410, 0.9); for (const [x, z] of [[-215, 250], [-215, 330]]) { const c = new THREE.Group(); c.position.set(x, 0, z); g.add(c); cyl(26, 22, 44, 0xD8B07A, 0, 0, 0, c, 10); cyl(28, 28, 6, 0xC89A60, 0, 44, 0, c, 10); noShadow(c); }   /* 라탄 의자 */
     const h = new THREE.Group(); h.position.set(-235, 0, 200); g.add(h); box(6, 200, 26, 0xFFFFFF, 0, 0, 0, h); for (let i = 0; i < 9; i++) box(8, 2, i % 3 ? 10 : 20, [0xFF6720, 0x5AB0E8, 0x9ACF6A][i % 3], 4, 20 + i * 20, 0, h); noShadow(h);   /* 아이 키 재는 벽 */
     if (open.has('hall')) { plant(g, -610, -400, 1); plant(g, -600, 410, 1.1); } },
   classic(g, open) { for (const z of [-900, -700]) { const s = new THREE.Group(); s.position.set(-1232, 0, z); g.add(s); for (const y of [120, 170, 220]) { box(40, 6, 170, 0x5A3A22, 0, y, 0, s); for (let i = 0; i < 3; i++) { const b = cyl(20, 16, 24, 0xC8A070, 6, y + 6, -50 + i * 50, s, 10); } } noShadow(s); }   /* 빵 바구니 벽 선반 */
@@ -92,7 +92,7 @@ const PROPS = {
     chalk(g, -240, 90, -60, Math.PI / 2, 100); plant(g, 610, 410, 0.9, 0x5A3A22); },
   modern(g, open) { const n = new THREE.Group(); n.position.set(200, 210, -1132); g.add(n); const nm = glow(0xFF7A3A); const t1 = new THREE.Mesh(new THREE.TorusGeometry(26, 5, 6, 16, Math.PI), nm); t1.position.x = -26; n.add(t1); const t2 = t1.clone(); t2.position.x = 26; n.add(t2); for (const x of [-52, 0, 52]) { const l = new THREE.Mesh(new THREE.BoxGeometry(10, 30, 10), nm); l.position.set(x, -15, 0); n.add(l); }   /* 네온 m */
     for (let i = 0; i < 2; i++) { const s = new THREE.Group(); s.position.set(610, 0, -280 + i * 640); g.add(s); for (const y of [40, 100, 160]) box(60, 4, 140, 0xD6DDE2, 0, y, 0, s); for (let k = 0; k < 6; k++) box(40, 30, 36, 0xFFFFFF, 0, 44 + Math.floor(k / 2) * 60, -36 + (k % 2) * 60, s); noShadow(s); }   /* 스테인리스 상자 선반 */
-    box(220, 30, 90, 0xE6E2DC, -30, 0, 150, g); for (let i = 0; i < 24; i++) box(5, 2, 5, [0xC8B8A8, 0x9AA4AC, 0xE8B98A][i % 3], -130 + (i * 37) % 200, 30, 112 + (i * 23) % 76, g); },   /* 테라조 진열대 */
+    box(90, 30, 160, 0xE6E2DC, 600, 0, 150, g); for (let i = 0; i < 18; i++) box(5, 2, 5, [0xC8B8A8, 0x9AA4AC, 0xE8B98A][i % 3], 565 + (i * 37) % 70, 30, 80 + (i * 23) % 140, g); },   /* 테라조 진열대 (오른쪽 벽 쪽 · 0.3.2) */
   forest(g, open) { for (const [x, z] of [[-220, 420], [620, 420], [-220, -420]]) { const p = new THREE.Group(); p.position.set(x, 0, z); g.add(p); box(70, 50, 70, 0xB98A5A, 0, 0, 0, p); sph(48, 0x7FBF6A, 0, 90, 0, p, 10, 8); }
     const hp = [[0, -200], [300, -150], [-120, 150]]; for (const [x, z] of hp) { const p = new THREE.Group(); p.position.set(x, 230, z); g.add(p); cyl(18, 14, 20, 0xE7B98A, 0, 0, 0, p, 10); for (let i = 0; i < 5; i++) { const l = sph(8, 0x6FAF5A, Math.cos(i) * 14, -10 - i * 8, Math.sin(i) * 14, p, 6, 4); } const c = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 80, 4), glow(0x5A4A3A)); c.position.y = 50; p.add(c); noShadow(p); }   /* 행잉 플랜트 */ },
 };
@@ -148,7 +148,7 @@ export function drawWorld(sc, B, open, build, setId) {
     else if (id === 'boss') floor(g, r, 'parquet', '#ECE4DA', '#E5DBCF', '#D2C4B4', 0, 260);
     else if (id === 'store') floor(g, r, 'concrete', '#D8D4CC', '#C8C2B8', '#BAB2A6', 0, 300);
     else floor(g, r, I.floor, I.fa, I.fb, I.line, 0, I.floor === 'check' ? 300 : 400);
-    if (FURN[id]) FURN[id](g, r, I); }
+    if (FURN[id]) { const fg = new THREE.Group(); fg.userData.furn = id; g.add(fg); FURN[id](fg, r, I); } }   /* 가구 묶음 표시: flow_check 가 걷는 길 위 가구를 찾음 */
   /* 바깥 벽 (뒤 · 왼쪽) — 지점 벽 재질 + 창 */
   wall(g, -1250, -1150, 1250, -1150, 260, I); wall(g, -1250, -1150, -1250, 450, 260, I);
   for (let x = -1050; x < 1200; x += 420) { if (Math.abs(x - 470) < 200) continue; box(200, 110, 8, 0xBFE3F2, x, 90, -1132, g).castShadow = false; box(210, 8, 12, 0xFFFFFF, x, 86, -1130, g).castShadow = false; }
@@ -156,11 +156,11 @@ export function drawWorld(sc, B, open, build, setId) {
 /* 벽(방 · 로고 벽 · 2층 난간)과 지점 조명 · 소품 — 방이 열릴 때마다 다시 */
 export function drawWalls(g, B, G, open, opt = {}) { const I = B.interior;
   for (const w of G.walls) { if (w.h <= 50) continue; const x0 = w.x - w.hw, x1 = w.x + w.hw, z0 = w.z - w.hd, z1 = w.z + w.hd, ax = w.hw > w.hd; wall(g, ax ? x0 : w.x, ax ? w.z : z0, ax ? x1 : w.x, ax ? w.z : z1, w.h, I, !w.front); }
-  const lw = logoWall(180, 72, opt.owned ? '#2A2A2E' : '#8E8C88'); lw.position.set(470, 205, -432); g.add(lw); if (opt.owned) { const t = new THREE.Mesh(new THREE.BoxGeometry(180, 6, 4), glow(0xFF6720)); t.position.set(470, 160, -429); g.add(t); }   /* 소장 전용 「TOKYO 블랙 간판」 · 회색 벽 흰 로고 (실제 매장 공통) */
+  const hs = occ(new THREE.Group()); hs.position.set(450, 300, -420); hs.rotation.y = 0; g.add(hs); const lw = logoWall(200, 80, opt.owned ? '#2A2A2E' : '#8E8C88'); lw.position.z = 4; hs.add(lw); box(212, 92, 6, opt.owned ? 0x1A1A1E : 0x6E6C68, 0, -46, 0, hs); for (const x of [-80, 80]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 120, 4), glow(0x4A4A4A)); c.position.set(x, 100, 0); hs.add(c); } if (opt.owned) { const t = new THREE.Mesh(new THREE.BoxGeometry(200, 6, 4), glow(0xFF6720)); t.position.set(0, -46, 5); hs.add(t); }   /* 회색 판 흰 로고 (실제 매장 공통) = 오븐 위에 매단 간판 · 바닥은 비움 */   /* 소장 전용 「TOKYO 블랙 간판」 · 회색 벽 흰 로고 (실제 매장 공통) */
   chalk(g, 600, 30, 430, Math.PI / 4, 80); boxShelf(g, -150, -1110, 0, 2);   /* 검은 칠판 가격표 · 주황 m 상자 선반 (로고 벽 앞) */
   const L = I.light;
   if (L === 'pendant') { for (const [x, z] of [[70, 310], [250, 80], [-60, 60]]) pendant(g, x, z); if (open.has('hall')) for (const z of [-260, 30, 320]) pendant(g, -450, z); }
   if (L === 'brass') { for (const x of [-900, -400, 100, 900]) sconce(g, x, -1132, 0); for (const z of [-900, -300]) sconce(g, -1232, z, Math.PI / 2); chandelier(g, 120, 160); if (open.has('hall')) chandelier(g, -450, 30); }
   if (L === 'led') { led(g, -200, -100, 600, -100); led(g, -200, 250, 600, 250); if (open.has('hall')) led(g, -450, -400, -450, 400); if (open.has('cream')) led(g, 50, -800, 600, -800); }
   if (L === 'garland') { garland(g, -240, -440, 640, -440, 240, 40); garland(g, -240, 440, 640, 440, 240, 60); garland(g, -240, -440, -240, 440, 245, 50); }
-  PROPS[I.props](g, open); }
+  const pg = new THREE.Group(); pg.userData.furn = 'props'; g.add(pg); PROPS[I.props](pg, open); }

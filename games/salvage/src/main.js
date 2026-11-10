@@ -1,21 +1,24 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
-import { forecast, setWxTest } from './data/weather.js?v=0.99.15'; /* M4-B 판 상태 5 */
+import { forecast, setWxTest } from './data/weather.js?v=0.99.16'; /* M4-B 판 상태 5 */
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.15';
-import { FX, shakeMul } from './fx.js?v=0.99.15';
-import { Raid } from './raid.js?v=0.99.15';
-import { UI } from './ui.js?v=0.99.15';
-import { S, load, save, stashCap } from './save.js?v=0.99.15';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.15';
-import * as E from './econ.js?v=0.99.15';
-import { installBack } from './oad.js?v=0.99.15';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.15';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.15';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.15';
-import { Story, artUrl } from './story_ui.js?v=0.99.15';
-import { HomeFac } from './home_fac.js?v=0.99.15';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.15';
-import * as TH from './threat.js?v=0.99.15'; /* M4-A 위협 곡선 · 주간 변주 */
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.16';
+import { FX, shakeMul } from './fx.js?v=0.99.16';
+import { Raid } from './raid.js?v=0.99.16';
+import { UI } from './ui.js?v=0.99.16';
+import { S, load, save, stashCap } from './save.js?v=0.99.16';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.16';
+import * as E from './econ.js?v=0.99.16';
+import { installBack } from './oad.js?v=0.99.16';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.16';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.16';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.16';
+import { Story, artUrl } from './story_ui.js?v=0.99.16';
+import { HomeFac } from './home_fac.js?v=0.99.16';
+import { FurnUI } from './furn_ui.js?v=0.99.16'; /* M5-D 은신처 가구 30 */
+import { petSpec, petScale, makeBandi } from './pet_raid.js?v=0.99.16'; /* M5-C 몽이 5단 겉모습 · 반디 */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.16';
+import * as TH from './threat.js?v=0.99.16'; /* M4-A 위협 곡선 · 주간 변주 */
+import * as CHL from './challenge.js?v=0.99.16'; import * as AB from './abyss.js?v=0.99.16'; import * as AC from './ach.js?v=0.99.16'; import * as M5 from './ui_m5b.js?v=0.99.16'; /* M5-B 주간 도전 · 깊은 물 · 업적 50 */
 
 const Q = new URLSearchParams(location.search);
 setWxTest({ wx: Q.get('wx'), week: Q.has('week') ? Q.get('week') : undefined }); /* ?wx= · ?week= 시험값 → 출격 준비 예보 카드와 실제 판이 같은 값 (M4 마무리) */
@@ -80,7 +83,7 @@ function buildHideout() {
   for (let i = -2; i <= 2; i++) add('floor_wood', i * 4, 0); for (let i = -1; i <= 1; i++) add('floor_wood', i * 4, -4);
   add('wall', -4, -6, 0); add('wall', 0, -6, 0); add('wall', 4, -6, 0);
   /* M4-D: 작업대 · 창고 · 선반 · 등은 시설 단계 소품(home_fac.js)이 맡음 — 여기엔 늘 있는 것만 */
-  add('rug', 0, -1.6, 0, 1.2); add('armchair', 2.4, -2.6, -0.5, 0.9);
+  g.userData.base = { rug: add('rug', 0, -1.6, 0, 1.2), armchair: add('armchair', 2.4, -2.6, -0.5, 0.9) }; /* M5-D 가구가 그 자리에 놓이면 숨김 (furn_ui.js) */
   add('torch', -1.6, -5.75, 0); add('torch', 2.4, -5.75, 0);
   const lamp = new THREE.PointLight(0xffb870, 10, 12, 1.4); lamp.position.set(-3, 3, -3); g.add(lamp); g.userData.lamp = lamp;
   g.userData.mats = [];
@@ -90,6 +93,7 @@ function buildHideout() {
 }
 /* 시설 12 × 3단 소품 · 공사 끝 카메라 연출 (M4-D · home_fac.js) */
 const homeFac = app.homeFac = new HomeFac(app);
+app.furn = new FurnUI(app, homeFac); /* M5-D: 가구는 시설 소품 덩어리에 합침 · '초소 꾸미기' 화면 */
 function syncHideoutProps() {
   if (!hide) return; homeFac.sync(hide, S);
   syncHideoutHero();
@@ -103,16 +107,20 @@ function syncHideoutHero() {
     const h = U.hero = makeHero(spec); h.root.scale.setScalar(0.62 * HERO_SCALE / 0.78); h.root.position.set(-0.4, 0, -1.6); h.root.rotation.y = 0.35; hide.add(h.root);
     U.mixer = new THREE.AnimationMixer(h.root); U.mixer.clipAction(h.clips.Idle).play(); U.heroKey = key;
   }
-  const pk = (S.fac.aquarium || 0) >= 1 ? JSON.stringify([S.look?.pet, S.look?.fur]) : null;
+  E.syncPets(S); const mlv = S.pets?.mong || 1; /* M5-C 몽이 단계 = 크기 · 장식 */
+  const pk = (S.fac.aquarium || 0) >= 1 ? JSON.stringify([S.look?.pet, S.look?.fur, mlv]) : null;
   if (U.petKey !== pk) {
     if (U.pet) { hide.remove(U.pet.root); U.pet = null; }
-    if (pk) { const p = makeHero(resolve({ pet: true, look: S.look })); p.root.scale.setScalar(0.36 * HERO_SCALE / 0.78); p.root.position.set(0.9, 0, -1.0); p.root.rotation.y = -0.6; hide.add(p.root); const m = new THREE.AnimationMixer(p.root); m.clipAction(p.clips.Idle).play(); m.setTime(0.7); U.pet = { root: p.root, m, h: p }; }
+    if (pk) { const p = makeHero(petSpec(resolve({ pet: true, look: S.look }), mlv)); p.root.scale.setScalar(petScale(mlv) * HERO_SCALE / 0.78); p.root.position.set(0.9, 0, -1.0); p.root.rotation.y = -0.6; hide.add(p.root); const m = new THREE.AnimationMixer(p.root); m.clipAction(p.clips.Idle).play(); m.setTime(0.7); U.pet = { root: p.root, m, h: p }; }
     U.petKey = pk;
   }
+  /* M5-C 반디: 몽이 머리 위에 떠 있음 (수족관 쪽) */
+  const bk = S.pets?.bandi || 0;
+  if (U.bandiKey !== bk) { if (U.bandi) { hide.remove(U.bandi); U.bandi = null; } if (bk) { U.bandi = makeBandi(bk); U.bandi.position.set(1.35, 1.25, -0.7); U.bandi.scale.multiplyScalar(1.1); hide.add(U.bandi); } U.bandiKey = bk; }
 }
 app.syncHideoutHero = () => syncHideoutHero();
 /* 겉모습 바뀜: 필요한 파일을 받은 뒤 은신처 수달 다시 합침 */
-app.lookChanged = async () => { const sp = resolve(lookOf(S, { both: true })); await ensure([...sp.files, ...resolve({ pet: true, look: S.look }).files]); syncHideoutHero(); };
+app.lookChanged = async () => { const sp = resolve(lookOf(S, { both: true })); await ensure([...sp.files, ...petSpec(resolve({ pet: true, look: S.look }), S.pets?.mong || 1).files]); syncHideoutHero(); };
 app.syncHideoutProps = () => syncHideoutProps();
 app.showHideout = on => {
   if (on && !hide) { hide = buildHideout(); scene.add(hide); }
@@ -135,7 +143,7 @@ app.startRaid = o => {
 };
 /* 열린 지도 묶음을 은신처에서 미리 받기 (첫 진입 용량엔 안 들어감) */
 app.preloadMaps = () => { for (const m of E.openMaps(S)) if (m !== 'ware') loadPack(m).catch(e => console.warn('지도 묶음', e)); };
-function startRaidNow({ safeItems = [], carry = [], map }) {
+function startRaidNow({ safeItems = [], carry = [], map, abyss = 0 }) {
   if (raid) endRaid();
   if (!app.free) S.sorties = Math.max(0, S.sorties - 1);   /* 테스트 무제한(nolimit)이어도 횟수는 세서 '하루 끝' 이야기는 그대로 */
   const L = E.loadout(S); E.useAmmo(S); /* v0.6 탄약 상자 1개 = 이번 판 (L.ammo 는 쓰기 전에 정해짐) */
@@ -149,15 +157,35 @@ function startRaidNow({ safeItems = [], carry = [], map }) {
   if (hide) hide.visible = false;
   const mk = mapFor({ map }); if (!packReady(mk)) { console.warn('지도 묶음 없음 → 창고', mk); }
   const rmap = packReady(mk) ? mk : 'ware'; TH.noteDay(S, S.day || E.kstDay()); const threat = Q.has('nothreat') ? null : TH.threatOf(S, rmap, S.day || E.kstDay(), { ...(Q.has('threat') ? { lv: +Q.get('threat') } : {}), ...(Q.has('week') ? { week: TH.weekNamed(Q.get('week')) } : {}), ...(Q.has('chief') ? { chiefAt: +Q.get('chief') || 5 } : {}) }); /* ?threat=N · ?week=night|storm|boss · ?chief=초 = 시험용 */ /* M4-A 오늘 위협 (?nothreat = M3 그대로) */
+  if (abyss && AB.abyssOpen(S) && threat) AB.applyRaid(S, threat, L, abyss); /* M5-B 깊은 물: 위협 Lv 10 + 깊이 · 보상 배수 · 닳음 */
   const rseed = seed; save(); /* M4 마무리: 주간 변주는 예보 가중치로 (data/weather.js wxTable) — 예보가 지도 상태를 정하므로 seed 다시 뽑기(pickSeed)는 뺌 */
   raid = app.raid = new Raid({ scene, camera, fx, ui, renderer, lights: { hemi, sun } });
   attachRaid(raid);   /* 원어데이: 가방 보험 · 이어하기 (bmflow) */
-  raid.start({ seed: rseed, threat, map: rmap, corpse: S.corpse, wx, wxForce: Q.has('wx'), L, safeItems: safe, carry: bring, kit: Array(L.kit).fill('med'), want, hero: resolve(lookOf(S, { both: true })) });
+  raid.start({ seed: rseed, threat, map: rmap, corpse: S.corpse, wx, wxForce: Q.has('wx'), L, safeItems: safe, carry: bring, kit: Array(L.kit).fill('med'), want, hero: resolve(lookOf(S, { both: true })), petHero: S.pets?.mong ? petSpec(resolve({ pet: true, look: S.look }), S.pets.mong) : null });
   story.raidStart(raid);
   const p = raid.pl.pos; camPos.set(p.x, 30, p.z + 18); camLook.copy(p);
 }
+/* M5-B 주간 도전: 지급 장비 · 그 주 seed · 규칙 — 내 창고 · 남은 가방 · 이야기 · BM(이어하기 · 보험)과 따로 */
+app.startChal = () => {
+  const v = CHL.canStart(S, app.nolimit); if (!v.ok) return v; if (app.starting) return { ok: false };
+  const spec = CHL.begin(S, { free: app.free }); save(); const sp = resolve(lookOf(S, { both: true }));
+  if (ready(sp.files) && packReady(spec.map)) { startChalNow(spec); return { ok: true, spec }; }
+  app.starting = true; ui.toast('지도를 받는 중…', 'soft');
+  Promise.all([ensure(sp.files).catch(e => console.warn('장착 파일', e)), loadPack(spec.map).catch(e => console.warn('지도 묶음', e))]).then(() => { app.starting = false; startChalNow(spec); });
+  return { ok: true, spec };
+};
+function startChalNow(spec) {
+  if (raid) endRaid();
+  const { L, kit } = CHL.chalLoadout(spec); const threat = CHL.chalThreat(spec); const rmap = packReady(spec.map) ? spec.map : 'ware';
+  if (hide) hide.visible = false;
+  raid = app.raid = new Raid({ scene, camera, fx, ui, renderer, lights: { hemi, sun } }); raid.chal = spec;
+  raid.start({ seed: spec.seed, threat, map: rmap, corpse: null, wx: spec.wx, L, safeItems: [], carry: [], kit, want: [], hero: resolve(lookOf(S, { both: true })) });
+  const p = raid.pl.pos; camPos.set(p.x, 30, p.z + 18); camLook.copy(p);
+}
+app.chalSpec = no => CHL.weekly(no ?? CHL.chal(S).wk); /* 시험 훅 */
 function endRaid() {
-  const res = raid.result(); story.raidEnd(); raid.dispose(); raid = app.raid = null;
+  const res = raid.result(); AC.collect(raid, res, S); const chal = raid.chal; story.raidEnd(); raid.dispose(); raid = app.raid = null;
+  if (chal) return M5.chalEnd(app, res, chal); /* M5-B: 도전 판은 점수로만 (창고 · 의뢰 · 이야기 X) */
   story.afterRaid(res);   /* 이야기 물건 · 기억 조각 · 녹음기 · 이야기 걸음 (창고에 넣기 전) */
   const gained = { overflow: 0, overflowVal: 0 };
   const intoStash = keys => { for (const k of keys) { if (S.stash.length < stashCap()) S.stash.push(k); else { gained.overflow++; gained.overflowVal += ITEMS[k].val; S.shells += ITEMS[k].val; } } };
@@ -172,9 +200,10 @@ function endRaid() {
   if (res.bossKind) (S.stats.bossKinds ||= {})[res.bossKind] = (S.stats.bossKinds[res.bossKind] || 0) + 1;
   res.quests = E.questRaid(S, res);
   (S.log ||= []).push({ d: S.day, o: res.outcome, v: res.outcome === 'extract' ? res.value : 0, t: Math.round(res.time), z: res.zoneMax, m: res.map, c: res.cond }); if (S.log.length > 30) S.log.shift();
+  M5.afterRaid(res); /* M5-B 업적 기록 · 깊은 물 깊이 · 닳음 · 이정표 */
   save();
   app.lastResult = res;
-  ui.result(res, gained);
+  ui.result(res, gained); M5.resultPop(app, res);
   return res;
 }
 
@@ -209,7 +238,7 @@ function frame(now) {
     /* 은신처 카메라: 천천히 숨쉬기 */
     const t = now / 1000; if (!app.hideCam?.(camera, t, rdt)) { camera.position.set(Math.sin(t * 0.15) * 0.8, 7.2, 9.4); camera.lookAt(0, -1.4, -1.8); }
     sun.position.set(6, 14, 8); sun.target.position.set(0, 0, -2);
-    if (hide) { const U = hide.userData; if (U.water) { U.water.offset.x = (t * 0.012) % 1; U.water.offset.y = (t * 0.02) % 1; } U.mixer?.update(rdt); U.pet?.m.update(rdt); if (U.hero) tailWag(U.hero, rdt, 0); if (U.pet) tailWag(U.pet.h, rdt, 0); }
+    if (hide) { const U = hide.userData; if (U.water) { U.water.offset.x = (t * 0.012) % 1; U.water.offset.y = (t * 0.02) % 1; } U.mixer?.update(rdt); U.pet?.m.update(rdt); if (U.hero) tailWag(U.hero, rdt, 0); if (U.pet) tailWag(U.pet.h, rdt, 0); if (U.bandi) { U.bandi.position.y = 1.25 + Math.sin(t * 2.2) * 0.08; U.bandi.rotation.y = Math.sin(t * 0.7) * 0.6; } }
     ui.drawVeil(null, camera);
   }
   if (ui.wardrobe.on) { renderer.setClearColor(0x14181d, 1); renderer.clear(); ui.wardrobe.draw(renderer, rdt); renderer.setClearColor(0x000000, 1); }
@@ -219,7 +248,7 @@ function frame(now) {
 
 /* ───── 시작 ───── */
 async function boot() {
-  resize(); load();
+  resize(); load(); if (Q.has('abyss') && !/^(www\.)?oneaday\.kr$/.test(location.hostname)) AB.markEnding(S); /* M5-B 시험: 깊은 물 열기 */
   /* 첫 실행 로딩 (v0.5.1 · 검수 Top 9): 불투명 · 프롤로그 첫 그림을 흐리게 미리 깔고 '7년 전 밤으로…' — 막은 프롤로그 그림이 뜬 뒤에 걷음 */
   const ld = document.getElementById('loading'); const first = story.on && S.story?.tut === 0;
   app.hideLoading = () => { if (!ld.isConnected || ld.classList.contains('done')) return; ld.classList.add('done'); setTimeout(() => ld.remove(), 500); };
@@ -229,16 +258,16 @@ async function boot() {
   catch (e) { document.querySelector('#loading span').textContent = '불러오기 실패 — 새로고침해 주세요'; throw e; }
   makeIcons(renderer);
   /* 장착한 겉모습 파일만 먼저 받음 (판 안 · 은신처) — 옷장의 나머지는 열 때 */
-  grantEarned(S); try { await ensure([...resolve(lookOf(S, { both: true })).files, ...resolve({ pet: true, look: S.look }).files]); } catch (e) { console.warn('장착 파일', e); }
+  grantEarned(S); E.syncPets(S); try { await ensure([...resolve(lookOf(S, { both: true })).files, ...petSpec(resolve({ pet: true, look: S.look }), S.pets?.mong || 1).files]); } catch (e) { console.warn('장착 파일', e); }
   app.loadMs = Math.round(performance.now() - t0); app.assetBytes = A.bytes;
   if (first) setTimeout(app.hideLoading, 6000); else app.hideLoading();   /* 첫 실행은 프롤로그가 걷음 (6초 안전) */
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.15'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.16'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */
-Object.assign(app, { S: () => S, save, E, endRaid: () => raid && endRaid(), FACILITIES, A, loadPack,
+Object.assign(app, { S: () => S, save, E, CHL, AB, AC, endRaid: () => raid && endRaid(), FACILITIES, A, loadPack,
   mem: () => ({ geo: renderer.info.memory.geometries, tex: renderer.info.memory.textures, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null, nodes: (() => { let n = 0; scene.traverse(() => n++); return n; })() }) });
 boot();

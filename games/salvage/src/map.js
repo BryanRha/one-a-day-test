@@ -1,18 +1,19 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.15';
-import { prop } from './assets.js?v=0.99.15';
-import { buildDress, farWater } from './dress_art.js?v=0.99.15';
-import { buildFactory } from './factory.js?v=0.99.15'; /* M3-B 가라앉은 공장 */
-import { buildLab } from './lab.js?v=0.99.15'; /* M4-B 심해 연구소 */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.16';
+import { prop } from './assets.js?v=0.99.16';
+import { buildDress, farWater } from './dress_art.js?v=0.99.16';
+import { buildFactory } from './factory.js?v=0.99.16'; /* M3-B 가라앉은 공장 */
+import { buildLab } from './lab.js?v=0.99.16'; /* M4-B 심해 연구소 */
+import { buildGate } from './gate.js?v=0.99.16'; /* M5-A 대수문 꼭대기 */
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.15';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.16';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */
 /* 뒤질 곳 모델 */
-export const LOOT_MODEL = { crate: 'k_boxopen', barrel: 'k_barrel', locker: 'cabinet', chest: 'k_chest', toolbox: 'k_crate', vault: 'chest', net: 'k_bucket', cargo: 'cont_b', kiosk: 'cabinet', cart: 'k_crate', bench: 'k_bench', stash: 'f_stash', corebox: 'f_corebox', lshelf: 'l_specimen', labcab: 'l_drawer', culture: 'l_culture', archive: 'l_archive' };
+export const LOOT_MODEL = { crate: 'k_boxopen', barrel: 'k_barrel', locker: 'cabinet', chest: 'k_chest', toolbox: 'k_crate', vault: 'chest', net: 'k_bucket', cargo: 'cont_b', kiosk: 'cabinet', cart: 'k_crate', bench: 'k_bench', stash: 'f_stash', corebox: 'f_corebox', lshelf: 'l_specimen', labcab: 'l_drawer', culture: 'l_culture', archive: 'l_archive', gstair: 'k_crate' }; /* M5-A 대수문 관제 보관함 */
 export const LOOT_SCALE = { k_boxopen: 4.2, k_barrel: 5, k_chest: 5.5, k_crate: 1.6, chest: 1.3, k_bucket: 5.5, cont_b: 3.2, k_bench: 5 };
 /* 지도 모양: 바닥(방 종류 · 칸) · 벽(구역 · 카메라 쪽 낮은 벽) — [키, 세로 배수, 크기 배수, 회전 더함] */
 const STYLE = {
@@ -27,6 +28,8 @@ const STYLE = {
     wall: (z, low) => low ? ['f_wall', 0.9, 'z', 0.7] : ['f_wall', 3.0, 'z', 0.7] },
   lab: { floor: (rm, i, j) => rm.type === 'tankhall' || rm.type === 'basin' || rm.type === 'decon' ? ((i + j) % 2 ? 'floor_grate' : 'l_floor') : rm.type === 'records' || rm.type === 'dorm' || rm.type === 'vault' ? 'floor_wood' : 'l_floor',
     wall: (z, low) => low ? ['l_wall', 0.9, 'z', 0.5] : ['l_wall', 3.2, 'z', 0.5] }, /* M4-B 연구소: 흰 패널 벽 · 청록 줄 */
+  gate: { floor: (rm, i, j) => rm.type === 'gstair' || (i + j) % 5 === 0 ? 'floor_grate' : 'floor',
+    wall: (z, low) => low || z === 3 ? ['h_fence', 1.0, 'x', 0.22] : ['h_mwall', 2.0, 'x', 0.4] }, /* M5-A 대수문 꼭대기: 난간 · 승강로만 낮은 벽 */
 };
 const dimCache = {};
 function dimsOf(k) { if (dimCache[k]) return dimCache[k]; const o = prop(k); o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o); const v = b.getSize(new THREE.Vector3()); return dimCache[k] = { x: Math.max(0.01, v.x), y: Math.max(0.01, v.y), z: Math.max(0.01, v.z) }; }
@@ -178,6 +181,7 @@ function buildExtras(P, map, statics, group, put, addBox, boxes, tanks) {
   }
   if (map === 'factory') buildFactory(P, statics, group, put, addBox, out, add, own);
   if (map === 'lab') buildLab(P, statics, group, put, addBox, out, add, own, boxes, tanks);
+  if (map === 'gate') buildGate(P, statics, group, put, addBox, out, add, own);
   return out;
 }
 function radial(c0, c1) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, c0); g.addColorStop(1, c1); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }

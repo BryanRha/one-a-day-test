@@ -1,17 +1,17 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.15';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.99.15';
-import { cup } from './models.js?v=0.99.15';
-import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.99.15';
-import { bm } from './oad_bm.js?v=0.99.15';
-import { sfx, setAudio } from './audio.js?v=0.99.15';
-import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.15';
-import { UI2 } from './ui2.js?v=0.99.15';
-import { FLOORS, FINISHED } from './layout.js?v=0.99.15';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.16';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.99.16';
+import { cup } from './models.js?v=0.99.16';
+import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.99.16';
+import { bm } from './oad_bm.js?v=0.99.16';
+import { sfx, setAudio } from './audio.js?v=0.99.16';
+import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.16';
+import { UI2 } from './ui2.js?v=0.99.16';
+import { FLOORS, FINISHED } from './layout.js?v=0.99.16';
 
 const $ = s => document.querySelector(s);
-const SLOT = 'gamsung_slot_', SKEY = 'gamsung_v2';
+const SLOT = 'gamsung_slot_', SKEY = 'gamsung_v2', CLOUD_MAX = 3;
 /* 광고 보상: 원어데이 쪽 자리 이름 (bm.rewardedAd) · 게임 쪽 하루 상한(합 5 = 앱 shell/bm.js 게임당 5) · 바로 완성 최소 남은 시간 */
 const PLACE = { boost: 'boost2x', finish: 'finish', offline: 'offline2x' }, AD_DAY = { finish: 2, boost: 2, offline: 1 }, AD_MIN = 60, INST_MIN = 10;
 /* 조사: 마지막 글자 받침으로 고름 · josa('서윤', '이', '가') → 서윤이 · josa('지호', '을', '를') → 지호를 (한글이 아니면 뒤엣것) */
@@ -81,17 +81,26 @@ export class UI {
     const cam = this.app.cam, W = innerWidth, H = innerHeight, q = W / H < 0.6 ? 1 : Math.max(0.9, Math.min(1.5, H / (cam.top - cam.bottom) / 0.358)), sk = Math.abs(q - 1) > 0.02 ? ` scale(${q.toFixed(3)})` : '', v = new THREE.Vector3(),   /* 화면 위 표시는 매장이 그려지는 크기에 맞춤(폰 세로 = 1) · 기준점은 그대로 */ at = (x, y, z) => { v.set(x, y, z).project(cam); return `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px)`; };
     $('#cn').textContent = fmt(S.coins); $('#hn').textContent = fmt(S.hearts); $('#bn').textContent = fmt(S.beans); $('#beanP').classList.toggle('low', S.beans < 6);
     for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.4; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)` + sk; d.style.opacity = Math.max(0, 1 - d._t / 1.3); if (d._t > 1.3) d.remove(); }
-    for (const c of g.cust) { if (!c.tag) continue; const sst = c.state === 'story' || (c.story && c.state === 'seated'), show = (c.state === 'story' || (c.state === 'seated' && (c.story || g.ready(c) || c.w > 90))) && !g.deco;   /* 자리에서 사연을 기다리는 단골도 💌 */   /* 앉아 기다리는 손님은 주문 레일로 보고, 머리 위엔 오래 기다릴 때만 */ c.tag.style.display = show ? '' : 'none'; if (!show) continue;
-      c.tag.style.transform = at(c.pos.x, 230, c.pos.z) + ' translate(-50%,-100%)' + sk;
-      const html = sst ? `<i class="lt">💌</i><b>${c.reg.name}</b><small>눌러서 이야기 듣기</small>` : c.state === 'kiosk' ? '<b>📱 주문 중…</b>' : `<i class="no">#${c.ticket ? c.ticket.no : ''}</i>${c.items.map(it => `<img src="${pic(it.k)}"><b>${MENU[it.k].short}${it.n > 1 ? `×${it.n}` : ''}</b>`).join('')}${c.w > 90 ? '<em>😌</em>' : ''}`;
-      if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('story', sst); c.tag.classList.toggle('reg', !!c.reg); c.tag.classList.toggle('has', g.ready(c)); }
-    const lab = g.cust.filter(c => c.state === 'seated' && !(g.ready(c) || c.w > 90)).sort((a, b) => b.w - a.w)[0];
-    for (const c of g.cust) { const el = c.cloud; if (!el) continue; const sv = c.clearT != null, age = sv ? g.t - c.clearT : 0, show = !g.deco && (sv ? age < 3.2 : ['seated', 'toPick'].includes(c.state));   /* 줄 선 손님 · 받은 뒤엔 구름을 안 띄움 (어수선함 줄이기) */ el.style.display = show ? '' : 'none'; if (!show) continue;
-      const wait = !sv && c === lab;   /* 마음 구름: 흐림 → 맑음 · 정성 한 잔이면 햇살 · 글자는 가장 오래 기다린 한 명만 */
-      const html = !sv ? `<i>☁️</i>${wait ? '<b>마음 흐림</b>' : ''}` : age < 3.2 ? `<i>${c.sun ? '🌞' : '☀️'}</i><b>${c.sun ? '햇살 가득' : '맑아졌어요'}${c.gain ? ` <em>♥+${c.gain}</em>` : ''}</b>` : `<i>${c.sun ? '🌞' : '🌤️'}</i>`;
-      if (el._h !== html) { el.innerHTML = html; el._h = html; el.className = 'cloud ' + (!sv ? 'dim' : age < 3.2 ? 'sun pop' + (c.sun ? ' gold' : '') : 'ok'); }
-      { const t = at(c.pos.x, c.P.sit ? 120 : 150, c.pos.z), px = +t.match(/translate\(([-\d.]+)px/)[1], right = px - (el.offsetWidth * q || 0) - 16 < 4;   /* 손님이 왼쪽 끝이면 구름을 오른쪽에 */
-        el.style.transformOrigin = right ? '0 50%' : ''; el.style.transform = t + (right ? ' translate(16px,-50%)' : ' translate(calc(-100% - 16px),-50%)') + sk; } }
+    /* 0.2.1 대표 피드백 「화면이 지저분해요」: 손님 머리 위는 아이콘 하나만 (메뉴 이름은 손님을 누르거나 사장님이 가까이 갈 때 · 아래 주문 레일에서)
+       · 마음 구름은 기본 숨김 → 기분이 바뀔 때 · 화났을 때(오래 기다림) · 사장님이 가까이 갈 때만 1.5초 · 한 화면에 최대 CLOUD_MAX 개 · 표시는 손님 자리(세계 좌표)에 고정 (tools/clutter_check.mjs) */
+    const o = g.owner, near = c => o && Math.hypot(o.pos.x - c.pos.x, o.pos.z - c.pos.z) < 220;
+    for (const c of g.cust) { if (!c.tag) continue; const sst = c.state === 'story' || (c.story && c.state === 'seated'), show = (c.state === 'story' || (c.state === 'seated' && (c.story || g.ready(c) || c.w > 90))) && !g.deco; c.tag.style.display = show ? '' : 'none'; if (!show) continue;
+      const nm = (near(c) && c.state === 'seated') || (c.showName && g.t < c.showName), it = c.items[0];
+      if (!c.tagAt) c.tagAt = [c.pos.x, c.pos.z]; if (c.state !== 'seated' && c.state !== 'story') c.tagAt = [c.pos.x, c.pos.z]; else if (Math.hypot(c.tagAt[0] - c.pos.x, c.tagAt[1] - c.pos.z) > 40) c.tagAt = [c.pos.x, c.pos.z];   /* 앉은 손님 표시는 움직이지 않음 */
+      c.tag.style.transform = at(c.tagAt[0], 230, c.tagAt[1]) + ' translate(-50%,-100%)' + sk;
+      const html = sst ? `<i class="lt">💌</i>${nm ? `<b>${c.reg.name}</b>` : ''}` : `<img src="${pic(it.k)}">${c.items.length > 1 || it.n > 1 ? `<u>${c.items.reduce((a, x) => a + x.n, 0)}</u>` : ''}${nm ? `<b>${c.items.map(x => MENU[x.k].short + (x.n > 1 ? `×${x.n}` : '')).join(' · ')}</b>` : ''}`;
+      if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('story', sst); c.tag.classList.toggle('reg', !!c.reg); c.tag.classList.toggle('has', g.ready(c)); c.tag.classList.toggle('one', !nm); }
+    { const shown = []; for (const c of g.cust) { const el = c.cloud; if (!el) continue; const sv = c.clearT != null;
+        const mood = sv ? 'sv' : c.w > 120 ? 'mad' : 'wait', nb = near(c) && ['seated', 'drink'].includes(c.state);
+        if (c._mood !== mood) { if (c._mood && (mood === 'sv' || mood === 'mad')) c.cloudUntil = g.t + 1.5; c._mood = mood; }   /* 기분이 바뀜 · 화남 */
+        if (nb && !c._nb) c.cloudUntil = Math.max(c.cloudUntil || 0, g.t + 1.5); c._nb = nb;   /* 사장님이 가까이 감 */
+        if (!g.deco && (c.cloudUntil || 0) > g.t && ['seated', 'drink', 'back', 'sitting2', 'toPick'].includes(c.state)) shown.push(c); else el.style.display = 'none'; }
+      shown.sort((a, b) => b.cloudUntil - a.cloudUntil); shown.slice(CLOUD_MAX).forEach(c => { c.cloud.style.display = 'none'; });
+      for (const c of shown.slice(0, CLOUD_MAX)) { const el = c.cloud; el.style.display = ''; const sv = c.clearT != null;
+        const html = sv ? `<i>${c.sun ? '🌞' : '☀️'}</i>${c.gain ? `<em>♥+${c.gain}</em>` : ''}` : c._mood === 'mad' ? '<i>🌧️</i>' : '<i>☁️</i>';
+        if (el._h !== html) { el.innerHTML = html; el._h = html; el.className = 'cloud one ' + (sv ? 'sun' + (c.sun ? ' gold' : '') : 'dim'); }
+        if (!c.cloudAt || c.state !== 'seated' && c.state !== 'drink') c.cloudAt = [c.pos.x, c.pos.z, c.P.sit ? 120 : 150];
+        el.style.transformOrigin = ''; el.style.transform = at(c.cloudAt[0], c.cloudAt[2], c.cloudAt[1]) + ' translate(calc(-100% - 16px),-50%)' + sk; } }
     this.rail(g);
     for (const d of this.chips.values()) d._seen = false;
     if (!g.deco) {
@@ -104,7 +113,6 @@ export class UI {
         if (S.fg >= 3) { const q = this.chip('stackp', 'stackc', () => ({ kind: 'stack' })); q.style.transform = at(STACK.x, STACK.y + 20, STACK.z) + ' translate(calc(-100% - 34px),-50%)' + sk; if (!q._h) { q.innerHTML = '<b>눌러서 픽업대로 ➜</b>'; q._h = 1; } } } }   /* 안내 중엔 손가락이 대신 */   /* 작업대 탑(개수) · 아래에 「끌어 픽업대로」 */
     }
     for (const [k, d] of this.chips) if (!d._seen) { d.remove(); this.chips.delete(k); }
-    const b = g.boostUntil - now(); $('#adT').textContent = b > 0 ? mmss(Math.ceil(b / 1000)) : '손님×2'; $('#bAd').classList.toggle('on', b > 0);
     if (!this._pt || performance.now() - this._pt > 1000) { this._pt = performance.now(); this.progress(); }
     this.finger(g, at); this.frame2(g);
   }
@@ -186,7 +194,7 @@ export class UI {
     if (p.kind === 'window' || p.kind === 'car') { const car = (g.cars || []).find(c => c.reserved && !c.taken && !c.delBy); return car ? g.jobTakeout(car) : this.toast('포장 주문이 나오면 창구로 건네요'); }
     if (p.kind === 'pot') return g.jobPlant(p.p);
     if (p.kind === 'visit') return g.walkTo(p.at[0], p.at[1] + 100);
-    if (p.kind === 'cust') { const c = p.c; if (c.reserved && !c.taken && g.seatFar(c.seat)) return g.jobServe(); return this.toast(`#${c.ticket ? c.ticket.no : ''} ${MENU[c.menu].name} 기다리는 중${g.seatFar(c.seat) ? ' · 나오면 가져다 드려요' : ' · 픽업대에 나오면 손님이 가지러 가요'}`); }
+    if (p.kind === 'cust') { const c = p.c; c.showName = g.t + 3;   /* 누르면 메뉴 이름을 잠깐 */ if (c.reserved && !c.taken && g.seatFar(c.seat)) return g.jobServe(); return this.toast(`#${c.ticket ? c.ticket.no : ''} ${MENU[c.menu].name} 기다리는 중${g.seatFar(c.seat) ? ' · 나오면 가져다 드려요' : ' · 픽업대에 나오면 손님이 가지러 가요'}`); }
     if (p.kind === 'bar') return bar(() => this.menuBook());
     if (p.kind === 'return') return g.wash() || this.toast('반납대가 비어 있어요');
   }

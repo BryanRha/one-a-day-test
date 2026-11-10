@@ -149,3 +149,11 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .bigcard .bb { display: flex; flex-direction: column; gap: 6px; align-items: stretch; } .bbtn { border-radius: 14px; padding: 10px 14px; font-size: 16px; font-weight: 900; min-width: 92px; } .bbtn.cash { background: #FFD24A; box-shadow: 0 3px 0 #D9A20E; color: #5A3A22; } .bbtn.off { opacity: .5; pointer-events: none; }
 .sheet .more { width: 100%; padding: 10px; border-radius: 12px; background: #F6EEDC; color: #7A4A2A; font-size: 13px; }
 .srow.s { padding: 7px 10px; margin-bottom: 5px; } .srow.s .ic { width: 32px; height: 32px; font-size: 17px; } .srow.s .tx b { font-size: 13px; } .srow.s .tx b em { font-style: normal; color: #B07A4A; font-size: 11px; margin-left: 4px; } .srow .mx { font-size: 11px; color: #B07A4A; }
+
+/* 0.3.2: 월드에 붙는 화면 아이콘은 transform 을 위치에만 씀 — 애니메이션은 안쪽 요소에 (예전 풍선: pulse 애니메이션의 scale 이 위치 translate 를 덮어써 화면 구석으로 휙휙) */
+.balloon { animation: none; background: none; box-shadow: none; } .balloon > i { font-style: normal; width: 64px; height: 64px; border-radius: 50%; background: #ffffffd8; box-shadow: 0 4px 0 #E2C9A6, 0 0 0 4px #FFB24A; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: pulse 1s infinite; }
+.ev2x { animation: none; }
+/* 월드에 붙는 표 (쉬는 직원 💤 · 컴플레인 😤 경고): 박동은 transform 대신 scale 속성으로 (위치 translate 를 안 덮음) */
+@keyframes pulseS { 50% { scale: 1.06; } }
+.zz, .evp { animation: pulseS 1.2s infinite; }
+.undo { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--sb) + 132px); background: #fff; color: #7A4A2A; border-radius: 14px; padding: 9px 14px; font-size: 13px; box-shadow: 0 3px 0 #E2C9A6, 0 0 0 2px #F2B533; z-index: 7; zoom: var(--z, 1); } .undo small { color: #B08060; margin-left: 4px; }

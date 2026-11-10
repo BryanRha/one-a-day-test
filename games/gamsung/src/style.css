@@ -290,3 +290,6 @@ body.wide .minis { top: calc(var(--st) + 54px); }
 .chip.jobc { position: absolute; } .chip.jobc::after { border-top-color: #FFFDF8F2; } .chip.jobc.u::after { border-top-color: #A92E2B; }
 .hint { bottom: calc(var(--sb) + 236px); }
 body.ov #hud > *:not(#modal) { visibility: hidden; } body.ov #tags { display: none; }
+/* 0.2.1 화면 정리: 손님 머리 위 = 아이콘 하나 · 구름은 작게 */
+.bub.one { padding: 2px; gap: 0; border-radius: 50%; } .bub.one img { width: 30px; height: 30px; } .bub u { position: absolute; right: -4px; top: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--ink); color: #fff; font-size: 10px; font-weight: 900; text-decoration: none; display: grid; place-items: center; }
+.bub.story.one { padding: 5px 7px; border-radius: 14px; } .cloud.one { padding: 1px 5px; } .cloud.one i { font-size: 14px; }

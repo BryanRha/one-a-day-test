@@ -30,8 +30,37 @@ export const WEAPONS = {
              desc: '맞은 적 옆으로 전기가 두 번 튀어요. 드론 · 기계에 세고, 해파리엔 약해요.', cost: { shells: 1100, wire: 20, battery: 3, core: 1 } },
   flare:   { name: '조명탄 발사기', short: '조명', role: '범위 · 밤을 밝힘', dmg: 46, rate: 0.75, mag: 3, reload: 2.4, range: 13, spread: 0.02, add: 0.02, max: 0.06, rec: 0.5, crit: 0.05, knock: 3, noise: 16, tier: 3, bench: 5, color: '#ff8a3c', blast: { r: 2.7, burn: 3, dps: 9 }, light: 6, slots: ALL,
              desc: '터지는 조명탄. 둘레에 불이 붙고 6초 동안 그 자리가 밝아져요(밤에 좋아요).', cost: { shells: 1500, powder: 16, pkeg: 3, spyglass: 1, core: 1 } },
+  /* ── M5-C 무기 16 + 근접 3 (2026-11-09) — 6계열(권총 · 연발 · 산탄 · 대형 · 정밀 · 특수)이 둘 이상씩 · 서명 효과 하나씩 · 근접은 같은 '쏘기' 버튼(새 버튼 없음)
+   *  twin 쌍발(권총) · net 그물(특수 · 묶어 느리게) · crossbow 석궁(정밀 · 조용 · 출혈) · hose 물대포(특수 · 밀어냄 · 적심 → 전기 ×1.25)
+   *  anchor 닻 발사포(대형 · 끌어 모음 + 멈칫) · scatter 물보라 산탄(산탄 · 한 번 튕김) · rocket 불꽃 다연장(특수 · 유도 3발 · 작은 터짐)
+   *  hook 인양 갈고리(근접 · 길게 찌르고 끌어옴) · oar 수달 노(근접 · 한 바퀴 휘둘러 밀어냄 · 물속에서 빠름) */
+  twin:    { name: '쌍발 작살 권총', short: '쌍발', role: '두 발 동시 · 가까운 적 둘', dmg: 9, pellets: 2, rate: 3.4, mag: 8, reload: 0.9, range: 11, spread: 0.05, add: 0, max: 0.05, rec: 1, crit: 0.10, knock: 1.8, noise: 11, tier: 1, bench: 3, color: '#e0b860', slots: ALL, fam: 'pistol',
+             desc: '총열 둘에서 작살이 같이 나가요. 가볍고 장전이 빨라요.', cost: { shells: 560, bolt: 16, spring: 3 } },
+  net:     { name: '그물 발사기', short: '그물', role: '묶어서 느리게 · 무리 끊기', dmg: 18, rate: 1.2, mag: 4, reload: 1.8, range: 11, spread: 0.02, add: 0.02, max: 0.06, rec: 0.6, crit: 0.02, knock: 0.6, noise: 8, tier: 2, bench: 4, color: '#c9b98a', slots: ALL, fam: 'special',
+             net: { r: 2.4, slow: 0.4, t: 2.6 }, ctrl: 0.78, desc: '맞은 자리에 그물이 펼쳐져 둘레 적이 2.6초 동안 느려져요(보스는 덜).', cost: { shells: 1100, cloth: 16, bolt: 12, rope: 3, spring: 2 } },
+  crossbow:{ name: '작살 석궁', short: '석궁', role: '조용한 저격 · 출혈', dmg: 46, rate: 1.1, mag: 6, reload: 1.5, range: 20, spread: 0.005, add: 0.03, max: 0.08, rec: 0.4, crit: 0.22, knock: 2.6, noise: 2, tier: 2, bench: 4, color: '#8a7a5a', slots: ALL, fam: 'precision',
+             bleed: { dps: 7, t: 4 }, desc: '소리가 거의 없어요. 박힌 작살이 4초 동안 더 아프게 해요.', cost: { shells: 1250, bolt: 16, wire: 8, lens: 1, spring: 2 } },
+  hose:    { name: '고압 물대포', short: '물대포', role: '밀어내기 · 적심(전기 ×1.25)', dmg: 5, rate: 12, mag: 70, reload: 2.6, range: 7.5, spread: 0.1, add: 0, max: 0.1, rec: 1, crit: 0.02, knock: 3.4, noise: 9, tier: 3, bench: 4, color: '#6fc8ff', slots: ALL, fam: 'special',
+             wet: { t: 4, mul: 1.25 }, ctrl: 0.8, desc: '물줄기로 적을 밀어내요. 젖은 적은 4초 동안 전기에 25% 더 아파요.', cost: { shells: 1900, wire: 14, bolt: 18, o2: 2, spring: 3 } },
+  anchor:  { name: '닻 발사포', short: '닻', role: '끌어 모으기 · 멈칫', dmg: 68, rate: 0.7, mag: 2, reload: 2.3, range: 14, spread: 0.01, add: 0.03, max: 0.06, rec: 0.5, crit: 0.08, knock: 1, noise: 15, tier: 3, bench: 4, color: '#7a8a99', slots: ALL, fam: 'heavy',
+             pull: { r: 3.6, stun: 0.6, mul: 0.4 }, ctrl: 0.85, desc: '박힌 닻이 둘레 적을 끌어당겨 모으고 잠깐 멈추게 해요.', cost: { shells: 2400, bolt: 32, wire: 14, gear: 2, core: 1 } },
+  scatter: { name: '물보라 산탄총', short: '물보라', role: '튕기는 산탄 · 무리', dmg: 7, pellets: 8, rate: 2.0, mag: 8, reload: 2.1, range: 8.5, spread: 0.24, add: 0, max: 0.24, rec: 1, crit: 0.05, knock: 3.6, noise: 15, tier: 3, bench: 4, color: '#bfe6f0', slots: ALL, fam: 'shotgun',
+             ricochet: { r: 4.2, mul: 0.45 }, desc: '조개껍데기 알이 맞으면 옆 적에게 한 번 튕겨요.', cost: { shells: 2100, bolt: 26, powder: 8, spring: 3, core: 1 } },
+  rocket:  { name: '불꽃 다연장', short: '불꽃', role: '유도 불꽃 3발 · 범위', dmg: 22, rate: 0.6, mag: 3, reload: 2.6, range: 15, spread: 0.02, add: 0, max: 0.02, rec: 1, crit: 0.05, knock: 2, noise: 16, tier: 3, bench: 5, color: '#ff6fa8', slots: ALL, fam: 'special',
+             swarm: { n: 3, r: 1.5 }, desc: '축제 불꽃 세 발이 가까운 적을 따라가 작게 터져요.', cost: { shells: 3600, powder: 24, pkeg: 4, chip: 2, core: 2 } },
+  hook:    { name: '인양 갈고리', short: '갈고리', role: '근접 · 길게 찌르고 끌어옴', dmg: 30, rate: 1.5, mag: 0, reload: 0, range: 3.4, arc: 0.6, spread: 0, add: 0, max: 0, rec: 1, crit: 0.12, knock: 0, noise: 3, tier: 1, bench: 3, color: '#b08850', melee: true, slots: ['barrel', 'chamber', 'grip'], fam: 'melee',
+             hookPull: { d: 1.8, stun: 0.35, n: 2 }, ctrl: 0.88, desc: '긴 장대 끝 갈고리. 멀리서 찍어 내 앞으로 끌어와요.', cost: { shells: 640, bolt: 16, rope: 3 } },
+  oar:     { name: '수달 노', short: '노', role: '근접 · 한 바퀴 휘두름 · 물속 빠름', dmg: 46, rate: 0.95, mag: 0, reload: 0, range: 2.5, arc: 6.283, spread: 0, add: 0, max: 0, rec: 1, crit: 0.08, knock: 7, noise: 4, tier: 2, bench: 4, color: '#c98a4a', melee: true, slots: ['barrel', 'chamber', 'grip'], fam: 'melee',
+             spin: { n: 5 }, water: { rate: 1.35 }, ctrl: 0.82, desc: '배 젓던 노를 한 바퀴 크게 휘둘러 둘레 적을 밀어내요. 물에선 더 빨라요.', cost: { shells: 1300, cloth: 14, bolt: 18, gear: 2 } },
 };
 export const WEAPON_KEYS = Object.keys(WEAPONS);
+/* M5-C 계열 6 + 근접 — 작업대 · 출격 준비 무기 고르기를 계열 줄로 접어 보여 줌(19개가 4줄 넘게 늘어나지 않게) */
+export const FAMILY = { pistol: '권총', auto: '연발', shotgun: '산탄', heavy: '대형', precision: '정밀', special: '특수', melee: '근접' };
+export const FAMILY_KEYS = Object.keys(FAMILY);
+const FAM0 = { pistol: 'pistol', rifle: 'auto', wrench: 'melee', shotgun: 'shotgun', rivet: 'auto', longshot: 'precision', diver: 'special', harpoon: 'heavy', volt: 'special', flare: 'heavy' };
+for (const k of WEAPON_KEYS) WEAPONS[k].fam ||= FAM0[k];
+export const RANGED_KEYS = WEAPON_KEYS.filter(k => !WEAPONS[k].melee);
+export const MELEE_KEYS = WEAPON_KEYS.filter(k => WEAPONS[k].melee);
 
 /* ───── 손맛 칸 (v0.6.1 · 검수 M3 Top 5 — 폰 쿼터뷰에서 보이는 '서명 효과' 하나씩 · arms.js 가 읽음) ─────
  * shake 쏠 때 화면 흔들림(카메라는 제곱으로 흔듦: 0.3 ≈ 3px · 0.5 ≈ 9px · 상한 SHAKE_MAX · 설정 '흔들림 약하게' ×0.35)
@@ -53,6 +82,18 @@ export const FEEL = {
   harpoon: { shake: 0.56, kick: 0.32, stop: 1.6,  push: 1.2, flash: 1.5, light: 36, fc: 0xffc070, tc: 0xffa63a, tw: 0.34, tl: 0.34, sig: 'pierce' },
   volt:    { shake: 0.30, kick: 0.12, stop: 1.2,  push: 1,   flash: 1.1, light: 44, fc: 0x9fe8ff, tc: 0x6fd0ff, tw: 0.2,  tl: 0.17, sig: 'arc' },
   flare:   { shake: 0.26, kick: 0.18, stop: 1.2,  push: 1,   flash: 1.2, light: 30, fc: 0xffa050, tc: 0xff9a3c, tw: 0,    tl: 0,    sig: 'flare', boom: 0.6, fly: 34 },
+  /* M5-C 새 무기 서명: twin 나란한 금빛 두 줄 + 쌍 총구 · net 날아가는 그물 원판 → 바닥 그물 고리(묶인 동안) · bolt 가는 어두운 선 + 박힌 작살 반짝(출혈 동안 붉은 방울)
+   *  spray 굵은 물줄기 다발 + 물보라 · anchor 사슬 점선 + 쿵 먼지 고리 + 끌려오는 줄 · shard 진주빛 짧은 알 + 튕김 꺾인 선 · swarm 분홍 · 연두 · 금빛 곡선 꼬리 셋 → 작은 꽃불
+   *  hook 앞으로 뻗는 장대 선 + 갈고리 반짝 + 끌어오는 밧줄 · spin 몸 둘레 한 바퀴 물결 고리 두 겹 + 물방울 */
+  twin:    { shake: 0.28, kick: 0.14, stop: 0.8,  push: 1,   flash: 1.0, light: 26, fc: 0xffe0a0, tc: 0xffd27a, tw: 0.12, tl: 0.14, sig: 'twin' },
+  net:     { shake: 0.22, kick: 0.16, stop: 0.6,  push: 0.5, flash: 0.7, light: 14, fc: 0xf0e6c8, tc: 0xe8dcb0, tw: 0.06, tl: 0.2,  sig: 'net', fly: 26 },
+  crossbow:{ shake: 0.20, kick: 0.12, stop: 1.5,  push: 1,   flash: 0,   light: 0,  fc: 0xffffff, tc: 0x4a3a2a, tw: 0.07, tl: 0.3,  sig: 'bolt' },
+  hose:    { shake: 0.12, kick: 0.04, stop: 0.2,  push: 1.6, flash: 0.5, light: 0,  fc: 0xcff0ff, tc: 0x9fdcff, tw: 0.32, tl: 0.12, sig: 'spray' },
+  anchor:  { shake: 0.58, kick: 0.34, stop: 1.8,  push: 0.6, flash: 1.4, light: 30, fc: 0xffc890, tc: 0x5a6470, tw: 0.16, tl: 0.5,  sig: 'anchor', boom: 0.5 },
+  scatter: { shake: 0.48, kick: 0.26, stop: 0.9,  push: 1.4, flash: 1.6, light: 38, fc: 0xe8f8ff, tc: 0xe0f4ff, tw: 0.1,  tl: 0.11, sig: 'shard' },
+  rocket:  { shake: 0.30, kick: 0.16, stop: 1,    push: 1,   flash: 1.3, light: 34, fc: 0xff9ad0, tc: 0xff6fa8, tw: 0,    tl: 0,    sig: 'swarm', boom: 0.35, fly: 18 },
+  hook:    { shake: 0.34, kick: -0.12, stop: 1.6, push: 0,   flash: 0,   light: 0,  fc: 0xffffff, tc: 0xe8d0a0, tw: 0.14, tl: 0.2,  sig: 'hook' },
+  oar:     { shake: 0.50, kick: 0.2, stop: 1.8,   push: 1.4, flash: 0,   light: 0,  fc: 0xffffff, tc: 0xbfeaff, tw: 0.7,  tl: 0.24, sig: 'spin' },
 };
 for (const k of WEAPON_KEYS) WEAPONS[k].feel = FEEL[k];
 /* 탄약 명중 효과 (arms.js hitSig) — 일반 = 뼈 조각 + 따뜻한 별 · 관통 = 뒤로 빠지는 은빛 침 3 + '틱' · 전기 = 파란 번쩍 + 작은 호 2 + '지직' */
@@ -83,6 +124,11 @@ export const MOD_COST = [null,
   { shells: 900, wire: 12, sp: 1, core: 1 },
 ];
 export const TIER_MUL = { 1: 1, 2: 1.3, 3: 1.6 };
+/* M5-C 무기 단련 ★1~3 (정밀 공방 단계 = 단련 단계 상한) — 개조 Mk3 위 '상위 단계' · 후반 조개를 받는 곳 (조개 + 코어 + 보스 보물)
+ *  S.star[무기] = 0~3 (개조 칸 S.weapons 과 따로 — 개조 수 세는 곳에 안 섞임) · 피해 × · 장전/휘두르기 빠르게 */
+export const STAR = { max: 3, dmg: [1, 1.07, 1.14, 1.22], reload: [1, 0.95, 0.9, 0.85], rate: [1, 1.02, 1.04, 1.07],
+  fx: ['', '피해 +7% · 장전 −5%', '피해 +14% · 장전 −10%', '피해 +22% · 장전 −15% · 빠르기 +7%'],
+  cost: [null, { shells: 900, bolt: 18, wire: 10, core: 1 }, { shells: 1800, bolt: 26, wire: 16, core: 1, sample: 2 }, { shells: 3200, wire: 24, core: 2, coral: 1, fang: 1 }] };
 export const freshMods = () => ({ scope: 0, barrel: 0, mag: 0, chamber: 0, grip: 0 });
 
 /* ───── 탄약 3 — 출격 준비에서 고름 · 관통 · 특수는 '탄약 상자' 1개 = 한 판 모든 총(근접 제외) ─────

@@ -4,9 +4,9 @@
 //  · 판 상태는 판마다 하나 — 지도 상태가 이미 갈래를 가지면 그것, 아니면 지도마다 '나올 수 있는 조합'(WX_MAP) 가중치로 '이번 판 예보'를 뽑음
 //  · 예보 = (한국 날짜 · 지도 · 지금까지 출격 수) 해시 → 출격 준비에서 미리 보이고 맵 장비(data/gear.js MAP_GEAR) 권장이 뜸. 처음 6판은 침수 창고가 늘 맑음
 //  · NARRATIVE 1-4 해석: 밤 = 이끼가 가장 밝게 빛나는 시간 · 폭풍 = 대수문 틈으로 바다가 밀려듦 · 안개 = 대수문 냉각수 증기 · 한파 = 연구소 냉각 장치 고장 · 독수 = 깨진 코어 누수
-import { mix32, rng } from '../plan.js?v=0.99.15';
-import { MAPS } from '../data.js?v=0.99.15';
-import { WEEKS, WEEK_CYCLE, WEEK_FROM } from './enemies.js?v=0.99.15';
+import { mix32, rng } from '../plan.js?v=0.99.16';
+import { MAPS } from '../data.js?v=0.99.16';
+import { WEEKS, WEEK_CYCLE, WEEK_FROM } from './enemies.js?v=0.99.16';
 
 export const WX_KEYS = ['night', 'storm', 'fog', 'cold', 'toxic'];
 /* 판 상태 5 — 아이콘 · 이름 · 한 줄(판 안 띠) · 숫자 (raid.js 가 지도 상태 숫자에 곱해 씀: sight · hear · vis · fog · rain · night) */
@@ -18,7 +18,7 @@ export const WEATHER = {
   toxic: { icon: '☣', name: '독수', band: '초록 웅덩이를 피해요', txt: '독수 — 깨진 코어가 새어 초록 독 웅덩이가 생겨요. 밟으면 독이 오르고 쌓인 독은 천천히 아파요. 연고 · 해독제 · 소독 샤워로 씻어요', fog: [22, 46], vis: 0.95, toxic: 1, gear: 'filter' },
 };
 /* 지도 상태 → 갈래 (지금 있는 상태 정리) — 없는 것은 날씨가 아님(지도 사건) */
-export const WX_OF = { storm: 'storm', fog: 'fog', clear: 'night', dark: 'night', outage: 'night', steam: 'fog' };
+export const WX_OF = { storm: 'storm', fog: 'fog', clear: 'night', dark: 'night', outage: 'night', steam: 'fog', gale: 'storm' }; /* M5-A 대수문 꼭대기 비바람 = 폭풍 */
 /* 지도마다 나올 수 있는 조합 (가중치 · none = 맑음) — 항구는 지도 상태 자체가 날씨(폭풍 · 안개 · 맑은 밤)라 그 표를 씀 */
 export const WX_MAP = {
   ware:    { none: 70, storm: 15, fog: 15 },
@@ -26,6 +26,7 @@ export const WX_MAP = {
   tunnel:  { night: 35, none: 36, toxic: 13, cold: 10, fog: 6 },   /* M4 마무리: night 35 = 정전(dark) — 예보가 지도 상태를 정하므로 옛 지도 상태 비율(정전 35%)을 예보 표에 넣음 */
   factory: { fog: 35, night: 35, none: 17, toxic: 8, storm: 5 },   /*            fog 35 = 증기 누출(steam) · night 35 = 정전(outage) · 나머지 = 과열(overheat) */
   lab:     { cold: 35, toxic: 20, fog: 15, night: 15, none: 15 },
+  gate:    { storm: 100 }, /* M5-A 대수문 꼭대기 — 늘 비바람 */
 };
 /* 항구 예보 → 지도 상태 (plan(seed, 'harbor', { cond }) 로 넘김) */
 export const WX_COND = { harbor: { storm: 'storm', fog: 'fog', night: 'clear' } };

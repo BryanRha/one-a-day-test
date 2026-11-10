@@ -1,13 +1,13 @@
 // 방문형 방 창 (크루룸 · 사장실 · 창고) · 금고 · 공사 · 풍선 · 골드 상품 · 시즌 패스 · 지점 완성 — UI 에 붙임
 //   방 창: 방에 들어가면 아래에서 올라옴 (게임은 멈추지 않음 · 위쪽을 끌면 계속 걸음) · 나가면 닫힘 · 뒤로 = 닫기
 //   모든 광고 자리는 바구니(하루 10) 하나를 나눠 씀 · 다 쓰면 같은 효과의 🪙 로 바뀌거나(1·2·4·6·10) 조용히 숨음(3·7·9)
-import { UI } from './ui.js?v=0.99.15';
-import { S, save, vipOn, has, today } from './state.js?v=0.99.15';
-import { BRANCHES, STAFF, STAFF_JOB, ROOM_UP, ROOM_UP_MAX, OUTFITS_PRO, GOLD, VIP, IDLE, THEME_SETS, SEASON, COUPON, BRAND, STORE_MAP, AD_PLACES, AD_DAY } from './data.js?v=0.99.15';
-import { ROOMS, hms, instGold } from './layout.js?v=0.99.15';
-import { sfx } from './audio.js?v=0.99.15';
-import { pushBack, track } from './oad.js?v=0.99.15';
-import { bm } from './oad_bm.js?v=0.99.15';
+import { UI } from './ui.js?v=0.99.16';
+import { S, save, vipOn, has, today } from './state.js?v=0.99.16';
+import { BRANCHES, STAFF, STAFF_JOB, ROOM_UP, ROOM_UP_MAX, OUTFITS_PRO, GOLD, VIP, IDLE, THEME_SETS, SEASON, COUPON, BRAND, STORE_MAP, AD_PLACES, AD_DAY } from './data.js?v=0.99.16';
+import { ROOMS, hms, instGold } from './layout.js?v=0.99.16';
+import { sfx } from './audio.js?v=0.99.16';
+import { pushBack, track } from './oad.js?v=0.99.16';
+import { bm } from './oad_bm.js?v=0.99.16';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 const day = () => Math.floor(Date.now() / 864e5);
@@ -90,7 +90,7 @@ P.buildModal = function () { const g = this.app.game, bd = Object.entries(S.bran
   m.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => { if (!(S.inst > 0)) return; S.inst--; save(true); now(b.dataset.bt); });
   m.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => { const id = b.dataset.bg, gp = instGold(g.buildLeft(id)); if (gp !== +b.dataset.g) { this.buildModal(); return; } this.gold('inst' + gp, () => now(id)); }); };
 /* 베이글 풍선: 탭하면 광고 → 수익 2배 / 빨리 걷기 / 큰 쟁반 중 하나 */
-P.balloon = function (on) { const b = $('#balloon'); if (b) b.hidden = !on; };
+P.balloon = function (on) { const b = $('#balloon'); if (b && !on) b.hidden = true; if (on && b) { const n = b.cloneNode(true); n.hidden = true; n.style.transform = ''; b.replaceWith(n); n.onclick = () => this.balloonTap(); } this._balOn = on; };   /* 풍선마다 새 단추 (앞 풍선 자리에서 튀어 오지 않게) · 보이는 건 frame 이 자리를 정한 뒤 */   /* 보이는 건 frame 이 자리를 정한 뒤 (첫 프레임에 구석에서 튀지 않게) */
 P.balloonTap = function () { const g = this.app.game; if (!g.balloon) return; const k = ['boost', 'speed', 'tray'][Math.floor(Math.random() * 3)], nm = { boost: '3분 동안 수익 2배', speed: '3분 동안 빨리 걷기', tray: '3분 동안 큰 쟁반(+4개)' }[k];
   g.balloon.t = Math.max(g.balloon.t, 8); this.ad('balloon', () => { g.popBalloon(true); this.reward(k); }, 'balloon', `🥯 베이글 풍선: ${nm}`).then(ok => { if (!ok && g.balloon) g.balloon.t = Math.min(g.balloon.t, 3); }); };
 /* 이벤트 끝 ×2 (단체 주문 · 인플루언서) — 6초 동안 작은 카드 */

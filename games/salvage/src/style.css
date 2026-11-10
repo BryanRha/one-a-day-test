@@ -698,3 +698,12 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .wxfx .band { position: absolute; left: -50%; width: 200%; height: 26%; border-radius: 50%; background: radial-gradient(ellipse at center, rgba(230, 236, 242, .30) 0%, rgba(230, 236, 242, .14) 45%, rgba(230, 236, 242, 0) 70%); filter: blur(6px); animation: wxFog 26s linear infinite; }
 .wxfx .band.b1 { top: 14%; } .wxfx .band.b2 { top: 58%; height: 32%; animation-duration: 38s; animation-direction: reverse; opacity: .85; }
 @keyframes wxFog { 0% { transform: translateX(-12%); } 50% { transform: translateX(12%); } 100% { transform: translateX(-12%); } }
+/* ───── M5-C (v0.8) 무기 19 계열 줄 · 단련 ★ · 반려 2 ───── */
+.wfam { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; }
+.wfam button { padding: 5px 0 4px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .03); display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.wfam button b { font-size: 12px; } .wfam button small { font-size: 11px; color: var(--mute); } .wfam button small em { font-style: normal; color: var(--amber); margin-right: 2px; }
+.wfam button.on { background: rgba(255, 180, 74, .14); border-color: var(--amber); } .wfam button.can { box-shadow: inset 0 0 0 1px rgba(125, 255, 178, .5); }
+.wsel.wfl { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; } .wsel.wfl button { padding: 6px 1px; } .wsel.wfl b { font-size: 12px; } .wsel.wfl small { font-size: 12px; } .wsel.wfl sup { font-size: 9px; color: #ffd27a; margin-left: 1px; }
+.stars i { font-style: normal; color: rgba(255, 255, 255, .18); font-size: 13px; } .stars i.on { color: #ffd27a; text-shadow: 0 0 6px rgba(255, 210, 122, .7); }
+.mrow.starrow.on { border-color: rgba(255, 210, 122, .45); background: rgba(255, 210, 122, .06); } .btn.star { background: linear-gradient(180deg, #ffd27a, #e0a040); color: #2a1a08; }
+.petrow { border-left: 3px solid var(--c, var(--line)); } .petrow.lock { opacity: .6; } .petrow .pico { font-style: normal; font-size: 26px; width: 34px; text-align: center; } .petrow .ldots { margin-left: 4px; }

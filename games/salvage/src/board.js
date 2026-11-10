@@ -2,16 +2,18 @@
 //  데이터 = data/quests.js BOARD · 대사 = talk/common.js QTALK · 화면 = story_ui.js (의뢰 탭 '인물 의뢰' · 결과 화면 금빛 카드)
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀
 //  저장: S.quests.board = { prog: { 의뢰: 누적 }, rep: { 반복 의뢰: 끝낸 주 } } (salvage_v4 그대로 · 없으면 여기서 만듦) · 끝낸 판 의뢰 id 는 S.quests.done 에 같이 들어감
-import { ITEMS, MAPS, ENEMIES, MATS, CONDS } from './data.js?v=0.99.15';
-import * as D from './data.js?v=0.99.15'; /* D.MAP_GEAR (M4-B 맵 장비 — 없으면 그 의뢰는 안 보임) */
-import { BOARD, QBY } from './data/quests.js?v=0.99.15';
-import * as ST from './story.js?v=0.99.15';
+import { ITEMS, MAPS, ENEMIES, MATS, CONDS } from './data.js?v=0.99.16';
+import * as D from './data.js?v=0.99.16'; /* D.MAP_GEAR (M4-B 맵 장비 — 없으면 그 의뢰는 안 보임) */
+import { BOARD, QBY } from './data/quests.js?v=0.99.16';
+import * as ST from './story.js?v=0.99.16';
 
 export { BOARD, QBY };
 /* v0.7 공통 판 상태 5 (M4-B data/weather.js WX_KEYS 와 같은 키 — ROADMAP M4 고정) · 판 결과 res.wx 로 옴 */
 export const WX5 = new Set(['night', 'storm', 'fog', 'cold', 'toxic']);
 export const ACTIVE_MAX = 4;   /* 한 번에 보이는 인물 의뢰 (반복 납품은 따로) */
-const HOME_GOALS = new Set(['deliver', 'fac', 'weapon', 'mod', 'gear', 'codex', 'tapes', 'graf', 'beat']);
+const HOME_GOALS = new Set(['deliver', 'fac', 'weapon', 'mod', 'gear', 'codex', 'tapes', 'graf', 'beat', 'pay', 'rebuild', 'endings']); /* M5-A pay(조개 내기) · rebuild(은포 되살리기) · endings(본 엔딩 길) */
+/* 은신처 버튼으로 끝내는 것 (납품 · 조개 내기) */
+export const BUTTON = new Set(['deliver', 'pay']);
 export const isHome = q => HOME_GOALS.has(q.goal.t);
 /* 한국 날짜 → 주 번호 (월요일 시작) */
 export const weekOf = d => Math.floor((Date.parse(d) / 864e5 + 3) / 7);
@@ -25,7 +27,7 @@ export function board(S) {
   return b;
 }
 const doneList = S => S.quests?.done || [];
-export const isDone = (S, q, today) => (q.repeat ? board(S).rep[q.id] === weekOf(today) : doneList(S).includes(q.id));
+export const isDone = (S, q, today) => (q.repeat ? board(S).rep[q.id] === (q.repeat === 'day' ? today : weekOf(today)) : doneList(S).includes(q.id)); /* M5-A repeat 'day' = 매일 */
 
 /* 열리는 조건 — 의뢰인이 와 있어야(합류 전 인물은 말하지 않음 · story.present) · 튜토리얼 뒤 · 지도/적 키가 게임에 있어야 */
 export function reqMet(S, q) {
@@ -35,6 +37,7 @@ export function reqMet(S, q) {
   if (r.q && !d.includes(r.q)) return false;
   if (r.prev && !d.includes(r.prev)) return false;
   if (r.beat && !st.beatsDone[r.beat]) return false;
+  if (r.end && !(st.ending || st.ended)) return false; /* M5-A 엔딩 뒤 */
   if (r.ch && ST.chapter(S) < r.ch) return false;
   if (r.fac && (S.fac?.[r.fac[0]] || 0) < r.fac[1]) return false;
   if (r.map && !MAPS[r.map]) return false;
@@ -75,6 +78,9 @@ export function progress(S, q) {
     case 'tapes': return { cur: Math.min(g.n, (st.tapes || []).length), n: g.n };
     case 'graf': return { cur: Math.min(g.n, (st.graf || []).length), n: g.n };
     case 'beat': return { cur: st.beatsDone?.[g.id] ? 1 : 0, n: 1 };
+    case 'pay': return { cur: Math.min(g.n, Math.max(0, Math.floor(S.shells || 0))), n: g.n };
+    case 'rebuild': return { cur: Math.min(g.n, st.rebuild || 0), n: g.n };
+    case 'endings': return { cur: Math.min(g.n, Object.keys(st.endings || {}).length), n: g.n };
     default: return { cur: 0, n: 1 };
   }
 }
@@ -83,12 +89,13 @@ export function progress(S, q) {
 function give(S, r) {
   for (const [k, n] of Object.entries(r || {})) {
     if (k === 'cos') { S.owned ||= []; if (S.owned.includes(n)) S.shells += 150; else S.owned.push(n); }
+    else if (k === 'rebuild') { if (S.story) S.story.rebuild = (S.story.rebuild || 0) + n; } /* M5-A 은포 되살리기 */
     else if (k === 'shells') S.shells += n; else if (k in MATS) S.mats[k] = (S.mats[k] || 0) + n; else if (ITEMS[k]) for (let i = 0; i < n; i++) S.stash.push(k);
   }
 }
 export function complete(S, q, today) {
   const b = board(S); const d = S.quests.done;
-  if (q.repeat) b.rep[q.id] = weekOf(today); else if (!d.includes(q.id)) d.push(q.id);
+  if (q.repeat) b.rep[q.id] = q.repeat === 'day' ? today : weekOf(today); else if (!d.includes(q.id)) d.push(q.id);
   const u = q.map && MAPS[q.map]?.unlock; if (u && u !== q.id && !d.includes(u)) d.push(u);
   delete b.prog[q.id]; give(S, q.reward); if (S.story && ST.CAST[q.giver]) ST.addRel(S, q.giver, 1);
   return q;
@@ -117,19 +124,20 @@ export function boardRaid(S, res, today) {
 export function boardTick(S, today) {
   const out = [];
   for (let guard = 0; guard < 6; guard++) {
-    const list = [...active(S, today), ...available(S, today).filter(q => q.auto)].filter(q => isHome(q) && q.goal.t !== 'deliver');
+    const list = [...active(S, today), ...available(S, today).filter(q => q.auto)].filter(q => isHome(q) && !BUTTON.has(q.goal.t));
     const q = list.find(x => { const p = progress(S, x); return p.cur >= p.n; }); if (!q) break;
     out.push(complete(S, q, today));
   }
   return out;
 }
 export function boardDeliver(S, id, today) {
-  const q = QBY[id]; if (!q || q.goal.t !== 'deliver' || !active(S, today).includes(q)) return { ok: false, why: 'none' };
+  const q = QBY[id]; if (!q || !BUTTON.has(q.goal.t) || !active(S, today).includes(q)) return { ok: false, why: 'none' };
   const g = q.goal; const p = progress(S, q); if (p.cur < p.n) return { ok: false, why: 'cost' };
-  if (g.mat) S.mats[g.mat] -= g.n; else for (let i = 0; i < g.n; i++) S.stash.splice(S.stash.indexOf(g.item), 1);
+  if (g.t === 'pay') S.shells -= g.n; /* M5-A 조개 쓰는 곳 */
+  else if (g.mat) S.mats[g.mat] -= g.n; else for (let i = 0; i < g.n; i++) S.stash.splice(S.stash.indexOf(g.item), 1);
   return { ok: true, q: complete(S, q, today) };
 }
 /* 판에 넣을 이야기 물건 (금빛 고리 상자): 진행 중인 carry 판 의뢰 중 이 지도 것 */
 export const boardWants = (S, map, today) => active(S, today).filter(q => q.goal.t === 'carry' && q.goal.map === map).map(q => ({ item: q.goal.item, zone: q.goal.zone, q: q.id }));
 /* 창고 물건 중 지금 납품할 수 있는 판 의뢰 (의뢰 탭 점) */
-export const deliverReady = (S, today) => active(S, today).some(q => q.goal.t === 'deliver' && progress(S, q).cur >= q.goal.n);
+export const deliverReady = (S, today) => active(S, today).some(q => q.goal.t === 'deliver' && progress(S, q).cur >= q.goal.n); /* 조개 내기(pay)는 점 안 띄움 — 조르지 않음 */

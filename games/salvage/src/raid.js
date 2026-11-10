@@ -1,26 +1,29 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.15';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.15';
-import { mapOf } from './plan.js?v=0.99.15';
-import { prop, charClone } from './assets.js?v=0.99.15';
-import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.15'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.15';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.15';
-import { sfx, ambience } from './audio.js?v=0.99.15';
-import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig } from './arms.js?v=0.99.15'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 */
-import { AI, facOf } from './ai.js?v=0.99.15'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
-import { populate, chiefRoll } from './threat.js?v=0.99.15'; /* M4-A 위협 곡선 */
-import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.15'; /* M4-A 새 적 5 */
-import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.15'; /* M4-A 검은 닻 두목 */
-import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.15';
-import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.15'; /* M4-B 심해 연구소 */
-import { wxStart } from './weather.js?v=0.99.15'; /* M4-B 공통 판 상태 5 */
-import { rimify, rimHit } from './rim.js?v=0.99.15'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
-import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.15';
-import { HitNums } from './nums.js?v=0.99.15'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
-import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.15'; /* M3-B 가라앉은 공장 */
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.16';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.16';
+import { mapOf } from './plan.js?v=0.99.16';
+import { prop, charClone } from './assets.js?v=0.99.16';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.16'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.16';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.16';
+import { sfx, ambience } from './audio.js?v=0.99.16';
+import { petInit, petTick } from './pet_raid.js?v=0.99.16'; /* M5-C 판 안 반려 */
+import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig, statusTick, onGunHit, anchorPull, ricochet, swarmFire } from './arms.js?v=0.99.16'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 · M5-C 무기 19 */
+import { AI, facOf } from './ai.js?v=0.99.16'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
+import { populate, chiefRoll } from './threat.js?v=0.99.16'; /* M4-A 위협 곡선 */
+import { abyssEnemy } from './abyss.js?v=0.99.16'; /* M5-B 깊은 물 */
+import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.16'; /* M4-A 새 적 5 */
+import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.16'; /* M4-A 검은 닻 두목 */
+import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.16';
+import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.16'; /* M4-B 심해 연구소 */
+import { gateStart, gateWind, gateAttack, GATE_KIND } from './gate.js?v=0.99.16'; /* M5-A 6장 대수문 꼭대기 · 최종 보스 파수 */
+import { wxStart } from './weather.js?v=0.99.16'; /* M4-B 공통 판 상태 5 */
+import { rimify, rimHit } from './rim.js?v=0.99.16'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
+import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.16';
+import { HitNums } from './nums.js?v=0.99.16'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
+import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.16'; /* M3-B 가라앉은 공장 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tmp = V(), tmp2 = V(), tmp3 = V();
@@ -138,6 +141,7 @@ export class Raid {
     pl.mats = []; h.root.traverse(o => { if (o.isMesh) { pl.mats.push(o.material); o.userData.keepGeo = true; } }); this.ownMats.push(...pl.mats);
     /* 가방 · 안전 칸 · 몽이 주머니 */
     this.bag = mkBag(L.bag.w, L.bag.h); this.safe = mkBag(L.safe[0], L.safe[1]); this.pet = L.pet ? mkBag(L.pet.w, L.pet.h) : null;
+    petInit(this, opt); /* M5-C 몽이 따라옴 · 반디 어깨 위 */
     for (const k of opt.safeItems || []) { const it = mkItem(k); if (!autoAdd(this.safe, it)) autoAdd(this.bag, it); }
     for (const k of [...(opt.kit || []), ...(opt.carry || [])]) { const it = mkItem(k); if (!autoAdd(this.bag, it) && !(this.pet && autoAdd(this.pet, it))) this.ui.toast(ITEMS[k].name + ' — 가방이 모자라 두고 왔어요', 'soft'); }
     /* 뒤질 곳: 내용은 미리 굴림 (연구대 '상자 등급 빛') */
@@ -185,6 +189,7 @@ export class Raid {
     chiefStart(this, this.T ? chiefRoll(this.T, opt.seed, map, this.cond) : null); this.bossAt = RAID.bossAt - (this.T?.bossEarly || 0);
     if (map === 'factory') factoryStart(this);
     if (map === 'lab') labStart(this); wxStart(this); /* M4-B 연구소 장치 · 판 상태(한파 · 독수 · 헤드램프) */
+    if (map === 'gate') gateStart(this); /* M5-A 파수 · 무대 · 출구 조건 */
     this.alive = true; this.paused = false;
     ambience(true);
     this.fx.weather?.(this.C.rain ? 'rain' : null); /* M4-B: 폭풍은 어느 지도든 비 */
@@ -234,6 +239,7 @@ export class Raid {
     }
     en.custom = [en.d, en.c, en.j, en.l, en.cust].find(x => x?.custom) || null; if (D.cloak) en.hidden = true;
     en.big = boss || D.radius >= 0.6; en.rimU = rimify(en.mats, facOf(e.kind), this.liftK > 1 || this.wx === 'night' || this.C.dark); /* v0.7.1 검수 M4 Top 1 · 3 */
+    if (this.T?.abyss) abyssEnemy(this, en, e, i, THREE); /* M5-B 깊은 물 변형 적 */
     en.root.position.copy(en.pos); this.root.add(en.root);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: markTex(), transparent: true, depthTest: false })); sp.scale.set(0.9, 0.9, 1); sp.position.y = boss ? ({ boss: 2.9, captain: 3.25, eel: 1.6, smelter: 3.4, mother: 2.6, chief: 3.0 }[e.kind] || 3) * (en.vis?.scale.x || 1) + 1 : e.kind === 'crab' || e.kind === 'mine' ? 1.4 : e.kind === 'hermit' ? 1.9 : 2.6; /* 보스: 설계 키 × 화면 배율 + 1m (커진 머리 위) */ sp.visible = false; sp.renderOrder = 10; en.root.add(sp); en.markSp = sp;
     if (e.squad != null) en.squad = e.squad; this.ai?.join(en); /* M3-B: 판 중에 생긴 적(보스 · 부름)도 진영 */
@@ -367,7 +373,7 @@ export class Raid {
     const pl = this.pl, inp = this.input, L = this.L; if (pl.dead) { pl.roll = 0; this.rollPose(dt); pl.anim.mixer.update(dt); return; }
     pl.inv = Math.max(0, pl.inv - dt); pl.fireCd -= dt; pl.flash = Math.max(0, pl.flash - dt);
     pl.stam = Math.min(PLAYER.stamMax + (L.stamMax || 0), pl.stam + PLAYER.stamRegen * L.stam * dt * (pl.roll > 0 ? 0 : 1));
-    const wet = pl.wet = this.water.userData.mask(pl.pos.x, pl.pos.z) > 0.15; armsTick(this, dt);
+    const wet = pl.wet = this.water.userData.mask(pl.pos.x, pl.pos.z) > 0.15; armsTick(this, dt); petTick(this, dt);
     const heavy = this.weight() > L.bag.comfy;
     pl.slowMul = 1; pl.grip = 1; pl.lit = false; for (const m of this.mods) m.pre?.(dt); /* M4-B 이끼 자리 · 얼음 · 체온 */
     /* 이동 */
@@ -475,9 +481,11 @@ export class Raid {
   switchWeapon() { if (this.ws.length < 2 || this.pl.dead) return; this.wi = (this.wi + 1) % this.ws.length; setWeapon(this.pl.hero, this.wi); this.pl.reload = 0; this.pl.fireCd = 0.25; this.pl.spread = this.w.spread; sfx.reload(); this.ui.toast(this.w.name, 'soft'); }
   startReload() { const pl = this.pl; if (pl.reload > 0) return; pl.reload = this.w.reload; sfx.reload(); this.noise(pl.pos, 5); }
   fire(target) {
-    const pl = this.pl, w = this.w; pl.fireCd = 1 / w.rate; this.shots++; pl.shotT = this.t; /* M4-A: 눌림(엄폐한 적이 덜 내밂) */
+    const pl = this.pl, w = this.w; const wm = waterMul(this, w); pl.fireCd = 1 / (w.rate * (wm?.rate || 1)); this.shots++; pl.shotT = this.t; /* M4-A: 눌림(엄폐한 적이 덜 내밂) · M5-C 노는 물에서 빠름 */
     if (w.melee) return swing(this, target); /* v0.6 렌치: 탄 없음 */
-    pl.mags[this.wi]--; const wm = waterMul(this, w); const RNG = w.range * (wm?.range || 1), DM = wm?.dmg || 1; let boomAt = null;
+    pl.mags[this.wi]--; const RNG = w.range * (wm?.range || 1), DM = wm?.dmg || 1; let boomAt = null, pullAt = null, firstHit = null;
+    if (w.swarm) { const base0 = target ? Math.atan2(target.pos.x - pl.pos.x, target.pos.z - pl.pos.z) : pl.face; const dir0 = V(Math.sin(base0), 0, Math.cos(base0)); const mz0 = pl.pos.clone().addScaledVector(dir0, 0.75); mz0.y = 1.05;
+      shotSig(this, w, 0, 1, mz0, mz0, dir0, [], 1); swarmFire(this, target); sfx.shot(); fireFeel(this, w, base0, false); pl.anim.play('1H_Ranged_Shoot', { once: true, fade: 0.04, speed: 2.2, force: true }); this.noise(pl.pos, w.noise); return; } /* M5-C 불꽃 다연장: 유도 세 발 */
     const base = target ? Math.atan2(target.pos.x - pl.pos.x, target.pos.z - pl.pos.z) : pl.face;
     const n = w.pellets; let hitAny = false;
     for (let k = 0; k < n; k++) {
@@ -493,12 +501,14 @@ export class Raid {
       const ht = take.length ? take[take.length - 1].t : tb;
       const hit = pl.pos.clone().lerp(end, ht); hit.y = 1.0;
       shotSig(this, w, k, n, muzzle, hit, dir, take, tb); /* v0.6.1 무기 서명 효과 · 총구 · 탄피 · 궤적 (arms.js) */
-      if (w.blast) { boomAt = hit.clone(); if (take.length) boomAt.copy(take[0].e.pos); hitAny = take.length > 0; continue; } /* 조명탄: 아래에서 터짐 */
-      for (const h of take) { const dd = w.dmg * DM * (0.9 + this.R() * 0.2); this.damage(h.e, dd, dir, pl.pos.clone().lerp(end, h.t).setY(1.0), w.crit, n > 1, { gun: true }); if (w.chain) zap(this, h.e, dd); hitAny = true; }
+      if (w.blast || w.net) { boomAt = hit.clone(); if (take.length) boomAt.copy(take[0].e.pos); hitAny = take.length > 0; continue; } /* 조명탄 · M5-C 그물: 아래에서 터짐/펼쳐짐 */
+      for (const h of take) { const dd = w.dmg * DM * (0.9 + this.R() * 0.2); this.damage(h.e, dd, dir, pl.pos.clone().lerp(end, h.t).setY(1.0), w.crit, n > 1, { gun: true }); if (w.chain) zap(this, h.e, dd); onGunHit(this, w, h.e, dd, dir); if (!firstHit) firstHit = h.e; hitAny = true; }
+      if (w.pull && k === 0) { pullAt = take.length ? take[0].e.pos.clone() : hit.clone(); } /* M5-C 닻 */
       if (!take.length && tb < 0.999 && this.mods.length) this.modHit(hit, w.dmg * DM); /* M4-B 배양조 유리 */
       if (!take.length && tb < 0.999 && k % 2 === 0) { this.fx.burst(hit.x, hit.y, hit.z, 5, 0xd9c7a0, 4, 0.09, 0.45, 22, V(-dir.x, 0, -dir.z)); if (k === 0) sfx.cover(); }
     }
-    if (boomAt) lob(this, boomAt); /* v0.6.1 조명탄은 날아가서 터짐 */
+    if (boomAt) lob(this, boomAt); /* v0.6.1 조명탄은 날아가서 터짐 · M5-C 그물도 날아가서 펼쳐짐 */
+    if (pullAt) anchorPull(this, pullAt, w, firstHit); if (w.ricochet && firstHit) ricochet(this, w, firstHit); /* M5-C 닻 끌어 모음 · 물보라 튕김 */
     if (hitAny) this.hits++;
     pl.spread = Math.min(w.max, pl.spread + w.add);
     sfx.shot(); fireFeel(this, w, base, this.R() < 0.5); /* 흔들림 · 반동 = 무기 표 FEEL (판 난수는 전처럼 한 번) */
@@ -506,14 +516,14 @@ export class Raid {
     this.noise(pl.pos, w.noise);
   }
   damage(e, dmg, dir, at, critChance = 0.1, pellet = false, how = {}) {
-    if (e.dead) return; const boss = !!e.D.boss;
+    if (e.dead || e.guard > 0) return; const boss = !!e.D.boss; /* M5-A guard = 파수 단계 바뀜(무적) */
     const crit = this.R() < critChance;
     /* 약점(보스 기절 · 랜턴) ×2 · 광부 해골은 앞에서 맞으면 방패로 막음 */
     const weak = e.weakT > 0 ? (BOSS[e.kind]?.weakMul || 2) : 1;
     const am = ammoMul(this, e, how); /* v0.6 탄약 × 방어 · 기계 · 보스 */
     const shield = e.D.shield && dir && (dir.x * Math.sin(e.face) + dir.z * Math.cos(e.face)) < -0.45 ? 1 - e.D.shield * am.shield : 1;
     const d = Math.max(1, Math.round(dmg * (crit ? 1.8 : 1) * weak * shield * am.m));
-    e.hp -= d; this.dmgDealt += d; if (!(e.flashCd > this.t)) { e.flash = 0.08; e.flashCd = this.t + 0.2; } /* v0.7.1 검수 M4 Top 1: 번쩍임 0.2초에 한 번 (연사에도 흰색이 끊김) */ e.stagger = boss ? 0.03 : e.kind === 'miner' ? 0.05 : 0.12; e.sleep = false;
+    e.hp -= d; if (e.hpFloor && e.hp < e.hpFloor) e.hp = e.hpFloor; /* M5-A 파수: 다음 단계 문턱 아래로는 단계가 바뀐 뒤에 */ this.dmgDealt += d; if (!(e.flashCd > this.t)) { e.flash = 0.08; e.flashCd = this.t + 0.2; } /* v0.7.1 검수 M4 Top 1: 번쩍임 0.2초에 한 번 (연사에도 흰색이 끊김) */ e.stagger = boss ? 0.03 : e.kind === 'miner' ? 0.05 : 0.12; e.sleep = false;
     const hf = hitFeel(this, how); /* v0.6.1 무기마다 넉백 · 히트스톱 배수 */
     e.vel.addScaledVector(dir, this.w.knock * hf.push * (e.kind === 'drone' ? 1.4 : boss ? 0.15 : e.kind === 'jelly' ? 0.4 : e.kind === 'crab' ? 1.3 : 1) * (pellet ? 0.35 : 1));
     this.hitstop = Math.max(this.hitstop, (crit || weak > 1 ? 0.07 : pellet ? 0.02 : 0.04) * hf.stop);
@@ -543,7 +553,7 @@ export class Raid {
     else if (e.kind !== 'mine') { this.fx.burst(e.pos.x, 1.0, e.pos.z, boss ? 50 : 18, 0xf2ecd8, boss ? 10 : 7, 0.12, 0.9, 24, dir); e.anim?.play('Death_C_Skeletons', { once: true, fade: 0.05, force: true }); }
     e.markSp.visible = false; if (e.lantern) e.lantern.g.visible = false;
     if (boss && e.kind === 'chief') chiefDown(this, e); /* M4-A 떠돌이 보스: 이야기 조각 */
-    else if (boss) { this.ui.event(`${e.D.name}${josa(e.D.name, '을', '를')} 쓰러뜨렸어요! 잔해에 금고 열쇠가`, 'good'); sfx.rare(); }
+    else if (boss && !GATE_KIND[e.kind]) { this.ui.event(`${e.D.name}${josa(e.D.name, '을', '를')} 쓰러뜨렸어요! 잔해에 금고 열쇠가`, 'good'); sfx.rare(); }
     else if (!by) this.ui.praise(['깔끔해요!', '한 방 더 정확하게!', '좋은 조준!', '인양단 솜씨!'][this.killN % 4]); /* 칭찬은 머리 위 (v0.5.1) */
     const kind = e.D.loot || 'body';
     const items = rollLoot(kind, e.zone || 3, this.R); if (boss && this.T?.bossLoot) items.push(...rollLoot(kind, 3, this.R).filter(k => !(LOOT_TABLE[kind].fixed || []).includes(k)).slice(0, this.T.bossLoot)); /* 보스 주간: 잔해 +1 */
@@ -638,6 +648,7 @@ export class Raid {
       else if (canAttack && boss && dist < 2.4) goal = null;
       if (!e.ai && !boss && !(e.wind > 0) && !stunned && !e.charging) { const o = this.ai.steer(e, dt, goal, spd, dist, sees); if (o) { goal = o.goal; spd = o.spd; } } /* M4-A 2단계: 양쪽 끼기 · 구조 요청 · 후퇴 · 빛으로 */
       if (e.taunt > 0) { e.taunt -= dt; goal = null; wantFace = angToP; }
+      if (e.netT > 0 || e.wetT > 0 || e.bleed) spd *= statusTick(this, e, dt); /* M5-C 그물 느려짐 · 젖음 · 출혈 */
       if (goal && e.stagger <= 0 && !e.charging) {
         const wp = this.los(e.pos, goal) ? goal : this.waypoint(e.pos, goal);
         if (wp) { tmp2.copy(wp).sub(e.pos).setY(0); const l = tmp2.length();
@@ -679,6 +690,7 @@ export class Raid {
   bossWind(e, dist, rage) {
     const pl = this.pl; e.lockFace = null; e.teleT0 = this.t; /* 보스 패턴은 모두 예고 (원 · 줄 · 떨어질 자리) */
     if (e.kind === 'chief') return chiefWind(this, e, dist, rage);
+    if (GATE_KIND[e.kind]) return gateWind(this, e, dist, rage); /* M5-A 파수 */
     if (e.kind === 'boss') {
       const slam = dist < 4.2; e.pat = slam ? 'slam' : 'wave'; e.windMax = e.wind = (slam ? 0.85 : 0.6) / rage; e.cd = e.D.cd / rage; if (slam) e.lockFace = e.face;
       e.anim.play(slam ? '1H_Melee_Attack_Chop' : 'Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.75 * rage, force: true });
@@ -733,6 +745,7 @@ export class Raid {
     if (e.kind === 'smelter') return smelterAttack(this, e, dist);
     if (LAB_KIND[e.kind]) { labAttack(this, e, dist); return; } /* M4-B 포자낭 · 경비 기계 · 청록 어미 */
     if (e.kind === 'chief') return chiefAttack(this, e, dist);
+    if (GATE_KIND[e.kind]) return gateAttack(this, e, dist); /* M5-A 파수 */
     if (FOE[e.kind] && foeAttack(this, e, dist)) return; /* M4-A 새 적 */
     if (this.ai && e.ai && this.ai.attack(e, dist)) return;
     if (e.kind === 'drone') shoot(1, 0, 0.16, 0xff7a4a, 0xff8a50, 11, D.dmg * e.dmgMul, 0.55);
@@ -898,6 +911,7 @@ export class Raid {
   useMed() {
     const pl = this.pl; if (pl.hp >= pl.maxHp && !(this.WX?.poison > 0.5)) { this.ui.toast('체력이 가득해요', 'soft'); return; }
     const miss = pl.maxHp - pl.hp; const order = this.WX?.poison > 0.5 && miss < 40 ? ['antitox', 'med', 'bandage'] : miss >= 70 ? ['bandage', 'med', 'antitox'] : ['med', 'bandage', 'antitox']; /* M4-B 해독제 */
+    if (this.L.noHeal) { this.ui.toast('이번 주 도전 규칙: 회복 없음', 'soft'); return; } /* M5-B 주간 도전 */
     const k = order.find(k => this.hasItem(k)); if (!k) { this.ui.toast('회복약이 없어요', 'soft'); return; }
     this.takeOne(k); this.used.push(k);
     const hv = Math.round(ITEMS[k].heal * (this.L.heal || 1)); pl.hp = Math.min(pl.maxHp, pl.hp + hv); sfx.pick(3); this.fx.burst(pl.pos.x, 1.2, pl.pos.z, 12, 0x8ef0a8, 3, 0.08, 0.6, -2); this.fx.num(pl.pos, '+' + hv, 'heal'); for (const m of this.mods) m.healed?.(k); /* M4-B 독 씻김 */

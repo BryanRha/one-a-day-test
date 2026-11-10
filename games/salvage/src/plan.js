@@ -3,9 +3,10 @@
 //  ※ 'ware'(침수 창고)는 v0.3 과 같은 seed → 같은 지도 (지난번 쓰러진 자리를 다시 열어야 함) — 새 난수는 다른 지도 갈래 안에서만 뽑음
 //  1칸(tile) = 4m · 방 = 4×4칸(16m) · 격자 3열 × 7행 · 아래(+z)가 카메라 쪽 · 시작은 맨 아래 가운데
 //  문 잠금: 창고→기관실 '전원 문'(발전기) · 금고실 문(금고 열쇠)
-import { ZONES, LOOT_TABLE, MAPS, CONDS, ENEMIES } from './data.js?v=0.99.15';
-import { F_COVERS, F_DECOS, F_SOLID, factoryRoom, factoryExits, factorySquad, noAnchor } from './plan_factory.js?v=0.99.15'; /* M3-B 가라앉은 공장 */
-import { L_TYPES, L_COVERS, L_DECOS, L_SOLID, labPre, labRoom, labExits, labFoes } from './plan_lab.js?v=0.99.15'; /* M4-B 심해 연구소 */
+import { ZONES, LOOT_TABLE, MAPS, CONDS, ENEMIES } from './data.js?v=0.99.16';
+import { F_COVERS, F_DECOS, F_SOLID, factoryRoom, factoryExits, factorySquad, noAnchor } from './plan_factory.js?v=0.99.16'; /* M3-B 가라앉은 공장 */
+import { L_TYPES, L_COVERS, L_DECOS, L_SOLID, labPre, labRoom, labExits, labFoes } from './plan_lab.js?v=0.99.16'; /* M4-B 심해 연구소 */
+import { planGate } from './plan_gate.js?v=0.99.16'; /* M5-A 6장 최종 무대 대수문 꼭대기 (고정 무대) */
 
 export const T = 4, RT = 4, COLS = 3, ROWS = 7, RS = T * RT;
 export const zoneOfRow = r => (r >= 5 ? 1 : r >= 2 ? 2 : 3);
@@ -35,6 +36,7 @@ export const mapOf = k => MAPS[k] ? k : 'ware';
 export const SOLID = { h_cont_c: [1.1, 2.4, 1], h_tank: [1.6, 1.5, 1], t_machine: [0.9, 1.2, 1], t_bench: [1.1, 0.45, 0], k_cont_a: [1.15, 2.45, 1], k_cont_b: [1.15, 2.45, 1], k_machine: [0.9, 1.1, 1], k_hopper: [0.9, 0.9, 1], k_tank: [1.7, 1.05, 1], k_boxwide: [0.75, 1.25, 1], k_crate: [0.7, 1.25, 1], k_screen: [0.75, 0.4, 1], crates: [1.1, 1.1, 1], box_large: [0.8, 0.8, 1], pallet_s: [1, 1, 1], barrel: [0.9, 0.9, 1], barrels: [0.95, 0.55, 1], cont: [1.65, 1.65, 1], table: [1, 1, 0], cabinet: [1.05, 0.55, 1], crate_r: [1, 1, 1], keg: [0.9, 1, 1], chest: [0.85, 0.75, 1], locker: [1.05, 0.55, 1], crate: [0.8, 0.8, 1], shelf: [1.4, 0.5, 1], trunk: [0.8, 0.5, 1], ...F_SOLID, ...L_SOLID };
 
 export function plan(seed, mapKey = 'ware', opt = {}) { /* opt.cond: 판 예보로 지도 상태를 정함(항구 — M4-B 판 상태 5) · 없으면 seed 로 */
+  if (mapKey === 'gate' && MAPS.gate) return planGate(seed, opt);
   const map = mapOf(mapKey); const ware = map === 'ware'; const MZ = MAPS[map].zones; const TY = TYPES[map];
   const R = rng(seed); const ri = (a, b) => a + Math.floor(R() * (b - a + 1)); const pick = a => a[Math.floor(R() * a.length)];
   const wpick = w => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = R() * tot; for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; } return Object.keys(w)[0]; };

@@ -1,9 +1,10 @@
 // 수달 인양단 — 데이터 · 숫자 (조정은 여기서만). three 없이 읽힘 → node 시뮬 · 시험에서도 씀
-export const VERSION = '0.7.1';
-import { F_MAP, F_ENEMIES, F_BOSS, F_VARIANTS, F_CONDS, F_ITEMS, F_LOOT, F_DAILY } from './data/map_factory.js?v=0.99.15'; /* 맵 4 가라앉은 공장 (M3-B) */
-import { M4_ENEMIES, M4_BOSS, M4_VARIANTS, M4_ITEMS, M4_LOOT } from './data/enemies.js?v=0.99.15'; /* M4-A 새 적 5 · 검은 닻 두목 */
-import { L_MAP, L_ENEMIES, L_BOSS, L_VARIANTS, L_CONDS, L_ITEMS, L_LOOT, L_DAILY } from './data/map_lab.js?v=0.99.15'; /* 맵 5 심해 연구소 (M4-B) */
-import { STORY_ITEMS } from './data/quests.js?v=0.99.15'; /* M3-C 이야기 물건 (ITEMS 끝에 붙음) */
+export const VERSION = '0.8.0';
+import { F_MAP, F_ENEMIES, F_BOSS, F_VARIANTS, F_CONDS, F_ITEMS, F_LOOT, F_DAILY } from './data/map_factory.js?v=0.99.16'; /* 맵 4 가라앉은 공장 (M3-B) */
+import { M4_ENEMIES, M4_BOSS, M4_VARIANTS, M4_ITEMS, M4_LOOT } from './data/enemies.js?v=0.99.16'; /* M4-A 새 적 5 · 검은 닻 두목 */
+import { L_MAP, L_ENEMIES, L_BOSS, L_VARIANTS, L_CONDS, L_ITEMS, L_LOOT, L_DAILY } from './data/map_lab.js?v=0.99.16'; /* 맵 5 심해 연구소 (M4-B) */
+import { STORY_ITEMS } from './data/quests.js?v=0.99.16';
+import { G_MAP, G_ENEMIES, G_BOSS, G_VARIANTS, G_CONDS, G_ITEMS, G_LOOT } from './data/map_gate.js?v=0.99.16'; /* M5-A 6장 최종 무대 대수문 꼭대기 · 최종 보스 파수 */ /* M3-C 이야기 물건 (ITEMS 끝에 붙음) */
 
 /* ───── 재료 (창고 숫자로만 셈 · 분해해서 얻음) ───── */
 export const MATS = {
@@ -76,6 +77,7 @@ export const ITEMS = {
   ...M4_ITEMS,
   ...L_ITEMS,
   ...STORY_ITEMS,
+  ...G_ITEMS,
 };
 export const ITEM_KEYS = Object.keys(ITEMS);
 export const CATS = { scrap: '고철', part: '부품', treasure: '보물', med: '소모품', key: '열쇠', memo: '기억' };
@@ -103,6 +105,7 @@ export const LOOT_TABLE = {
   ...F_LOOT,
   ...L_LOOT,
   ...M4_LOOT,
+  ...G_LOOT,
 };
 /* 깊은 곳 사물함 · 공구함에서 금고 열쇠가 나올 확률 */
 export const VKEY_CHANCE = { 2: 0.025, 3: 0.05 };
@@ -146,6 +149,7 @@ export const MAPS = {
     floodAt: 90, floodSpeed: 0.2 },
   factory: F_MAP,
   lab: L_MAP,
+  gate: G_MAP, /* M5-A 6장 (b_final 이 엶) */
 };
 export const MAP_KEYS = Object.keys(MAPS);
 /* 판마다 다른 상태 — 설명 · 숫자 (raid.js 가 읽음) */
@@ -159,6 +163,7 @@ export const CONDS = {
   calm:   { name: '잔잔', txt: '물살이 약해요 — 산소만 조심', current: 0.8 },
   ...F_CONDS,
   ...L_CONDS,
+  ...G_CONDS,
 };
 /* 산소 (해저 터널) — 짙은 물(잠긴 방 · 차오른 물) 안에서 줄고, 공기 방울 기둥에서 빠르게 참 · 0 이면 체력이 줆
    기본 100 + 헬멧(체력 보너스와 같은 값) · 깊은 구역은 수압으로 더 빨리 줆 */
@@ -210,6 +215,7 @@ export const ENEMIES = {
   ...F_ENEMIES,
   ...L_ENEMIES,
   ...M4_ENEMIES,
+  ...G_ENEMIES,
 };
 /* 보스 패턴 숫자 (예고 시간 · 반경 · 피해) — raid.js bossWind/enemyAttack
  *  수문지기: slam(가까이) · wave(멀리) · 체력 절반부터 1.25배
@@ -224,6 +230,7 @@ export const BOSS = {
   ...F_BOSS,
   ...L_BOSS,
   ...M4_BOSS,
+  ...G_BOSS,
 };
 /* 지도마다 기존 적 변형 (이름 · 숫자 배수 · 색) */
 export const VARIANTS = {
@@ -232,6 +239,7 @@ export const VARIANTS = {
   tunnel: { drone: { name: '수중 드론', hp: 1.15, color: 0x4f7a78 }, skel: { name: '물때 해골', hp: 1.05, speed: 0.9, tint: [0.62, 0.8, 0.66] }, ...M4_VARIANTS.tunnel },
   factory: { ...F_VARIANTS, ...M4_VARIANTS.factory },
   lab: L_VARIANTS,
+  gate: G_VARIANTS,
 };
 
 /* 무게: 편한 무게를 넘으면 느려짐 (편한 무게 2배에서 최대 −35%) · 구르기 기력 +50% */
@@ -249,17 +257,19 @@ export const MEALS = {
   soup:  { name: '생선 수프',   lv: 1, cost: { herb: 2, shells: 10 }, txt: '기력 회복 +35%', stam: 1.35 },
   rice:  { name: '해초 주먹밥', lv: 2, cost: { herb: 3, shells: 15 }, txt: '이동 +7% · 기력 회복 +20%', speed: 1.07, stam: 1.2 },
   grill: { name: '조개 구이',   lv: 3, cost: { herb: 4, shells: 25 }, txt: '뒤지기 1.4배 · 체력 +15', search: 1.4, hp: 15 },
+  stew:  { name: '해물 전골',   lv: 4, cost: { herb: 5, fish: 1, shells: 40 }, txt: '체력 +20 · 기력 회복 +30% · 뒤지기 1.2배', hp: 20, stam: 1.3, search: 1.2 }, /* M5-C 주방 4단계 */
 };
 
 /* ───── M3-A 성장 뼈대 (새 파일 · 여기선 다시 내보내기만) — 무기 10 · 개조 5칸 · 탄약 3 · 장비 5단 · 부적 · 난이도 · 시설 12 · 상인 3 · 업적 20 ───── */
-export * from './data/weapons.js?v=0.99.15';
-export * from './data/gear.js?v=0.99.15';
-export * from './data/facilities.js?v=0.99.15';
-export * from './data/merchants.js?v=0.99.15';
-export * from './data/achievements.js?v=0.99.15';
+export * from './data/weapons.js?v=0.99.16';
+export * from './data/gear.js?v=0.99.16';
+export * from './data/facilities.js?v=0.99.16';
+export * from './data/merchants.js?v=0.99.16';
+export * from './data/achievements.js?v=0.99.16';
+export * from './data/pets.js?v=0.99.16'; /* M5-C 몽이 5단 · 두 번째 반려 반디 */
 
 /* ───── 의뢰 — data/quests.js 로 옮김 (M3-C · 본 사슬 28 + 판 의뢰) ───── */
-export { QUESTS } from './data/quests.js?v=0.99.15';
+export { QUESTS } from './data/quests.js?v=0.99.16';
 
 /* ───── 오늘의 인양 목록 (한국 날짜마다 3개) — 창고에서 납품하면 값의 1.6배 + 재료 ───── */
 export const DAILY_POOL = [

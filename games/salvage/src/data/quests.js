@@ -138,8 +138,47 @@ export const BOARD = [
   { id: 'q88', giver: 'moru', kind: 'char', ch: 5, name: '방한 잠수복', txt: '맵 장비 방한 잠수복 만들기', req: { beat: 'b_ch5' }, goal: { t: 'gear', k: 'drysuit', lv: 1, mg: true }, reward: { spring: 3, shells: 180 }, tip: '연구소는 춥다 — 한파 판에서 체온이 1/3만 줄어요' },
   { id: 'q89', giver: 'gombang', kind: 'repeat', ch: 5, repeat: true, name: '주간 심해 고철', txt: '심해 배터리 2개 납품 (매주)', req: { beat: 'b_ch5' }, goal: { t: 'deliver', item: 'battery', n: 2 }, reward: { shells: 90, wire: 4 }, tip: '터널 · 연구소 기계 상자에 있어요' },
   { id: 'q90', giver: 'neuru', kind: 'char', ch: 5, name: '연구소 머그', txt: '연구소에서 국 주문 쪽지 붙은 머그를 들고 탈출', req: { beat: 'b_moss', map: 'lab' }, goal: { t: 'carry', item: 'mug', map: 'lab', zone: 2 }, reward: { shells: 200, herb: 6 }, tip: '금빛 고리 상자 — 수조 옆 휴게실' },
+  /* ───── M5-A (v0.8) 6장 「대수문」 · 엔딩 뒤 · 조개 쓰는 곳 · 매일 의뢰 — q91~q120 ─────
+   *  새 goal.t: pay(조개 내기 — 은신처 '내기' 버튼 · 조개 쓰는 곳) · rebuild(엔딩 뒤 '은포 되살리기' 수 = S.story.rebuild) · endings(본 엔딩 길 수)
+   *  새 req: end(엔딩을 봄) · repeat: 'day' = 매일 다시 (한국 날짜) — 매일 할 수 있는 의뢰 3개 이상(ROADMAP M5 설계 메모 ②)
+   *  reward.rebuild: 은포 되살리기 +n (엔딩 뒤 은신처 꾸밈 · q119 '은포 등불 서른') */
+  /* 6장 — 바람 · 여울 (5장 끝 선택이 대사에) */
+  { id: 'q91', giver: 'baram', kind: 'story', ch: 6, name: '여울', txt: '공장 코어실에서 검은 닻 수감 칸 열쇠를 들고 탈출', req: { beat: 'b_ch6', map: 'factory' }, goal: { t: 'carry', item: 'cellkey', map: 'factory', zone: 3 }, reward: { shells: 260, spring: 3 }, tip: '금빛 고리 상자 — 코어실 은닉 상자' },
+  { id: 'q92', giver: 'baram', kind: 'boss', ch: 6, name: '두목의 마지막 밤', txt: '검은 닻 두목 쓰러뜨리기 (6장)', req: { prev: 'q91', enemy: 'chief' }, goal: { t: 'kill', kind: 'chief', n: 1 }, reward: { core: 1, shells: 300 }, tip: '밤 판에 나타나요 — 닻이 박히면 등 코어' },
+  /* 6장 — 파수 의뢰 둘 (걸음 b_pasu6 이 기다림 · 6장 첫 걸음 뒤 바로 열림) */
+  { id: 'q95', giver: 'pasu', kind: 'story', ch: 6, name: '조력 전원 연결', txt: '가라앉은 공장 발전기를 켜고 탈출 (대수문 선에 물림)', req: { beat: 'b_ch6', map: 'factory' }, goal: { t: 'power', map: 'factory' }, reward: { wire: 10, shells: 240 }, tip: '파수의 무전: "공장 조력 전원을 대수문 선에 물려 주십시오."' },
+  { id: 'q96', giver: 'pasu', kind: 'story', ch: 6, name: '승강로 승인 카드', txt: '연구소 수조 구역에서 승강로 승인 카드를 들고 탈출', req: { beat: 'b_ch6', map: 'lab' }, goal: { t: 'carry', item: 'gatecard', map: 'lab', zone: 2 }, reward: { glass: 6, shells: 260 }, tip: '금빛 고리 상자 — 수조 구역 중계기 보관함' },
+  /* 6장 — 인물 · 도전 */
+  { id: 'q94', giver: 'moru', kind: 'char', ch: 6, name: '마지막 개조', txt: '개조 단계 합 16 (꼭대기 가기 전 손질)', req: { beat: 'b_ch6' }, goal: { t: 'mod', n: 16 }, reward: { lens: 2, shells: 200 }, tip: '무기 탭 — 주무기 · 보조무기 개조 단계를 합쳐요' },
+  { id: 'q97', giver: 'haedam', kind: 'char', ch: 6, name: '숨 연습', txt: '해저 터널 깊은 구역에 들어갔다 탈출', req: { beat: 'b_ch6' }, goal: { t: 'zone', map: 'tunnel', zone: 3 }, reward: { bandage: 2, herb: 6 }, tip: '공기 방울 기둥을 이어 가요' },
+  { id: 'q98', giver: 'seori', kind: 'char', ch: 6, name: '노을의 랜턴 걸이', txt: '연구소 관제실에서 빈 랜턴 걸이를 들고 탈출', req: { beat: 'b_ch6', prev: 'q81', map: 'lab' }, goal: { t: 'carry', item: 'lhook', map: 'lab', zone: 3 }, reward: { glass: 6, shells: 220 }, tip: '금빛 고리 상자 — 빈 잠수복 의자 옆' },
+  { id: 'q99', giver: 'seori', kind: 'char', ch: 6, name: '녹음기 열다섯', txt: '녹음기 15개 듣기', req: { prev: 'q74', beat: 'b_ch6' }, goal: { t: 'tapes', n: 15 }, reward: { glass: 5, shells: 220 }, tip: '지도마다 셋 — 대수문 꼭대기에도 셋' },
+  { id: 'q100', giver: 'neuru', kind: 'char', ch: 6, name: '축제 등롱 열 개', txt: '바다 유리 3개 납품 (축제 등롱 갓)', req: { beat: 'b_last' }, goal: { t: 'deliver', item: 'gem', n: 3 }, reward: { herb: 8, shells: 160 }, tip: '바다 유리 — 사물함 · 금고에 가끔' },
+  { id: 'q101', giver: 'gombang', kind: 'char', ch: 6, name: '상회 재개업 자금', txt: '조개 1,500 내기 (곰방 상회 다시 열기)', req: { beat: 'b_last' }, goal: { t: 'pay', n: 1500 }, reward: { core: 1, rebuild: 2 }, tip: '조개 쓰는 곳 — 의뢰 탭 \'내기\'' },
+  { id: 'q102', giver: 'haedam', kind: 'chal', ch: 6, name: '폭풍 속 귀환', txt: '폭풍 판에서 탈출하기 (어느 지도든)', req: { beat: 'b_ch6' }, goal: { t: 'cond', conds: ['storm'] }, reward: { bandage: 2, shells: 200 }, tip: '번개가 치면 잠깐 다 보여요' },
+  { id: 'q103', giver: 'baram', kind: 'chal', ch: 6, name: '얼음 물길 끝까지', txt: '한파 판에서 깊은 구역까지 갔다 탈출', req: { beat: 'b_ch6', prev: 'q86' }, goal: { t: 'zone', zone: 3, conds: ['cold'] }, reward: { cloth: 8, shells: 220 }, tip: '방한 잠수복을 고르고 가요' },
+  /* 엔딩 뒤 (req.end) — 파수 다시 붙기 · 반환 · 은포 되살리기 */
+  { id: 'q93', giver: 'moru', kind: 'char', ch: 6, name: '수문 판 볼트', txt: '대수문 볼트 4개 납품', req: { end: 1 }, goal: { t: 'deliver', item: 'gbolt', n: 4 }, reward: { bolt: 12, shells: 150, rebuild: 1 }, tip: '대수문 꼭대기 계단 보관함' },
+  { id: 'q104', giver: 'seori', kind: 'boss', ch: 6, name: '다시 선 파수', txt: '대수문 꼭대기에서 파수 한 번 더 (시험 운전)', req: { end: 1 }, goal: { t: 'boss', map: 'gate', n: 1 }, reward: { core: 2, shells: 400 }, tip: '파수가 시험 운전을 청했어요 — 패턴은 같아요' },
+  { id: 'q105', giver: 'pasu', kind: 'story', ch: 6, name: '반환 목록 0001', txt: '작은 금고 2개 납품 (첫 반환)', req: { end: 1 }, goal: { t: 'deliver', item: 'chest', n: 2 }, reward: { glass: 4, shells: 300, rebuild: 2 }, tip: '깊은 구역 보물 상자 · 파수 잔해' },
+  { id: 'q106', giver: 'gombang', kind: 'char', ch: 6, name: '언덕의 새 가게', txt: '조개 3,000 내기 (언덕 가게 짓기)', req: { end: 1, prev: 'q101' }, goal: { t: 'pay', n: 3000 }, reward: { core: 1, rebuild: 4 }, tip: '조개 쓰는 곳 — 은포 되살리기 +4' },
+  { id: 'q107', giver: 'haedam', kind: 'char', ch: 6, name: '명단의 마지막 이름', txt: '기억 도감 65칸 채우기', req: { end: 1, prev: 'q80' }, goal: { t: 'codex', n: 65 }, reward: { bandage: 3, shells: 250 }, tip: '대수문 꼭대기 물건도 한 칸씩' },
+  { id: 'q108', giver: 'baram', kind: 'boss', ch: 6, name: '밤바다 두목 셋', txt: '검은 닻 두목 세 번 더 (누적)', req: { end: 1, prev: 'q92', enemy: 'chief' }, goal: { t: 'kill', kind: 'chief', n: 3 }, reward: { core: 2, shells: 380 }, tip: '여울이 닻 무리의 순찰 시간을 알려 줬어요' },
+  { id: 'q109', giver: 'neuru', kind: 'char', ch: 6, name: '축제 국 백 그릇', txt: '말린 생선 6개 납품', req: { end: 1 }, goal: { t: 'deliver', item: 'fish', n: 6 }, reward: { herb: 10, rebuild: 1 }, tip: '항구 어망 더미에 많아요' },
+  { id: 'q110', giver: 'seori', kind: 'char', ch: 6, name: '은포 도감', txt: '기억 도감 78칸 채우기', req: { end: 1, prev: 'q107' }, goal: { t: 'codex', n: 78 }, reward: { lens: 3, shells: 400, rebuild: 3 }, tip: '세 번 건진 물건은 사연이 한 줄 더' },
+  { id: 'q111', giver: 'gombang', kind: 'chal', ch: 6, name: '한 판 1,500', txt: '한 판에 가치 1,500 이상 들고 탈출', req: { end: 1 }, goal: { t: 'value', n: 1500 }, reward: { core: 1, rebuild: 2 }, tip: '대수문 꼭대기 잔해 · 금고실' },
+  { id: 'q119', giver: 'gombang', kind: 'story', ch: 6, name: '은포 등불 서른', txt: '은포 되살리기 30 (의뢰 · 반환 · 기부로)', req: { end: 1 }, goal: { t: 'rebuild', n: 30 }, reward: { core: 3, shells: 800 }, tip: '오늘의 반환 상자 · 언덕의 새 가게 · 반환 의뢰가 하나씩' },
+  { id: 'q120', giver: 'neuru', kind: 'story', ch: 6, name: '불이 켜진 곳', txt: '세 길의 끝을 모두 보기 (기록실에서 다시)', req: { end: 1 }, goal: { t: 'endings', n: 3 }, reward: { core: 2, rebuild: 5 }, tip: '설정 → 기록실에서 다른 길을 고를 수 있어요 (장비 · 시설 그대로)' },
+  /* 반복 — 매주 둘 · 매일 다섯 (매일 할 수 있는 의뢰 3개 이상: 튜토리얼 뒤 고철 · 무사 귀환 → 모루 손풀기 → 느루 국거리 → 5장 반환 상자) */
+  { id: 'q112', giver: 'pasu', kind: 'repeat', ch: 6, repeat: true, name: '주간 반환', txt: '금 나침반 1개 납품 (주인에게 반환 · 매주)', req: { end: 1 }, goal: { t: 'deliver', item: 'compass', n: 1 }, reward: { glass: 2, rebuild: 1 }, tip: '금고 · 보스 잔해에서' },
+  { id: 'q113', giver: 'gombang', kind: 'repeat', ch: 6, repeat: true, name: '주간 대수문 고철', txt: '대수문 볼트 2개 납품 (매주)', req: { beat: 'b_final' }, goal: { t: 'deliver', item: 'gbolt', n: 2 }, reward: { shells: 100, wire: 4 }, tip: '대수문 꼭대기 계단 보관함' },
+  { id: 'q114', giver: 'gombang', kind: 'repeat', ch: 1, repeat: 'day', name: '오늘의 고철', txt: '녹슨 통조림 3개 납품 (매일)', req: {}, goal: { t: 'deliver', item: 'can', n: 3 }, reward: { bolt: 3, shells: 12 }, tip: '나무 상자 · 기름통에 흔해요' },
+  { id: 'q115', giver: 'neuru', kind: 'repeat', ch: 1, repeat: 'day', name: '오늘의 국거리', txt: '해초 다발 2개 납품 (매일)', req: { q: 'q5' }, goal: { t: 'deliver', item: 'kelp', n: 2 }, reward: { herb: 3 }, tip: '나무 상자 · 기름통' },
+  { id: 'q116', giver: 'gombang', kind: 'repeat', ch: 1, repeat: 'day', name: '오늘도 무사히', txt: '아무 지도에서나 탈출하기 (매일)', req: {}, goal: { t: 'extract' }, reward: { bandage: 1 }, tip: '돌아오는 게 제일 중요해요' },
+  { id: 'q118', giver: 'moru', kind: 'repeat', ch: 1, repeat: 'day', name: '오늘의 손풀기', txt: '아무 지도 구역 2까지 갔다 탈출 (매일)', req: { beat: 'b_moru' }, goal: { t: 'zone', zone: 2 }, reward: { glass: 1 }, tip: '처음 보는 낙서가 있으면 지나가며 읽어요' },
+  { id: 'q117', giver: 'pasu', kind: 'repeat', ch: 5, repeat: 'day', name: '오늘의 반환 상자', txt: '조개 300 내기 (반환 상자 운송비 · 매일)', req: { beat: 'b_pasu' }, goal: { t: 'pay', n: 300 }, reward: { glass: 1, rebuild: 1 }, tip: '조개 쓰는 곳 — 엔딩 뒤 은포 되살리기 +1' },
 ];
-/* 의뢰 90 = 본 사슬 28 + 판 의뢰 62 (v0.6 32 + v0.7 30) */
+/* 의뢰 120 = 본 사슬 28 + 판 의뢰 92 (v0.6 32 + v0.7 30 + v0.8 M5-A 30) */
 export const QALL = [...QUESTS, ...BOARD];
 export const QBY = Object.fromEntries(QALL.map(q => [q.id, q]));
 /* 가라앉은 공장 지도를 여는 의뢰 — 끝내면 MAPS.factory.unlock(M3-B 'map_factory')을 done 에 넣음 (board.js) */

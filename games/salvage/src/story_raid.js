@@ -1,13 +1,13 @@
 // 판 안 이야기 — 무전(짧은 자막 + 몽이 반응) · 튜토리얼 무전 · 이야기 물건(금빛 고리 상자) · 녹음기 · 벽 낙서
 //  raid.js 는 건드리지 않고 판 상태를 매 프레임 지켜봄 (main.js 가 attach · tick · detach)
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.15';
-import * as ST from './story.js?v=0.99.15';
-import { boardWants } from './board.js?v=0.99.15';
-import { ITEMS } from './data.js?v=0.99.15';
-import { RS } from './plan.js?v=0.99.15';
-import { sfx } from './audio.js?v=0.99.15';
-import { T, talk, portrait } from './story_ui.js?v=0.99.15';
+import { S, save } from './save.js?v=0.99.16';
+import * as ST from './story.js?v=0.99.16';
+import { boardWants } from './board.js?v=0.99.16';
+import { ITEMS } from './data.js?v=0.99.16';
+import { RS } from './plan.js?v=0.99.16';
+import { sfx } from './audio.js?v=0.99.16';
+import { T, talk, portrait } from './story_ui.js?v=0.99.16';
 
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -119,7 +119,7 @@ export class StoryRaid {
       return;
     }
     if (!C) return;
-    const b = ST.openBeat(S); const bt = b && T['t' + Math.min(5, b.ch)]?.BEAT[b.id];
+    const b = ST.openBeat(S); const bt = b && T['t' + Math.min(6, b.ch)]?.BEAT[b.id];
     if (this.t > 1.6) {
       if (this.tut === 2 && RT) this.say('start', RT.start2, true); else if (this.tut === 3 && RT) this.say('start', RT.start3, true);
       else if (b?.goal?.map === R.map && bt?.hint) this.say('start', bt.hint, false, null, rad(C.RADIO_G, 'start', R.map)); else this.say('start', rad(C.RADIO, 'start', R.map), false, null, rad(C.RADIO_G, 'start', R.map));
@@ -138,6 +138,10 @@ export class StoryRaid {
     /* 5장 연구소: 수조 구역에서 '노을 목소리'(= 파수가 이어 붙인 녹음) · 관제실이 열린 뒤엔 파수가 직접 */
     if (R.map === 'lab' && (b?.id === 'b_ch5' || b?.id === 'b_tank') && R.zoneMax >= 2 && C.RADIO.noleLab) { this.say('noleLab', C.RADIO.noleLab, true, C.RADIO.noleMongi, null, 2.8); st.flags.heardNoleLab = 1; }
     if (R.map === 'lab' && (b?.id === 'b_mother' || b?.id === 'b_pasu' || st.beatsDone.b_mother) && this.t > 10 && C.RADIO.pasu) this.say('pasu', C.RADIO.pasu, false);
+    /* M5-A 대수문 꼭대기: 깨어남 · 단계 바뀜 · 약점 · 멈춤 — 인물 무전 (엔딩 뒤엔 파수의 '시험 운전') */
+    if (R.map === 'gate' && T.t6?.RADIO6) { const RR = T.t6.RADIO6, G = R.GT, e = R.boss; if (st.ending) this.say('g_again', RR.again, true); else if (this.t > 2.4) this.say('g_start', RR.start, true);
+      if (G?.active) this.say('g_wake', RR.wake, true); if (G?.phase >= 1 && !(G.shift > 0)) this.say('g_p1', RR.p1, true); if (G?.phase >= 2 && !(G.shift > 0)) this.say('g_p2', RR.p2, true);
+      if (e && !e.dead && e.weakT > 0) this.say('g_weak', RR.weak, true); if (e?.dead) this.say('g_down', RR.down, true, null, null, 3); }
     /* 몽이 코: 녹음기 · 이야기 물건 상자 가까이 */
     if (R.L.pet) for (const c of R.containers) if ((c.tape || c.story) && !c.searched && near(c.pos, 9)) { this.say('sniff' + (c.tape ? 't' : 's'), ['y', C.RADIO.sniff], true); break; }
   }

@@ -4,7 +4,7 @@ export const BRAND = {
   name: '감성커피', en: 'GAMSUNG COFFEE', red: '#A92E2B', redHex: 0xA92E2B, ink: '#3B2A20', paper: '#F6EFE4',
   slogan: '마음이 쉬어가는 곳', keywords: ['진심', '정갈함', '여백', '따뜻함', '단아함'], site: 'https://xn--439as41bv4jv9f.com/',
 };
-export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short: '감성커피', ver: '0.2.0' };
+export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short: '감성커피', ver: '0.2.1' };
 
 // 메뉴: t = 내리는 시간(초) · n = 한 번에 나오는 잔 수 · bean = 잔당 원두 · lv = 열리는 레벨 · photo = 공식 사진
 //   price = 한 잔 값 · xp = 경험치 · look = 3D 잔 모양 (models.js)

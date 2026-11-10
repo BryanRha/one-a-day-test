@@ -1,7 +1,7 @@
 // 방 모양 → 걸을 수 있는 곳 · 벽 · 높이 · 길 찾기 (직원 · 손님 · 안내 화살표)
 //   사장님: 열린 방(+ 연결 통로)만 걸음 · 벽에 막힘 · 손님/직원(npc): + 매장 앞 거리
 //   길 찾기: 50 칸 격자 BFS → 보이는 가장 먼 점으로 줄임(직선으로 갈 수 있으면 바로)
-import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.15';
+import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.16';
 const CELL = 50, X0 = -1350, Z0 = -1250, NX = 60, NZ = 58;
 /* 문 위치: 방 rect 의 변(N 위 = z0 · S 아래 = z1 · W 왼 = x0 · E 오른 = x1) 위 at 에서 폭 DOOR_W */
 export function doorBox(r, d) { const [x0, z0, x1, z1] = r, h = DOOR_W / 2;
@@ -22,8 +22,7 @@ export function geom(open, feat) {
     const gaps = s => ds.filter(d => d.side === s).map(d => [d.a, d.b]);
     /* 이웃 방(같은 변을 쓰는 방)의 문도 구멍으로 */ for (const oid of open) { const O = ROOMS[oid]; if (oid === id || !O.doors) continue; for (const d of O.doors) { const b = doorBox(O.rect, d); if (b.axis === 'x' && (b.z === z0 || b.z === z1) && b.a < x1 && b.b > x0) ds.push({ ...b, side: b.z === z0 ? 'N' : 'S' }); if (b.axis === 'z' && (b.x === x0 || b.x === x1) && b.a < z1 && b.b > z0) ds.push({ ...b, side: b.x === x0 ? 'W' : 'E' }); } }
     side(x0, x1, z0, 'x', gaps('N'), 230, false); side(z0, z1, x0, 'z', gaps('W'), 230, false); side(x0, x1, z1, 'x', gaps('S'), 70, true); side(z0, z1, x1, 'z', gaps('E'), 70, true); }   /* 앞(카메라 쪽) 벽은 낮게 잘라 방 안이 보이게 */
-  /* 매대 뒤 로고 벽 (실제 매장 공통: 회색 벽 + 흰 로고) — 왼쪽은 반죽실 · 공방으로 넘어가는 통로 */
-  seg(380, -450, 560, -450, 270, false);
+  /* 0.3.2: 매대 뒤 로고 칸막이는 없앰(동선을 막음) → 로고는 오븐 위에 매다는 간판 (world.js) · 열린 방 안에는 벽을 두지 않음 (tools/flow_check.mjs 가 확인) */
   /* 2층: 계단 옆 난간 · 2층 뒤 끝(아래층과 높이 차) */
   if (open.has('up2')) { seg(STAIRS.x0, STAIRS.z0, STAIRS.x0, STAIRS.z1, 40, true); seg(-1250, 450, STAIRS.x0, 450, 40, false); }
   return { rects, walls, raised: open.has('up2'), npc: [...rects, STREET, [650, 1050, 1600, 1550], [-1250, 1050, -250, 1550]] };

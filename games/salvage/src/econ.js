@@ -1,7 +1,7 @@
 // 경제 · 성장 계산 (화면 · three 없이 — node 시뮬 · 시험에서도 그대로 씀)
 //  S = 저장 상태(save.js). 모든 함수는 S 를 직접 바꾸고 { ok, why } 를 돌려줌
 import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2,
-  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS } from './data.js?v=0.99.15';
+  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS, STAR, PETS, PET_MAX } from './data.js?v=0.99.16';
 
 export const kstDay = (t = Date.now()) => new Date(t + 324e5).toISOString().slice(0, 10);
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -78,15 +78,52 @@ export function upgradeMod(S, wk, slot) {
   if (!pay(S, modCost(wk, slot, mk))) return { ok: false, why: 'cost' };
   w[slot] = mk; return { ok: true };
 }
-/* 개조 반영한 무기 숫자 */
-export function weaponStats(wk, mods0) {
-  const W = WEAPONS[wk], M = MODS; const mods = { ...freshMods(), ...(mods0 || {}) };
+/* ───── M5-C 무기 단련 ★ (정밀 공방) ───── */
+export const starOf = (S, wk) => Math.max(0, Math.min(STAR.max, S.star?.[wk] | 0));
+export const forgeStar = S => facCur(S, 'forge')?.star || 0;
+export function starCost(wk, n) { const b = STAR.cost[n]; if (!b) return null; const m = TIER_MUL[WEAPONS[wk].tier]; const c = {}; for (const [k, v] of Object.entries(b)) c[k] = k === 'shells' || k in MATS ? Math.round(v * m) : v; return c; }
+export function temperWeapon(S, wk) {
+  if (!S.weapons[wk]) return { ok: false, why: 'noweapon' }; const n = starOf(S, wk) + 1; if (n > STAR.max) return { ok: false, why: 'max' };
+  if (forgeStar(S) < n) return { ok: false, why: 'forge' }; if (!pay(S, starCost(wk, n))) return { ok: false, why: 'cost' };
+  (S.star ||= {})[wk] = n; return { ok: true, n };
+}
+/* ───── M5-C 반려 2: 몽이 5단 · 반디 3단 ───── */
+export const petLv = (S, k) => S.pets?.[k] | 0;
+/* 단계 상한(시설): 몽이 수족관 1 → 2 · 수족관 2 → 3 · 쉼터 → petCap / 반디 쉼터 bandiCap (없으면 1) */
+export function petCap(S, k) {
+  if (k === 'mong') { const aq = facLvl(S, 'aquarium'); if (!aq) return 0; return Math.max(aq >= 2 ? 3 : 2, facCur(S, 'den')?.petCap || 0); }
+  return petLv(S, 'bandi') ? Math.max(1, facCur(S, 'den')?.bandiCap || 0) : 0;
+}
+export const petNext = (S, k) => { const n = petLv(S, k); return n && n < PET_MAX[k] ? PETS[k].stages[n + 1] : null; };
+/* 합류: 몽이 = 수족관 1단계 · 반디 = 이야기 '조용한 수조' 끝 (S.story.beatsDone) — 은신처에 들어올 때 · 시뮬 은신처마다 부름. 새로 합류하면 키를 돌려줌 */
+export function syncPets(S) {
+  const P = S.pets ||= { mong: 0, bandi: 0 }; const joined = [];
+  if (!P.mong && facLvl(S, 'aquarium') >= 1) { P.mong = 1; joined.push('mong'); }
+  if (!P.bandi && S.story?.beatsDone?.[PETS.bandi.beat]) { P.bandi = 1; joined.push('bandi'); }
+  return joined;
+}
+export function growPet(S, k) {
+  const nx = petNext(S, k); if (!petLv(S, k)) return { ok: false, why: 'locked' }; if (!nx) return { ok: false, why: 'max' };
+  if (petCap(S, k) < petLv(S, k) + 1) return { ok: false, why: 'petcap' }; if (!pay(S, nx.cost)) return { ok: false, why: 'cost' };
+  S.pets[k]++; return { ok: true, n: S.pets[k] };
+}
+/* 판 안 능력(쌓임): 1 ~ 지금 단계의 fx 를 합침 */
+export function petFx(S) {
+  const out = { mong: petLv(S, 'mong'), bandi: petLv(S, 'bandi') };
+  for (const k of ['mong', 'bandi']) for (let i = 1; i <= out[k]; i++) for (const [f, v] of Object.entries(PETS[k].stages[i].fx || {})) out[f] = v; /* 뒤 단계 값이 앞 단계를 덮음(같은 능력이 커짐) */
+  return out;
+}
+
+/* 개조 반영한 무기 숫자 (M5-C: star = 단련 ★ 0~3 · 새 무기 특수 칸 net · bleed · wet · pull · ricochet · swarm · hookPull · spin · ctrl) */
+export function weaponStats(wk, mods0, star = 0) {
+  const W = WEAPONS[wk], M = MODS; const mods = { ...freshMods(), ...(mods0 || {}) }; const st = Math.max(0, Math.min(STAR.max, star | 0));
   const sm = M.scope.spread[mods.scope], gm = M.grip;
   return { key: wk, name: W.name, short: W.short, pellets: W.pellets || 1, pierce: W.pierce || 0, knock: W.knock, noise: W.noise * M.barrel.noise[mods.barrel],
-    dmg: W.dmg * M.chamber.dmg[mods.chamber], boss: M.chamber.boss[mods.chamber], rate: W.rate * (W.melee ? gm.swing[mods.grip] : 1),
-    mag: W.melee ? 0 : Math.round(W.mag * M.mag.mag[mods.mag]), reload: W.reload * M.mag.reload[mods.mag],
+    dmg: W.dmg * M.chamber.dmg[mods.chamber] * STAR.dmg[st], boss: M.chamber.boss[mods.chamber], rate: W.rate * (W.melee ? gm.swing[mods.grip] : 1) * STAR.rate[st],
+    mag: W.melee ? 0 : Math.round(W.mag * M.mag.mag[mods.mag]), reload: W.reload * M.mag.reload[mods.mag] * STAR.reload[st],
     range: W.range * M.barrel.range[mods.barrel], spread: W.spread * sm, add: W.add * sm * gm.add[mods.grip], max: W.max * sm * gm.max[mods.grip], rec: W.rec * M.barrel.rec[mods.barrel],
-    crit: W.crit + M.scope.crit[mods.scope] + gm.crit[mods.grip], melee: !!W.melee, arc: W.arc || 0, water: W.water || null, chain: W.chain || null, blast: W.blast || null, light: W.light || 0, mods };
+    crit: W.crit + M.scope.crit[mods.scope] + gm.crit[mods.grip], melee: !!W.melee, arc: W.arc || 0, water: W.water || null, chain: W.chain || null, blast: W.blast || null, light: W.light || 0, mods,
+    net: W.net || null, bleed: W.bleed || null, wet: W.wet || null, pull: W.pull || null, ricochet: W.ricochet || null, swarm: W.swarm || null, hookPull: W.hookPull || null, spin: W.spin || null, ctrl: W.ctrl || 1, fam: W.fam, star: st };
 }
 /* 체감용 숫자: 거리 d 에서 적을 연사로 잡는 데 걸리는 시간(초) · 명중률 — 같은 식을 화면 · 시뮬이 같이 씀
  *  명중: 적 반지름이 보이는 각(atan(r/d)) ÷ 그때의 퍼짐(연사 중 평균) · 산탄은 알 수 만큼 */
@@ -96,11 +133,11 @@ export function ttk(ws, hp, d = 7, r = 0.62) {
   const half = Math.atan(r / d);
   if (d > ws.range) return { hit: 0, t: Infinity, dps: 0 };
   let spread = ws.spread, t = 0, dealt = 0, mag = ws.melee ? Infinity : ws.mag, shots = 0, hitSum = 0;
-  const per = ws.dmg * (1 + ws.crit * 0.8) + (ws.blast ? ws.blast.burn * ws.blast.dps * 0.6 : 0);
+  const per = (ws.dmg * (1 + ws.crit * 0.8) + (ws.blast ? ws.blast.burn * ws.blast.dps * 0.6 : 0) + (ws.bleed ? ws.bleed.dps * ws.bleed.t * 0.5 : 0)) * (ws.swarm ? ws.swarm.n : 1) * (ws.ricochet ? 1 + ws.ricochet.mul * 0.25 : 1); /* M5-C 출혈 · 유도 3발 · 튕김(무리일 때 몫) */
   while (dealt < hp && t < 60) {
     if (mag <= 0) { t += ws.reload; mag = ws.mag; spread = ws.spread; }
     const p = Math.min(1, half / Math.max(1e-3, spread));
-    const exp = ws.pellets > 1 ? ws.pellets * Math.min(1, half / Math.max(1e-3, ws.spread)) : p;
+    const exp = ws.swarm ? 1 : ws.pellets > 1 ? ws.pellets * Math.min(1, half / Math.max(1e-3, ws.spread)) : p; /* 유도 불꽃은 늘 맞음 */
     dealt += per * exp; hitSum += p; shots++; mag--; t += 1 / ws.rate; spread = Math.min(ws.max, spread + ws.add);
   }
   return { hit: hitSum / Math.max(1, shots), t: Math.round(t * 100) / 100, dps: Math.round(dealt / Math.max(0.01, t)) };
@@ -235,16 +272,17 @@ export function loadout(S) {
   const clinic = facCur(S, 'clinic'), store = facCur(S, 'store'), lab = facCur(S, 'lab'), aq = facCur(S, 'aquarium'), lt = facCur(S, 'lights'), gym = facCur(S, 'gym'), dock = facCur(S, 'dock');
   const vest = GEAR.vest.tiers[S.gear.vest] || GEAR.vest.tiers[0], helm = GEAR.helmet.tiers[S.gear.helmet] || GEAR.helmet.tiers[0], bag = GEAR.bag.tiers[S.gear.bag] || GEAR.bag.tiers[0];
   const meal = S.meal ? MEALS[S.meal] : null; const cf = charmFx(S); const D = DIFF[S.diff] || DIFF.normal;
-  const ammo = ammoReady(S);
+  const ammo = ammoReady(S); const pf = petFx(S); /* M5-C 반려 능력 */
   return {
-    weapons: [weaponStats(main, S.weapons[main]), ...(side ? [weaponStats(side, S.weapons[side])] : [])],
+    weapons: [weaponStats(main, S.weapons[main], starOf(S, main)), ...(side ? [weaponStats(side, S.weapons[side], starOf(S, side))] : [])],
     hp: PLAYER.hp + (clinic?.hp || 0) + (helm.hp || 0) + (meal?.hp || 0) + (cf.hp || 0), armor: vest.armor || 0, lastStand: !!clinic?.last, heal: clinic?.heal || 1,
     o2: O2.max + (helm.hp || 0) + (gym?.o2 || 0), o2Drain: 1 - (cf.o2 || 0), /* v0.4 해저 터널: 헬멧이 산소통 몫도 함 · 훈련장 · 장어 이빨 부적 */
     bag: { w: bag.w, h: bag.h, comfy: bag.comfy, slow: bag.slow || 1 }, safe: store?.safe || [1, 1], kit: store?.kit || 0,
     pet: aq ? { w: aq.pet[0], h: aq.pet[1], safe: !!aq.petSafe, sniff: !!aq.sniff } : null,
-    glow: !!lab?.glow, hints: !!lab?.hints, vision: (lt?.vision || 1) * (helm.vision || 1) * (1 + (cf.vision || 0)), blackout: lt?.blackout || 1, sense: !!lt?.sense, dark: 1 + (cf.dark || 0),
+    glow: !!lab?.glow, hints: !!lab?.hints, vision: (lt?.vision || 1) * (helm.vision || 1) * (1 + (cf.vision || 0)) * (1 + (pf.vision || 0)), blackout: lt?.blackout || 1, sense: !!lt?.sense, senseR: lt?.senseR || 1, dark: 1 + (cf.dark || 0),
     stam: (meal?.stam || 1) * (gym?.stam || 1) * (1 + (cf.stam || 0)), stamMax: gym?.stamMax || 0, roll: (1 - (gym?.roll || 0)) * (1 - (cf.roll || 0)),
-    speed: (meal?.speed || 1) * (gym?.speed || 1), water: 1 + (cf.water || 0), search: (meal?.search || 1) * (1 + (cf.search || 0)), meal: S.meal,
+    speed: (meal?.speed || 1) * (gym?.speed || 1), water: 1 + (cf.water || 0), search: (meal?.search || 1) * (1 + (cf.search || 0)) * (1 + (pf.search || 0)), meal: S.meal,
+    pets: pf, /* M5-C { mong, bandi, warn, medic, heal, bite, vision, ping, flash } */
     hold: 1 - (cf.hold || 0), boss: 1 + (cf.boss || 0), loot: (1 + (cf.loot || 0)) * D.loot, keep: (cf.keep || 0) + (dock?.rescue || 0),
     ammo, diff: S.diff || 'normal', foeHp: D.foeHp, foeDmg: D.foeDmg,
     mgear: S.mgSel && MAP_GEAR[S.mgSel] && S.gear?.[S.mgSel] ? S.mgSel : null, /* M4-B 맵 장비 하나 */
@@ -254,7 +292,7 @@ export function loadout(S) {
 export function power(S) { const L = loadout(S); const w = L.weapons[0]; return Math.round(ttk(w, 1000, w.melee ? 2 : 7).dps * (L.hp / 100) / (1 - L.armor)); }
 
 /* ═════ M3-A 성장 뼈대 (v0.6): 탄약 · 부적 · 상인 · 업적 · 난이도 — 숫자는 data/*.js ═════ */
-import { COS } from './look.js?v=0.99.15';
+import { COS } from './look.js?v=0.99.16';
 const ITEM_LIST = Object.keys(ITEMS);
 /* ───── 탄약 상자 (관통 · 전기) — 한 판에 1상자, 출격 때 씀 ───── */
 export const ammoCount = (S, k) => (S.ammo?.[k] || 0);
@@ -338,27 +376,7 @@ export function sellAt(S, m, k) {
   const v = sellPriceAt(S, m, k); if (v == null || !merchOpen(S, m)) return 0; const i = S.stash.indexOf(k); if (i < 0) return 0;
   S.stash.splice(i, 1); S.shells += v; S.stats.sold = (S.stats.sold || 0) + v; (S.stats.traded ||= {})[m] = 1; return v;
 }
-/* ───── 업적 20 ───── */
-export function achValue(S, t) {
-  const st = S.stats || {};
-  switch (t) {
-    case 'bossKinds': return bossKinds(S);
-    case 'fac': return FAC_KEYS.reduce((s, k) => s + facLvl(S, k), 0);
-    case 'weapons': return Object.keys(S.weapons || {}).length;
-    case 'fullMods': return Object.entries(S.weapons || {}).some(([wk, w]) => WEAPONS[wk].slots.every(m => (w[m] || 0) >= 3)) ? 1 : 0;
-    case 'gear5': return ['vest', 'helmet', 'bag'].some(g => (S.gear?.[g] || 0) >= GEAR_MAX) ? 1 : 0;
-    case 'charms': return (S.charms?.have || []).length;
-    case 'traders': return Object.keys(st.traded || {}).length;
-    case 'deep': return st.deepExt || 0;
-    default: return st[t] || 0;
-  }
-}
-export function achTick(S) {
-  const out = []; S.ach ||= {};
-  for (const a of ACHIEVEMENTS) { if (S.ach[a.id] || achValue(S, a.t) < a.n) continue;
-    S.ach[a.id] = kstDay(); const { cos, ...rw } = a.reward; give(S, rw);
-    if (cos) { S.owned ||= []; if (S.owned.includes(cos) || !COS[cos]) S.shells += 150; else S.owned.push(cos); } out.push(a); }
-  return out;
-}
+/* ───── 업적 50 (M5-B) — ach.js 로 옮김 (칭호 · 받아 둔 꾸미기 · 판 기록) · 이름은 그대로 내보냄 ───── */
+export { achValue, achTick } from './ach.js?v=0.99.16';
 /* ───── 난이도 (언제든) ───── */
 export function setDiff(S, k) { if (!DIFF[k]) return { ok: false }; S.diff = k; return { ok: true }; }

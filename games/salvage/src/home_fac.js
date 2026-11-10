@@ -3,10 +3,10 @@
 //  그리기 최소: 보이는 시설을 전부 한 지오메트리로 합침 → 재질 2개(빛 받음 · 빛남) = 그리기 2 (+ 그림자 1). 단계가 바뀔 때만 다시 합침
 //  완성 연출(app.hideCam): 1.0초 다가감 → 1.6초 머묾(빛 웅덩이 번쩍 · 불티 · 반짝 소리) → 0.9초 제자리. 누르면 바로 끝. 빛은 미리 만든 점광 하나(개수 안 바뀜 = 셰이더 다시 안 만듦)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.15';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.15';
-import { FACILITIES } from './data.js?v=0.99.15';
-import { sfx } from './audio.js?v=0.99.15';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.16';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.16';
+import { FACILITIES } from './data.js?v=0.99.16';
+import { sfx } from './audio.js?v=0.99.16';
 
 /* 자리 [x, z, 바라보는 방향, 크기] — 은신처 좌표(main.js buildHideout · 인물 SPOT 과 안 겹치게). 뒷벽 z −6 · 바닥 원 반지름 9 */
 export const SLOT = {
@@ -22,18 +22,24 @@ export const SLOT = {
   ammo:     [-3.4, -0.25, 1.3, 1],
   gym:      [0.45, 4.3, 0.0, 1],
   dock:     [-2.75, 4.0, 0.3, 1],
+  forge:    [-3.55, 1.75, 1.25, 0.95], /* M5-C 정밀 공방 — 탄약대 아래 왼쪽 벽 */
+  den:      [2.75, 4.75, -0.35, 0.95], /* M5-C 반려 쉼터 — 앞 부두 훈련장 오른쪽 */
 };
+/* M5-C 끝 단계(x4 · 주방 · 조명 4단계): 3단 외형 그대로 + 금빛 표식(o_star4) — 자리 기준 옮김 [x, z] */
+const STAR_AT = { kitchen: [0.55, -0.15], lights: [0.55, 0.1] };
 /* 단계 수 → 그림 단: 마지막 = 완성(3) · 절반 이상 = 고침(2) · 그 밑 = 낡음(1) (3단 시설 1·2·3 / 4단 1·2·2·3 / 5단 1·1·2·2·3) */
-export function stageOf(k, lv) { const n = FACILITIES[k]?.levels.length || 3; if (!lv) return 0; if (lv >= n) return 3; return lv >= Math.ceil(n / 2) ? 2 : 1; }
+export function stageOf(k, lv) { const F = FACILITIES[k]; const n = F?.x4 ? 3 : F?.levels.length || 3; if (!lv) return 0; if (lv >= n) return 3; return lv >= Math.ceil(n / 2) ? 2 : 1; } /* M5-C x4: 끝 단계는 3단 외형 + 표식 */
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-let job = null; const MODELS = {};
-function loadHome() {
-  return job ||= loader.loadAsync('assets/dress_home.glb').then(g => {
+let job = null; export const MODELS = {};
+/* 소품 묶음 하나 → MODELS (이름 = 노드 이름) · M5-D 가구(dress_furn.glb)도 이 길로 같은 덩어리에 합침 */
+export function loadModels(url) {
+  return loader.loadAsync(url).then(g => {
     g.scene.updateMatrixWorld(true);
     for (const n of g.scene.children) { const parts = []; n.traverse(o => { if (o.isMesh) parts.push({ geo: o.geometry, glow: o.material.name === 'glow', m: o.matrixWorld.clone() }); }); MODELS[n.name] = parts; }
   });
 }
+function loadHome() { return job ||= loadModels('assets/dress_home.glb'); }
 const v3 = new THREE.Vector3(), col = new THREE.Color();
 /* 여러 모델을 하나로: 위치 · 정점 색을 실수 배열로 풀어(양자화 해제) 변환을 굽고 이어 붙임 */
 function merge(list) {
@@ -84,7 +90,10 @@ export class HomeFac {
     const S = this.S; if (!S) return; const list = []; let key = '';
     for (const k in SLOT) { const st = stageOf(k, S.fac?.[k] || 0); const building = S.build?.k === k; key += st + (building ? 'b' : '') + ',';
       if (st) list.push({ key: `o_${k}_${st}`, M: slotM(k) });
+      if (FACILITIES[k]?.x4 && (S.fac?.[k] || 0) >= 4 && STAR_AT[k]) { key += '*'; list.push({ key: 'o_star4', M: slotM(k).multiply(new THREE.Matrix4().makeTranslation(STAR_AT[k][0], 0, STAR_AT[k][1])) }); } /* M5-C 끝 단계 금빛 표식 */
       if (building) { const M = slotM(k); if (st) M.multiply(new THREE.Matrix4().makeTranslation(0, 0, 1.1)); list.push({ key: 'o_build', M }); } }
+    /* M5-D 가구: 같은 두 덩어리(빛 받음 · 빛남)에 합침 → 그리기 수 그대로 (furn_ui.js 가 extra 를 닮) */
+    const ex = this.extra?.(S); if (ex) { list.push(...ex.list); key += '|' + ex.key; }
     if (key !== this.key || force) {
       this.key = key; const G = merge(list);
       for (const k of ['pal', 'glow']) { const m = this.meshes[k]; if (m) { this.g.remove(m); m.geometry.dispose(); delete this.meshes[k]; }

@@ -1,10 +1,13 @@
 // 시험 봇 (?bot=N&free&seed=…&fast=3) — 화면 버튼을 눌러 출격 → 뒤지기 · 싸우기 · 탈출 → 결과 → 다시. N판 연속
 //  기록: window.__salvage.botLog (판마다 결과 · fps · 메모리) · 오류는 window.__salvage.errors
-import { ITEMS, MAPS } from './data.js?v=0.99.15';
+import { ITEMS, MAPS } from './data.js?v=0.99.16';
 export function installBot(app) {
   const Q = new URLSearchParams(location.search); const N = +Q.get('bot') || 3; app.timeScale = +(Q.get('fast') || 1);
   /* ?map=harbor|tunnel — 그 지도를 열어 두고(시험용) 그 지도로만 출격 */
   const MAPQ = Q.get('map'); if (MAPQ) { const S = app.S(); const need = { harbor: 11, tunnel: 19, factory: 19 }[MAPQ] || 0; for (let i = 1; i <= need; i++) if (!S.quests.done.includes('q' + i)) S.quests.done.push('q' + i); const u = MAPS[MAPQ]?.unlock; if (u && !S.quests.done.includes(u)) S.quests.done.push(u); /* 공장 = 이야기 해금 키 */ S.mapSel = MAPQ; app.save(); app.preloadMaps?.(); }
+  /* M5-B: ?botchal = 주간 도전만 · ?botabyss=N = 깊은 물 심연 N 으로 (엔딩 훅을 부르고 켬) */
+  const CHALB = Q.has('botchal'); if (Q.has('botabyss') && app.AB) { const S = app.S(); app.AB.markEnding(S); const A = app.AB.ab(S); A.on = true; A.max = Math.max(A.max, +Q.get('botabyss') || 3); A.sel = A.max; S.stats.raids = Math.max(S.stats.raids || 0, 6); app.save(); }
+  if (CHALB) { const S = app.S(); S.stats.raids = Math.max(S.stats.raids || 0, 6); app.save(); }
   const log = app.botLog = []; app.errors = app.errors || []; let st = 'menu', t = 0, raidT = 0, stuck = 0, lastPos = null, goal = null, goalKind = null, fpsAcc = [], firstMem = null, wander = null;
   addEventListener('error', e => app.errors.push(String(e.message)));
   const click = sel => { const e = document.querySelector(sel); if (e) { e.click(); return true; } return false; };
@@ -16,6 +19,8 @@ export function installBot(app) {
       click('.modal .btn');
       if (document.querySelector('.scr-result')) { click('#home'); return; }
       if (log.length >= N) { st = 'done'; app.botDone = true; return; }
+      if (CHALB && app.raid) { st = 'raid'; raidT = 0; fpsAcc = []; goal = null; return; }
+      if (CHALB && document.querySelector('.scr-hideout')) { if (!click('#chalGo')) { app.ui.tab = 'chal'; app.ui.m5seg = 'week'; app.ui.hideout(); } return; }
       if (document.querySelector('.scr-hideout')) { if (log.length % 3 === 2) { click('#bScrap'); click('#bTre'); } click('.fb:not(.dim)'); click('#go'); return; }
       if (document.querySelector('.scr-prep')) { click('#sortie'); if (app.raid) { st = 'raid'; raidT = 0; fpsAcc = []; goal = null; } return; }
       return;
