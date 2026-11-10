@@ -1,12 +1,12 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.18';
-import { ROOMS, hms } from './layout.js?v=0.99.18';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.18';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.18';
-import { sfx, setAudio } from './audio.js?v=0.99.18';
-import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.18';
-import { bm } from './oad_bm.js?v=0.99.18';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.19';
+import { ROOMS, hms } from './layout.js?v=0.99.19';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.19';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.19';
+import { sfx, setAudio } from './audio.js?v=0.99.19';
+import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.19';
+import { bm } from './oad_bm.js?v=0.99.19';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -83,6 +83,8 @@ export class UI {
     const eqBest = (g.lvPads || []).filter(p => p.u.eq && S.coins >= g.eqCost(p)).sort((a, b) => g.eqCost(a) - g.eqCost(b))[0];   /* 살 수 있는 설비 칸은 가장 싼 하나만 글자 */
     for (const p of g.lvPads || []) { const vis = p.u.eq ? Math.hypot(g.pl.pos.x - p.x, g.pl.pos.z - p.z) < 260 : g.room === p.room;   /* 설비 칸 글자는 가까이 갔을 때만 (0.3.3) */ p.tag.style.display = vis ? '' : 'none'; if (!vis) continue;   /* 방 칸 글자는 그 방 안에서만 · 설비 칸은 가까이 가거나 살 수 있을 때만 */ v.set(p.x, 20, p.z).project(cam);   /* 방 칸 글자는 그 방 안에서만 */ p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0 || p.free); }
     for (const t of g.rtags || []) { v.set(t.x, 6 + t.y, t.z).project(cam); t.d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; if (t.bd) { const l = g.buildLeft('R_' + t.id); const h = `🔨 ${ROOMS[t.id].name} <em>${hms(l)}</em>`; if (t.d._h !== h) { t.d.innerHTML = h; t.d._h = h; } } }
+    /* 돈 더미 표 (0.3.5: 바닥 돈과 왼쪽 위 돈이 따로 노는 것처럼 보임 → 더미 위에 「+N 줍기」) */
+    for (const q of g.piles) { const v0 = Math.round(q.v); if (!q.tag) { q.tag = document.createElement('div'); q.tag.className = 'piletag'; this.tags.append(q.tag); } q.tag.style.display = v0 > 0 ? '' : 'none'; if (v0 > 0) { v.set(q.x, 70, q.z).project(cam); q.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const h = `💰 +${fmt(v0)}`; if (q.tag._h !== h) { q.tag.innerHTML = h; q.tag._h = h; } } }
     for (const r of g.riders || []) { if (!r.tag) continue; const show = r.state === 'wait' || r.state === 'in'; r.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(r.pos.x, 200, r.pos.z).project(cam); r.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = '🛵 ' + Object.entries(r.order).map(([k, n]) => `<b>${ICON[k]}</b><em>${n - (r.got[k] || 0)}</em>`).join(' '); if (r.tag._h !== html) { r.tag.innerHTML = html; r.tag._h = html; } }
     if ((this._bc = (this._bc || 0) + 1) % 15 === 0) { const bd = Object.entries(S.branch[S.bi]?.build || {}), bc = $('#bchip'); bc.hidden = !bd.length; if (bd.length) { const [id] = bd.sort((a, b) => a[1] - b[1])[0], s = BRANCHES[S.bi].slots.find(x => x.id === id), l = g.buildLeft(id); const h = `🔨 ${s?.type === 'room' ? ROOMS[s.room].name : s?.label || ''} <b>${hms(l)}</b>${bd.length > 1 ? ` <small>+${bd.length - 1}</small>` : ''} <em>⚡</em>`; if (bc._h !== h) { bc.innerHTML = h; bc._h = h; } } }
     const bl = $('#balloon'); if (g.balloon && this._balOn) { v.copy(g.balloon.g.position).project(cam); bl.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; bl.hidden = false; }

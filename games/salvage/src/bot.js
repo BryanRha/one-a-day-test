@@ -1,6 +1,6 @@
 // 시험 봇 (?bot=N&free&seed=…&fast=3) — 화면 버튼을 눌러 출격 → 뒤지기 · 싸우기 · 탈출 → 결과 → 다시. N판 연속
 //  기록: window.__salvage.botLog (판마다 결과 · fps · 메모리) · 오류는 window.__salvage.errors
-import { ITEMS, MAPS } from './data.js?v=0.99.18';
+import { ITEMS, MAPS } from './data.js?v=0.99.19';
 export function installBot(app) {
   const Q = new URLSearchParams(location.search); const N = +Q.get('bot') || 3; app.timeScale = +(Q.get('fast') || 1);
   /* ?map=harbor|tunnel — 그 지도를 열어 두고(시험용) 그 지도로만 출격 */

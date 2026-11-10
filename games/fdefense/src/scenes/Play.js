@@ -3,19 +3,19 @@
 //   · 세로: 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 띠는 원작 그림 그대로 · 카드 줄(HERO + 병사 6)은 아래 엄지 자리
 //   · 병사 · 영웅을 누르면 원작 메뉴: 전신 일러스트 · 이름 · lv · 능력치 4줄 · 판매 · 전직(다음 직업 미리보기) · 레벨 업 · 필살기 → 확인 창(예/아니오) → 전직 컷인(일러스트 바뀜)
 //   · 메뉴가 열려 있으면 판 시간이 멈춘다 (원작 update_GAME_PLAYING: 메뉴 상태에선 효과만 움직임)
-import { W, H, C, SCALE } from '../config.js?v=0.99.18';
-import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.18';
-import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.18';
-import * as M from '../core/meta.js?v=0.99.18';
-import { BUNDLE } from '../core/balance.js?v=0.99.18';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.18';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.99.18';
-import { audio, S } from '../audio.js?v=0.99.18';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.99.18';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.18';
-import { T0, img, num, label, inRect } from './orig.js?v=0.99.18';
-import { pushBack } from '../oad.js?v=0.99.18';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.18';
+import { W, H, C, SCALE } from '../config.js?v=0.99.19';
+import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.19';
+import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.19';
+import * as M from '../core/meta.js?v=0.99.19';
+import { BUNDLE } from '../core/balance.js?v=0.99.19';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.19';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.99.19';
+import { audio, S } from '../audio.js?v=0.99.19';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.99.19';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.19';
+import { T0, img, num, label, inRect } from './orig.js?v=0.99.19';
+import { pushBack } from '../oad.js?v=0.99.19';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.19';
 
 const US = 2.25;                 // 원작 UI 배율 (가로 화면 480 → 1080)
 const HUD_H = 196, TRAY_MIN = 250, CS = 2.4;   // 세로 화면: 위 띠 높이 · 아래 카드 칸 최소 높이 · 카드 배율

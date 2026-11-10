@@ -167,3 +167,5 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .tierb small { display: block; font-size: 12px; color: #9A7050; } .tierb b { display: block; font-size: 22px; color: #E2702A; } .tierb em { font-style: normal; font-size: 10px; color: #B08060; }
 .tag { font-size: 16px; padding: 5px 12px; } .tag small { font-size: 11px; }
 .adbox .testad { background: #FF6720; color: #fff; border-radius: 8px; padding: 3px 10px; opacity: 1; font-size: 13px; font-weight: 900; }
+
+.piletag { position: absolute; left: 0; top: 0; background: #2E9A3E; color: #fff; border-radius: 10px; padding: 2px 8px; font-size: 12px; font-weight: 900; box-shadow: 0 2px 0 #1E6A2A; pointer-events: none; white-space: nowrap; }

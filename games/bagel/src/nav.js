@@ -1,7 +1,7 @@
 // 방 모양 → 걸을 수 있는 곳 · 벽 · 높이 · 길 찾기 (직원 · 손님 · 안내 화살표)
 //   사장님: 열린 방(+ 연결 통로)만 걸음 · 벽에 막힘 · 손님/직원(npc): + 매장 앞 거리
 //   길 찾기: 50 칸 격자 BFS → 보이는 가장 먼 점으로 줄임(직선으로 갈 수 있으면 바로)
-import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.18';
+import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.19';
 const CELL = 50, X0 = -1350, Z0 = -1250, NX = 60, NZ = 58;
 /* 문 위치: 방 rect 의 변(N 위 = z0 · S 아래 = z1 · W 왼 = x0 · E 오른 = x1) 위 at 에서 폭 DOOR_W */
 export function doorBox(r, d) { const [x0, z0, x1, z1] = r, h = DOOR_W / 2;
@@ -36,7 +36,7 @@ export class Nav {
   free(rects, x, z, r = 34) { const inAny = (px, pz) => rects.some(R => px >= R[0] && px <= R[2] && pz >= R[1] && pz <= R[3]);
     if (!inAny(x, z) || !inAny(x + r, z) || !inAny(x - r, z) || !inAny(x, z + r) || !inAny(x, z - r)) return false;
     for (const w of this.G.walls) if (Math.abs(x - w.x) < w.hw + r && Math.abs(z - w.z) < w.hd + r) return false;
-    if (r >= 30) for (const [ox, oz, hw, hd] of this.obs) if (Math.abs(x - ox) < hw + r && Math.abs(z - oz) < hd + r) return false;   /* 부딪힘과 같은 여유 */ return true; }
+    if (r >= 30) for (const o of this.obs) { if (o === this.skip) continue; const [ox, oz, hw, hd] = o; if (Math.abs(x - ox) < hw + r && Math.abs(z - oz) < hd + r) return false; }   /* 부딪힘과 같은 여유 · 목표 바로 옆 장애물(앉을 테이블)은 뺌 */ return true; }
   ok(x, z, r = 34) { return this.free(this.G.rects, x, z, r); }
   /* 직선으로 갈 수 있나 (25 마다 확인) */
   clear(ax, az, bx, bz, npc) { const R = npc ? this.G.npc : this.G.rects, l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(l / 25)); for (let i = 1; i <= n; i++) { const u = i / n; if (!this.free(R, ax + (bx - ax) * u, az + (bz - az) * u, 34)) return false; } return true; }
@@ -49,7 +49,9 @@ export class Nav {
     if (prev[t] < 0) return null; const P = []; for (let c = t; c !== s; c = prev[c]) P.push([X0 + (c % NX + 0.5) * CELL, Z0 + (((c / NX) | 0) + 0.5) * CELL]); P.reverse(); P.push([bx, bz]); return P; }
   near(g, i, j) { if (g[j * NX + i]) return [i, j]; for (let r = 1; r < 6; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) { const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < NX && b < NZ && g[b * NX + a]) return [a, b]; } return [-1, -1]; }
   /* 지금 향할 점: 목표가 바로 보이면 목표 · 아니면 경로에서 보이는 가장 먼 점 (o 마다 경로 기억) */
-  next(o, x, z, npc) { const p = o.pos; let c = this.cache.get(o); if (!c || c.x !== x || c.z !== z || c.npc !== npc) { c = { x, z, npc, k: 0, w: null, P: null }; this.cache.set(o, c); }
+  next(o, x, z, npc) { const p = o.pos; this.skip = this.obs.find(([ox, oz, hw, hd]) => Math.abs(x - ox) < hw + 40 && Math.abs(z - oz) < hd + 40) || null;   /* 목표가 설비 · 테이블 바로 옆(의자)이면 그 장애물은 빼고 봄 */
+    try { return this._next(o, x, z, npc); } finally { this.skip = null; } }
+  _next(o, x, z, npc) { const p = o.pos; let c = this.cache.get(o); if (!c || c.x !== x || c.z !== z || c.npc !== npc) { c = { x, z, npc, k: 0, w: null, P: null }; this.cache.set(o, c); }
     if (c.k-- > 0 && (!c.w || Math.hypot(p.x - c.w[0], p.z - c.w[1]) > 30)) return c.w;   /* 몇 프레임마다만 다시 봄 (가벼움) */
     c.k = 10; if (this.clear(p.x, p.z, x, z, npc)) { c.w = null; c.P = null; return null; }
     if (!c.P || !c.P.length) c.P = this.path(p.x, p.z, x, z, npc); if (!c.P) { c.w = null; return null; }

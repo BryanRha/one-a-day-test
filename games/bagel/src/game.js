@@ -1,16 +1,16 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { UP_MAX, upCost } from './data.js?v=0.99.18';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, OUTFITS_PRO, REST, FX, EVENTS, FINISHED_RATE, ROOM_UP, ROOM_UP_MAX, VIP, THEME_SETS } from './data.js?v=0.99.18';
-import { ROOMS, hms, inRect as inR } from './layout.js?v=0.99.18';
-import { geom, Nav, heightAt } from './nav.js?v=0.99.18';
-import { drawWorld, drawWalls } from './world.js?v=0.99.18';
-import { track, salesAdd } from './oad.js?v=0.99.18';
-import { bm } from './oad_bm.js?v=0.99.18';
+import { UP_MAX, upCost } from './data.js?v=0.99.19';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, OUTFITS_PRO, REST, FX, EVENTS, FINISHED_RATE, ROOM_UP, ROOM_UP_MAX, VIP, THEME_SETS } from './data.js?v=0.99.19';
+import { ROOMS, hms, inRect as inR } from './layout.js?v=0.99.19';
+import { geom, Nav, heightAt } from './nav.js?v=0.99.19';
+import { drawWorld, drawWalls } from './world.js?v=0.99.19';
+import { track, salesAdd } from './oad.js?v=0.99.19';
+import { bm } from './oad_bm.js?v=0.99.19';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, sph, item, person, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.18';
-import { S, save, addSold, mission, today, vipOn } from './state.js?v=0.99.18';
-import { sfx } from './audio.js?v=0.99.18';
+import { M, box, cyl, sph, item, person, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.19';
+import { S, save, addSold, mission, today, vipOn } from './state.js?v=0.99.19';
+import { sfx } from './audio.js?v=0.99.19';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -37,7 +37,7 @@ export class Game {
     sc.add(new THREE.HemisphereLight(I.hemi[0], I.hemi[1], I.hemi[2])); const sun = new THREE.DirectionalLight(I.sun, 2.1); sun.position.set(-500, 1200, 700); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
     Object.assign(sun.shadow.camera, { left: -1300, right: 1300, top: 1300, bottom: -1300, near: 10, far: 3600 }); sun.shadow.radius = 4; sun.shadow.bias = -0.0005; sc.add(sun, sun.target); this.sun = sun;
     for (const p of this.pads || []) p.tag.remove(); for (const p of this.lvPads || []) p.tag.remove(); for (const c of [...(this.cust || []), ...(this.cars || []), ...(this.riders || [])]) c.tag && c.tag.remove(); this.ui && this.ui.floats && (this.ui.floats.innerHTML = '');   /* 지점 바꿀 때 화면 글자 정리 */
-    this.ui && this.ui.tags && this.ui.tags.querySelectorAll('.nt, .zz, .evp, .rtag, .btag').forEach(e => e.remove()); this.endEvent(true); this.placing = null; this.spin = [];   /* 설비 이름표 · 쉬는 직원 · 이벤트 · 방 이름 · 공사 */
+    this.ui && this.ui.tags && this.ui.tags.querySelectorAll('.nt, .zz, .evp, .rtag, .btag, .piletag').forEach(e => e.remove()); this.endEvent(true); this.placing = null; this.spin = [];   /* 설비 이름표 · 쉬는 직원 · 이벤트 · 방 이름 · 공사 */
     for (const f of this.fly) f.done && f.done(); this.fly = [];   /* 지점을 바꾸면 날던 것은 끝냄 */
     this.nexting = false; this.st = {}; this.zones = []; this.pads = []; this.lvPads = []; this.cust = []; this.cars = []; this.riders = []; this.staff = []; this.piles = []; this.room = null; this.balloonT = 90; this.balloon = null;
     const br = (S.branch[bi] ||= { unl: [], staff: [], paid: {}, build: {} }); br.build ||= {};
@@ -66,6 +66,9 @@ export class Game {
     for (const [id] of Object.entries(br.build || {})) { const s = B.slots.find(x => x.id === id); if (s && s.type !== 'room') { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.wg.add(g); for (const [x, z] of [[-80, -70], [80, -70], [-80, 70], [80, 70]]) box(10, 200, 10, 0xC8A050, x, 0, z, g); box(170, 8, 150, 0xC8A050, 0, 200, 0, g); box(60, 40, 50, 0xFF6720, 0, 0, 0, g); } }   /* 설비 공사 (저온 숙성고) */
     this.roomTags(); if (this.pl) this.fitView(); if (this.decoObjs) this.collectOcc(); }
   endCine() { if (!this.cine) return; this.cine = null; this.cam.zoom = 1; this.cam.updateProjectionMatrix(); this.ui.tierBanner(null); }
+  /* 손님이 나가는 문 (0.3.5 근본 원인: 예전 new V(...door) 는 [x, z] 를 (x, y, 0) 으로 만들어 나가는 곳이 매장 가운데 계산대 옆이 됨
+     → 0.3.3 부터 계산대가 길 찾기 장애물이라 거기 도착을 못 해 손님이 계산대 뒤에 쌓임) */
+  doorV() { const d = this.B.door; return new V(d[0], 0, d[1]); }
   hAt(x, z) { return heightAt(this.G, x, z); }
   /* 길 찾기에 설비 몸통도 넣음 (설비가 생길 때마다) */
   navObs() { const obs = []; for (const o of Object.values(this.st)) { const sz = SIZE[o.type]; if (!sz || o.type === 'drive' || o.y) continue; const [hw, hd = hw] = o.type === 'table' ? [128, 72] : sz; obs.push([o.x, o.z, hw, hd]); } this.nav = new Nav(this.G, obs); }
@@ -98,7 +101,7 @@ export class Game {
     const h = this.hAt(s.x, s.z), g = new THREE.Group(); g.position.set(s.x, h, s.z); if (s.look === 'picnic') g.rotation.y = Math.PI / 2; this.sc.add(g); STATION[s.look || s.type](g);   /* 피크닉 의자는 좌우(손님 자리 ±x) */
     const o = { s, g, type: s.type, x: s.x, z: s.z, y: h, stack: [], in: 0, inStack: [], t: 0, feed: [], ft: 0 };   /* 상태는 놓을 때 전부 만들어 둠 (늦게 만들면 순서에 따라 오류) · y: 2층 높이 */
     if (s.type === 'table') { o.seats = [-95, 95].map(dx => ({ x: s.x + dx, z: s.z, who: null })); o.trash = []; o.up = h > 0; if ((S.deco[this.bi] || []).includes('vase')) this.tableVase(o); }
-    if (s.type === 'counter') { o.shelf = { bagel: [], cream: [], coffee: [], drink: [] }; o.cash = this.pile(s.x + 230, s.z + 10); }
+    if (s.type === 'counter') { o.shelf = { bagel: [], cream: [], coffee: [], drink: [] }; o.cash = this.pile(s.x + 240, s.z - 30); }   /* 0.3.5: 돈 더미는 계산하는 자리(초록 칸) 바로 옆 → 직접 계산하면 저절로 주움 */
     if (s.type === 'drive') { o.glass = []; g.children.slice(0, 2).forEach(m => { m.material = m.material.clone(); m.material.transparent = true; o.glass.push(m); });   /* 벽·창: 가까이 가면 유리처럼 */
       o.cash = this.pile(s.x - 140, s.z + 210); o.lane = { bagel: [], cream: [], coffee: [], drink: [] }; }
     this.st[s.id] = o; o.Z = {}; for (const [k, dx, dz, w, d, col, ring] of ZONES[s.type] || []) o.Z[k] = this.zone(s.x + dx, s.z + dz, w, d, col, ring, h); 
@@ -201,7 +204,7 @@ export class Game {
   refreshPads() {
     for (const p of this.pads) { this.sc.remove(p.g); p.tag.remove(); } this.pads = []; for (const p of this.lvPads) { this.sc.remove(p.g); p.tag.remove(); } this.lvPads = [];
     const br = S.branch[this.bi] || {}, bd = br.build || {}, rate = this.rate();
-    const reach = (x, z) => [...this.open].some(id => inR(ROOMS[id].rect, x, z)), next = this.B.slots.filter(s => !s.free && !s.withRoom && !this.unl.has(s.id) && !bd[s.id] && (s.type === 'room' ? reach(s.x, s.z) : this.open.has(s.room)) && (s.type !== 'next' || rate >= FINISHED_RATE)).slice(0, 2);   /* 방 칸은 그 칸이 열린 방 안에 있을 때만 */
+    const reach = (x, z) => [...this.open].some(id => inR(ROOMS[id].rect, x, z)), seenAt = new Set(), next = this.B.slots.filter(s => !s.free && !s.withRoom && !this.unl.has(s.id) && !bd[s.id] && (s.type === 'room' ? reach(s.x, s.z) : this.open.has(s.room)) && (s.type !== 'next' || rate >= FINISHED_RATE)).filter(s => { const k = (s.px ?? s.x) + ',' + (s.pz ?? s.z); if (s.type !== 'hire' || !this.open.has('crew')) { if (seenAt.has(k)) return false; seenAt.add(k); } return true; }).slice(0, 2);   /* 같은 자리 칸은 하나씩 */   /* 방 칸은 그 칸이 열린 방 안에 있을 때만 */
     let hi = 0; for (const s of next) { const [x, z] = this.padPos(s, s.type === 'hire' ? hi++ : 0), h = this.hAt(x, z), g = new THREE.Group(); g.position.set(x, h, z); this.sc.add(g);
       const room = s.type === 'room', col = room ? (s.build ? 0xFFE9C8 : 0xFFFFFF) : s.type === 'hire' ? 0xFFE2CC : 0xFFFFFF;
       const { fill, look } = padLook(g, PAD, room ? 0xFF8A3C : s.type === 'hire' ? 0xFFB24A : 0xFFD24A, 0xFFD24A);
@@ -458,7 +461,7 @@ export class Game {
     if (w.kind === 'trash' && this.in(w, bin.Z.drop)) {   /* 쓰레기 버리기 */ const it = w.stack.pop(); w.P.hand.remove(it.m); if (!w.stack.length) w.kind = null; sfx('drop', { vol: 0.2 }); if (it.kind === 'trash') mission('clean'); return step(); }
     if (!w.isPlayer) return;
     // 돈 줍기
-    for (const p of this.piles) if (p.v > 0 && this.near(w, p.x, p.z + 20, 110)) { const v = Math.round(p.v); S.coins += v; S.earned += v; mission('coins', v); p.v = 0; const ms = p.meshes; p.meshes = [];
+    for (const p of this.piles) if (p.v > 0 && this.near(w, p.x, p.z + 20, 140)) { const v = Math.round(p.v); S.coins += v; S.earned += v; mission('coins', v); p.v = 0; const ms = p.meshes; p.meshes = [];
       ms.forEach((m, i) => { const from = m.position.clone(); setTimeout(() => this.fly.push({ m, from, to: () => w.pos.clone().setY(120), t: 0, d: 0.25, done: () => this.sc.remove(m) }), i * 18); });
       sfx('coin', { vol: 0.5 }); this.ui.float('+' + fmt(v), w.pos, 'cash'); save(); return step(); }
     // 열기 칸에 돈 붓기
@@ -489,7 +492,7 @@ export class Game {
     if (f.reg) this.regServed(f);
     f.tag && (f.tag.remove(), f.tag = null); for (const o of f.order) for (let i = 0; i < o.n && i < 3; i++) { const m = item(o.k); m.scale.setScalar(0.8); f.P.hand.add(m); m.position.y = i * 14; } f.P.carry = true;
     const seat = Math.random() < 0.6 && this.freeSeat(); this.cust.forEach(x => { if (x.state === 'queue' && x.qi > 0) x.qi--; });
-    if (seat) { seat.s.who = f; f.seat = seat; f.state = 'toSeat'; f.target = new V(seat.s.x, 0, seat.s.z); } else { f.state = 'leave'; f.target = new V(...this.B.door); } this.reQ();
+    if (seat) { seat.s.who = f; f.seat = seat; f.state = 'toSeat'; f.target = new V(seat.s.x, 0, seat.s.z); } else { f.state = 'leave'; f.target = this.doorV(); } this.reQ();
   }
   freeSeat() { for (const t of Object.values(this.st)) if (t.type === 'table' && !t.trash.length) for (const s of t.seats) if (!s.who) return { t, s }; return null; }
   spawnCustomer(reg) {
@@ -503,6 +506,10 @@ export class Game {
   }
   reQ() { const [q, gap] = this.B.queue, c = this.st.counter; let i = 0; for (const x of this.cust) if (x.state === 'queue' || x.state === 'walkQ') { x.qi = i++; x.target = new V(c.x + 110, 0, c.z + QZ + x.qi * gap); } }   /* QZ: 말풍선이 계산대를 가리지 않게 (테스터 #8) */
   custAI(c, dt) {
+    /* 안전장치: 앉으러 가거나 나가는 손님이 6초 넘게 제자리면 문으로 옮기고(서서히 사라짐) 기록 */
+    if (c.state === 'toSeat' || c.state === 'leave') { const k = c._k ||= { x: c.pos.x, z: c.pos.z, t: 0 }; if (Math.hypot(c.pos.x - k.x, c.pos.z - k.z) > 10) { k.x = c.pos.x; k.z = c.pos.z; k.t = 0; } else if ((k.t += dt) > 6) {
+        (window.__stuckLog ||= []).push([c.state, Math.round(c.pos.x), Math.round(c.pos.z), Math.round(c.target.x), Math.round(c.target.z)]); track('bg_stuck', { b: this.bi, st: c.state, x: Math.round(c.pos.x), z: Math.round(c.pos.z) });
+        if (c.seat) { c.seat.s.who = null; c.seat = null; } const d = this.doorV(); c.pos.set(d.x, 0, d.z - 200); c.state = 'leave'; c.target = d; k.t = 0; k.x = c.pos.x; k.z = c.pos.z; } } else c._k = null;
     const moveTo = (sp = 230) => { const wp = c.state !== 'queue' && c.state !== 'walkQ' ? this.nav.next(c, c.target.x, c.target.z, true) : null;
       if (wp) { const d = new V(wp[0] - c.pos.x, 0, wp[1] - c.pos.z), l = d.length(); if (l > 1) { d.normalize(); c.pos.addScaledVector(d, Math.min(l, sp * dt)); c.P.g.rotation.y = Math.atan2(d.x, d.z); } c.P.anim(dt, true); return false; }   /* 2층 · 테라스 자리: 계단 · 통로로 */
       const d = new V().subVectors(c.target, c.pos); d.y = 0; const l = d.length(); if (l < 6) return true; d.normalize();
@@ -517,7 +524,7 @@ export class Game {
     else if (c.state === 'queue') { if (!moveTo(180)) {} else { c.P.anim(dt, false); c.P.g.rotation.y = Math.PI; } }
     else if (c.state === 'toSeat') { if (moveTo()) { c.state = 'eat'; c.t = rnd(5, 8); c.P.g.rotation.y = c.seat.s.x < c.seat.t.x ? Math.PI / 2 : -Math.PI / 2; c.P.carry = false; while (c.P.hand.children.length) c.P.hand.remove(c.P.hand.children[0]); c.pos.y = 12; } }
     else if (c.state === 'eat') { c.P.anim(dt, false); c.t -= dt; if (c.t <= 0) { const t = c.seat.t; for (let i = 0; i < c.order.reduce((a, o) => a + o.n, 0) && t.trash.length < 6; i++) this.put(t.trash, item('trash'), t.x + rnd(-30, 30), 88 + (t.y || 0) + t.trash.length * 6, t.z + rnd(-25, 25), 'trash');
-      c.seat.s.who = null; c.leftT = c.seat.t; c.seat = null; c.pos.y = 0; c.state = 'leave'; c.target = new V(...this.B.door); } }
+      c.seat.s.who = null; c.leftT = c.seat.t; c.seat = null; c.pos.y = 0; c.state = 'leave'; c.target = this.doorV(); } }
     else if (c.state === 'leave') { if (moveTo(260)) c.gone = true; }
   }
   // ── 직원 AI
@@ -544,6 +551,7 @@ export class Game {
       : hk === 'dough' ? (this.st.kettle && pl.stack.some(x => !x.m.userData.b) ? at(this.st.kettle.Z.io, '솥 칸을 지나 오븐에 넣어요 (쫄깃!)') : at(ov.Z.out, `${pre}반죽을 오븐에 넣어요`))
       : ov.feed.length || !mx ? at(ov.Z.out, `${pre}굽는 중… 오븐 앞에서 잠깐 기다려요`) : at(mx.Z.out, `${pre}반죽기에서 반죽을 집어요${swapTo('dough')}`);
     { const zz = this.staff.find(w => w.rest); if (zz) return [zz.pos.x, zz.pos.z, `💤 쉬는 ${STAFF[zz.k].name}에게 다가가면 다시 일해요`]; }   /* 쉬는 직원 깨우기가 먼저 (다들 쉬면 아무것도 안 돌아감) */
+    { const big = this.piles.find(q => q.v >= 40 * this.B.mult); if (big && !hk && S.coins < 40 * this.B.mult) return [big.x, big.z, `💰 돈 더미를 주워요 (+${fmt(big.v)})`]; }   /* 0.3.5: 바닥 돈이 쌓였는데 손에 돈이 없으면 먼저 줍기 */
     if (hk === 'trash') return at(this.st.bin.Z.drop, '쓰레기는 쓰레기통에 버려요');   /* 쓰레기를 들고는 아무것도 못 집음 → 먼저 버리기 (0.3.1 막힘 검출) */
     /* 맨 앞 손님이 진열대에 없는 메뉴를 기다리면 그 메뉴로 가는 길 */ const f = this.cust.find(x => x.state === 'queue' && x.qi === 0), need = f && f.order.find(o => o.got < o.n);
     if (need && !c.shelf[need.k].length) { this.blockT = (this.blockT || 0) + dt; if (this.blockT > 2.5) { const k = need.k, nm = MENU[k].name, wait = `손님이 ${josa(nm, '을/를')} 기다려요 · `;
@@ -579,7 +587,7 @@ export class Game {
   ovenBatch(n) { const ov = this.st.oven, k = Math.min(n, this.ovenRoom()); for (let i = 0; i < k; i++) setTimeout(() => { if (this.st.oven !== ov || !this.ovenRoom()) return; const m = item('bagel'); this.put(ov.stack, m, ...this.home('bagel').pos(ov.stack.length), 'bagel'); this.sparkle(m.position); }, i * 60); this.steam(ov.x, 190, ov.z); return k; }
   // ── 돌발 이벤트 (테스터 #12): 컴플레인 손님 · 단체 주문 · 인플루언서 방문 — 반복 플레이에 변화 · 놓쳐도 벌 없음
   eventUpdate(dt) {
-    for (let i = (this.leavers || []).length - 1; i >= 0; i--) { const l = this.leavers[i]; if (this.walk(l, new V(...this.B.door), 260, dt)) { this.sc.remove(l.P.g); l.tag && l.tag.remove(); this.leavers.splice(i, 1); } }
+    for (let i = (this.leavers || []).length - 1; i >= 0; i--) { const l = this.leavers[i]; if (this.walk(l, this.doorV(), 260, dt)) { this.sc.remove(l.P.g); l.tag && l.tag.remove(); this.leavers.splice(i, 1); } }
     const E = this.ev;
     if (E) { E.t -= dt; if (E.type === 'complain') { if (E.state === 'in' && this.walk(E, E.spot, 230, dt)) { E.state = 'wait'; E.P.g.rotation.y = Math.PI * 0.75; }
         if (E.state === 'wait') { E.P.anim(dt, false); E.P.body.rotation.z = Math.sin(this.t * 10) * 0.06; if (this.near(this.pl, E.pos.x, E.pos.z, 130)) return this.endEvent(false, true); } }
@@ -651,7 +659,7 @@ export class Game {
     for (const s of this.B.slots) { if (!s.free && !s.withRoom) R.push({ n: 'pad:' + s.id, x: s.px ?? s.x, z: s.pz ?? s.z, w: PAD, d: PAD });
       const sz = SIZE[s.type]; if (sz && s.type !== 'table') R.push({ n: 'st:' + s.id, x: s.x, z: s.z, w: sz[0] * 2, d: (sz[1] || sz[0]) * 2 }); if (s.type === 'table') R.push({ n: 'st:' + s.id, x: s.x, z: s.z, w: 256, d: 144 });
       for (const [k, dx, dz, w, d, , ring] of ZONES[s.type] || []) if (!ring) R.push({ n: 'zone:' + s.id + '.' + k, x: s.x + dx, z: s.z + dz, w, d }); }
-    const out = []; for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) { const a = R[i], b = R[j]; if (a.n.split(/[:.]/)[1] === b.n.split(/[:.]/)[1]) continue; if (a.n.startsWith('st:') && b.n.startsWith('st:')) continue;
+    const out = []; for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) { const a = R[i], b = R[j]; if (a.n.startsWith('pad:') && b.n.startsWith('pad:') && a.x === b.x && a.z === b.z) continue;   /* 같은 자리를 차례로 쓰는 칸 (함께 안 나옴) */ if (a.n.split(/[:.]/)[1] === b.n.split(/[:.]/)[1]) continue; if (a.n.startsWith('st:') && b.n.startsWith('st:')) continue;
       if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 - 1 && Math.abs(a.z - b.z) < (a.d + b.d) / 2 - 1) out.push(a.n + ' × ' + b.n); } return out; }
   /* 시험용: 장면에 따로 떠 있는 물건(어느 진열 · 재료 칸 · 손 · 날아가기에도 없는 것) */
   orphans() { const known = new Set(); const add = a => { for (const it of a || []) known.add(it.m); };

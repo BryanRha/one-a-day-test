@@ -6,14 +6,14 @@
 //  · 판정 · 이동 · 공격 예고는 raid.js 것을 그대로 · 새 적 공격 모양은 foes.js · 두목은 chief.js
 //  · 모든 큰 공격은 예고(바닥 원 · 줄 · 떨어질 자리) — 예고를 띄우면 e.teleT0 (raid.warnDisc/warnLine) → raid.hurt 가 '예고 없는 큰 피해' 자동 검사
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.18';
-import { LOB } from './data/map_factory.js?v=0.99.18';
-import { AI2, NADE } from './data/enemies.js?v=0.99.18';
-import { SOLID } from './plan.js?v=0.99.18';
-import { glowSprite } from './enemy3d.js?v=0.99.18';
-import { sfx } from './audio.js?v=0.99.18';
-import { foeWind } from './foes.js?v=0.99.18';
-import { hazard } from './a11y.js?v=0.99.18'; /* M6-C 색약 보조: 위험 예고 빗금 */
+import { ENEMIES } from './data.js?v=0.99.19';
+import { LOB } from './data/map_factory.js?v=0.99.19';
+import { AI2, NADE } from './data/enemies.js?v=0.99.19';
+import { SOLID } from './plan.js?v=0.99.19';
+import { glowSprite } from './enemy3d.js?v=0.99.19';
+import { sfx } from './audio.js?v=0.99.19';
+import { foeWind } from './foes.js?v=0.99.19';
+import { hazard } from './a11y.js?v=0.99.19'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 export const FACTION = { drone: 'machine', boss: 'machine', smelter: 'machine', skel: 'moss', lamp: 'moss', miner: 'moss', captain: 'moss', crab: 'beast', jelly: 'beast', eel: 'beast' };
 export const facOf = kind => ENEMIES[kind]?.fac || FACTION[kind] || 'machine';
