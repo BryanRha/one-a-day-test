@@ -1,12 +1,12 @@
 // 데이터: 브랜드(받은 자료로 교체) · 메뉴 · 지점 배치 · 열기 순서 · 직원 · 쿠폰
 //   ※ 메뉴 이름 · 지점 이름 · 색은 임시 — 트렌차이즈 자료 받으면 여기만 바꾸면 됨
-import { LAYOUT } from './layout.js?v=0.99.16';
+import { LAYOUT } from './layout.js?v=0.99.17';
 export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO BAGEL', dark: '#5A3A22', brown: '#A98259', accent: '#FF6720', accentHex: 0xFF6720, cream: '#F3E7D6',
   slogan: '일상의 쉼표가 되는 곳, 마루미베이글에서 즐기는 갓 구운 행복', story: '도쿄 요요기에서 이어지는 정신 · 매일 새벽 직접 반죽하고 굽는 수제 베이글', insta: 'https://www.instagram.com/marumi.bagel_official/' };   /* 공식 홈페이지 marumibagel.com */
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.3.2' };   /* 0.3.0 (2026-11-09): 매장이 자라는 마루미 — 방 · 공사 · 크루룸 · 사장실 · 창고 · 지점 특색 · 인테리어 4종 · BM · 0.2.0: 테스터 QA/QC 시트 #1~14 */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.3.3' };   /* 0.3.0 (2026-11-09): 매장이 자라는 마루미 — 방 · 공사 · 크루룸 · 사장실 · 창고 · 지점 특색 · 인테리어 4종 · BM · 0.2.0: 테스터 QA/QC 시트 #1~14 */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)
@@ -77,7 +77,7 @@ export const ROOM_UP = {
 };
 export const ROOM_UP_MAX = 10;
 // 직원 쉬기 (테스터 #10): 화면을 안 만지고 REST 초가 지나면 직원이 하나씩 쉼 → 사장님이 다가가면(거리 near) 다시 일함 + 기운 충전(빨리 · BOOST 초)
-export const REST = { after: 45, spread: 20, near: 150, boost: 30, boostK: 1.25 };
+export const REST = { after: 45, spread: 20, near: 150, boost: 30, boostK: 1.25, gap: 20 };   /* gap: 동시에 쉬는 직원은 1명 · 다음 직원은 20초 이상 뒤 */
 // 직원 유니폼 (꾸미기 › 직원) · basic = 역할별 색 · 모든 지점 공통 · 한 번 사면 언제든 바꿔 입힘
 export const OUTFITS = [
   { id: 'basic', name: '역할별 기본 앞치마', icon: '🧑‍🍳', cost: 0, desc: '역할마다 색이 달라요' },

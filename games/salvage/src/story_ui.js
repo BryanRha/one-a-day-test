@@ -1,18 +1,19 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.16';
-import * as ST from './story.js?v=0.99.16';
-import * as B from './board.js?v=0.99.16';
-import { frac } from './chips.js?v=0.99.16'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.16';
-import { COS } from './look.js?v=0.99.16';
-import { A } from './assets.js?v=0.99.16';
-import { sfx, unlock, setScore } from './audio.js?v=0.99.16'; /* M5-A setScore: 엔딩 · 크레딧 배경음 */
-import { shakeLabel, cycleShake } from './fx.js?v=0.99.16'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
-import { StoryRaid } from './story_raid.js?v=0.99.16';
-import { NpcHome } from './npc_home.js?v=0.99.16';
-import { ART } from './talk/art.js?v=0.99.16';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import { S, save, today } from './save.js?v=0.99.17';
+import * as ST from './story.js?v=0.99.17';
+import * as B from './board.js?v=0.99.17';
+import { frac } from './chips.js?v=0.99.17'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.17';
+import { COS } from './look.js?v=0.99.17';
+import { A } from './assets.js?v=0.99.17';
+import { sfx, unlock, setScore } from './audio.js?v=0.99.17'; /* M5-A setScore: 엔딩 · 크레딧 배경음 */
+import { shakeLabel, cycleShake } from './fx.js?v=0.99.17'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
+import { StoryRaid } from './story_raid.js?v=0.99.17';
+import { NpcHome } from './npc_home.js?v=0.99.17';
+import { ART } from './talk/art.js?v=0.99.17';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import * as A11Y from './a11y.js?v=0.99.17'; /* M6-C 접근성 설정 줄 */
 
 const Q = new URLSearchParams(location.search);
 /* M5-A 6장 · 엔딩 화면 모양 (story_m5a.css — 공용 style.css 와 따로) */
@@ -24,7 +25,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.16'), t1: () => import('./talk/t1.js?v=0.99.16'), t2: () => import('./talk/t2.js?v=0.99.16'), t3: () => import('./talk/t3.js?v=0.99.16'), t4: () => import('./talk/t4.js?v=0.99.16'), t5: () => import('./talk/t5.js?v=0.99.16'), t6: () => import('./talk/t6.js?v=0.99.16'), common: () => import('./talk/common.js?v=0.99.16'), memo: () => import('./talk/memo.js?v=0.99.16') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.17'), t1: () => import('./talk/t1.js?v=0.99.17'), t2: () => import('./talk/t2.js?v=0.99.17'), t3: () => import('./talk/t3.js?v=0.99.17'), t4: () => import('./talk/t4.js?v=0.99.17'), t5: () => import('./talk/t5.js?v=0.99.17'), t6: () => import('./talk/t6.js?v=0.99.17'), common: () => import('./talk/common.js?v=0.99.17'), memo: () => import('./talk/memo.js?v=0.99.17') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;
@@ -167,7 +168,7 @@ class Player {
     if (s.fx === 'quest') { if (!R) this.story.wantTab = 'quest'; return; }
     if (s.fx === 'windows') { if (this.skipping) return; document.querySelector('.post')?.classList.add('hl'); return; }
     if (s.fx === 'ending') { this.skipping = false; if (R) { await this.story.playEnding(st.ending || ST.endingChoices(S)[0], this); return; } await this.story.endingPick(this); return; } /* M5-A 엔딩 고르기 → 엔딩 → 크레딧 */
-    if (s.fx === 'deep') { if (this.skipping || R) return; const ok = await import('./abyss.js?v=0.99.16').then(m => { m.markEnding?.(S, st.ending); save(); return true; }).catch(() => false); /* M5-B 깊은 물 훅 */
+    if (s.fx === 'deep') { if (this.skipping || R) return; const ok = await import('./abyss.js?v=0.99.17').then(m => { m.markEnding?.(S, st.ending); save(); return true; }).catch(() => false); /* M5-B 깊은 물 훅 */
       if (ok) await this.showCard(`<small class="kick">엔딩 뒤 도전</small><b>깊은 물이 열렸어요</b><p>대수문 안쪽 · 출격 준비에서 켜고 끌 수 있어요</p>`, 0, true); return; }
   }
   /* 가운데 카드 (ms 뒤 저절로 · keep 이면 눌러야 닫힘) */
@@ -308,21 +309,28 @@ export class Story {
 
   /* ───── M5-A 엔딩: 파수의 질문 → 열린 길 고르기(가장 밝은 등불 맨 위) → 엔딩 컷 · 글 → 크레딧 ───── */
   async endingPick(P) {
-    const st = S.story; const opts = ST.endingChoices(S); const top = ST.brightest(S); P.box.classList.add('hide'); P.skipping = false;
-    const k = await new Promise(res => {
-      P.card.innerHTML = `<div class="stc endpick st-keep"><small class="kick">파수 · 보관 중 412,880점 · 주인 미확인</small><b>지시를 바랍니다</b>
-        <div class="endto">${opts.map(k => { const E = ST.ENDINGS[k], C = ST.SIDES[k]; return `<button data-k="${k}" style="--c:${C.color}"><i class="lampdot" style="--c:${C.color}"></i><span><b>${esc(say(E.say))}</b><small>「${esc(E.name)}」 · ${esc(E.pasu)}${k === top && opts.length > 1 ? ' · 가장 밝은 등불' : ''}</small></span></button>`; }).join('')}</div>
-        <small class="hint">${opts.length < 3 ? '다른 길은 세 등불이 더 밝으면 열려요 · ' : ''}엔딩 뒤 기록실에서 다른 길도 볼 수 있어요</small></div>`;
-      P.card.classList.add('on'); snd('lamp');
-      P.card.querySelectorAll('.endto button').forEach(b => b.onclick = e => { e.stopPropagation(); unlock(); snd('ui'); res(b.dataset.k); });
-    });
-    P.card.classList.remove('on'); P.card.innerHTML = ''; P.box.classList.remove('hide');
+    const opts = ST.endingChoices(S); const top = ST.brightest(S); P.box.classList.add('hide'); P.skipping = false;
+    /* M6-A: 은신처 위 모달 → 전체 화면 장면 — 대수문 꼭대기(cut_6_3 흐림 + 렌즈 빛 · 떠오르는 이름표 빛) · 위 '지시를 바랍니다' · 바닥에 세 등불이 하나씩 올라옴
+     *  열린 길만 누를 수 있음(.endto button[data-k]) · 아직 어두운 등불은 꺼진 채 놓여 '세 등불이 더 밝으면' */
+    const bg = artUrl('cut_6_3');
+    const lamp = k => { const E = ST.ENDINGS[k], C = ST.SIDES[k]; const on = opts.includes(k);
+      const art = `<svg class="eslamp" viewBox="0 0 60 84" aria-hidden="true"><path d="M30 2v8" stroke="#3a2a1a" stroke-width="2.5"/><path d="M22 10h16l-2 6H24z" fill="#4a3522"/><path d="M18 18h24l4 44H14z" fill="${on ? C.color : '#3b4650'}" opacity="${on ? 0.32 : 0.5}"/><path d="M18 18h24l4 44H14z" fill="none" stroke="#4a3522" stroke-width="2.5"/><path d="M30 18v44M16 40h28" stroke="#4a3522" stroke-width="1.6" opacity=".7"/><ellipse class="flame" cx="30" cy="44" rx="6" ry="9" fill="${on ? C.color : '#55606a'}"/><ellipse cx="30" cy="46" rx="2.6" ry="4" fill="${on ? '#fff6e0' : '#6a747c'}"/><path d="M12 62h36l-3 8H15z" fill="#4a3522"/></svg>`;
+      return on ? `<button data-k="${k}" class="esl${k === top && opts.length > 1 ? ' top' : ''}" style="--c:${C.color}">${art}<b>「${esc(E.name)}」</b><span>${esc(say(E.say))}</span><small>${esc(E.pasu)}${k === top && opts.length > 1 ? '<br>가장 밝은 등불' : ''}</small></button>`
+        : `<div class="esl off" style="--c:${C.color}">${art}<b>「${esc(E.name)}」</b><span>아직 어두운 등불</span><small>${esc(C.name)}의 등불이 더 밝으면</small></div>`; };
+    const el = h('div', 'endscene st-keep', `<div class="es-bg"${bg ? ` style="background-image:url(${bg})"` : ''}></div><i class="es-lens"></i><div class="es-motes">${Array.from({ length: 14 }, (_, i) => `<i style="left:${4 + (i * 37) % 92}%;animation-delay:${-(i * 1.9) % 9}s;animation-duration:${8 + (i * 5) % 6}s"></i>`).join('')}</div>
+      <header class="es-top"><small>파수 · 보관 중 412,880점 · 주인 미확인</small><b>지시를 바랍니다</b></header>
+      <div class="es-floor"><div class="endto">${Object.keys(ST.ENDINGS).map(lamp).join('')}</div>
+        <small class="es-hint">${opts.length < 3 ? '어두운 등불은 이야기 선택으로 밝아져요 · ' : ''}엔딩 뒤 기록실에서 다른 길도 볼 수 있어요</small></div>`);
+    P.el.appendChild(el); P.el.classList.add('ending'); snd('lamp');
+    const k = await new Promise(res => { let picked = false;
+      el.querySelectorAll('.endto button').forEach(b => b.onclick = e => { e.stopPropagation(); if (picked) return; picked = true; unlock(); snd('ui'); snd('lamp'); b.classList.add('pick'); el.classList.add('picked'); setTimeout(() => res(b.dataset.k), 650); }); });
+    el.classList.add('out'); setTimeout(() => el.remove(), 420); P.el?.classList.remove('ending'); P.box.classList.remove('hide');
     this.chooseEnding(k); await this.playEnding(k, P);
   }
   /* 고른 길 기록 (처음이면 ended · 본 길 모음 · 깊은 물 훅) — 기록실 '마지막 선택 다시' 도 여기 */
   chooseEnding(k) {
     const st = S.story; ST.setEnding(S, k, today()); for (const x of Object.keys(ST.ENDINGS)) delete st.flags['end_' + x]; st.flags['end_' + k] = 1; this.lampFlash = k; save();
-    import('./abyss.js?v=0.99.16').then(m => { m.markEnding?.(S, k); save(); }).catch(() => {}); /* M5-B 깊은 물 (없으면 조용히 — abyss.endingSeen 이 S.story.ending 을 봄) */
+    import('./abyss.js?v=0.99.17').then(m => { m.markEnding?.(S, k); save(); }).catch(() => {}); /* M5-B 깊은 물 (없으면 조용히 — abyss.endingSeen 이 S.story.ending 을 봄) */
   }
   async playEnding(k, P) {
     const T6 = await talk('t6'); try { setScore?.('ending'); } catch { /* */ }
@@ -333,10 +341,11 @@ export class Story {
   /* 크레딧: 마지막 컷 위로 천천히 올라감 · 누르면 빨리 · 끝 = 세 엔딩 공통 한 줄 */
   credits(P, k, T6) {
     const E = ST.ENDINGS[k]; P.box.classList.add('hide');
-    const el = h('div', 'credits st-keep', `<div class="crroll">${[[`엔딩 · ${E.name}`, [E.txt]], ...T6.CREDITS].map(([t, L]) => `<section><small>${esc(say(t))}</small>${L.map(x => `<p>${esc(say(x))}</p>`).join('')}</section>`).join('')}<section class="crlast"><b>${esc(T6.END_LINE)}</b></section></div><small class="crtap">누르면 빨리 · 두 번 누르면 넘김</small>`);
-    P.el.appendChild(el); snd('chapter');
-    return new Promise(res => { const roll = el.querySelector('.crroll'); let y = 0, sp = 62, taps = 0, last = performance.now(), done = false; const H = () => roll.scrollHeight + el.clientHeight * 0.45;
-      const end = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => { el.remove(); P.box.classList.remove('hide'); res(); }, 400); };
+    /* M6-A: 글이 올라오는 창(.crview — 위 · 아래가 흐려짐)과 넘김 안내 자리를 나눔 · 안내는 1.5초 뒤 나타나 3초 뒤 사라짐 · 크레딧 동안 '건너뛰기' 숨김(두 번 누르면 넘김) */
+    const el = h('div', 'credits st-keep', `<div class="crview" data-lc="roll"><div class="crroll">${[[`엔딩 · ${E.name}`, [E.txt]], ...T6.CREDITS].map(([t, L]) => `<section><small>${esc(say(t))}</small>${L.map(x => `<p>${esc(say(x))}</p>`).join('')}</section>`).join('')}<section class="crlast"><b>${esc(T6.END_LINE)}</b></section></div></div><small class="crtap">누르면 빨리 · 두 번 누르면 넘김</small>`);
+    P.el.appendChild(el); P.el.classList.add('crediting'); snd('chapter'); const tip = el.querySelector('.crtap'); const t1 = setTimeout(() => tip.classList.add('on'), 1500), t2 = setTimeout(() => tip.classList.remove('on'), 4500);
+    return new Promise(res => { const roll = el.querySelector('.crroll'); let y = 0, sp = 62, taps = 0, last = performance.now(), done = false; const H = () => roll.scrollHeight + roll.parentNode.clientHeight * 0.45;
+      const end = () => { if (done) return; done = true; clearTimeout(t1); clearTimeout(t2); el.classList.add('out'); setTimeout(() => { el.remove(); P.el?.classList.remove('crediting'); P.box.classList.remove('hide'); res(); }, 400); };
       el.onpointerdown = e => { e.stopPropagation(); taps++; sp = taps >= 2 ? 1e4 : 220; };
       const f = now => { if (done) return; const dt = Math.min(0.1, (now - last) / 1000); last = now; y += sp * dt; roll.style.transform = `translateY(${-y}px)`; if (y > H()) { setTimeout(end, taps >= 2 ? 0 : 2200); return; } requestAnimationFrame(f); };
       roll.style.transform = 'translateY(0)'; requestAnimationFrame(f); });
@@ -363,6 +372,8 @@ export class Story {
     if (B.deliverReady(S, d)) { const qt = el.querySelector('.tabs button[data-t="quest"]'); if (qt && !qt.querySelector('.dot')) qt.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); }
     this.home?.sync(el);
   }
+  /* M6-A: 지금 할 수 있는 이야기 · 인물 · 매일 의뢰 수 (은신처 의뢰 칩 — 본 사슬이 끝난 뒤) */
+  openCount() { const b = ST.openBeat(S); return (b?.goal ? 1 : 0) + B.active(S, today()).length; }
   /* 의뢰 탭 위: 이야기 의뢰 카드 + 인물 의뢰(판 의뢰) */
   questHtml() { return this.beatHtml() + this.boardHtml(); }
   beatHtml() {
@@ -477,14 +488,14 @@ export class Story {
     const st = S.story; const done = ST.BEATS.filter(b => st.beatsDone[b.id] && !b.tut);
     const m = h('div', 'modal st-keep', `<div class="sheet"><h3>설정</h3>
       <div class="setrow"><span>주인공 이름</span><b>${esc(getName())}</b><button class="btn sm" id="sName">바꾸기</button></div>
-      <div class="setrow"><span>화면 흔들림</span><b id="sShkT">${shakeLabel().split(' · ')[1]}</b><button class="btn sm" id="sShk">바꾸기</button></div>
+      <div class="sec">보기 · 소리 · 손 <small>바꾸면 바로 · 이 기기에 기억</small></div>${A11Y.settingsHtml()}
       <div class="sec">기록실 <small>본 이야기 다시 보기</small></div>
       <div class="rec"><button class="btn sm" id="sPro">처음 이야기 (프롤로그 · 첫날)</button>${done.map(b => `<button class="btn sm" data-b="${b.id}">${b.ch}장 · ${esc(b.name)}</button>`).join('')}${st.ending ? `<button class="btn sm endre" id="sEnd">마지막 선택 다시 · 다른 길 (본 길 ${Object.keys(st.endings).length}/3)</button>` : ''}</div>
       <div class="sbtns"><button class="btn" id="sHow">조작법</button><button class="btn" id="sX">닫기</button></div></div>`);
     $('#frame').appendChild(m); const close = () => { m.remove(); };
     $('#sX', m).onclick = () => { snd('ui'); close(); }; m.onclick = e => { if (e.target === m) close(); };
     $('#sHow', m).onclick = () => { close(); this.ui.howto(); };
-    $('#sShk', m).onclick = () => { snd('ui'); cycleShake(); $('#sShkT', m).textContent = shakeLabel().split(' · ')[1]; }; /* 보통 ↔ 약하게(×0.35 · 반동도 줄임) */
+    A11Y.bindSettings(m); /* M6-C 접근성: 글자 크기 3단 · 색약 보조 · 소리 크기 셋 · 진동 · 흔들림 3단 (a11y.js) */
     $('#sName', m).onclick = async () => { close(); await this.nameModal(false); if (this.ui.root.className === 'scr-hideout') this.ui.hideout(); this.settings(); };
     $('#sPro', m).onclick = () => { close(); this.replayIntro(); };
     m.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { close(); this.replayBeat(b.dataset.b); });

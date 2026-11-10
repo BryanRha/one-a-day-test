@@ -146,7 +146,7 @@ export function createEnv({ ctx, out, rev }) {
         groan: (b, t) => creak(b, t, { v: 0.06, f: rnd(110, 220), modes: [[1, 22, 1], [1.5, 16, 0.4], [2.6, 12, 0.25]], wet: 0.7 }), gurgle: (b, t) => gurgle(b, t, 0.035) },
     },
     /* 가라앉은 공장 (M3-B) */
-    factory: { gain: 0.72,
+    factory: { gain: 0.62, /* M6-D 라운드니스: 배경음 대비 −5.8 → −7 LU 안팎 */
       beds: {
         flow: { kind: 'brown', f: [['bandpass', 380, 0.6], ['lowpass', 1000, 0.5]], wide: true, wet: 0.35, wander: { every: [1.5, 3.5], f: [0.8, 1.25], g: [0.8, 1.15], tc: 1.2 } },
         machine: { drone: 1, hz: [[49, 1], [98, 0.6], [147, 0.3, 'triangle'], [196, 0.12, 'sawtooth']], cut: 420, wet: 0.35, wander: { every: [1.2, 2.6], g: [0.6, 1.3], tc: 0.5 } },
@@ -187,6 +187,7 @@ export function createEnv({ ctx, out, rev }) {
   };
   for (const M of Object.values(MAPS)) { Object.assign(M.beds, WXL.beds); const lv = M.lv, ev = M.ev; M.lv = s => ({ ...lv(s), ...WXL.lv(s) }); M.ev = s => ({ ...ev(s), ...WXL.ev(s) }); Object.assign(M.fire, WXL.fire); }
 
+  MAPS.gate = { ...MAPS.harbor, gain: (MAPS.harbor.gain || 1) * 0.9 }; /* M6-D: 대수문 꼭대기도 바다 위 바람 · 파도 · 폭풍(항구 소리 재사용) — 전엔 환경음 없음(측정 −99) */
   /* ───── 엔진 ───── */
   let cur = null;
   function start(map, at) {

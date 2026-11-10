@@ -4,6 +4,7 @@
  *  - 셰이더는 모든 적 재질이 한 프로그램을 같이 씀(customProgramCacheKey) · 값은 재질마다 uniform
  */
 import * as THREE from 'three';
+import { rimCol } from './a11y.js?v=0.99.17';
 
 export const RIM_COL = { anchor: 0xff8a3a, moss: 0x46e6cf, machine: 0xe6eef6, beast: 0xff7c9c };
 const RIM_K = { base: 0.34, dark: 0.55 }; /* 밝은 지도 / 어두운 지도(터널 · 공장 · 밤) */
@@ -17,7 +18,7 @@ function patch(sh, U) {
 
 /* 적 하나의 재질에 림 빛을 붙임 (빛 받는 재질만 — 눈 · 빛남 MeshBasic 은 그대로) */
 export function rimify(mats, fac, dark) {
-  const col = new THREE.Color(RIM_COL[fac] ?? RIM_COL.machine); const k = dark ? RIM_K.dark : RIM_K.base; const out = [];
+  const col = new THREE.Color(rimCol(fac)); const k = dark ? RIM_K.dark : RIM_K.base; const out = []; /* M6-C 색약 보조면 파랑 · 노랑 · 흰 · 보라 표 (a11y.js) */
   for (const m of mats) {
     if (!m || !(m.isMeshLambertMaterial || m.isMeshStandardMaterial || m.isMeshPhongMaterial || m.isMeshToonMaterial)) continue;
     if (m.userData.rimU) { m.userData.rimU.uRim.value.copy(col); m.userData.rimU.uRimK.value = k; out.push(m.userData.rimU); continue; }

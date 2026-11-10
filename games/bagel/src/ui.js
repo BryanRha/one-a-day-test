@@ -1,17 +1,18 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.16';
-import { ROOMS, hms } from './layout.js?v=0.99.16';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.16';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.16';
-import { sfx, setAudio } from './audio.js?v=0.99.16';
-import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.16';
-import { bm } from './oad_bm.js?v=0.99.16';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, STORE_MAP, ROOM_UP, ROOM_UP_MAX } from './data.js?v=0.99.17';
+import { ROOMS, hms } from './layout.js?v=0.99.17';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.17';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY } from './state.js?v=0.99.17';
+import { sfx, setAudio } from './audio.js?v=0.99.17';
+import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.17';
+import { bm } from './oad_bm.js?v=0.99.17';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
 const SLOT = 'marumi_slot_';
 /* 광고 보상: 원어데이 쪽 자리 이름 (bm.rewardedAd) · 수익 2배 길이 */
+const REPEAT_MS = 180000;   /* 같은 알림 다시 띄우기 간격 */
 const PLACE = { boost: 'boost2x', offline: 'offline2x', speed: 'speed', coins: 'coins' }, BOOST_MS = 180000, FX_MS = 180000;
 /* 쉬는 동안 수익 (초당, × 지점 배수 × (1 + 열린 칸/10)) · 실제 장사 ≈ 쉬는 동안 × ACTIVE (growth_sim 으로 맞춤) */
 export const IDLE_K = 0.9, ACTIVE = 3;
@@ -80,7 +81,7 @@ export class UI {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
     for (const p of g.padList()) { v.set(p.x, 30 + (p.y || 0), p.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
     const eqBest = (g.lvPads || []).filter(p => p.u.eq && S.coins >= g.eqCost(p)).sort((a, b) => g.eqCost(a) - g.eqCost(b))[0];   /* 살 수 있는 설비 칸은 가장 싼 하나만 글자 */
-    for (const p of g.lvPads || []) { const vis = p.u.eq ? (Math.hypot(g.pl.pos.x - p.x, g.pl.pos.z - p.z) < 260 || p === eqBest) : g.room === p.room; p.tag.style.display = vis ? '' : 'none'; if (!vis) continue;   /* 방 칸 글자는 그 방 안에서만 · 설비 칸은 가까이 가거나 살 수 있을 때만 */ v.set(p.x, 20, p.z).project(cam);   /* 방 칸 글자는 그 방 안에서만 */ p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0 || p.free); }
+    for (const p of g.lvPads || []) { const vis = p.u.eq ? Math.hypot(g.pl.pos.x - p.x, g.pl.pos.z - p.z) < 260 : g.room === p.room;   /* 설비 칸 글자는 가까이 갔을 때만 (0.3.3) */ p.tag.style.display = vis ? '' : 'none'; if (!vis) continue;   /* 방 칸 글자는 그 방 안에서만 · 설비 칸은 가까이 가거나 살 수 있을 때만 */ v.set(p.x, 20, p.z).project(cam);   /* 방 칸 글자는 그 방 안에서만 */ p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0 || p.free); }
     for (const t of g.rtags || []) { v.set(t.x, 6 + t.y, t.z).project(cam); t.d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; if (t.bd) { const l = g.buildLeft('R_' + t.id); const h = `🔨 ${ROOMS[t.id].name} <em>${hms(l)}</em>`; if (t.d._h !== h) { t.d.innerHTML = h; t.d._h = h; } } }
     for (const r of g.riders || []) { if (!r.tag) continue; const show = r.state === 'wait' || r.state === 'in'; r.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(r.pos.x, 200, r.pos.z).project(cam); r.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const html = '🛵 ' + Object.entries(r.order).map(([k, n]) => `<b>${ICON[k]}</b><em>${n - (r.got[k] || 0)}</em>`).join(' '); if (r.tag._h !== html) { r.tag.innerHTML = html; r.tag._h = html; } }
     if ((this._bc = (this._bc || 0) + 1) % 15 === 0) { const bd = Object.entries(S.branch[S.bi]?.build || {}), bc = $('#bchip'); bc.hidden = !bd.length; if (bd.length) { const [id] = bd.sort((a, b) => a[1] - b[1])[0], s = BRANCHES[S.bi].slots.find(x => x.id === id), l = g.buildLeft(id); const h = `🔨 ${s?.type === 'room' ? ROOMS[s.room].name : s?.label || ''} <b>${hms(l)}</b>${bd.length > 1 ? ` <small>+${bd.length - 1}</small>` : ''} <em>⚡</em>`; if (bc._h !== h) { bc.innerHTML = h; bc._h = h; } } }
@@ -112,17 +113,33 @@ export class UI {
     const g = this.app.game; if (!g || !g.unl) return; const B = BRANCHES[S.bi], all = g.countable().length, done = g.countable().filter(s => g.unl.has(s.id)).length, pct = Math.round(done / Math.max(1, all) * 100);
     $('#bn').textContent = B.name.replace(/점$/, '') + (pct >= 100 ? ' ★ 완성' : ''); $('#bl').textContent = pct + '%'; $('#bp').style.width = pct + '%';
     const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.height = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '받음' : couponReady() ? '받기!' : `${S.sold}/${COUPON.goal}`;
-    $('#cp').classList.toggle('ready', couponReady()); $('#shopDot') && ($('#shopDot').style.display = this.giftReady() ? 'block' : 'none'); this.adUi(); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
+    $('#cp').classList.toggle('ready', couponReady()); $('#shopDot') && ($('#shopDot').style.display = this.giftReady() ? 'block' : 'none'); this.adUi(); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() ? 'block' : 'none'; $('#upDot').style.display = 'none';   /* 0.3.3: 「올릴 수 있음」은 화면 점이 아니라 바닥 칸 표시로만 */ $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
     const gp = $('#gp'); if (gp) { const h = bm.info; gp.hidden = !(h.ok && h.group !== 'A'); $('#gv').textContent = h.gold == null ? '로그인' : fmt(h.gold); }
     $('#upT').textContent = g.open.has('crew') && g.open.has('boss') ? '설비' : '업그레이드';
     const rooms = B.rooms.filter(id => id !== 'shop' && g.open.has(id)), last = [...g.unl].filter(id => id.startsWith('R_')).pop(), st = $('#stamp');
-    st.textContent = pct >= 100 ? `완성 · 방 ${rooms.length + 1}개 + ${ROOMS[B.feature].name}` : rooms.length ? `${rooms.length + 1}단계 · ${ROOMS[last.slice(2)].name}${ROOMS[last.slice(2)].visit ? '(' + { crew: '인사팀', boss: '업그레이드', store: '배송' }[last.slice(2)] + ')' : ''} 열림` : '1단계 · 작은 가게 (매대)';
+    const stTxt = pct >= 100 ? `완성 · 방 ${rooms.length + 1}개 + ${ROOMS[B.feature].name}` : rooms.length ? `${rooms.length + 1}단계 · ${ROOMS[last.slice(2)].name}${ROOMS[last.slice(2)].visit ? '(' + { crew: '인사팀', boss: '업그레이드', store: '배송' }[last.slice(2)] + ')' : ''} 열림` : '1단계 · 작은 가게 (매대)';
+    if (stTxt !== this._stTxt) { st.textContent = stTxt; this._stTxt = stTxt; st.classList.add('on'); clearTimeout(this._stT); this._stT = setTimeout(() => st.classList.remove('on'), 4000); }   /* 단계 도장은 바뀔 때 4초만 (0.3.3 테스터 #5 「계속 떠 있음」) */
     const vc = $('#vchip'); if (vc) { const on = vipOn(); vc.hidden = !on; if (on) vc.textContent = `👑 VIP ${Math.ceil((S.vipUntil - Date.now()) / 864e5)}일`; }
   }
+  /* 외형 단계 띠: 「브랜드 → 프로」 · 누르면 건너뜀 */
+  tierBanner(name, a, b, skip) { $('#tierb')?.remove(); if (!name) return; const d = document.createElement('button'); d.id = 'tierb'; d.className = 'tierb'; d.innerHTML = `<small>${name} 외형</small><b>${a} → ${b}</b><em>누르면 넘어가요</em>`; $('#hud').append(d); d.onclick = () => skip && skip(); }
   /* 되돌리기 버튼 (바닥 칸 강화 직후 4초) */
   undo(id, cost) { if (!id) return; $('#undo')?.remove(); const d = document.createElement('button'); d.id = 'undo'; d.className = 'undo'; d.innerHTML = `↩ 되돌리기 <small>4초</small>`; $('#hud').append(d); let n = 4; const tm = setInterval(() => { n--; const s0 = d.querySelector('small'); if (s0) s0.textContent = n + '초'; if (n <= 0) { clearInterval(tm); d.remove(); } }, 1000);
     d.onclick = () => { clearInterval(tm); d.remove(); if (this.app.game.undoLevel(id, cost)) { sfx('drop', { vol: 0.4 }); this.toast(`되돌렸어요 · +${fmt(cost)}`); } }; }
-  toast(t) { let el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 1800); }
+  /* 알림 대기열 (0.3.3 테스터 #18 · #19 · #23 · 수달 인양단 M6-A 알림 줄과 같은 방식): 한 번에 하나만 · 줄 서서 차례로 · 같은 알림은 3분 안에 다시 안 띄움 · 중요(prio 2: 완성 · 보상)는 앞으로
+     · 「업그레이드할 수 있음」 같은 권유는 알림을 안 띄우고 바닥 칸 표시로만 */
+  toast(t, o = {}) { const key = o.key || String(t).replace(/[+\d,]+/g, '#'), now = Date.now(); this._tq ||= []; this._seen ||= new Map();
+    if (!o.force && (this._cur?.key === key || this._tq.some(x => x.key === key))) return; const last = this._seen.get(key); if (!o.force && last && now - last < (o.again ?? 0)) return;
+    const prio = o.prio ?? (/[!🎉🏆]|완성|열림|받았|\+/.test(t) ? 2 : 1), it = { t, key, prio, dur: o.dur || 1800, age: 0, qt: performance.now() };
+    if (!o.again) { const el = $('#toast'); this._cur && this._tq.unshift(this._cur); it.at = performance.now(); this._cur = it; this._seen.set(key, now); el.textContent = t; el.classList.add('on'); this.toastTick(); return; }   /* 누른 것의 대답은 바로 (보던 알림은 줄 맨 앞으로) */
+    this._tq.push(it); this._tq.sort((a, b) => b.prio - a.prio); this.toastTick(); }
+  /* 게임이 스스로 띄우는 알림 (같은 것은 3분 간격) — 누른 것에 대한 대답(toast)은 바로 */
+  note(t, o = {}) { this.toast(t, { again: REPEAT_MS, ...o }); }
+  toastTick() { const el = $('#toast'); if (!this._tTimer) this._tTimer = setInterval(() => this.toastTick(), 120); const now = performance.now();
+    if (this._cur && now - this._cur.at < this._cur.dur) { const nx = this._tq[0]; if (!(nx && nx.prio > this._cur.prio && now - this._cur.at > 600)) return; }
+    if (this._cur) { el.classList.remove('on'); this._cur = null; this._gapAt = now; return; } if (this._gapAt && now - this._gapAt < 250) return;   /* 앞 알림이 사라지는 동안 다음 것을 안 띄움 */
+    while (this._tq.length && now - this._tq[0].qt > 6000) this._tq.shift();   /* 6초 넘게 기다린 알림은 버림 (지난 일) */
+    const it = this._tq.shift(); if (!it) return; it.at = now; this._cur = it; this._seen.set(it.key, Date.now()); el.textContent = it.t; el.classList.add('on'); (window.__toasts ||= []).push(it.t); }
   modal(html, onClose) { const m = $('#modal'), cur = m.querySelector('.modal'); if (cur && this._ub) { cur.innerHTML = html; const f = this._oc; this._oc = onClose; if (f && f !== onClose) f(); return m; }   /* 덮인 창의 닫힘 처리도 불러 줌 (광고 취소 · 쉬는 동안 1배 받기) */   /* 이미 열린 창은 내용만 바꿈 (깜빡임 없음) */
     m.innerHTML = `<div class="mback"><div class="modal">${html}</div></div>`; m.firstChild.onclick = e => { if (e.target === m.firstChild) this.close(); }; this._oc = onClose; this._ub = pushBack(() => { this.close(); return true; }); sfx('tap', { vol: 0.4 }); return m; }
   close() { $('#modal').innerHTML = ''; this._ub && this._ub(); this._ub = null; const f = this._oc; this._oc = null; f && f(); }
@@ -180,7 +197,7 @@ export class UI {
       const tick = () => { if (fin) return; if (!$('#adbox')) return stop(false);   /* 다른 창이 덮음 = 취소 (그 창은 그대로 둠) */
         const left = Math.max(0, Math.ceil((end - Date.now()) / 1000)), e = $('#adc'); if (e) e.textContent = left;
         if (left <= 0) { this._oc = null; this.close(); stop(true); } };
-      this.modal(`<h3>📺 광고 보고 받기</h3><p><b>${what}</b></p><div class="adbox" id="adbox"><span>광고 (시험용)</span><em id="adc">3</em></div><button class="btn ghost" id="adNo">그만두기</button>`, () => stop(false));
+      this.modal(`<h3>📺 시험 광고</h3><p><b>${what}</b></p><div class="adbox" id="adbox"><span class="testad">시험 광고 · 실제 광고가 아니에요</span><em id="adc">3</em><span>원어데이 앱 안에서는 실제 광고가 나와요</span></div><button class="btn ghost" id="adNo">그만두기</button>`, () => stop(false));
       $('#adNo').onclick = () => this.close();
       tm = setInterval(tick, 250); addEventListener('visibilitychange', tick);
     });

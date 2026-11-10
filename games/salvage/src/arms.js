@@ -3,8 +3,8 @@
 //   여기서는 R.R()(판 씨앗 난수)를 부르지 않음 — 효과는 Math.random 만 (봇 · 시뮬 재현 그대로)
 //  근접 휘두르기(렌치) · 감전 연쇄(전류) · 조명탄(터짐 + 불 + 빛 웅덩이) · 물속 특화(잠수) · 탄약 × 적 방어/방패/기계
 import * as THREE from 'three';
-import { AMMO, ARMOR, MACHINE, WEAPONS, FEEL, SHAKE_MAX, AMMO_FX } from './data.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
+import { AMMO, ARMOR, MACHINE, WEAPONS, FEEL, SHAKE_MAX, AMMO_FX } from './data.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -59,8 +59,10 @@ function hookPull(R, e, d, dir, H) {
 function hookSig(R, base, w, hit) {
   const pl = R.pl, F = feelOf(w), dx = Math.sin(base), dz = Math.cos(base), L = w.range + 0.3;
   const a = tv.set(pl.pos.x + dx * 0.4, 1.05, pl.pos.z + dz * 0.4), b = tv2.set(pl.pos.x + dx * L, 1.0, pl.pos.z + dz * L);
-  R.fx.streak(a, b, { w: F.tw, w1: F.tw * 0.7, life: F.tl, color: F.tc, tail: 0.6, shrink: 0.3 }); /* 장대 */
-  R.fx.streak(a, b, { w: 0.05, life: F.tl * 1.4, color: 0x8a6a40, tail: 1, shrink: 0 }); /* 밧줄 */
+  R.fx.streak(a, b, { w: 0.24, w1: 0.16, life: F.tl, color: F.tc, tail: 0.6, shrink: 0.3 }); /* 장대 (M6-B 굵게) */
+  R.fx.streak(a, b, { w: 0.1, life: F.tl * 1.8, color: 0x9a7448, tail: 1, shrink: 0 }); /* 밧줄 (굵게 · 오래) */
+  if (hit) { R.fx.streak(b, tv.set(pl.pos.x + dx * 1.2, 0.5, pl.pos.z + dz * 1.2), { w: 0.3, w1: 0.06, life: 0.22, color: 0xe8d0a0, tail: 0.2, shrink: 0.5 }); /* 끌려오는 자국 */
+    R.kickCam(V(dx, 0, dz), -0.08); }
   R.fx.arc(b.x, 1.0, b.z, 0.35, base + 1.2, base + 4.2, { w: 0.12, w1: 0.04, life: 0.18, color: 0xfff0c8, tail: 0.2, seg: 6 }); /* 갈고리 끝 반짝 */
   R.fx.glow(b.x, 1.0, b.z, { s: hit ? 1.4 : 0.8, s1: 0.3, life: 0.14, color: 0xfff0c8, i: 1.3 });
 }
@@ -159,13 +161,27 @@ export function shotSig(R, w, k, n, muzzle, hit, dir, take, tb) {
     case 'fan': fx.streak(muzzle, hit, { w: F.tw, w1: F.tw * 0.6, life: F.tl, color: F.tc, tail: 0.25 }); break;
     case 'flare': case 'net': case 'swarm': break;
     /* M5-C */
-    case 'twin': { const off = tv2.set(dir.z, 0, -dir.x).multiplyScalar(k ? 0.1 : -0.1); fx.streak(tv.copy(muzzle).add(off), hit, { w: F.tw, w1: F.tw * 0.5, life: F.tl, color: F.tc, tail: 0.15 }); if (hitE) fx.glow(hit.x, hit.y, hit.z, { s: 0.9, s1: 0.2, life: 0.1, color: 0xfff0c0, i: 1.2 }); break; }
-    case 'bolt': fx.streak(muzzle, hit, { w: F.tw, life: F.tl, color: F.tc, tail: 0.7, shrink: 0.9 }); fx.streak(tv.copy(hit).addScaledVector(dir, -0.5), hit, { w: 0.1, w1: 0.03, life: 0.6, color: 0xd8c8a0, tail: 1, shrink: 0 }); break; /* 박힌 작살 */
+    /* M6-B 약한 무기 서명 보강 (검수 M5 — 폰에서 가는 선 · 작은 불티라 숫자로만 느껴짐): 굵은 궤적 + 흰 심 · 무기마다 다른 모양 */
+    case 'twin': { const sx = dir.z * (k ? 0.17 : -0.17), sz = -dir.x * (k ? 0.17 : -0.17); /* 쌍발: 나란한 두 줄(굵게 + 흰 심) · 총열 사이 번쩍 다리 · 맞으면 X 표 */
+      fx.streak(tv.set(muzzle.x + sx, muzzle.y, muzzle.z + sz), tv2.set(hit.x + sx * 0.4, hit.y, hit.z + sz * 0.4), { w: 0.2, w1: 0.09, life: 0.15, color: F.tc, tail: 0.2 });
+      fx.streak(tv.set(muzzle.x + sx, muzzle.y, muzzle.z + sz), tv2.set(hit.x + sx * 0.4, hit.y, hit.z + sz * 0.4), { w: 0.06, life: 0.09, color: 0xffffff, tail: 0.6 });
+      if (k === 0) { fx.streak(tv.set(muzzle.x - dir.z * 0.26, muzzle.y, muzzle.z + dir.x * 0.26), tv2.set(muzzle.x + dir.z * 0.26, muzzle.y, muzzle.z - dir.x * 0.26), { w: 0.16, life: 0.07, color: 0xfff4d0, tail: 1, shrink: 0 }); fx.glow(muzzle.x, muzzle.y, muzzle.z, { s: 1.3, s1: 0.4, life: 0.07, color: 0xffe0a0, i: 1.4 }); }
+      if (hitE && k === 1) for (const q of [0.785, -0.785]) fx.streak(tv.set(hit.x - Math.sin(q) * 0.45, hit.y + 0.05, hit.z - Math.cos(q) * 0.45), tv2.set(hit.x + Math.sin(q) * 0.45, hit.y + 0.05, hit.z + Math.cos(q) * 0.45), { w: 0.13, life: 0.16, color: 0xffd27a, tail: 1, shrink: 0.4 });
+      break; }
+    case 'bolt': fx.streak(muzzle, hit, { w: 0.17, w1: 0.1, life: 0.32, color: 0x7a5a38, tail: 0.75, shrink: 0.9 }); fx.streak(muzzle, hit, { w: 0.05, life: 0.09, color: 0xfff8e8, tail: 0.3 }); /* 석궁: 굵은 나무 살 + 흰 심(날아가는 순간) */
+      fx.streak(tv.copy(hit).addScaledVector(dir, -0.95), hit, { w: 0.15, w1: 0.05, life: 1.0, color: 0xe8d4a8, tail: 1, shrink: 0 }); /* 박힌 작살 (길게 · 1초) */
+      fx.streak(tv.copy(hit).addScaledVector(dir, -1.05), tv2.copy(hit).addScaledVector(dir, -0.8), { w: 0.26, w1: 0.1, life: 1.0, color: 0xc0303a, tail: 1, shrink: 0 }); break; /* 붉은 깃 */
     case 'spray': { const L = muzzle.distanceTo(hit); fx.streak(muzzle, hit, { w: F.tw * 0.5, w1: F.tw * 1.4, life: F.tl, color: F.tc, tail: 0.4, shrink: 0.2 }); fx.streak(muzzle, hit, { w: 0.08, w1: 0.18, life: F.tl * 0.8, color: 0xffffff, tail: 0.6, shrink: 0.2 });
       if (Math.random() < 0.5) fx.burst(hit.x, hit.y, hit.z, 3, 0xcff0ff, 4, 0.07, 0.35, 12, { x: -dir.x, z: -dir.z }); if (L > 2 && Math.random() < 0.3) fx.burst(muzzle.x + dir.x * L * 0.5, 0.2, muzzle.z + dir.z * L * 0.5, 2, 0x9fdcff, 2, 0.06, 0.4, 8); break; }
-    case 'anchor': { const L = muzzle.distanceTo(hit), n = Math.max(3, Math.round(L / 0.55)); for (let i = 0; i < n; i += 2) { const a = tv.copy(muzzle).lerp(hit, i / n), b = tv2.copy(muzzle).lerp(hit, Math.min(1, (i + 1) / n)); fx.streak(a, b, { w: F.tw, life: F.tl, color: F.tc, tail: 1, shrink: 0.2 }); } /* 사슬 마디 */
-      fx.glow(hit.x, hit.y, hit.z, { s: 1.8, s1: 0.5, life: 0.18, color: 0xffc890, i: 1.3 }); break; }
-    case 'shard': fx.streak(muzzle, hit, { w: F.tw, w1: F.tw * 0.4, life: F.tl, color: F.tc, tail: 0.2 }); if (hitE && k % 3 === 0) fx.burst(hit.x, hit.y, hit.z, 2, 0xe8f8ff, 4, 0.05, 0.25, 10); break;
+    case 'anchor': { const L = muzzle.distanceTo(hit), n = Math.max(3, Math.round(L / 0.55)); for (let i = 0; i < n; i += 2) { const a = tv.copy(muzzle).lerp(hit, i / n), b = tv2.copy(muzzle).lerp(hit, Math.min(1, (i + 1) / n)); fx.streak(a, b, { w: 0.26, w1: 0.18, life: F.tl, color: 0x8a98a8, tail: 1, shrink: 0.2 }); } /* 사슬 마디 (굵게) */
+      fx.streak(muzzle, hit, { w: 0.05, life: F.tl * 0.8, color: 0xdfe8f0, tail: 0.6 }); /* 사슬 심 */
+      fx.glow(hit.x, hit.y, hit.z, { s: 2.6, s1: 0.6, life: 0.2, color: 0xffc890, i: 1.4 }); fx.burst(hit.x, 0.4, hit.z, 10, 0x9a9080, 6, 0.12, 0.5, 10); break; } /* 박힐 때 바닥 파편 */
+    case 'shard': { if (k === 0) { const pl = R.pl.pos, b = Math.atan2(dir.x, dir.z), sp = (w.spread || 0.24) * 1.15; /* 물보라: 부채꼴 물판 한 장(총구 → 앞 4m) */
+        fx.arc(pl.x, 1.0, pl.z, 1.5, b - sp, b + sp, { w: 0.9, w1: 0.9, life: 0.12, color: 0xd8f4ff, tail: 1, seg: 7, shrink: 0.3 });
+        fx.arc(pl.x, 1.0, pl.z, 2.8, b - sp * 1.1, b + sp * 1.1, { w: 0.55, w1: 0.55, life: 0.15, color: 0x8fd6ff, tail: 1, seg: 9, shrink: 0.5 });
+        fx.arc(pl.x, 1.0, pl.z, 4.1, b - sp * 1.2, b + sp * 1.2, { w: 0.28, w1: 0.28, life: 0.18, color: 0x6fc8ff, tail: 1, seg: 11, shrink: 0.6 });
+        fx.burst(pl.x + dir.x * 1.6, 1.0, pl.z + dir.z * 1.6, 8, 0xcff0ff, 6, 0.07, 0.4, 12, dir); }
+      fx.streak(muzzle, hit, { w: 0.13, w1: 0.05, life: F.tl, color: 0xe0f6ff, tail: 0.2 }); if (hitE && k % 2 === 0) fx.burst(hit.x, hit.y, hit.z, 4, 0xbfe8ff, 5, 0.07, 0.3, 12); break; }
     default: fx.tracer(muzzle, hit);
   }
 }
@@ -205,17 +221,23 @@ export function hitSig(R, e, at, dir, o = {}) {
     case 'line': fx.burst(at.x, at.y, at.z, 12, 0xeef8ff, 10, 0.06, 0.4, 8, { x: dx / dl, z: dz / dl }); /* 관통 파편: 뒤로 빠짐 */
       if (big) { fx.arc(e.pos.x, 0.3, e.pos.z, 1.3, 0, Math.PI * 2, { w: 0.18, life: 0.3, color: 0xffffff, tail: 1, seg: 14, shrink: 0.4 }); /* '핑' 고리 */ fx.glow(at.x, at.y, at.z, { s: 1, s1: 3.2, life: 0.2, color: 0xffffff, i: 1.2 }); sfx.ping?.(); } break;
     case 'pierce': fx.burst(at.x, at.y, at.z, 14, 0xffc070, 10, 0.09, 0.45, 14, { x: dx / dl, z: dz / dl }); break;
-    case 'swing': case 'hook': fx.glow(at.x, at.y, at.z, { s: 1.8, s1: 0.5, life: 0.13, color: 0xfff4dc, i: 1.4 }); fx.burst(at.x, at.y, at.z, 10, 0xfff4dc, 7, 0.08, 0.3, 16, { x: dx / dl, z: dz / dl }); break;
+    case 'swing': case 'hook': fx.glow(at.x, at.y, at.z, { s: 1.8, s1: 0.5, life: 0.13, color: 0xfff4dc, i: 1.4 }); fx.burst(at.x, at.y, at.z, 10, 0xfff4dc, 7, 0.08, 0.3, 16, { x: dx / dl, z: dz / dl });
+      if (F.sig === 'hook') { fx.burst(at.x, at.y, at.z, 8, 0xd0303a, 5, 0.08, 0.45, 14, { x: -dx / dl, z: -dz / dl }); fx.arc(e.pos.x, 0.25, e.pos.z, 0.8, 0, Math.PI * 2, { w: 0.14, life: 0.25, color: 0xe8c890, tail: 1, seg: 12, shrink: 0.3 }); } break; /* M6-B 갈고리: 찍힌 자리 붉은 방울 + 고리 */
     case 'spin': fx.glow(at.x, at.y, at.z, { s: 2.0, s1: 0.6, life: 0.14, color: 0xcff0ff, i: 1.3 }); fx.burst(at.x, at.y, at.z, 12, 0xcff0ff, 7, 0.08, 0.4, 12, { x: dx / dl, z: dz / dl }); break; /* M5-C 노: 물보라 */
-    case 'bolt': fx.burst(at.x, at.y, at.z, 6, 0xd8c8a0, 6, 0.05, 0.3, 14, { x: dx / dl, z: dz / dl }); if (big) sfx.ping?.(); break;
+    case 'bolt': fx.burst(at.x, at.y, at.z, 6, 0xd8c8a0, 6, 0.05, 0.3, 14, { x: dx / dl, z: dz / dl }); fx.burst(at.x, at.y, at.z, 9, 0xd0303a, 6, 0.08, 0.5, 14, { x: dx / dl, z: dz / dl }); /* M6-B 출혈 표시: 붉은 방울 · 짧은 고리 */
+      fx.arc(e.pos.x, 0.2, e.pos.z, 0.7, 0, Math.PI * 2, { w: 0.12, life: 0.3, color: 0xd04048, tail: 1, seg: 12, shrink: 0.3 }); if (big) sfx.ping?.(); break;
     case 'spray': if (Math.random() < 0.3) fx.burst(at.x, at.y, at.z, 3, 0xcff0ff, 5, 0.06, 0.3, 10, { x: dx / dl, z: dz / dl }); break;
-    case 'anchor': fx.burst(at.x, at.y, at.z, 12, 0xb0bcc8, 8, 0.1, 0.45, 14, { x: dx / dl, z: dz / dl }); break;
+    case 'anchor': fx.burst(at.x, at.y, at.z, 12, 0xb0bcc8, 8, 0.1, 0.45, 14, { x: dx / dl, z: dz / dl }); fx.glow(e.pos.x, 0.12, e.pos.z, { s: 1.6, s1: 3.4, life: 0.3, color: 0xc8d0d8, i: 0.9, flat: true }); break;
+    case 'shard': fx.arc(e.pos.x, 0.25, e.pos.z, 0.6, 0, Math.PI * 2, { w: 0.1, life: 0.2, color: 0x9fdcff, tail: 1, seg: 10, shrink: 0.4 }); break; /* M6-B 물보라: 맞은 적 발밑 물 튐 고리 */
+    case 'twin': fx.glow(at.x, at.y, at.z, { s: 1.0, s1: 0.3, life: 0.1, color: 0xffe0a0, i: 1.3 }); break;
     case 'bubble': fx.burst(at.x, at.y, at.z, 7, 0xcff8ff, 4, 0.07, 0.5, -2); break;
     case 'arc': fx.glow(at.x, at.y, at.z, { s: 2.4, s1: 0.9, life: 0.17, color: 0x7dd3ff, i: 1.5 }); fx.burst(at.x, at.y, at.z, 5, 0xffffff, 5, 0.04, 0.2, 4); break;
     case 'rivet': fx.burst(at.x, at.y, at.z, 3, 0xffa040, 5, 0.05, 0.22, 18, { x: dx / dl, z: dz / dl }); break;
     default: break;
   }
+  if (HIT_SND[F.sig]) sfx.hitW?.(R.w?.key, 0); /* M6-B 약한 무기 6: 맞는 소리 한 겹 (무기마다 다름 · audio.js hitW) */
 }
+const HIT_SND = { twin: 1, bolt: 1, anchor: 1, shard: 1, hook: 1 };
 
 /* ═════ M5-C 새 무기 7 (그물 · 석궁 · 물대포 · 닻 · 물보라 · 불꽃 다연장 · 쌍발) ═════
  *  상태 칸(적): netT 느려짐 · wetT 젖음(전기 ×) · bleed {dps, t} 출혈 — 매 프레임 statusTick 이 속도 배수를 돌려줌(raid.js 적 이동) */
@@ -249,9 +271,11 @@ export function anchorPull(R, at, w, first) {
   for (const e of R.enemies) { if (e.dead || e.sleep || e === first) continue; const dx = at.x - e.pos.x, dz = at.z - e.pos.z, d = Math.hypot(dx, dz); if (d > P.r) continue;
     const big = e.D.boss || e.D.radius >= 0.6; if (!big && d > 0.8) { const k = (d - 0.8) * 0.75; e.pos.x += dx / d * k; e.pos.z += dz / d * k; R.collide?.(e.pos, e.D.radius); }
     R.damage(e, w.dmg * P.mul, V(dx / (d || 1), 0, dz / (d || 1)), e.pos.clone().setY(1.0), 0, true, { gun: true }); e.stagger = Math.max(e.stagger || 0, big ? P.stun * 0.3 : P.stun); n++; /* 피해가 멈칫을 0.12 로 덮어쓰지 않게 뒤에 */
-    R.fx.streak(tv.set(e.pos.x, 0.6, e.pos.z), tv2.set(at.x, 0.6, at.z), { w: 0.07, life: 0.25, color: 0x8a96a4, tail: 0.5, seg: 4, shrink: 0.3 }); }
+    R.fx.streak(tv.set(e.pos.x, 0.6, e.pos.z), tv2.set(at.x, 0.6, at.z), { w: 0.14, life: 0.3, color: 0x8a96a4, tail: 0.5, seg: 4, shrink: 0.3 });
+    for (let u = 0.15; u < 1; u += 0.28) R.fx.burst(e.pos.x + (at.x - e.pos.x) * u * 0.6 - dx / (d || 1) * 0.6, 0.3, e.pos.z + (at.z - e.pos.z) * u * 0.6 - dz / (d || 1) * 0.6, 3, 0xcff0ff, 3, 0.08, 0.45, 10); } /* M6-B 끌려오는 적 뒤 물보라 줄 */
   if (first && !first.dead) first.stagger = Math.max(first.stagger || 0, first.D.boss ? P.stun * 0.3 : P.stun);
-  R.fx.ring(at.x, at.z, P.r, 0xb0bcc8); R.fx.burst(at.x, 0.3, at.z, 16, 0x9a9080, 5, 0.14, 0.6, 6); R.fx.glow(at.x, 0.15, at.z, { s: 2.4, s1: 4.5, life: 0.3, color: 0xc8d0d8, i: 0.8, flat: true });
+  R.fx.ring(at.x, at.z, P.r, 0xb0bcc8); R.fx.burst(at.x, 0.3, at.z, 16, 0x9a9080, 5, 0.14, 0.6, 6);
+  R.fx.arc(at.x, 0.15, at.z, P.r * 0.55, 0, Math.PI * 2, { w: 0.34, w1: 0.1, life: 0.32, color: 0xe0e8f0, tail: 1, seg: 18, shrink: 0.5 }); /* M6-B 충격 고리 (안쪽) */ R.fx.glow(at.x, 0.15, at.z, { s: 2.4, s1: 4.5, life: 0.3, color: 0xc8d0d8, i: 0.8, flat: true });
   R.shake = Math.max(R.shake, Math.min(SHAKE_MAX, feelOf(w).boom || 0.4)); sfx.clank?.(n);
 }
 /* 물보라 산탄: 한 발에 한 번, 맞은 적에서 옆 적으로 튕김 */
@@ -279,7 +303,8 @@ function missileTick(R, dt) {
     m.t += dt; if (!m.tgt || m.tgt.dead) { let bd = 9; m.tgt = null; for (const e of R.enemies) { if (e.dead || e.sleep || e.hidden) continue; const d = Math.hypot(e.pos.x - m.x, e.pos.z - m.z); if (d < bd) { bd = d; m.tgt = e; } } }
     if (m.tgt) { const dx = m.tgt.pos.x - m.x, dz = m.tgt.pos.z - m.z, d = Math.hypot(dx, dz) || 1, sp = 17; const k = Math.min(1, dt * 7); m.vx += (dx / d * sp - m.vx) * k; m.vz += (dz / d * sp - m.vz) * k; if (d < 0.6 + m.tgt.D.radius * 0.5) m.t = m.life; }
     m.x += m.vx * dt; m.z += m.vz * dt; m.g.x = m.x; m.g.z = m.z; m.g.y = 1.15 + Math.sin(m.t * 18) * 0.06;
-    if ((m.tr -= dt) <= 0) { m.tr = 0.02; R.fx.burst(m.x, 1.15, m.z, 1, m.c, 0.6, 0.06, 0.3, -1); }
+    if ((m.tr -= dt) <= 0) { m.tr = 0.02; R.fx.burst(m.x, 1.15, m.z, 1, m.c, 0.6, 0.08, 0.35, -1); if ((m.sm = (m.sm || 0) + 1) % 3 === 0) R.fx.burst(m.x, 1.1, m.z, 1, 0x9a929a, 0.5, 0.16, 0.8, -1.5); } /* M6-B 연기 꼬리 */
+    if (m.px != null) R.fx.streak(tv.set(m.px, 1.15, m.pz), tv2.set(m.x, 1.15, m.z), { w: 0.2, w1: 0.06, life: 0.22, color: m.c, tail: 1, shrink: 0.6 }); m.px = m.x; m.pz = m.z; /* 색 꼬리 */
     if (m.t > 0.08 && R.boxes) for (const b of R.boxes) if (!b.off && b.bullet && m.x > b.x0 && m.x < b.x1 && m.z > b.z0 && m.z < b.z1) { m.t = m.life; break; } /* 벽에 닿으면 터짐 */
     if (m.t >= m.life) { m.g.t = m.g.life; swarmPop(R, m); }
   }
@@ -289,5 +314,8 @@ function swarmPop(R, m) {
   const w = m.w, r = w.swarm.r, at = { x: m.x, z: m.z };
   for (const e of R.enemies) { if (e.dead || e.sleep) continue; const d = Math.hypot(e.pos.x - at.x, e.pos.z - at.z); if (d > r + e.D.radius) continue; R.damage(e, w.dmg * (1 - 0.35 * Math.min(1, d / r)), V(e.pos.x - at.x, 0, e.pos.z - at.z).normalize(), e.pos.clone().setY(1.0), w.crit, true, { gun: true }); }
   R.fx.burst(at.x, 1.1, at.z, 14, m.c, 6, 0.08, 0.5, 4); R.fx.burst(at.x, 1.1, at.z, 6, 0xffffff, 4, 0.05, 0.3, 2); R.fx.glow(at.x, 1.1, at.z, { s: 1.4, s1: 3.2, life: 0.2, color: m.c, i: 1.4 });
-  R.shake = Math.max(R.shake, 0.22); sfx.pop?.();
+  /* M6-B 터질 때 지름 2m 불꽃 원 (바닥 · 0.45초) + 꽃잎 불티 */
+  R.fx.arc(at.x, 0.15, at.z, 1.0, 0, Math.PI * 2, { w: 0.32, w1: 0.32, life: 0.45, color: m.c, tail: 1, seg: 16, shrink: 0.2, pw: 0.6 }); R.fx.glow(at.x, 0.12, at.z, { s: 2.2, s1: 2.6, life: 0.45, color: 0xff9a50, i: 0.9, flat: true });
+  for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.random() * 0.4; R.fx.streak(tv.set(at.x + Math.sin(a) * 0.3, 1.1, at.z + Math.cos(a) * 0.3), tv2.set(at.x + Math.sin(a) * 1.4, 0.9, at.z + Math.cos(a) * 1.4), { w: 0.12, w1: 0.02, life: 0.22, color: m.c, tail: 1 }); }
+  R.shake = Math.max(R.shake, 0.28); sfx.pop?.(); sfx.hitW?.('rocket');
 }

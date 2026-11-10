@@ -6,9 +6,10 @@
 //  · 쇳물 도랑: 문 없는 벽 쪽을 따라 흐르는 쇳물(셰이더 하나) · 들어가면 피해(구르면 안 데임)
 //  · 보스 쇳물 감독관: 쇳물 붓기(줄 경고) · 내려찍기(원 경고 → 가슴 용광로 2초 약점 ×2) · 쇳물 비(체력 60% 아래 · 떨어질 자리 원 5개)
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.16';
-import { STEAM, MOLTEN, BELT, CRANE } from './data/map_factory.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
+import { BOSS } from './data.js?v=0.99.17';
+import { STEAM, MOLTEN, BELT, CRANE } from './data/map_factory.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { hazard } from './a11y.js?v=0.99.17'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V();
@@ -182,7 +183,7 @@ export function smelterWind(R, e, dist, rage) {
   const pl = R.pl, B = BOSS.smelter; const ang = Math.atan2(pl.pos.x - e.pos.x, pl.pos.z - e.pos.z);
   if (e.hp < e.maxHp * B.rain.below && e.pcd <= 0) { e.pat = 'rain'; e.windMax = e.wind = B.rain.wind; e.pcd = B.rain.cd;
     e.rain = []; for (let i = 0; i < B.rain.n; i++) { const a = i / (B.rain.n - 1) * Math.PI * 2 + R.R(); const r = i === 0 ? 0 : 2.4 + R.R() * 1.2; const x = pl.pos.x + Math.cos(a) * r, z = pl.pos.z + Math.sin(a) * r;
-      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0.3, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.23, z); m.scale.setScalar(0.3); R.root.add(m); e.rain.push({ x, z, m }); }
+      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 28), hazard(new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0.3, depthWrite: false }))); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.23, z); m.scale.setScalar(0.3); R.root.add(m); e.rain.push({ x, z, m }); }
     e.anim.play('Taunt', { once: true, fade: 0.05, speed: 0.9, force: true }); sfx.roar(); }
   else if (dist < 4.2) { e.pat = 'slam'; e.windMax = e.wind = B.slam.wind / rage; e.lockFace = e.face; R.warnDisc(e, B.slam.r, 0xff4a30); e.anim.play('1H_Melee_Attack_Chop', { once: true, fade: 0.05, speed: 0.75 * rage, force: true }); }
   else { e.pat = 'pour'; e.windMax = e.wind = B.pour.wind / rage; e.lockFace = ang; e.face = ang; R.warnLine(e, B.pour.len, B.pour.w, 0xff8a2a); e.anim.play('Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.55, force: true }); }

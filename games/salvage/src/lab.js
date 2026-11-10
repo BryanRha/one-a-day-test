@@ -6,11 +6,12 @@
 //  · 적: 포자낭(빛을 따라옴 · 둘레 원 예고 → 포자 터짐 + 이끼 자리 · 불에 약함) · 경비 기계(탐조 부채꼴 · 겨냥 줄 → 수압 탄 · 앞 방패 · 알아채면 경보)
 //  · 5장 보스 청록 어미: 덩굴 채찍(줄 경고 → 심장 산호 2초 약점 ×2) · 포자 비(원 4) · 빛 삼키기(60% 아래 · 둘레 큰 원 → 5초 어둠 + 포자낭 2)
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.16';
-import { PRESS, TANK, MOSS, TERM, BEAM, SPORE } from './data/map_lab.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
-import { glowSprite } from './enemy3d.js?v=0.99.16';
-import { flarePools } from './arms.js?v=0.99.16';
+import { BOSS } from './data.js?v=0.99.17';
+import { PRESS, TANK, MOSS, TERM, BEAM, SPORE } from './data/map_lab.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { glowSprite } from './enemy3d.js?v=0.99.17';
+import { flarePools } from './arms.js?v=0.99.17';
+import { hazard } from './a11y.js?v=0.99.17'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V(), tq = new THREE.Quaternion(), ts = V(), tm = new THREE.Matrix4(), up = V(0, 1, 0);
@@ -232,7 +233,7 @@ export function motherWind(R, e, dist, rage) {
   else if (dist < B.lash.near) { e.pat = 'lash'; e.windMax = e.wind = B.lash.wind / rage; e.lockFace = ang; e.face = ang; R.warnLine(e, B.lash.len, B.lash.w, 0x7dffd8); e.anim?.play('1H_Melee_Attack_Chop', { once: true, fade: 0.05, speed: 0.75 * rage, force: true }); }
   else { e.pat = 'spore'; e.windMax = e.wind = B.spore.wind; e.rain = [];
     for (let i = 0; i < B.spore.n; i++) { const a = i / B.spore.n * Math.PI * 2 + R.R() * 0.8; const r = i === 0 ? 0 : 2.2 + R.R() * 1.4; const x = pl.pos.x + Math.cos(a) * r, z = pl.pos.z + Math.sin(a) * r;
-      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshBasicMaterial({ color: 0x7dffd8, transparent: true, opacity: 0.3, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.23, z); m.scale.setScalar(0.3); R.root.add(m); e.rain.push({ x, z, m }); }
+      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 28), hazard(new THREE.MeshBasicMaterial({ color: 0x7dffd8, transparent: true, opacity: 0.3, depthWrite: false }))); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.23, z); m.scale.setScalar(0.3); R.root.add(m); e.rain.push({ x, z, m }); }
     e.anim?.play('Unarmed_Melee_Attack_Punch_A', { once: true, fade: 0.05, speed: 0.55, force: true }); }
   e.cd = e.D.cd / rage; sfx.warn();
 }

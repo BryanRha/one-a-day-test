@@ -1,14 +1,14 @@
 // M5-B 화면 — 은신처 '도전' 탭(주간 도전 · 깊은 물 · 업적) · 도전 결과 · 출격 준비 깊은 물 카드 · 업적 알림 · 칭호
 //  스타일은 여기서 넣음(style.css 안 건드림) · 로직은 challenge.js · abyss.js · ach.js
-import { S, save } from './save.js?v=0.99.16';
-import { MAPS, ENEMIES, GEAR, WEAPONS } from './data.js?v=0.99.16';
-import { ACHIEVEMENTS, ACH_CATS, ACH_CAT_KEYS } from './data/achievements.js?v=0.99.16';
-import { CH, CH_RULES, ABYSS, TITLES, M5B_COS } from './data/m5b.js?v=0.99.16';
-import { WEATHER } from './data/weather.js?v=0.99.16';
-import * as CHL from './challenge.js?v=0.99.16';
-import * as AB from './abyss.js?v=0.99.16';
-import * as AC from './ach.js?v=0.99.16';
-import { sfx, unlock } from './audio.js?v=0.99.16';
+import { S, save } from './save.js?v=0.99.17';
+import { MAPS, ENEMIES, GEAR, WEAPONS } from './data.js?v=0.99.17';
+import { ACHIEVEMENTS, ACH_CATS, ACH_CAT_KEYS } from './data/achievements.js?v=0.99.17';
+import { CH, CH_RULES, ABYSS, TITLES, M5B_COS } from './data/m5b.js?v=0.99.17';
+import { WEATHER } from './data/weather.js?v=0.99.17';
+import * as CHL from './challenge.js?v=0.99.17';
+import * as AB from './abyss.js?v=0.99.17';
+import * as AC from './ach.js?v=0.99.17';
+import { sfx, unlock } from './audio.js?v=0.99.17';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -70,7 +70,7 @@ function style() {
 .m5pop{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translate(-50%,-140%);z-index:60;width:min(92vw,380px);display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:16px;
   background:linear-gradient(180deg,rgba(48,36,10,.96),rgba(26,20,8,.96));border:1px solid rgba(255,196,80,.55);box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 24px rgba(255,180,60,.25);transition:transform .35s cubic-bezier(.2,1.4,.4,1);pointer-events:auto}
 .m5pop.on{transform:translate(-50%,0)}.m5pop>i{font-style:normal;font-size:28px}.m5pop div{flex:1;min-width:0}.m5pop small{display:block;font-size:11px;color:#ffcf7a;font-weight:700;letter-spacing:.5px}
-.m5pop b{display:block;font-size:15px;color:#fff}.m5pop em{display:block;font-style:normal;font-size:12px;color:#e8dcc0;margin-top:1px}
+.m5pop b{display:block;font-size:15px;color:#fff}.m5pop.many b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m5pop em{display:block;font-style:normal;font-size:12px;color:#e8dcc0;margin-top:1px}
 .m5pop.abyss{background:linear-gradient(180deg,rgba(40,24,70,.96),rgba(18,12,36,.96));border-color:rgba(170,130,255,.6)}.m5pop.abyss small{color:#cdb6ff}
 .m5pop.chal{background:linear-gradient(180deg,rgba(10,40,52,.96),rgba(6,22,30,.96));border-color:rgba(95,208,224,.6)}.m5pop.chal small{color:#9ff0ff}
 .result.chal .rh h2{color:#9ff0ff}.chsc{display:flex;flex-direction:column;gap:3px;font-size:13px}.chsc div{display:flex;justify-content:space-between;color:#cfe3ea}.chsc div.t{border-top:1px solid rgba(255,255,255,.12);padding-top:5px;margin-top:3px;font-weight:800;color:#fff;font-size:15px}
@@ -80,18 +80,33 @@ function style() {
   document.head.appendChild(s);
 }
 
-/* ═════ 알림 (업적 · 물결 표 · 깊은 물) — 화면이 바뀌어도 남게 body 에 · 하나씩 2.6초 ═════ */
-const Q = []; let busy = false;
+/* ═════ 알림 (업적 · 물결 표 · 깊은 물 · 새 꾸미기) — 화면이 바뀌어도 남게 body 에 · 하나씩 2.6초 ═════
+ *  M6-A 알림 한 줄: 한 번에 하나만 · 판 안 · 이야기 장면 · 이어하기 창에선 기다림 · 판이 시작되면 떠 있던 카드도 거둬 줄 맨 앞으로(holdPops)
+ *  같은 종류(업적 · 꾸미기)가 줄에 둘 이상이면 한 장으로 모아 보여 줌 ('업적 3개 달성 — 이름 · 이름 · 이름') */
+const Q = []; let busy = false, cur = null;
 export function pop(items) { style(); for (const it of items) Q.push(it); if (!busy) next(); }
+export const popQueue = () => ({ n: Q.length, cur: cur?.it?.name || null }); /* 시험 훅 */
+const GROUP = it => it.group || (/업적/.test(it.head || '') ? 'ach' : it.icon === '👕' ? 'cos' : null);
+function merge() {
+  const it = Q.shift(); const g = GROUP(it); if (!g) return it;
+  const same = [it]; for (let i = 0; i < Q.length;) { if (GROUP(Q[i]) === g) same.push(Q.splice(i, 1)[0]); else i++; }
+  if (same.length === 1) return it;
+  return { kind: it.kind, icon: it.icon, head: g === 'ach' ? `업적 ${same.length}개 달성` : `새 꾸미기 ${same.length}개`, name: same.map(x => x.name).join(' · '), sub: g === 'ach' ? '도전 탭 · 업적에서 받은 것을 볼 수 있어요' : '옷장에서 입어 봐요', group: g, n: same.length };
+}
 function next() {
   if (!Q.length) { busy = false; return; } busy = true;
   const R = typeof window !== 'undefined' && window.__salvage?.raid; if (document.getElementById('story') || document.querySelector('.modal.cont') || (R && R.alive)) { setTimeout(next, 600); return; } /* 이야기 장면 · 이어하기 창 · 판 안에선 기다림 (건너뛰기 · 체력 줄을 덮지 않게) */
-  const it = Q.shift();
-  const el = h('div', 'm5pop ' + (it.kind || ''), `<i>${it.icon || '★'}</i><div><small>${esc(it.head || '업적 달성')}</small><b>${esc(it.name)}</b>${it.sub ? `<em>${it.sub}</em>` : ''}</div>`);
+  const it = merge();
+  const el = h('div', 'm5pop ' + (it.kind || '') + (it.n ? ' many' : ''), `<i>${it.icon || '★'}</i><div><small>${esc(it.head || '업적 달성')}</small><b>${esc(it.name)}</b>${it.sub ? `<em>${it.sub}</em>` : ''}</div>`);
   (document.getElementById('frame') || document.body).appendChild(el); try { sfx.rare(); } catch { /* */ }
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('on')));
-  let gone = false; const close = () => { if (gone) return; gone = true; el.classList.remove('on'); setTimeout(() => { el.remove(); next(); }, 380); };
-  el.onclick = close; setTimeout(close, 2600);
+  let gone = false; const me = cur = { it, el, close: null };
+  const close = () => { if (gone) return; gone = true; if (cur === me) cur = null; el.classList.remove('on'); setTimeout(() => { el.remove(); next(); }, 380); };
+  me.close = close; el.onclick = close; setTimeout(close, 2600);
+}
+/* 판 시작 (ui.raidStart): 은신처에서 막 뜬 카드가 판 위를 덮지 않게 — 바로 거두고 줄 맨 앞에 다시 세움 (결과 화면 · 은신처에서 이어서) */
+export function holdPops() {
+  if (!cur) return; const { it, el } = cur; cur = null; el.onclick = null; el.remove(); Q.unshift(it); busy = true; setTimeout(next, 600);
 }
 export const popAch = list => pop(list.map(a => ({ kind: a.cat === 'hidden' ? '' : '', icon: a.cat === 'hidden' ? '❔' : ACH_CATS[a.cat]?.icon || '★', head: a.cat === 'hidden' ? '숨은 업적 발견!' : `업적 달성 · ${ACH_CATS[a.cat]?.name || ''}`, name: a.name, sub: rewardTxt(a.reward) })));
 export function popCos(keys) { if (keys.length) pop(keys.map(k => ({ kind: 'chal', icon: '👕', head: '받아 둔 꾸미기가 옷장에', name: AC.cosName(k), sub: '옷장에서 입어 봐요' }))); }

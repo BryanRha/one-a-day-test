@@ -1,16 +1,17 @@
 // 은신처 성장 화면 (M3-A · v0.6) — 시설 카드 · 무기대(무기 10 · 탄약 3 · 개조 5칸) · 장비(5단 · 부적 2칸) · 상인 3 · 업적 · 난이도
 //  ui.js 의 탭이 여기를 부름. 글자 목록 대신 그림 · 단계 점 · '다음' 한 구절 · 모자란 것은 빨간 점 (QUALITY_M2 Top 7)
-import * as WXUI from './ui_wx.js?v=0.99.16'; /* M4-B 맵 장비 */
-import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.16';
-import { S, save } from './save.js?v=0.99.16';
-import * as E from './econ.js?v=0.99.16';
-import { A } from './assets.js?v=0.99.16';
-import { sfx, unlock } from './audio.js?v=0.99.16';
-import { COS } from './look.js?v=0.99.16';
-import * as BM from './bmflow.js?v=0.99.16';
-import * as GL from './goal.js?v=0.99.16'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
-import { costChips } from './chips.js?v=0.99.16'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
-import * as M5C from './ui_m5c.js?v=0.99.16'; /* M5-C 무기 19 계열 줄 · 단련 ★ · 반려 2 */
+import * as WXUI from './ui_wx.js?v=0.99.17'; /* M4-B 맵 장비 */
+import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.17';
+import { S, save } from './save.js?v=0.99.17';
+import * as E from './econ.js?v=0.99.17';
+import { A } from './assets.js?v=0.99.17';
+import { sfx, unlock } from './audio.js?v=0.99.17';
+import { COS } from './look.js?v=0.99.17';
+import * as BM from './bmflow.js?v=0.99.17';
+import * as GL from './goal.js?v=0.99.17'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
+import { costChips } from './chips.js?v=0.99.17'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
+import * as M5C from './ui_m5c.js?v=0.99.17'; /* M5-C 무기 19 계열 줄 · 단련 ★ · 반려 2 */
+import { fIco, wIco, hasIco } from './icons_m6c.js?v=0.99.17'; /* M6-C 렌더 아이콘 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -59,7 +60,8 @@ const ART = {
   forge: '<path d="M12 36h40l-6 8H18z"/><rect x="22" y="44" width="20" height="10" rx="2" opacity=".8"/><path d="M38 12l10 10-4 4-10-10z" fill="#fff"/><path d="M41 21l-14 14" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="20" cy="28" r="2" fill="#ffd27a"/><circle cx="26" cy="22" r="1.6" fill="#ffd27a"/><circle cx="16" cy="20" r="1.4" fill="#ffd27a"/>',
   den: '<path d="M8 36h48l-5 16a4 4 0 0 1-4 3H17a4 4 0 0 1-4-3z"/><path d="M8 36q24-8 48 0" stroke="#fff8" stroke-width="3" fill="none"/><ellipse cx="32" cy="20" rx="6" ry="5" fill="#fff"/><circle cx="23" cy="13" r="3" fill="#fff"/><circle cx="29" cy="9" r="3" fill="#fff"/><circle cx="35" cy="9" r="3" fill="#fff"/><circle cx="41" cy="13" r="3" fill="#fff"/>',
 };
-export const facArt = (k, cls = '') => `<span class="fart ${cls}" style="--c:${FACILITIES[k].tint || '#8fa6ae'}"><svg viewBox="0 0 64 64" fill="var(--c)">${ART[k] || ART.store}</svg></span>`;
+export const facArt = (k, cls = '') => hasIco('f_' + k) ? `<span class="fart m6f ${cls}" style="--c:${FACILITIES[k].tint || '#8fa6ae'}">${fIco(k)}</span>` /* M6-C Blender 렌더 아이콘 (없으면 아래 SVG) */
+  : `<span class="fart ${cls}" style="--c:${FACILITIES[k].tint || '#8fa6ae'}"><svg viewBox="0 0 64 64" fill="var(--c)">${ART[k] || ART.store}</svg></span>`;
 
 /* ───── 시설 탭: 그림 카드 2열 · 누르면 자세히 ───── */
 export function tabFac(ui, body) {
@@ -116,7 +118,7 @@ export function tabGun(ui, body) {
   body.innerHTML = `
     ${M5C.wselHtml(ui, wk)}
     <div class="wcard">
-      <div class="fh"><b>${W.name}</b><span class="lv">${own ? `개조 ${modN}/${W.slots.length * 3}` : '아직 없음'}</span></div>
+      <div class="fh"><b style="display:flex;align-items:center">${wIco(wk, 'wico')}${W.name}</b><span class="lv">${own ? `개조 ${modN}/${W.slots.length * 3}` : '아직 없음'}</span></div>
       <div class="role" style="--c:${W.color}">${W.role}</div><small class="hint">${W.desc}</small>
       <div class="wgrid">${cone(ws.spread, ws.max)}
         <div class="wstats">

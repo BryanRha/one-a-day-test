@@ -1,14 +1,15 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.16';
-import { prop } from './assets.js?v=0.99.16';
-import { buildDress, farWater } from './dress_art.js?v=0.99.16';
-import { buildFactory } from './factory.js?v=0.99.16'; /* M3-B 가라앉은 공장 */
-import { buildLab } from './lab.js?v=0.99.16'; /* M4-B 심해 연구소 */
-import { buildGate } from './gate.js?v=0.99.16'; /* M5-A 대수문 꼭대기 */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.17';
+import { prop } from './assets.js?v=0.99.17';
+import { buildDress, farWater } from './dress_art.js?v=0.99.17';
+import { buildFactory } from './factory.js?v=0.99.17'; /* M3-B 가라앉은 공장 */
+import { buildLab } from './lab.js?v=0.99.17'; /* M4-B 심해 연구소 */
+import { buildGate } from './gate.js?v=0.99.17'; /* M5-A 대수문 꼭대기 */
+import { DUCK, TONE, duckWallH, addBand, addDoor, floorMat, standMat } from './look_duck.js?v=0.99.17'; /* 시안용 ?look=duck */
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.16';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.17';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */
@@ -28,7 +29,7 @@ const STYLE = {
     wall: (z, low) => low ? ['f_wall', 0.9, 'z', 0.7] : ['f_wall', 3.0, 'z', 0.7] },
   lab: { floor: (rm, i, j) => rm.type === 'tankhall' || rm.type === 'basin' || rm.type === 'decon' ? ((i + j) % 2 ? 'floor_grate' : 'l_floor') : rm.type === 'records' || rm.type === 'dorm' || rm.type === 'vault' ? 'floor_wood' : 'l_floor',
     wall: (z, low) => low ? ['l_wall', 0.9, 'z', 0.5] : ['l_wall', 3.2, 'z', 0.5] }, /* M4-B 연구소: 흰 패널 벽 · 청록 줄 */
-  gate: { floor: (rm, i, j) => rm.type === 'gstair' || (i + j) % 5 === 0 ? 'floor_grate' : 'floor',
+  gate: { floor: (rm, i, j) => rm.type === 'garena' || rm.type === 'gtop' ? null : rm.type === 'gstair' || (i + j) % 5 === 0 ? 'floor_grate' : 'floor', /* M6-B: 꼭대기 무대 바닥 = gate.js 수문 철판 */
     wall: (z, low) => low || z === 3 ? ['h_fence', 1.0, 'x', 0.22] : ['h_mwall', 2.0, 'x', 0.4] }, /* M5-A 대수문 꼭대기: 난간 · 승강로만 낮은 벽 */
 };
 const dimCache = {};
@@ -46,11 +47,11 @@ export function build(P, scene) {
   const addBox = (x, z, hx, hz, bullet = 1, ry = 0) => { if (Math.abs(Math.sin(ry)) > 0.7) [hx, hz] = [hz, hx]; boxes.push({ x0: x - hx, z0: z - hz, x1: x + hx, z1: z + hz, bullet }); };
   const put = (k, x, z, ry = 0, sy = 1, s = 1) => { const o = k === 'cont' ? prop('cargo') : prop(k); o.position.set(x, 0, z); o.rotation.y = ry; const sc = (SCALE[k] || 1) * s; o.scale.set(sc, sc * sy * (LOW[k] || 1), sc); o.userData.zone = zoneOfRow(Math.max(0, Math.min(ROWS - 1, Math.floor((z - 0.01) / RS)))); statics.add(o); return o; };
   /* 바닥: 방마다 4×4 타일 (물 많은 곳은 철망) */
-  for (const rm of P.rooms) for (let j = 0; j < RT; j++) for (let i = 0; i < RT; i++) put(ST.floor(rm, i, j), rm.x0 + i * T + T / 2, rm.z0 + j * T + T / 2, 0);
+  for (const rm of P.rooms) for (let j = 0; j < RT; j++) for (let i = 0; i < RT; i++) { const fk = ST.floor(rm, i, j); if (fk) { const o = put(fk, rm.x0 + i * T + T / 2, rm.z0 + j * T + T / 2, 0); if (DUCK.on) o.userData.floor = 1; } } /* M6-B: null = 지도 특수물이 바닥을 그림(대수문 꼭대기 수문 철판) */
   /* 벽: 방 경계 칸마다. 문 자리는 비움. 가로벽(카메라를 가리는 쪽)은 낮게 */
   const has = (c, r) => P.rooms.some(x => x.c === c && x.r === r);
   const doorAt = (x, z) => P.doors.find(d => Math.abs(d.x - x) < 0.1 && Math.abs(d.z - z) < 0.1);
-  const seg = new Set();
+  const seg = new Set(); const WB = new THREE.Box3(), wallOff = {};
   for (const rm of P.rooms) {
     for (let t = 0; t < RT; t++) {
       const edges = [
@@ -63,16 +64,26 @@ export function build(P, scene) {
         const key = e.x.toFixed(1) + ',' + e.z.toFixed(1); if (seg.has(key)) continue; seg.add(key);
         if (doorAt(e.x, e.z)) continue;
         const low = e.horiz && !(e.top && e.out);
-        if (map === 'ware') put(low ? 'wall_broken' : 'wall', e.x, e.z, e.ry, low ? 0.28 : 1);
-        else { const [wk, H, ax, th] = ST.wall(zoneOfRow(Math.min(ROWS - 1, Math.max(0, Math.floor((e.z - 0.01) / RS)))), low, seg.size); const d = dimsOf(wk);
-          const o = put(wk, e.x, e.z, e.ry + (ax === 'z' ? Math.PI / 2 : 0)); o.scale.set(ax === 'x' ? 4.06 / d.x : th / d.x, H / d.y, ax === 'z' ? 4.06 / d.z : th / d.z); }
-        addBox(e.x, e.z, T / 2, 0.5, 1, e.ry);
+        const zn = zoneOfRow(Math.min(ROWS - 1, Math.max(0, Math.floor((e.z - 0.01) / RS))));
+        let o;
+        if (map === 'ware') { const wk = low && !DUCK.on ? 'wall_broken' : 'wall'; const d = dimsOf(wk); o = put(wk, e.x, e.z, e.ry, DUCK.on ? TONE.ware.wallH / d.y : low ? 0.28 : 1); }
+        else { const [wk, H0, ax, th] = ST.wall(zn, low && !DUCK.on, seg.size); /* 시안용: 카메라 쪽 벽도 같은 높이 (가리면 성기게) */ const H = DUCK.on ? duckWallH(map, wk, H0, low) : H0; const d = dimsOf(wk);
+          o = put(wk, e.x, e.z, e.ry + (ax === 'z' ? Math.PI / 2 : 0)); o.scale.set(ax === 'x' ? 4.06 / d.x : th / d.x, H / d.y, ax === 'z' ? 4.06 / d.z : th / d.z); }
+        addBox(e.x, e.z, T / 2, 0.5, 1, e.ry); boxes[boxes.length - 1].wall = 1;
+        /* 벽 칸 목록 (퀄리티 G4 측정 · 2026-11-10): 실제 모델 상자 가운데 · 윗면 높이 · 두께 — 모델 기준점이 가운데가 아닌 벽(터널 · 공장 · 연구소)도 맞게 */
+        o.updateMatrixWorld(true); const B = WB.setFromObject(o); const cx = (B.min.x + B.max.x) / 2, cz = (B.min.z + B.max.z) / 2, top = B.max.y, thk = e.horiz ? B.max.z - B.min.z : B.max.x - B.min.x;
+        if (!wallOff[e.horiz ? 'h' : 'v']) wallOff[e.horiz ? 'h' : 'v'] = { x: cx - e.x, z: cz - e.z, th: thk, H: top };
+        (P.wallList ||= []).push({ x: +cx.toFixed(2), z: +cz.toFixed(2), horiz: e.horiz, H: +top.toFixed(2), th: +thk.toFixed(2), out: e.horiz ? !!e.out : !has(rm.c + (Math.abs(e.x - rm.x0) < 0.1 ? -1 : 1), rm.r) });
+        if (DUCK.on) addBand(statics, map, cx, cz, e.ry, top, Math.min(1.2, thk), zn);
       }
     }
   }
+  /* 시안용: 문 = 벽 끊긴 자리 양끝 띠 + 바닥 문턱 (색 규칙 하나) */
+  if (DUCK.on) { P.wallH = (wallOff.h || wallOff.v)?.H || 1.4;
+    for (const d of P.doors) { const zn = zoneOfRow(Math.min(ROWS - 1, Math.max(0, Math.floor((d.z - 0.01) / RS)))); const off = wallOff[d.axis === 'x' ? 'h' : 'v'] || { x: 0, z: 0, th: 0.6, H: P.wallH }; addDoor(statics, { ...d, x: d.x + off.x, z: d.z + off.z }, off.H, Math.min(off.th, 1.2), zn); } }
   /* 기둥: 방 모서리 */
   const corners = new Set();
-  for (const rm of P.rooms) for (const [x, z] of [[rm.x0, rm.z0], [rm.x0 + RS, rm.z0], [rm.x0, rm.z0 + RS], [rm.x0 + RS, rm.z0 + RS]]) { const k = x + ',' + z; if (corners.has(k)) continue; corners.add(k); put('pillar', x, z, 0, z === Math.min(...P.rooms.map(r => r.z0)) ? 1 : 0.3, 0.7); }
+  for (const rm of P.rooms) for (const [x, z] of [[rm.x0, rm.z0], [rm.x0 + RS, rm.z0], [rm.x0, rm.z0 + RS], [rm.x0 + RS, rm.z0 + RS]]) { const k = x + ',' + z; if (corners.has(k)) continue; corners.add(k); put('pillar', x, z, 0, DUCK.on ? ((TONE[map]?.wallH || 1.4) + 0.08) / (dimsOf('pillar').y * 0.7) : z === Math.min(...P.rooms.map(r => r.z0)) ? 1 : 0.3, 0.7); }
   /* 엄폐물 */
   const tanks = [];
   for (const p of P.props) {
@@ -88,11 +99,14 @@ export function build(P, scene) {
   /* 물: 전체 얕은 물(반투명) + 웅덩이(진한 물) — 한 장의 셰이더 평면 */
   const water = makeWater(P); group.add(water);
   /* 지도 밖: 검정 대신 어두운 물 + 물안개 (항구 바다도 이것) */
-  group.add(farWater(P, map, water.material.uniforms.uTime));
+  const fw = farWater(P, map, water.material.uniforms.uTime); group.add(fw);
+  if (DUCK.on) { fw.material.uniforms.uDeep.value.multiplyScalar(0.18); fw.material.uniforms.uMist.value.multiplyScalar(0.12); water.material.uniforms.uDuck.value = 1; } /* 시안용: 바닥 밖은 확실히 어둡게 · 웅덩이 옅게 */
   /* 합치기 */
   statics.updateMatrixWorld(true);
   const byMat = new Map();
-  statics.traverse(o => { if (!o.isMesh) return; let zp = o; while (zp && zp.userData.zone == null) zp = zp.parent; const g = toFloat(o.geometry).applyMatrix4(o.matrixWorld); const m = o.material; const key = (m.map ? m.map.uuid : m.uuid) + '/' + (zp?.userData.zone || 0); if (!byMat.has(key)) byMat.set(key, { m, gs: [] }); byMat.get(key).gs.push(g); });
+  statics.traverse(o => { if (!o.isMesh) return; let zp = o; while (zp && zp.userData.zone == null) zp = zp.parent; const g = toFloat(o.geometry).applyMatrix4(o.matrixWorld); let m = o.material;
+    if (DUCK.on) { let fp = o; while (fp && !fp.userData.floor && !fp.userData.band) fp = fp.parent; m = fp?.userData.floor ? floorMat(m) : fp?.userData.band ? m : standMat(m); } /* 시안용: 바닥 무늬 약하게 · 서 있는 것은 주인공 앞이면 성기게 */
+    const key = (m.map ? m.map.uuid : m.uuid) + '/' + (zp?.userData.zone || 0) + (DUCK.on ? '/' + m.uuid : ''); if (!byMat.has(key)) byMat.set(key, { m, gs: [] }); byMat.get(key).gs.push(g); });
   for (const { m, gs } of byMat.values()) { const mg = mergeGeometries(gs, false); gs.forEach(g => g.dispose()); const mesh = new THREE.Mesh(mg, m); mesh.receiveShadow = !m.isMeshBasicMaterial; mesh.castShadow = !m.isMeshBasicMaterial; mesh.name = 'static'; group.add(mesh); }
   scene.add(group);
   /* 잠긴 문: 판정 상자 + 창살(열리면 내려감) */
@@ -160,7 +174,7 @@ function buildExtras(P, map, statics, group, put, addBox, boxes, tanks) {
       const st = new THREE.Mesh(new THREE.BoxGeometry(3.75, 0.22, 3.75), stripe); st.position.set(b.x, 0.5, b.z); add(st, false);
       const cap = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.16, 3.8), stripe); cap.position.set(b.x, 2.66, b.z); add(cap, false);
       const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.1, 3.2), conc); top.position.set(b.x, 2.78, b.z); add(top, false);
-      addBox(b.x, b.z, 1.85, 1.85, 1); }
+      addBox(b.x, b.z, 1.85, 1.85, 1); boxes[boxes.length - 1].wall = 1; }
     /* 레일 (선로 방 가운데 + 화물칸 칸) */
     for (const rm of P.rooms) if (rm.type === 'track') for (const cx of [rm.x0 + 6.8, rm.x0 + 9.2]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, RS), steel); r.position.set(cx, 0.08, rm.z0 + RS / 2); add(r, false); }
     for (const c of P.cars) { for (const dx of [-0.75, 0.75]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, RS), steel); r.position.set(c.x + dx, 0.08, c.z); add(r, false); }
@@ -211,11 +225,11 @@ function makeWater(P) {
   const tex = new THREE.DataTexture(data, N, N); tex.magFilter = THREE.LinearFilter; tex.needsUpdate = true;
   const mat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, fog: true,
-    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uMask: { value: tex }, uTime: { value: 0 }, uSize: { value: new THREE.Vector2(P.W, P.H) }, uFlood: { value: 1e4 }, uDeep: { value: P.map === 'tunnel' ? new THREE.Vector3(0.1, 0.34, 0.4) : new THREE.Vector3(0.07, 0.2, 0.25) }, uDeepA: { value: P.map === 'tunnel' ? 0.6 : 0.72 } }]),
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uMask: { value: tex }, uTime: { value: 0 }, uSize: { value: new THREE.Vector2(P.W, P.H) }, uFlood: { value: 1e4 }, uDeep: { value: P.map === 'tunnel' ? new THREE.Vector3(0.1, 0.34, 0.4) : new THREE.Vector3(0.07, 0.2, 0.25) }, uDeepA: { value: P.map === 'tunnel' ? 0.6 : 0.72 }, uDuck: { value: 0 } }]),
     vertexShader: [
       'varying vec2 vW;', '#include <fog_pars_vertex>',
       'void main(){ vec4 w = modelMatrix * vec4(position,1.); vW = w.xz; vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;', '#include <fog_vertex>', '}'].join('\n'),
-    fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec2 uSize; uniform float uFlood; uniform vec3 uDeep; uniform float uDeepA; varying vec2 vW;
+    fragmentShader: `uniform sampler2D uMask; uniform float uTime; uniform vec2 uSize; uniform float uFlood; uniform vec3 uDeep; uniform float uDeepA; uniform float uDuck; varying vec2 vW;
       #include <fog_pars_fragment>
       void main(){ float m = texture2D(uMask, vW/uSize).r; m = max(m, smoothstep(uFlood - 1.5, uFlood + 1.5, vW.y) * 0.75);
         float r = sin(vW.x*1.7+uTime*1.3)*sin(vW.y*1.3-uTime*1.1) + sin((vW.x+vW.y)*0.9+uTime*0.8)*0.6;
@@ -223,6 +237,7 @@ function makeWater(P) {
         vec3 base = mix(vec3(0.16,0.32,0.36), uDeep, m);
         float a = mix(0.16, uDeepA, smoothstep(0.02, 0.4, m));
         vec3 col = base + hi*vec3(0.35,0.5,0.5)*(0.35+m*0.6);
+        if (uDuck > 0.5) { a = mix(0.08, 0.3, smoothstep(0.02, 0.4, m)); float rim = smoothstep(0.03, 0.12, m) * (1. - smoothstep(0.12, 0.24, m)); col = mix(col, vec3(0.62,0.85,0.9), rim*0.7); a = max(a, rim*0.55); }
         gl_FragColor = vec4(col, a + hi*0.12);
         #include <fog_fragment>
       }`,

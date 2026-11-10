@@ -11,9 +11,9 @@ export const ROOMS = {
   cream: { name: '크림치즈 공방', en: 'CREAM ATELIER', rect: [0, -1150, 650, -450], kind: 'open', main: 'cc', pad: [170, -370] },
   cafe: { name: '커피 바', en: 'COFFEE BAR', rect: [650, -450, 1250, 450], kind: 'open', main: 'espresso', pad: [590, -30] },   /* 0.3.1: 계산대 바로 오른쪽 (커피 → 계산대가 오븐 앞을 안 지나감) */
   hall: { name: '홀 확장', en: 'HALL', rect: [-650, -450, -250, 450], kind: 'open', main: 't2', pad: [-170, -200] },
-  crew: { name: '크루룸', en: 'CREW ROOM', rect: [-1250, -1150, -650, -450], kind: 'encl', visit: true, doors: [{ side: 'E', at: -800 }], pad: [-560, -880] },
+  crew: { name: '크루룸', en: 'CREW ROOM', rect: [-1250, -1150, -650, -450], kind: 'encl', visit: true, doors: [{ side: 'E', at: -800 }], pad: [-420, -880] },
   boss: { name: '사장실', en: "OWNER'S OFFICE", rect: [-1250, -450, -650, 450], kind: 'encl', visit: true, doors: [{ side: 'N', at: -950 }, { side: 'E', at: 0 }], pad: [-1100, -540] },
-  store: { name: '창고', en: 'STOCKROOM', rect: [650, -1150, 1250, -450], kind: 'encl', visit: true, doors: [{ side: 'W', at: -800 }], pad: [590, -880] },   /* 0.3.1: 뒤쪽 오른편 · 문은 크림치즈 공방 쪽 */
+  store: { name: '창고', en: 'STOCKROOM', rect: [650, -1150, 1250, -450], kind: 'encl', visit: true, doors: [{ side: 'W', at: -800 }], pad: [590, -930] },   /* 0.3.1: 뒤쪽 오른편 · 문은 크림치즈 공방 쪽 */
   /* 지점 특색 (8번 방) — 지점마다 하나 */
   pickup: { name: '픽업 창구', en: 'PICK-UP', rect: [650, 450, 1250, 1050], kind: 'open', main: 'drive', pad: [565, 330], feature: 1 },
   up2: { name: '2층 홀', en: '2F LAKE VIEW', rect: [-1250, 450, -250, 1050], kind: 'open', main: 'u1', pad: [-160, 370], feature: 2, raised: 150 },
@@ -27,26 +27,26 @@ export const STAIRS = { x0: -450, x1: -250, z0: 450, z1: 850 };
 export const STREET = [-250, 450, 650, 1500];
 export const DOOR = [430, 1420];
 
-// ── 칸 (설비 · 직원 · 테이블 · 지점 계약) — room: 속한 방 · base: 1호점 기준 값(열리는 순서에 따라 늘림)
+// ── 칸 (설비 · 직원 · 테이블 · 지점 계약) — 0.3.3: 설비 몸통 사이 100 · 동작 칸과 다른 몸통 60 이상 (tools/flow_check.mjs) — room: 속한 방 · base: 1호점 기준 값(열리는 순서에 따라 늘림)
 const S = {
   oven: { type: 'oven', x: 450, z: -320, free: true, room: 'shop' },
   counter: { type: 'counter', x: 250, z: 80, free: true, room: 'shop' },
   bin: { type: 'bin', x: -150, z: 80, free: true, room: 'shop' },
-  t1: { type: 'table', x: 70, z: 310, room: 'shop', base: 30 },
+  t1: { type: 'table', x: 100, z: 330, room: 'shop', base: 30 },
   cashier: { type: 'hire', staff: 'cashier', x: 170, z: -200, room: 'shop', base: 90, label: '계산원 뽑기' },
   mixer: { type: 'mixer', x: -200, z: -660, room: 'dough', base: 140, label: '반죽기' },
   dougher: { type: 'hire', staff: 'dougher', x: -200, z: -960, room: 'dough', base: 140, label: '반죽 직원 뽑기' },
-  kettle: { type: 'kettle', x: -420, z: -660, room: 'dough', base: 900, label: '데치기 솥 · 쫄깃 플레인' },
-  retard: { type: 'retard', x: -400, z: -1010, room: 'dough', base: 1200, label: '저온 숙성고' },
-  cc: { type: 'ccbar', x: 180, z: -660, room: 'cream', base: 160, label: '토핑 바' },
+  kettle: { type: 'kettle', x: -450, z: -660, room: 'dough', base: 900, label: '데치기 솥 · 쫄깃 플레인' },
+  retard: { type: 'retard', x: -590, z: -1010, room: 'dough', base: 1200, label: '저온 숙성고' },
+  cc: { type: 'ccbar', x: 130, z: -660, room: 'cream', base: 160, label: '토핑 바' },
   topper: { type: 'hire', staff: 'topper', x: 180, z: -960, room: 'cream', base: 520, label: '토핑 직원 뽑기' },
-  coffee: { type: 'coffee', x: 480, z: -680, room: 'cream', base: 420, label: '크림치즈 냉장고' },
+  coffee: { type: 'coffee', x: 420, z: -760, room: 'cream', base: 420, label: '크림치즈 냉장고' },
   fridge: { type: 'hire', staff: 'fridge', x: 345, z: -960, room: 'cream', base: 760, label: '음료·크림치즈 직원 뽑기' },
   espresso: { type: 'espresso', x: 800, z: -320, room: 'cafe', base: 340, label: '커피 머신' },
   baker: { type: 'hire', staff: 'baker', x: 0, z: -200, room: 'shop', base: 300, label: '진열 직원 뽑기' },
-  t2: { type: 'table', x: -450, z: -260, room: 'hall', base: 200 },
-  t3: { type: 'table', x: -450, z: 30, room: 'hall', base: 560 },
-  t4: { type: 'table', x: -450, z: 320, room: 'hall', base: 900 },
+  t2: { type: 'table', x: -450, z: -280, room: 'hall', base: 200 },
+  t3: { type: 'table', x: -450, z: -10, room: 'hall', base: 560 },
+  t4: { type: 'table', x: -450, z: 250, room: 'hall', base: 900 },
   cleaner: { type: 'hire', staff: 'cleaner', x: -170, z: -40, room: 'shop', base: 1100, label: '청소 직원 뽑기' },
   drive: { type: 'drive', x: 1110, z: 700, px: 900, pz: 600, room: '*feature', base: 1600, label: '창구' },
   driver: { type: 'hire', staff: 'driver', x: 1000, z: 960, room: '*feature', base: 1400, label: '창구 직원 뽑기' },

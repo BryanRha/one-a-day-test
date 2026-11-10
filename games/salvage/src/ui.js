@@ -1,20 +1,21 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import * as WXUI from './ui_wx.js?v=0.99.16'; /* M4-B 판 상태 5 · 맵 장비 */
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS, ACHIEVEMENTS } from './data.js?v=0.99.16';
-import { S, save, rollDay } from './save.js?v=0.99.16';
-import * as E from './econ.js?v=0.99.16';
-import { A } from './assets.js?v=0.99.16';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.16';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.16';
-import { Wardrobe } from './wardrobe.js?v=0.99.16';
-import { grantEarned, COS } from './look.js?v=0.99.16';
-import * as BM from './bmflow.js?v=0.99.16';
-import { frac } from './chips.js?v=0.99.16'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import * as GL from './goal.js?v=0.99.16'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
-import * as TU from './threat_ui.js?v=0.99.16'; /* M4-A 오늘 위협 · 주간 변주 */
-import * as M5 from './ui_m5b.js?v=0.99.16'; /* M5-B 도전 탭(주간 도전 · 깊은 물 · 업적) · 알림 · 칭호 */
-import * as G from './ui_grow.js?v=0.99.16'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
-import * as M5C from './ui_m5c.js?v=0.99.16'; /* M5-C 반려 · 단련 */
+import { DUCK, duckVeil, initVeil2, pickTargets } from './look_duck.js?v=0.99.17'; /* 시안용 ?look=duck */
+import * as WXUI from './ui_wx.js?v=0.99.17'; /* M4-B 판 상태 5 · 맵 장비 */
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS, ACHIEVEMENTS } from './data.js?v=0.99.17';
+import { S, save, rollDay } from './save.js?v=0.99.17';
+import * as E from './econ.js?v=0.99.17';
+import { A } from './assets.js?v=0.99.17';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.17';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.17';
+import { Wardrobe } from './wardrobe.js?v=0.99.17';
+import { grantEarned, COS } from './look.js?v=0.99.17';
+import * as BM from './bmflow.js?v=0.99.17';
+import { frac } from './chips.js?v=0.99.17'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import * as GL from './goal.js?v=0.99.17'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
+import * as TU from './threat_ui.js?v=0.99.17'; /* M4-A 오늘 위협 · 주간 변주 */
+import * as M5 from './ui_m5b.js?v=0.99.17'; /* M5-B 도전 탭(주간 도전 · 깊은 물 · 업적) · 알림 · 칭호 */
+import * as G from './ui_grow.js?v=0.99.17'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
+import * as M5C from './ui_m5c.js?v=0.99.17'; /* M5-C 반려 · 단련 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -27,7 +28,7 @@ const pct = x => Math.round(x * 100) + '%';
 const WHY = { cost: '재료가 모자라요', bench: '작업대 단계가 모자라요', rack: '무기대 단계가 모자라요', busy: '공사는 한 번에 하나씩', locked: '의뢰를 먼저 끝내요', fac: '시설이 필요해요', full: '창고가 가득', have: '이미 요리가 있어요', max: '최고 단계', owned: '이미 있어요' };
 
 /* 판 상태 띠 — 판 안엔 한 구절 + 아이콘, 배율 · 자세한 설명은 출격 준비 ⓘ (v0.5.1 · 검수 Top 8) */
-export const COND_UI = { leak: ['💧', '수압 문이 자주 닫혀요'], bloom: ['🌿', '이끼 자리가 넓어요 — 불로 태워요'], lockdown: ['🔒', '경비 기계가 많아요'], storm: ['⛈', '소리가 묻혀요'], fog: ['🌫', '가까이 와야 보여요'], clear: ['🌙', '서로 멀리 보여요'], dark: ['🔦', '발전기를 찾아요'], rapids: ['🌊', '물살이 세요'], calm: ['💧', '산소만 조심'] };
+export const COND_UI = { leak: ['💧', '수압 문이 자주 닫혀요'], bloom: ['🌿', '이끼 자리가 넓어요 — 불로 태워요'], lockdown: ['🔒', '경비 기계가 많아요'], storm: ['⛈️', '소리가 묻혀요'], fog: ['🌫️', '가까이 와야 보여요'], clear: ['🌙', '서로 멀리 보여요'], dark: ['🔦', '발전기를 찾아요'], rapids: ['🌊', '물살이 세요'], calm: ['💧', '산소만 조심'] };
 /* 판 안 위쪽 한 줄 (v0.5.1 · 검수 Top 1): 보스 경고(3) > 무전(2~2.6) > 판 상태 · 사건(1) — 한 번에 하나만.
  *  더 높은 것이 오면 지금 것은 0.35초 뒤 비키고(덜 보였으면 뒤로 다시 줄 섬), 같거나 낮은 것은 최대 2초 기다린 뒤 지금 것을 줄임(최소 1.2초는 보임).
  *  칭찬은 줄에 안 서고 주인공 머리 위 (ui.praise) */
@@ -46,11 +47,12 @@ export class TopLine {
       c.left -= dt; c.shown += dt;
       const up = nx && nx.prio > c.prio && c.shown > 0.35, waited = nx && !c.hold && nx.age >= 2 && c.shown >= 1.2;
       if (c.left <= 0 || up || waited) {
-        c.hide?.(); this.cur = null; if (c.left <= 0) c.timeout?.();
+        c.hide?.(); this.cur = null; this.gap = 0.3; /* M6-A: 앞 줄이 사라지는 동안(0.25초) 다음 줄을 안 띄움 — 무전 상자 뒤로 '오늘 위협' 띠가 비치던 것 */ if (c.left <= 0) c.timeout?.();
         else if (up && c.shown < c.dur * 0.6) { c.dur = Math.max(1.6, c.left); c.age = 0; this.q.unshift(c); this.q.sort((a, b) => b.prio - a.prio); }
         else c.timeout?.();
       }
     }
+    if (this.gap > 0) { this.gap -= dt; if (this.gap > 0) return; }
     if (!this.cur && this.q.length) { const it = this.q.shift(); it.left = it.dur; it.shown = 0; this.cur = it; it.show(); this.log.push(it.key || ''); if (this.log.length > 40) this.log.shift(); }
   }
   clear() { this.cur?.hide?.(); this.cur = null; this.q = []; }
@@ -82,7 +84,7 @@ export class UI {
         <div class="money">${shell(S.shells)}</div></header>
       <div class="matbar">${MAT_KEYS.map(k => `<span>${mat(k, S.mats[k] || 0)}</span>`).join('')}</div>
       <div class="sortie"><span>오늘 출격</span><span class="pips">${pips}</span><b>${S.sorties}/${DAILY_SORTIES}</b>
-        ${BM.sortieHtml()}${q ? `<button class="qpill" id="qpill">의뢰 · ${q.name}${qp && qp.n > 1 ? ` ${frac(qp.cur, qp.n, false)}` : ''}</button>` : '<span class="qpill done">의뢰 모두 완료!</span>'}</div>
+        ${BM.sortieHtml()}${q ? `<button class="qpill" id="qpill">의뢰 · ${q.name}${qp && qp.n > 1 ? ` ${frac(qp.cur, qp.n, false)}` : ''}</button>` : (qLeft => qLeft ? `<button class="qpill" id="qpill">오늘 의뢰 ${qLeft}</button>` : '<span class="qpill done">의뢰 모두 완료!</span>')(this.app.story?.openCount?.() || 0) /* M6-A QA: 본 사슬이 끝나도 이야기 · 인물 · 매일 의뢰가 남으면 '모두 완료' 아님 */}</div>
       <div class="spacer"><button class="wardpill" id="ward">옷장 · 무기대${(S.owned || []).some(k => !(S.lookSeen || []).includes(k)) ? '<i class="dot"></i>' : ''}</button></div>
       <section class="panel">
         <nav class="tabs">${[['fac', '시설'], ['gun', '무기'], ['gear', '장비'], ['shop', '상인'], ['stash', '창고'], ['quest', '의뢰'], ['chal', '도전']].map(([k, t]) => `<button data-t="${k}" class="${this.tab === k ? 'on' : ''}">${t}${k === 'stash' && E.syncDaily(S).some((o, i) => !S.daily.done[i] && E.count(S, o.item) >= o.n) ? '<i class="dot"></i>' : ''}${k === 'quest' && q?.goal.t === 'deliver' && qp.cur >= qp.n ? '<i class="dot"></i>' : ''}</button>`).join('')}</nav>
@@ -100,7 +102,7 @@ export class UI {
     $('#diffBtn', el).onclick = () => { sfx.ui(); G.diffSheet(this); }; $('#achBtn', el).onclick = () => { sfx.ui(); this.tab = 'chal'; this.m5seg = 'ach'; this.hideout(); };
     app.story?.decorate(el);
     $('#ward', el).onclick = () => { unlock(); sfx.ui(); this.wardrobe.open(this.tab === 'gun' ? 'weapon' : null); };
-    for (const k of got) setTimeout(() => this.toast(`새 꾸미기: ${COS[k].name} — 옷장에서 입어 봐요`, 'good'), 300);
+    if (got.length) M5.pop(got.map(k => ({ kind: 'chal', icon: '👕', group: 'cos', head: '새 꾸미기', name: COS[k].name, sub: '옷장에서 입어 봐요' }))); /* M6-A: 아래 알림 대신 위쪽 알림 줄(업적과 같은 줄 · 여럿이면 한 장) */
     app.lookChanged?.();
     const body = $('#tabbody', el); this[{ fac: 'tabFac', gun: 'tabGun', gear: 'tabGear', shop: 'tabShop', stash: 'tabStash', quest: 'tabQuest', chal: 'tabChal' }[this.tab] || 'tabFac'](body);
     if (this._scroll?.[this.tab]) body.scrollTop = this._scroll[this.tab]; body.onscroll = () => { (this._scroll ||= {})[this.tab] = body.scrollTop; if (!this.fold && body.scrollTop > 12) this.setFold(el, true); };
@@ -218,7 +220,7 @@ export class UI {
     /* 지도 고르기 (v0.4) — 쓰러진 가방이 있으면 그 지도로 고정 */
     const open = E.openMaps(S); let mk = S.corpse ? (S.corpse.map || 'ware') : open.includes(S.mapSel) ? S.mapSel : 'ware'; this.mapKey = mk; const MP = MAPS[mk];
     const lockQ = m => QUESTS.findIndex(q => q.id === MAPS[m].unlock) + 1;
-    const mapRow = MAP_KEYS.map(m => { const on = open.includes(m); return `<button class="mapbtn m-${m} ${m === mk ? 'on' : ''} ${on ? '' : 'locked'}" data-m="${m}" ${S.corpse && m !== mk ? 'disabled' : ''}><span>${MAPS[m].icon}</span><b>${MAPS[m].name}</b><small>${on ? (m === 'ware' ? '기본' : '열림') : MAPS[m].lock || `의뢰 ${lockQ(m)}에서 열려요`}</small></button>`; }).join('');
+    const mapRow = MAP_KEYS.map(m => { const on = open.includes(m); return `<button class="mapbtn m-${m} ${m === mk ? 'on' : ''} ${on ? '' : 'locked'}" data-m="${m}" ${S.corpse && m !== mk ? 'disabled' : ''}><span>${MAPS[m].icon}</span><b>${MAPS[m].short || MAPS[m].name}</b><small>${on ? (m === 'ware' ? '기본' : '열림') : '🔒 잠김'}</small></button>`; }).join(''); /* M6-A: 지도 6 — 칩은 짧은 이름 · 잠김 사유는 누르면 알림 (긴 이름이 서로 겹치던 것) */
     const exitTxt = m => m === 'gate' ? '승강로 승강기(늘 열림 · 물러나기) · 꼭대기 구조 보트(파수를 멈추면)' /* M5 통합: 대수문은 출구 둘 (gate.js) */ : m === 'lab' ? `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}(관제 터미널 2곳 승인)` : m === 'tunnel' ? `${MP.exits.early}(물 닿으면 잠김) · ${MP.exits.power}(전원) · ${MP.exits.sub}` : m === 'harbor' ? `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}(신호탄 → 7초)` : `${MP.exits.early}(3분) · ${MP.exits.power}(전원) · ${MP.exits.sub}`;
     const el = h('div', 'prep', `
       <header class="topbar"><button class="back" id="back">‹</button><div class="brand"><b>출격 준비</b><small>${MP.name} · ${fmt(RAID.time)} 안에 탈출</small></div><div class="money">${shell(S.shells)}</div></header>
@@ -251,7 +253,7 @@ export class UI {
     $('#back', el).onclick = () => { sfx.ui(); this.hideout(); };
     $('#condInfo', el) && ($('#condInfo', el).onclick = () => { sfx.ui(); const bx = $('#condBox', el); bx.hidden = !bx.hidden; });
     $('#prepMore', el).onclick = () => { sfx.ui(); this.prepOpen = !this.prepOpen; this.prep(); if (this.prepOpen) requestAnimationFrame(() => $('#prepDet', this.root)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }; /* 검수 M4 Top 5: 장비 · 소모품 · 안전 칸은 접어 둠 */
-    el.querySelectorAll('.mapbtn').forEach(b => b.onclick = () => { const m = b.dataset.m; if (!open.includes(m)) { sfx.empty(); return this.toast(`의뢰 ${lockQ(m)} '${QUESTS[lockQ(m) - 1].name}'을 끝내면 열려요`, 'soft'); } if (S.corpse) return; S.mapSel = m; save(); sfx.ui(); this.prep(); });
+    el.querySelectorAll('.mapbtn').forEach(b => b.onclick = () => { const m = b.dataset.m; if (!open.includes(m)) { sfx.empty(); return this.toast(MAPS[m].lock ? `${MAPS[m].name} — ${MAPS[m].lock}` : `의뢰 ${lockQ(m)} '${QUESTS[lockQ(m) - 1].name}'을 끝내면 열려요`, 'soft'); } if (S.corpse) return; S.mapSel = m; save(); sfx.ui(); this.prep(); });
     BM.bindInsure(el, () => this.prep()); BM.bindSortie(el, () => this.prep());
     G.bindAmmo(this, el, () => this.prep()); G.bindPrepGoal(this, el, () => this.prep()); $('#diffBtn', el) && ($('#diffBtn', el).onclick = () => { sfx.ui(); G.diffSheet(this, () => this.prep()); });
     $('#sortie', el).onclick = () => {
@@ -265,6 +267,7 @@ export class UI {
   /* ───────── 전투 HUD ───────── */
   raidStart(R) {
     this.clear(); this.R = R; this.root.className = 'scr-raid'; this.top.clear(); this._praiseT = 0;
+    M5.holdPops(); $('#toasts')?.replaceChildren(); /* M6-A 알림 한 줄: 은신처에서 뜬 업적 · 꾸미기 카드 · 아래 알림은 판으로 안 가져감 (결과 · 은신처에서 이어서) */
     const el = h('div', 'raidui', `
       <div class="top"><div class="hpbox"><div class="hp"><i id="hpf"></i><span id="hpt"></span></div><div class="st"><i id="stf"></i></div><div class="wt" id="wt"><i></i><span></span></div></div>
         <div class="tcol"><div class="timer" id="timer">7:00</div><div class="zone" id="zone"></div></div><div class="val" id="val"></div></div>
@@ -363,14 +366,16 @@ export class UI {
     const gp = R.gen.pos; const lost = R.elapsed > RAID.earlyClose - 30 && !R.power;
     if (!R.power && (R.L.hints || lost || R.zone >= 2)) targets.push({ raw: gp, t: '발전기', c: lost ? 'gen hot' : 'gen' });
     if (R.L.hints && !R.vaultOpened) { const v = R.P.rooms.find(r => r.id === R.P.vault); targets.push({ raw: { x: v.x0 + RS2, z: v.z0 + RS2 }, t: '금고실', c: 'co' }); }
+    for (const m of R.mods || []) m.marks?.(targets); /* M6-C 판 중 사건 자리 (happen.js) */
     if (R.L.pet?.sniff) { let best = null, bd = 30; for (const c of R.containers) { if (c.searched || (c.best || 0) < 70) continue; const d = c.pos.distanceTo(R.pl.pos); if (d < bd) { bd = d; best = c; } } if (best) targets.push({ p: best.pos, t: '몽이: 여기 좋은 냄새!', c: 'pet' }); }
+    if (DUCK.on) { const pk = pickTargets(R, targets, R.duck?.guide); targets.length = 0; targets.push(...pk); } /* 시안용: 급할 때 하나 · 평소 2개까지 */
     const v = this._v || (this._v = R.pl.pos.clone());
     /* 위쪽 무전 · 사건 띠 · 보스 체력 줄이 떠 있으면 그 아래로 비켜남 (검수 M3 Top 7) */
     const placed = []; const blocks = ['#radio.on', '#evt.show', '#bossbar.show'].map(s => document.querySelector(s)?.getBoundingClientRect()).filter(r => r && r.height);
     const ctl = ['#stick', '#bFire', '#bRoll', '#bBag', '#bAct', '#bMed', '#ammo'].map(s => document.querySelector(s)?.getBoundingClientRect()).filter(r => r && r.height && r.top > H * 0.45);
     const yMax = Math.min(H - 284, ctl.length ? Math.min(...ctl.map(r => r.top)) - 30 : H); /* 390×844 → y ≤ 560 */
     for (const tg of targets) {
-      const src = tg.raw || tg.p; v.set(src.x, 1, src.z); const d = Math.round(Math.hypot(src.x - R.pl.pos.x, src.z - R.pl.pos.z)); v.project(cam); let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
+      const src = tg.raw || tg.p; v.set(src.x, 1, src.z); const d = tg.dist ?? Math.round(Math.hypot(src.x - R.pl.pos.x, src.z - R.pl.pos.z)); v.project(cam); let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
       const m = 34; if (x > m && x < W - m && y > 110 && y < H - 200 && v.z < 1) continue;
       const cx = W / 2, cy = H / 2; const ang = Math.atan2(y - cy, x - cx); const k = Math.min((W / 2 - m) / Math.abs(Math.cos(ang) || 1e-6), (H / 2 - 130) / Math.abs(Math.sin(ang) || 1e-6));
       x = cx + Math.cos(ang) * k; y = cy + Math.sin(ang) * k;
@@ -385,6 +390,7 @@ export class UI {
   }
   /* 시야: 원뿔 + 발밑 원 밖은 어둡게 (화면 좌표) · 정전 때 더 어둡게 · 조명 Lv2 는 원뿔 밖 적을 점으로 */
   drawVeil(R, cam) {
+    if (DUCK.on) { initVeil2(this); return duckVeil(this, R, cam); } /* 시안용 ?look=duck */
     const c = this.veil, x = this.vx; const W = c.width, H = c.height; x.clearRect(0, 0, W, H);
     if (!R || !R.alive) return;
     const sc = W / innerWidth; const pl = R.pl; const p = pl.pos.clone(); p.y = 0.5; p.project(cam);
@@ -533,7 +539,8 @@ export class UI {
     const box = $('#toasts'); const now = performance.now(); const seen = this._toastAt || (this._toastAt = new Map());
     const arm = el => { clearTimeout(el._a); clearTimeout(el._b); el._a = setTimeout(() => el.classList.add('out'), 1900); el._b = setTimeout(() => el.remove(), 2300); };
     const live = [...box.children].find(e => e._t === t && !e.classList.contains('out'));
-    if (live) { seen.set(t, now); live.classList.remove('again'); void live.offsetWidth; live.classList.add('again'); arm(live); this.toastLog?.push('blink'); return; }
+    if (live) { seen.set(t, now); if (now - (live._bl || 0) < 300) { arm(live); return; } /* M6-D: 연타 · 매 프레임 부름에 레이아웃 강제(offsetWidth)를 0.3초에 한 번만 */
+      live._bl = now; live.classList.remove('again'); void live.offsetWidth; live.classList.add('again'); arm(live); this.toastLog?.push('blink'); return; }
     if (this.root.className === 'scr-raid' && now - (seen.get(t) ?? -1e9) < 3000) { this.toastLog?.push('skip'); return; }
     seen.set(t, now); if (seen.size > 60) seen.delete(seen.keys().next().value);
     const el = h('div', 'toast ' + kind, t); el._t = t; box.appendChild(el); this.toastLog?.push('show');

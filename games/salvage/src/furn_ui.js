@@ -3,12 +3,13 @@
 //   그리기: 가구는 시설 소품과 같은 두 덩어리(home_fac.js extra) → 그리기 수 그대로 · 기본 깔개 · 안락의자는 그 자리에 가구가 있으면 숨김
 //   뒤로가기: 바로 전 화면(초소 보기 · 옷장 · 은신처)으로 — oad.js pushBack
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
-import { pushBack } from './oad.js?v=0.99.16';
-import { loadModels, MODELS } from './home_fac.js?v=0.99.16';
-import { COS } from './look.js?v=0.99.16';
-import { FURN, FURN_SPOTS, FURN_SPOT_KEYS, furnOf, needOf, canBuy, buyFurn, placeFurn, clearSpot, placed, furnStats } from './furn.js?v=0.99.16';
+import { S, save } from './save.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { pushBack } from './oad.js?v=0.99.17';
+import { loadModels, MODELS } from './home_fac.js?v=0.99.17';
+import { COS } from './look.js?v=0.99.17';
+import { thumbHtml } from './wardrobe.js?v=0.99.17'; /* M6-A 칸 그림 */
+import { FURN, FURN_SPOTS, FURN_SPOT_KEYS, furnOf, needOf, canBuy, buyFurn, placeFurn, clearSpot, placed, furnStats } from './furn.js?v=0.99.17';
 
 const $ = (s, r = document) => r.querySelector(s);
 /* 화면 전용 css (공용 style.css 를 안 건드림) */
@@ -72,7 +73,7 @@ export class FurnUI {
   items() { return Object.keys(FURN).filter(k => FURN[k].spot === this.spot); }
   grid() {
     const F = furnOf(S), cur = F.at[this.spot] || null, sel = this.sel ?? cur ?? 'base';
-    const card = (id, name, sw, tag, cls) => `<button class="fit ${cls}" data-k="${id}"><span class="fsw" style="background:${sw}"></span><b>${name}</b><small>${tag}</small></button>`;
+    const card = (id, name, sw, tag, cls) => `<button class="fit ${cls}" data-k="${id}">${thumbHtml('furn', id, 40, sw, 'fsw') || `<span class="fsw" style="background:${sw}"></span>`}<b>${name}</b><small>${tag}</small></button>`;
     const P = FURN_SPOTS[this.spot];
     const html = [card('base', P.base ? '기본' : '비우기', '#3a434d', !cur ? '놓여 있음' : '', `${sel === 'base' ? 'try' : ''} ${!cur ? 'sel' : ''}`)];
     for (const k of this.items()) {

@@ -1,29 +1,31 @@
 // 출격 한 판 — 주인공 · 적 · 보스 · 사격(4종) · 투척 · 뒤지기 · 무게 · 구역 3단 · 잠긴 문 · 발전기 · 출구 조건 · 침수/정전 · 타이머 · 시야
 //  v0.4: 지도 3곳(침수 창고 · 밤의 항구 · 해저 터널) — 판마다 상태(폭풍/안개/맑은 밤 · 정전/급류/잔잔) · 등불 · 신호탄 보트 · 산소 · 물살 · 새 적 4 · 보스 2
 import * as THREE from 'three';
-import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.16';
-import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.16';
-import { mapOf } from './plan.js?v=0.99.16';
-import { prop, charClone } from './assets.js?v=0.99.16';
-import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.16'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
-import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.16';
-import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.16';
-import { sfx, ambience } from './audio.js?v=0.99.16';
-import { petInit, petTick } from './pet_raid.js?v=0.99.16'; /* M5-C 판 안 반려 */
-import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig, statusTick, onGunHit, anchorPull, ricochet, swarmFire } from './arms.js?v=0.99.16'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 · M5-C 무기 19 */
-import { AI, facOf } from './ai.js?v=0.99.16'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
-import { populate, chiefRoll } from './threat.js?v=0.99.16'; /* M4-A 위협 곡선 */
-import { abyssEnemy } from './abyss.js?v=0.99.16'; /* M5-B 깊은 물 */
-import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.16'; /* M4-A 새 적 5 */
-import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.16'; /* M4-A 검은 닻 두목 */
-import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.16';
-import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.16'; /* M4-B 심해 연구소 */
-import { gateStart, gateWind, gateAttack, GATE_KIND } from './gate.js?v=0.99.16'; /* M5-A 6장 대수문 꼭대기 · 최종 보스 파수 */
-import { wxStart } from './weather.js?v=0.99.16'; /* M4-B 공통 판 상태 5 */
-import { rimify, rimHit } from './rim.js?v=0.99.16'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
-import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.16';
-import { HitNums } from './nums.js?v=0.99.16'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
-import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.16'; /* M3-B 가라앉은 공장 */
+import { DUCK } from './look_duck.js?v=0.99.17'; /* 시안용 ?look=duck */
+import { ITEMS, LOOT_TABLE, PLAYER, ENEMIES, RAID, ZONES, EXITS, WEIGHT, VKEY_CHANCE, MAPS, CONDS, O2, CURRENT, LAMP, BOSS, VARIANTS } from './data.js?v=0.99.17';
+import { plan, build, RS, LOOT_MODEL, LOOT_SCALE, rng, rollLoot, zoneOfRow, ROWS } from './map.js?v=0.99.17';
+import { mapOf } from './plan.js?v=0.99.17';
+import { prop, charClone } from './assets.js?v=0.99.17';
+import { enemyBody, enemyTick, bossVis, glowSprite, weakPoint } from './enemy3d.js?v=0.99.17'; /* v0.5.x 적 · 보스 전용 모델 (없으면 아래 예전 모델) */
+import { makeHero, setWeapon, tailWag, HERO_SCALE } from './hero.js?v=0.99.17';
+import { mkBag, mkItem, autoAdd, bagValue, bagWeight, bagKeys, remove } from './inv.js?v=0.99.17';
+import { sfx, ambience } from './audio.js?v=0.99.17';
+import { petInit, petTick } from './pet_raid.js?v=0.99.17'; /* M5-C 판 안 반려 */
+import { swing, zap, armsTick, ammoMul, waterMul, flarePools, lob, shotSig, fireFeel, hitFeel, hitSig, statusTick, onGunHit, anchorPull, ricochet, swarmFire } from './arms.js?v=0.99.17'; /* M3-A 무기 10 · 탄약 3 · v0.6.1 손맛 · M5-C 무기 19 */
+import { AI, facOf } from './ai.js?v=0.99.17'; /* M3-B 진영 · 엄폐 · 무리 · M4-A 2단계 */
+import { populate, chiefRoll } from './threat.js?v=0.99.17'; /* M4-A 위협 곡선 */
+import { abyssEnemy } from './abyss.js?v=0.99.17'; /* M5-B 깊은 물 */
+import { FOE, PRIM, foeBody, foeAttack, foeTick, foeKill } from './foes.js?v=0.99.17'; /* M4-A 새 적 5 */
+import { chiefStart, chiefTick, chiefWind, chiefAttack, chiefDown, chiefDispose } from './chief.js?v=0.99.17'; /* M4-A 검은 닻 두목 */
+import { BIG_HIT, TELE_MIN, AI2 } from './data/enemies.js?v=0.99.17';
+import { labStart, labExitDeco, labAttack, labWind, motherWind, labLook, LAB_KIND } from './lab.js?v=0.99.17'; /* M4-B 심해 연구소 */
+import { gateStart, gateWind, gateAttack, GATE_KIND } from './gate.js?v=0.99.17'; /* M5-A 6장 대수문 꼭대기 · 최종 보스 파수 */
+import { wxStart } from './weather.js?v=0.99.17'; /* M4-B 공통 판 상태 5 */
+import { rimify, rimHit } from './rim.js?v=0.99.17'; /* v0.7.1 검수 M4 Top 1 · 3 진영 색 림 빛 · 큰 적 맞음 틴트 */
+import { WEATHER, condFor, wxFor, mergeWx, forecast } from './data/weather.js?v=0.99.17';
+import { HitNums } from './nums.js?v=0.99.17'; /* 피해 숫자 합치기 · 막힘 방패 (검수 M3 Top 6) */
+import { factoryStart, factoryPlayer, factoryTick, startRide, callCrane, exitDeco, factoryLook, smelterWind, smelterAttack, clearRain } from './factory.js?v=0.99.17'; /* M3-B 가라앉은 공장 */
+import { hazard } from './a11y.js?v=0.99.17'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tmp = V(), tmp2 = V(), tmp3 = V();
@@ -208,11 +210,12 @@ export class Raid {
   /* 매 프레임 빛 세기: 번개 · 정전(터널 = 붉은 비상등) · 선장의 등불 끄기 */
   updateLook(dt) {
     const lt = this.lights, b = this.lookBase; if (!lt || !b) return; const sc = this.scene;
-    const darkK = this.dark > 0 ? (this.map === 'tunnel' ? 0.55 : 0.6) : 1; const bolt = this.flash > 0 ? 3.2 * (this.flash / 0.25) : 0;
+    const darkK = this.dark > 0 ? (DUCK.on ? 0.72 : this.map === 'tunnel' ? 0.55 : 0.6) : 1; /* 시안용: 정전도 형태는 보이게 (긴장은 색 · 밝기로) */ const bolt = this.flash > 0 ? 3.2 * (this.flash / 0.25) : 0;
     const lift = this.dark > 0 || (this.night || 0) >= 0.5 ? 1 : (this.liftK || 1); /* v0.7.1 검수 M4 Top 3 */
     lt.hemi.intensity = b.hemi[0] * darkK * lift * (this.douse > 0 ? 0.55 : 1) + bolt; lt.sun.intensity = b.sun[0] * darkK * lift + bolt * 0.6;
     if (this.map === 'tunnel' || this.map === 'factory' || this.map === 'lab') lt.hemi.color.setHex(this.dark > 0 ? 0xc87a70 : b.hemi[1]);
     const f = this.C.fog || [22, 48]; sc.fog.near = f[0] * (this.dark > 0 ? 0.92 : 1); sc.fog.far = f[1] * (this.dark > 0 ? 0.92 : 1);
+    if (DUCK.on) { sc.fog.near += DUCK.fogAdd; sc.fog.far += DUCK.fogAdd * 1.15; } /* 시안용: 카메라가 멀어진 만큼 안개도 뒤로 */
   }
   makeEnemy(e, i) {
     const base = ENEMIES[e.kind]; const VR = VARIANTS[this.map]?.[e.kind]; const D = VR ? { ...base, name: VR.name, sight: base.sight * (VR.sight || 1), speed: base.speed * (VR.speed || 1) } : base;
@@ -680,8 +683,8 @@ export class Raid {
   /* 보스 보이는 모델 묶음: 화면 배율만 (판정 · 예고 원 · 이동은 en.root/en.pos 그대로) */
   visGroup(root, kind) { const g = new THREE.Group(); g.scale.setScalar(bossVis(kind)); root.add(g); return g; }
   /* 경고 표시: 바닥 원(warnDisc) · 바닥 줄(warnLine) — 예고 시간 동안 커지며 깜빡임 */
-  warnDisc(e, r, color, follow = false) { e.teleT0 = this.t; const m = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.setScalar(0.5); this.root.add(m); e.warn = m; e.warnR = r; e.warnFollow = follow; }
-  warnLine(e, len, w, color) { e.teleT0 = this.t; const m = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide })); m.userData.line = true; m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, e.lockFace, 0); m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.set(w * 0.4, len, 1); this.root.add(m); e.warn = m; e.warnW = w; e.warnFollow = false; }
+  warnDisc(e, r, color, follow = false) { e.teleT0 = this.t; const m = new THREE.Mesh(discGeo, hazard(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false }))); m.rotation.x = -Math.PI / 2; m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.setScalar(0.5); this.root.add(m); e.warn = m; e.warnR = r; e.warnFollow = follow; }
+  warnLine(e, len, w, color) { e.teleT0 = this.t; const m = new THREE.Mesh(lineGeo, hazard(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }))); m.userData.line = true; m.rotation.order = 'YXZ'; m.rotation.set(-Math.PI / 2, e.lockFace, 0); m.position.set(e.pos.x, 0.22, e.pos.z); m.scale.set(w * 0.4, len, 1); this.root.add(m); e.warn = m; e.warnW = w; e.warnFollow = false; }
   /* M4-A: 일반 적 큰 공격 예고 — 근접 = 앞 원 · 던지기/쏘기 = 겨냥 줄 */
   bigTele(e, dist, ang) { const D = e.D;
     if (D.atk === 'melee') { this.warnDisc(e, Math.max(1.6, D.range + 0.35), 0xff6a3a, false); e.warn.position.set(e.pos.x + Math.sin(ang) * D.range * 0.6, 0.22, e.pos.z + Math.cos(ang) * D.range * 0.6); }

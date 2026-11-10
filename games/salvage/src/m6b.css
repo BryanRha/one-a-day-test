@@ -1,0 +1,8 @@
+/* M6-B 최종 보스전 화면 (gate.js 가 #frame 에 m6boss 를 붙임 — 파수가 깨어나 싸우는 동안만)
+   · 카메라 기준점이 파수 쪽으로 옮겨져 파수는 화면 위 18~32% 에 섬 → 위 HUD 를 얇게 모음: 보스 체력 줄을 위 띠 바로 밑 · 사건 띠(.evt) · 무전(.radio)은 그 밑 한 줄(최대 2줄)
+   · 파수 머리가 HUD 아래로 내려옴 (검수 M5 '파수가 체력 줄 · 무전 상자 밑에 가림') — m6b_shots.mjs 가 머리 ↔ HUD 아래 끝 거리를 잼 */
+#frame.m6boss .bossbar { top: calc(env(safe-area-inset-top) + 62px); width: 60%; gap: 1px; }
+#frame.m6boss .bossbar div { height: 7px; }
+#frame.m6boss .evt, #frame.m6boss .radio { top: calc(env(safe-area-inset-top) + 92px); max-width: 94%; padding: 4px 10px; font-size: 12.5px; line-height: 1.3; border-radius: 10px;
+  word-break: keep-all; }
+#frame.m6boss .radio span { font-size: 12.5px; }

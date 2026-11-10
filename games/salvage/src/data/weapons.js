@@ -35,23 +35,23 @@ export const WEAPONS = {
    *  anchor 닻 발사포(대형 · 끌어 모음 + 멈칫) · scatter 물보라 산탄(산탄 · 한 번 튕김) · rocket 불꽃 다연장(특수 · 유도 3발 · 작은 터짐)
    *  hook 인양 갈고리(근접 · 길게 찌르고 끌어옴) · oar 수달 노(근접 · 한 바퀴 휘둘러 밀어냄 · 물속에서 빠름) */
   twin:    { name: '쌍발 작살 권총', short: '쌍발', role: '두 발 동시 · 가까운 적 둘', dmg: 9, pellets: 2, rate: 3.4, mag: 8, reload: 0.9, range: 11, spread: 0.05, add: 0, max: 0.05, rec: 1, crit: 0.10, knock: 1.8, noise: 11, tier: 1, bench: 3, color: '#e0b860', slots: ALL, fam: 'pistol',
-             desc: '총열 둘에서 작살이 같이 나가요. 가볍고 장전이 빨라요.', cost: { shells: 560, bolt: 16, spring: 3 } },
+             desc: '총열 둘에서 작살이 같이 나가요. 가볍고 장전이 빨라요.', cost: { shells: 380, bolt: 14, spring: 2 } },
   net:     { name: '그물 발사기', short: '그물', role: '묶어서 느리게 · 무리 끊기', dmg: 18, rate: 1.2, mag: 4, reload: 1.8, range: 11, spread: 0.02, add: 0.02, max: 0.06, rec: 0.6, crit: 0.02, knock: 0.6, noise: 8, tier: 2, bench: 4, color: '#c9b98a', slots: ALL, fam: 'special',
-             net: { r: 2.4, slow: 0.4, t: 2.6 }, ctrl: 0.78, desc: '맞은 자리에 그물이 펼쳐져 둘레 적이 2.6초 동안 느려져요(보스는 덜).', cost: { shells: 1100, cloth: 16, bolt: 12, rope: 3, spring: 2 } },
+             net: { r: 2.4, slow: 0.4, t: 2.6 }, ctrl: 0.78, desc: '맞은 자리에 그물이 펼쳐져 둘레 적이 2.6초 동안 느려져요(보스는 덜).', cost: { shells: 700, cloth: 14, bolt: 12, spring: 2 } },
   crossbow:{ name: '작살 석궁', short: '석궁', role: '조용한 저격 · 출혈', dmg: 46, rate: 1.1, mag: 6, reload: 1.5, range: 20, spread: 0.005, add: 0.03, max: 0.08, rec: 0.4, crit: 0.22, knock: 2.6, noise: 2, tier: 2, bench: 4, color: '#8a7a5a', slots: ALL, fam: 'precision',
-             bleed: { dps: 7, t: 4 }, desc: '소리가 거의 없어요. 박힌 작살이 4초 동안 더 아프게 해요.', cost: { shells: 1250, bolt: 16, wire: 8, lens: 1, spring: 2 } },
+             bleed: { dps: 7, t: 4 }, desc: '소리가 거의 없어요. 박힌 작살이 4초 동안 더 아프게 해요.', cost: { shells: 800, bolt: 14, wire: 8, lens: 1, spring: 2 } },
   hose:    { name: '고압 물대포', short: '물대포', role: '밀어내기 · 적심(전기 ×1.25)', dmg: 5, rate: 12, mag: 70, reload: 2.6, range: 7.5, spread: 0.1, add: 0, max: 0.1, rec: 1, crit: 0.02, knock: 3.4, noise: 9, tier: 3, bench: 4, color: '#6fc8ff', slots: ALL, fam: 'special',
-             wet: { t: 4, mul: 1.25 }, ctrl: 0.8, desc: '물줄기로 적을 밀어내요. 젖은 적은 4초 동안 전기에 25% 더 아파요.', cost: { shells: 1900, wire: 14, bolt: 18, o2: 2, spring: 3 } },
+             wet: { t: 4, mul: 1.25 }, ctrl: 0.8, desc: '물줄기로 적을 밀어내요. 젖은 적은 4초 동안 전기에 25% 더 아파요.', cost: { shells: 1150, wire: 12, bolt: 16, glass: 2, spring: 2 } },
   anchor:  { name: '닻 발사포', short: '닻', role: '끌어 모으기 · 멈칫', dmg: 68, rate: 0.7, mag: 2, reload: 2.3, range: 14, spread: 0.01, add: 0.03, max: 0.06, rec: 0.5, crit: 0.08, knock: 1, noise: 15, tier: 3, bench: 4, color: '#7a8a99', slots: ALL, fam: 'heavy',
-             pull: { r: 3.6, stun: 0.6, mul: 0.4 }, ctrl: 0.85, desc: '박힌 닻이 둘레 적을 끌어당겨 모으고 잠깐 멈추게 해요.', cost: { shells: 2400, bolt: 32, wire: 14, gear: 2, core: 1 } },
+             pull: { r: 3.6, stun: 0.6, mul: 0.4 }, ctrl: 0.85, desc: '박힌 닻이 둘레 적을 끌어당겨 모으고 잠깐 멈추게 해요.', cost: { shells: 1500, bolt: 24, wire: 12, spring: 3, core: 1 } },
   scatter: { name: '물보라 산탄총', short: '물보라', role: '튕기는 산탄 · 무리', dmg: 7, pellets: 8, rate: 2.0, mag: 8, reload: 2.1, range: 8.5, spread: 0.24, add: 0, max: 0.24, rec: 1, crit: 0.05, knock: 3.6, noise: 15, tier: 3, bench: 4, color: '#bfe6f0', slots: ALL, fam: 'shotgun',
-             ricochet: { r: 4.2, mul: 0.45 }, desc: '조개껍데기 알이 맞으면 옆 적에게 한 번 튕겨요.', cost: { shells: 2100, bolt: 26, powder: 8, spring: 3, core: 1 } },
-  rocket:  { name: '불꽃 다연장', short: '불꽃', role: '유도 불꽃 3발 · 범위', dmg: 22, rate: 0.6, mag: 3, reload: 2.6, range: 15, spread: 0.02, add: 0, max: 0.02, rec: 1, crit: 0.05, knock: 2, noise: 16, tier: 3, bench: 5, color: '#ff6fa8', slots: ALL, fam: 'special',
-             swarm: { n: 3, r: 1.5 }, desc: '축제 불꽃 세 발이 가까운 적을 따라가 작게 터져요.', cost: { shells: 3600, powder: 24, pkeg: 4, chip: 2, core: 2 } },
+             ricochet: { r: 4.2, mul: 0.45 }, desc: '조개껍데기 알이 맞으면 옆 적에게 한 번 튕겨요.', cost: { shells: 1300, bolt: 22, powder: 8, spring: 3 } },
+  rocket:  { name: '불꽃 다연장', short: '불꽃', role: '유도 불꽃 3발 · 범위', dmg: 22, rate: 0.6, mag: 3, reload: 2.6, range: 15, spread: 0.02, add: 0, max: 0.02, rec: 1, crit: 0.05, knock: 2, noise: 16, tier: 3, bench: 4, color: '#ff6fa8', slots: ALL, fam: 'special',
+             swarm: { n: 3, r: 1.5 }, desc: '축제 불꽃 세 발이 가까운 적을 따라가 작게 터져요.', cost: { shells: 2200, powder: 18, pkeg: 3, chip: 2, core: 1 } },
   hook:    { name: '인양 갈고리', short: '갈고리', role: '근접 · 길게 찌르고 끌어옴', dmg: 30, rate: 1.5, mag: 0, reload: 0, range: 3.4, arc: 0.6, spread: 0, add: 0, max: 0, rec: 1, crit: 0.12, knock: 0, noise: 3, tier: 1, bench: 3, color: '#b08850', melee: true, slots: ['barrel', 'chamber', 'grip'], fam: 'melee',
-             hookPull: { d: 1.8, stun: 0.35, n: 2 }, ctrl: 0.88, desc: '긴 장대 끝 갈고리. 멀리서 찍어 내 앞으로 끌어와요.', cost: { shells: 640, bolt: 16, rope: 3 } },
+             hookPull: { d: 1.8, stun: 0.35, n: 2 }, ctrl: 0.88, desc: '긴 장대 끝 갈고리. 멀리서 찍어 내 앞으로 끌어와요.', cost: { shells: 420, bolt: 14, wire: 6 } },
   oar:     { name: '수달 노', short: '노', role: '근접 · 한 바퀴 휘두름 · 물속 빠름', dmg: 46, rate: 0.95, mag: 0, reload: 0, range: 2.5, arc: 6.283, spread: 0, add: 0, max: 0, rec: 1, crit: 0.08, knock: 7, noise: 4, tier: 2, bench: 4, color: '#c98a4a', melee: true, slots: ['barrel', 'chamber', 'grip'], fam: 'melee',
-             spin: { n: 5 }, water: { rate: 1.35 }, ctrl: 0.82, desc: '배 젓던 노를 한 바퀴 크게 휘둘러 둘레 적을 밀어내요. 물에선 더 빨라요.', cost: { shells: 1300, cloth: 14, bolt: 18, gear: 2 } },
+             spin: { n: 5 }, water: { rate: 1.35 }, ctrl: 0.82, desc: '배 젓던 노를 한 바퀴 크게 휘둘러 둘레 적을 밀어내요. 물에선 더 빨라요.', cost: { shells: 820, cloth: 12, bolt: 16, spring: 2 } },
 };
 export const WEAPON_KEYS = Object.keys(WEAPONS);
 /* M5-C 계열 6 + 근접 — 작업대 · 출격 준비 무기 고르기를 계열 줄로 접어 보여 줌(19개가 4줄 넘게 늘어나지 않게) */

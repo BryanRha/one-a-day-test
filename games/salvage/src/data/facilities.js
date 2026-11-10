@@ -71,8 +71,8 @@ FACILITIES.forge = { name: '정밀 공방', icon: '⚒️', tint: '#d9a24a', who
     { cost: { shells: 4800, bolt: 40, wire: 24, core: 2 },             time: 216000, txt: '무기 단련 ★2', star: 2, short: '단련 ★2' },
     { cost: { shells: 8400, bolt: 55, wire: 32, core: 2, motor: 1 },   time: 288000, txt: '무기 단련 ★3 · 무기대에 금빛 이름표', star: 3, short: '단련 ★3' } ] };
 FACILITIES.den = { name: '반려 쉼터', icon: '🐾', tint: '#8fc9a0', who: 'neuru', desc: '몽이 · 반디가 크는 곳', req: { fac: ['aquarium', 3] }, levels: [
-    { cost: { shells: 900, cloth: 14, herb: 10, glass: 4 },           time: 86400,  txt: '몽이 4단까지 (놀이 기구 · 쉼 바구니)', petCap: 4, short: '몽이 4단' },
-    { cost: { shells: 2600, cloth: 20, herb: 16, glass: 8 },          time: 162000, txt: '반디 수조 · 반디 2단까지', petCap: 4, bandiCap: 2, short: '반디 수조' },
-    { cost: { shells: 5600, cloth: 28, herb: 22, glass: 12, core: 1 }, time: 230400, txt: '몽이 5단 · 반디 3단까지', petCap: 5, bandiCap: 3, short: '몽이 5단' } ] };
+    { cost: { shells: 900, cloth: 14, herb: 10, glass: 4 },           time: 86400,  txt: '반디 2단까지 · 몽이 놀이 기구 · 쉼 바구니', short: '반디 2단' },
+    { cost: { shells: 2600, cloth: 20, herb: 16, glass: 8 },          time: 162000, txt: '반디 수조 · 반디 3단까지', short: '반디 3단' },
+    { cost: { shells: 5600, cloth: 28, herb: 22, glass: 12, core: 1 }, time: 230400, txt: '쉼터 완성 · 금빛 표식 (몽이 · 반디 다 큼)', short: '쉼터 완성' } ] };
 export const FAC_KEYS = Object.keys(FACILITIES);
 export const FAC_TOTAL = FAC_KEYS.reduce((s, k) => s + FACILITIES[k].levels.length, 0);

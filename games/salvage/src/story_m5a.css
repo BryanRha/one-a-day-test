@@ -1,5 +1,38 @@
 /* 수달 인양단 M5-A — 6장 · 엔딩 고르기 · 크레딧 · 엔딩 뒤 초소 꾸밈 · 조개 내기 버튼 (story_ui.js 가 붙임 · 공용 style.css 와 따로) */
-/* 엔딩 고르기: 파수의 질문 — 열린 길이 세로로 (가장 밝은 등불 맨 위) */
+/* 엔딩 고르기 (M6-A 전체 화면 장면): 대수문 꼭대기 — 흐린 cut_6_3 + 렌즈 빛 · 떠오르는 이름표 빛 · 위 '지시를 바랍니다' · 바닥에 세 등불 */
+.endscene { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #070b10; animation: esIn .6s ease-out; transition: opacity .4s; }
+.endscene.out { opacity: 0; }
+@keyframes esIn { from { opacity: 0; } }
+.es-bg { position: absolute; inset: -12px; background: #0b1218 center 30% / cover no-repeat; filter: blur(3px) brightness(.5) saturate(.85); transform: scale(1.06); animation: esKb 18s ease-in-out infinite alternate; }
+@keyframes esKb { to { transform: scale(1.12) translateY(-8px); } }
+.endscene::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 8, 12, .55), rgba(4, 8, 12, .05) 30%, rgba(4, 8, 12, .2) 50%, rgba(4, 8, 12, .92) 78%); pointer-events: none; }
+.es-lens { position: absolute; left: 34%; top: 36%; width: 70vw; max-width: 380px; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255, 200, 110, .38), rgba(255, 170, 80, .1) 40%, transparent 68%); mix-blend-mode: screen; animation: esLens 3.2s ease-in-out infinite; pointer-events: none; z-index: 1; }
+@keyframes esLens { 50% { opacity: .55; transform: translate(-50%, -50%) scale(.92); } }
+.es-motes { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.es-motes i { position: absolute; bottom: -10px; width: 5px; height: 5px; border-radius: 50%; background: #ffd58a; box-shadow: 0 0 8px 2px rgba(255, 200, 110, .55); opacity: 0; animation: esMote 10s linear infinite; }
+@keyframes esMote { 10% { opacity: .85; } 80% { opacity: .5; } to { transform: translateY(-78vh) translateX(14px); opacity: 0; } }
+.es-top { position: relative; z-index: 2; padding: calc(env(safe-area-inset-top) + 44px) 20px 0; text-align: center; display: flex; flex-direction: column; gap: 8px; animation: esTop 1s .2s both; }
+@keyframes esTop { from { opacity: 0; transform: translateY(-10px); } }
+.es-top small { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #ffcf8a; }
+.es-top b { font-size: 28px; font-weight: 900; letter-spacing: 3px; color: #fff1d8; text-shadow: 0 0 22px rgba(255, 180, 90, .55), 0 2px 6px #000; }
+.es-floor { position: relative; z-index: 2; padding: 0 12px calc(env(safe-area-inset-bottom) + 18px); display: flex; flex-direction: column; gap: 10px; }
+.endscene .endto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; width: 100%; margin: 0; }
+.esl { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 12px; min-height: 44px; border-radius: 16px; text-align: center; color: #f4efe4; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 16%, rgba(10, 16, 22, .55)), rgba(10, 16, 22, .82)); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); box-shadow: 0 0 0 0 transparent; animation: esRise .7s cubic-bezier(.2, .9, .3, 1.15) backwards; transition: transform .25s, opacity .3s, box-shadow .3s; }
+.esl:nth-child(1) { animation-delay: .7s; } .esl:nth-child(2) { animation-delay: 1.15s; } .esl:nth-child(3) { animation-delay: 1.6s; }
+@keyframes esRise { from { opacity: 0; transform: translateY(60px); } to { opacity: 1; transform: none; } }
+.esl .eslamp { width: 46px; height: 64px; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--c) 70%, transparent)); }
+.esl .flame { transform-origin: 30px 52px; animation: esFlame 1.6s ease-in-out infinite; }
+@keyframes esFlame { 50% { transform: scale(.88, .94); opacity: .85; } }
+.esl b { font-size: 14px; font-weight: 800; color: color-mix(in srgb, var(--c) 70%, #fff); word-break: keep-all; }
+.esl span { font-size: 13px; line-height: 1.4; word-break: keep-all; }
+.esl small { font-size: 12px; line-height: 1.35; color: #c9c3b6; word-break: keep-all; }
+.esl.top { box-shadow: 0 0 22px -2px color-mix(in srgb, var(--c) 60%, transparent); }
+.esl.off { border-color: rgba(255, 255, 255, .12); background: rgba(10, 16, 22, .7); }
+.esl.off .eslamp { filter: none; } .esl.off .flame { animation: none; } .esl.off b { color: #9aa4ad; } .esl.off span { color: #9aa4ad; }
+button.esl:active { transform: scale(.97); }
+.endscene.picked .esl { opacity: .3; } .endscene.picked .esl.pick { opacity: 1; transform: translateY(-10px) scale(1.04); box-shadow: 0 0 34px 2px color-mix(in srgb, var(--c) 75%, transparent); }
+.es-hint { text-align: center; font-size: 12px; color: rgba(255, 240, 220, .6); animation: esTop 1s 2.2s both; }
+/* (옛) 엔딩 고르기 카드 — 지금은 쓰지 않음 */
 .endpick { max-width: 350px; gap: 8px; }
 .endpick > b { font-size: 21px; color: #ffe2b0; letter-spacing: 1px; }
 .endto { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; }
@@ -19,11 +52,19 @@
 .crroll section:first-child p { color: #ffe2b0; font-size: 16px; }
 .crroll .crlast { margin-top: 90px; }
 .crroll .crlast b { display: block; font-size: 18px; line-height: 1.6; color: #ffe8c2; text-shadow: 0 0 18px rgba(255, 190, 110, .45); }
-.crtap { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 11px; color: rgba(255, 255, 255, .45); }
+.crtap { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 12px; color: rgba(255, 255, 255, .5); opacity: 0; transition: opacity .6s; }
+/* M6-A: 크레딧 글은 안내 자리 위의 창 안에서만 (위 · 아래 흐려짐) — 안내 · 건너뛰기와 겹치지 않게 */
+.crview { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 18px); bottom: calc(env(safe-area-inset-bottom) + 46px); overflow: hidden; -webkit-mask-image: linear-gradient(180deg, transparent, #000 9%, #000 86%, transparent); mask-image: linear-gradient(180deg, transparent, #000 9%, #000 86%, transparent); }
+.crtap.on { opacity: 1; }
+#story.crediting .st-skip, #story.ending .st-skip { display: none; }
 /* 엔딩 뒤 초소 꾸밈 (창 여섯 · 세 등불 아래 한 줄) */
 .enddeco { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 4px; pointer-events: none; }
 .enddeco svg { width: min(220px, 70vw); height: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }
 .enddeco small { font-size: 11px; color: #ffd9a0; background: rgba(8, 16, 22, .55); padding: 2px 8px; border-radius: 10px; }
+/* M6-A: 창 · 등불 옆(화면 밖)으로 밀려나던 것 → 초소 판 아래 한 줄로 낮게 (layoutcheck 잘림) */
+.post:has(.enddeco) { flex-wrap: wrap; row-gap: 2px; }
+.post .enddeco { flex: 1 0 100%; flex-direction: row; justify-content: center; gap: 8px; margin: 0; }
+.post .enddeco svg { width: auto; height: 22px; }
 .enddeco.end-lamp svg ellipse { animation: enlamp 2.6s ease-in-out infinite; }
 .enddeco.end-lamp svg g:nth-child(2n) ellipse { animation-delay: -1.3s; }
 @keyframes enlamp { 50% { opacity: .78; } }

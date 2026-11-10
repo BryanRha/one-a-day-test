@@ -6,11 +6,11 @@
 //  · 독수: 초록 독 웅덩이 → 독 게이지(쌓이면 초마다 아픔 · 아주 천천히 빠짐) → 연고 · 붕대 · 해독제 · 소독 샤워로 씻음 — 해독 필터 = 1/3 · 빨리 빠짐
 //  모든 큰 피해 예고 규칙: 판 상태 피해는 게이지가 먼저 보이고(30 · 55 경고), 작은 피해만 천천히 (hurtRaw · 한 번에 3 이하)
 import * as THREE from 'three';
-import { WEATHER, WX_OF, COLD, TOXIC, LAMP_GEAR, wxPlan } from './data/weather.js?v=0.99.16';
-import { ITEMS } from './data.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
-import { glowSprite } from './enemy3d.js?v=0.99.16';
-import { flarePools } from './arms.js?v=0.99.16';
+import { WEATHER, WX_OF, COLD, TOXIC, LAMP_GEAR, wxPlan } from './data/weather.js?v=0.99.17';
+import { ITEMS } from './data.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { glowSprite } from './enemy3d.js?v=0.99.17';
+import { flarePools } from './arms.js?v=0.99.17';
 
 const tv = new THREE.Vector3(), tm = new THREE.Matrix4(), tq = new THREE.Quaternion(), ts = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 let ICE_T = null, TOX_T = null;
@@ -34,15 +34,16 @@ function toxTex() {
 export function wxStart(R) {
   const wx = R.wx, W = WEATHER[wx]; const L = R.L; const mg = L.mgear || null;
   R.wxVis = (mg === 'hlamp' && (wx === 'night' || wx === 'fog' || R.night > 0.5)) ? LAMP_GEAR.vision : 1; R.wxDark = mg === 'hlamp' ? LAMP_GEAR.dark : 1;
+  if (R.T?.abyss) abyssFx(R); /* M6-A 깊은 물 판 화면 층 */
   if (!W) return;
   /* 판 상태 띠 (지도 상태 띠 다음 · 지도 상태가 곧 날씨면 그것으로 끝) */
-  if (!WX_OF[R.cond]) setTimeout(() => R.alive && R.ui.event(`${W.icon} ${W.name} · ${W.band}${W.gear && mg === W.gear ? ' — 장비 덕에 덜해요' : ''}`, 'warn cond'), R.map === 'ware' ? 2900 : 3100); /* v0.7.1: 날씨 카드 뒤로 */
+  /* (M6-A: 3초 뒤 같은 말 띠는 뺌 — 날씨 띠 하나가 위쪽 한 줄 대기열에서 나옴 · 지도 상태가 곧 날씨면 판 상태 띠가 그 말) */
   wxFx(R, wx, W, mg); /* v0.7.1 검수 M4 Top 4: 판 시작 날씨 카드 + 판 내내 보이는 화면 층 */
   const P = R.P, plan = wxPlan(P, wx, R.opt.seed); const S = R.WX = { wx, plan, temp: COLD.max, poison: 0, hurtT: 0, breathT: 1, told: {}, hud: null, suit: mg === 'drysuit', filter: mg === 'filter' };
   const own = m => { R.ownMats.push(m); return m; };
   if (wx === 'cold') {
     if (plan.ice.length) { const g = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2); const m = own(new THREE.MeshLambertMaterial({ map: iceTex(), transparent: true, opacity: 0.95, depthWrite: false, emissive: 0x3a6a80, polygonOffset: true, polygonOffsetFactor: -3 }));
-      const im = new THREE.InstancedMesh(g, m, plan.ice.length); plan.ice.forEach((c, i) => im.setMatrixAt(i, tm.compose(tv.set((c.x0 + c.x1) / 2, 0.075, (c.z0 + c.z1) / 2), tq.setFromAxisAngle(up, 0), ts.set(c.x1 - c.x0, 1, c.z1 - c.z0)))); im.renderOrder = 1; im.receiveShadow = true; R.root.add(im); }
+      const im = new THREE.InstancedMesh(g, m, plan.ice.length); plan.ice.forEach((c, i) => im.setMatrixAt(i, tm.compose(tv.set((c.x0 + c.x1) / 2, 0.075, (c.z0 + c.z1) / 2), tq.setFromAxisAngle(up, 0), ts.set(c.x1 - c.x0, 1, c.z1 - c.z0)))); im.renderOrder = 1; im.receiveShadow = true; im.userData.own = true; /* M6-D 누수: 그림 재질(map)이라 raid.dispose 가 공유 기하로 보고 안 버렸음 → 한파 판마다 기하 1 늘던 것 */ R.root.add(im); }
     /* 온열 배관: 바닥 주황 창살 + 김 + 빛 */
     for (const h of plan.heat) { const g = new THREE.Group(); g.position.set(h.x, 0, h.z);
       const grate = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.85, 0.12, 14), own(new THREE.MeshLambertMaterial({ color: 0x3a2a24, flatShading: true }))); grate.position.y = 0.1; g.add(grate);
@@ -53,7 +54,7 @@ export function wxStart(R) {
   }
   if (wx === 'toxic') {
     if (plan.pools.length) { const g = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2); const m = own(new THREE.MeshBasicMaterial({ map: toxTex(), transparent: true, depthWrite: false }));
-      const im = new THREE.InstancedMesh(g, m, plan.pools.length); plan.pools.forEach((p, i) => im.setMatrixAt(i, tm.compose(tv.set(p.x, 0.1, p.z), tq.setFromAxisAngle(up, i * 1.3), ts.set(p.r, 1, p.r)))); im.renderOrder = 2; R.root.add(im); S.poolIM = im; }
+      const im = new THREE.InstancedMesh(g, m, plan.pools.length); plan.pools.forEach((p, i) => im.setMatrixAt(i, tm.compose(tv.set(p.x, 0.1, p.z), tq.setFromAxisAngle(up, i * 1.3), ts.set(p.r, 1, p.r)))); im.renderOrder = 2; im.userData.own = true; /* M6-D 누수 (위와 같음 · 독수) */ R.root.add(im); S.poolIM = im; }
     for (const sh of plan.showers) { const g = new THREE.Group(); g.position.set(sh.x, 0, sh.z);
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.8, 6), own(new THREE.MeshLambertMaterial({ color: 0xb8c4c4 }))); pole.position.y = 1.4; g.add(pole);
       const head = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.2, 0.18, 12), own(new THREE.MeshLambertMaterial({ color: 0xe0b23a }))); head.position.y = 2.8; g.add(head);
@@ -90,11 +91,19 @@ function wxFx(R, wx, W, mg) {
       else layer.innerHTML = '<i class="band b1"></i><i class="band b2"></i>';
       host.prepend(layer);
     }
-    card = document.createElement('div'); card.className = `wxcard wx-${wx}`; card.innerHTML = `<i>${W.icon}</i><b>${W.name}</b><span>${W.band}${soft ? ' — 장비 덕에 덜해요' : ''}</span>`; host.appendChild(card);
-    setTimeout(() => card?.remove(), 2600);
+    /* M6-A 알림 한 줄: 가운데 큰 카드(첫 교전 적을 가림) → 위쪽 한 줄 대기열(ui.top · 무전 다음 · 판 상태 띠 앞)에 작은 띠로 */
+    card = true; const evt = () => document.getElementById('evt');
+    if (!WX_OF[R.cond]) R.ui?.top?.push({ prio: 1.5, key: 'wx:' + wx, dur: 2.8, show: () => { const e = evt(); if (!e) return; e.innerHTML = `<i class="wxi">${W.icon}</i><b>${W.name}</b> · ${W.band}${soft ? ' — 장비 덕에 덜해요' : ''}`; e.className = `evt show wxband wx-${wx}`; }, hide: () => evt()?.classList.remove('show') });
   };
   R.mods.push({ name: 'wxfx', tick: () => { if (card) { if (layer && !layer.isConnected) document.querySelector('.raidui')?.prepend(layer); return; } const host = document.querySelector('.raidui'); if (host) mk(host); },
-    dispose: () => { layer?.remove(); card?.remove(); layer = null; } });
+    dispose: () => { layer?.remove(); layer = null; } });
+}
+/* M6-A 깊은 물 판: 가장자리 보라 비네트 + 떠오르는 어두운 입자 (날씨 층과 같은 방식 · 판 내내) */
+function abyssFx(R) {
+  let layer = null;
+  R.mods.push({ name: 'abyssfx', tick: () => { if (layer?.isConnected) return; const host = document.querySelector('.raidui'); if (!host) return;
+    layer ||= Object.assign(document.createElement('div'), { className: 'wxfx abyssfx', innerHTML: Array.from({ length: 10 }, (_, i) => `<b style="left:${3 + i * 10}%;animation-delay:${-(i * 1.13) % 9}s;animation-duration:${7 + (i * 3) % 5}s;--s:${0.6 + ((i * 7) % 6) / 7}"></b>`).join('') });
+    host.prepend(layer); }, dispose: () => { layer?.remove(); layer = null; } });
 }
 const inRect = (p, c) => p.x > c.x0 && p.x < c.x1 && p.z > c.z0 && p.z < c.z1;
 /* 움직임 전: 얼음 = 미끄러짐 · 체온 낮음 = 느려짐 */

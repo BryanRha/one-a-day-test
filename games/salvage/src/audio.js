@@ -3,16 +3,18 @@
 //  이름 목록 · 렌더 측정표 = docs/AUDIO.md · 미리듣기 = docs/audio_preview/ (v2 = *_v2.m4a)
 //  v2 (11-05): 마스터 = 가상 저음 + 중역 보강 → 묶음 압축 → 리미터 → 천장(−3dBFS) / 방 울림 4종(코드로 만든 IR · 지도 따라 바뀜)
 //              효과음마다 무작위 변주(높이 · 필터 · 세기 · 2ms 어긋남) · 발사음 = 몸통 + 터짐 + 중역 + 꼬리(방) + 기계음
-let ctx = null, master = null, sfxBus = null, musBus = null, ambBus = null, revIn = null, rvBus = null;
+let ctx = null, master = null, sfxBus = null, musBus = null, ambBus = null, revIn = null, rvBus = null, vocBus = null, CUR_BUS = null; /* M6-C 소리 크기 나누기: 배경음 · 효과음(+환경음) · 무전 목소리(vocBus) */
 let mus = null, musLoad = null, env = null, envLoad = null, ambOn = false, drive = 0, T0 = 0;
 const noiseBuf = {};
 /* 설정: 음량 · 배경음 · 음소거 (기기에 기억) */
-const SET = { vol: 1, music: true, muted: false };
+const SET = { vol: 1, music: true, muted: false, bus: { mus: 1, sfx: 1, voc: 1 } };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('salvage_audio') || '{}')); } catch { /* */ }
+SET.bus = { mus: 1, sfx: 1, voc: 1, ...(SET.bus || {}) };
 const saveSet = () => { try { localStorage.setItem('salvage_audio', JSON.stringify(SET)); } catch { /* */ } };
 /* 버스 음량 (docs/AUDIO.md 5장 측정으로 맞춤: 배경음 평균 −20dBFS 안팎 · 효과음 최고 −3dBFS 이내 · 환경음은 배경음보다 10dB 아래) */
 const MASTER = 1, MUS = 1.25, SFXV = 4.5, AMBV = 1;
-const applySet = () => { if (!ctx) return; const t = ctx.currentTime; master.gain.setTargetAtTime(SET.muted ? 0 : SET.vol * MASTER, t, 0.03); musBus.gain.setTargetAtTime(SET.music ? MUS : 0, t, 0.3); };
+const applySet = () => { if (!ctx) return; const t = ctx.currentTime, B = SET.bus; master.gain.setTargetAtTime(SET.muted ? 0 : SET.vol * MASTER, t, 0.03); musBus.gain.setTargetAtTime(SET.music ? MUS * B.mus : 0, t, 0.3);
+  sfxBus.gain.setTargetAtTime(SFXV * B.sfx, t, 0.03); ambBus.gain.setTargetAtTime(AMBV * B.sfx, t, 0.1); vocBus.gain.setTargetAtTime(SFXV * B.voc, t, 0.03); };
 const isOffline = c => typeof OfflineAudioContext !== 'undefined' && c instanceof OfflineAudioContext;
 const bq = (type, f, q = 0.7, g = 0) => { const x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = q; x.gain.value = g; return x; };
 const gn = v => { const g = ctx.createGain(); g.gain.value = v; return g; };
@@ -37,7 +39,7 @@ export function unlock() {
   master.connect(hp); hp.connect(mid); mid.connect(pres); pres.connect(tame); tame.connect(glue);
   master.connect(vb); vb.connect(vbs); vbs.connect(vbb); vbb.connect(vbg); vbg.connect(glue);
   glue.connect(trim); trim.connect(lim); lim.connect(pre); pre.connect(ceil); ceil.connect(ctx.destination);
-  sfxBus = gn(SFXV); sfxBus.connect(master);
+  sfxBus = gn(SFXV); sfxBus.connect(master); vocBus = gn(SFXV); vocBus.connect(master);
   musBus = ctx.createGain(); musBus.connect(master);
   ambBus = gn(AMBV); ambBus.connect(master);
   /* 울림: 보내기 버스 하나 → 지금 방(지도)의 컨볼버. 방이 바뀌면 1초 겹쳐 바꿈 */
@@ -64,6 +66,9 @@ export function setVolume(v) { SET.vol = Math.max(0, Math.min(1, v)); saveSet();
 export const getVolume = () => SET.vol;
 export function setMusic(on) { SET.music = !!on; saveSet(); applySet(); }
 export const musicOn = () => SET.music;
+/* M6-C 접근성: 소리 크기 셋 (0~1 · 기기에 기억 · 바로 반영) — mus 배경음 · sfx 효과음(+지도 환경음) · voc 무전 · 말소리 · 몽이 */
+export const busVol = k => SET.bus[k] ?? 1;
+export function setBusVol(k, v) { if (!(k in SET.bus)) return; SET.bus[k] = Math.max(0, Math.min(1, +v || 0)); saveSet(); applySet(); }
 /* 은신처 아래 버튼 하나로 돌려 가며: 켬 → 작게 → 배경음 끔 → 끔 */
 const STEPS = [{ vol: 1, music: true, muted: false, t: '소리 · 켬' }, { vol: 0.5, music: true, muted: false, t: '소리 · 작게' }, { vol: 1, music: false, muted: false, t: '배경음 끔' }, { vol: 1, music: true, muted: true, t: '소리 끔' }];
 const stepNow = () => Math.max(0, STEPS.findIndex(s => s.muted === SET.muted && (s.muted || (s.music === SET.music && (!s.music || s.vol === SET.vol)))));
@@ -125,7 +130,7 @@ function voice(src, o) {
   const g = ctx.createGain(); g.gain.value = 0.0001; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(pk, t + a); if (hold) g.gain.setValueAtTime(pk, t + a + hold); g.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + o.dur);
   n.connect(g); let out = g;
   if (o.pan) { const p = ctx.createStereoPanner(); p.pan.value = cl(o.pan); g.connect(p); out = p; }
-  out.connect(o.bus || sfxBus);
+  out.connect(o.bus || CUR_BUS || sfxBus);
   if (o.wet) { const s = ctx.createGain(); s.gain.value = o.wet; out.connect(s); s.connect(revIn); }
   return t + a + hold + o.dur + 0.03;
 }
@@ -164,7 +169,7 @@ function fol(kind, t, peak, o = {}) {
   let n = s; if (o.lp) { const f = bq('lowpass', o.lp * EV.f, 0.7); n.connect(f); n = f; } if (o.hp) { const f = bq('highpass', o.hp, 0.7); n.connect(f); n = f; }
   const g = ctx.createGain(); g.gain.value = peak * EV.g * (1 + EV.a * (Math.random() * 2 - 1)); n.connect(g); let out = g;
   if (o.pan) { const p = ctx.createStereoPanner(); p.pan.value = cl(o.pan); g.connect(p); out = p; }
-  out.connect(sfxBus); if (o.wet) { const w = gn(o.wet); out.connect(w); w.connect(revIn); }
+  out.connect(CUR_BUS || sfxBus); if (o.wet) { const w = gn(o.wet); out.connect(w); w.connect(revIn); }
   s.start(t, st, len / s.playbackRate.value * (o.cut || 1)); }
 
 /* ───── 무기 4종: 발사 · 재장전 · 탄피 (판에서 지금 무기를 읽음 — 직접 넘겨도 됨) ─────
@@ -277,7 +282,8 @@ function thunder(t) { duck(0.5, 2.5); const d = rnd(0.12, 0.5);
 let lastShot = -1, lastStep = -1;
 export const sfx = {
   /* 사격 — 무기 4종 각각 (wk 없으면 판의 지금 무기) */
-  shot(pan = 0, wk) { if (!ctx) return; const t = now(); if (t - lastShot < 0.03) return; lastShot = t; (GUN[wk || wkNow()] || GUN.pistol)(t, pan); },
+  shot(pan = 0, wk) { if (!ctx) return; const t = now(); if (t - lastShot < 0.03) return; lastShot = t; const k = wk || wkNow(), g0 = EV.g; EV.g = g0 * (GUNV[k] || 1); /* M6-D 무기별 크기 (tools/m6d_loudness.mjs) */
+    try { (GUN[k] || GUN.pistol)(t, pan); } finally { EV.g = g0; } },
   shell(wk) { if (!ctx) return; shell(now() + rnd(0.46, 0.56), wk || wkNow()); }, /* v0.6.1 탄피가 바닥에 처음 닿는 때(fx.shell 0.46~0.58초)에 맞춤 — 전엔 0.18~0.3초로 공중에서 남 */
   /* 재장전(무기마다 길이 맞춤) · 무기 바꾸기(장전 중이 아니면) */
   reload(wk, T) { if (!ctx) return; const r = R(), t = now(); wk = wk || wkNow();
@@ -326,6 +332,15 @@ export const sfx = {
   clank(n = 0) { if (!ctx) return; const t = now(); thud(t, 90, 0.2, 0.5); for (let i = 0; i < 4 + Math.min(4, n); i++) metal(t + 0.04 + i * rnd(0.03, 0.05), rnd(650, 900), 0.1, 0.05, rnd(-0.3, 0.3), 0.2, 0.4); },
   whoosh() { if (!ctx) return; const t = now(); nz({ t, kind: 'pink', dur: 0.25, a: 0.04, ft: 'bandpass', ff: 700, ff1: 2200, fdur: 0.25, q: 1.2, peak: 0.12 }); },
   pop() { if (!ctx) return; const t = now(); thud(t, 180, 0.08, 0.3); nz({ t, dur: 0.05, ft: 'bandpass', ff: 2600, q: 1, peak: 0.12 }); for (let i = 0; i < 4; i++) clk(t + 0.03 + i * rnd(0.02, 0.05), rnd(2400, 4200), 0.04, rnd(-0.4, 0.4)); },
+  /* M6-B 약한 무기 6 맞는 소리 한 겹 (공통 '맞음' 위에 무기 색 — 0.06초에 한 번): 쌍발 = 두 번 '틱틱' · 석궁 = 나무 '퍽' + 낮은 진동 · 닻 = 쇠사슬 '촤르륵' + 둔탁
+     물보라 = 물 '촥' (젖은 잡음) · 갈고리 = 쇠 '끽' 긁힘 · 불꽃 = 축제 폭죽 '팡' 따닥 */
+  hitW(wk, pan = 0) { if (!ctx) return; const t = now(); if (t - (this.__hw || 0) < 0.06) return; this.__hw = t;
+    if (wk === 'twin') { clk(t, 3100, 0.16, pan - 0.15); clk(t + 0.045, 2700, 0.14, pan + 0.15); }
+    else if (wk === 'crossbow') { thud(t, 220, 0.07, 0.32, pan); nz({ t, kind: 'pink', dur: 0.06, ft: 'bandpass', ff: 900, q: 1.4, peak: 0.2, pan }); os({ t: t + 0.01, f0: 140, f1: 120, dur: 0.18, peak: 0.08, wave: 'triangle', lp: 900, pan }); }
+    else if (wk === 'anchor') { thud(t, 70, 0.18, 0.45, pan); for (let i = 0; i < 5; i++) metal(t + 0.02 + i * 0.035, rnd(900, 1300), 0.06, 0.04, pan + rnd(-0.2, 0.2), 0.1, 0.3); }
+    else if (wk === 'scatter') { nz({ t, kind: 'white', dur: 0.12, a: 0.005, ft: 'bandpass', ff: 2200, ff1: 900, fdur: 0.12, q: 0.8, peak: 0.18, pan }); nz({ t: t + 0.03, kind: 'pink', dur: 0.1, ft: 'lowpass', ff: 1200, q: 0.7, peak: 0.1, pan }); }
+    else if (wk === 'hook') { metal(t, 1500, 0.1, 0.06, pan, 0.1, 0.5); nz({ t: t + 0.01, dur: 0.14, ft: 'bandpass', ff: 2600, ff1: 1400, fdur: 0.14, q: 3, peak: 0.12, pan }); }
+    else if (wk === 'rocket') { thud(t, 120, 0.1, 0.3, pan); nz({ t, dur: 0.08, ft: 'highpass', ff: 3000, q: 0.7, peak: 0.12, pan }); for (let i = 0; i < 6; i++) clk(t + 0.05 + i * rnd(0.03, 0.06), rnd(3000, 5200), 0.05, pan + rnd(-0.5, 0.5)); } },
   /* 구르기: 옷 · 물 휙 + 0.31초 뒤 착지 / 판에서 장어가 돌진 시작이면 물 밀려오는 소리 / 던지기면 휙만 */
   roll() { if (!ctx) return; const t = now(), r = R();
     if (r?.boss?.charging && r.boss.kind === 'eel') { nz({ t, kind: 'brown', dur: 0.9, ft: 'lowpass', ff: 300, ff1: 1400, fdur: 0.4, peak: 0.7, wet: 0.2 }); nz({ t, kind: 'pink', dur: 0.7, ft: 'bandpass', ff: 900, ff1: 2500, q: 0.8, peak: 0.22, a: 0.1 }); return; }
@@ -473,28 +488,33 @@ export const sfx = {
 };
 sfx.window = sfx.windowLight; sfx.memo = sfx.memory;
 /* 변주 씌우기: 부를 때마다 EV 를 새로 굴림. 음악 같은 소리(화음 · 마림바)는 높이 고정 · 필터만 조금 */
+const VOICE = /^(talk|radio|mong|page)$/; /* M6-C 소리 크기 '무전 목소리' 줄 */
 const TUNED = /^(chiefHorn|chiefWarn|pick|rare|extract|die|ui|tab|coin|equip|power|build|talk|cut|memory|memo|windowLight|window|bond|chapter|lamp|quest|warn|bossWarn|tape|radio|mong|siren|alert)$/;
 /* 소리마다 음량 손질 (효과음 버스를 사격 · 타격에 맞춰 올렸으므로 큰 사건 · 화음 소리는 덜어 리미터가 덜 일하게 — 5장 측정) */
-const GAIN = { chiefHorn: 0.6, chiefWarn: 0.6, foeWarn: 0.8, boom: 0.5, thunder: 0.4, roar: 0.5, slam: 0.5, gate: 0.5, siren: 0.5, bossWarn: 0.5, warn: 0.55, die: 0.55, extract: 0.55, power: 0.55, cut: 0.55, chapter: 0.55, memory: 0.55, memo: 0.55,
-  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.6, kill: 0.8, hurt: 0.8, puff: 0.6, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, swingW: 0.7, net: 0.7, clank: 0.6, whoosh: 0.7, pop: 0.7, roll: 0.7, rotate: 0.6, zap: 0.8, fizz: 0.7, bubble: 0.7 };
+/* M6-D 라운드니스 측정(tools/m6d_loudness.mjs · docs/m6d_loudness.json)으로 맞춤: 기준 = 발사음 순간 최댓값 중앙값 R.
+   큰 사건(천둥 · 포효 · 두목 뱃고동 · 폭발 · 내려찍기)이 R 보다 +9~11 LU 로 폰에서 깜짝 놀랄 만큼 컸음 → +6 안으로 · 물대포 −10 → −5 안으로 · 무거운 발사(닻 · 저격 · 불꽃) 조금 내림 */
+const GUNV = { hose: 2.5, anchor: 0.28, longshot: 0.55, flare: 0.42, harpoon: 0.75 };
+const GAIN = { chiefHorn: 0.2, chiefWarn: 0.6, foeWarn: 0.8, boom: 0.1, thunder: 0.09, roar: 0.13, slam: 0.15, gate: 0.5, siren: 0.36, bossWarn: 0.4, warn: 0.55, die: 0.45, extract: 0.4, power: 0.55, cut: 0.38, chapter: 0.55, memory: 0.55, memo: 0.55,
+  windowLight: 0.6, window: 0.6, bond: 0.6, rare: 0.55, build: 0.55, reload: 0.55, pick: 0.6, lamp: 0.6, quest: 0.6, mong: 0.5, kill: 0.7, hurt: 0.8, puff: 0.6, pour: 0.75, beacon: 0.6, glass: 0.75, steam: 0.75, coin: 0.7, equip: 0.7, tape: 0.7, radio: 0.8, shell: 0.35, empty: 0.6, page: 0.7, swing: 0.7, swingW: 0.55, net: 0.7, clank: 0.6, whoosh: 0.7, pop: 0.55, roll: 0.7, rotate: 0.6, zap: 0.8, fizz: 0.7, bubble: 0.7 };
 for (const k of Object.keys(sfx)) { const fn = sfx[k], tuned = TUNED.test(k), g = GAIN[k] || 1;
-  sfx[k] = function (...a) { if (!ctx) return; const prev = EV; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; try { return fn.apply(this, a); } finally { EV = prev; } }; }
+  const vb = VOICE.test(k); /* M6-C: 무전 · 말소리 · 몽이 소리는 목소리 버스로 */
+  sfx[k] = function (...a) { if (!ctx) return; const prev = EV, pb = CUR_BUS; EV = tuned ? { p: 1, f: rnd(0.95, 1.05), a: 0.05, j: 0, g } : { p: rnd(0.965, 1.035), f: rnd(0.88, 1.12), a: 0.1, j: 0.002, g }; if (vb) CUR_BUS = vocBus; try { return fn.apply(this, a); } finally { EV = prev; CUR_BUS = pb; } }; }
 
 /* 지도 환경음 (판 중에만 · 배경음을 꺼도 남음) — assets/audio/env.js 를 판 시작 때 늦게 받음 · 구역 · 날씨 · 정전 · 급류 · 침수 따라 바뀜 */
-function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.16').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
+function loadEnv() { if (envLoad || !ctx) return envLoad; envLoad = import('../assets/audio/env.js?v=0.99.17').then(m => (env = m.createEnv({ ctx, out: ambBus, rev: revIn, noise: noiseBuf }))).catch(e => { console.warn('환경음', e); envLoad = null; }); return envLoad; }
 const envState = r => ({ map: r?.map || 'ware', zone: r?.zone || 1, cond: r?.cond || 'normal', wx: r?.wx || 'none', /* M4-B 판 상태 → 날씨 소리 */ dark: (r?.dark || 0) > 0 || (r?.douse || 0) > 0, surge: (r?.surge || 0) > 0, flood: !!r?.events?.flood });
 export function ambience(on) {
   ambOn = !!on; if (!ctx) return; /* 소리가 아직 안 풀렸으면 기억만 → 첫 탭 뒤 tick 이 받음 */
   if (on) loadEnv(); else if (env) env.stop(ctx.currentTime);
 }
 /* 큰 소리 동안 배경음 잠깐 낮춤 */
-function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gain, t = ctx.currentTime + T0; g.cancelScheduledValues(t); g.setTargetAtTime(MUS * to, t, 0.03); g.setTargetAtTime(MUS, t + dur * 0.4, dur * 0.3); }
+function duck(to, dur) { if (!musBus || !SET.music) return; const g = musBus.gain, t = ctx.currentTime + T0, m = MUS * SET.bus.mus; g.cancelScheduledValues(t); g.setTargetAtTime(m * to, t, 0.03); g.setTargetAtTime(m, t + dur * 0.4, dur * 0.3); }
 
 /* ───── 배경음 (적응형) ─────
    장면: 은신처(처음 · 하루 끝) · 침수 창고 · 밤의 항구 · 해저 터널 · 보스전(지도 색)
    긴장 단계: 0 평소 → 1 적 발견(쫓는 적이 있음 · 4초 여운) → 2 탈출 카운트다운(물 차기 1분 전) */
 let seenRaid = false, chaseT = 0;
-function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.16').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
+function loadMusic() { if (musLoad || !ctx || !SET.music) return musLoad; musLoad = import('../assets/audio/music.js?v=0.99.17').then(m => { mus = m.createMusic({ ctx, out: musBus, rev: revIn, noise: noiseBuf }); return mus; }).catch(e => { console.warn('배경음', e); musLoad = null; }); return musLoad; }
 /* M5-A 이야기 장면 배경음 덮어쓰기 (엔딩 · 크레딧 = 'ending') — null 이면 평소대로 */
 let scoreOv = null; export function setScore(id) { scoreOv = id || null; }
 function scene() {

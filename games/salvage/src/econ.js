@@ -1,7 +1,7 @@
 // 경제 · 성장 계산 (화면 · three 없이 — node 시뮬 · 시험에서도 그대로 씀)
 //  S = 저장 상태(save.js). 모든 함수는 S 를 직접 바꾸고 { ok, why } 를 돌려줌
 import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2,
-  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS, STAR, PETS, PET_MAX } from './data.js?v=0.99.16';
+  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS, STAR, PETS, PET_MAX } from './data.js?v=0.99.17';
 
 export const kstDay = (t = Date.now()) => new Date(t + 324e5).toISOString().slice(0, 10);
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -89,10 +89,10 @@ export function temperWeapon(S, wk) {
 }
 /* ───── M5-C 반려 2: 몽이 5단 · 반디 3단 ───── */
 export const petLv = (S, k) => S.pets?.[k] | 0;
-/* 단계 상한(시설): 몽이 수족관 1 → 2 · 수족관 2 → 3 · 쉼터 → petCap / 반디 쉼터 bandiCap (없으면 1) */
+/* 단계 상한(시설) — M6-C: data/pets.js 단계마다 cap [시설, 단계] 이 한 곳의 기준 (몽이 수족관 1 → 2 · 2 → 3 · 4 · 3 → 5 / 반디 쉼터 1 → 2 · 2 → 3) */
 export function petCap(S, k) {
-  if (k === 'mong') { const aq = facLvl(S, 'aquarium'); if (!aq) return 0; return Math.max(aq >= 2 ? 3 : 2, facCur(S, 'den')?.petCap || 0); }
-  return petLv(S, 'bandi') ? Math.max(1, facCur(S, 'den')?.bandiCap || 0) : 0;
+  if (k === 'mong' ? !facLvl(S, 'aquarium') : !petLv(S, 'bandi')) return 0;
+  const st = PETS[k].stages; let n = 1; while (n + 1 < st.length && (!st[n + 1].cap || facLvl(S, st[n + 1].cap[0]) >= st[n + 1].cap[1])) n++; return n;
 }
 export const petNext = (S, k) => { const n = petLv(S, k); return n && n < PET_MAX[k] ? PETS[k].stages[n + 1] : null; };
 /* 합류: 몽이 = 수족관 1단계 · 반디 = 이야기 '조용한 수조' 끝 (S.story.beatsDone) — 은신처에 들어올 때 · 시뮬 은신처마다 부름. 새로 합류하면 키를 돌려줌 */
@@ -292,7 +292,7 @@ export function loadout(S) {
 export function power(S) { const L = loadout(S); const w = L.weapons[0]; return Math.round(ttk(w, 1000, w.melee ? 2 : 7).dps * (L.hp / 100) / (1 - L.armor)); }
 
 /* ═════ M3-A 성장 뼈대 (v0.6): 탄약 · 부적 · 상인 · 업적 · 난이도 — 숫자는 data/*.js ═════ */
-import { COS } from './look.js?v=0.99.16';
+import { COS } from './look.js?v=0.99.17';
 const ITEM_LIST = Object.keys(ITEMS);
 /* ───── 탄약 상자 (관통 · 전기) — 한 판에 1상자, 출격 때 씀 ───── */
 export const ammoCount = (S, k) => (S.ammo?.[k] || 0);
@@ -377,6 +377,6 @@ export function sellAt(S, m, k) {
   S.stash.splice(i, 1); S.shells += v; S.stats.sold = (S.stats.sold || 0) + v; (S.stats.traded ||= {})[m] = 1; return v;
 }
 /* ───── 업적 50 (M5-B) — ach.js 로 옮김 (칭호 · 받아 둔 꾸미기 · 판 기록) · 이름은 그대로 내보냄 ───── */
-export { achValue, achTick } from './ach.js?v=0.99.16';
+export { achValue, achTick } from './ach.js?v=0.99.17';
 /* ───── 난이도 (언제든) ───── */
 export function setDiff(S, k) { if (!DIFF[k]) return { ok: false }; S.diff = k; return { ok: true }; }

@@ -1,7 +1,7 @@
 // 방 모양 → 걸을 수 있는 곳 · 벽 · 높이 · 길 찾기 (직원 · 손님 · 안내 화살표)
 //   사장님: 열린 방(+ 연결 통로)만 걸음 · 벽에 막힘 · 손님/직원(npc): + 매장 앞 거리
 //   길 찾기: 50 칸 격자 BFS → 보이는 가장 먼 점으로 줄임(직선으로 갈 수 있으면 바로)
-import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.16';
+import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.17';
 const CELL = 50, X0 = -1350, Z0 = -1250, NX = 60, NZ = 58;
 /* 문 위치: 방 rect 의 변(N 위 = z0 · S 아래 = z1 · W 왼 = x0 · E 오른 = x1) 위 at 에서 폭 DOOR_W */
 export function doorBox(r, d) { const [x0, z0, x1, z1] = r, h = DOOR_W / 2;
@@ -30,12 +30,13 @@ export function geom(open, feat) {
 /* 높이: 2층(계단은 비탈) */
 export function heightAt(G, x, z) { if (!G.raised) return 0; const r = ROOMS.up2.rect; if (!inRect(r, x, z)) return 0; if (x >= STAIRS.x0 && z < STAIRS.z1) return Math.max(0, Math.min(1, (z - STAIRS.z0) / (STAIRS.z1 - STAIRS.z0))) * 150; return 150; }
 export class Nav {
-  constructor(G) { this.G = G; this.grid = { p: this.mk(G.rects), n: this.mk(G.npc) }; this.cache = new WeakMap(); }
+  constructor(G, obs = []) { this.G = G; this.obs = obs; this.grid = { p: this.mk(G.rects), n: this.mk(G.npc) }; this.cache = new WeakMap(); }   /* obs: 설비 몸통 [x, z, 반가로, 반세로] (0.3.3 · 안내 · 길 찾기가 계산대 등을 돌아감) */
   mk(rects) { const g = new Uint8Array(NX * NZ); for (let i = 0; i < NX; i++) for (let j = 0; j < NZ; j++) { const x = X0 + (i + 0.5) * CELL, z = Z0 + (j + 0.5) * CELL; g[j * NX + i] = this.free(rects, x, z, 36) ? 1 : 0; } return g; }
   /* 점이 걸을 수 있는 곳인가: 반지름 r 만큼 네 방향도 어떤 방 안 · 벽 상자와 안 겹침 */
   free(rects, x, z, r = 34) { const inAny = (px, pz) => rects.some(R => px >= R[0] && px <= R[2] && pz >= R[1] && pz <= R[3]);
     if (!inAny(x, z) || !inAny(x + r, z) || !inAny(x - r, z) || !inAny(x, z + r) || !inAny(x, z - r)) return false;
-    for (const w of this.G.walls) if (Math.abs(x - w.x) < w.hw + r && Math.abs(z - w.z) < w.hd + r) return false; return true; }
+    for (const w of this.G.walls) if (Math.abs(x - w.x) < w.hw + r && Math.abs(z - w.z) < w.hd + r) return false;
+    if (r >= 30) for (const [ox, oz, hw, hd] of this.obs) if (Math.abs(x - ox) < hw + r && Math.abs(z - oz) < hd + r) return false;   /* 부딪힘과 같은 여유 */ return true; }
   ok(x, z, r = 34) { return this.free(this.G.rects, x, z, r); }
   /* 직선으로 갈 수 있나 (25 마다 확인) */
   clear(ax, az, bx, bz, npc) { const R = npc ? this.G.npc : this.G.rects, l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(l / 25)); for (let i = 1; i <= n; i++) { const u = i / n; if (!this.free(R, ax + (bx - ax) * u, az + (bz - az) * u, 34)) return false; } return true; }

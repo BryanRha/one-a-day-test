@@ -1,6 +1,6 @@
 // 시험 봇 (?bot=N&free&seed=…&fast=3) — 화면 버튼을 눌러 출격 → 뒤지기 · 싸우기 · 탈출 → 결과 → 다시. N판 연속
 //  기록: window.__salvage.botLog (판마다 결과 · fps · 메모리) · 오류는 window.__salvage.errors
-import { ITEMS, MAPS } from './data.js?v=0.99.16';
+import { ITEMS, MAPS } from './data.js?v=0.99.17';
 export function installBot(app) {
   const Q = new URLSearchParams(location.search); const N = +Q.get('bot') || 3; app.timeScale = +(Q.get('fast') || 1);
   /* ?map=harbor|tunnel — 그 지도를 열어 두고(시험용) 그 지도로만 출격 */
@@ -8,7 +8,7 @@ export function installBot(app) {
   /* M5-B: ?botchal = 주간 도전만 · ?botabyss=N = 깊은 물 심연 N 으로 (엔딩 훅을 부르고 켬) */
   const CHALB = Q.has('botchal'); if (Q.has('botabyss') && app.AB) { const S = app.S(); app.AB.markEnding(S); const A = app.AB.ab(S); A.on = true; A.max = Math.max(A.max, +Q.get('botabyss') || 3); A.sel = A.max; S.stats.raids = Math.max(S.stats.raids || 0, 6); app.save(); }
   if (CHALB) { const S = app.S(); S.stats.raids = Math.max(S.stats.raids || 0, 6); app.save(); }
-  const log = app.botLog = []; app.errors = app.errors || []; let st = 'menu', t = 0, raidT = 0, stuck = 0, lastPos = null, goal = null, goalKind = null, fpsAcc = [], firstMem = null, wander = null;
+  const log = app.botLog = []; app.errors = app.errors || []; let st = 'menu', t = 0, raidT = 0, hap = null, chief = false, stuck = 0, lastPos = null, goal = null, goalKind = null, fpsAcc = [], firstMem = null, wander = null;
   addEventListener('error', e => app.errors.push(String(e.message)));
   const click = sel => { const e = document.querySelector(sel); if (e) { e.click(); return true; } return false; };
   const press = sel => { const e = document.querySelector(sel); if (!e) return false; e.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); e.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); return true; };
@@ -29,9 +29,9 @@ export function installBot(app) {
     const R = app.raid; if (!R) { /* 판 끝 → 결과 기록 */
       const r = app.lastResult; const fl = fpsAcc.length ? fpsAcc : [0];
       const m = app.mem(); if (!firstMem) firstMem = m;
-      log.push({ n: log.length + 1, map: r.map, cond: r.cond, wx: r.wx, minO2: r.minO2, out: r.outcome, val: r.value, kills: r.killN, zone: r.zoneMax, power: r.power, exit: r.exit, time: Math.round(r.time), fpsAvg: Math.round(fl.reduce((a, b) => a + b, 0) / fl.length), fpsMin: Math.min(...fl), geo: m.geo, tex: m.tex, heap: m.heap, nodes: m.nodes, corpse: r.corpseTaken, why: r.outcome === 'dead' ? JSON.stringify(r.dmgLog) : '' });
+      log.push({ n: log.length + 1, map: r.map, cond: r.cond, wx: r.wx, minO2: r.minO2, out: r.outcome, val: r.value, kills: r.killN, zone: r.zoneMax, power: r.power, exit: r.exit, time: Math.round(r.time), fpsAvg: Math.round(fl.reduce((a, b) => a + b, 0) / fl.length), fpsMin: Math.min(...fl), geo: m.geo, tex: m.tex, heap: m.heap, nodes: m.nodes, corpse: r.corpseTaken, hap: hap || '', chief, why: r.outcome === 'dead' ? JSON.stringify(r.dmgLog) : '' });
       st = 'menu'; t = 0; return; }
-    raidT += dt; if (app.stats.fps) fpsAcc.push(app.stats.fps);
+    raidT += dt; if (app.stats.fps) fpsAcc.push(app.stats.fps); if (raidT < 0.2) { hap = null; chief = false; } if (R.happen?.k) hap = R.happen.k; if (R.chief) chief = true; /* M6-D 봇 1,000판: 판 중 사건 · 떠돌이 두목 기록 */
     if (R.over) { R.input.mx = R.input.mz = 0; return; }
     const pl = R.pl, inp = R.input; inp.auto = true;
     /* 가방 열려 있으면 담고 닫기 */

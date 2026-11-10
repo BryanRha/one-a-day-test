@@ -8,8 +8,12 @@ const MAX = 600, MAXS = 320, MAXG = 64;
 const FXSET = { shake: 1 };
 try { Object.assign(FXSET, JSON.parse(localStorage.getItem('salvage_fx') || '{}')); } catch { /* */ }
 export const shakeMul = () => FXSET.shake;
-export const shakeLabel = () => (FXSET.shake < 1 ? '흔들림 · 약하게' : '흔들림 · 보통');
-export function cycleShake() { FXSET.shake = FXSET.shake < 1 ? 1 : 0.35; try { localStorage.setItem('salvage_fx', JSON.stringify(FXSET)); } catch { /* */ } }
+/* M6-C 접근성: 보통 · 약하게(×0.35) · 끔(0) 세 단계 (a11y.js 설정 줄) */
+export const SHAKE_STEPS = [{ v: 1, t: '보통' }, { v: 0.35, t: '약하게' }, { v: 0, t: '끔' }];
+export const shakeLevel = () => { const i = SHAKE_STEPS.findIndex(s => Math.abs(s.v - FXSET.shake) < 1e-3); return i < 0 ? 0 : i; };
+export function setShakeLevel(i) { FXSET.shake = SHAKE_STEPS[Math.max(0, Math.min(SHAKE_STEPS.length - 1, i | 0))].v; try { localStorage.setItem('salvage_fx', JSON.stringify(FXSET)); } catch { /* */ } }
+export const shakeLabel = () => '흔들림 · ' + SHAKE_STEPS[shakeLevel()].t;
+export function cycleShake() { setShakeLevel((shakeLevel() + 1) % SHAKE_STEPS.length); }
 
 export class FX {
   constructor(scene, hud) {
@@ -44,7 +48,9 @@ export class FX {
   }
   stats() { return { parts: this.n, peak: this.peak, streaks: this.streaks.length, glows: this.glows.length, cap: this.cap }; }
   /* 저사양(자동 화질이 낮춤): 상한 · 개수 줄임 */
-  lowQ(on) { this.cap = on ? 360 : MAX; this.q = on ? 0.6 : 1; }
+  lowQ(on) { this.setQ(on ? 360 : MAX, on ? 0.6 : 1); }
+  /* M6-D 자동 화질 단계: 입자 상한 · 개수 배율 · 비 줄기(배율 0.5 아래면 절반) */
+  setQ(cap, q) { this.cap = Math.min(MAX, cap); this.q = q; this.qSet = true; if (this.n > this.cap) this.n = this.cap; if (this.rain) this.rain.m.count = q < 0.5 ? this.rain.N >> 1 : this.rain.N; }
   /* 칸 하나 받기 — 꽉 차면 오래된 쪽부터 돌려 씀 */
   take() { if (this.n < this.cap) return this.pool[this.n++]; this.rr = (this.rr + 1) % this.n; return this.pool[this.rr]; }
   spawn(o) { Object.assign(this.take(), o); }
@@ -53,7 +59,7 @@ export class FX {
     if (kind === 'rain' && !this.rain) {
       const N = 260; const m = new THREE.InstancedMesh(new THREE.BoxGeometry(0.035, 1.1, 0.035), new THREE.MeshBasicMaterial({ color: 0xa8c4e0, transparent: true, opacity: 0.42, depthWrite: false, fog: false }), N);
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.renderOrder = 4; this.scene.add(m);
-      this.rain = { m, N, d: Array.from({ length: N }, () => ({ x: (Math.random() - 0.5) * 26, y: Math.random() * 14, z: (Math.random() - 0.5) * 34, s: 18 + Math.random() * 8 })) };
+      this.rain = { m, N, d: Array.from({ length: N }, () => ({ x: (Math.random() - 0.5) * 26, y: Math.random() * 14, z: (Math.random() - 0.5) * 34, s: 18 + Math.random() * 8 })) }; if (this.q < 0.5) m.count = N >> 1; /* M6-D 화질 3단계 */
     }
     if (this.rain) this.rain.m.visible = kind === 'rain'; this.rainOn = kind === 'rain';
   }
@@ -133,7 +139,7 @@ export class FX {
   }
   update(dt, camera, W, H) {
     if (this.rainOn) this.updateRain(dt, camera);
-    const lowNow = typeof window !== 'undefined' && !!window.__salvage?.lowGfx; if (lowNow !== this.low) { this.low = lowNow; this.lowQ(lowNow); }
+    if (!this.qSet) { const lowNow = typeof window !== 'undefined' && !!window.__salvage?.lowGfx; if (lowNow !== this.low) { this.low = lowNow; this.lowQ(lowNow); } } /* M6-D: 단계(setQ)를 쓰면 그쪽이 정함 */
     const m = this.mesh, P = this.pool; this.peak = Math.max(this.peak, this.n);
     for (let i = this.n - 1; i >= 0; i--) {
       const o = P[i]; o.t += dt; if (o.t >= o.life) { this.n--; if (i !== this.n) { P[i] = P[this.n]; P[this.n] = o; } continue; }

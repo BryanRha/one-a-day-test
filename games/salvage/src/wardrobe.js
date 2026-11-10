@@ -4,13 +4,16 @@
 //   아이템 누르면 입어 보기(안 가진 것도 미리보기) + 능력치 비교(지금 → 바꾸면) + 얻는 길(플레이 · 의뢰 · 조개 · 원어데이 골드 — bmflow, 원어데이 밖이면 골드 숨김)
 //   [되돌리기] 처음으로 · [이대로 출격 준비] 저장 후 출격 준비
 import * as THREE from 'three';
-import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.16';
-import { S, save } from './save.js?v=0.99.16';
-import * as E from './econ.js?v=0.99.16';
-import * as BM from './bmflow.js?v=0.99.16';
-import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf, srcOf, LOOK_SLOTS } from './look.js?v=0.99.16';
-import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
+import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.17';
+import { S, save } from './save.js?v=0.99.17';
+import * as E from './econ.js?v=0.99.17';
+import * as BM from './bmflow.js?v=0.99.17';
+import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf, srcOf, LOOK_SLOTS } from './look.js?v=0.99.17';
+import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { THUMB } from './data/thumbs.js?v=0.99.17';
+/* M6-A: 꾸미기 · 가구 칸 작은 렌더 그림 (assets/thumbs · tools/m6a_thumbs.mjs) — 없으면 색 네모 */
+export const thumbHtml = (kind, k, px, sw, cls) => { const T = THUMB[kind]; const i = T ? T.keys.indexOf(k) : -1; if (i < 0) return null; const c = THUMB.cols; return `<span class="${cls} th" style="background:${sw} url(assets/thumbs/${kind}.webp) -${(i % c) * px}px -${Math.floor(i / c) * px}px / ${c * px}px ${T.rows * px}px no-repeat;width:${px}px;height:${px}px;--sw:${sw}"></span>`; };
 
 const $ = (s, r = document) => r.querySelector(s);
 const pct = x => Math.round(x * 100) + '%';
@@ -76,7 +79,7 @@ export class Wardrobe {
     const ui = this.ui; ui.clear(); ui.root.className = 'scr-wardrobe';
     const el = document.createElement('div'); el.className = 'wardrobe';
     el.innerHTML = `
-      <header class="whead"><button class="back" id="wBack">‹</button><b>옷장 · 무기대<small class="wcount">꾸미기 ${COS_KEYS.filter(k => BM.cosShown(k) && owns(S, k)).length}/${COS_KEYS.filter(k => BM.cosShown(k)).length}</small></b><button class="wfurn" id="wFurn">가구 ›</button><span class="cur"><span class="shell"></span>${S.shells.toLocaleString()}</span></header>
+      <header class="whead"><button class="back" id="wBack">‹</button><b>옷장 · 무기대<small class="wcount">꾸미기 ${COS_KEYS.filter(k => owns(S, k)).length}/${COS_KEYS.length}</small></b><button class="wfurn" id="wFurn">가구 ›</button><span class="cur"><span class="shell"></span>${S.shells.toLocaleString()}</span></header>
       <div class="stage" id="wstage"><div class="whint">끌어서 돌려 보기</div><div class="wviews" id="wViews">${VIEWS.map((v, i) => `<button data-v="${i}" class="${i === this.view ? 'on' : ''}">${v[1]}</button>`).join('')}</div></div>
       <div class="wtabs" id="wTabs">${TABS.map(([k, t]) => `<button data-t="${k}" class="${k === this.tab ? 'on' : ''}">${t}${this.newIn(k) ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>
       <div class="wfilt" id="wFilt"></div>
@@ -141,7 +144,7 @@ export class Wardrobe {
       <div class="wnote">${I.note}</div>
       ${I.items.length ? '' : `<div class="wempty">이 탭엔 '${FILTS.find(f => f[0] === this.filt)?.[1]}' 꾸미기가 없어요 · <button class="lnk" id="wAll">전체 보기</button></div>`}
       <div class="wgrid">${I.items.map((it, i) => { const lock = !it.own && !it.base; const tag = it.on ? (it.cos || it.base ? '겉모습' : '장착 중') : it.own || it.base ? '' : it.past ? '지난 단계' : it.gear ? `작업대 Lv.${it.bench}` : it.weapon ? '제작' : getText(it.cos);
-        return `<div class="wit ${it.on ? 'sel' : ''} ${selId === it.id ? 'try' : ''} ${lock ? 'lock' : ''}" data-i="${i}"><span class="wtag">${lock ? '🔒' : it.cos && this.isNew(it.cos) ? '<i class="dot"></i>' : ''}</span><span class="wsw" style="background:${it.sw}"></span><b>${it.name}</b><small>${tag}</small></div>`; }).join('')}</div>`;
+        return `<div class="wit ${it.on ? 'sel' : ''} ${selId === it.id ? 'try' : ''} ${lock ? 'lock' : ''}" data-i="${i}"><span class="wtag">${lock ? '🔒' : it.cos && this.isNew(it.cos) ? '<i class="dot"></i>' : ''}</span>${(it.cos && thumbHtml('cos', it.cos, 40, it.sw, 'wsw')) || `<span class="wsw" style="background:${it.sw}"></span>`}<b>${it.name}</b><small>${tag}</small></div>`; }).join('')}</div>`;
     $('#wTog', el).onclick = () => { sfx.ui(); if (I.slot === 'pet') this.draft.look.pet = []; else if (I.slot === 'pattern') this.draft.look.pattern = null; else { this.draft.look[I.slot] = null; if (I.slot2) this.draft.look[I.slot2] = null; } this.draft.prev = null; this.sel = null; this.slot(); this.rebuild(); };
     $('#wAll', el) && ($('#wAll', el).onclick = () => { sfx.ui(); this.filt = 'all'; this.slot(); });
     el.querySelectorAll('.wit').forEach(d => d.onclick = () => this.pick(I.items[+d.dataset.i]));

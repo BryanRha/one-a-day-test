@@ -4,18 +4,18 @@
 //  · 판 상태는 판마다 하나 — 지도 상태가 이미 갈래를 가지면 그것, 아니면 지도마다 '나올 수 있는 조합'(WX_MAP) 가중치로 '이번 판 예보'를 뽑음
 //  · 예보 = (한국 날짜 · 지도 · 지금까지 출격 수) 해시 → 출격 준비에서 미리 보이고 맵 장비(data/gear.js MAP_GEAR) 권장이 뜸. 처음 6판은 침수 창고가 늘 맑음
 //  · NARRATIVE 1-4 해석: 밤 = 이끼가 가장 밝게 빛나는 시간 · 폭풍 = 대수문 틈으로 바다가 밀려듦 · 안개 = 대수문 냉각수 증기 · 한파 = 연구소 냉각 장치 고장 · 독수 = 깨진 코어 누수
-import { mix32, rng } from '../plan.js?v=0.99.16';
-import { MAPS } from '../data.js?v=0.99.16';
-import { WEEKS, WEEK_CYCLE, WEEK_FROM } from './enemies.js?v=0.99.16';
+import { mix32, rng } from '../plan.js?v=0.99.17';
+import { MAPS } from '../data.js?v=0.99.17';
+import { WEEKS, WEEK_CYCLE, WEEK_FROM } from './enemies.js?v=0.99.17';
 
 export const WX_KEYS = ['night', 'storm', 'fog', 'cold', 'toxic'];
 /* 판 상태 5 — 아이콘 · 이름 · 한 줄(판 안 띠) · 숫자 (raid.js 가 지도 상태 숫자에 곱해 씀: sight · hear · vis · fog · rain · night) */
 export const WEATHER = {
   night: { icon: '🌙', name: '밤', band: '어두워요 — 빛 속의 나는 멀리서 보여요', txt: '밤 — 헤드램프 · 빛 밑이 아니면 잘 안 보여요. 빛 속에 서면 적도 멀리서 나를 봐요. 빛이끼가 가장 밝게 빛나요', night: 1, sight: 0.9, fog: [20, 44], vis: 0.88, gear: 'hlamp' },
-  storm: { icon: '⛈', name: '폭풍', band: '소리가 묻혀요', txt: '폭풍 — 비바람에 소리가 묻혀 적이 덜 들어요(0.6배) · 번개가 치면 잠깐 다 보여요', hear: 0.6, fog: [24, 44], rain: 1, gear: null },
-  fog:   { icon: '🌫', name: '안개', band: '가까이 와야 보여요', txt: '안개 — 냉각수 증기 · 서로 가까이 와야 보여요(적 시야 0.7배)', sight: 0.7, fog: [16, 36], vis: 0.8, gear: 'hlamp' },
-  cold:  { icon: '❄', name: '한파', band: '바닥이 얼고 체온이 내려가요', txt: '한파 — 냉각 장치 고장 · 얼음 바닥은 미끄럽고 체온이 내려가요(물속은 더 빨리). 불 · 온열 배관 곁에서 녹아요. 체온이 바닥나면 느려지고 아파요', fog: [20, 46], vis: 0.92, cold: 1, gear: 'drysuit' },
-  toxic: { icon: '☣', name: '독수', band: '초록 웅덩이를 피해요', txt: '독수 — 깨진 코어가 새어 초록 독 웅덩이가 생겨요. 밟으면 독이 오르고 쌓인 독은 천천히 아파요. 연고 · 해독제 · 소독 샤워로 씻어요', fog: [22, 46], vis: 0.95, toxic: 1, gear: 'filter' },
+  storm: { icon: '⛈️', name: '폭풍', band: '소리가 묻혀요', txt: '폭풍 — 비바람에 소리가 묻혀 적이 덜 들어요(0.6배) · 번개가 치면 잠깐 다 보여요', hear: 0.6, fog: [24, 44], rain: 1, gear: null },
+  fog:   { icon: '🌫️', name: '안개', band: '가까이 와야 보여요', txt: '안개 — 냉각수 증기 · 서로 가까이 와야 보여요(적 시야 0.7배)', sight: 0.7, fog: [16, 36], vis: 0.8, gear: 'hlamp' },
+  cold:  { icon: '❄️', name: '한파', band: '바닥이 얼고 체온이 내려가요', txt: '한파 — 냉각 장치 고장 · 얼음 바닥은 미끄럽고 체온이 내려가요(물속은 더 빨리). 불 · 온열 배관 곁에서 녹아요. 체온이 바닥나면 느려지고 아파요', fog: [20, 46], vis: 0.92, cold: 1, gear: 'drysuit' },
+  toxic: { icon: '☣️', name: '독수', band: '초록 웅덩이를 피해요', txt: '독수 — 깨진 코어가 새어 초록 독 웅덩이가 생겨요. 밟으면 독이 오르고 쌓인 독은 천천히 아파요. 연고 · 해독제 · 소독 샤워로 씻어요', fog: [22, 46], vis: 0.95, toxic: 1, gear: 'filter' },
 };
 /* 지도 상태 → 갈래 (지금 있는 상태 정리) — 없는 것은 날씨가 아님(지도 사건) */
 export const WX_OF = { storm: 'storm', fog: 'fog', clear: 'night', dark: 'night', outage: 'night', steam: 'fog', gale: 'storm' }; /* M5-A 대수문 꼭대기 비바람 = 폭풍 */

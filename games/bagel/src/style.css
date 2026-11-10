@@ -157,3 +157,13 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 @keyframes pulseS { 50% { scale: 1.06; } }
 .zz, .evp { animation: pulseS 1.2s infinite; }
 .undo { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--sb) + 132px); background: #fff; color: #7A4A2A; border-radius: 14px; padding: 9px 14px; font-size: 13px; box-shadow: 0 3px 0 #E2C9A6, 0 0 0 2px #F2B533; z-index: 7; zoom: var(--z, 1); } .undo small { color: #B08060; margin-left: 4px; }
+/* 0.3.3 테스터 #5 · #23: 단계 도장은 잠깐만 · 위쪽 띠(이벤트 · 공사)는 얇고 반투명 · 아래 안내도 얇게 */
+.stamp { opacity: 0; transition: opacity .4s; } .stamp.on { opacity: 1; }
+.evb { background: rgba(255,255,255,.72) !important; padding: 3px 10px !important; min-height: 0 !important; box-shadow: none !important; font-size: 12px; backdrop-filter: blur(2px); }
+.bchip { background: rgba(74,43,22,.62); padding: 4px 10px; font-size: 11.5px; box-shadow: none; }
+.hint { background: rgba(74,43,22,.66); padding: 6px 12px; font-size: 12.5px; }
+#toast { background: rgba(255,255,255,.94); }
+.tierb { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); background: linear-gradient(#FFF6E2, #FFE2B0); border-radius: 18px; padding: 12px 22px; box-shadow: 0 4px 0 #E2B060, 0 10px 30px #4A2B1640; text-align: center; z-index: 9; zoom: var(--z, 1); }
+.tierb small { display: block; font-size: 12px; color: #9A7050; } .tierb b { display: block; font-size: 22px; color: #E2702A; } .tierb em { font-style: normal; font-size: 10px; color: #B08060; }
+.tag { font-size: 16px; padding: 5px 12px; } .tag small { font-size: 11px; }
+.adbox .testad { background: #FF6720; color: #fff; border-radius: 8px; padding: 3px 10px; opacity: 1; font-size: 13px; font-weight: 900; }

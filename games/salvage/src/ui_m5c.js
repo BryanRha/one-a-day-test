@@ -1,10 +1,11 @@
 // 은신처 화면 M5-C (v0.8) — 무기 19 고르기를 계열 줄로 접기 · 무기 단련 ★ · 반려 2(몽이 5단 · 반디 3단)
 //  ui_grow.js(무기 탭 · 장비 탭)가 부름. 글자 목록 대신 짧은 줄 + 단계 점 + 재료 칩 '가진 / 필요'(chips.js)
-import { WEAPONS, WEAPON_KEYS, FAMILY, FAMILY_KEYS, STAR, PETS, PET_MAX, FACILITIES } from './data.js?v=0.99.16';
-import { S, save } from './save.js?v=0.99.16';
-import * as E from './econ.js?v=0.99.16';
-import { sfx, unlock } from './audio.js?v=0.99.16';
-import { costChips } from './chips.js?v=0.99.16';
+import { WEAPONS, WEAPON_KEYS, FAMILY, FAMILY_KEYS, STAR, PETS, PET_MAX, FACILITIES } from './data.js?v=0.99.17';
+import { S, save } from './save.js?v=0.99.17';
+import * as E from './econ.js?v=0.99.17';
+import { sfx, unlock } from './audio.js?v=0.99.17';
+import { costChips } from './chips.js?v=0.99.17';
+import { wIco, pIco, hasIco } from './icons_m6c.js?v=0.99.17'; /* M6-C 렌더 아이콘 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const stars = n => `<span class="stars">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}">★</i>`).join('')}</span>`;
@@ -17,7 +18,7 @@ export function wselHtml(ui, wk) {
     const eq = ks.includes(S.equip.main) ? '주' : ks.includes(S.equip.side) ? '보' : '';
     return `<button data-f="${f}" class="${f === fam ? 'on' : ''} ${can ? 'can' : ''}"><b>${FAMILY[f]}</b><small>${eq ? `<em>${eq}</em>` : ''}${own}/${ks.length}</small></button>`; }).join('');
   const list = WEAPON_KEYS.filter(k => WEAPONS[k].fam === fam).map(k => { const o = S.weapons[k]; const W2 = WEAPONS[k]; const can = !o && bench >= W2.bench && E.canPay(S, W2.cost); const st = E.starOf(S, k);
-    return `<button data-w="${k}" class="${k === wk ? 'on' : ''} ${o ? '' : 'no'} ${can ? 'can' : ''}" style="--c:${W2.color}"><b>${W2.short}${st ? `<sup>★${st}</sup>` : ''}</b><small>${S.equip.main === k ? '주무기' : S.equip.side === k ? '보조' : o ? '보유' : bench >= W2.bench ? '제작' : '🔒' + W2.bench}</small></button>`; }).join('');
+    return `<button data-w="${k}" class="${k === wk ? 'on' : ''} ${o ? '' : 'no'} ${can ? 'can' : ''}" style="--c:${W2.color}">${wIco(k)}<b>${W2.short}${st ? `<sup>★${st}</sup>` : ''}</b><small>${S.equip.main === k ? '주무기' : S.equip.side === k ? '보조' : o ? '보유' : bench >= W2.bench ? '제작' : '🔒' + W2.bench}</small></button>`; }).join('');
   return `<div class="wfam">${chips}</div><div class="wsel wfl">${list}</div>`;
 }
 export function bindWsel(ui, body) {
@@ -43,6 +44,7 @@ export function bindStar(ui, body, wk, why) {
 
 /* ───── 반려 2 (장비 탭 위) — 그림 · 이름 · 단계 점 · 지금 능력 · 다음 능력 · 먹이 칩 · [키우기] ───── */
 const PET_ICO = { mong: '🦦', bandi: '🌟' };
+const petPic = (k, lv) => hasIco('p_' + k + '1') ? `<i class="pico m6p">${pIco(k, lv)}</i>` : `<i class="pico">${PET_ICO[k]}</i>`; /* M6-C 렌더 아이콘(단계마다) */
 function capTxt(k) {
   const n = E.petLv(S, k) + 1, st = PETS[k].stages[n]; if (!st?.cap) return '';
   const [f, lv] = st.cap; return `${FACILITIES[f].name} ${lv}단계`;
@@ -50,9 +52,9 @@ function capTxt(k) {
 export function petHtml() {
   E.syncPets(S);
   const row = k => { const P = PETS[k], lv = E.petLv(S, k), cur = P.stages[lv], nx = E.petNext(S, k), cap = E.petCap(S, k);
-    if (!lv) return `<div class="grow petrow lock"><i class="pico">${PET_ICO[k]}</i><div><b>${P.name} <small>${P.kind}</small></b><small>${k === 'mong' ? '수족관 1단계를 지으면 합류해요' : '5장 「조용한 수조」에서 만나요'}</small></div></div>`;
+    if (!lv) return `<div class="grow petrow plock">${petPic(k, 1)}<div><b>${P.name} <small>${P.kind}</small></b><small>${k === 'mong' ? '수족관 1단계를 지으면 합류해요' : '5장 「조용한 수조」에서 만나요'}</small></div></div>`;
     const ready = nx && cap >= lv + 1;
-    return `<div class="grow petrow" style="--c:${P.color}"><i class="pico">${PET_ICO[k]}</i><div><b>${cur.name} <small>${P.kind}</small> <span class="ldots">${Array.from({ length: PET_MAX[k] }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span></b>
+    return `<div class="grow petrow" style="--c:${P.color}">${petPic(k, lv)}<div><b>${cur.name} <small>${P.kind}</small> <span class="ldots">${Array.from({ length: PET_MAX[k] }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span></b>
       <small>${Array.from({ length: lv }, (_, i) => P.stages[i + 1].txt).slice(-2).join(' · ')}</small>
       ${nx ? `<small class="next">다음 ${nx.name}: ${nx.txt}</small>${ready ? `<div class="cost">${costChips(nx.cost)}</div>` : `<small class="hint">${capTxt(k)}이 있어야 더 커요</small>`}` : ''}</div>
       ${nx ? `<button class="btn sm ${ready ? '' : 'dim'}" data-pet="${k}">${ready ? '키우기' : '🔒'}</button>` : '<small class="max">다 컸어요</small>'}</div>`; };

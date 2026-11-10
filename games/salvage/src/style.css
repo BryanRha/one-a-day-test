@@ -166,7 +166,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .busy, .lock { flex: none; width: 80px; text-align: center; font-size: 12px; color: var(--mute); display: flex; flex-direction: column; gap: 3px; align-items: center; } .busy b { font-size: 16px; color: var(--amber); font-variant-numeric: tabular-nums; } .busy .chip { font-size: 12px; padding: 3px 6px; }
 .max { color: var(--mint); font-size: 12px; font-weight: 700; }
 .btn.sm { width: auto; padding: 8px 12px; font-size: 12.5px; border-radius: 10px; flex: none; } .btn.sm.on { border-color: var(--mint); color: var(--mint); }
-.sec { font-size: 13px; font-weight: 800; margin-top: 6px; display: flex; align-items: baseline; gap: 8px; } .sec small { font-weight: 500; color: var(--mute); font-size: 12px; }
+.sec { font-size: 13px; font-weight: 800; margin-top: 6px; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; } .sec small { font-weight: 500; color: var(--mute); font-size: 12px; white-space: normal; } /* M6-A: 제목 글은 한 줄 ('맵/장비' 쪼개짐 · layoutcheck) */
 .grow, .dl { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); }
 .grow > div:not(.gi), .dl > div:not(.gi) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .grow small, .dl small { font-size: 12px; color: #c5d6db; } .grow small.next { color: var(--amber); } .grow b small { color: var(--mute); font-weight: 500; }
 .gi { width: 38px; height: 38px; flex: none; } .dl.done { opacity: .55; }
@@ -271,7 +271,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .wfoot button { flex: 1; border-radius: 14px; padding: 12px; font-size: 15px; font-weight: 700; }
 .wfoot .p { background: var(--acc); color: #1a1a1a; } .wfoot .s { background: var(--card); }
 /* v0.4 지도 고르기 · 산소 */
-.maprow { display: flex; gap: 8px; margin: 0 16px 10px; } .mapbtn { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(14, 30, 40, .8); color: #dfe9ec; font: inherit; }
+.maprow { display: flex; gap: 6px; margin: 0 16px 10px; overflow-x: auto; scrollbar-width: none; } .maprow::-webkit-scrollbar { display: none; } .mapbtn { flex: 1 0 52px; min-width: 52px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(14, 30, 40, .8); color: #dfe9ec; font: inherit; }
 .mapbtn span { font-size: 20px; line-height: 1; } .mapbtn b { font-size: 12px; white-space: nowrap; } .mapbtn small { font-size: 12px; color: #9fb3ba; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .mapbtn.on { border-color: #7dffb2; box-shadow: 0 0 0 1px #7dffb2 inset; background: rgba(40, 90, 100, .6); } .mapbtn.locked { opacity: .5; } .mapbtn.locked span { filter: grayscale(1); } .mapbtn[disabled] { opacity: .35; }
 .mapcard.m-harbor { background: linear-gradient(135deg, rgba(40, 52, 110, .55), rgba(8, 14, 30, .95)); } .mapcard.m-harbor .mapart { background: radial-gradient(circle at 70% 25%, #ffe6a0 0 6%, transparent 7%), linear-gradient(#0a1530, #1c2d5a); }
@@ -681,10 +681,17 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .wxcard.wx-cold { border-color: rgba(170, 225, 255, .7); } .wxcard.wx-cold b { color: #cdeeff; }
 .wxcard.wx-toxic { border-color: rgba(170, 255, 110, .7); } .wxcard.wx-toxic b { color: #c8ff8a; }
 .wxcard.wx-fog { border-color: rgba(220, 228, 235, .6); } .wxcard.wx-night { border-color: rgba(150, 170, 255, .6); } .wxcard.wx-storm { border-color: rgba(140, 200, 255, .6); }
+/* M6-A 알림 한 줄: 날씨는 가운데 카드 → 위쪽 한 줄 띠 (ui.top 대기열 · 무전 다음) */
+.evt.wxband { border-color: rgba(140, 200, 255, .55); color: #e4f1ff; } .evt.wxband .wxi { font-style: normal; font-size: 17px; line-height: 1; vertical-align: -2px; margin-right: 5px; } .evt.wxband b { font-weight: 900; letter-spacing: 1px; }
+.evt.wxband.wx-cold { border-color: rgba(170, 225, 255, .7); } .evt.wxband.wx-toxic { border-color: rgba(170, 255, 110, .7); color: #e6ffc8; } .evt.wxband.wx-fog { border-color: rgba(220, 228, 235, .6); } .evt.wxband.wx-night { border-color: rgba(150, 170, 255, .6); }
 @keyframes wxCard { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.92); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -56%); } }
 .wxfx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
 .wxfx.wx-cold { background-size: 100% 100%; box-shadow: inset 0 0 70px rgba(190, 230, 255, .45); }
-.wxfx.wx-cold.soft { opacity: .7; }
+.wxfx.wx-cold.soft { opacity: .7; } .wxfx.wx-cold { -webkit-mask-image: linear-gradient(180deg, #000 62%, rgba(0, 0, 0, .35) 74%, rgba(0, 0, 0, .3)); mask-image: linear-gradient(180deg, #000 62%, rgba(0, 0, 0, .35) 74%, rgba(0, 0, 0, .3)); } /* M6-A: 조작부(아래 30%)에선 서리를 옅게 */
+/* M6-A 깊은 물 판 화면 층: 가장자리 보라 비네트 + 떠오르는 어두운 입자 (wxFx 방식 · weather.js abyssFx) */
+.wxfx.abyssfx { background: radial-gradient(ellipse at 50% 46%, rgba(40, 20, 80, 0) 42%, rgba(46, 22, 92, .26) 76%, rgba(28, 10, 60, .55) 100%); z-index: 0; }
+.wxfx.abyssfx b { position: absolute; bottom: -16px; width: calc(7px * var(--s)); height: calc(7px * var(--s)); border-radius: 50%; background: rgba(20, 8, 40, .55); box-shadow: 0 0 6px 2px rgba(120, 80, 220, .25); animation: abRise 9s linear infinite; }
+@keyframes abRise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: .9; } 85% { opacity: .5; } 100% { transform: translate(18px, -96vh); opacity: 0; } }
 .wxfx .glint { position: absolute; width: 6px; height: 6px; left: 12%; top: 22%; border-radius: 50%; background: #fff; box-shadow: 0 0 10px 3px rgba(220, 245, 255, .9); animation: wxGlint 3.4s ease-in-out infinite; }
 .wxfx .glint.g2 { left: 84%; top: 64%; animation-delay: -1.2s; } .wxfx .glint.g3 { left: 22%; top: 82%; animation-delay: -2.3s; }
 @keyframes wxGlint { 0%, 70%, 100% { opacity: 0; transform: scale(.4); } 80% { opacity: 1; transform: scale(1.3); } }
@@ -706,4 +713,4 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .wsel.wfl { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; } .wsel.wfl button { padding: 6px 1px; } .wsel.wfl b { font-size: 12px; } .wsel.wfl small { font-size: 12px; } .wsel.wfl sup { font-size: 9px; color: #ffd27a; margin-left: 1px; }
 .stars i { font-style: normal; color: rgba(255, 255, 255, .18); font-size: 13px; } .stars i.on { color: #ffd27a; text-shadow: 0 0 6px rgba(255, 210, 122, .7); }
 .mrow.starrow.on { border-color: rgba(255, 210, 122, .45); background: rgba(255, 210, 122, .06); } .btn.star { background: linear-gradient(180deg, #ffd27a, #e0a040); color: #2a1a08; }
-.petrow { border-left: 3px solid var(--c, var(--line)); } .petrow.lock { opacity: .6; } .petrow .pico { font-style: normal; font-size: 26px; width: 34px; text-align: center; } .petrow .ldots { margin-left: 4px; }
+.petrow { border-left: 3px solid var(--c, var(--line)); } .petrow.plock { opacity: .6; } /* M6-A: .lock(시설 잠김 칸 80px 세로)과 이름이 같아 아직 없는 반려 카드가 좁은 세로로 깨졌음 */ .petrow .pico { font-style: normal; font-size: 26px; width: 34px; text-align: center; } .petrow .ldots { margin-left: 4px; }

@@ -6,13 +6,14 @@
 //  · 판정 · 이동 · 공격 예고는 raid.js 것을 그대로 · 새 적 공격 모양은 foes.js · 두목은 chief.js
 //  · 모든 큰 공격은 예고(바닥 원 · 줄 · 떨어질 자리) — 예고를 띄우면 e.teleT0 (raid.warnDisc/warnLine) → raid.hurt 가 '예고 없는 큰 피해' 자동 검사
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.16';
-import { LOB } from './data/map_factory.js?v=0.99.16';
-import { AI2, NADE } from './data/enemies.js?v=0.99.16';
-import { SOLID } from './plan.js?v=0.99.16';
-import { glowSprite } from './enemy3d.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
-import { foeWind } from './foes.js?v=0.99.16';
+import { ENEMIES } from './data.js?v=0.99.17';
+import { LOB } from './data/map_factory.js?v=0.99.17';
+import { AI2, NADE } from './data/enemies.js?v=0.99.17';
+import { SOLID } from './plan.js?v=0.99.17';
+import { glowSprite } from './enemy3d.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { foeWind } from './foes.js?v=0.99.17';
+import { hazard } from './a11y.js?v=0.99.17'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 export const FACTION = { drone: 'machine', boss: 'machine', smelter: 'machine', skel: 'moss', lamp: 'moss', miner: 'moss', captain: 'moss', crab: 'beast', jelly: 'beast', eel: 'beast' };
 export const facOf = kind => ENEMIES[kind]?.fac || FACTION[kind] || 'machine';
@@ -272,7 +273,7 @@ export class AI {
     const R = this.R; const p = to.clone().setY(0); const rng = o.range || e.D.range || 11; const d = dist2(p, e.pos); if (d > rng) p.sub(e.pos).setLength(rng).add(e.pos);
     const nade = type === 'nade'; const r = o.r || (nade ? NADE.r : LOB.r);
     const m = new THREE.Mesh(nade ? new THREE.SphereGeometry(0.13, 8, 6) : new THREE.CylinderGeometry(0.09, 0.13, 0.34, 8), new THREE.MeshLambertMaterial({ color: nade ? 0x3a4a3a : 0x5a7a3a, emissive: nade ? 0x101810 : 0x3a2a10 })); m.position.copy(e.pos).setY(1.6); R.root.add(m); m.add(glowSprite(nade ? 0xff5a3a : 0xffa040, 0.7, nade ? 0.6 : 0.9));
-    const w = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: nade ? 0xff3a2a : 0xff6a2a, transparent: true, opacity: 0.3, depthWrite: false })); w.rotation.x = -Math.PI / 2; w.position.set(p.x, 0.23, p.z); w.scale.setScalar(0.3); R.root.add(w);
+    const w = new THREE.Mesh(new THREE.CircleGeometry(1, 32), hazard(new THREE.MeshBasicMaterial({ color: nade ? 0xff3a2a : 0xff6a2a, transparent: true, opacity: 0.3, depthWrite: false }))); w.rotation.x = -Math.PI / 2; w.position.set(p.x, 0.23, p.z); w.scale.setScalar(0.3); R.root.add(w);
     this.lobs.push({ m, w, from: e.pos.clone().setY(1.6), to: p, t: 0, dur: o.flight || (nade ? NADE.flight : LOB.flight), fuse: nade ? NADE.fuse : 0, src: e, dmg: o.dmg ?? (nade ? NADE.dmg * e.dmgMul : e.D.dmg * e.dmgMul), type, r, t0: R.t });
     sfx.swing?.();
   }

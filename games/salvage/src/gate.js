@@ -5,16 +5,21 @@
 //   단계 3 · 바뀜 2 (66% · 33%): 바뀌는 동안 무적(푸른 막) · 체력 바닥(hpFloor)이 다음 문턱이라 한 방에 건너뛰지 않음 → 바뀜은 늘 2번
 //  큰 공격 피해는 모두 raid.enemyAttack 안(예고 시간 = this.tele)에서 → '예고 없는 큰 피해' 검사 0
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.16';
-import { sfx } from './audio.js?v=0.99.16';
-import { glowSprite } from './enemy3d.js?v=0.99.16';
-import { GATE_ARENA as AR } from './plan_gate.js?v=0.99.16';
+import { BOSS } from './data.js?v=0.99.17';
+import { sfx } from './audio.js?v=0.99.17';
+import { glowSprite } from './enemy3d.js?v=0.99.17';
+import { GATE_ARENA as AR } from './plan_gate.js?v=0.99.17';
+import { hazard } from './a11y.js?v=0.99.17'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V();
 export const GATE_KIND = { pasu: 1 };
 export const gateLook = { bg: 0x0a1620, hemi: [1.0, 0x9fc4d8, 0x18222c], sun: [0.95, 0xc8dcff] };
 const LENS = [[1, 0.42, 0.18], [0.4, 1, 0.9], [1, 0.22, 0.18]]; /* 단계마다 렌즈 · 빛줄 · 화면 색 (호박 → 청록 → 빨강) · 쓰러지면 다시 호박 */
+/* M6-B 보스전 화면: 카메라 기준점을 주인공 → 파수 쪽으로(CAM_K) · 알림 상자 · 체력 줄 자리 바꿈(m6b.css · #frame.m6boss) */
+const CAM_K = 0.4, CAM_MAX = 5.2;
+if (typeof document !== 'undefined' && !document.getElementById('cssM6b')) { const l = document.createElement('link'); l.id = 'cssM6b'; l.rel = 'stylesheet'; l.href = new URL('./m6b.css', import.meta.url).href; document.head.appendChild(l); }
+function bossHud(R, on) { R.camBias = on ? (R.camBias || { x: 0, z: 0 }) : null; if (typeof document !== 'undefined') document.getElementById('frame')?.classList.toggle('m6boss', !!on); }
 const PH_TXT = ['', '파수 2단계 — 보관 목록이 빛으로 쏟아져요 · 수문 닫기를 조심해요', '파수 3단계 — 해일 경보! 붉은 바닥이면 빛나는 원 안으로 · 가슴 코어가 더 약해졌어요'];
 
 /* ───── 그림 (map.js build 안 — 정적인 것은 합쳐짐) ───── */
@@ -53,7 +58,57 @@ export function buildGate(P, statics, group, put, addBox, out, add, own) {
   /* 바닥 경고 띠 (무대 가장자리) · 무대 가운데 수문 기호 */
   for (let x = x0 + 0.5; x < x1; x += 1) { S(box(0.5, 0.04, 0.35), x % 2 < 1 ? yel : blk, x, 0.03, 0.55); S(box(0.5, 0.04, 0.35), x % 2 < 1 ? yel : blk, x, 0.03, 31.45); }
   const ringG = new THREE.RingGeometry(3.0, 3.4, 40).rotateX(-Math.PI / 2); geos.push(ringG); S(ringG, own(new THREE.MeshBasicMaterial({ color: 0x8a6a2a, transparent: true, opacity: 0.55, depthWrite: false })), P.boss.x, 0.04, P.boss.z);
-  out.geos.push(...geos); out.gateFx = { beacons, bm };
+  const stage = buildStage(P, S, box, geos, group, own, x0, x1);
+  out.geos.push(...geos); out.gateFx = { beacons, bm, ...stage };
+}
+
+/* ───── M6-B 무대: '바다 위 거대한 수문 꼭대기' (검수 M5 — 육각 바닥이라 창고 · 공장과 같아 보임) ─────
+ *  수문 철판 바닥(4m 판 · 이음 홈 · 리벳 · 두 톤) · 양옆 배수 홈 · 노란 손잡이 난간 · 북쪽을 가리키는 칠한 화살표
+ *  10m 아래 바다(흐르는 물결 무늬 · 벽 밑 흰 거품 줄 · 물보라는 tick 이 뿜음) · 북쪽 끝 하늘판(폭풍 → 새벽, tick 이 섞음) · 새벽 빛줄기 */
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+function buildStage(P, S, box, geos, group, own, x0, x1) {
+  const plateA = own(new THREE.MeshLambertMaterial({ color: 0x8b918b, flatShading: true })), plateB = own(new THREE.MeshLambertMaterial({ color: 0x777e79, flatShading: true }));
+  const seam = own(new THREE.MeshLambertMaterial({ color: 0x23282a, flatShading: true })), rivet = own(new THREE.MeshLambertMaterial({ color: 0xa9ab9f, flatShading: true }));
+  const paint = own(new THREE.MeshLambertMaterial({ color: 0xd9ad3a, flatShading: true })), rail = own(new THREE.MeshLambertMaterial({ color: 0xe0b23a, flatShading: true })), drain = own(new THREE.MeshLambertMaterial({ color: 0x1a1f21, flatShading: true }));
+  const zA = 0.5, zB = 31.5;
+  /* 철판 4m × 4m 두 톤 (바닥 y 0 · 판 두께 0.06) */
+  const pG = box(3.9, 0.06, 3.9);
+  for (let x = x0; x < x1 - 0.1; x += 4) for (let z = 0; z < 32 - 0.1; z += 4) S(pG, ((x - x0) / 4 + z / 4) % 2 ? plateB : plateA, x + 2, -0.025, z + 2);
+  /* 이음 홈 (판 사이) · 리벳 (판 귀퉁이 · 가운데) */
+  for (let x = x0; x <= x1 + 0.01; x += 4) S(box(0.12, 0.02, 32), seam, x, 0.005, 16);
+  for (let z = 0; z <= 32.01; z += 4) S(box(x1 - x0, 0.02, 0.12), seam, (x0 + x1) / 2, 0.005, z);
+  const rG = box(0.13, 0.05, 0.13);
+  for (let x = x0; x < x1 - 0.1; x += 4) for (let z = 0; z < 32 - 0.1; z += 4) for (const [a, b] of [[0.35, 0.35], [3.65, 0.35], [0.35, 3.65], [3.65, 3.65], [2, 0.35], [2, 3.65]]) S(rG, rivet, x + a, 0.02, z + b);
+  /* 양옆 배수 홈 (난간 안쪽 0.7m · 창살 줄) */
+  for (const sx of [x0 + 0.55, x1 - 0.55]) { S(box(0.7, 0.03, zB - zA), drain, sx, 0.012, 16); for (let z = zA + 0.4; z < zB; z += 0.6) S(box(0.62, 0.035, 0.07), seam, sx, 0.02, z); }
+  /* 칠한 화살표 셋 (북쪽 = 파수 쪽) · 수문 번호 막대 */
+  for (const z of [14, 20, 26]) { const a = S(box(2.4, 0.015, 0.36), paint, 24 - 0.75, 0.012, z); a.rotation.y = 0.6; const b = S(box(2.4, 0.015, 0.36), paint, 24 + 0.75, 0.012, z); b.rotation.y = -0.6; }
+  for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) S(box(0.32, 0.015, 1.6), paint, 24 + sx * (5.4 + k * 0.6), 0.012, 28.6);
+  /* 노란 손잡이 난간 (양옆 · 기둥 2m) — 아래가 낭떠러지라는 표시 */
+  const post = box(0.1, 1.1, 0.1);
+  for (const x of [x0 + 0.12, x1 - 0.12]) { S(box(0.1, 0.1, zB - zA + 1), rail, x, 1.1, 16); S(box(0.07, 0.07, zB - zA + 1), rail, x, 0.6, 16); for (let z = zA; z <= zB + 0.01; z += 2) S(post, rail, x, 0.55, z); }
+  /* 10m 아래 바다: 물결 무늬 흐름 · 흰 거품 줄 (벽 밑) — fog 은 tick 이 넓힘 */
+  const seaT = canvasTex(256, 256, (x, w, h) => { x.fillStyle = '#21566a'; x.fillRect(0, 0, w, h); let s = 11; const r = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+    for (let i = 0; i < 420; i++) { const px = r() * w, py = r() * h, l = 6 + r() * 26; x.strokeStyle = `rgba(${150 + r() * 80 | 0},${200 + r() * 55 | 0},255,${0.12 + r() * 0.3})`; x.lineWidth = 1 + r() * 2; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + l / 2, py - 3, px + l, py); x.stroke(); } });
+  seaT.wrapS = seaT.wrapT = THREE.RepeatWrapping; seaT.repeat.set(10, 10); geos.push(seaT);
+  const seaM = own(new THREE.MeshLambertMaterial({ map: seaT, color: 0xffffff, emissive: 0x0a2430 }));
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(220, 140).rotateX(-Math.PI / 2), seaM); geos.push(sea.geometry); sea.position.set(24, -9.6, 30); sea.receiveShadow = false; sea.userData.own = true; group.add(sea);
+  const foamT = canvasTex(64, 256, (x, w, h) => { let s = 3; const r = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; const g = x.createLinearGradient(0, 0, w, 0); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 160; i++) { x.fillStyle = `rgba(0,0,0,${0.3 + r() * 0.6})`; x.beginPath(); x.arc(r() * w, r() * h, 2 + r() * 6, 0, 7); x.fill(); } });
+  foamT.wrapS = foamT.wrapT = THREE.RepeatWrapping; foamT.repeat.set(1, 12); geos.push(foamT);
+  const foamM = own(new THREE.MeshBasicMaterial({ map: foamT, transparent: true, opacity: 0.85, depthWrite: false }));
+  const foams = [];
+  for (const [x, flip] of [[x0 - 0.75 - 2.2, true], [x1 + 0.75 + 2.2, false]]) { const g = new THREE.PlaneGeometry(4.4, 72).rotateX(-Math.PI / 2); if (flip) g.rotateY(Math.PI); geos.push(g); const f = new THREE.Mesh(g, foamM); f.position.set(x, -9.5, 34); f.renderOrder = 2; f.userData.own = true; group.add(f); foams.push(f); }
+  /* 북쪽 끝 하늘판: 폭풍(짙은 남색 구름) · 새벽(호박 · 분홍 수평선) 두 장을 섞음 */
+  const skyStorm = canvasTex(8, 128, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0b1420'); g.addColorStop(0.6, '#1a2636'); g.addColorStop(1, '#2a3646'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
+  const skyDawn = canvasTex(8, 128, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#3a4a6a'); g.addColorStop(0.45, '#b77a7a'); g.addColorStop(0.75, '#ffb46a'); g.addColorStop(1, '#ffe2a8'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
+  geos.push(skyStorm, skyDawn); const skyG = new THREE.PlaneGeometry(260, 46); geos.push(skyG);
+  const skyA = new THREE.Mesh(skyG, own(new THREE.MeshBasicMaterial({ map: skyStorm, fog: false, depthWrite: false }))), skyB = new THREE.Mesh(skyG, own(new THREE.MeshBasicMaterial({ map: skyDawn, fog: false, transparent: true, opacity: 0, depthWrite: false })));
+  for (const [m, o] of [[skyA, -1], [skyB, 0]]) { m.position.set(24, 11, -30); m.renderOrder = o; m.userData.own = true; group.add(m); }
+  /* 새벽 빛줄기 셋 (북동 하늘 → 무대 위 비스듬히 · 더하기 섞기 · 단계 3부터) */
+  const rayG = new THREE.PlaneGeometry(3.2, 46); geos.push(rayG); const rayM = own(new THREE.MeshBasicMaterial({ color: 0xffd39a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+  const rays = []; for (const [rx, rz, a] of [[30, 6, 0.5], [21, 14, 0.42], [35, 20, 0.55]]) { const m = new THREE.Mesh(rayG, rayM); m.position.set(rx, 8, rz); m.rotation.set(-0.9, 0, a); m.renderOrder = 5; m.userData.own = true; group.add(m); rays.push(m); }
+  return { seaT, foamT, foams, foamM, skyB, rayM, x0, x1 };
 }
 
 /* ───── 판 시작 (raid.start 끝에서) ───── */
@@ -61,7 +116,7 @@ export function gateStart(R) {
   const B = BOSS.pasu; B.weakMul = 2; /* 3단계에서 바뀐 값 되돌림 */
   const G = R.GT = { phase: 0, shift: 0, active: false, t: 0, last: '', told: {}, tele: [], plates: [], dome: null, bolt: 0, surgeCd: 6, sweepCd: 3, rainCd: 0 };
   /* 빛 · 안개 (raid.applyLook 은 지도표에 없으면 건너뜀 → 여기서) */
-  const sc = R.scene, lt = R.lights; R.lookBase = gateLook; if (lt && sc) { sc.background.setHex(gateLook.bg); sc.fog.color.setHex(gateLook.bg); lt.hemi.color.setHex(gateLook.hemi[1]); lt.hemi.groundColor.setHex(gateLook.hemi[2]); lt.sun.color.setHex(gateLook.sun[1]); R.updateLook(0); }
+  const sc = R.scene, lt = R.lights; R.lookBase = { ...gateLook, hemi: [...gateLook.hemi], sun: [...gateLook.sun] }; /* M6-B: 하늘 단계가 세기를 바꿈 → 복사본 */ if (lt && sc) { sc.background.setHex(gateLook.bg); sc.fog.color.setHex(gateLook.bg); lt.hemi.color.setHex(gateLook.hemi[1]); lt.hemi.groundColor.setHex(gateLook.hemi[2]); lt.sun.color.setHex(gateLook.sun[1]); R.updateLook(0); }
   /* 지도 밖 바다 · 물 막 — 무대 높이(10m 아래)로 · 물 막은 무대 위만 */
   R.root.traverse(o => { if (o.material?.uniforms?.uDeep && o.name === 'static' && o.geometry?.parameters?.width === 320) o.position.y = -10; });
   if (R.water) { R.water.scale.set((AR.x1 - AR.x0) / R.P.W, 64 / R.P.H, 1); R.water.position.set((AR.x0 + AR.x1) / 2, 0.12, 32); }
@@ -82,17 +137,20 @@ export function gateStart(R) {
 
 /* ───── 매 프레임 ───── */
 function tick(R, dt) {
-  const G = R.GT, e = R.boss, B = BOSS.pasu; if (!G || !e) return; G.t += dt;
+  const G = R.GT, e = R.boss, B = BOSS.pasu; if (!G || !e) return; G.t += dt; gateSky(R, dt);
   /* 경고등 깜빡 */
   const F = R.X.gateFx; if (F) { const on = Math.sin(G.t * (G.phase === 2 ? 9 : 4)) > 0; F.bm.color.setHex(on ? 0xff3a2a : 0x3a0e0a); }
-  if (e.dead) { color(e, [1, 0.72, 0.32], dt * 1.5); return; }
+  if (e.dead) { color(e, [1, 0.72, 0.32], dt * 1.5); if (R.camBias) bossHud(R, false); return; }
   /* 깨어남 */
   if (!G.active && R.pl.pos.z < AR.enterZ && !R.pl.dead) {
     G.active = true; e.state = 'chase'; e.alert = 1; e.target = R.pl.pos.clone(); e.D = { ...e.D, sight: 40 }; e.cd = 1.4; e.mark = 1.2; e.markType = '!';
     sfx.roar?.(0, 'boss'); sfx.chiefHorn?.(); R.shake = Math.max(R.shake, 0.6); e.anim?.play('Taunt', { once: true, fade: 0.1, speed: 1, force: true });
-    R.ui.event('파수: "침입자 확인. 방어 모드." — 큰 공격은 모두 바닥에 먼저 보여요 · 수문 팔이 박히면 가슴 코어!', 'boss');
+    R.ui.event('파수: "침입자 확인. 방어 모드." — 큰 공격은 바닥에 먼저 보여요 · 팔이 박히면 가슴 코어!', 'boss'); /* M6-B: 위 띠 두 줄 안 */
   }
   if (!G.active) return;
+  /* M6-B 카메라: 주인공과 파수 사이 CAM_K 지점을 봄 (최대 CAM_MAX m) — 파수가 화면 위 HUD 띠 밑에서 싸우던 것 */
+  if (!R.pl.dead) { bossHud(R, true); const dx = e.pos.x - R.pl.pos.x, dz = e.pos.z - R.pl.pos.z, d = Math.hypot(dx, dz), k = Math.min(CAM_K, CAM_MAX / Math.max(1e-3, d)); R.camBias.x = dx * k * 0.5; R.camBias.z = dz * k; }
+  else if (R.camBias) bossHud(R, false);
   if (e.hpFloor && e.hp < e.hpFloor) e.hp = e.hpFloor; /* 화상 · 독 같은 직접 피해도 문턱 아래로는 안 감 */
   /* 자리 지킴 (관제 코어 — 받침 레일 위에서만) · 늘 나를 봄 */
   e.pos.x = Math.max(AR.x0 + 3.5, Math.min(AR.x1 - 3.5, e.pos.x)); e.pos.z = Math.max(4.2, Math.min(8.5, e.pos.z));
@@ -112,8 +170,38 @@ function tick(R, dt) {
   /* 휩쓰는 수문 판 (보이는 것만 — 피해는 공격 순간에 이미 셈) */
   for (let i = G.plates.length - 1; i >= 0; i--) { const p = G.plates[i]; p.t += dt; const k = Math.min(1, p.t / 0.32); p.m.position.x = p.x0 + (p.x1 - p.x0) * k; p.m.material.opacity = 1 - Math.max(0, (p.t - 0.32) / 0.4);
     if (p.t > 0.72) { R.root.remove(p.m); p.m.material.dispose(); G.plates.splice(i, 1); } }
-  /* 3단계 폭풍: 번개가 잦음 */
-  if (G.phase === 2 && R.nextBolt > 4) R.nextBolt = 2 + R.R() * 2;
+}
+/* ───── M6-B 최종전 날씨 = 고정 연출 (그날 예보와 상관없음 · 총괄 결정): 폭풍이 걷히며 새벽빛 — 단계마다 밝아짐 ─────
+ *  하늘 단계 sky 0 = 폭풍(비 · 번개) → 1 = 2단계(비 줄고 구름 틈) → 2 = 3단계(비 거의 그침 · 수평선 호박빛 · 빛줄기) → 3 = 쓰러짐(새벽 · 비 그침)
+ *  바뀌는 것: 배경 · 안개 색과 거리 · 하늘빛(hemi) · 해 색 · 세기 · 판 어둠(night) · 비 세기 · 번개 · 하늘판 · 빛줄기 · 바다 물결 · 거품 · 물보라 */
+const SKY = [ /* bg, hemi 세기, hemi 위, hemi 아래, 해 세기, 해 색, night, 안개 [가까이, 멀리] */
+  [0x0d1824, 1.0, 0x9fc4d8, 0x18222c, 0.95, 0xc8dcff, 0.55, [30, 62]],
+  [0x1c2433, 1.1, 0xb8c6d8, 0x232834, 1.05, 0xe6d8d2, 0.4, [32, 68]],
+  [0x3a3242, 1.22, 0xffd6c0, 0x2e2a32, 1.25, 0xffc890, 0.22, [36, 76]],
+  [0x574650, 1.32, 0xffe2c8, 0x36303a, 1.4, 0xffd6a0, 0.06, [40, 84]]];
+const cA = new THREE.Color(), cB = new THREE.Color();
+const mixHex = (a, b, k, out) => out.setHex(a).lerp(cB.setHex(b), k);
+export function gateSky(R, dt) {
+  const G = R.GT, e = R.boss; if (!G) return; const F = R.X?.gateFx, sc = R.scene, lt = R.lights;
+  const tgt = e?.dead ? 3 : G.active ? G.phase + (G.shift > 0 ? 0.5 : 0) : 0;
+  G.sky = (G.sky || 0) + (tgt - (G.sky || 0)) * Math.min(1, dt * 0.55);
+  const s = Math.max(0, Math.min(3, G.sky)), i = Math.min(2, Math.floor(s)), k = s - i, A = SKY[i], B = SKY[i + 1];
+  if (sc && lt && R.lookBase) {
+    mixHex(A[0], B[0], k, cA); sc.background.copy(cA); sc.fog.color.copy(cA);
+    mixHex(A[2], B[2], k, lt.hemi.color); mixHex(A[3], B[3], k, lt.hemi.groundColor); mixHex(A[5], B[5], k, lt.sun.color);
+    R.lookBase.hemi[0] = A[1] + (B[1] - A[1]) * k; R.lookBase.sun[0] = A[4] + (B[4] - A[4]) * k;
+  }
+  R.night = A[6] + (B[6] - A[6]) * k; R.C.fog = [A[7][0] + (B[7][0] - A[7][0]) * k, A[7][1] + (B[7][1] - A[7][1]) * k];
+  /* 비: 점점 옅게 → 쓰러지면 그침 · 번개는 2단계까지만 (3단계부터 구름이 걷힘) */
+  const rain = R.fx?.rain; if (rain) rain.m.material.opacity = 0.42 * Math.max(0, 1 - s / 2.6);
+  if (s > 2.6 && R.fx?.rainOn) R.fx.weather(null);
+  if (s > 1.6) R.nextBolt = Math.max(R.nextBolt || 0, 6); else if (G.phase === 1 && R.nextBolt > 12) R.nextBolt = 6 + R.R() * 6;
+  if (!F) return;
+  F.skyB.material.opacity = Math.min(1, s / 2.4); F.rayM.opacity = 0.16 * Math.max(0, Math.min(1, (s - 1.4) / 1.2)) * (0.8 + 0.2 * Math.sin(G.t * 0.7));
+  F.seaT.offset.x += dt * 0.012; F.seaT.offset.y -= dt * (0.035 + 0.02 * (1 - s / 3)); F.foamT.offset.y -= dt * 0.12; F.foamM.opacity = 0.55 + 0.3 * Math.sin(G.t * 1.3);
+  /* 물보라: 벽 밑에서 하얀 물방울이 솟음 (보이는 쪽 z 만 · 폭풍일수록 잦음) */
+  G.spray = (G.spray || 0) - dt;
+  if (G.spray <= 0 && R.pl) { G.spray = 0.22 + s * 0.08; const side = R.R() < 0.5 ? F.x0 - 1.0 : F.x1 + 1.0, z = R.pl.pos.z - 14 + R.R() * 20; R.fx.burst(side, -9.2, z, 10, 0xeaf6ff, 6.5, 0.18, 1.2, 6); }
 }
 /* 렌즈 · 빛줄 · 화면(glow) = 단계 색 · 가슴 장어 코어(eye) = 약점이면 하얗게 · 평소 청록 맥박 */
 function color(e, c, k) {
@@ -172,7 +260,7 @@ export function gateWind(R, e, dist) {
 }
 const LINE = (() => { const g = new THREE.PlaneGeometry(1, 1); g.translate(0, 0.5, 0); return g; })();
 const DISC = new THREE.CircleGeometry(1, 32), SAFE = new THREE.RingGeometry(0.82, 1, 36).rotateX(-Math.PI / 2);
-const disc = (c, op) => { const m = new THREE.Mesh(DISC, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: op, depthWrite: false })); m.rotation.x = -Math.PI / 2; return m; };
+const disc = (c, op) => { const m = new THREE.Mesh(DISC, hazard(new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: op, depthWrite: false }))); m.rotation.x = -Math.PI / 2; return m; };
 function clearTele(R) { const G = R.GT; if (!G) return; for (const t of G.tele) { R.root?.remove(t.m); t.m.material.dispose(); } G.tele = []; }
 
 /* ───── 공격 (raid.enemyAttack 안 — R.tele 가 예고 시간) ───── */
@@ -213,4 +301,4 @@ function down(R, e) {
   R.ui.event('파수가 멈췄어요 — 렌즈가 호박색으로 돌아와요. 잔해에서 \'돌려받은 기억\'을 · 꼭대기 구조 보트가 와요', 'good'); sfx.rare?.();
   if (G) G.done = true;
 }
-function clear(R) { const G = R.GT; if (!G) return; clearTele(R); for (const p of G.plates) { R.root?.remove(p.m); p.m.material.dispose(); } if (G.dome) { R.root?.remove(G.dome); G.dome.geometry.dispose(); G.dome.material.dispose(); } R.GT = null; BOSS.pasu.weakMul = 2; }
+function clear(R) { bossHud(R, false); const G = R.GT; if (!G) return; clearTele(R); for (const p of G.plates) { R.root?.remove(p.m); p.m.material.dispose(); } if (G.dome) { R.root?.remove(G.dome); G.dome.geometry.dispose(); G.dome.material.dispose(); } R.GT = null; BOSS.pasu.weakMul = 2; }

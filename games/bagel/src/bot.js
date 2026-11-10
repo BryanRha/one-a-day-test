@@ -1,8 +1,8 @@
 // 시험용 자동 플레이 (?bot=1): 굽기 → 진열 → 계산 → 돈 줍기 → 열기 칸 · 크림치즈 · 커피 · 쓰레기
 import * as THREE from 'three';
-import { IN } from './ui.js?v=0.99.16';
-import { S } from './state.js?v=0.99.16';
-import { SIZE } from './game.js?v=0.99.16';
+import { IN } from './ui.js?v=0.99.17';
+import { S } from './state.js?v=0.99.17';
+import { SIZE } from './game.js?v=0.99.17';
 const SPD = +(new URLSearchParams(location.search).get('speed') || 1);
 export function startBot(app) {
   let padGoal = null, padT = 0, goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
