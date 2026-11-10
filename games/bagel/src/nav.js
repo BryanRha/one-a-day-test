@@ -1,60 +1,66 @@
-// 방 모양 → 걸을 수 있는 곳 · 벽 · 높이 · 길 찾기 (직원 · 손님 · 안내 화살표)
-//   사장님: 열린 방(+ 연결 통로)만 걸음 · 벽에 막힘 · 손님/직원(npc): + 매장 앞 거리
-//   길 찾기: 50 칸 격자 BFS → 보이는 가장 먼 점으로 줄임(직선으로 갈 수 있으면 바로)
-import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.19';
-const CELL = 50, X0 = -1350, Z0 = -1250, NX = 60, NZ = 58;
-/* 문 위치: 방 rect 의 변(N 위 = z0 · S 아래 = z1 · W 왼 = x0 · E 오른 = x1) 위 at 에서 폭 DOOR_W */
-export function doorBox(r, d) { const [x0, z0, x1, z1] = r, h = DOOR_W / 2;
-  if (d.side === 'N') return { x: d.at, z: z0, axis: 'x', a: d.at - h, b: d.at + h }; if (d.side === 'S') return { x: d.at, z: z1, axis: 'x', a: d.at - h, b: d.at + h };
-  if (d.side === 'W') return { x: x0, z: d.at, axis: 'z', a: d.at - h, b: d.at + h }; return { x: x1, z: d.at, axis: 'z', a: d.at - h, b: d.at + h }; }
-/* 열린 방 목록 → { rects 사장님이 걷는 곳 · npc 손님/직원 · walls 벽 상자 [x,z,반가로,반세로, 높이, 바깥쪽?] · raised 2층 } */
-export function geom(open, feat) {
-  const rects = [], walls = [], seen = new Set();
-  for (const id of open) { const R = ROOMS[id]; if (!R) continue; rects.push(R.rect); if (R.link) rects.push(R.link); }
-  /* 특색 방 연결 통로 (방끼리 모서리로만 닿는 곳): 픽업 · 드라이브스루 = 매장 오른쪽 앞 · 테라스 = 왼쪽 앞 */
-  if (open.has('pickup') || open.has('drive')) rects.push([470, 440, 660, 720]);
-  if (open.has('terrace')) rects.push([-260, 440, -90, 720]);
-  const seg = (x0, z0, x1, z1, h, front) => { const k = [x0, z0, x1, z1].map(Math.round).join(','); if (seen.has(k)) return; seen.add(k);
-    walls.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, hw: Math.max(WALL_T / 2, Math.abs(x1 - x0) / 2), hd: Math.max(WALL_T / 2, Math.abs(z1 - z0) / 2), h, front }); };
-  /* 벽에 문 구멍 내기 */
-  const side = (a, b, fixed, axis, gaps, h, front) => { let s = a; for (const [g0, g1] of gaps.sort((p, q) => p[0] - q[0])) { if (g0 > s) axis === 'x' ? seg(s, fixed, g0, fixed, h, front) : seg(fixed, s, fixed, g0, h, front); s = Math.max(s, g1); } if (s < b) axis === 'x' ? seg(s, fixed, b, fixed, h, front) : seg(fixed, s, fixed, b, h, front); };
-  for (const id of open) { const R = ROOMS[id]; if (!R || R.kind !== 'encl') continue; const [x0, z0, x1, z1] = R.rect, ds = (R.doors || []).map(d => ({ ...doorBox(R.rect, d), side: d.side }));
-    const gaps = s => ds.filter(d => d.side === s).map(d => [d.a, d.b]);
-    /* 이웃 방(같은 변을 쓰는 방)의 문도 구멍으로 */ for (const oid of open) { const O = ROOMS[oid]; if (oid === id || !O.doors) continue; for (const d of O.doors) { const b = doorBox(O.rect, d); if (b.axis === 'x' && (b.z === z0 || b.z === z1) && b.a < x1 && b.b > x0) ds.push({ ...b, side: b.z === z0 ? 'N' : 'S' }); if (b.axis === 'z' && (b.x === x0 || b.x === x1) && b.a < z1 && b.b > z0) ds.push({ ...b, side: b.x === x0 ? 'W' : 'E' }); } }
-    side(x0, x1, z0, 'x', gaps('N'), 230, false); side(z0, z1, x0, 'z', gaps('W'), 230, false); side(x0, x1, z1, 'x', gaps('S'), 70, true); side(z0, z1, x1, 'z', gaps('E'), 70, true); }   /* 앞(카메라 쪽) 벽은 낮게 잘라 방 안이 보이게 */
-  /* 0.3.2: 매대 뒤 로고 칸막이는 없앰(동선을 막음) → 로고는 오븐 위에 매다는 간판 (world.js) · 열린 방 안에는 벽을 두지 않음 (tools/flow_check.mjs 가 확인) */
-  /* 2층: 계단 옆 난간 · 2층 뒤 끝(아래층과 높이 차) */
-  if (open.has('up2')) { seg(STAIRS.x0, STAIRS.z0, STAIRS.x0, STAIRS.z1, 40, true); seg(-1250, 450, STAIRS.x0, 450, 40, false); }
-  return { rects, walls, raised: open.has('up2'), npc: [...rects, STREET, [650, 1050, 1600, 1550], [-1250, 1050, -250, 1550]] };
-}
-/* 높이: 2층(계단은 비탈) */
-export function heightAt(G, x, z) { if (!G.raised) return 0; const r = ROOMS.up2.rect; if (!inRect(r, x, z)) return 0; if (x >= STAIRS.x0 && z < STAIRS.z1) return Math.max(0, Math.min(1, (z - STAIRS.z0) / (STAIRS.z1 - STAIRS.z0))) * 150; return 150; }
+// ③ 이동 · 충돌 하나 — 장애물 표(space.js obstacles) 1벌 → 격자 1벌 → 사장 · 직원 · 봇이 같은 길 찾기와 같은 밀어내기
+//   손님은 정해진 고리(줄 · 통로 · 나감 길) 위를 걸어서 길 찾기가 필요 없어요 (space.js entryPath · seatPath · exitPath)
+import { R } from './space.js?v=0.99.20';
+
+const CELL = 20, X0 = -640, Z0 = -40, X1 = 1640, Z1 = 1840, NX = Math.ceil((X1 - X0) / CELL), NZ = Math.ceil((Z1 - Z0) / CELL);
 export class Nav {
-  constructor(G, obs = []) { this.G = G; this.obs = obs; this.grid = { p: this.mk(G.rects), n: this.mk(G.npc) }; this.cache = new WeakMap(); }   /* obs: 설비 몸통 [x, z, 반가로, 반세로] (0.3.3 · 안내 · 길 찾기가 계산대 등을 돌아감) */
-  mk(rects) { const g = new Uint8Array(NX * NZ); for (let i = 0; i < NX; i++) for (let j = 0; j < NZ; j++) { const x = X0 + (i + 0.5) * CELL, z = Z0 + (j + 0.5) * CELL; g[j * NX + i] = this.free(rects, x, z, 36) ? 1 : 0; } return g; }
-  /* 점이 걸을 수 있는 곳인가: 반지름 r 만큼 네 방향도 어떤 방 안 · 벽 상자와 안 겹침 */
-  free(rects, x, z, r = 34) { const inAny = (px, pz) => rects.some(R => px >= R[0] && px <= R[2] && pz >= R[1] && pz <= R[3]);
-    if (!inAny(x, z) || !inAny(x + r, z) || !inAny(x - r, z) || !inAny(x, z + r) || !inAny(x, z - r)) return false;
-    for (const w of this.G.walls) if (Math.abs(x - w.x) < w.hw + r && Math.abs(z - w.z) < w.hd + r) return false;
-    if (r >= 30) for (const o of this.obs) { if (o === this.skip) continue; const [ox, oz, hw, hd] = o; if (Math.abs(x - ox) < hw + r && Math.abs(z - oz) < hd + r) return false; }   /* 부딪힘과 같은 여유 · 목표 바로 옆 장애물(앉을 테이블)은 뺌 */ return true; }
-  ok(x, z, r = 34) { return this.free(this.G.rects, x, z, r); }
-  /* 직선으로 갈 수 있나 (25 마다 확인) */
-  clear(ax, az, bx, bz, npc) { const R = npc ? this.G.npc : this.G.rects, l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(l / 25)); for (let i = 1; i <= n; i++) { const u = i / n; if (!this.free(R, ax + (bx - ax) * u, az + (bz - az) * u, 34)) return false; } return true; }
-  cellOf(x, z) { return [Math.max(0, Math.min(NX - 1, Math.floor((x - X0) / CELL))), Math.max(0, Math.min(NZ - 1, Math.floor((z - Z0) / CELL)))]; }
-  /* 격자 BFS (8방향) → 칸 중심 경로 */
-  path(ax, az, bx, bz, npc) { const g = npc ? this.grid.n : this.grid.p, [si, sj] = this.near(g, ...this.cellOf(ax, az)), [ti, tj] = this.near(g, ...this.cellOf(bx, bz)); if (si < 0 || ti < 0) return null;
-    const prev = new Int32Array(NX * NZ).fill(-1), s = sj * NX + si, t = tj * NX + ti, q = [s]; prev[s] = s;
-    for (let h = 0; h < q.length; h++) { const c = q[h]; if (c === t) break; const ci = c % NX, cj = (c / NX) | 0;
-      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) { const i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= NX || j >= NZ) continue; const k = j * NX + i; if (prev[k] >= 0 || !g[k]) continue; if (di && dj && (!g[cj * NX + i] || !g[j * NX + ci])) continue; prev[k] = c; q.push(k); } }
-    if (prev[t] < 0) return null; const P = []; for (let c = t; c !== s; c = prev[c]) P.push([X0 + (c % NX + 0.5) * CELL, Z0 + (((c / NX) | 0) + 0.5) * CELL]); P.reverse(); P.push([bx, bz]); return P; }
-  near(g, i, j) { if (g[j * NX + i]) return [i, j]; for (let r = 1; r < 6; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) { const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < NX && b < NZ && g[b * NX + a]) return [a, b]; } return [-1, -1]; }
-  /* 지금 향할 점: 목표가 바로 보이면 목표 · 아니면 경로에서 보이는 가장 먼 점 (o 마다 경로 기억) */
-  next(o, x, z, npc) { const p = o.pos; this.skip = this.obs.find(([ox, oz, hw, hd]) => Math.abs(x - ox) < hw + 40 && Math.abs(z - oz) < hd + 40) || null;   /* 목표가 설비 · 테이블 바로 옆(의자)이면 그 장애물은 빼고 봄 */
-    try { return this._next(o, x, z, npc); } finally { this.skip = null; } }
-  _next(o, x, z, npc) { const p = o.pos; let c = this.cache.get(o); if (!c || c.x !== x || c.z !== z || c.npc !== npc) { c = { x, z, npc, k: 0, w: null, P: null }; this.cache.set(o, c); }
-    if (c.k-- > 0 && (!c.w || Math.hypot(p.x - c.w[0], p.z - c.w[1]) > 30)) return c.w;   /* 몇 프레임마다만 다시 봄 (가벼움) */
-    c.k = 10; if (this.clear(p.x, p.z, x, z, npc)) { c.w = null; c.P = null; return null; }
-    if (!c.P || !c.P.length) c.P = this.path(p.x, p.z, x, z, npc); if (!c.P) { c.w = null; return null; }
-    let bi = 0; for (let i = Math.min(c.P.length - 1, 10); i > 0; i--) if (this.clear(p.x, p.z, c.P[i][0], c.P[i][1], npc)) { bi = i; break; }
-    c.w = c.P[bi]; c.P = c.P.slice(bi); return c.w; }
+  constructor(sp) { this.sp = sp; this.active = []; this.grid = new Uint8Array(NX * NZ); }
+  /* open(id) 로 지금 있는 장애물만 고름 (열린 시설 몸통 · 잠긴 방) → 격자를 다시 만듦 */
+  rebuild(open, roomOpen) {
+    this.active = this.sp.obstacles.filter(o => o.lockedRoom ? !roomOpen(o.lockedRoom) : !o.need || open(o.need));
+    const g = this.grid, r = R.owner + 4; g.fill(0);
+    for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) { const x = X0 + (ix + 0.5) * CELL, z = Z0 + (iz + 0.5) * CELL; if (!this.inside(x, z) || this.hit(x, z, r)) g[iz * NX + ix] = 1; }
+    this.ver = (this.ver || 0) + 1;
+  }
+  /* 걸을 수 있는 바닥 (본관 · 별채 · 문턱) */
+  inside(x, z) { const H = this.sp.hall, A = this.sp.annex; return (x > 0 && x < H.w && z > 0 && z < H.d - 10) || (x > A.x0 && x < 0 && z > A.z0 && z < A.z1); }
+  hit(x, z, r, body) { for (const o of this.active) if (body && o.pathOnly) continue; else if (o.rect ? rectD(o.rect, x, z) < r : Math.hypot(o.circle[0] - x, o.circle[1] - z) < o.circle[2] + r) return o; return null; }
+  free(x, z) { const ix = Math.floor((x - X0) / CELL), iz = Math.floor((z - Z0) / CELL); return ix >= 0 && iz >= 0 && ix < NX && iz < NZ && !this.grid[iz * NX + ix]; }
+  /* 한 걸음: 원하는 이동 → 장애물에서 밀어냄(미끄러짐) · 바닥 밖이면 안 감 */
+  move(p, dx, dz, r) {
+    const n = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 12));
+    for (let i = 0; i < n; i++) { let x = p.x + dx / n, z = p.z + dz / n;
+      for (let k = 0; k < 3; k++) { let pushed = false; for (const o of this.active) { if (o.pathOnly) continue; const q = push(o, x, z, r); if (q) { x = q[0]; z = q[1]; pushed = true; } } if (!pushed) break; }
+      if (!this.inside(x, z)) { if (this.inside(x, p.z)) z = p.z; else if (this.inside(p.x, z)) x = p.x; else continue; }
+      p.x = x; p.z = z; }
+  }
+  /* 길 찾기 (A* · 8방향) → 시선이 닿는 점만 남김 */
+  path(ax, az, bx, bz) {
+    const c = (x, z) => [Math.max(0, Math.min(NX - 1, Math.floor((x - X0) / CELL))), Math.max(0, Math.min(NZ - 1, Math.floor((z - Z0) / CELL)))];
+    let [sx, sz] = c(ax, az), [tx, tz] = c(bx, bz); const g = this.grid;
+    const near = (ix, iz) => { if (!g[iz * NX + ix]) return [ix, iz]; for (let r = 1; r < 12; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x = ix + dx, z = iz + dz; if (x >= 0 && z >= 0 && x < NX && z < NZ && !g[z * NX + x]) return [x, z]; } return [ix, iz]; };
+    [sx, sz] = near(sx, sz); [tx, tz] = near(tx, tz);
+    const N = NX * NZ, from = new Int32Array(N).fill(-1), cost = new Float32Array(N).fill(1e9), open = [[0, sz * NX + sx]], goal = tz * NX + tx; cost[sz * NX + sx] = 0;
+    const H = (i) => { const x = i % NX, z = (i / NX) | 0, dx = Math.abs(x - tx), dz = Math.abs(z - tz); return Math.max(dx, dz) + 0.41 * Math.min(dx, dz); };
+    let it = 0;
+    while (open.length && it++ < 40000) { let bi = 0; for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i; const [, cur] = open[bi]; open[bi] = open[open.length - 1]; open.pop();
+      if (cur === goal) break; const x = cur % NX, z = (cur / NX) | 0;
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dz) continue; const nx = x + dx, nz = z + dz; if (nx < 0 || nz < 0 || nx >= NX || nz >= NZ) continue; const ni = nz * NX + nx; if (g[ni]) continue;
+        if (dx && dz && (g[z * NX + nx] || g[nz * NX + x])) continue; const nc = cost[cur] + (dx && dz ? 1.414 : 1); if (nc < cost[ni]) { cost[ni] = nc; from[ni] = cur; open.push([nc + H(ni), ni]); } } }
+    if (from[goal] < 0 && goal !== sz * NX + sx) return null;
+    const pts = []; for (let i = goal; i >= 0 && i !== sz * NX + sx; i = from[i]) pts.push([X0 + (i % NX + 0.5) * CELL, Z0 + (((i / NX) | 0) + 0.5) * CELL]);
+    pts.reverse(); pts.push([bx, bz]);
+    const out = []; let px = ax, pz = az;   /* 시선 줄이기 */
+    for (let i = 0; i < pts.length; i++) { const nx = pts[i + 1]; if (nx && this.los(px, pz, nx[0], nx[1])) continue; out.push(pts[i]); [px, pz] = pts[i]; }
+    return out;
+  }
+  los(ax, az, bx, bz) { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / (CELL / 2)); for (let i = 1; i <= n; i++) { const t = i / n; if (!this.free(ax + (bx - ax) * t, az + (bz - az) * t)) return false; } return true; }
+  /* 거리 (길 찾기 기준 cm) — 시험 Q1 · Q4 가 씀 */
+  dist(ax, az, bx, bz) { const p = this.path(ax, az, bx, bz); if (!p) return Infinity; let d = 0, x = ax, z = az; for (const [px, pz] of p) { d += Math.hypot(px - x, pz - z); x = px; z = pz; } return d; }
+}
+export function rectD(r, x, z) { const dx = Math.max(r[0] - x, 0, x - r[2]), dz = Math.max(r[1] - z, 0, z - r[3]); return Math.hypot(dx, dz); }
+function push(o, x, z, r) {
+  if (o.circle) { const [cx, cz, cr] = o.circle, d = Math.hypot(x - cx, z - cz), m = cr + r; if (d >= m) return null; const k = d ? m / d : 1; return d ? [cx + (x - cx) * k, cz + (z - cz) * k] : [cx + m, cz]; }
+  const [x0, z0, x1, z1] = o.rect, qx = Math.max(x0, Math.min(x, x1)), qz = Math.max(z0, Math.min(z, z1)), dx = x - qx, dz = z - qz, d = Math.hypot(dx, dz);
+  if (d >= r) return null;
+  if (d > 0) return [qx + dx / d * r, qz + dz / d * r];
+  const L = x - x0, Rr = x1 - x, T = z - z0, B = z1 - z, m = Math.min(L, Rr, T, B);   /* 안에 들어감: 가장 가까운 변으로 */
+  return m === L ? [x0 - r, z] : m === Rr ? [x1 + r, z] : m === T ? [x, z0 - r] : [x, z1 + r];
+}
+/* 사람끼리 부드럽게 비켜남 (같은 규칙 하나): 서로 반지름 합보다 가까우면 반씩 밀어냄 · fixed 는 안 밀림 */
+export function separate(people, nav) {
+  for (let i = 0; i < people.length; i++) for (let j = i + 1; j < people.length; j++) { const a = people[i], b = people[j]; if (a.ghost || b.ghost || (a.y || 0) !== (b.y || 0)) continue;
+    const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, d = Math.hypot(dx, dz), m = a.r + b.r; if (d >= m || d < 0.01) continue;
+    const o = (m - d), ux = dx / d, uz = dz / d, wa = a.fixed ? 0 : b.fixed ? 1 : 0.5, wb = 1 - wa; if (a.fixed && b.fixed) continue;
+    if (wa) nav.move(a.pos, -ux * o * wa, -uz * o * wa, a.r); if (wb) nav.move(b.pos, ux * o * wb, uz * o * wb, b.r); }
 }
