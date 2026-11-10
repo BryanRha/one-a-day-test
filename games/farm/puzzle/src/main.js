@@ -1,12 +1,12 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.17';
-import { audio } from './audio.js?v=0.99.17';
-import { BootScene } from './scenes/Boot.js?v=0.99.17';
-import { TitleScene } from './scenes/Title.js?v=0.99.17';
-import { MapScene } from './scenes/Map.js?v=0.99.17';
-import { GameScene } from './scenes/Game.js?v=0.99.17';
-import { WorldClearScene } from './scenes/WorldClear.js?v=0.99.17';
-import { ReefScene } from './scenes/Reef.js?v=0.99.17';
-import { installBack } from './oad.js?v=0.99.17';
+import { W, BASE_H, setH } from './config.js?v=0.99.18';
+import { audio } from './audio.js?v=0.99.18';
+import { BootScene } from './scenes/Boot.js?v=0.99.18';
+import { TitleScene } from './scenes/Title.js?v=0.99.18';
+import { MapScene } from './scenes/Map.js?v=0.99.18';
+import { GameScene } from './scenes/Game.js?v=0.99.18';
+import { WorldClearScene } from './scenes/WorldClear.js?v=0.99.18';
+import { ReefScene } from './scenes/Reef.js?v=0.99.18';
+import { installBack } from './oad.js?v=0.99.18';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 폰트 실패 시 기본 폰트 */ }

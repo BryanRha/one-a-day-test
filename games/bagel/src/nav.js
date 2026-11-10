@@ -1,7 +1,7 @@
 // 방 모양 → 걸을 수 있는 곳 · 벽 · 높이 · 길 찾기 (직원 · 손님 · 안내 화살표)
 //   사장님: 열린 방(+ 연결 통로)만 걸음 · 벽에 막힘 · 손님/직원(npc): + 매장 앞 거리
 //   길 찾기: 50 칸 격자 BFS → 보이는 가장 먼 점으로 줄임(직선으로 갈 수 있으면 바로)
-import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.17';
+import { ROOMS, DOOR_W, WALL_T, STAIRS, STREET, inRect } from './layout.js?v=0.99.18';
 const CELL = 50, X0 = -1350, Z0 = -1250, NX = 60, NZ = 58;
 /* 문 위치: 방 rect 의 변(N 위 = z0 · S 아래 = z1 · W 왼 = x0 · E 오른 = x1) 위 at 에서 폭 DOOR_W */
 export function doorBox(r, d) { const [x0, z0, x1, z1] = r, h = DOOR_W / 2;

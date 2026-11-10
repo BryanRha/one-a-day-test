@@ -1,16 +1,16 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { UP_MAX, upCost } from './data.js?v=0.99.17';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, OUTFITS_PRO, REST, FX, EVENTS, FINISHED_RATE, ROOM_UP, ROOM_UP_MAX, VIP, THEME_SETS } from './data.js?v=0.99.17';
-import { ROOMS, hms, inRect as inR } from './layout.js?v=0.99.17';
-import { geom, Nav, heightAt } from './nav.js?v=0.99.17';
-import { drawWorld, drawWalls } from './world.js?v=0.99.17';
-import { track, salesAdd } from './oad.js?v=0.99.17';
-import { bm } from './oad_bm.js?v=0.99.17';
+import { UP_MAX, upCost } from './data.js?v=0.99.18';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, OUTFITS_PRO, REST, FX, EVENTS, FINISHED_RATE, ROOM_UP, ROOM_UP_MAX, VIP, THEME_SETS } from './data.js?v=0.99.18';
+import { ROOMS, hms, inRect as inR } from './layout.js?v=0.99.18';
+import { geom, Nav, heightAt } from './nav.js?v=0.99.18';
+import { drawWorld, drawWalls } from './world.js?v=0.99.18';
+import { track, salesAdd } from './oad.js?v=0.99.18';
+import { bm } from './oad_bm.js?v=0.99.18';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, sph, item, person, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.17';
-import { S, save, addSold, mission, today, vipOn } from './state.js?v=0.99.17';
-import { sfx } from './audio.js?v=0.99.17';
+import { M, box, cyl, sph, item, person, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.18';
+import { S, save, addSold, mission, today, vipOn } from './state.js?v=0.99.18';
+import { sfx } from './audio.js?v=0.99.18';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -211,11 +211,27 @@ export class Game {
       const step = (S.roomStep || {})[room] || 0, pr = step ? null : this.ui.primary && this.ui.primary(room);   /* 처음엔 첫 할 일 칸만 (0.3.1) */
       list.forEach((u, i) => { if (step || (pr && pr.k === 'lv' && pr.u.id === u.id)) this.lvPad(room, u, P0[i]); }); if (step) this.lvPad(room, { id: 'free', name: '무료 1단계', icon: '📺' }, P0[list.length]); }
     /* 설비 강화 칸 (0.3.1 · 원작처럼 몸이 직접 감): 설비 앞 옆 바닥 · 그 설비 업그레이드 중 낮은 것 1단계 · HUD 「설비」 창은 보조로 남김 */
-    for (const [sid, [dx, dz]] of Object.entries(EQ_PAD)) { const o = this.st[sid]; if (!o) continue; const us = UPGRADES.filter(u => u.st === sid && u.id !== 'price'); if (!us.length) continue; this.lvPad(null, { id: 'eq_' + sid, eq: sid, us, icon: '⬆', name: stName(sid) }, [o.x + dx, o.z + dz]); }
+    for (const sid of Object.keys(EQ_PAD)) { const o = this.st[sid]; if (!o) continue; const us = UPGRADES.filter(u => u.st === sid && u.id !== 'price'); if (!us.length) continue; const at = this.eqSpot(sid) || this.eqFallback(sid); if (at) this.lvPad(null, { id: 'eq_' + sid, eq: sid, us, icon: '⬆', name: stName(sid) }, at); }
   }
   lvPad(room, u, [x, z]) { const g = new THREE.Group(); g.position.set(x, 0, z); this.sc.add(g); const free = u.id === 'free', S2 = u.eq ? 120 : 140;   /* g · S2 는 ring() 이 씀 */
     const { fill, look } = padLook(g, S2, free ? 0x5AB0E8 : u.eq ? 0xFFD24A : room === 'crew' ? 0x6FD0A0 : 0xFFB24A, free ? 0x8ACCF2 : 0xFFD24A);
     const tag = this.ui.tag(); tag.classList.add('lv'); if (free) tag.classList.add('free'); const p = { room, u, g, fill, look, tag, x, z, S2, free }; this.lvPads.push(p); this.updLv(p); }
+  /* 설비 강화 칸 자리 (0.3.4 긴급 「팔아도 돈이 안 늚」): 예전엔 동작 칸 바로 옆 → 오븐 앞에서 기다리다 멈추면 돈이 강화 칸으로 새어 나감
+     → 그 설비 방 안에서, 모든 동작 칸과 60 · 설비 몸통 · 다른 칸과 20 이상 떨어진 가장 가까운 자리 (지점 전체 배치 기준이라 칸이 열려도 안 움직임) */
+  eqSpot(sid) { const B = this.B, key = this.bi + ':' + sid; (this._eqc ||= {}); if (key in this._eqc) return this._eqc[key]; const me = B.slots.find(x => x.id === sid); if (!me) return null; const RS = [ROOMS[me.room]?.rect || ROOMS.shop.rect], H = 60;   /* 그 설비가 있는 방 안에서만 */
+    const box = [], zon = []; for (const sl of B.slots) { const sz = SIZE[sl.look === 'picnic' ? 'table' : sl.type]; if (sz && sl.type !== 'drive') { const [hw, hd = hw] = sl.type === 'table' ? [128, 72] : sz; box.push([sl.x, sl.z, hw + 10, hd + 10]); } for (const [, dx, dz, w, d, , ring] of ZONES[sl.type] || []) if (!ring) zon.push([sl.x + dx, sl.z + dz, w / 2, d / 2]);
+      if (!sl.free && !sl.withRoom) box.push([sl.px ?? sl.x, sl.pz ?? sl.z, PAD / 2 + 10, PAD / 2 + 10]); }
+    const ct = B.slots.find(x => x.id === 'counter'); zon.push([ct.x + 230, ct.z + 30, 130, 70]);   /* 돈 더미 줍는 자리 */
+    for (const q of [...CREW_HIRE, ...Object.values(LV_PADS).flat()]) box.push([q[0], q[1], PAD / 2 + 10, PAD / 2 + 10]); for (const k of Object.keys(this._eqc)) if (k.startsWith(this.bi + ':') && this._eqc[k]) box.push([this._eqc[k][0], this._eqc[k][1], 140, 140]);
+    for (const ZM of [60, 50]) for (const R of RS) for (let r = 160; r < 900; r += 30) for (let a = 0; a < 24; a++) { const x = me.x + Math.cos(a / 24 * 6.283) * r, z = me.z + Math.sin(a / 24 * 6.283) * r; if (x - H < R[0] + 20 || x + H > R[2] - 20 || z - H < R[1] + 20 || z + H > R[3] - 20) continue;
+      if (box.some(([bx, bz, w, d]) => Math.abs(x - bx) < w + H && Math.abs(z - bz) < d + H) || zon.some(([bx, bz, w, d]) => Math.abs(x - bx) < w + H + ZM && Math.abs(z - bz) < d + H + ZM)) continue; return (this._eqc[key] = [Math.round(x), Math.round(z)]); }
+    return (this._eqc[key] = null); }
+  /* 빈자리가 없으면: 이미 열린 칸(직원 뽑기 · 방 열기)이 쓰던 자리를 물려받음 (그 칸은 다시 안 나옴) */
+  eqFallback(sid) { const me = this.B.slots.find(x => x.id === sid), room = me.room === 'shop' || !me.room ? 'shop' : me.room, used = this.lvPads.filter(p => p.u.eq).map(p => [p.x, p.z]);
+    const zs = []; for (const o of Object.values(this.st)) for (const Z of Object.values(o.Z)) if (!Z.hidden && !Z.ring) zs.push(Z);
+    const c = this.B.slots.filter(x => !x.free && !x.withRoom && x.type !== 'next' && this.unl.has(x.id) && (x.type === 'room' ? inR(ROOMS[room].rect, x.x, x.z) : x.room === room) && x.type !== 'table').map(x => x.type === 'hire' && this.open.has('crew') ? null : [x.px ?? x.x, x.pz ?? x.z]).filter(Boolean)
+      .filter(([x, z]) => !used.some(u => Math.hypot(u[0] - x, u[1] - z) < 130) && zs.every(Z => Math.max(Math.abs(x - Z.x) - Z.w / 2, Math.abs(z - Z.z) - Z.d / 2) >= 60 + 50)).sort((a, b) => Math.hypot(a[0] - me.x, a[1] - me.z) - Math.hypot(b[0] - me.x, b[1] - me.z));
+    return c[0] || null; }
   lvCost(id) { return Math.round([...ROOM_UP.crew, ...ROOM_UP.boss].find(u => u.id === id).base * 1.6 * Math.pow(1.6, L(id)) * this.B.mult / 5) * 5; }
   eqU(p) { return p.u.us.filter(u => L(u.id) < UP_MAX).sort((a, b) => L(a.id) - L(b.id))[0] || null; }   /* 그 설비에서 다음에 올릴 것 (낮은 단계 먼저) */
   eqCost(p) { const u = this.eqU(p); return u ? upCost(u, L(u.id), this.B.mult) : Infinity; }
@@ -268,7 +284,7 @@ export class Game {
     if (w.rest) { if (this.near(w, this.pl.pos.x, this.pl.pos.z, REST.near)) { w.rest = false; this.restPose(w, false); w.boostT = this.t + REST.boost; w.restAt = REST.after + rnd(0, REST.spread);
         this.ui.float(['다시 힘낼게요!', '네, 사장님!', '바로 할게요!'][Math.floor(Math.random() * 3)], w.pos.clone().setY(260), 'say'); sfx('blip', { vol: 0.3, rate: 1.3 }); this.sparkle(w.pos.clone().setY(150)); mission('wake'); }
       return; }
-    if (this.calmT > w.restAt && !w.stack.length && !this.nexting && !this.staff.some(x => x.rest) && this.t > (this.restNext || 0)) { w.rest = true; this.restPose(w, true); this.restNext = this.t + REST.gap; for (const x of this.staff) if (x !== w) x.restAt = Math.max(x.restAt, this.calmT + REST.gap * (1 + Math.random())); } }   /* 한 번에 한 명만 · 다음 사람은 REST.gap 초 뒤 (0.3.3 테스터 #20) */
+    if (w.k !== 'cashier' && this.calmT > w.restAt && !w.stack.length && !this.nexting && !this.staff.some(x => x.rest) && this.t > (this.restNext || 0)) { w.rest = true; this.restPose(w, true); this.restNext = this.t + REST.gap; for (const x of this.staff) if (x !== w) x.restAt = Math.max(x.restAt, this.calmT + REST.gap * (1 + Math.random())); } }   /* 한 번에 한 명만 · 다음 사람은 REST.gap 초 뒤 (0.3.3 테스터 #20) */
   restPose(w, on) { w.P.body.rotation.x = on ? 0.32 : 0; w.P.carry = false; for (const a of w.P.arms) a.rotation.x = on ? 0.2 : 0; }
   staffK(w) { return (fxOn('staff') ? FX.staff.k : 1) * ((w.boostT || 0) > this.t ? REST.boostK : 1); }   /* 직원 응원 커피 · 깨운 뒤 기운 */
   // ── 매 프레임
@@ -407,7 +423,7 @@ export class Game {
     for (const [id, z, kind] of L0) { const o = this.st[id]; if (o && this.in(w, o.Z[z])) return { o, kind }; } return null; }
   /* 지금 선 동작 칸 (주고받기가 일어나는 칸만) */
   zoneKey(w) { for (const [id, k] of [['mixer', 'out'], ['retard', 'out'], ['oven', 'out'], ['cc', 'io'], ['coffee', 'out'], ['espresso', 'out'], ['bin', 'drop'], ['kettle', 'io']]) { const o = this.st[id]; if (o && this.in(w, o.Z[k])) return id + '.' + k; } return null; }
-  /* 손에 다른 걸 든 채 지나가기만 하면 바꾸지 않음: 그 칸에 DWELL 초 머물러야 바꾸기 · 반납 · 토핑 바 투입 (0.3.1 대표) */
+  /* 멈춤 기준 (0.3.4 정리): 집기 · 진열 · 투입 · 계산 · 돈 줍기 = 바로 · 손에 든 것을 「바꾸기 · 반납」만 DWELL 초 머물러야 (0.3.1 대표) · 돈을 쓰는 칸(강화 · 구역 열기)은 멈춰 서서 PAD_STAY 초 */
   stay(w) { return !w.isPlayer || this.dwT >= DWELL; }
   interact(w, dt) {
     w.tick -= dt; if (w.tick > 0) return; const step = () => { w.tick = 0.07; };
@@ -427,7 +443,7 @@ export class Game {
       if (sa && sa.kind === w.kind && full && sa.o.stack.length) this.say('손이 가득 찼어요', 'full-hand'); }
     if (!full && (!w.kind || w.kind === 'bagel') && this.in(w, ov.Z.out) && ov.stack.length) { this.take(ov.stack, w); sfx('pick', { vol: 0.25, rate: 1 + w.stack.length * 0.05 }); return step(); }
     const cc = this.st.cc; if (cc && this.in(w, cc.Z.io)) {
-      if (w.kind === 'bagel' && cc.inStack.length < 8 && this.stay(w)) { const i = cc.inStack.length; this.give(w, cc.inStack, [cc.x - 70 + (i % 2) * 34, 107 + Math.floor(i / 2) * 16, cc.z + 30]); sfx('drop', { vol: 0.2 }); return step(); }
+      if (w.kind === 'bagel' && cc.inStack.length < 8) {   /* 토핑 바 투입은 자연스러운 일 → 바로 (0.3.4) */ const i = cc.inStack.length; this.give(w, cc.inStack, [cc.x - 70 + (i % 2) * 34, 107 + Math.floor(i / 2) * 16, cc.z + 30]); sfx('drop', { vol: 0.2 }); return step(); }
       if (!full && (!w.kind || w.kind === 'cream') && cc.stack.length) { this.take(cc.stack, w); sfx('pick', { vol: 0.25 }); return step(); } }
     const cf = this.st.coffee; if (cf && !full && (!w.kind || w.kind === 'coffee') && this.in(w, cf.Z.out) && cf.stack.length) { this.take(cf.stack, w); sfx('pick', { vol: 0.25 }); return step(); }
     // 내려놓기: 계산대 진열
@@ -631,7 +647,7 @@ export class Game {
     return null;
   }
   // 겹침 검사 (시험용): 모든 열기 칸 · 동작 칸 · 설비 바닥이 서로 겹치는지
-  overlaps() { const R = []; for (const [room, L0] of Object.entries(LV_PADS)) L0.forEach((q, i) => R.push({ n: 'lv:' + room + i, x: q[0], z: q[1], w: 140, d: 140 })); CREW_HIRE.forEach((q, i) => R.push({ n: 'hire:' + i, x: q[0], z: q[1], w: PAD, d: PAD })); for (const s of this.B.slots) if (EQ_PAD[s.type === 'ccbar' ? 'cc' : s.id]) { const [dx, dz] = EQ_PAD[s.type === 'ccbar' ? 'cc' : s.id]; R.push({ n: 'eq:' + s.id, x: s.x + dx, z: s.z + dz, w: 120, d: 120 }); }
+  overlaps() { const R = []; for (const [room, L0] of Object.entries(LV_PADS)) L0.forEach((q, i) => R.push({ n: 'lv:' + room + i, x: q[0], z: q[1], w: 140, d: 140 })); CREW_HIRE.forEach((q, i) => R.push({ n: 'hire:' + i, x: q[0], z: q[1], w: PAD, d: PAD })); for (const s of this.B.slots) if (EQ_PAD[s.id]) { const at = this.eqSpot(s.id); if (at) R.push({ n: 'eq:' + s.id, x: at[0], z: at[1], w: 120, d: 120 }); }
     for (const s of this.B.slots) { if (!s.free && !s.withRoom) R.push({ n: 'pad:' + s.id, x: s.px ?? s.x, z: s.pz ?? s.z, w: PAD, d: PAD });
       const sz = SIZE[s.type]; if (sz && s.type !== 'table') R.push({ n: 'st:' + s.id, x: s.x, z: s.z, w: sz[0] * 2, d: (sz[1] || sz[0]) * 2 }); if (s.type === 'table') R.push({ n: 'st:' + s.id, x: s.x, z: s.z, w: 256, d: 144 });
       for (const [k, dx, dz, w, d, , ring] of ZONES[s.type] || []) if (!ring) R.push({ n: 'zone:' + s.id + '.' + k, x: s.x + dx, z: s.z + dz, w, d }); }

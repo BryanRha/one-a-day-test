@@ -1,16 +1,16 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.17';
-import { audio } from './audio.js?v=0.99.17';
-import { WindFX } from './fx.js?v=0.99.17';
-import { BootScene } from './scenes/Boot.js?v=0.99.17';
-import { HomeScene } from './scenes/Home.js?v=0.99.17';
-import { AltarScene } from './scenes/Altar.js?v=0.99.17';
-import { RoadScene } from './scenes/Road.js?v=0.99.17';
-import { ArcadeScene } from './scenes/Arcade.js?v=0.99.17';
-import { DeckScene } from './scenes/Deck.js?v=0.99.17';
-import { PlayScene } from './scenes/Play.js?v=0.99.17';
-import { ResultScene } from './scenes/Result.js?v=0.99.17';
-import { installBack } from './oad.js?v=0.99.17';
-import { initBM } from './bmflow.js?v=0.99.17';
+import { W, BASE_H, setH } from './config.js?v=0.99.18';
+import { audio } from './audio.js?v=0.99.18';
+import { WindFX } from './fx.js?v=0.99.18';
+import { BootScene } from './scenes/Boot.js?v=0.99.18';
+import { HomeScene } from './scenes/Home.js?v=0.99.18';
+import { AltarScene } from './scenes/Altar.js?v=0.99.18';
+import { RoadScene } from './scenes/Road.js?v=0.99.18';
+import { ArcadeScene } from './scenes/Arcade.js?v=0.99.18';
+import { DeckScene } from './scenes/Deck.js?v=0.99.18';
+import { PlayScene } from './scenes/Play.js?v=0.99.18';
+import { ResultScene } from './scenes/Result.js?v=0.99.18';
+import { installBack } from './oad.js?v=0.99.18';
+import { initBM } from './bmflow.js?v=0.99.18';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }
