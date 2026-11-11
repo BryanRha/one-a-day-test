@@ -2,8 +2,8 @@
 //   지나가며 되는 일만 여기 (멈출 필요 없음) · 돈 쓰는 칸(멈춰서 붓기)은 pads.js · 책상 카드는 desk.js
 //   표 순서: 시간 없는 일(돈 · 계산 자리 · 깨우기 · 통화)은 늘 함께 · 손이 바뀌는 일은 앞에서부터 하나만
 //   누가: 사장은 전부 · 직원은 data.js STAFF[역할].can · ownerOnly = 사장만 · hand(h): 손 상태 조건 · near(g, a): 닿는 곳 목록 [{ x, z, r, ... }] · every: 한 개에 걸리는 초 · act: 한 번 일어나는 일
-import { R } from './space.js?v=0.99.25';
-import { STAFF, CHAIN } from './data.js?v=0.99.25';
+import { R } from './space.js?v=0.99.26';
+import { STAFF, CHAIN } from './data.js?v=0.99.26';
 /* 누가 하나: 사장은 모든 일 · 직원은 data.js STAFF[역할].can 에 적힌 일만 (역할 목록을 규칙마다 따로 적지 않음) */
 export const canDo = (a, id) => a.role === 'owner' || (!RULES.find(r => r.id === id)?.ownerOnly && (STAFF[a.role]?.can || []).includes(id));
 export const FOOD = ['bagel', 'cream', 'coffee', 'drink'];

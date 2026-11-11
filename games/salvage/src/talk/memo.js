@@ -1,9 +1,9 @@
 // 기억 조각 (인양품마다 사연 한 줄 · 세 번 건지면 한 줄 더) · 벽 낙서 · 녹음기
 //  v0.6: 가라앉은 공장(M3-B data/map_factory.js)의 사연 · 낙서는 그 파일에서 펼침 (키 그대로 · 사연 글은 M3-B 몫)
-import { FACTORY_MEMO, FACTORY_GRAF } from '../data/map_factory.js?v=0.99.25';
-import { LAB_MEMO, LAB_GRAF } from '../data/map_lab.js?v=0.99.25'; /* v0.7 심해 연구소 (M4-B) 사연 · 낙서 — 키 그대로 펼침 */
-import { M4_MEMO } from '../data/enemies.js?v=0.99.25'; /* v0.7 검은 닻 두목 짐 (M4-A) */
-import { TAPE6, GRAF6 } from './t6.js?v=0.99.25'; /* v0.8 대수문 꼭대기 녹음기 · 낙서 (M5-A) */
+import { FACTORY_MEMO, FACTORY_GRAF } from '../data/map_factory.js?v=0.99.26';
+import { LAB_MEMO, LAB_GRAF } from '../data/map_lab.js?v=0.99.26'; /* v0.7 심해 연구소 (M4-B) 사연 · 낙서 — 키 그대로 펼침 */
+import { M4_MEMO } from '../data/enemies.js?v=0.99.26'; /* v0.7 검은 닻 두목 짐 (M4-A) */
+import { TAPE6, GRAF6 } from './t6.js?v=0.99.26'; /* v0.8 대수문 꼭대기 녹음기 · 낙서 (M5-A) */
 export const MEMO = {
   can:      ['라벨에 "축제 특가". 그날 밤 먹을 저녁이었다.', '바닥에 아이 글씨로 "엄마 거 아님".'],
   soda:     ['김은 빠졌다. 따던 소리는 축제 소리에 묻혔겠지.', '캔 고리 몇 개가 실에 꿰여 팔찌가 되어 있다.'],

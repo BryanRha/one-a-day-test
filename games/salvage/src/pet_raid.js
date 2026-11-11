@@ -3,9 +3,9 @@
 //   · medic 체력 35% 아래 한 번 연고 · bite 바짝 붙은 적 한 번 물기(2초 멈춤) · vision(econ 이 L.vision 에 곱함) · ping 몇 초마다 가까운 적 빛 표시 · flash 체력 30% 아래 한 번 빛 터뜨림
 //  그리기: 몽이 = 수달 몸 한 덩어리(SkinnedMesh 1) · 반디 = 정점 색 한 덩어리(Mesh 1) + fx 빛 점 하나. 판 난수(R.R)는 안 씀 (봇 · 시뮬 재현 그대로)
 import * as THREE from 'three';
-import { makeHero, tailWag, HERO_SCALE } from './hero.js?v=0.99.25';
-import { PETS } from './data.js?v=0.99.25';
-import { sfx } from './audio.js?v=0.99.25';
+import { makeHero, tailWag, HERO_SCALE } from './hero.js?v=0.99.26';
+import { PETS } from './data.js?v=0.99.26';
+import { sfx } from './audio.js?v=0.99.26';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };

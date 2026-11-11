@@ -1,13 +1,13 @@
 // 원트랙 — 화면 흐름: 오늘의 한 곡 → 플레이 → 결과 → 이야기 컷 → 이야기책(내일 예고)
 //   무대 목록: 지금까지 열린 화(오늘까지)의 곡을 다시 고를 수 있음 · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.25';
-import { Play } from './play.js?v=0.99.25';
-import { SONGS, DAYS, DIVAS, PRAISE, CHEER, SEASON } from './data.js?v=0.99.25';
-import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, DEV } from './save.js?v=0.99.25';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.25';
-import { bm } from './oad_bm.js?v=0.99.25';
-import { THEMES } from './themes.js?v=0.99.25';
+import { A } from './audio.js?v=0.99.26';
+import { Play } from './play.js?v=0.99.26';
+import { SONGS, DAYS, DIVAS, PRAISE, CHEER, SEASON } from './data.js?v=0.99.26';
+import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, DEV } from './save.js?v=0.99.26';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.26';
+import { bm } from './oad_bm.js?v=0.99.26';
+import { THEMES } from './themes.js?v=0.99.26';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);

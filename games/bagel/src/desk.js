@@ -1,12 +1,12 @@
 // 별채 책상 카드 창 (DESIGN 3장 · analysis 13-1 · 13-7 원리): 책상 앞에 0.3초 서면 아래에서 카드 3장 — 걸어 나가면 닫힘 · 지나가다 실수로 살 수 없음
 //   크루룸 = 직원 뽑기 · 직원 걷기 · 들기 · 옷장 / 사장실 = 사장 걷기 · 들기 · 홍보 · 가격 · 금고 · 다음 지점 계약 / 창고 = 오늘의 선물 · VIP 상자 · 시즌 패스
 //   카드마다 「📺 무료」(하루 상한 · 광고 바구니) · 「돈」 두 단추
-import { UI } from './ui.js?v=0.99.25';
-import { S, save, vipOn, today } from './state.js?v=0.99.25';
-import { STAFF, DESK_UP, VIP, BRANCHES } from './data.js?v=0.99.25';
-import { FEATURES } from './space.js?v=0.99.25';
-import { sfx } from './audio.js?v=0.99.25';
-import { pushBack } from './oad.js?v=0.99.25';
+import { UI } from './ui.js?v=0.99.26';
+import { S, save, vipOn, today } from './state.js?v=0.99.26';
+import { STAFF, DESK_UP, VIP, BRANCHES } from './data.js?v=0.99.26';
+import { FEATURES } from './space.js?v=0.99.26';
+import { sfx } from './audio.js?v=0.99.26';
+import { pushBack } from './oad.js?v=0.99.26';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 P.desk = function (room) { const el = $('#sheet'); if (!el) return; this._desk = room; if (!room) { el.hidden = true; el.innerHTML = ''; this._dbk && this._dbk(); this._dbk = null; return; }
