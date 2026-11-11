@@ -3,13 +3,13 @@
 //   그리기: 가구는 시설 소품과 같은 두 덩어리(home_fac.js extra) → 그리기 수 그대로 · 기본 깔개 · 안락의자는 그 자리에 가구가 있으면 숨김
 //   뒤로가기: 바로 전 화면(초소 보기 · 옷장 · 은신처)으로 — oad.js pushBack
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.24';
-import { sfx } from './audio.js?v=0.99.24';
-import { pushBack } from './oad.js?v=0.99.24';
-import { loadModels, MODELS } from './home_fac.js?v=0.99.24';
-import { COS } from './look.js?v=0.99.24';
-import { thumbHtml } from './wardrobe.js?v=0.99.24'; /* M6-A 칸 그림 */
-import { FURN, FURN_SPOTS, FURN_SPOT_KEYS, furnOf, needOf, canBuy, buyFurn, placeFurn, clearSpot, placed, furnStats } from './furn.js?v=0.99.24';
+import { S, save } from './save.js?v=0.99.25';
+import { sfx } from './audio.js?v=0.99.25';
+import { pushBack } from './oad.js?v=0.99.25';
+import { loadModels, MODELS } from './home_fac.js?v=0.99.25';
+import { COS } from './look.js?v=0.99.25';
+import { thumbHtml } from './wardrobe.js?v=0.99.25'; /* M6-A 칸 그림 */
+import { FURN, FURN_SPOTS, FURN_SPOT_KEYS, furnOf, needOf, canBuy, buyFurn, placeFurn, clearSpot, placed, furnStats } from './furn.js?v=0.99.25';
 
 const $ = (s, r = document) => r.querySelector(s);
 /* 화면 전용 css (공용 style.css 를 안 건드림) */

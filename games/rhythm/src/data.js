@@ -1,28 +1,23 @@
-// 프로듀서 온에어 콘텐츠: 곡 · 캐스트 · 하루 방송(방송 전 · 생방송 채팅 · 개인 채널) · 칭찬 문구
-//   기획: team/dev/tasks/261109-rhythm/ONAIR_PLAN.md (하루 스튜디오 · 시즌 1 「옥상의 30일」 1막 1~10화)
+// 원트랙 콘텐츠: 곡 · 가희 · 하루 이야기 · 칭찬 문구
+//   세계관 · 이름은 team/dev/tasks/261109-rhythm/PLAN.md (시즌 1 「에덴펠의 첫 노래」)
 //   곡: Suno 유료 구독(회사 우동화 대표 계정)으로 2026-11-10~11 만든 10곡 — AUDIO_CREDITS.md
-//   그림: 아바타(화면 속) = 그라나사 원화 · 방송 밖(화면 밖) · 오늘의 조각 = Figma 생성(얼굴 없음) — tools/art.py · ONAIR_PLAN 8장
+//   v0.3 그림: 2 · 4 · 5 · 7 ~ 10화 배경은 Figma 생성 범용 배경(곡 분위기) · 원화는 Real-ESRGAN x2 (tools/art.py · upscale.py)
 
-export const GAME = { name: '프로듀서 온에어', en: 'PRODUCER ON AIR', studio: '하루 스튜디오' };
-export const SEASON = { no: 1, title: '옥상의 30일', pages: 30 };
+export const SEASON = { no: 1, title: '에덴펠의 첫 노래', pages: 30 };
 
-/* 캐스트: 아바타 이름 · 기수 · 화면 속 소개 · 얼굴 · 색 · 사고 수습 대사(방어 — v0.5 에 효과, 지금은 대사만)
-   진짜 이름은 '오늘의 조각' 4단계에서만 공개 (v0.6) — 지금은 개인 채널에 ○○○ */
-export const CASTS = {
-  miyu: { name: '미유', en: 'MIYU', gen: '1기 리더', role: '새벽 종탑의 첫 소리', face: 'assets/img/f_miyu.jpg', color: '#F2D49A', fix: '숨 한 번 쉬고요. …네, 다시 같이.' },
-  edel: { name: '에델', en: 'EDEL', gen: '1기', role: '목소리 없는 천사', face: 'assets/img/f_edel.jpg', color: '#9FF0FF', fix: '(채팅) …방금 거, 내 탓으로 해.' },
-  bella: { name: '벨라', en: 'BELLA', gen: '2기 리더', role: '55초 디스코', face: 'assets/img/f_bella.jpg', color: '#FFC46B', fix: '방금 박자 일부러 늦춘 거예요~ 리믹스!' },
-  liv: { name: '리브', en: 'LIV', gen: '2기', role: '기록 보관인', face: 'assets/img/f_liv.jpg', color: '#E8C9A0', fix: '한 줄 건너뛰었네요. 괜찮아요, 다음 쪽부터.' },
-  tina: { name: '티나', en: 'TINA', gen: '3기 리더', role: '행진 대장', face: 'assets/img/f_tina.jpg', color: '#FFB48F', fix: '흔들려도 행진은 안 멈춘다. 다음 박!' },
-  moa: { name: '모아', en: 'MOA', gen: '3기', role: '1등 막내', face: 'assets/img/f_moa.jpg', color: '#FF9AD5', fix: '지금 거 없던 걸로! …봤으면 잊어 줘!' },
-  yuha: { name: '유하', en: 'YUHA', gen: '4기 리더', role: '바람 따라', face: 'assets/img/f_yuha.jpg', color: '#9FF0D8', fix: '바람이 한 번 쉬어 간 거야.' },
-  media: { name: '메디아', en: 'MEDIA', gen: '오르골', role: '오르골 간판 · 완벽한 한 곡', face: 'assets/img/f_media.jpg', color: '#C9D8FF', fix: '오차 발생. …계속합니다.' },
-  rose: { name: '로제', en: 'ROSE', gen: '대표', role: '하루 스튜디오 대표', face: 'assets/img/f_rose.jpg', color: '#E6B0FF', fix: '' },
+export const DIVAS = {
+  miyu: { name: '미유', en: 'MIYU', role: '아르웬 극장의 무대 감독', face: 'assets/img/f_miyu.jpg', color: '#F2D49A' },
+  edel: { name: '에델', en: 'EDEL', role: '목소리를 잃은 마지막 가희', face: 'assets/img/f_edel.jpg', color: '#9FF0FF' },
+  tina: { name: '티나', en: 'TINA', role: '아르웬 성벽의 군악대장', face: 'assets/img/f_tina.jpg', color: '#FFB48F' },
+  bella: { name: '벨라', en: 'BELLA', role: '시계탑의 시계지기', face: 'assets/img/f_bella.jpg', color: '#FFC46B' },
+  liv: { name: '리브', en: 'LIV', role: '이야기책을 지키는 사서', face: 'assets/img/f_liv.jpg', color: '#E8C9A0' },
+  moa: { name: '모아', en: 'MOA', role: '광장 순위판의 막내', face: 'assets/img/f_moa.jpg', color: '#FF9AD5' },
+  yuha: { name: '유하', en: 'YUHA', role: '바람을 따라 떠도는 가희', face: 'assets/img/f_yuha.jpg', color: '#9FF0D8' },
+  media: { name: '메디아', en: 'MEDIA', role: '질서의 가희', face: 'assets/img/f_media.jpg', color: '#C9D8FF' },
 };
-/* 대사에서 쓰는 특수 화자: pd = 나(프로듀서, 얼굴 없음) · sys = 지문 */
 
-/* 곡: preview = [시작 초, 길이] (후렴 8마디) · tier = 곡 성격 */
-const SUNO = { artist: '하루 스튜디오', badge: 'AI 작곡 · Suno', license: 'Suno 유료 구독 · 상업 이용' };
+/* 곡: 박 지도(tmap)는 채보 파일 안 · preview = [시작 초, 길이] (후렴 8마디) · tier = 곡 성격(쉬운 곡 · 보통 · 어려운 곡 · 보스) */
+const SUNO = { artist: '원트랙 사운드', badge: 'AI 작곡 · Suno', license: 'Suno 유료 구독 · 상업 이용' };
 const song = (id, title, en, preview, tier) => ({ id, title, en, ko: en, ...SUNO, audio: `assets/audio/${id}`, chart: `assets/charts/${id}.json`, preview, tier });
 export const SONGS = {
   s01: song('s01', '빛의 첫 소절', 'First Verse of Light', [92.07, 13.56], '보통'),
@@ -37,294 +32,160 @@ export const SONGS = {
   s10: song('s10', '잡음 너머', 'Beyond the Noise', [142.8, 10.94], '어려운 곡'),
 };
 
-const P = (who, text, o) => ({ who, text, ...o });
-const OFF = { roof: 'assets/img/off_rooftop.jpg', store: 'assets/img/off_store.jpg', hosp: 'assets/img/off_hospital.jpg', watch: 'assets/img/off_watch.jpg' };
-
-/* 하루 = 오늘의 생방송 한 회:
-   pre(방송 전 · 화면 밖) → 생방송(리듬 플레이 · live 채팅) → 결과 → dm(방송 후 개인 채널 + 오늘의 조각) → 방송 기록
-   subs = [방송 전, 방송 후] 사무소 구독자 (이야기상 숫자 · 실력과 무관) */
+/* 하루 = 곡 하나 + 가희 + 이야기 한 화 · 순서는 난이도가 오르내리며 10화 보스로 (쉬운 곡 2 · 4 · 6화) */
 export const DAYS = [
   {
-    no: 1, song: 's01', cast: 'miyu', hero: 'assets/img/d2_hero.jpg', cut: 'assets/img/d2_cut.jpg',
-    chapter: '첫 출근, 첫 무사고', place: '루미나 · 새벽 종탑',
-    hello: '프로듀서님이세요? 오늘 밤도 한 곡만, 끝까지 같이 가요.',
-    pre: { bg: OFF.roof, where: '옥상 컨테이너 방송실 · 밤 11시 40분', lines: [
-      P('sys', '비 그친 옥상. 컨테이너 문에 「방송 중엔 노크 금지」 종이가 붙어 있다.'),
-      P('rose', '왔네. 3년 만에 페이더 잡는 기분은?'),
-      P('pd', '(대답 대신 콘솔 먼지를 손가락으로 쓸어 본다)'),
-      P('rose', '구독자 312명. 지난주 방송 사고 네 번. 건물 계약은 30일 남았고.'),
-      P('rose', '오늘 캐스트는 미유. 걱정되는 건 노래가 아니라 이 콘솔이지.'),
-      P('miyu', '프로듀서님이세요? …저, 오늘은 사고 안 났으면 좋겠어요.'),
-      P('miyu', '제 방송 기다리는 애들이 있어서요. 병원에서요.'),
-      P('edel', '…잘 부탁해.', { dm: true }),
-      P('rose', '15초 전. 큐는 네가 줘.'),
-    ] },
-    live: { open: '새벽 종탑에서 인사드려요, 미유예요. 오늘 밤도 한 곡만, 끝까지.',
-      chat: ['ㅎㅇㅎㅇ', '오늘은 안 끊기나', '지난주 3번 끊긴 거 실화냐', '소리 왜 이렇게 깨끗함??', 'PD 바뀜?', '종소리 들어간 거 소름', '미유 숨소리까지 들림', '병원에서 보고 있어요 ㅠㅠ', '701호 애들 다 깨어 있음'],
-      end: ['끝까지 안 끊겼다!!!', '첫 무사고 방송 축하', '새 PD 누구야'] },
-    subs: [312, 347],
-    dm: { with: 'miyu', lines: [
-      P('miyu', '프로듀서님. 오늘 처음으로 끝까지 불렀어요. 지난달부터 한 번도 못 했거든요.'),
-      P('miyu', '701호 지우가 \'오늘은 노래가 안 깨졌다\'고 했대요.'),
-    ], choice: ['수고했어요', '내일도 끊기지 않게 할게요'], after: [
-      P('miyu', '내일은 벨라 차례예요. 1분 안에 끝나니까 준비 단단히 하세요. 후후.'),
-      P('miyu', '아, 그리고… 에델이 프로듀서님 손 좋다고 했어요. 걔가 칭찬하는 거 처음 봐요.'),
-    ], piece: { img: 'assets/img/p01_miyu.jpg', step: 1, caption: '간호사 명찰을 뒤집어 놓은 탁자 위, 식은 컵을 쥔 손' } },
-    tomorrow: { who: 'bella', title: '째깍째깍 · 55초 안에 끝내야 하는 방송', text: '내일 저녁 7시, 시계방 카운터에서요. 손님 오면 끊어야 하니까 빨리요~', img: 'assets/img/d4_tease.jpg' },
+    no: 1, song: 's01', diva: 'miyu', hero: 'assets/img/d2_hero.jpg', cut: 'assets/img/d2_cut.jpg',
+    chapter: '아르웬 종탑의 첫 햇살', place: '아르웬 · 종탑',
+    hello: '어서 오세요, 조율사님. 오늘 무대는 단 한 번이에요.',
+    story: [
+      { who: 'miyu', text: '들렸어요… 정말로 들렸어요!' },
+      { who: 'miyu', text: '종탑의 종이 백 년 만에 혼자 울렸어요. 조율사님 손끝에서요.' },
+      { who: 'miyu', text: '이 대륙은 하루에 한 곡씩만 버틸 수 있어요. 아무도 듣지 않은 노래는 잡음이 되거든요.' },
+      { who: 'miyu', text: '그런데 오늘, 이 노래는 별이 됐어요.' },
+      { who: 'miyu', text: '내일도 와 주실 거죠? 시계탑의 벨라가 벌써 시계를 감고 있어요.' },
+    ],
+    caption: '노래가 끝나자 종탑의 종이 혼자 울렸다.\n하늘 끝 회색이 아주 조금, 물러났다.',
+    tomorrow: { who: 'bella', text: '내일 아침 7시, 시계탑. 늦으면 무대는 안 기다려 줘요.', img: 'assets/img/d4_tease.jpg', title: '멈춘 시계의 카페' },
   },
   {
-    no: 2, song: 's02', cast: 'bella', hero: 'assets/img/v2_hero.jpg', cut: 'assets/img/v2_cut.jpg',
-    chapter: '55초의 디스코', place: '루미나 · 태엽 거리',
-    hello: '들려요~? 오늘도 1분 컷이에요. 한 박자도 버릴 시간 없어요!',
-    pre: { bg: OFF.watch, where: '태엽 거리 뒤 시계방 카운터 · 저녁 6시 58분', lines: [
-      P('sys', '벨라는 오늘 시계방 카운터에서 방송한다. 프로듀서는 옥상에서 원격으로 믹싱한다.'),
-      P('bella', '들려요~? 아 잠깐만요, 손님! …아 아니네, 계속~!'),
-      P('rose', '벨라 방송은 늘 1분 안이야. 손님이 오면 끊어야 하거든.'),
-      P('bella', '그러니까 55초! 한 박자도 버릴 시간 없어요~'),
-      P('rose', '짧은 방송일수록 사고가 크게 보여. 첫 박부터 정확하게.'),
-    ] },
-    live: { open: '태엽 거리에서 째깍째깍~ 벨라예요! 오늘도 1분 컷!',
-      chat: ['1분 컷 방송 시작ㅋㅋ', '벨라 오늘은 손님 없길', '째깍째깍 중독됨', '박자 칼같다', '오 오늘 소리 좋다', 'PD 바뀐 거 맞네', '어 벌써 끝나감??'],
-      end: ['55초 순삭', '한 번 더 해 줘', '손님 오기 전에 끝났다ㅋㅋ'] },
-    subs: [347, 410],
-    dm: { with: 'bella', lines: [
-      P('bella', '프로듀서님! 오늘 처음으로 안 끊기고 끝까지 갔어요~'),
-      P('bella', '사실 손님이 왔는데요, 노래 끝날 때까지 기다려 주셨어요.'),
-      P('bella', '시계 고치러 오신 할아버지가 박자 좋다고 하셨어요. 헤헤.'),
-    ], choice: ['55초, 완벽했어요', '다음엔 1분 넘겨 봐요'], after: [
-      P('bella', '1분 넘기는 건… 언젠가요! 그날은 꼭 프로듀서님이 믹싱해 줘요.'),
-      P('bella', '내일은 티나 대장님이에요. 시험 준비하세요~'),
-    ], piece: { img: 'assets/img/p02_bella.jpg', step: 1, caption: '회중시계 뒷뚜껑을 여는 손, 구석엔 방송 중인 휴대폰' } },
-    tomorrow: { who: 'tina', title: '행진하라 · 프로듀서 시험 방송', text: '내일 곡은 내가 고른다. 손 풀고 와.', img: 'assets/img/v3_tease.jpg' },
+    no: 2, song: 's02', diva: 'bella', hero: 'assets/img/v2_hero.jpg', cut: 'assets/img/v2_cut.jpg',
+    chapter: '멈춘 시계의 카페', place: '아르웬 · 시계탑 카페',
+    hello: '늦지 않았네요, 조율사님. 1분만 늦었어도 무대는 닫혔어요.',
+    story: [
+      { who: 'bella', text: '째깍, 째깍. 들려요? 멈춰 있던 시계가 다시 가요!' },
+      { who: 'bella', text: '이 카페 시계는 하루에 한 번씩만 감겨요. 노래 한 곡 길이만큼요.' },
+      { who: 'bella', text: '그래서 저는 매일 아침 7시를 지켜요. 다음 곡이 늦지 않게.' },
+      { who: 'miyu', text: '벨라가 칭찬하는 건 드문 일이에요, 조율사님.' },
+      { who: 'bella', text: '칭찬 아니거든요? …뭐, 박자는 정확했어요.' },
+    ],
+    caption: '카페의 시계 서른 개가 한꺼번에 7시를 쳤다.\n오늘 하루가 무사히 감겼다.',
+    tomorrow: { who: 'tina', text: '내일은 성벽이에요. 조율사라는 사람, 직접 봐야 믿겠어요.', img: 'assets/img/v3_tease.jpg', title: '성벽 위 군악대' },
   },
   {
-    no: 3, song: 's03', cast: 'tina', hero: 'assets/img/d3_hero.jpg', cut: 'assets/img/d3_cut.jpg',
-    chapter: '조율사라는 이름', place: '루미나 · 깃발 광장',
-    hello: '네가 새 믹싱? 말로는 못 믿어. 증명해 봐.',
-    pre: { bg: OFF.roof, where: '옥상 컨테이너 방송실 · 밤 9시', lines: [
-      P('tina', '네가 새 믹싱? 손 줘 봐. …굳은살은 있네.'),
-      P('tina', '오늘 곡은 행진곡이야. 박 하나 흔들리면 다 같이 넘어져.'),
-      P('rose', '티나는 사람을 시험해. 통과하면 끝까지 믿고.'),
-      P('tina', '통과하면 별명 하나 붙여 준다. 떨어지면 내일부터 안 봐.'),
-      P('tina', '큐 줘. 지금.'),
-    ] },
-    live: { open: '깃발 광장, 3기 대장 티나다. 오늘은 행진이다. 따라와.',
-      chat: ['대장님 오셨다', '오늘 브라스 미쳤음', '행진 박자 칼같네', 'PD 시험 중이래ㅋㅋ', '티나가 웃었다 방금', '이거 통과각인데', '헤이! 헤이!'],
-      end: ['통과다 통과', '새 PD 합격', '티나 표정 풀림'] },
-    subs: [410, 520],
-    dm: { with: 'tina', lines: [
-      P('tina', '…통과.'),
-      P('tina', '박이 안 흔들리는 손은 오랜만이다.'),
-      P('tina', '오늘부터 넌 조율사다. 내가 부르면 그게 네 이름이야.'),
-    ], choice: ['조율사, 좋네요', '시험은 끝인가요?'], after: [
-      P('tina', '방송 끝날 때까지 시험이지. 대신 이제 내 편이다.'),
-      P('tina', '내일은 리브. 도서관이니까 조용히 와.'),
-    ], piece: { img: 'assets/img/p03_tina.jpg', step: 1, caption: '보면대 위, 지휘봉을 쥔 손 · 빈 관악부 연습실' } },
-    tomorrow: { who: 'liv', title: '책장 사이 · 기록 보관실의 밤', text: '내일은 낭독 방송이에요. 기록 보관실에서 기다릴게요.', img: 'assets/img/v4_tease.jpg' },
+    no: 3, song: 's03', diva: 'tina', hero: 'assets/img/d3_hero.jpg', cut: 'assets/img/d3_cut.jpg',
+    chapter: '성벽 위 군악대', place: '아르웬 · 성벽',
+    hello: '당신이 조율사? 말로는 못 믿어요. 증명해 봐요.',
+    story: [
+      { who: 'tina', text: '…좋아요. 박자 하나 안 흐트러졌네요.' },
+      { who: 'tina', text: '성벽 군악대는 잡음이 오면 제일 먼저 북을 쳐요. 무너지지 말라고.' },
+      { who: 'tina', text: '당신 손이 북보다 빨랐어요. 인정할게요, 오늘만.' },
+      { who: 'miyu', text: '티나가 ‘오늘만’이라고 하면, 내일도 인정한다는 뜻이에요.' },
+      { who: 'tina', text: '미유! 그런 거 아니거든요!' },
+    ],
+    caption: '성벽 위로 행진곡이 울려 퍼졌다.\n군악대의 깃발이 처음으로 바람을 받았다.',
+    tomorrow: { who: 'liv', text: '내일은 도서관으로 와 주세요. 조용히요. 책들이 자고 있어요.', img: 'assets/img/v4_tease.jpg', title: '빈 책장의 도서관' },
   },
   {
-    no: 4, song: 's04', cast: 'liv', hero: 'assets/img/v4_hero.jpg', cut: 'assets/img/v4_cut.jpg',
-    chapter: '잠긴 폴더', place: '루미나 · 태엽 거리 도서관',
-    hello: '쉿… 프로듀서님 맞으시죠? 오늘은 책장 사이로 걸어 볼게요.',
-    pre: { bg: OFF.roof, where: '옥상 방송실 옆 기록 보관실 · 밤 10시', lines: [
-      P('liv', '어서 오세요, 프로듀서님. 여기가 사무소 방송 기록이 다 모인 곳이에요.'),
-      P('liv', '6년 치예요. 사고 난 방송도 전부 남겨 둬요. 기록은 지우는 게 아니니까요.'),
-      P('sys', '책장 맨 아래, 「3년 전」이라고 적힌 폴더 하나에만 자물쇠가 걸려 있다.'),
-      P('liv', '…그건 대표님 허락이 있어야 열어요. 오늘은 노래만 해요.'),
-      P('liv', '책 읽어 주다 노래가 된 방송이에요. 그 문장, 같이 넘겨 주세요.'),
-    ] },
-    live: { open: '태엽 거리 도서관에서, 리브예요. 오늘은 책장 사이로 걸어 볼게요.',
-      chat: ['낭독 방송인 줄 알았는데 비트 뭐야', '리브 목소리 너무 좋다', '재즈 피아노 좋다', '책장 넘기는 소리 들림', '오늘 PD 일 잘하네', '플루트 파트 최고', '밑줄 쳤다'],
-      end: ['한 권 다 읽은 기분', '오늘도 기록 완료', '다음 장 기대'] },
-    subs: [520, 690],
-    dm: { with: 'liv', lines: [
-      P('liv', '오늘 방송도 기록해 뒀어요. 사고 0회. 사무소 기록에선 처음 보는 숫자예요.'),
-      P('liv', '…아까 그 폴더, 신경 쓰이셨죠?'),
-    ], choice: ['조금요', '안 물어볼게요'], after: [
-      P('liv', '언젠가 열게 될 거예요. 기록은 결국 누군가 읽으려고 남기는 거니까요.'),
-      P('liv', '내일은 모아예요. …사실 내일이 모아 생일이래요. 아무한테도 말 안 했지만.'),
-    ], piece: { img: 'assets/img/p04_liv.jpg', step: 1, caption: '대출 카드에 날짜 도장을 찍는 손, 옆엔 잠긴 기록 상자' } },
-    tomorrow: { who: 'moa', title: '1등 말고 너 · 일간 순위 1등 도전', text: '내일 제 곡이 제일 빨라요! 1등 할 거니까 실수하지 마요!', img: 'assets/img/v5_tease.jpg' },
+    no: 4, song: 's04', diva: 'liv', hero: 'assets/img/v4_hero.jpg', cut: 'assets/img/v4_cut.jpg',
+    chapter: '빈 책장의 도서관', place: '아르웬 · 옛 도서관',
+    hello: '쉿… 조율사님 맞으시죠? 기다리고 있었어요.',
+    story: [
+      { who: 'liv', text: '보셨어요? 노래가 끝나자 빈 책장에 책 한 권이 생겼어요.' },
+      { who: 'liv', text: '이건 이야기책이에요. 누군가 끝까지 들어 준 노래만 여기 꽂혀요.' },
+      { who: 'liv', text: '서른 장이 모이면 한 권이 돼요. 마지막 장에 뭐가 적힐지는… 저도 몰라요.' },
+      { who: 'miyu', text: '리브는 모르는 게 생기면 밤을 새워요. 오늘도 그럴 거예요.' },
+      { who: 'liv', text: '조율사님, 내일도 한 장 부탁해요. 빈 페이지는 쓸쓸하거든요.' },
+    ],
+    caption: '텅 빈 책장 맨 끝에 얇은 책 한 권이 꽂혔다.\n표지에는 조율사의 박자가 적혀 있었다.',
+    tomorrow: { who: 'moa', text: '내일은 광장 순위판! 내 곡이 제일 빨라요. 각오해요!', img: 'assets/img/v5_tease.jpg', title: '네온 순위판의 광장' },
   },
   {
-    no: 5, song: 's05', cast: 'moa', hero: 'assets/img/v5_hero.jpg', cut: 'assets/img/v5_cut.jpg',
-    chapter: '1등보다 한 사람', place: '루미나 · 깃발 광장 순위판',
+    no: 5, song: 's05', diva: 'moa', hero: 'assets/img/v5_hero.jpg', cut: 'assets/img/v5_cut.jpg',
+    chapter: '네온 순위판의 광장', place: '아르웬 · 중앙 광장',
     hello: '드디어 왔네요! 오늘 곡은 제일 빨라요. 따라올 수 있어요?',
-    pre: { bg: OFF.roof, where: '옥상 컨테이너 방송실 · 밤 11시', lines: [
-      P('moa', '프로듀서님! 오늘 순위 3등이에요. 오늘 방송으로 1등 찍어야 해요!'),
-      P('moa', '1등이면 다들 봐 주잖아요. …아니면 아무도 안 봐요.'),
-      P('rose', '숫자는 내가 볼게. 넌 사람만 봐.'),
-      P('moa', '그게 무슨 말이에요? 아 몰라, 빨리 큐 주세요!'),
-      P('sys', '(미유가 옥상 구석 냉장고에 작은 상자 하나를 몰래 넣는다)'),
-    ] },
-    live: { open: '깃발 광장의 막내, 모아예요! 오늘 1등 갑니다!',
-      chat: ['모아 텐션 무엇', '170bpm 실화?', '손가락 따라가다 쥐남', '1등 가자!!!', '오늘 PD 박자 소름', '모아 오늘 생일이라던데?', '생축!!!'],
-      end: ['순위 1등 찍었다', '생일 축하해 모아', '1등보다 오늘 노래가 좋았음'] },
-    subs: [690, 1020],
-    dm: { with: 'moa', lines: [
-      P('moa', '…1등 했어요. 근데 이상해요. 하나도 안 기뻐요.'),
-      P('moa', '방송 끝나고 옥상 냉장고 열었는데 케이크가 있었어요.'),
-      P('moa', '제 생일, 아무한테도 말 안 했는데요. 누구예요?'),
-    ], choice: ['리브가 기록을 봤대요', '다들 알고 있었어요'], after: [
-      P('moa', '…치. 다들 진짜.'),
-      P('moa', '1등 말고요, 채팅에 생일 축하한다던 그 한 사람이 더 좋았어요.'),
-      P('moa', '내일은 에델 언니예요. 언니 방송은… 프로듀서님이 꼭 잘해 줘요.'),
-    ], piece: { img: 'assets/img/p05_moa.jpg', step: 1, caption: '촛불 하나 꽂은 컵케이크를 든 손, 침대 위엔 순위 화면' } },
-    tomorrow: { who: 'miyu', title: '목소리 없는 노래 · 에델의 방송', text: '내일은 에델이에요. 3년 동안 생방송에서 목소리를 못 냈어요. …부탁해요.', img: 'assets/img/v6_tease.jpg' },
+    story: [
+      { who: 'moa', text: '에이, 끝까지 따라왔잖아요! …좀 하네요, 조율사님.' },
+      { who: 'moa', text: '광장 순위판 봤어요? 1등 자리, 원래 제 거였거든요.' },
+      { who: 'moa', text: '1등을 하면 다들 제 노래를 들어 주니까요. 그래서…' },
+      { who: 'moa', text: '아, 아무것도 아니에요! 다음엔 제가 이길 거니까!' },
+      { who: 'miyu', text: '모아는 지는 게 싫은 게 아니라, 혼자 남는 게 싫은 거예요.' },
+    ],
+    caption: '광장의 네온 순위판에 이름 두 개가 나란히 떴다.\n모아는 그걸 오래 바라보았다.',
+    tomorrow: { who: 'miyu', text: '내일은 무너진 극장이에요. 에델이… 당신을 기다리고 있어요.', img: 'assets/img/v6_tease.jpg', title: '무너진 극장의 에델' },
   },
   {
-    no: 6, song: 's08', cast: 'edel', hero: 'assets/img/d1_hero.jpg', cut: 'assets/img/d1_cut.jpg',
-    chapter: '3년 만의 첫 소리', place: '루미나 · 새벽 종탑 뒤 극장',
-    hello: '…(채팅) 오늘은, 피아노. 50초.',
-    pre: { bg: OFF.store, where: '24시 편의점 계산대 · 새벽 2시', lines: [
-      P('sys', '에델은 오늘도 편의점 야간 근무 중이다. 방송은 채팅으로만 한다.'),
-      P('edel', '…왔어?', { dm: true }),
-      P('edel', '…오늘 곡, 피아노가 50초야. 그다음은… 나도 몰라.', { dm: true }),
-      P('miyu', '에델은 3년 전 데뷔 방송이 끊긴 뒤로 생방송에서 목소리가 안 나와요.'),
-      P('miyu', '그래도 오늘은 해 보겠대요. 프로듀서님이 믹싱한다니까.'),
-      P('edel', '…50초 끝나면, 큐 줘.', { dm: true }),
-    ] },
-    live: { open: '…(채팅) 새벽 종탑. 에델. 오늘은… 피아노.',
-      chat: ['에델 방송 오랜만', '오늘도 채팅 방송이지?', '피아노 너무 좋다', '50초 지났다', '?? 목소리??', '에델 목소리 처음 들어', '울면서 듣는 중', 'PD 누구냐 진짜'],
-      end: ['에델이 노래했어', '3년 만이래', '오늘 이 방송 평생 기억함'] },
-    subs: [1020, 2400],
-    dm: { with: 'edel', lines: [
-      P('edel', '…들렸어?'),
-      P('edel', '…3년 만이야. 생방송에서 내 목소리.'),
-      P('edel', '큐가… 딱 맞았어. 그때랑 똑같이.'),
-    ], choice: ['그때요?', '잘 불렀어요'], after: [
-      P('edel', '…아니야. 아무것도.'),
-      P('edel', '…미유 언니가 울었어. 나 때문에. 고마워, 진짜로.'),
-    ], piece: { img: 'assets/img/p06_edel.jpg', step: 1, caption: '편의점 계산대 위, 별 머리핀을 올려 둔 악보 공책' } },
-    tomorrow: { who: 'yuha', title: '바람의 가야금 · 여행지 생방송', text: '내일은 바람 부는 데서 방송할게. 회선 좀 잘 잡아 줘.', img: 'assets/img/v7_tease.jpg' },
+    no: 6, song: 's08', diva: 'edel', hero: 'assets/img/d1_hero.jpg', cut: 'assets/img/d1_cut.jpg',
+    chapter: '목소리 없는 무대', place: '아르웬 · 무너진 극장',
+    hello: '…(에델이 소리 없이 웃으며 고개를 숙인다)',
+    story: [
+      { who: 'miyu', text: '들렸어요… 에델의 노래가, 정말로 들렸어요.' },
+      { who: 'miyu', text: '에델은 목소리를 잃은 마지막 가희예요. 노래를 지어도 부를 수가 없어요.' },
+      { who: 'edel', text: '(입 모양으로) 고마워요.' },
+      { who: 'miyu', text: '그런데 조율사님이 치니까 노래가 들렸어요. 당신 손끝에서만요.' },
+      { who: 'miyu', text: '…에델의 목소리가 어디로 갔는지는, 저도 몰라요. 정말이에요.' },
+    ],
+    caption: '무너진 극장에 피아노 소리가 번졌다.\n에델이 처음으로 객석을 보았다.',
+    tomorrow: { who: 'yuha', text: '내일은 숲이야. 바람이 이상한 노래를 실어 와.', img: 'assets/img/v7_tease.jpg', title: '솜누스 숲의 바람' },
   },
   {
-    no: 7, song: 's06', cast: 'yuha', hero: 'assets/img/v7_hero.jpg', cut: 'assets/img/v7_cut.jpg',
-    chapter: '오르골이라는 이름', place: '루미나 · 바람 정원',
-    hello: '새 프로듀서구나. 오늘은 산바람이랑 같이 할게.',
-    pre: { bg: OFF.roof, where: '옥상 방송실 · 원격 연결 · 강원도 어느 산', lines: [
-      P('yuha', '들려? 여기 바람이 좀 세. 그것도 같이 믹싱해 줘.'),
-      P('rose', '유하는 바람 부는 대로 와. 오늘은 기차 타고 산에 갔대.'),
-      P('yuha', '새 프로듀서구나. 손이 좋다는 소문, 산까지 왔어.'),
-      P('yuha', '하나만 물어볼게. 「오르골」이라는 이름, 들어 봤어?'),
-      P('rose', '…유하. 방송 전이야.'),
-      P('yuha', '알았어, 알았어. 잡음도 사연이야. 들어 봐.'),
-    ] },
-    live: { open: '바람 정원에서, 유하야. 오늘은 산바람이랑 같이 할게.',
-      chat: ['유하 여행 방송 왔다', '가야금 미쳤다', '바람 소리까지 좋음', '배경 어디야?', '국악 트랜스 맛집', '회선 하나도 안 끊김', 'PD 원격 믹싱 실력 뭐임'],
-      end: ['산에서 생방이라니', '다음 여행지 어디?', '힐링 완료'] },
-    subs: [2400, 4100],
-    dm: { with: 'yuha', lines: [
-      P('yuha', '좋은 믹싱이었어. 바람이 노래를 안 지웠네.'),
-      P('yuha', '아까 오르골 얘기는… 로제가 싫어해. 우리 둘 다 거기서 나왔거든.'),
-      P('yuha', '거긴 틀리지 않는 노래를 만들어. 사람 없이.'),
-    ], choice: ['사람 없이요?', '지금은 안 물어볼게요'], after: [
-      P('yuha', '언젠가 직접 듣게 될 거야. 그때 놀라지 마.'),
-      P('yuha', '내일은 다 같이야. 사무소 첫 합동 방송. 주제가 연습해 둬.'),
-    ], piece: { img: 'assets/img/p07_yuha.jpg', step: 1, caption: '기차 창가, 가야금 줄 위의 손과 기차표' } },
-    tomorrow: { who: 'miyu', title: '하루 한 곡 · 하루 스튜디오 첫 합동 방송', text: '내일은 다 같이 불러요. 우리 사무소 주제가예요.', img: 'assets/img/v8_tease.jpg' },
+    no: 7, song: 's06', diva: 'yuha', hero: 'assets/img/v7_hero.jpg', cut: 'assets/img/v7_cut.jpg',
+    chapter: '솜누스 숲의 바람', place: '솜누스 · 잠든 숲',
+    hello: '네가 조율사구나. 바람이 네 얘기를 하더라.',
+    story: [
+      { who: 'yuha', text: '좋은 연주였어. 안개가 반쯤 걷혔네.' },
+      { who: 'yuha', text: '이 숲 사람들은 잠들어 있어. 입에서 회색 음표가 새어 나오지.' },
+      { who: 'yuha', text: '다들 그걸 ‘잡음’이라고 부르지만… 내가 보기엔 사연이야.' },
+      { who: 'yuha', text: '아무도 안 들어 준 노래는 저렇게 회색이 돼. 그건 기억해 둬.' },
+      { who: 'miyu', text: '유하는 바람처럼 왔다 가요. 하지만 틀린 말은 안 해요.' },
+    ],
+    caption: '가야금 소리에 안개가 갈라졌다.\n잠든 마을 하나가 기지개를 켰다.',
+    tomorrow: { who: 'miyu', text: '내일은 다 같이 불러요. 이 대륙의 노래, 「하루 한 곡」이에요.', img: 'assets/img/v8_tease.jpg', title: '모두의 무대' },
   },
   {
-    no: 8, song: 's09', cast: 'miyu', hero: 'assets/img/v8_hero.jpg', cut: 'assets/img/v8_cut.jpg', singer: '캐스트 모두',
-    chapter: '구독자 1만', place: '루미나 · 축제 무대',
-    hello: '오늘은 캐스트 모두가 모였어요. 주제가, 끝까지 들어 줘요.',
-    pre: { bg: OFF.roof, where: '옥상 · 밤 10시 · 합동 방송 30분 전', lines: [
-      P('sys', '옥상에 의자가 일곱 개 놓였다. 컨테이너 안이 처음으로 꽉 찼다.'),
-      P('bella', '사람이 이렇게 많은 방송은 처음이에요~ 1분 넘어도 돼요?'),
-      P('tina', '오늘은 내가 박 센다. 조율사, 큐만 줘.'),
-      P('moa', '구독자 1만까지 몇 명 남았어요? 오늘 넘기죠?'),
-      P('liv', '정확히 5,900명이요. 기록할 준비 됐어요.'),
-      P('rose', '숫자 봐. 그리고 사람 봐. …가자.'),
-    ] },
-    live: { open: '하루 스튜디오 첫 합동 방송! 주제가 「하루 한 곡」, 끝까지 들어 줘요!',
-      chat: ['전원 출동', '합동 방송 실화', '주제가 너무 좋아', 'One track, one day', '구독자 1만 가자', '에델도 노래함?!', '이 사무소 뭔데 이렇게 좋아'],
-      end: ['1만 돌파!!!', '하루 스튜디오 사랑해', '끝까지 들었다'] },
-    subs: [4100, 10300],
-    dm: { with: 'group', title: '하루 스튜디오 단톡방', lines: [
-      P('rose', '구독자 10,300. 6년 만에 처음 넘겼다.'),
-      P('bella', '1분 넘겼어요!!! 57초지만요~'),
-      P('tina', '…잘했다, 조율사.'),
-      P('moa', '1등보다 좋은 거 찾았어요.'),
-      P('edel', '…다음에도, 같이.'),
-    ], choice: ['다들 수고했어요', '내일도 끝까지'], after: [
-      P('rose', '좋아. 근데 하나만 말해 둘게.'),
-      P('rose', '이 숫자를 싫어하는 데가 있어. 내일부터 조심해.'),
-    ], piece: { img: 'assets/img/p08_all.jpg', step: 0, caption: '옥상 탁자 위로 포개진 일곱 개의 손' } },
-    tomorrow: { who: 'tina', title: '잡음 너머 · 송출 방해', text: '내일 방송, 뭔가 이상하면 바로 말해. 끝까지 가는 거다.', img: 'assets/img/v9_tease.jpg' },
+    no: 8, song: 's09', diva: 'miyu', hero: 'assets/img/v8_hero.jpg', cut: 'assets/img/v8_cut.jpg', singer: '가희 모두',
+    chapter: '모두의 무대', place: '아르웬 · 축제 광장',
+    hello: '오늘은 가희들이 다 모였어요. 조율사님을 위한 노래예요.',
+    story: [
+      { who: 'moa', text: '같이 부르니까 순위 같은 건 생각도 안 났어요!' },
+      { who: 'tina', text: '…나쁘지 않았어요. 행진곡으로 써도 되겠네요.' },
+      { who: 'bella', text: '짧은 곡이었는데, 하루가 꽉 찬 느낌이에요.' },
+      { who: 'liv', text: '이 곡은 이야기책 맨 앞에 꽂아 둘게요.' },
+      { who: 'miyu', text: '하루 한 곡. 이 노래가 있는 한, 대륙은 내일도 버틸 거예요.' },
+    ],
+    caption: '아르웬 광장에 가희들의 목소리가 겹쳤다.\n그날 하늘은 유난히 맑았다.',
+    tomorrow: { who: 'tina', text: '내일은 성벽으로. 하늘 끝이 이상해요. 북을 준비해요.', img: 'assets/img/v9_tease.jpg', title: '회색 하늘' },
   },
   {
-    no: 9, song: 's10', cast: 'tina', hero: 'assets/img/v9_hero.jpg', cut: 'assets/img/v9_cut.jpg',
-    chapter: '잡음을 뚫고', place: '루미나 · 회색 하늘 성벽',
-    hello: '봤어? 회선에 잡음이 낀다. 이번엔 진짜야.',
-    pre: { bg: OFF.roof, where: '옥상 컨테이너 방송실 · 밤 11시 50분', lines: [
-      P('sys', '방송 10분 전. 모니터의 파형에 정체 모를 회색 지직거림이 섞인다.'),
-      P('liv', '송출 회선에 이상한 신호가 들어와요. 기록에 3년 전이랑 비슷한 모양이…'),
-      P('rose', '…오르골이야. 1만 넘긴 사무소를 그냥 둘 리가 없지.'),
-      P('tina', '조율사. 흔들려도 박은 내가 잡는다. 넌 끝까지 송출만 해.'),
-      P('tina', '끊기면 우리가 지는 거고, 안 끊기면 이기는 거야.'),
-    ] },
-    live: { open: '깃발 광장, 티나다. 오늘 잡음이 좀 끼어도 놀라지 마. 뚫고 간다.',
-      chat: ['화면 왜 지직거림', '잡음 뭐야 해킹?', '근데 노래는 안 끊김', 'PD 버티는 거 실화', '티나 목소리 더 커짐ㅋㅋ', '정글 비트 미쳤다', '뚫어!!!'],
-      end: ['잡음 뚫었다', '이게 방송이지', '하루 스튜디오 강하다'] },
-    subs: [10300, 14800],
-    dm: { with: 'tina', lines: [
-      P('tina', '…버텼다.'),
-      P('tina', '잡음 너머로 끊긴 멜로디가 들렸어. 누가 부르다 만 노래 같은.'),
-      P('tina', '오르골 놈들, 이런 짓을 3년 전에도 했을 거야.'),
-    ], choice: ['3년 전에도요?', '다음에도 버틸게요'], after: [
-      P('tina', '나중에 말해 줄게. 너도 알아야 할 이야기니까.'),
-      P('tina', '그리고… 내일은 오르골이 정면으로 온다. 메디아야.'),
-    ], piece: { img: 'assets/img/p09_tina.jpg', step: 2, caption: '방과 후 빈 연습실, 보면대 위 지휘봉과 노트북 속 회색 파형' } },
-    tomorrow: { who: 'media', title: '완벽한 한 곡 · 오르골의 맞불 방송', text: '같은 시간대에 방송합니다. 오차 0.02초. 당신들은 0.3초.', img: 'assets/img/v10_tease.jpg' },
+    no: 9, song: 's10', diva: 'tina', hero: 'assets/img/v9_hero.jpg', cut: 'assets/img/v9_cut.jpg',
+    chapter: '회색 하늘', place: '아르웬 · 성벽',
+    hello: '봤어요? 하늘 끝이 지워지고 있어요. 이번엔 진짜예요.',
+    story: [
+      { who: 'tina', text: '…버텼어요. 회색이 성벽 앞에서 멈췄어요.' },
+      { who: 'tina', text: '잡음은 적이에요. 그렇게 배웠어요. 그런데…' },
+      { who: 'tina', text: '북을 칠수록 회색 속에서 끊긴 멜로디가 들렸어요. 누군가의 노래 같은.' },
+      { who: 'yuha', text: '말했잖아. 잡음은 사연이라고.' },
+      { who: 'miyu', text: '…내일은 바다에서 누가 와요. 아주 완벽한 사람이요.' },
+    ],
+    caption: '회색 하늘에 금이 갔다.\n그 틈으로 아무도 모르는 노래가 새어 나왔다.',
+    tomorrow: { who: 'media', text: '완벽한 한 곡만 영원히. 그러면 잡음은 생기지 않아요.', img: 'assets/img/v10_tease.jpg', title: '톱니의 가희' },
   },
   {
-    no: 10, song: 's07', cast: 'media', hero: 'assets/img/v10_hero.jpg', cut: 'assets/img/v10_cut.jpg',
-    chapter: '오르골의 선전포고', place: '오르골 송출 · 톱니 계단',
-    hello: '하루 스튜디오 여러분. 오늘은 같은 시간대에 방송하죠.',
-    pre: { bg: OFF.roof, where: '옥상 방송실 · 밤 11시 55분 · 같은 시각 오르골 생방송', lines: [
-      P('sys', '오르골 간판 캐스트 메디아가 하루 스튜디오와 같은 시간대에 맞불 방송을 열었다.'),
-      P('media', '하루 스튜디오 여러분, 반가워요. 오늘은 같이 방송하죠.'),
-      P('media', '사람은 틀립니다. 그래서 우리는 틀리지 않는 노래를 만들었어요.'),
-      P('yuha', '소문으로는 메디아가 사람이 아니래. 들어 보면 알 거야.'),
-      P('rose', '메디아 곡을 그대로 받아 칠 거야. 우리 방식으로.'),
-      P('rose', '틀려도 끝까지 부른다. 그게 우리 답이야. …큐.'),
-    ] },
-    live: { open: '오르골의 메디아입니다. 오차 0.02초. 따라올 수 있다면.',
-      chat: ['오르골 vs 하루 실화', '메디아 방송 동시 송출', '소름 돋는다', '180bpm 넘는 거 아님?', '하루 스튜디오 PD 버텨라', '사람이 이걸 한다고?', '완벽한 한 곡 말고 끝까지 가는 한 곡'],
-      end: ['끝까지 갔다!!!', '오르골한테 안 졌다', '하루 스튜디오 2만 돌파'] },
-    subs: [14800, 21000],
-    dm: { with: 'media', lines: [
-      P('media', '…끝까지 따라왔군요.'),
-      P('media', '오차 0.3초. 그런데 한 번도 끊기지 않았어요.'),
-      P('media', '틀리는데 멈추지 않는 노래. 그게 뭔지 저는 잘 모르겠네요.'),
-    ], choice: ['직접 불러 보면 알아요', '다음엔 더 정확하게'], after: [
-      P('media', '…회사에 보고하겠습니다. 오늘 일은.'),
-      P('rose', '(로제) 1막 끝. 잘했어. 진짜 시작은 지금부터야.'),
-    ], piece: { img: 'assets/img/p10_media.jpg', step: 1, caption: '오르골 녹음 부스, 틀린 곳 하나 없는 악보 위의 손' } },
-    tomorrow: { who: 'bella', title: '11화 준비 중', text: '시즌 1은 계속돼요. 다음 방송은 곧 열려요~', img: 'assets/img/d4_tease.jpg' },
+    no: 10, song: 's07', diva: 'media', hero: 'assets/img/v10_hero.jpg', cut: 'assets/img/v10_cut.jpg',
+    chapter: '톱니의 가희', place: '오드스톤 · 바다 위 계단',
+    hello: '조율사. 매일 새 노래라니, 비효율적이네요. 제 곡을 들어 보세요.',
+    story: [
+      { who: 'media', text: '…끝까지 따라왔군요. 인정하죠, 완벽하진 않았지만.' },
+      { who: 'media', text: '새 노래는 언젠가 잊혀요. 잊힌 노래는 잡음이 되고요.' },
+      { who: 'media', text: '그러니 완벽한 한 곡만 영원히 되풀이하면 돼요. 아무것도 잃지 않게.' },
+      { who: 'miyu', text: '그건… 내일이 없는 노래예요, 메디아.' },
+      { who: 'media', text: '내일이 필요하다면, 증명해 보세요. 매일, 끝까지.' },
+    ],
+    caption: '바다 위 계단에서 톱니 후광이 멈췄다.\n처음으로, 메디아가 박수를 쳤다.',
+    tomorrow: { who: 'bella', text: '11화는 준비 중이에요. 시계는 계속 감고 있을게요.', img: 'assets/img/d4_tease.jpg', title: '다음 이야기' },
   },
 ];
 
-/* 생방송 채팅 공통 묶음 (미리 쓴 문장만 · 실시간 사용자 채팅 없음) — 판정 · 콤보 · 피버에 따라 섞어 흘림 */
-export const CHAT = {
-  nick: ['새벽세시', '종탑지기', '701호', '태엽덕후', '관악부OB', '책갈피', '깃발든자', '바람소리', '하루팬1호', '야간근무중', '리믹스장인', '막차탑승객', '옥상구경꾼', '페이더요정', '첫방부터봄'],
-  good: ['오늘 소리 좋다', '믹싱 깔끔', '박자 칼같다', '와 이거지', '손 미쳤다', 'PD 일 잘하네', '끝까지 가자', '소름', 'ㄷㄷ', '귀 호강'],
-  combo50: ['50콤보!', '안 끊긴다', '이 방송 레전드각'],
-  combo100: ['100콤보 실화', '방송 사고 0', '하루 스튜디오 폼 미쳤다'],
-  miss: ['괜찮아 괜찮아', '수습 장인', '오히려 좋아', '라이브의 맛', '사람이 부르는 거니까'],
-  fever: ['드롭 미쳤다', '지금 화면 실화?', '손가락 불탄다', '여기가 하이라이트'],
-};
-
 /* 칭찬: 등급 · 상황별로 돌려 씀 (유능감 — 넉넉하게, 실수는 부드럽게) */
 export const PRAISE = {
-  SS: ['완벽한 송출이었어요. 채팅창이 숨을 멈췄어요.', '한 음도 안 놓치셨어요. 프로듀서님 정말이에요?', '이런 믹싱은 처음 들어 봐요.'],
-  S: ['훌륭해요! 방송이 끝까지 반짝였어요.', '손끝이 노래랑 같이 숨 쉬었어요.', '오늘 방송, 오래 기억할게요.'],
-  A: ['정말 좋았어요. 노래가 또렷하게 나갔어요.', '박자가 시청자들한테 그대로 갔어요.', '좋아요, 오늘도 무사고예요.'],
-  B: ['끝까지 송출해 주셔서 고마워요. 노래가 살아났어요.', '중간중간 반짝이는 순간이 많았어요.', '이 정도면 충분해요. 채팅이 웃고 있어요.'],
-  C: ['오늘 손이 조금 피곤했나 봐요. 그래도 끝까지 와 주셨잖아요.', '방송은 끝까지 들어 준 사람을 기억해요.', '한 번 더 하면 훨씬 가까워질 거예요.'],
-  best: '새 기록이에요! 어제의 프로듀서님보다 한 걸음 더.',
+  SS: ['완벽했어요. 무대가 숨을 멈추고 들었어요.', '한 음도 놓치지 않으셨어요. 정말이에요?', '이런 연주는 처음 들어 봐요, 조율사님.'],
+  S: ['훌륭해요! 노래가 하늘 끝까지 닿았어요.', '손끝이 노래랑 같이 숨 쉬었어요.', '오늘 무대, 오래 기억할게요.'],
+  A: ['정말 좋았어요. 노래가 또렷하게 들렸어요.', '박자가 마음에 그대로 왔어요.', '좋아요, 이 노래는 이제 잡음이 되지 않아요.'],
+  B: ['끝까지 들어 주셔서 고마워요. 노래가 살아났어요.', '중간중간 반짝이는 순간이 많았어요.', '이 정도면 충분해요. 노래가 웃고 있어요.'],
+  C: ['오늘 귀가 조금 피곤했나 봐요. 그래도 끝까지 와 주셨잖아요.', '노래는 끝까지 들어 준 사람을 기억해요.', '한 번 더 들으면 훨씬 가까워질 거예요.'],
+  best: '새 기록이에요! 어제의 조율사님보다 한 걸음 더.',
   fc: '한 번도 끊기지 않았어요. 풀 콤보!',
   ap: '모든 음이 PERFECT. 올 퍼펙트예요!',
 };
-/* 생방송 중 캐스트 한마디 (콤보 이정표) */
-export const CHEER = { 30: '좋아요, 그대로!', 60: '채팅이 밝아지고 있어요!', 150: '방송 사고 0이에요!', 250: '믿을 수 없어요…!', 400: '끝까지 함께해요!' };
+/* 연주 중 한마디 (콤보 이정표) */
+export const CHEER = { 30: '좋아요, 그대로!', 60: '노래가 밝아지고 있어요!', 100: '훌륭해요, 조율사님!', 150: '무대가 울려요!', 200: '믿을 수 없어요…!', 300: '끝까지 함께해요!', 500: '전설이 되고 있어요!' };

@@ -8,8 +8,8 @@
 //   ⑥ 카메라 약 68° · 세로 시야 42° (위 끝 47°) · 가로 폭 ?cam= (기본 14m)
 //   ⑦ UI 얇게(css .duck) · ⑧ 급할 때 길잡이(바닥 점선 · 가장자리 표시 하나) · ⑨ 방 칸 미니맵(?mini=0 끔)
 import * as THREE from 'three';
-import { RS, COLS, ROWS } from './plan.js?v=0.99.24';
-import { COLD, TOXIC } from './data/weather.js?v=0.99.24';
+import { RS, COLS, ROWS } from './plan.js?v=0.99.25';
+import { COLD, TOXIC } from './data/weather.js?v=0.99.25';
 
 const Q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
 export const DUCK = { on: Q.get('look') === 'duck', ang: +(Q.get('ang') || 68), vfov: +(Q.get('vfov') || 42), mini: Q.get('mini') !== '0', fogAdd: 0, dist: 0 };

@@ -2,13 +2,13 @@
 //   멈춤 판정: 칸 안에서 실제 이동 속도 < 0.2m/s 가 0.3초 → 붓기 시작 · 금액과 상관없이 0.5초 · 부분 납부는 칸이 기억 · 돈 0 = 조용히 멈춤 · 걸어 나가면 즉시 멈춤(날아간 지폐는 칸에 남음)
 //   되돌리기 없음 — 칸이 일하는 길 밖이라 지나가다 밟을 일이 없어요 (시험 Q3 · P1 · P4)
 import * as THREE from 'three';
-import { padSpot, openingFund } from './space.js?v=0.99.24';
-import { STATION, bill, M } from './models.js?v=0.99.24';
-import { S, save, mission } from './state.js?v=0.99.24';
-import { UP_K, UP_MAX, PROD, DESK_UP } from './data.js?v=0.99.24';
-import { FEATURES } from './space.js?v=0.99.24';
-import { sfx } from './audio.js?v=0.99.24';
-import { track } from './oad.js?v=0.99.24';
+import { padSpot, openingFund } from './space.js?v=0.99.25';
+import { STATION, bill, M } from './models.js?v=0.99.25';
+import { S, save, mission } from './state.js?v=0.99.25';
+import { UP_K, UP_MAX, PROD, DESK_UP } from './data.js?v=0.99.25';
+import { FEATURES } from './space.js?v=0.99.25';
+import { sfx } from './audio.js?v=0.99.25';
+import { track } from './oad.js?v=0.99.25';
 
 /* 붓기 규칙 (DESIGN 6-2): 칸 밖에서 들어와 멈춤 → 멈춤 0.3초(작은 칸) · 0.6초(큰 칸 = 남은 값이 가진 돈의 25% 넘음) → 준비 0.35초(링이 차오름 · 돈 안 나감 · 움직이면 취소) → 0.5초 붓기
    → 돈이 실제로 나가는 때 = 멈추고 0.65초(작은 칸) · 0.95초(큰 칸): 손가락을 고쳐 쥐는 0.3~0.6초 멈칫으로는 안 나감 */

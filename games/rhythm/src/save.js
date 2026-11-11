@@ -4,15 +4,15 @@ const Q = new URLSearchParams(location.search);
 const NOSAVE = Q.get('nosave') === '1';
 export const pad = n => String(n).padStart(2, '0');
 /* 시험용: ?day=2026-11-10 처럼 날짜를 바꿔 볼 수 있음 · 하루는 아침 7시에 바뀜 (새 곡 시각)
-   ?day=7 처럼 숫자만 쓰면 '오늘'을 7화로 (저장의 첫날은 그대로) · ?dev=1 은 방송 목록 전부 열림 (테스트 서버 · localhost 는 기본으로 켜짐, ?dev=0 으로 끔) */
+   ?day=7 처럼 숫자만 쓰면 '오늘'을 7화로 (저장의 첫날은 그대로) · ?dev=1 은 무대 목록 전부 열림 */
 export const EP = /^\d{1,2}$/.test(Q.get('day') || '') ? +Q.get('day') : 0;
-export const DEV = Q.get('dev') === '1' || (Q.get('dev') !== '0' && /^(test\.|localhost$|127\.)/.test(location.hostname));   /* 테스트 서버는 늘 시험 모드 (2026-11-11 대표: 모든 곡 플레이) · ?dev=0 이면 일반 흐름(오늘의 곡만 무료 등) 확인용으로 끔 */
+export const DEV = Q.get('dev') === '1' || /^(test\.|localhost$|127\.)/.test(location.hostname);   /* 테스트 서버는 늘 시험 모드 (2026-11-11 대표: 모든 곡 플레이) */
 export function now() { const q = Q.get('day'); if (q && !EP) { const [y, m, d] = q.split('-').map(Number); return new Date(y, m - 1, d, 12); } return new Date(); }
 export function dayKey(d = now()) { const x = new Date(d.getTime() - 7 * 3600e3); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; }
 export function nextOpen(d = now()) { const n = new Date(d); n.setHours(7, 0, 0, 0); if (n <= d) n.setDate(n.getDate() + 1); return n; }
 
 export function fresh() {
-  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'normal', days: {}, best: {}, book: {}, pre: {}, dm: {}, plays: 0, calibrated: false };
+  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'normal', days: {}, best: {}, book: {}, plays: 0, calibrated: false };
 }
 export let S = fresh();
 export function load() {

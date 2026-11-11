@@ -1,11 +1,10 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.24';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.24';
-import { makeRenderer, laneAt } from './render.js?v=0.99.24';
-import { makeFx } from './fx.js?v=0.99.24';
-import { Live } from './live.js?v=0.99.24';
+import { A } from './audio.js?v=0.99.25';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.25';
+import { makeRenderer, laneAt } from './render.js?v=0.99.25';
+import { makeFx } from './fx.js?v=0.99.25';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -39,12 +38,11 @@ export const Play = {
     this.fxs.setTheme(opt.theme); this.fxs.reset(); this.fxs.lite = !!opt.lite;
     this.st = { p: -LEAD, notes, spd: 12 + opt.speed * 5, clk: clock(opt.chart, opt.entry.shift), missAt: WIN.good, pressed: [false, false, false, false], flash: [0, 0, 0, 0], drawFrom: 0, now: performance.now() / 1000, dt: 0.016, pulse: 0, fever: 0, held: [false, false, false, false], fx: this.fxs, theme: this.fxs.theme };
     this.down = [0, 0, 0, 0]; this.ptr = new Map(); this.shown = 0; this.lastCheer = 0;
-    this.pend = []; this.prevCombo = 0; this.fcShown = false; this.readyState = ''; this.chordSeen = new Set(); this.work = 0; this.iv = []; this.refresh = 0; this.offRate = false; this.slowT = 0; this.autoLite = false; this.txt = {};
+    this.pend = []; this.prevCombo = 0; this.fcShown = false; this.readyState = ''; this.chordSeen = new Set(); this.work = 0; this.iv = []; this.refresh = 0; this.slowT = 0; this.autoLite = false; this.txt = {};
     this.dens = density(notes);
     if (!this.R) this.R = makeRenderer($('#p_cv'));
     this.fit();
     $('#play').className = 'scr on ' + this.fxs.theme.judge;
-    Live.start({ live: opt.live, subs: opt.subs || [300, 300], lite: !!opt.lite }); this.fixAt = 0;
     /* 화면 채우기 */
     $('#p_cov').style.backgroundImage = `url(${opt.cover})`; $('#p_thumb').style.backgroundImage = `url(${opt.cover})`;
     $('#p_title').textContent = opt.song.title; $('#p_sub').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
@@ -73,9 +71,7 @@ export const Play = {
   press(lane, ms) {
     if (!this.on || this.paused || this.ended) return;
     this.down[lane]++; this.st.pressed[lane] = true; this.st.flash[lane] = 1;
-    const t = this.pos(ms);
-    for (const m of this.sess.settle(t)) this.fx(m);   /* 앞 노트 MISS 를 먼저 (이벤트 시각 순서) */
-    const e = this.sess.press(lane, t);
+    const e = this.sess.press(lane, this.pos(ms));
     if (e) { this.fx(e); this.flush(performance.now() / 1000); }   /* 판정 글자는 누른 그 자리에서 (다음 프레임 기다리지 않음 · 검수 A1) */ else if (this.opt.hitsnd !== false) A.fxPlay('soft', this.opt.sfx * 0.45);
   },
   release(lane, ms) {
@@ -133,9 +129,6 @@ export const Play = {
     if (el) this.sAnim = sm.animate(MISS_K, { duration: 620, fill: 'forwards' });
     /* 콤보 */
     const cb = $('#p_combo'), nb = cb.querySelector('b'), n = this.sess.combo;
-    for (const ev of evs) Live.judge(ev, ev.combo);
-    /* 방송 사고 수습 대사 (MISS · 6초에 한 번) — 대사만 · 효과는 v0.5 (engine hooks.miss) */
-    if (evs.some(x => x.j === 'miss') && o.diva.fix && now > this.fixAt) { this.fixAt = now + 6; this.cutin(o.diva.fix); }
     if (n === 0 && this.prevCombo >= 3) {   /* 끊김: 아래로 흐려짐 (빨강 · 흔들림 없음) */
       if (this.cAnim) this.cAnim.cancel();
       this.cAnim = cb.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 4px' }], { duration: 420, easing: 'ease-out' });
@@ -156,7 +149,7 @@ export const Play = {
     }
     this.prevCombo = n;
     const line = o.cheer[n];
-    if (line && n > this.lastCheer) { this.lastCheer = n; if (n % 100) this.cutin(line); }   /* 100 단위는 '100 COMBO' 띠와 겹치지 않게 말풍선 생략 (재검수 C-4) */
+    if (line && n > this.lastCheer) { this.lastCheer = n; this.cutin(line); }
   },
   cutin(text) { const c = $('#p_cut'); c.querySelector('span').textContent = text; c.classList.add('on'); clearTimeout(this.cutT); this.cutT = setTimeout(() => c.classList.remove('on'), 1700); },
   shake(px) {
@@ -177,15 +170,9 @@ export const Play = {
     /* 느린 기기 판단 (검수 A4): 프레임 '간격'이 아니라 화면 주사율 대비 ① 놓친 프레임 비율 ② frame() 안 작업 시간
        주사율 = 처음 1초 간격의 하위 20% 값 (30Hz 저전력 모드면 33ms 가 주사율이라 그대로는 안 줄임) */
     P.iv.push(st.dt * 1000); if (P.iv.length > 120) P.iv.shift();
-    /* 주사율은 흔한 값(120 · 90 · 60 · 30Hz)에 맞춤 (재검수 B-1): 잰 간격이 어느 값과도 12% 넘게 멀면(예: 25 · 40ms)
-       화면이 아니라 기기가 느린 것 → 처음부터 느린 기기도 줄임 */
-    if (!P.refresh && P.iv.length >= 60) {
-      const v = P.iv.slice().sort((a, b) => a - b), m = v[Math.floor(v.length * 0.2)], std = [8.33, 11.11, 16.67, 33.33];
-      const near = std.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a);
-      P.refresh = near; P.offRate = Math.abs(m - near) / near > 0.12;
-    }
+    if (!P.refresh && P.iv.length >= 60) { const v = P.iv.slice().sort((a, b) => a - b); P.refresh = v[Math.floor(v.length * 0.2)]; }
     if (P.refresh && !P.fxs.lite && p > 0) {
-      const late = P.iv.filter(x => x > P.refresh * 1.5).length / P.iv.length, heavy = P.work > P.refresh * 0.6 || P.offRate;
+      const late = P.iv.filter(x => x > P.refresh * 1.5).length / P.iv.length, heavy = P.work > P.refresh * 0.6;
       P.slowT = late > 0.25 || heavy ? P.slowT + st.dt : 0;
       if (P.slowT > 2) { P.fxs.lite = true; P.autoLite = true; const t = $('#toast'); if (t) { t.textContent = '이 기기에 맞게 연출을 가볍게 바꿨어요'; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2200); } }
     }
@@ -200,8 +187,7 @@ export const Play = {
     st.fever += (want - st.fever) * Math.min(1, st.dt / 0.25); P.fxs.st.fever = P.fxs.lite ? 0 : st.fever;
     P.R.draw(st);
     P.flush(st.now);
-    Live.frame(st.now, p, st.fever);
-    { const sc2 = (1 + 0.045 * st.pulse).toFixed(2); if (P.txt.cs !== sc2) { P.txt.cs = sc2; $('#p_combo').style.scale = sc2; } }   /* 콤보가 박마다 살짝 튐 (바뀔 때만) */
+    $('#p_combo').style.scale = (1 + 0.045 * st.pulse).toFixed(3);   /* 콤보가 박마다 살짝 튐 */
     /* 풀콤보 · 올 퍼펙트: 마지막 판정 직후 */
     if (!P.fcShown && P.sess.finished) { P.fcShown = true; const r = P.sess.result(); if (r.fc) { P.fxs.celebrate(r.ap, st.now); P.shake(1.5); if (P.opt.hitsnd !== false) A.fxPlay('fc', P.opt.sfx * 0.8); P.fcMoment(r); } }
     /* READY · GO */
@@ -227,11 +213,10 @@ export const Play = {
     m.querySelector('b').textContent = r.ap ? 'ALL PERFECT' : 'FULL COMBO';
     m.querySelector('span').textContent = r.ap ? `모든 음이 완벽했어요 · ${this.opt.diva.name}` : `한 번도 끊기지 않았어요 · ${this.opt.diva.name}`;
     m.className = 'fcm ' + (r.ap ? 'ap' : 'fc'); void m.offsetWidth; m.className = 'fcm on ' + (r.ap ? 'ap' : 'fc');
-    if (this.jAnim) this.jAnim.cancel(); if (this.sAnim) this.sAnim.cancel();   /* 마지막 판정 글자가 첫 프레임에 겹치지 않게 (재검수 C-3) */
     $('#p_shake').classList.add('fcing');   /* 콤보 · 판정 글자는 비켜 줌 */
   },
   finish() {
-    this.ended = true; const r = this.sess.result(); Live.end();
+    this.ended = true; const r = this.sess.result();
     const bn = $('#p_banner');
     if (r.fc) {   /* 풀콤보 장면이 이미 떠 있음 → 배너 대신 장면을 조금 더 보여 주고 결과로 */
       setTimeout(() => { A.stop(1.4); }, 1400);
@@ -247,7 +232,7 @@ export const Play = {
   },
   async pause() { if (!this.on || this.paused || this.ended) return; this.paused = true; for (let l = 0; l < 4; l++) { this.down[l] = 1; this.release(l, performance.now()); } this.ptr.clear(); await A.suspend(); },
   async resume() { if (!this.paused) return; await A.resume(); this.paused = false; },
-  quit() { Live.stop(); this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
+  quit() { this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
 
   /* 봇 · 자동 연주 (시험용): auto = { jitter: ms, miss: 확률 } — 실제 입력 길(press/release)을 그대로 씀 */
   /* dom: 진짜 화면 터치처럼 PointerEvent 를 보냄 (레인 계산 · 손가락 추적 길까지 시험) */

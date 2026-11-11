@@ -8,7 +8,7 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#070816">
-<title>프로듀서 온에어 · 오늘 밤 한 곡, 끝까지 송출</title>
+<title>원트랙 · 노래로 넘기는 웹툰, 하루 한 곡</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/NanumMyeongjo-ExtraBold.ttf" as="font" type="font/ttf" crossorigin>
@@ -22,12 +22,12 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
       <div class="hero"></div>
       <div class="top">
         <button class="ic" id="t_back" aria-label="원어데이로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <div class="logo onair"><i class="lamp"></i>프로듀서 온에어</div>
-        <span class="rbtn"><button class="ic" id="t_list" aria-label="방송 목록"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></button>
-        <button class="ic" id="t_book" aria-label="방송 기록"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg></button></span>
+        <div class="logo gaje">원트랙<small>가제</small></div>
+        <span class="rbtn"><button class="ic" id="t_list" aria-label="무대 목록"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></button>
+        <button class="ic" id="t_book" aria-label="이야기책"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg></button></span>
       </div>
       <div class="info">
-        <span class="pill" id="t_no">TONIGHT · NO.001</span><span class="pill2" id="t_ch">1화</span>
+        <span class="pill" id="t_no">TODAY · NO.001</span><span class="pill2" id="t_ch">미유 이야기 1화</span>
         <div class="ttl" id="t_title"></div>
         <div class="comp" id="t_comp"></div>
         <div class="chips">
@@ -38,19 +38,17 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
       <div class="diva">
         <div class="av" id="t_av"></div>
         <div class="tx">
-          <div class="nm"><em>CAST</em><b id="t_dn"></b><span id="t_dr"></span></div>
+          <div class="nm"><em>DIVA</em><b id="t_dn"></b><span id="t_dr"></span></div>
           <q id="t_hello"></q>
           <div class="steps" id="t_steps"></div>
         </div>
       </div>
       <div class="diff" id="t_diff"></div>
       <div class="hint" id="t_hint"><i>?</i><span></span></div>
-      <button class="start onair" id="t_start"><b><i class="lamp"></i>생방송 시작</b><span>오늘 무제한 무료</span></button>
+      <button class="start" id="t_start"><b>오늘의 한 곡 시작</b><span>무료 1회</span></button>
     </section>
 
-    <!-- ①-2 방송 전 (화면 밖) -->
-    <section id="pre" class="scr"></section>
-    <!-- ② 플레이 (생방송) -->
+    <!-- ② 플레이 -->
     <section id="play" class="scr">
       <div class="shake" id="p_shake">
         <div class="cov" id="p_cov"></div><div class="shade"></div>
@@ -66,9 +64,6 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
         <div class="chap" id="p_chap"></div>
         <div class="combo" id="p_combo"><span>COMBO</span><b class="tnum">0</b></div>
         <div class="judge" id="p_judge"><b></b><small></small></div>
-        <div class="live" id="p_live"><i></i>LIVE<span>시청</span><b>0</b></div>
-        <div class="chat" id="p_chat"></div>
-        <div class="hearts" id="p_hearts"></div>
         <div class="cutin" id="p_cut"><div class="face"></div><div class="say"><small></small><span></span></div></div>
         <div class="intro" id="p_intro"><em></em><b></b><span></span></div>
         <div class="ready" id="p_ready"><b></b></div>
@@ -81,9 +76,9 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 
     <!-- ③ 결과 -->
     <section id="result" class="scr"></section>
-    <!-- ④ 개인 채널 (방송 후 DM · 오늘의 조각) -->
+    <!-- ④ 이야기 컷 -->
     <section id="story" class="scr"></section>
-    <!-- ⑤ 방송 기록 -->
+    <!-- ⑤ 이야기책 -->
     <section id="book" class="scr"></section>
     <!-- ⑦ 무대 목록 (지난 곡 다시 고르기) -->
     <section id="stages" class="scr"></section>
@@ -93,9 +88,9 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
     <div id="sheet"></div>
     <div id="modal"></div>
     <div id="toast"></div>
-    <div id="boot"><b>프로듀서 온에어</b><span>옥상 방송실을 켜고 있어요</span><i></i></div>
+    <div id="boot"><b>원트랙</b><span>무대를 준비하고 있어요</span><i></i></div>
   </div>
 </div>
-<script type="module" src="src/main.js?v=0.99.24"></script>
+<script type="module" src="src/main.js?v=0.99.25"></script>
 </body>
 </html>

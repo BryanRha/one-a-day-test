@@ -6,8 +6,8 @@
 //   · v0.3.1 (검수 A1 · A2): 판정 위계는 '모양'으로 — PERFECT 금 핵 + 링 2겹 + 빛기둥 + 파티클 · GREAT 장미색 링 1겹 · GOOD 작은 빛점
 //     판정 색(금 · 장미 · 세이지)은 레인 · 노트 색(얼음 · 라벤더)과 겹치지 않게 · 빛 예산(밝기 상한)으로 판정선이 하얗게 타지 않게
 //   · 색 · 파티클 모양 · 롱노트 불꽃은 테마(themes.js)에서 읽음 → setTheme 로 바꿔 끼움
-import { GEO, P } from './render.js?v=0.99.24';
-import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.24';
+import { GEO, P } from './render.js?v=0.99.25';
+import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.25';
 
 const { L, LW, YJ } = GEO;
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
@@ -140,9 +140,8 @@ export function makeFx(themeId = DEFAULT_THEME) {
         if (!b.on) continue; const t = now - b.t0; if (t < 0) continue; const s = b.s, k = t / s.life; if (k >= 1) { b.on = false; continue; }
         const e = 1 - Math.pow(1 - k, 3), fade = 1 - k, sp = SP[s.col];
         const r = s.size * (0.55 + 0.6 * e);
-        const Kb = t < 0.06 ? Math.max(K, 0.9) : K;   /* 막 터진 0.06초는 예산에서 빼 줌 → 동시치기 순간에도 빈 프레임 없음 (재검수 B-3) */
-        g.globalAlpha = fade * 0.62 * Kb; g.drawImage(sp.glow, b.x - r, b.y - r * 0.42, r * 2, r * 0.84);
-        const core = s.core ?? 1; if (core && k < 0.3) { const r2 = s.size * 0.28 * (1 - k / 0.3); g.globalAlpha = core * Kb; g.drawImage(sp.glow, b.x - r2, b.y - r2 * 0.8, r2 * 2, r2 * 1.6); }
+        g.globalAlpha = fade * 0.62 * K; g.drawImage(sp.glow, b.x - r, b.y - r * 0.42, r * 2, r * 0.84);
+        const core = s.core ?? 1; if (core && k < 0.3) { const r2 = s.size * 0.28 * (1 - k / 0.3); g.globalAlpha = core * K; g.drawImage(sp.glow, b.x - r2, b.y - r2 * 0.8, r2 * 2, r2 * 1.6); }
         if (s.pillar && !st.lite) { const h = s.pillar * (1 - e * 0.35), w = 24 + 18 * (1 - e); g.globalAlpha = fade * 0.85 * K; g.drawImage(sp.pillar, b.x - w / 2, b.y - h, w, h); }
       }
       /* 링 */

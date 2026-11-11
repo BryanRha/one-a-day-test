@@ -1,12 +1,12 @@
 // ⑥ 직원 작업 목록 (DESIGN 6-3): 작업 큐 하나 + 고정 자리 — 역할마다 문턱 숫자 없음
 //   큐: 「진열이 2 보다 적은 메뉴」 · 「줄 맨 앞 손님이 기다리는 메뉴」 · 「창구 손님이 기다리는 메뉴」 · 「테이블 쓰레기」가 작업을 만들어요
 //   우선순위 = ① 줄 맨 앞이 기다림 ② 진열 0 ③ 진열이 가장 적음 · 직원은 작업 하나를 잠그고 가져가요 (같은 받침에 두 명이 안 감)
-import { person } from './models.js?v=0.99.24';
-import { STAFF, OUTFITS, OUTFITS_PRO, REST, CHAIN, outsOf, slotOf, INTER, STAFF_HAND_MAX } from './data.js?v=0.99.24';
-import { S } from './state.js?v=0.99.24';
-import { applyRules, hand, FOOD } from './rules.js?v=0.99.24';
-import { R, tableSide } from './space.js?v=0.99.24';
-import { sfx } from './audio.js?v=0.99.24';
+import { person } from './models.js?v=0.99.25';
+import { STAFF, OUTFITS, OUTFITS_PRO, REST, CHAIN, outsOf, slotOf, INTER, STAFF_HAND_MAX } from './data.js?v=0.99.25';
+import { S } from './state.js?v=0.99.25';
+import { applyRules, hand, FOOD } from './rules.js?v=0.99.25';
+import { R, tableSide } from './space.js?v=0.99.25';
+import { sfx } from './audio.js?v=0.99.25';
 
 const inR = (r, x, z) => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3];
 const SRC = { bagel: 'oven', cream: 'top', coffee: 'cream', drink: 'coffee' };
