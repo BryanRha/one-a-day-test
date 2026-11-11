@@ -1,6 +1,6 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (사람 · 베이글 · 커피 · 설비 · 가게)
 import * as THREE from 'three';
-import { BRAND } from './data.js?v=0.99.20';
+import { BRAND } from './data.js?v=0.99.21';
 
 const gm = (() => { const d = new Uint8Array([95, 190, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -11,7 +11,7 @@ export const box = (w, h, d, c, x, y, z, p) => mesh(geo(`b${w},${h},${d}`, () =>
 export const cyl = (rt, rb, h, c, x, y, z, p, s = 16) => mesh(geo(`c${rt},${rb},${h},${s}`, () => new THREE.CylinderGeometry(rt, rb, h, s)), M(c), x, y + h / 2, z, p);
 export const sph = (r, c, x, y, z, p, ws = 14, hs = 10) => mesh(geo(`s${r},${ws}`, () => new THREE.SphereGeometry(r, ws, hs)), M(c), x, y, z, p);
 // ── 물건: 베이글 · 크림치즈 베이글 · 커피 · 쓰레기
-export const ITEM_H = { drink: 29, bagel: 15, cream: 16, coffee: 27, trash: 12, box: 30, dough: 14, boiled: 15 };
+export const ITEM_H = { drink: 29, bagel: 15, chewy: 15, cream: 16, coffee: 27, trash: 12, box: 30, dough: 14, aged: 14, boiled: 15 };
 export const LOOK = { cream: 'salt', coffee: 'cup_plain' };
 export function item(kind) {
   const g = new THREE.Group(), torus = () => geo('torus', () => new THREE.TorusGeometry(15, 7.5, 8, 18).rotateX(Math.PI / 2));
@@ -26,6 +26,8 @@ export function item(kind) {
     sph(12.5, top, 0, 19, 0, g, 12, 8).scale.set(1, 0.7, 1); if (look === 'cup_blue') dots(6, 0x3A2A6A, 1.8, 24); if (look === 'cup_scallion') { dots(5, 0x4AA04A, 1.8, 24); dots(3, 0xC04A3A, 1.6, 23); } }
   else if (kind === 'drink') { cyl(11, 8.5, 26, 0xE8F2F6, 0, 0, 0, g, 12); cyl(10, 8, 17, 0x4A2A16, 0, 2, 0, g, 12); cyl(11.5, 11.5, 3, 0xFFFFFF, 0, 26, 0, g, 12); cyl(1.2, 1.2, 18, 0xFF6720, 3, 26, 0, g, 6); }   /* 아이스 아메리카노 */
   else if (kind === 'dough') { sph(14, 0xFFF4E2, 0, 9, 0, g, 12, 8).scale.set(1, 0.65, 1); }
+  else if (kind === 'aged') { sph(15, 0xF2DDB0, 0, 9, 0, g, 12, 8).scale.set(1, 0.75, 1); sph(4, 0xFFFFFF, 6, 15, -4, g, 6, 4); }   /* 숙성 반죽: 부푼 노란 반죽 */
+  else if (kind === 'chewy') { mesh(torus(), new THREE.MeshToonMaterial({ color: 0xB8742E, gradientMap: gm, emissive: 0x2A1400 }), 0, 7.5, 0, g); sph(2.4, 0xFFF4D0, -7, 15, 6, g, 5, 4); sph(2.4, 0xFFF4D0, 8, 15, -3, g, 5, 4); }   /* 쫄깃 베이글: 윤기 나는 진한 갈색 */
   else if (kind === 'boiled') { mesh(torus(), new THREE.MeshToonMaterial({ color: 0xE8C08A, gradientMap: gm, emissive: 0x3A2208 }), 0, 7.5, 0, g); }
   else if (kind === 'prem') { mesh(torus(), new THREE.MeshToonMaterial({ color: 0xB86A20, gradientMap: gm, emissive: 0x3A1A00 }), 0, 7.5, 0, g); sph(3, 0xFFFFFF, 8, 15, -6, g, 6, 4); }
   else if (kind === 'trash') { box(30, 3, 22, 0x6A4A3A, 0, 0, 0, g); sph(7, 0xB8B8B8, -6, 8, 0, g, 6, 4); sph(6, 0xA8A8A8, 6, 7, 3, g, 6, 4); cyl(4, 3, 10, 0xD84A3A, 8, 3, -6, g, 6); }   /* 쟁반 + 구겨진 종이 (음식과 구분) */
@@ -118,6 +120,11 @@ export const DECO_MODEL = {
 // ── 지폐 다발 (36×9×20 · 흰 띠) — 돈 더미는 가로 3 × 2 × 층 12
 export function billBundle() { const g = new THREE.Group(); box(36, 8, 20, 0x5FB66A, 0, 0, 0, g); box(8, 8.5, 20.5, 0xFFFFFF, 0, 0, 0, g); return g; }
 export function bill() { const g = new THREE.Group(); box(30, 1.5, 16, 0x6FC27A, 0, 0, 0, g); box(6, 2, 16.5, 0xFFFFFF, 0, 0, 0, g); return g; }
+// ── 베이글 풍선 (보상형 광고 자리 · 고정 자리에 묶여 살짝 흔들림): 주황 풍선 + 끈 + 작은 베이글
+export function balloon() { const g = new THREE.Group(), top = new THREE.Group(); g.add(top); top.position.y = 260;
+  sph(36, BRAND.accentHex, 0, 0, 0, top, 16, 12).scale.set(1, 1.15, 1); cyl(4, 8, 10, 0xD8501A, 0, -48, 0, top, 8);
+  const b = item('bagel'); b.scale.setScalar(1.1); b.position.set(0, -6, 30); b.rotation.x = Math.PI / 2; top.add(b);
+  cyl(1, 1, 210, 0xFFFFFF, 0, 0, 0, g, 4); cyl(10, 12, 10, 0x8A6A44, 0, 0, 0, g, 10); g.userData.top = top; return g; }
 // ── 사장님 발밑 표시: 브랜드 주황 고리 (어디 있는지 한눈에)
 export function ownerRing() { const g = new THREE.Group(); const r = new THREE.Mesh(new THREE.RingGeometry(40, 52, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: BRAND.accentHex, transparent: true, opacity: 0.85, depthWrite: false }));
   r.position.y = 3; g.add(r); const d = new THREE.Mesh(new THREE.CircleGeometry(40, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: BRAND.accentHex, transparent: true, opacity: 0.18, depthWrite: false })); d.position.y = 2.5; g.add(d); g.userData.ring = r; return g; }

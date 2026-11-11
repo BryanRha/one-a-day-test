@@ -1,25 +1,25 @@
 // 화면 (DESIGN 9장): 상시 버튼 4개(돈 · 진행 막대 + 지점 이름 · ≡ 메뉴 · 📺 부스트) · 빨간 점 ≤ 1 · 글자 띄우기 분당 ≤ 20 · 칸 이름표는 칸 위 · 줄 맨 앞 1명만 말풍선 · 안내 한 줄 + 화살표 하나
 //   창(메뉴 · 상점 · 단골 · 꾸미기 · 미션 · 설정 · 쿠폰 · 광고 · 골드)은 ui_menu.js · 별채 책상 카드는 desk.js · 지도는 map.js
 import * as THREE from 'three';
-import { BRANCHES, COUPON, AD_DAY, AD_PLACES, STAFF } from './data.js?v=0.99.20';
-import { S, save, couponReady, missionReady, vipOn, today } from './state.js?v=0.99.20';
-import { sfx } from './audio.js?v=0.99.20';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.20';
-import { bm } from './oad_bm.js?v=0.99.20';
-import { PAD_COLOR } from './pads.js?v=0.99.20';
+import { BRANCHES, COUPON, AD_DAY, AD_PLACES, STAFF, MENU } from './data.js?v=0.99.21';
+import { S, save, couponReady, vipOn, today, missionNew, PASS_HOOK } from './state.js?v=0.99.21';
+import { sfx } from './audio.js?v=0.99.21';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.21';
+import { bm } from './oad_bm.js?v=0.99.21';
+import { PAD_COLOR } from './pads.js?v=0.99.21';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
-const ICON = { bagel: '🥯', cream: '🥯', coffee: '🥣', drink: '☕' }, FLOAT_MAX = 20;
+const ICON = new Proxy({}, { get: (_, k) => MENU[k]?.icon || '🥯' }), FLOAT_MAX = 20;   /* 말풍선 그림 = 메뉴 그림 (특별 베이글은 지점마다 🧈 🫒 🥬 🍒 — 플레인 🥯 과 구분 · 0.4.3) */
 export class UI {
-  constructor(app) {
+  constructor(app) { PASS_HOOK.lock = () => this.passLockNow();   /* 시즌 패스 별을 채운 때 값 고정 (state.passXp) */
     this.app = app; this._adBusy = false; const h = $('#hud');
     h.innerHTML = `<div class="top"><div class="coin" id="coin"><i class="c"></i><b id="cn">0</b></div><button class="prog" id="prog"><span><b id="bn"></b><em id="bl"></em></span><div class="pb"><s id="bp"></s></div></button><button class="mbtn" id="bMenu" aria-label="메뉴"><i></i><i></i><i></i><s class="dot" id="mDot"></s></button></div>
       <button class="adbtn" id="bAd"><b>📺</b><span id="adT">10/10</span></button><button class="bchip" id="bchip" hidden></button>
       <div class="guide" id="guide"></div><div class="garrow" id="garrow"><i></i></div>
-      <div class="joy" id="joy"><i id="knob"></i></div><div class="sheet" id="sheet" hidden></div><div class="menusheet" id="menusheet" hidden></div><button id="bSet" hidden aria-hidden="true"></button>`;   /* #bSet: 원어데이 소리 점검(oneaday/tools/sound_check)이 여는 설정 단추 — 화면에는 ≡ 메뉴 안 「설정」 */
+      <div class="joy" id="joy"><i id="knob"></i></div><div class="sheet" id="sheet" hidden></div><div class="menusheet" id="menusheet" hidden></div><button id="bSet" hidden aria-hidden="true"></button><button class="balloonb" id="balloon" hidden><b>📺</b><span>3분 보너스</span></button>`;   /* #bSet: 원어데이 소리 점검(oneaday/tools/sound_check)이 여는 설정 단추 — 화면에는 ≡ 메뉴 안 「설정」 */
     this.tags = $('#tags'); this.floats = $('#floats'); this.floatT = [];
-    $('#bMenu').onclick = () => this.menu(); $('#bSet').onclick = () => this.settings(); $('#prog').onclick = () => this.map(); $('#bAd').onclick = () => this.adPick(); $('#bchip').onclick = () => this.buildModal();
+    $('#bMenu').onclick = () => this.menu(); $('#balloon').onclick = () => this.balloonTap(); $('#bSet').onclick = () => this.settings(); $('#prog').onclick = () => this.map(); $('#bAd').onclick = () => this.adPick(); $('#bchip').onclick = () => this.buildModal();
     this.joy(); this.progress();
     bm.hello().then(hh => { for (const it of hh.items || []) if (!S.items.includes(it)) S.items.push(it); if (hh.items?.includes('manager')) S.manager = true; this.adUi(); this.progress(); });
   }
@@ -47,9 +47,10 @@ export class UI {
     this._padTags ||= new Map(); const seen = new Set(), boxes = [];
     for (const p of g.pads.list) { if (p.done) continue; seen.add(p); let t = this._padTags.get(p); if (!t) { t = this.el('ptag ' + p.kind); this._padTags.set(p, t); p.tag = t; }
       const left = Math.max(0, p.cost - p.paid), fill = p.cost ? p.paid / p.cost : 0, ok = S.coins >= left, html = `<i style="--p:${Math.round(fill * 100)}%;--c:${PAD_COLOR[p.kind]}"></i><b>${fmt(left)}</b><small>${p.name}</small>`;
-      if (t._h !== html) { t.innerHTML = html; t._h = html; } t.classList.toggle('ok', ok); t.classList.toggle('poor', !ok && !fill);
+      if (t._h !== html) { t.innerHTML = html; t._h = html; } t.classList.toggle('ok', ok); t.classList.toggle('poor', !ok && !fill); t.classList.toggle('arm', p.hold > 0); t.style.setProperty('--h', (p.hold || 0).toFixed(2));
       const [sx, sy] = this.scr(p.at[0], 60, p.at[1] - Math.min(60, p.size[1] / 2)); if (t._h2 !== t._h) { t._w = t.offsetWidth; t._hh = t.offsetHeight; t._h2 = t._h; } boxes.push({ t, x: sx, y: sy, w: t._w, h: t._hh }); }
     /* 이름표끼리 안 겹치게: 화면 아래쪽 칸부터 자리 잡고, 겹치면 위로 올림 (칸 바로 위 원칙은 그대로) */
+    const hudB = ($('.top')?.getBoundingClientRect().bottom || 70) + 8; for (const q of boxes) { q.x = Math.max(q.w / 2 + 6, Math.min(innerWidth - q.w / 2 - 6, q.x)); q.y = Math.max(hudB + q.h, q.y); }   /* 화면 끝 · 위쪽 HUD 띠 뒤로 안 숨게 */
     boxes.sort((a, b) => b.y - a.y); const placed = [];
     for (const q of boxes) { for (let k = 0; k < 6; k++) { const hit = placed.find(o => q.x - q.w / 2 < o.x + o.w / 2 + 2 && o.x - o.w / 2 < q.x + q.w / 2 + 2 && q.y - q.h < o.y + 2 && o.y - o.h < q.y + 2); if (!hit) break; q.y = hit.y - hit.h - 4; } placed.push(q); q.t.style.transform = `translate(${q.x | 0}px,${q.y | 0}px) translate(-50%,-100%)`; }
     for (const [p, t] of this._padTags) if (!seen.has(p)) { t.remove(); this._padTags.delete(p); }
@@ -60,16 +61,25 @@ export class UI {
     if (wf) { const html = `${wf.car ? '🚗' : '🛍'} ${wf.order.filter(o => o.got < o.n).map(o => `<b>${ICON[o.k]}</b><em>${o.n - o.got}</em>`).join('')}`; if (wb._h !== html) { wb.innerHTML = html; wb._h = html; } this.put(wb, wf.pos.x, wf.car ? 200 : 230, wf.pos.z); }
     // 조는 직원 zZ
     for (const w of g.staff) { if (w.rest) { w.zz ||= this.el('zz'); w.zz.textContent = 'zZ'; this.put(w.zz, w.pos.x, 220 + (w.y || 0), w.pos.z); } else if (w.zz) { w.zz.remove(); w.zz = null; } }
-    // 안내: 한 줄 + 화살표 하나 (그 방향으로 움직이면 흐려짐)
-    const gd = g.guide.cur, el = $('#guide'), ar = $('#garrow');
+    // 안내: 한 줄 + 화살표 하나 (그 방향으로 움직이면 흐려짐) — 화살표는 새 목표가 0.5초 이어질 때만 바꾸고, 초당 1,600px 로 미끄러져 따라감 (순간이동 없음)
+    const gd0 = g.guide.cur, el = $('#guide'), ar = $('#garrow'), now = performance.now();
+    if ((gd0 && gd0.key) !== this._gk) { this._gk = gd0 && gd0.key; this._gkAt = now; }
+    const gd = (!this._gd || now - this._gkAt >= 500 || !gd0) ? (this._gd = gd0) : this._gd;
     if (gd) { const html = gd.text.replace(gd.hi, `<em>${gd.hi}</em>`); if (el._h !== html) { el.innerHTML = html; el._h = html; } el.classList.add('on');
-      if (gd.at) { let [sx, sy] = this.scr(gd.at[0], 40, gd.at[1]); const m = 40, W = innerWidth, H = innerHeight, off = sx < m || sy < 90 || sx > W - m || sy > H - 120; const toward = this._toward(g, gd.at);
-        if (off) { const cx = W / 2, cy = H / 2, ang = Math.atan2(sy - cy, sx - cx); sx = Math.max(m, Math.min(W - m, sx)); sy = Math.max(100, Math.min(H - 130, sy)); ar.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%) rotate(${ang + Math.PI / 2}rad)`; }
-        else ar.style.transform = `translate(${sx}px,${sy - 70}px) translate(-50%,-50%) rotate(180deg)`;
-        ar.classList.add('on'); ar.classList.toggle('dim', toward); el.classList.toggle('dim', toward); } else ar.classList.remove('on'); }
+      let tx, ty, rot = 180, toward = false;
+      if (gd.ui) { const r = document.querySelector(gd.ui)?.getBoundingClientRect(); if (r) { tx = r.left + r.width / 2; ty = r.bottom + 28; rot = 0; } }
+      else if (gd.at) { const [sx, sy] = this.scr(gd.at[0], 40, gd.at[1]), m = 40, W = innerWidth, H = innerHeight; toward = this._toward(g, gd.at);
+        if (sx < m || sy < 90 || sx > W - m || sy > H - 120) { rot = Math.atan2(sy - H / 2, sx - W / 2) * 180 / Math.PI + 90; tx = Math.max(m, Math.min(W - m, sx)); ty = Math.max(100, Math.min(H - 130, sy)); } else { tx = sx; ty = sy - 70; } }
+      if (tx != null) { const A = (this._ar ||= { x: tx, y: ty, r: rot, t: now }), dt = Math.min(0.1, (now - A.t) / 1000), d = Math.hypot(tx - A.x, ty - A.y), stp = 1600 * dt; A.t = now;
+        if (d > stp) { A.x += (tx - A.x) / d * stp; A.y += (ty - A.y) / d * stp; } else { A.x = tx; A.y = ty; } const dr = ((rot - A.r + 540) % 360) - 180; A.r += Math.max(-720 * dt, Math.min(720 * dt, dr));
+        ar.style.transform = `translate(${A.x | 0}px,${A.y | 0}px) translate(-50%,-50%) rotate(${A.r.toFixed(1)}deg)`; ar.classList.add('on'); ar.classList.toggle('dim', toward); el.classList.toggle('dim', toward); (window.__arrow ||= []).push([now, A.x, A.y]); if (window.__arrow.length > 600) window.__arrow.shift(); }
+      else ar.classList.remove('on'); }
     else { el.classList.remove('on'); ar.classList.remove('on'); }
     // 공사 칩
     if ((this._bc = (this._bc || 0) + 1) % 15 === 0) { const bd = Object.entries(g.br.build || {}), bc = $('#bchip'); bc.hidden = !bd.length; if (bd.length) { const [id, end] = bd.sort((a, b) => a[1] - b[1])[0]; const l = Math.max(0, (end - Date.now()) / 1000), hh = `🔨 ${g.pads.label({ id, kind: id === g.sp.feat ? 'feat' : 'node' })} <b>${Math.floor(l / 3600) ? Math.floor(l / 3600) + '시간 ' : ''}${Math.floor(l / 60) % 60}분</b> <em>⚡</em>`; if (bc._h !== hh) { bc.innerHTML = hh; bc._h = hh; } } }
+    // 베이글 풍선: 고정된 세계 자리를 화면에 비춤 — 자리를 먼저 정한 뒤 보여 줌(첫 프레임에 구석에서 튀지 않게) · 풍선이 없으면 숨김
+    const bl = $('#balloon'), B = g.balloon; if (B) { let [bx, by] = this.scr(B.at[0], 330, B.at[1]); if (bl.hidden) bl.hidden = false; const bw = bl.offsetWidth || 110; bx = Math.max(8 + bw / 2, Math.min(innerWidth - 8 - bw / 2, bx));   /* 화면 끝에서 안 잘리게 */ bl.style.transform = `translate(${bx | 0}px,${by | 0}px) translate(-50%,-100%)`; bl.hidden = false; bl._at = [bx, by]; } else if (!bl.hidden) bl.hidden = true;
+    if ((this._pf = (this._pf || 0) + 1) % 120 === 0) this.progress();   /* 빨간 점 · 진행 막대를 2초마다 맞춤 */
     // 띄운 글자 (분당 ≤ 20)
     for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.4; this.put(d, d._p.x, d._p.y, d._p.z, '-50%', '-50%'); d.style.opacity = Math.max(0, 1 - d._t / 1.2); if (d._t > 1.2) d.remove(); }
     const b = (+S.boostUntil || 0) - Date.now(), ad = $('#bAd'); if (b > 0) $('#adT').textContent = `${Math.floor(b / 60000)}:${String(Math.floor(b / 1000) % 60).padStart(2, '0')}`; ad.classList.toggle('on', b > 0); if (b <= 0 && this._wasB) this.adUi(); this._wasB = b > 0;
@@ -79,6 +89,9 @@ export class UI {
   float(t, pos, cls = '') { const now = performance.now(); this.floatT = this.floatT.filter(x => now - x < 60000); if (this.floatT.length >= FLOAT_MAX) return; this.floatT.push(now); (window.__floats ||= []).push(now);
     const d = document.createElement('div'); d.className = 'float ' + cls; d.textContent = t; d._p = new THREE.Vector3(pos.x ?? pos[0], (pos.y || 0) + 200, pos.z ?? pos[1]); d._t = 0; this.floats.append(d); }
   say(t, pos) { this.float(t, pos, 'say'); }
+  /* 풍선 누름 → 광고(바구니 · 풍선 자리 하루 3) → 수익 2배 · 빨리 걷기 · 큰 쟁반 중 하나 3분 */
+  balloonTap() { const g = this.app.game; if (!g.balloon || this._adBusy) return; g.balloon.t = Math.max(g.balloon.t, 8); const k = ['boost', 'speed', 'tray'][Math.floor(Math.random() * 3)], nm = { boost: '3분 동안 수익 2배', speed: '3분 동안 빨리 걷기', tray: '3분 동안 큰 쟁반(+4개)' }[k];
+    this.ad('balloon', () => { g.popBalloon(true); this.reward(k); }, 'balloon', `🥯 베이글 풍선: ${nm}`).then(ok => { if (!ok && g.balloon) g.balloon.t = Math.min(g.balloon.t, 3); }); }
   money(v) { const c = $('#coin'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
   /* 새로 열림: 알림 한 줄 (+ 칸 다 참 「+N」 대신 이름) */
   unlocked(o, name) { const g = this.app.game, sp = g.sp; this.progress();
@@ -102,7 +115,7 @@ export class UI {
     const g = this.app.game; if (!g || !g.pads) return; const B = BRANCHES[S.bi], pct = Math.round(g.pads.progress() * 100);
     $('#bn').textContent = B.name.replace(/점$/, '').replace('호점 · ', '호점 · '); $('#bl').textContent = pct >= 100 ? '★' : pct + '%'; $('#bp').style.width = pct + '%';
     /* 빨간 점은 하나만: 받을 것(쿠폰 · 미션 · 단골 이야기 · 선물) 중 하나라도 */
-    const dot = couponReady() || missionReady() || Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) || (S.gift !== today() && !g.own('store')); $('#mDot').style.display = dot ? 'block' : 'none';
+    const dot = couponReady() || missionNew() || Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0));   /* 빨간 점 = 새로 받을 것(쿠폰 · 아직 안 본 미션 보상 · 단골 새 이야기) — 한 번 보면 꺼짐 · 하루 선물은 상점 탭 점으로 */ $('#mDot').style.display = dot ? 'block' : 'none';
     this.adUi(); }
   // ── ≡ 메뉴 (지도 · 상점 · 단골 · 꾸미기 · 미션 · 메뉴 숙련 · 쿠폰 · 설정)
   menu(on = !this._menuOn) { const m = $('#menusheet'); if (!m) return; this._menuOn = on; m.hidden = !on; if (!on) { this._mbk && this._mbk(); this._mbk = null; return; }

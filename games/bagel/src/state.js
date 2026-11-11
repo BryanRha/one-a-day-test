@@ -1,9 +1,9 @@
 // 저장 (localStorage 'marumi_v3' · 0.4 재설계): 돈 · 지점별 산 것(own) · 칸에 부은 돈(paid) · 공사 · 재고 · 단골 · 숙련 · 꾸미기 · BM
 //   예전 저장 v2(0.3.x) · v1(0.2) 은 처음 열 때 한 번 옮김 — 같은 시설은 그대로 열고, 없어진 방에 낸 값은 돈으로 돌려주고, 진행률은 줄지 않게 · 옛 키는 지우지 않음(되돌리기용)
-import { COUPON, BRANCHES, SEASON } from './data.js?v=0.99.20';
+import { COUPON, BRANCHES, SEASON } from './data.js?v=0.99.21';
 export const KEY = 'marumi_v3', OLD2 = 'marumi_v2', OLD1 = 'marumi_v1';
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const fresh = () => ({ v: 3, coins: 180, earned: 0, bi: 0, maxBi: 0, branch: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'],
+const fresh = () => ({ v: 3, coins: 205, earned: 0, bi: 0, maxBi: 0, branch: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'],
   born: Date.now(), vipUntil: 0, vipBox: '', manager: false, safe: { v: 0 }, adp: { day: '', n: {} }, outfitAd: { id: '', n: 0, day: '' }, items: [], theme: {}, inst: 0, pass: { id: '', xp: 0, free: [], paid: [] }, setsFree: 0, sales: { day: '', n: {} }, time: {}, tut: 0, coupons: [] });
 /* 지점: branch[i] = { own 산 것(시설 · 테이블 · 방 · 직원 · 강화 「oven+2」) · paid 칸에 부은 돈 · build{id: 끝 시각} · stock 재고 · idleAt · done · idleUp · idleAd } */
 export let S = fresh();
@@ -46,7 +46,7 @@ export function loadSave() {
   try { let s = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (!s) { const o2 = JSON.parse(localStorage.getItem(OLD2) || 'null'), o1 = JSON.parse(localStorage.getItem(OLD1) || 'null'); if (o2 && o2.v === 2) s = migrate2(o2); else if (o1 && o1.v === 1) s = migrate1(o1); if (s) localStorage.setItem(KEY, JSON.stringify(s)); }
     if (s && s.v === 3) S = Object.assign(fresh(), s); } catch { /* */ }
-  for (const b of Object.values(S.branch || {})) { b.own = Array.isArray(b.own) ? b.own.filter((k, i, a) => typeof k === 'string' && a.indexOf(k) === i) : []; if (!b.paid || typeof b.paid !== 'object') b.paid = {}; if (!b.build || typeof b.build !== 'object') b.build = {}; b.idleUp = Math.max(0, Math.min(5, +b.idleUp || 0)); b.idleAd = +b.idleAd || 0; }   /* 망가진 저장 정리 */
+  for (const b of Object.values(S.branch || {})) { b.own = Array.isArray(b.own) ? b.own.filter((k, i, a) => typeof k === 'string' && a.indexOf(k) === i) : []; if (!b.paid || typeof b.paid !== 'object') b.paid = {}; if (!b.build || typeof b.build !== 'object') b.build = {}; b.idleUp = Math.max(0, Math.min(5, +b.idleUp || 0)); b.idleAd = +b.idleAd || 0; if (b.own.includes('oven') && !b.own.includes('mixer')) b.own.unshift('mixer'); }   /* 망가진 저장 정리 · 0.4.3: 오븐은 반죽이 있어야 구움 → 오븐이 있던 판은 반죽기를 같이 줌 */
   for (const k of ['mast', 'deco', 'reg', 'fx', 'theme', 'time']) if (!S[k] || typeof S[k] !== 'object' || Array.isArray(S[k])) S[k] = {};
   for (const [k, v] of Object.entries(S.deco)) if (!Array.isArray(v)) delete S.deco[k];
   if (!S.ads || typeof S.ads !== 'object') S.ads = { day: '', n: 0 }; if (!S.adp || typeof S.adp.n !== 'object') S.adp = { day: '', n: {} }; if (!Array.isArray(S.outfits)) S.outfits = ['basic'];
@@ -55,6 +55,8 @@ export function loadSave() {
   for (const k of ['coins', 'earned', 'vipUntil', 'inst', 'born']) if (!Number.isFinite(+S[k])) S[k] = k === 'born' ? Date.now() : 0;
   if (S.vipUntil > Date.now() + 28 * 864e5) S.vipUntil = Date.now() + 28 * 864e5;   /* 시계를 앞으로 돌려도 최대 28일 */
   dayTick(); return S; }
+/* 처음부터: v3 를 새 판으로 쓰고 옛 저장(v2 · v1)은 「지움 표시」로 덮음 — 키를 지우면 원어데이 클라우드가 옛 저장을 다시 내려받을 수 있어서, 지우지 않고 덮어써 새 판이 올라가게 함 */
+export function resetAll() { const n = fresh(); n.resetAt = Date.now(); const tomb = JSON.stringify({ v: 0, reset: n.resetAt }); try { localStorage.setItem(KEY, JSON.stringify(n)); localStorage.setItem(OLD2, tomb); localStorage.setItem(OLD1, tomb); } catch { /* */ } window.__noSave = true; }
 let tm = null;
 export function save(now) { if (window.__noSave) return; S.last = Date.now(); clearTimeout(tm); const f = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* */ } }; if (now) f(); else tm = setTimeout(f, 400); }
 export function dayTick() { if (S.day !== today()) { S.day = today(); S.sold = 0; S.coupon = null; S.miss = {}; S.missDone = {}; } }
@@ -67,6 +69,8 @@ export const MISSIONS = [
   { id: 'unlock', name: '새로운 것 2개 열기', goal: 2, coins: 400 }, { id: 'cash', name: '돈 더미 20번 줍기', goal: 20, coins: 350 }, { id: 'coins', name: '돈 3,000 모으기', goal: 3000, coins: 500 },
 ];
 export function mission(id, n = 1) { dayTick(); S.miss[id] = (S.miss[id] || 0) + n; }
+/* 새로 받을 수 있게 된 미션 (미션 창을 열면 「본 것」 → 빨간 점 꺼짐) */
+export const missionNew = () => MISSIONS.some(m => (S.miss[m.id] || 0) >= m.goal && !S.missDone[m.id] && !(S.missSeen || []).includes(S.day + m.id));
 export const missionReady = () => MISSIONS.some(m => (S.miss[m.id] || 0) >= m.goal && !S.missDone[m.id]);
 export function claimMission(id) { const m = MISSIONS.find(x => x.id === id); if (!m || S.missDone[id] || (S.miss[id] || 0) < m.goal) return 0; S.missDone[id] = 1; const v = m.coins * mult(); S.coins += v; save(); return v; }
 export const mult = () => BRANCHES[S.bi]?.mult || 1;
@@ -74,4 +78,7 @@ export const mult = () => BRANCHES[S.bi]?.mult || 1;
 export const vipOn = () => (+S.vipUntil || 0) > Date.now();
 export const has = id => S.items.includes(id);
 // 시즌 패스 XP = 시즌 동안 판 베이글 (시즌이 바뀌면 새로)
-export function passXp(n) { if (S.pass.id !== SEASON.id) S.pass = { id: SEASON.id, xp: 0, free: [], paid: [] }; const d = today(); if (d >= SEASON.from && d <= SEASON.to) S.pass.xp += n; }
+/* 시즌 패스 값 고정 (DESIGN 5-5, 0.4.3 퀄리티 A3): 별 단계를 채운 그때의 「분당 값 · 한 칸 상한」을 기록 — 미뤄 받아도 커지지 않음 (passLock 은 ui 가 넣음) */
+export const PASS_HOOK = { lock: null };
+export function passXp(n) { if (S.pass.id !== SEASON.id) S.pass = { id: SEASON.id, xp: 0, free: [], paid: [], lock: {} }; S.pass.lock ||= {}; const d = today(); if (d >= SEASON.from && d <= SEASON.to) S.pass.xp += n;
+  const t = SEASON.xp.filter(x => S.pass.xp >= x).length; for (let i = 0; i < t; i++) if (!S.pass.lock[i] && PASS_HOOK.lock) S.pass.lock[i] = PASS_HOOK.lock(); }

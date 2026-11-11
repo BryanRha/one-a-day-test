@@ -3,7 +3,7 @@
 //  방 안 장치: 배양조(엄폐물 · 총알에 깨짐 — 판정은 엄폐물 그대로 'l_tank') · 빛이끼 번식 자리(바닥 원 · 느려짐 · 빛남) · 관제 터미널 2(구역 2 · 3 하나씩)
 //  문 장치: 수압 문 2~3 (구역 2 · 3 의 잠기지 않은 문 — 열림 7초 → 노란 불 1초 → 닫힘 3초 · 길 찾기 검사엔 '열린 문')
 //  출구: 연구동 비상 계단(3분) · 수압 승강기(전원) · 파수 반출 해치(새 방식 — 관제 터미널 두 곳 승인 뒤 열림)
-import { PRESS } from './data/map_lab.js?v=0.99.20';
+import { PRESS } from './data/map_lab.js?v=0.99.21';
 
 const RS = 16; /* plan.js 와 같은 값 (서로 부르는 고리를 피해 따로 둠) */
 export const L_TYPES = { 1: ['lobby', 'dorm', 'decon', 'lobby'], 2: ['tankhall', 'culture', 'coldroom', 'culture'], 3: ['records', 'lcontrol', 'corehall'], boss: 'basin' };

@@ -1,12 +1,12 @@
 // 미션 (2026-11-09 QA 시트 #4): 오늘 · 이번 주 · 누적 세 칸 — 받을 보상이 늘 남아 있게(재방문 장치)
 //   오늘 = 매일 3개 · 이번 주 = 월요일마다 5개 + 다 받으면 주간 상자 · 누적 = 평생 기록 단계마다 별 조각
 //   뒤로가기: 홈 (oad.js goBack 기본 · 왼쪽 위 홈 버튼)
-import { W, H } from '../config.js?v=0.99.20';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.20';
-import { audio } from '../audio.js?v=0.99.20';
-import { load } from '../save.js?v=0.99.20';
-import * as M from '../meta.js?v=0.99.20';
-import { sky } from '../sky.js?v=0.99.20';
+import { W, H } from '../config.js?v=0.99.21';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.21';
+import { audio } from '../audio.js?v=0.99.21';
+import { load } from '../save.js?v=0.99.21';
+import * as M from '../meta.js?v=0.99.21';
+import { sky } from '../sky.js?v=0.99.21';
 
 const TABS = [['day', '오늘'], ['week', '이번 주'], ['ach', '누적']];
 

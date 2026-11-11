@@ -1,5 +1,5 @@
 // 저장 — 기기(localStorage) 한 덩어리 · 원어데이 소장자는 같은 키를 계정 클라우드로 (catalog.js SAVES: hanson: ['hanson_v1'])
-import { keyOf, parse } from './engine.js?v=0.99.20';
+import { keyOf, parse } from './engine.js?v=0.99.21';
 export const KEY = 'hanson_v1';
 const Q = new URLSearchParams(location.search);
 const NOSAVE = Q.get('nosave') === '1';

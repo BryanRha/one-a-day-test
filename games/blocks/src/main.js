@@ -1,15 +1,15 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.20';
-import { audio } from './audio.js?v=0.99.20';
-import { WindFX } from './fx.js?v=0.99.20';
-import { BootScene } from './scenes/Boot.js?v=0.99.20';
-import { HomeScene } from './scenes/Home.js?v=0.99.20';
-import { AdventureScene } from './scenes/Adventure.js?v=0.99.20';
-import { CollectionScene } from './scenes/Collection.js?v=0.99.20';
-import { PlayScene } from './scenes/Play.js?v=0.99.20';
-import { ResultScene } from './scenes/Result.js?v=0.99.20';
-import { MissionsScene } from './scenes/Missions.js?v=0.99.20';
-import { installBack } from './oad.js?v=0.99.20';
-import { initBM } from './bmflow.js?v=0.99.20';
+import { W, BASE_H, setH } from './config.js?v=0.99.21';
+import { audio } from './audio.js?v=0.99.21';
+import { WindFX } from './fx.js?v=0.99.21';
+import { BootScene } from './scenes/Boot.js?v=0.99.21';
+import { HomeScene } from './scenes/Home.js?v=0.99.21';
+import { AdventureScene } from './scenes/Adventure.js?v=0.99.21';
+import { CollectionScene } from './scenes/Collection.js?v=0.99.21';
+import { PlayScene } from './scenes/Play.js?v=0.99.21';
+import { ResultScene } from './scenes/Result.js?v=0.99.21';
+import { MissionsScene } from './scenes/Missions.js?v=0.99.21';
+import { installBack } from './oad.js?v=0.99.21';
+import { initBM } from './bmflow.js?v=0.99.21';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }

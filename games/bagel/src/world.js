@@ -1,9 +1,9 @@
 // 매장 그리기 (고정된 것): 바닥 한 톤 · 벽(뒤 · 동 = 높게, 서 · 남 = 0.4m 턱) · 문 매트 · 화분 띠 · 반쪽 문 · 별채 · 거리 · 창구 · 2층 · 테라스 · 지점 인테리어
 //   명도 3층(DESIGN 7장): 바닥(가장 밝고 한 톤) → 설비(중간) → 물건(가장 선명) · 매장 안 벽 0
 import * as THREE from 'three';
-import { box, cyl, sph, M, mesh, logoPanel, STATION, DECO_MODEL } from './models.js?v=0.99.20';
-import { BRAND, THEME_SETS, DECO } from './data.js?v=0.99.20';
-import { ANNEX_WALLS } from './space.js?v=0.99.20';
+import { box, cyl, sph, M, mesh, logoPanel, STATION, DECO_MODEL } from './models.js?v=0.99.21';
+import { BRAND, THEME_SETS, DECO } from './data.js?v=0.99.21';
+import { ANNEX_WALLS } from './space.js?v=0.99.21';
 
 const flat = c => new THREE.MeshToonMaterial({ color: c });
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
@@ -29,8 +29,11 @@ export function buildWorld(sc, sp, B, themeId) {
   const cloth = {};
   for (const [k, r] of Object.entries(sp.rooms)) { rectP(g, r.rect, flat(k === 'boss' ? 0xE6DACB : k === 'crew' ? 0xE9DFD0 : 0xE2D7C6), 0.5);
     const c = new THREE.Group(); c.position.set((r.rect[0] + r.rect[2]) / 2, 0, (r.rect[1] + r.rect[3]) / 2); const w = r.rect[2] - r.rect[0] - 30, d = r.rect[3] - r.rect[1] - 30;
-    box(w, 150, d, 0xCDBFA8, 0, 0, 0, c); const st = canvasTex(256, 64, (x, W, Hh) => { x.fillStyle = '#E7A33A'; x.fillRect(0, 0, W, Hh); x.fillStyle = '#2A2A2A'; for (let i = -2; i < 12; i++) { x.beginPath(); x.moveTo(i * 32, Hh); x.lineTo(i * 32 + 16, Hh); x.lineTo(i * 32 + 32, 0); x.lineTo(i * 32 + 16, 0); x.fill(); } });
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(w + 4, 16, d + 4), new THREE.MeshBasicMaterial({ map: st })); tape.position.y = 120; c.add(tape); g.add(c); cloth[k] = c; }
+    /* 잠긴 별채 방: 낮은 공사 띠(30cm) + 흐린 바닥 + 책상 실루엣 — 화면을 가리지 않음 */
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8A7A66, transparent: true, opacity: 0.25, depthWrite: false })); fl.position.y = 2; c.add(fl);
+    const sil = new THREE.Group(); sil.position.set(r.desk[0] - (r.rect[0] + r.rect[2]) / 2, 0, r.desk[1] - 80 - (r.rect[1] + r.rect[3]) / 2); STATION.desk(sil); sil.traverse(o => { if (o.isMesh) { o.material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.3, depthWrite: false }); o.castShadow = false; } }); c.add(sil);
+    const st = canvasTex(256, 64, (x, W, Hh) => { x.fillStyle = '#E7A33A'; x.fillRect(0, 0, W, Hh); x.fillStyle = '#2A2A2A'; for (let i = -2; i < 12; i++) { x.beginPath(); x.moveTo(i * 32, Hh); x.lineTo(i * 32 + 16, Hh); x.lineTo(i * 32 + 32, 0); x.lineTo(i * 32 + 16, 0); x.fill(); } });
+    for (const [tw, td, tx, tz] of [[w, 6, 0, -d / 2], [w, 6, 0, d / 2], [6, d, -w / 2, 0], [6, d, w / 2, 0]]) { const tape = new THREE.Mesh(new THREE.BoxGeometry(tw, 14, td), new THREE.MeshBasicMaterial({ map: st })); tape.position.set(tx, 30, tz); c.add(tape); } g.add(c); cloth[k] = c; }
   // 벽: 뒤(북) · 동 = 높게 (카메라 반대쪽) · 서 · 남 = 낮은 턱 (안을 가리지 않음) · 매장 안 칸막이 0
   const WC = I.wallC, TR = I.trim, WH = 300, LH = 40;
   wallBox(g, [-15, -25, H.w + 25, 0], WH, WC); box(H.w + 40, 18, 27, TR, H.w / 2, 0, -12, g);
@@ -68,7 +71,8 @@ export function buildWorld(sc, sp, B, themeId) {
   if (sp.window) { const r = sp.window.rect, w = new THREE.Group(); w.position.set((r[0] + r[2]) / 2, 0, (r[1] + r[3]) / 2); STATION.window(w); feat.add(w); }
   if (sp.upper) { const U = sp.upper, s = U.stairs, n = 12; for (let i = 0; i < n; i++) { const z0 = s[1] + (s[3] - s[1]) * i / n; box(s[2] - s[0], U.y * (i + 1) / n, (s[3] - s[1]) / n, i % 2 ? 0xB98A5A : 0xA87A4A, (s[0] + s[2]) / 2, 0, z0 + (s[3] - s[1]) / n / 2, feat); }
     const dk = U.deck; box(dk[2] - dk[0], 16, dk[3] - dk[1], 0xC8A27A, (dk[0] + dk[2]) / 2, U.y - 16, (dk[1] + dk[3]) / 2, feat); for (const [x, z] of [[dk[0] + 20, dk[1] + 20], [dk[2] - 20, dk[1] + 20], [dk[0] + 20, dk[3] - 20], [dk[2] - 20, dk[3] - 20]]) box(20, U.y - 16, 20, 0x8A6A44, x, 0, z, feat);
-    box(dk[2] - dk[0], 40, 8, 0xFFFFFF, (dk[0] + dk[2]) / 2, U.y, dk[3], feat); box(8, 40, dk[3] - dk[1], 0xFFFFFF, dk[0], U.y, (dk[1] + dk[3]) / 2, feat); }
+    box(dk[2] - dk[0] - 70, 40, 8, 0xFFFFFF, (dk[0] + 70 + dk[2]) / 2, U.y, dk[3], feat);   /* 남쪽 난간 (서쪽 끝은 바깥 계단 입구) */
+    for (let i = 0; i < 10; i++) box(70, U.y * (10 - i) / 10, 30, i % 2 ? 0xB98A5A : 0xA87A4A, U.outX, 0, dk[3] + 15 + i * 30, feat);   /* 바깥 계단 (데크 → 거리) */ box(8, 40, dk[3] - dk[1], 0xFFFFFF, dk[0], U.y, (dk[1] + dk[3]) / 2, feat); }
   if (sp.terrace) { const T = sp.terrace, dk = T.deck; box(dk[2] - dk[0], 8, dk[3] - dk[1], 0xC8A27A, (dk[0] + dk[2]) / 2, 0, (dk[1] + dk[3]) / 2, feat); for (let x = dk[0] + 30; x < dk[2]; x += 60) box(3, 9, dk[3] - dk[1], 0xB08A5A, x, 0, (dk[1] + dk[3]) / 2, feat);
     for (const [x, z] of [[dk[0] - 40, dk[1] + 60], [dk[2] + 40, dk[3] - 40]]) { cyl(14, 18, 200, 0x6A4A2A, x, 0, z, feat); sph(100, 0x7FB86A, x, 260, z, feat, 12, 10); } }
   feat.visible = false;

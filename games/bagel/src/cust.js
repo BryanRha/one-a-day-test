@@ -2,12 +2,12 @@
 //   길은 정해진 고리 위 (space.js entryPath · seatPath · exitPath) — 길 찾기 · 비켜가기 · 갇힘 순간이동 없음
 //   창구 손님(픽업 걷기 · 드라이브 차)은 매장 밖 동쪽 길에서 따로 줄을 서요
 import * as THREE from 'three';
-import { queueSlot, entryPath, seatPath, exitPath, R } from './space.js?v=0.99.20';
-import { person, car, item } from './models.js?v=0.99.20';
-import { CUST_COLORS, MENU, MOOD, REGULARS, FAVOR, EVENTS, DECO } from './data.js?v=0.99.20';
-import { S, save, mission } from './state.js?v=0.99.20';
-import { sfx } from './audio.js?v=0.99.20';
-import { favLv } from './game.js?v=0.99.20';
+import { queueSlot, entryPath, seatPath, exitPath, R } from './space.js?v=0.99.21';
+import { person, car, item } from './models.js?v=0.99.21';
+import { CUST_COLORS, MENU, MOOD, REGULARS, FAVOR, EVENTS, DECO } from './data.js?v=0.99.21';
+import { S, save, mission } from './state.js?v=0.99.21';
+import { sfx } from './audio.js?v=0.99.21';
+import { favLv } from './game.js?v=0.99.21';
 
 const SPD = 230, TAKEOUT = 0.22;
 export class Cust {
@@ -47,7 +47,7 @@ export class Cust {
     // 계산: 줄 맨 앞(계산대 앞)에서만 · 계산원 또는 계산 자리에 선 사장
     const front = this.list.find(c => c.state === 'order');
     const server = g.staff.find(w => w.role === 'cashier' && w.atSpot) || g.tillBy;
-    if (front && !front.phone && server) this.checkout(front, dt, server.role === 'owner' ? 1.3 : 0.6, server.role === 'owner' ? 0.15 : 0.1);   /* 사장 1.3초 · 계산원 0.6초 (DESIGN 6-1 · K5) */
+    if (front && !front.phone && server) this.checkout(front, dt, server.role === 'owner' ? 1.3 : 0.5, server.role === 'owner' ? 0.15 : 0.1);   /* 사장 1.3초 · 계산원 0.5초 (DESIGN 6-1 · K5 여유) */
     for (let i = this.list.length - 1; i >= 0; i--) { const c = this.list[i]; this.step(c, dt); if (c.state === 'gone') { g.root.remove(c.g); c.tag?.remove(); this.list.splice(i, 1); } }
     this.windowServe(dt);
   }
@@ -56,9 +56,13 @@ export class Cust {
     const p = c.path[c.pi]; if (!p) return true; const dx = p[0] - c.pos.x, dz = p[1] - c.pos.z, d = Math.hypot(dx, dz);
     /* 같은 길의 앞사람과 간격 (줄은 95 · 걷는 길은 75) · 마주 오면 둘 다 오른쪽으로 비켜 감 (멈추지 않음 → 갇힘 없음) */
     const ux = d ? dx / d : 0, uz = d ? dz / d : 0, inQ = c.state === 'enter' || c.state === 'queue'; let blocked = false, side = 0;
-    for (const o of this.list) { if (o === c || o.win || o.state === 'gone' || (o.y || 0) !== (c.y || 0)) continue; const rx = o.pos.x - c.pos.x, rz = o.pos.z - c.pos.z, ah = rx * ux + rz * uz, lat = Math.abs(rx * uz - rz * ux); if (ah <= 0 || lat > 55) continue;
+    for (const o of this.list) { if (o === c || o.win || o.state === 'gone' || (o.y || 0) !== (c.y || 0)) continue; const rx = o.pos.x - c.pos.x, rz = o.pos.z - c.pos.z, ah = rx * ux + rz * uz, lat = Math.abs(rx * uz - rz * ux); if (ah <= -10 || lat > (inQ ? 55 : 62)) continue;
       if (inQ) { if ((o.slot == null || o.slot < c.slot) && Math.hypot(rx, rz) < 95) blocked = true; continue; }
       if (ah > 85) continue; const ov = (o.vx || 0) * ux + (o.vz || 0) * uz; if (o.slot != null || o.state === 'eat') continue; if (ov < -20) side = 1; else if (ah < 75 && (ov > 20 || o.uid < c.uid)) blocked = true; }   /* 같은 쪽 · 옆에서 합류 = 먼저 온 사람 먼저 · 마주 오면 오른쪽으로 */
+    /* 자리에서 일어나 통로로 들어서는 첫 걸음: 통로를 걷는 사람이 1m 안이면 지나갈 때까지 자리 앞에서 기다림 (옆에서 끼어들다 스치는 일 · U3) */
+    if (!inQ && !blocked && c.state === 'leave' && c.pi <= 1 && c.fromSeat) for (const o of this.list) { if (o === c || o.win || (o.y || 0) !== (c.y || 0) || !(o.state === 'toSeat' || (o.state === 'leave' && o.pi > 1)) || !(o.vx || o.vz)) continue;   /* 멈춰 선 사람은 안 기다림 (서로 기다리는 일 없음) */ if (Math.hypot(o.pos.x - p[0], o.pos.z - p[1]) < 100) { blocked = true; break; } }
+    /* 교차점: 사장 · 직원이 건너는 중이거나 기다리면 손님은 교차점 앞에서 멈춤 (이미 안에 있으면 그대로 지나감) */
+    if (!inQ && !blocked) { const nx = c.pos.x + ux * 60, nz = c.pos.z + uz * 60; for (const X of this.sp.crossings) if (X.rect[0] <= nx && nx <= X.rect[2] && X.rect[1] <= nz && nz <= X.rect[3] && !(X.rect[0] <= c.pos.x && c.pos.x <= X.rect[2] && X.rect[1] <= c.pos.z && c.pos.z <= X.rect[3]) && [this.g.pl, ...this.g.staff].some(w => w.waitX === X.id || (!w.y && X.rect[0] - 20 <= w.pos.x && w.pos.x <= X.rect[2] + 20 && X.rect[1] <= w.pos.z && w.pos.z <= X.rect[3]))) blocked = true; }   /* 사장 · 직원이 교차점 안에 있거나 건너려고 기다리면 */
     if (blocked) { c.vx = c.vz = 0; if (inQ) c.qAt ??= this.g.time; c.P.anim(dt, false); return false; }   /* 줄 시간 = 처음 멈춘 때부터 */
     /* 사장 · 직원이 바로 앞이면 오른쪽으로 비켜 감 (멈추지 않음) */
     if (!inQ && !side) for (const w of [this.g.pl, ...this.g.staff]) { if ((w.y || 0) !== (c.y || 0)) continue; const rx = w.pos.x - c.pos.x, rz = w.pos.z - c.pos.z, ah = rx * ux + rz * uz; if (ah > 0 && ah < 80 && Math.abs(rx * uz - rz * ux) < 55) { side = 1; break; } }
@@ -84,9 +88,9 @@ export class Cust {
   checkout(c, dt, payT, each = 0.15) {
     const g = this.g; c.ck = (c.ck || 0) + dt;
     const need = c.order.find(o => o.got < o.n);
-    if (need) { if (c.ck >= each && g.dispCount(need.k) > 0) { c.ck = 0; g.dispTake(need.k); need.got++; this.handItem(c, need.k); } return; }
+    if (need) { if (c.ck >= each && g.dispCount(need.k) > 0) { c.ck = 0; const m = g.dispTake(need.k); if (m?.userData.chewy) need.chewy = (need.chewy || 0) + 1; need.got++; this.handItem(c, m?.userData.chewy ? 'chewy' : need.k); } return; }
     c.pay = (c.pay || 0) + dt; if (c.pay < payT) return;
-    let v = 0, n = 0; for (const o of c.order) { v += g.price(o.k) * o.n * (c.group ? EVENTS.group.k : 1); g.sold(o.k, o.n); n += o.n; }
+    let v = 0, n = 0; for (const o of c.order) { const ch = o.chewy || 0; v += (g.price(o.k) * (o.n - ch) + g.price(o.k, true) * ch) * (c.group ? EVENTS.group.k : 1);   /* 쫄깃 베이글은 쫄깃 값 */ g.sold(o.k, o.n); n += o.n; }
     const wait = g.time - (c.qAt ?? c.at ?? 0), qw = g.time - (c.orderAt || g.time); this.log.waits.push(wait);
     if (qw <= MOOD.happy) { v *= 1 + MOOD.tip; sfx('happy'); c.happy = 1; }
     if (c.phoneTip) v *= 1 + EVENTS.phone.tip;
@@ -100,13 +104,13 @@ export class Cust {
     else { if (!take && free.length) this.log.leftWithSeat++; c.path = [[c.pos.x, c.pos.z], ...exitPath(this.sp, null)]; c.pi = 1; c.state = 'leave'; this.log.takeout++; }
     c.P.carry = true;
   }
-  handItem(c, k) { const m = item(k); c.P.hand.add(m); m.position.set(0, c.stack.length * 15, 0); c.stack.push(m); c.P.carry = true; sfx('place', { vol: -6, semi: 5 }); }
+  handItem(c, k) { const m = item(k); c.P.hand.add(m); m.position.set(0, c.stack.length * 15, 0); c.stack.push(m); c.P.carry = true; sfx('place', { vol: -6, semi: -3 }); }
   sitFood(c) { for (const m of c.stack) c.P.hand.remove(m); c.stack = []; c.P.carry = false; const t = this.g.tables[c.seat.table]; if (!t) return; const m = item('bagel'); m.position.set(c.seat.at[0] * 0.4 + c.seat.tx * 0.6, (t.y || 0) + 86, c.seat.at[1] * 0.4 + c.seat.tz * 0.6); this.g.root.add(m); c.food = m; }
   doneEating(c) { const g = this.g; if (c.food) g.root.remove(c.food); const s = c.seat;
     const keepTrash = (s.up && !g.staff.some(w => w.role === 'server')) || (s.out && !g.staff.some(w => w.role === 'cleaner2'));
     if (!keepTrash) g.addTrash(s);
     const pid = s.up ? 'up2' : s.out ? 'ter' : s.bar ? 'bar' : s.table; g.addCash(pid, Math.round(1.5 * g.B.mult * (g.hasStaff('cleaner') ? 1.3 : 1) * (1 + g.scent() / 400) * (c.happy ? 1.5 : 1)));
-    sfx('happy', { vol: -4, ...g.at3([c.pos.x, c.pos.z]) }); c.path = [[c.pos.x, c.pos.z, c.y], ...exitPath(this.sp, s)]; c.pi = 1; c.state = 'leave'; c.seat = null; }
+    sfx('happy', { vol: -4, ...g.at3([c.pos.x, c.pos.z]) }); c.path = [[c.pos.x, c.pos.z, c.y], ...exitPath(this.sp, s)]; c.pi = 1; c.state = 'leave'; c.seat = null; c.fromSeat = 1; }
   // ── 통화 손님: 사장이 1.5m 안 2초 → 비켜 서서 바로 주문(+팁) · 30초 지나면 스스로 끝냄 (벌 없음)
   endPhone(c, byOwner) { c.phone = false; if (byOwner) { c.phoneTip = 1; sfx('hello'); this.g.ui?.say('죄송해요! 주문할게요', c.pos); } if (this.g.ev?.c === c) this.g.ev = null; }
   // ── 단골
@@ -128,9 +132,11 @@ export class Cust {
       const d = tz - c.pos.z, st = Math.sign(d) * Math.min(Math.abs(d), (c.car ? 300 : SPD) * dt); c.pos.z += st; c.pos.x += (x - c.pos.x) * Math.min(1, dt * 4); c.P.anim(dt, Math.abs(d) > 1); if (!c.car && c.g.children) c.g.rotation.y = Math.PI;
       if (Math.abs(d) < 2) c.state = ahead === 0 ? 'wwait' : 'wwalk'; return; }
     if (c.state === 'wleave') { c.pos.z -= (c.car ? 320 : SPD) * dt; c.P.anim(dt, true); if (c.pos.z < -400) c.state = 'gone'; } }
+  /* 맨 앞 창구 손님이 아직 못 받은 것 − 선반에 있는 것 (창구 직원 일의 기준) */
+  frontNeed() { const need = { bagel: 0, cream: 0, coffee: 0, drink: 0 }, c = this.list.filter(o => o.win && (o.state === 'wwait' || o.state === 'wwalk')).sort((a, b) => a.wslot - b.wslot)[0]; if (!c) return need; for (const o of c.order) need[o.k] += o.n - o.got; for (const s of this.g.shelf) if (need[s.k] > 0) need[s.k]--; return need; }
   windowNeed() { const need = { bagel: 0, cream: 0, coffee: 0, drink: 0 }; for (const c of this.list) if (c.win && c.state !== 'wleave' && c.state !== 'gone') for (const o of c.order) need[o.k] += o.n - o.got; for (const s of this.g.shelf) need[s.k]--; return need; }
   windowServe(dt) { const g = this.g; const c = this.list.find(o => o.win && o.state === 'wwait'); if (!c) return; c.ck = (c.ck || 0) + dt;
-    if (c.order.some(o => o.got < o.n)) { if (c.ck >= 0.15) for (const o of c.order) if (o.got < o.n && g.shelfTake(o.k)) { c.ck = 0; o.got++; sfx('place', { vol: -6, semi: 7 }); break; } return; }
+    if (c.order.some(o => o.got < o.n)) { if (c.ck >= 0.15) for (const o of c.order) if (o.got < o.n && g.shelfTake(o.k)) { c.ck = 0; o.got++; sfx('place', { vol: -6, semi: -5 }); break; } return; }
     c.pay = (c.pay || 0) + dt; if (c.pay < 0.8) return; let v = 0; for (const o of c.order) { v += g.price(o.k) * o.n * 1.1; g.sold(o.k, o.n); }
     g.addCash('win', Math.round(v)); sfx('till', { vol: -4 }); c.state = 'wleave'; this.log.served++; }
 }

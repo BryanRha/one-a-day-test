@@ -1,11 +1,11 @@
 // 마루미 지도 (DESIGN 10장 · 시안 mock_map.html): 송파 · 강동 동네 길 하나에 실제 4지점 · 매장 카드(실제 사진 · 주소 · 시그니처 메뉴 2 · 게임 특색 · 열리는 조건)
 //   「📍 매장 가 보기」(지도 앱 · bg_store) · 「🎟 열면 받는 쿠폰」(의뢰사 확인 전 시험용) · 광고판 = 원어데이 교차 홍보 · 다음 동네 · TOKYO 자리
-import { UI } from './ui.js?v=0.99.20';
-import { S, save } from './state.js?v=0.99.20';
-import { BRANCHES, BRANCH_INFO, BRANCH_MENU, STORE_MAP, IDLE } from './data.js?v=0.99.20';
-import { SPACES, FEATURES } from './space.js?v=0.99.20';
-import { sfx, music, BGM } from './audio.js?v=0.99.20';
-import { pushBack, track } from './oad.js?v=0.99.20';
+import { UI } from './ui.js?v=0.99.21';
+import { S, save } from './state.js?v=0.99.21';
+import { BRANCHES, BRANCH_INFO, BRANCH_MENU, STORE_MAP, IDLE } from './data.js?v=0.99.21';
+import { SPACES, FEATURES } from './space.js?v=0.99.21';
+import { sfx, music, BGM } from './audio.js?v=0.99.21';
+import { pushBack, track } from './oad.js?v=0.99.21';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 const SPOT = [[96, 270], [203, 398], [52, 500], [262, 560]];   /* 지점 자리 (390×844 기준) */
@@ -21,7 +21,7 @@ P.map = function (sel = S.bi) {
   const stores = BRANCHES.map((B, i) => { const [x, y] = SPOT[i], o = open(i), here = i === S.bi, p = Math.round(prog(i) * 100);
     return `<g class="st" data-i="${i}" transform="translate(${x - 32},${y - 34})" filter="url(#sh)" opacity="${o ? 1 : 0.85}">${mini(i, o)}</g>
       ${here ? `<g transform="translate(${x},${y - 40})"><path d="M0,0 C-14,0 -18,-20 0,-30 C18,-20 14,0 0,0 Z" fill="#FF6720"/><circle cx="0" cy="-18" r="5" fill="#fff"/></g><g transform="translate(${x + 18},${y - 72})"><rect width="56" height="20" rx="10" fill="#FF6720"/><text x="28" y="14" text-anchor="middle" font-size="10" font-weight="900" fill="#fff">지금 여기</text></g>` : ''}
-      <g transform="translate(${x - 61},${y + 26})"><rect width="122" height="22" rx="11" fill="${o ? '#3A2414' : 'rgba(255,255,255,.8)'}"/><text x="61" y="15" text-anchor="middle" font-size="11" font-weight="900" fill="${o ? '#fff' : '#9A8E80'}">${o ? '' : '🔒 '}${B.name.replace(/점$/, '').replace(' · ', ' ')}${o ? ` ${p >= 100 ? '★' : ''}${p}%` : ''}</text></g>
+      <g transform="translate(${Math.max(6, Math.min(W - 128, x - 61))},${y + 26})"><rect width="122" height="22" rx="11" fill="${o ? '#3A2414' : 'rgba(255,255,255,.8)'}"/><text x="61" y="15" text-anchor="middle" font-size="11" font-weight="900" fill="${o ? '#fff' : '#9A8E80'}">${o ? '' : '🔒 '}${B.name.replace(/점$/, '').replace(' · ', ' ')}${o ? ` ${p >= 100 ? '★' : ''}${p}%` : ''}</text></g>
       ${i === sel ? `<circle cx="${x}" cy="${y - 4}" r="52" fill="none" stroke="#FF6720" stroke-width="3" stroke-dasharray="7 6"/>` : ''}`; }).join('');
   const svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" font-family="P, sans-serif"><defs><filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="0" flood-color="#C9AE8A"/></filter><pattern id="park" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#CFE2B8"/><circle cx="4" cy="4" r="2.2" fill="#B9D59E"/><circle cx="11" cy="10" r="2" fill="#B9D59E"/></pattern></defs>
     <rect width="${W}" height="${H}" fill="#F3EAD9"/><path d="M0,96 C90,120 200,70 390,110 L390,170 C250,140 120,190 0,160 Z" fill="#BFDDEB"/><text x="300" y="138" font-size="13" font-weight="900" fill="#8DB9CF" letter-spacing="3">한강</text>

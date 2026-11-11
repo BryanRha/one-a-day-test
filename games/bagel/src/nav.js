@@ -1,6 +1,6 @@
 // ③ 이동 · 충돌 하나 — 장애물 표(space.js obstacles) 1벌 → 격자 1벌 → 사장 · 직원 · 봇이 같은 길 찾기와 같은 밀어내기
 //   손님은 정해진 고리(줄 · 통로 · 나감 길) 위를 걸어서 길 찾기가 필요 없어요 (space.js entryPath · seatPath · exitPath)
-import { R } from './space.js?v=0.99.20';
+import { R } from './space.js?v=0.99.21';
 
 const CELL = 20, X0 = -640, Z0 = -40, X1 = 1640, Z1 = 1840, NX = Math.ceil((X1 - X0) / CELL), NZ = Math.ceil((Z1 - Z0) / CELL);
 export class Nav {
@@ -8,14 +8,14 @@ export class Nav {
   /* open(id) 로 지금 있는 장애물만 고름 (열린 시설 몸통 · 잠긴 방) → 격자를 다시 만듦 */
   rebuild(open, roomOpen) {
     this.active = this.sp.obstacles.filter(o => o.lockedRoom ? !roomOpen(o.lockedRoom) : !o.need || open(o.need));
-    const g = this.grid, r = R.owner + 4; g.fill(0);
-    for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) { const x = X0 + (ix + 0.5) * CELL, z = Z0 + (iz + 0.5) * CELL; if (!this.inside(x, z) || this.hit(x, z, r)) g[iz * NX + ix] = 1; }
+    const g = this.grid, sg = (this.sgrid ||= new Uint8Array(NX * NZ)), r = R.owner + 4; g.fill(0); sg.fill(0);
+    for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) { const x = X0 + (ix + 0.5) * CELL, z = Z0 + (iz + 0.5) * CELL, i = iz * NX + ix, inn = this.inside(x, z); if (!inn || this.hit(x, z, r)) g[i] = sg[i] = 1; else if (this.hit(x, z, r, false, true)) sg[i] = 1; }   /* grid = 사장 · 봇 · sgrid = 직원 (직원 통로 규칙 더함) */
     this.ver = (this.ver || 0) + 1;
   }
   /* 걸을 수 있는 바닥 (본관 · 별채 · 문턱) */
   inside(x, z) { const H = this.sp.hall, A = this.sp.annex; return (x > 0 && x < H.w && z > 0 && z < H.d - 10) || (x > A.x0 && x < 0 && z > A.z0 && z < A.z1); }
-  hit(x, z, r, body) { for (const o of this.active) if (body && o.pathOnly) continue; else if (o.rect ? rectD(o.rect, x, z) < r : Math.hypot(o.circle[0] - x, o.circle[1] - z) < o.circle[2] + r) return o; return null; }
-  free(x, z) { const ix = Math.floor((x - X0) / CELL), iz = Math.floor((z - Z0) / CELL); return ix >= 0 && iz >= 0 && ix < NX && iz < NZ && !this.grid[iz * NX + ix]; }
+  hit(x, z, r, body, staff) { for (const o of this.active) if ((body && o.pathOnly) || (o.staffOnly && !staff)) continue; else if (o.rect ? rectD(o.rect, x, z) < r : Math.hypot(o.circle[0] - x, o.circle[1] - z) < o.circle[2] + r) return o; return null; }
+  free(x, z, g = this.grid) { const ix = Math.floor((x - X0) / CELL), iz = Math.floor((z - Z0) / CELL); return ix >= 0 && iz >= 0 && ix < NX && iz < NZ && !g[iz * NX + ix]; }
   /* 한 걸음: 원하는 이동 → 장애물에서 밀어냄(미끄러짐) · 바닥 밖이면 안 감 */
   move(p, dx, dz, r) {
     const n = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 12));
@@ -25,9 +25,9 @@ export class Nav {
       p.x = x; p.z = z; }
   }
   /* 길 찾기 (A* · 8방향) → 시선이 닿는 점만 남김 */
-  path(ax, az, bx, bz) {
+  path(ax, az, bx, bz, staff) {
     const c = (x, z) => [Math.max(0, Math.min(NX - 1, Math.floor((x - X0) / CELL))), Math.max(0, Math.min(NZ - 1, Math.floor((z - Z0) / CELL)))];
-    let [sx, sz] = c(ax, az), [tx, tz] = c(bx, bz); const g = this.grid;
+    let [sx, sz] = c(ax, az), [tx, tz] = c(bx, bz); const g = staff ? this.sgrid : this.grid;
     const near = (ix, iz) => { if (!g[iz * NX + ix]) return [ix, iz]; for (let r = 1; r < 12; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x = ix + dx, z = iz + dz; if (x >= 0 && z >= 0 && x < NX && z < NZ && !g[z * NX + x]) return [x, z]; } return [ix, iz]; };
     [sx, sz] = near(sx, sz); [tx, tz] = near(tx, tz);
     const N = NX * NZ, from = new Int32Array(N).fill(-1), cost = new Float32Array(N).fill(1e9), open = [[0, sz * NX + sx]], goal = tz * NX + tx; cost[sz * NX + sx] = 0;
@@ -41,10 +41,10 @@ export class Nav {
     const pts = []; for (let i = goal; i >= 0 && i !== sz * NX + sx; i = from[i]) pts.push([X0 + (i % NX + 0.5) * CELL, Z0 + (((i / NX) | 0) + 0.5) * CELL]);
     pts.reverse(); pts.push([bx, bz]);
     const out = []; let px = ax, pz = az;   /* 시선 줄이기 */
-    for (let i = 0; i < pts.length; i++) { const nx = pts[i + 1]; if (nx && this.los(px, pz, nx[0], nx[1])) continue; out.push(pts[i]); [px, pz] = pts[i]; }
+    for (let i = 0; i < pts.length; i++) { const nx = pts[i + 1]; if (nx && this.los(px, pz, nx[0], nx[1], g)) continue; out.push(pts[i]); [px, pz] = pts[i]; }
     return out;
   }
-  los(ax, az, bx, bz) { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / (CELL / 2)); for (let i = 1; i <= n; i++) { const t = i / n; if (!this.free(ax + (bx - ax) * t, az + (bz - az) * t)) return false; } return true; }
+  los(ax, az, bx, bz, g = this.grid) { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / (CELL / 2)); for (let i = 1; i <= n; i++) { const t = i / n; if (!this.free(ax + (bx - ax) * t, az + (bz - az) * t, g)) return false; } return true; }
   /* 거리 (길 찾기 기준 cm) — 시험 Q1 · Q4 가 씀 */
   dist(ax, az, bx, bz) { const p = this.path(ax, az, bx, bz); if (!p) return Infinity; let d = 0, x = ax, z = az; for (const [px, pz] of p) { d += Math.hypot(px - x, pz - z); x = px; z = pz; } return d; }
 }

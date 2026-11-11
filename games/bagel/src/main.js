@@ -1,15 +1,15 @@
 // 시작: 렌더러 · 직교 카메라 · 저장 불러오기 · 쉬는 동안 번 돈 · 루프
 import * as THREE from 'three';
-import { Game } from './game.js?v=0.99.20';
-import { UI, IN } from './ui.js?v=0.99.20';
-import './ui_menu.js?v=0.99.20';
-import './desk.js?v=0.99.20';
-import './map.js?v=0.99.20';
-import { S, loadSave, save, KEY } from './state.js?v=0.99.20';
-import { BRANCHES } from './data.js?v=0.99.20';
-import { setAudio, preload } from './audio.js?v=0.99.20';
-import { installBack, track, flushDay } from './oad.js?v=0.99.20';
-import { bm } from './oad_bm.js?v=0.99.20';
+import { Game } from './game.js?v=0.99.21';
+import { UI, IN } from './ui.js?v=0.99.21';
+import './ui_menu.js?v=0.99.21';
+import './desk.js?v=0.99.21';
+import './map.js?v=0.99.21';
+import { S, loadSave, save, resetAll } from './state.js?v=0.99.21';
+import { BRANCHES } from './data.js?v=0.99.21';
+import { setAudio, preload } from './audio.js?v=0.99.21';
+import { installBack, track, flushDay } from './oad.js?v=0.99.21';
+import { bm } from './oad_bm.js?v=0.99.21';
 
 const app = {}; window.__app = app; window.__IN = IN; window.__S = () => S;   /* 시험 도구: 같은 입력 · 같은 저장 객체 */
 const canvas = document.getElementById('view');
@@ -19,7 +19,9 @@ const sc = new THREE.Scene(), cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1
 const fit = () => { const w = innerWidth, h = innerHeight, z = Math.max(1, Math.min(1.5, Math.min(w, h) / 600)); document.documentElement.style.setProperty('--z', z.toFixed(3)); r.setSize(w, h, false); if (app.game?.B) app.game.fitView(); };
 addEventListener('resize', fit);
 const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1);
-if (q.get('fresh')) { window.__noSave = true; for (const k of [KEY, 'marumi_v2', 'marumi_v1']) localStorage.removeItem(k); q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
+/* 시험용 씨앗 (?seed=N): 손님 · 주문 · 직원 쉬기 같은 우연을 판마다 바꿔 가며 되풀이 (gate_runs) */
+if (q.get('seed')) { let t = +q.get('seed') >>> 0; Math.random = () => { t = (t + 0x6D2B79F5) >>> 0; let x = Math.imul(t ^ (t >>> 15), 1 | t); x ^= x + Math.imul(x ^ (x >>> 7), 61 | x); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+if (q.get('fresh')) { resetAll(); q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
 loadSave(); setAudio(S.set); preload();
 app.game = new Game(sc, cam); app.ui = new UI(app); app.game.ui = app.ui;
 app.goBranch = i => { const prev = S.bi, v = app.game.leave(); if (S.branch[prev]) S.branch[prev].idleAt = Date.now(); S.bi = i; save(true); app.ui.desk(null); app.game.build(i); app.ui.progress(); if (v > 0) app.ui.toast(`${BRANCHES[prev].name}에 남은 돈 +${v.toLocaleString('en-US')} 챙겼어요`); };
@@ -35,7 +37,7 @@ flushDay();
 const sess = {}; setInterval(() => { if (document.visibilityState === 'hidden' || app.paused) return; S.time[S.bi] = (S.time[S.bi] || 0) + 1; sess[S.bi] = (sess[S.bi] || 0) + 1; }, 1000);
 addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Object.keys(sess).length) { track('bg_time', { ...Object.fromEntries(Object.entries(sess).map(([k, v]) => ['b' + k, v])) }); for (const k of Object.keys(sess)) delete sess[k]; } });
 bm.onPause = on => { app.paused = !!on; };
-if (q.get('bot')) import('./bot.js?v=0.99.20').then(m => m.startBot(app, q));
+if (q.get('bot')) import('./bot.js?v=0.99.21').then(m => m.startBot(app, q));
 /* 한 프레임의 오류가 화면 전체를 멈추지 않게: 기록하고 그리기는 계속 */
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 */ } };

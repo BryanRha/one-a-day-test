@@ -2,15 +2,17 @@
 //   멈춤 판정: 칸 안에서 실제 이동 속도 < 0.2m/s 가 0.3초 → 붓기 시작 · 금액과 상관없이 0.5초 · 부분 납부는 칸이 기억 · 돈 0 = 조용히 멈춤 · 걸어 나가면 즉시 멈춤(날아간 지폐는 칸에 남음)
 //   되돌리기 없음 — 칸이 일하는 길 밖이라 지나가다 밟을 일이 없어요 (시험 Q3 · P1 · P4)
 import * as THREE from 'three';
-import { padSpot } from './space.js?v=0.99.20';
-import { STATION, bill, M } from './models.js?v=0.99.20';
-import { S, save, mission } from './state.js?v=0.99.20';
-import { UP_K, UP_MAX, PROD, DESK_UP } from './data.js?v=0.99.20';
-import { FEATURES } from './space.js?v=0.99.20';
-import { sfx } from './audio.js?v=0.99.20';
-import { track } from './oad.js?v=0.99.20';
+import { padSpot, openingFund } from './space.js?v=0.99.21';
+import { STATION, bill, M } from './models.js?v=0.99.21';
+import { S, save, mission } from './state.js?v=0.99.21';
+import { UP_K, UP_MAX, PROD, DESK_UP } from './data.js?v=0.99.21';
+import { FEATURES } from './space.js?v=0.99.21';
+import { sfx } from './audio.js?v=0.99.21';
+import { track } from './oad.js?v=0.99.21';
 
-const STILL_V = 20, STILL_T = 0.3, POUR_T = 0.5, DONE_T = 0.25, SHOW = 3;
+/* 붓기 규칙 (DESIGN 6-2): 칸 밖에서 들어와 멈춤 → 멈춤 0.3초(작은 칸) · 0.6초(큰 칸 = 남은 값이 가진 돈의 25% 넘음) → 준비 0.35초(링이 차오름 · 돈 안 나감 · 움직이면 취소) → 0.5초 붓기
+   → 돈이 실제로 나가는 때 = 멈추고 0.65초(작은 칸) · 0.95초(큰 칸): 손가락을 고쳐 쥐는 0.3~0.6초 멈칫으로는 안 나감 */
+export const STILL_V = 20, STILL_T = 0.3, STILL_BIG = 0.6, BIG_K = 0.25, BIG_ABS = 1000, HOLD_T = 0.35, POUR_T = 0.5, DONE_T = 0.25, SHOW = 3;   /* 멈춤 = 손을 뗀 채 실제 속도 < 0.2m/s (손을 댄 채 벽에 막혀 미끄러지는 것은 멈춤이 아님) */
 const DESK_KIND = new Set(['hire', 'next']), DESK_UPS = new Set(['walk', 'carry', 'ads', 'price', 'swalk', 'scarry']);
 export const isDesk = o => DESK_KIND.has(o.kind) || (o.kind === 'up' && DESK_UPS.has(o.id.split('+')[0]));
 const ghostMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.38, depthWrite: false });
@@ -33,7 +35,7 @@ export class Pads {
     if (o.kind === 'node' && id === 'retard') return g.own(g.sp.feat);
     if (o.kind === 'zone') return g.own('counter');
     return true; }
-  hireOk(r) { const g = this.g; return { cashier: g.own('counter'), runner: g.own('oven'), topper: g.own('top'), barista: g.own('cream') || g.own('coffee'), cleaner: g.own('t1'), picker: g.own('pickup'), driver: g.own('drive'), server: g.own('up2'), cleaner2: g.own('terrace') }[r] ?? true; }
+  hireOk(r) { const g = this.g; return { cashier: g.own('counter'), runner: g.own('oven'), baker: g.own('mixer') && g.own('oven'), topper: g.own('top'), barista: g.own('cream') || g.own('coffee'), cleaner: g.own('t1'), picker: g.own('pickup'), driver: g.own('drive'), server: g.own('up2'), cleaner2: g.own('terrace') }[r] ?? true; }
   /* 강화 값: 여는 순서에 있는 단계는 그 값 · 그 밖은 시설 값 × 1.45^단계 */
   upCost(k, lv) { const g = this.g, o = this.order.find(x => x.id === `${k}+${lv}`); if (o) return o.cost; const base = this.order.find(x => x.id === k)?.cost || (DESK_UP[k]?.base || 500) * g.B.mult; return Math.round(base * 0.8 * Math.pow(UP_K, lv) / 10) * 10; }
   /* 바닥에 보이는 칸: 여는 순서에서 아직 안 산 바닥 칸 앞 3개 (책상 일은 빼고) · 다 사면 남은 시설 강화 중 싼 2개 */
@@ -67,18 +69,21 @@ export class Pads {
   update(dt) {
     const g = this.g, pl = g.pl; this.refresh();
     for (const p of this.list) { if (p.done) continue; const on = this.inside(p, pl.pos.x, pl.pos.z);
-      if (!on) { p.still = 0; p.silent = false; if (this.pour?.p === p) this.pour = null; continue; }
-      p.still = pl.spd < STILL_V ? p.still + dt : 0;
-      if (this.pour?.p === p && p.still === 0) this.pour = null;   /* 걸어 나가기 시작 = 즉시 멈춤 */
-      if (!this.pour && p.still >= STILL_T && !p.silent) { const left = p.cost - p.paid - (p.flight || 0), amt = Math.min(Math.floor(S.coins), left);
+      if (!on) { p.still = 0; p.silent = false; p.armed = true; if (this.pour?.p === p) this.pour = null; continue; }   /* 칸 밖에 한 번 나가야 그 칸이 「켜짐」 (서 있는 자리에 칸이 생기면 안 붓음) */
+      if (!p.armed) continue;
+      p.still = pl.spd < STILL_V && !pl.input ? p.still + dt : 0;
+      if (this.pour?.p === p && p.still === 0) this.pour = null;   /* 다시 움직임 = 즉시 멈춤 (준비 중이면 돈 0) */
+      const left = p.cost - p.paid - (p.flight || 0), need = left > S.coins * BIG_K || p.cost >= BIG_ABS ? STILL_BIG : STILL_T;
+      if (!this.pour && p.still >= need && !p.silent) { const amt = Math.min(Math.floor(S.coins), left);
         if (left <= 0) continue; if (amt <= 0) { p.silent = true; continue; }
-        const n = Math.max(6, Math.min(8, Math.ceil(amt / Math.max(1, p.cost / 8)))); this.pour = { p, amt, n, sent: 0, t: 0, left: amt }; }
+        const n = Math.max(6, Math.min(8, Math.ceil(amt / Math.max(1, p.cost / 8)))); this.pour = { p, amt, n, sent: 0, t: -HOLD_T, left: amt }; }
       // 칸 테두리: 살 돈이 충분하면 초록으로 숨쉼 · 모자라면 주황
     }
     for (const p of this.list) if (p.mesh.userData.dash) { const ok = S.coins >= p.cost - p.paid; const m = p.mesh.userData.dash.material; const want = ok ? tex('ok') : tex('new'); if (m.map !== want) { m.map = want; m.needsUpdate = true; } m.opacity = ok ? 0.75 + 0.25 * Math.sin(g.time * 4) : 1; }
     // 붓기: 0.5초 동안 n 장 (0.065초 간격 · 반음씩) · 지폐 = 사장 머리 위 → 칸 포물선 · 칸 숫자는 도착한 만큼 줄어듦
-    const P = this.pour; if (P) { P.t += dt; while (P.sent < P.n && P.t >= (P.sent + 1) * (POUR_T / P.n) - 1e-6) { const part = P.sent === P.n - 1 ? P.left : Math.floor(P.amt / P.n); P.left -= part; P.sent++; S.coins -= part; this.flyBill(P.p, part); sfx('bill'); }
+    const P = this.pour; if (P) { P.t += dt; P.p.hold = Math.min(1, 1 + P.t / HOLD_T); if (P.t >= 0) while (P.sent < P.n && P.t >= (P.sent + 1) * (POUR_T / P.n) - 1e-6) { const part = P.sent === P.n - 1 ? P.left : Math.floor(P.amt / P.n); P.left -= part; P.sent++; S.coins -= part; this.flyBill(P.p, part); sfx('bill'); }
       if (P.sent >= P.n) this.pour = null; }
+    for (const p of this.list) if (this.pour?.p !== p) p.hold = 0;
     // 다 참 → 0.25초 뒤 결과
     for (const p of this.list) if (!p.done && p.paid >= p.cost && !(p.flight > 0) && !p.doneT) p.doneT = g.time + DONE_T;
     for (const p of this.list) if (p.doneT && g.time >= p.doneT && !p.done) { p.done = true; this.complete(p.o, p.at); }
@@ -94,6 +99,7 @@ export class Pads {
   /* 산 것: 저장 → 열림(공사면 공사 시작) → 연출 · 소리 · 알림 한 줄 */
   complete(o, at) { const g = this.g, br = g.br; if (br.own.includes(o.id)) return; br.own.push(o.id); delete br.paid[o.id];
     if (o.build) br.build[o.id] = Date.now() + o.build * 1000;
+    if (o.kind === 'next') { const nb = (S.branch[g.bi + 1] ||= { own: [], paid: {}, build: {} }); if (!nb.fund) { nb.fund = openingFund(g.bi + 1); S.coins += nb.fund; } }   /* 개업 자금 (한 번만) */
     save(true); mission('unlock'); track('bg_unlock', { b: g.bi, id: o.id, n: br.own.length });
     if (o.kind === 'up') { sfx('upgrade', { v: [3, 6, 9].includes(+o.id.split('+')[1]) ? 3 : 1 }); } else { sfx('pad_done'); setTimeout(() => sfx(o.build ? 'hammer' : 'build'), 120); }
     this.key = null; g.opened(o, at); g.ui?.unlocked(o, this.label(o));
