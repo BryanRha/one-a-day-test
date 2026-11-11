@@ -1,10 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.23';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.23';
-import { makeRenderer, laneAt } from './render.js?v=0.99.23';
-import { makeFx } from './fx.js?v=0.99.23';
+import { A } from './audio.js?v=0.99.24';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.24';
+import { makeRenderer, laneAt } from './render.js?v=0.99.24';
+import { makeFx } from './fx.js?v=0.99.24';
+import { Live } from './live.js?v=0.99.24';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -43,6 +44,7 @@ export const Play = {
     if (!this.R) this.R = makeRenderer($('#p_cv'));
     this.fit();
     $('#play').className = 'scr on ' + this.fxs.theme.judge;
+    Live.start({ live: opt.live, subs: opt.subs || [300, 300], lite: !!opt.lite }); this.fixAt = 0;
     /* 화면 채우기 */
     $('#p_cov').style.backgroundImage = `url(${opt.cover})`; $('#p_thumb').style.backgroundImage = `url(${opt.cover})`;
     $('#p_title').textContent = opt.song.title; $('#p_sub').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
@@ -131,6 +133,9 @@ export const Play = {
     if (el) this.sAnim = sm.animate(MISS_K, { duration: 620, fill: 'forwards' });
     /* 콤보 */
     const cb = $('#p_combo'), nb = cb.querySelector('b'), n = this.sess.combo;
+    for (const ev of evs) Live.judge(ev, ev.combo);
+    /* 방송 사고 수습 대사 (MISS · 6초에 한 번) — 대사만 · 효과는 v0.5 (engine hooks.miss) */
+    if (evs.some(x => x.j === 'miss') && o.diva.fix && now > this.fixAt) { this.fixAt = now + 6; this.cutin(o.diva.fix); }
     if (n === 0 && this.prevCombo >= 3) {   /* 끊김: 아래로 흐려짐 (빨강 · 흔들림 없음) */
       if (this.cAnim) this.cAnim.cancel();
       this.cAnim = cb.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 4px' }], { duration: 420, easing: 'ease-out' });
@@ -195,6 +200,7 @@ export const Play = {
     st.fever += (want - st.fever) * Math.min(1, st.dt / 0.25); P.fxs.st.fever = P.fxs.lite ? 0 : st.fever;
     P.R.draw(st);
     P.flush(st.now);
+    Live.frame(st.now, p, st.fever);
     { const sc2 = (1 + 0.045 * st.pulse).toFixed(2); if (P.txt.cs !== sc2) { P.txt.cs = sc2; $('#p_combo').style.scale = sc2; } }   /* 콤보가 박마다 살짝 튐 (바뀔 때만) */
     /* 풀콤보 · 올 퍼펙트: 마지막 판정 직후 */
     if (!P.fcShown && P.sess.finished) { P.fcShown = true; const r = P.sess.result(); if (r.fc) { P.fxs.celebrate(r.ap, st.now); P.shake(1.5); if (P.opt.hitsnd !== false) A.fxPlay('fc', P.opt.sfx * 0.8); P.fcMoment(r); } }
@@ -225,7 +231,7 @@ export const Play = {
     $('#p_shake').classList.add('fcing');   /* 콤보 · 판정 글자는 비켜 줌 */
   },
   finish() {
-    this.ended = true; const r = this.sess.result();
+    this.ended = true; const r = this.sess.result(); Live.end();
     const bn = $('#p_banner');
     if (r.fc) {   /* 풀콤보 장면이 이미 떠 있음 → 배너 대신 장면을 조금 더 보여 주고 결과로 */
       setTimeout(() => { A.stop(1.4); }, 1400);
@@ -241,7 +247,7 @@ export const Play = {
   },
   async pause() { if (!this.on || this.paused || this.ended) return; this.paused = true; for (let l = 0; l < 4; l++) { this.down[l] = 1; this.release(l, performance.now()); } this.ptr.clear(); await A.suspend(); },
   async resume() { if (!this.paused) return; await A.resume(); this.paused = false; },
-  quit() { this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
+  quit() { Live.stop(); this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
 
   /* 봇 · 자동 연주 (시험용): auto = { jitter: ms, miss: 확률 } — 실제 입력 길(press/release)을 그대로 씀 */
   /* dom: 진짜 화면 터치처럼 PointerEvent 를 보냄 (레인 계산 · 손가락 추적 길까지 시험) */

@@ -1,12 +1,12 @@
 // 메뉴 창들 (0.3 에서 옮겨 온 BM · 단골 · 꾸미기 · 미션 · 설정 · 쿠폰 · 광고 · 골드 · 시즌 패스) — ≡ 메뉴 한 곳에서 열어요
 //   광고 바구니(하루 10) · 골드 · VIP 규칙은 그대로 · 전면 광고 · 배너는 없음(DESIGN 1장)
-import { UI } from './ui.js?v=0.99.23';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, BRANCH_INFO, STAFF, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, PASS_DAY_MIN, PASS_TIER_CAP, STORE_MAP, hms, instGold } from './data.js?v=0.99.23';
-import { starOf, favLv, fxOn } from './game.js?v=0.99.23';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY, resetAll } from './state.js?v=0.99.23';
-import { sfx, setAudio } from './audio.js?v=0.99.23';
-import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.23';
-import { bm } from './oad_bm.js?v=0.99.23';
+import { UI } from './ui.js?v=0.99.24';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, BRANCH_INFO, STAFF, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, PASS_DAY_MIN, PASS_TIER_CAP, STORE_MAP, hms, instGold } from './data.js?v=0.99.24';
+import { starOf, favLv, fxOn } from './game.js?v=0.99.24';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY, resetAll } from './state.js?v=0.99.24';
+import { sfx, setAudio } from './audio.js?v=0.99.24';
+import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.24';
+import { bm } from './oad_bm.js?v=0.99.24';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 const SLOT = 'marumi_slot_', REPEAT_MS = 180000, PLACE = { boost: 'boost2x', offline: 'offline2x', speed: 'speed', coins: 'coins' }, BOOST_MS = 180000, FX_MS = 180000;

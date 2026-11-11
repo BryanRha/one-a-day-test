@@ -2,10 +2,10 @@
 //  굴림 기뢰(자폭) · 문짝 소라게(방패) · 먹물 문어(은신) · 등대 저격수(저격) · 닻 신호수(소환) — 숫자 data/enemies.js · 움직임 판단 ai.js(역할)
 //  예고 규칙: 큰 공격은 모두 바닥 원/줄이 TELE_MIN 넘게 먼저 보임 (raid.warnDisc/warnLine → e.teleT0 → raid.hurt 자동 검사)
 import * as THREE from 'three';
-import { ENEMIES } from './data.js?v=0.99.23';
-import { TELE_MIN } from './data/enemies.js?v=0.99.23';
-import { enemyBody, glowSprite } from './enemy3d.js?v=0.99.23';
-import { sfx } from './audio.js?v=0.99.23';
+import { ENEMIES } from './data.js?v=0.99.24';
+import { TELE_MIN } from './data/enemies.js?v=0.99.24';
+import { enemyBody, glowSprite } from './enemy3d.js?v=0.99.24';
+import { sfx } from './audio.js?v=0.99.24';
 const st = (R, k) => { const o = R.aiSt || (R.aiSt = {}); o[k] = (o[k] || 0) + 1; };
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
