@@ -84,6 +84,12 @@ export const GAMES = {
     desc: '부산 영도대교점에서 시작하는 작은 감성커피. 원두를 볶고 새벽숲·제주 블루솔트·마이감성 라떼를 내려 손님에게 내어 주세요. 나무와 돌과 바람으로 가게를 꾸밀수록 손님이 늘고, 매일 찾아오는 단골들의 사연을 끝까지 들으면 그 사람만의 「시 한 줄」 액자를 벽에 걸 수 있어요.',
     path: 'games/gamsung/', cover: 'covers/gamsung.png', icon: 'covers/gamsung_icon.png', time: '5~15분',
   },
+  rhythm: {
+    title: '프로듀서 온에어', en: 'Producer On Air', genre: '리듬 액션', color: '#E82448',
+    tagline: '48명의 캐스트, 오늘 밤 방송은 내 손끝에서',
+    desc: '버추얼 아이돌 방송국의 프로듀서가 되어 캐스트의 무대를 직접 믹싱해요. 네 줄로 떨어지는 노트를 박자에 맞춰 누르고, 길게 누르고, 콤보를 이어 가면 방송이 달아올라요. 매일 바뀌는 오늘의 곡은 마음껏 무료. 곡마다 캐스트의 이야기가 한 화씩 열려요.',
+    path: 'games/rhythm/', cover: 'covers/rhythm.png', icon: 'covers/rhythm_icon.png', time: '2~3분',
+  },
   diary: {
     title: '오늘의 다꾸', en: 'Daily Deco Diary', genre: '타일 퍼즐 · 다꾸', color: '#B4473A',
     tagline: '하루 한 판, 다이어리 한 장 — 터뜨린 스티커가 오늘을 꾸며요',
@@ -143,7 +149,7 @@ export const SAVES = {
   beauty: ['kbeauty_v1'], farm: ['thefarm_v1', 'thefarm_puzzle_v1'], blade: ['ashblade_v1'],
   bagel: ['marumi_v3', 'marumi_v2', 'marumi_v1', 'marumi_slot_*'],   /* 2026-11-10 마루미 0.4 저장 v3 (v2 · v1 은 게임이 처음 열 때 v3 로 옮김 · 되돌리기용으로 같이 올림) */
   gamsung: ['gamsung_v2', 'gamsung_v1', 'gamsung_slot_*'],   /* 2026-11-10 감성커피 0.2.0 저장 v2 (v1 은 처음 열 때 v2 로 옮김 · 되돌리기용으로 같이 올림) */ pae: ['oad_pae_v1'], camp: ['camp_v1'], diary: ['oad_diary_v1'], fdefense: ['fdefense_v1', 'fdefense_resume_v1'],
-  hanson: ['hanson_v1'],
+  hanson: ['hanson_v1'], rhythm: ['onetrack_v1'],
   salvage: ['salvage_v4'],   /* 2026-11-05 수달 인양단 (v3 · v2 · v1 예전 키는 게임이 처음 열 때 v4 로 옮기므로 계정엔 v4 만) */   /* 2026-11-02 오랜상회 (목록 노출 순서는 총괄이 정함 — DAILY 에는 아직 없음) */
 };
 // 소장과 상관없이 로그인하면 계정에 저장하는 키 (결제 기록 · 뽑기 천장 — 분쟁 · 약속 보호)
@@ -152,7 +158,7 @@ export const SAVES_ALWAYS = { beauty: ['kbeauty_receipts_v1'], dice: ['rune_dice
 //   DAILY = 오늘의 게임으로 하루씩 돌아가며 공개 (컬렉션 번호 #1… 는 이 순서, 바뀌지 않음) — 브랜드 게임도 같은 규칙 (2026-10-28 대표)
 //   BRAND = 브랜드 콜라보 표시 + 라이브러리 '브랜드관'에 늘 노출 · 골드 규칙은 일반 게임과 같음(2026-11-09 대표 · 전체 소장에는 안 넣음 — 브랜드 매출 따로 집계)
 //   ORDER = 지금 목록에 올라 있는 게임 전부 · 여기 없는 게임(내린 게임)은 라이브러리 · 컬렉션에서 숨김(소장했으면 '잠시 쉬는 중')
-export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson', 'salvage'];   /* 2026-11-05 salvage 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
+export const DAILY = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'bagel', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson', 'salvage', 'rhythm'];   /* 2026-11-05 salvage 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-29 camp 추가(테스트 · 실서버는 RATING 으로 가림) · 2026-10-28 대표: 애쉬 블레이드(blade)는 게임성 보강 전까지 목록에서 빼고 보관 → RETIRED */
 export const BRAND = ['bagel', 'gamsung'];
 export const ORDER = DAILY.slice();
 // 게임은 한 번 서비스하면 목록에서 내리지 않음 (2026-10-28 대표). 꼭 내려야 하면 DAILY 에서 빼고 여기에 넣음:
@@ -188,6 +194,7 @@ export const TEASE = {
   bagel: '갓 구운 베이글 냄새에 손님이 줄을 서요',
   gamsung: '원두 볶는 소리, 마음이 쉬어 가는 카페',
   pae: '열두 달 꽃패, 오늘의 패로 넘길 수 있을까요',
+  rhythm: '방송 3초 전, 캐스트가 무대 위에서 신호를 기다려요',
 };
 
 // 그날 점쟁이가 오늘의 게임을 한 줄로 소개 (메인 B · 2026-10-28 사업 안 A) — 점쟁이 말투(반말 · 짧게) · “오늘은 ○○의 날.” 뒤에 붙음 · 새 게임을 올리면 한 줄 추가
@@ -210,4 +217,5 @@ export const PICK = {
   camp: '서두르지 마. 쉬어 가는 손님이 복을 두고 간다.',
   hanson: '말과 물건이 어긋나는 곳, 거기에 진실이 있다.',
   salvage: '욕심은 가방만큼만. 들고 나와야 네 것이다.',
+  rhythm: '박자는 거짓말을 안 해. 귀를 믿고 눌러.',
 };

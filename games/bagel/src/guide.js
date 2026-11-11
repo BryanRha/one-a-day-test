@@ -1,7 +1,7 @@
 // ⑦ 안내 하나 (DESIGN 6-4): 화살표 1개 + 글 한 줄 (16자 안팎) · 3초 동안 진척이 없을 때만 뜨고, 그 방향으로 움직이면 흐려짐
 //   표 8줄 = 우선순위 · 맨 위에서 맞는 것 하나만
-import { S } from './state.js?v=0.99.22';
-import { isDesk } from './pads.js?v=0.99.22';
+import { S } from './state.js?v=0.99.23';
+import { isDesk } from './pads.js?v=0.99.23';
 
 const TUT = ['oven', 'pick', 'place', 'cash'];
 export class Guide {

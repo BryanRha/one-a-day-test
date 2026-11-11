@@ -1,7 +1,7 @@
 // 이야기 규칙 (docs/NARRATIVE.md) — 진행 · 하루 한 걸음 · 인물 합류(창에 불) · 관계 · 기억 도감 · 세 등불 · 열쇠 기억
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀. 대사 글은 talk/*.js (나눠 받음 · story_ui.js 가 불러옴)
-import { ITEMS, MAPS, FACILITIES } from './data.js?v=0.99.22';
-import { LAST_PIECES } from './data/map_gate.js?v=0.99.22'; /* M5-A 6장 마지막 인양 다섯 */
+import { ITEMS, MAPS, FACILITIES } from './data.js?v=0.99.23';
+import { LAST_PIECES } from './data/map_gate.js?v=0.99.23'; /* M5-A 6장 마지막 인양 다섯 */
 
 /* ───── 인물 6 (창 여섯 = 이 순서) · 말하는 이 ───── */
 export const CAST = {

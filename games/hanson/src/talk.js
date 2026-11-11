@@ -1,9 +1,9 @@
 // ③ 손님 대화 · 흥정 · 결정 — 질문 3개 중 2개 · 말이 단서와 어긋나면 '모순' · 짚은 흠만큼 깎을 수 있음 · 사 줌 / 깎음 / 돌려보냄 / 주인 찾기
-import { D, cur, face, nameOf, tagOf } from './state.js?v=0.99.22';
-import { S, save } from './save.js?v=0.99.22';
-import * as A from './audio.js?v=0.99.22';
-import { $, $$, esc, I, praise, buzz, typeText, modal, closeModal, wait } from './ui.js?v=0.99.22';
-import { haggleFloor, buyPrice, won, CHN, cutOf, toolOn } from './engine.js?v=0.99.22';
+import { D, cur, face, nameOf, tagOf } from './state.js?v=0.99.23';
+import { S, save } from './save.js?v=0.99.23';
+import * as A from './audio.js?v=0.99.23';
+import { $, $$, esc, I, praise, buzz, typeText, modal, closeModal, wait } from './ui.js?v=0.99.23';
+import { haggleFloor, buyPrice, won, CHN, cutOf, toolOn } from './engine.js?v=0.99.23';
 
 const MOOD = ['평온', '당황', '안도'];
 let el, go;

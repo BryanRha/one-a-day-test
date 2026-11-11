@@ -3,7 +3,7 @@
 //   칸: 100 단위 · 구역 rect = [i0, j0, i1, j1) 층 안 칸 번호 (한 칸 가게 = 0~13) · 층 f 의 세계 x = 층 안 x + f × FDX (층마다 다른 곳에 있고 화면은 한 층만 그림)
 //   이웃 구역 사이는 벽 — openTo(벽 없이 이어짐) · doors(문 칸 짝)만 지나감 · 계단 links 는 층 사이를 잇는 칸 짝
 //   far = 먼 자리(가져다 드리기) · outdoor = 바깥 · visit = 방문형 방(동료 쉼터 · 사장실 · 원두 창고)
-import { STORES } from './data.js?v=0.99.22';
+import { STORES } from './data.js?v=0.99.23';
 export const CELL = 100, FN = 60, FDX = FN * CELL;
 export const FLOORS = ['1F', '2F', '3F', '루프탑'];
 export const floorOfX = x => Math.max(0, Math.round(x / FDX));

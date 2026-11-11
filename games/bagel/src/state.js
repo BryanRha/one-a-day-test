@@ -1,6 +1,6 @@
 // 저장 (localStorage 'marumi_v3' · 0.4 재설계): 돈 · 지점별 산 것(own) · 칸에 부은 돈(paid) · 공사 · 재고 · 단골 · 숙련 · 꾸미기 · BM
 //   예전 저장 v2(0.3.x) · v1(0.2) 은 처음 열 때 한 번 옮김 — 같은 시설은 그대로 열고, 없어진 방에 낸 값은 돈으로 돌려주고, 진행률은 줄지 않게 · 옛 키는 지우지 않음(되돌리기용)
-import { COUPON, BRANCHES, SEASON } from './data.js?v=0.99.22';
+import { COUPON, BRANCHES, SEASON } from './data.js?v=0.99.23';
 export const KEY = 'marumi_v3', OLD2 = 'marumi_v2', OLD1 = 'marumi_v1';
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fresh = () => ({ v: 3, coins: 205, earned: 0, bi: 0, maxBi: 0, branch: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'],

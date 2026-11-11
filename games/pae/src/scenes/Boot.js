@@ -1,13 +1,13 @@
 // 로딩: 원화(manifest) · 효과음 → 패 48장 합성 · 효과 텍스처 → 첫 화면
-import { W, H, C } from '../config.js?v=0.99.22';
-import { SFX } from '../audio.js?v=0.99.22';
-import { DECK } from '../meta.js?v=0.99.22';
-import { makeCardTextures, makeCardFx, backTex } from '../cards.js?v=0.99.22';
-import { makeFxTextures } from '../fx.js?v=0.99.22';
-import { txt } from '../ui.js?v=0.99.22';
-import { helloOnce, BACKS, track } from '../bmflow.js?v=0.99.22';
-import { load, save } from '../save.js?v=0.99.22';
-import { GODS } from '../core/gods.js?v=0.99.22';
+import { W, H, C } from '../config.js?v=0.99.23';
+import { SFX } from '../audio.js?v=0.99.23';
+import { DECK } from '../meta.js?v=0.99.23';
+import { makeCardTextures, makeCardFx, backTex } from '../cards.js?v=0.99.23';
+import { makeFxTextures } from '../fx.js?v=0.99.23';
+import { txt } from '../ui.js?v=0.99.23';
+import { helloOnce, BACKS, track } from '../bmflow.js?v=0.99.23';
+import { load, save } from '../save.js?v=0.99.23';
+import { GODS } from '../core/gods.js?v=0.99.23';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }

@@ -1,16 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.99.22';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.22';
-import { DESC } from './Deck.js?v=0.99.22';
-import { act } from '../core/ai.js?v=0.99.22';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.22';
-import { audio } from '../audio.js?v=0.99.22';
-import { load, save } from '../save.js?v=0.99.22';
-import * as M from '../meta.js?v=0.99.22';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.22';
-import * as BM from '../bmflow.js?v=0.99.22';
-import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.22';
-import { guidePop } from '../guide.js?v=0.99.22';
+import { W, H } from '../config.js?v=0.99.23';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.23';
+import { DESC } from './Deck.js?v=0.99.23';
+import { act } from '../core/ai.js?v=0.99.23';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.23';
+import { audio } from '../audio.js?v=0.99.23';
+import { load, save } from '../save.js?v=0.99.23';
+import * as M from '../meta.js?v=0.99.23';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.23';
+import * as BM from '../bmflow.js?v=0.99.23';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.23';
+import { guidePop } from '../guide.js?v=0.99.23';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -912,7 +912,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.22').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.23').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤
