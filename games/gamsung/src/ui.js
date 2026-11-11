@@ -1,14 +1,14 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.21';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now } from './state.js?v=0.99.21';
-import { cup } from './models.js?v=0.99.21';
-import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.99.21';
-import { bm } from './oad_bm.js?v=0.99.21';
-import { sfx, setAudio } from './audio.js?v=0.99.21';
-import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.21';
-import { UI2 } from './ui2.js?v=0.99.21';
-import { FLOORS, FINISHED } from './layout.js?v=0.99.21';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.22';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.22';
+import { cup } from './models.js?v=0.99.22';
+import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.99.22';
+import { bm } from './oad_bm.js?v=0.99.22';
+import { sfx, setAudio } from './audio.js?v=0.99.22';
+import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.22';
+import { UI2 } from './ui2.js?v=0.99.22';
+import { FLOORS, FINISHED } from './layout.js?v=0.99.22';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_', SKEY = 'gamsung_v2', CLOUD_MAX = 3;
@@ -448,7 +448,7 @@ export class UI {
     m.querySelectorAll('[data-ld]').forEach(b => b.onclick = () => { const v = JSON.parse(localStorage.getItem(SLOT + b.dataset.ld) || 'null'); if (!v) return; localStorage.setItem(SKEY, v.d); window.__noSave = true; location.reload(); });
     $('#dvMoney').onclick = () => { S.coins += 5000; S.hearts += 50; S.beans = Math.min(BEAN_MAX, S.beans + 200); save(); this.toast('돈 · 마음 · 원두를 채웠어요'); };
     $('#dvXp').onclick = () => { const need = XP[S.lv] ?? S.xp; this.app.game.gainXp(Math.max(1, need - S.xp)); this.close(); };
-    $('#dvReset').onclick = () => { if (!confirm('지금 진행이 모두 지워져요. 처음부터 할까요? (슬롯은 그대로)')) return; localStorage.removeItem(SKEY); localStorage.removeItem('gamsung_v1'); window.__noSave = true; location.reload(); };
+    $('#dvReset').onclick = () => { if (!confirm('지금 진행이 모두 지워져요. 처음부터 할까요? (슬롯은 그대로)')) return; resetAll(); location.reload(); };   /* state.js resetAll: 남은 저장 타이머 · 다른 탭 · 계정 저장까지 막음 (예전엔 키를 지워 계정의 옛 판이 되살아날 수 있었음) */
   }
 }
 const machineCountAt = (k, lv) => MACHINES[k].filter(l => lv >= l).length;

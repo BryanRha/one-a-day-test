@@ -1,8 +1,8 @@
 // 모드 안내 (v0.12 · 테스터 시트 #8): 일반 작전 · 전쟁실 · 특수 작전 · 자유 대전이 무엇이 다른지
 //   홈 [모드 안내] 버튼 · 각 모드를 처음 열 때 한 번 (tips.mode_<키>)
-import { T, C, btn, popup } from './pui.js?v=0.99.21';
-import { load, save } from './save.js?v=0.99.21';
-import { WAR, MAPS } from './core/maps.js?v=0.99.21';
+import { T, C, btn, popup } from './pui.js?v=0.99.22';
+import { load, save } from './save.js?v=0.99.22';
+import { WAR, MAPS } from './core/maps.js?v=0.99.22';
 
 export const MODES = {
   campaign: { name: '일반 작전', en: 'OPERATIONS', col: C.gold, what: `이야기를 따라 ${MAPS.length}개 작전을 차례로`, pts: ['이기면 다음 작전 · 새 지휘관이 열려요', '별 3개: 승리 · 기한 안 · 적은 손실', '되돌리기 · 보급품 · 막히면 자동 작전'] },

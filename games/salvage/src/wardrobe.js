@@ -4,14 +4,14 @@
 //   아이템 누르면 입어 보기(안 가진 것도 미리보기) + 능력치 비교(지금 → 바꾸면) + 얻는 길(플레이 · 의뢰 · 조개 · 원어데이 골드 — bmflow, 원어데이 밖이면 골드 숨김)
 //   [되돌리기] 처음으로 · [이대로 출격 준비] 저장 후 출격 준비
 import * as THREE from 'three';
-import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.21';
-import { S, save } from './save.js?v=0.99.21';
-import * as E from './econ.js?v=0.99.21';
-import * as BM from './bmflow.js?v=0.99.21';
-import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf, srcOf, LOOK_SLOTS } from './look.js?v=0.99.21';
-import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.21';
-import { sfx } from './audio.js?v=0.99.21';
-import { THUMB } from './data/thumbs.js?v=0.99.21';
+import { WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, ENEMIES, ZONES } from './data.js?v=0.99.22';
+import { S, save } from './save.js?v=0.99.22';
+import * as E from './econ.js?v=0.99.22';
+import * as BM from './bmflow.js?v=0.99.22';
+import { COS, COS_KEYS, FUR, owns, getText, progress, buyCos, freshLook, resolve, lookOf, srcOf, LOOK_SLOTS } from './look.js?v=0.99.22';
+import { makeHero, ensure, tailWag, HERO_SCALE } from './hero.js?v=0.99.22';
+import { sfx } from './audio.js?v=0.99.22';
+import { THUMB } from './data/thumbs.js?v=0.99.22';
 /* M6-A: 꾸미기 · 가구 칸 작은 렌더 그림 (assets/thumbs · tools/m6a_thumbs.mjs) — 없으면 색 네모 */
 export const thumbHtml = (kind, k, px, sw, cls) => { const T = THUMB[kind]; const i = T ? T.keys.indexOf(k) : -1; if (i < 0) return null; const c = THUMB.cols; return `<span class="${cls} th" style="background:${sw} url(assets/thumbs/${kind}.webp) -${(i % c) * px}px -${Math.floor(i / c) * px}px / ${c * px}px ${T.rows * px}px no-repeat;width:${px}px;height:${px}px;--sw:${sw}"></span>`; };
 

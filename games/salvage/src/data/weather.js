@@ -4,9 +4,9 @@
 //  · 판 상태는 판마다 하나 — 지도 상태가 이미 갈래를 가지면 그것, 아니면 지도마다 '나올 수 있는 조합'(WX_MAP) 가중치로 '이번 판 예보'를 뽑음
 //  · 예보 = (한국 날짜 · 지도 · 지금까지 출격 수) 해시 → 출격 준비에서 미리 보이고 맵 장비(data/gear.js MAP_GEAR) 권장이 뜸. 처음 6판은 침수 창고가 늘 맑음
 //  · NARRATIVE 1-4 해석: 밤 = 이끼가 가장 밝게 빛나는 시간 · 폭풍 = 대수문 틈으로 바다가 밀려듦 · 안개 = 대수문 냉각수 증기 · 한파 = 연구소 냉각 장치 고장 · 독수 = 깨진 코어 누수
-import { mix32, rng } from '../plan.js?v=0.99.21';
-import { MAPS } from '../data.js?v=0.99.21';
-import { WEEKS, WEEK_CYCLE, WEEK_FROM } from './enemies.js?v=0.99.21';
+import { mix32, rng } from '../plan.js?v=0.99.22';
+import { MAPS } from '../data.js?v=0.99.22';
+import { WEEKS, WEEK_CYCLE, WEEK_FROM } from './enemies.js?v=0.99.22';
 
 export const WX_KEYS = ['night', 'storm', 'fog', 'cold', 'toxic'];
 /* 판 상태 5 — 아이콘 · 이름 · 한 줄(판 안 띠) · 숫자 (raid.js 가 지도 상태 숫자에 곱해 씀: sight · hear · vis · fog · rain · night) */

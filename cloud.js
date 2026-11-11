@@ -1,8 +1,8 @@
 // 소장 게임 클라우드 저장: 게임 코드는 그대로, 앱이 게임의 저장 키(catalog SAVES)를 묶어 계정에 올리고 내림
 //   내려받기 = 게임 화면을 띄우기 직전 · 올리기 = 게임을 닫은 뒤 / 앱을 내릴 때 / 소장한 순간
 //   충돌 판정은 서버 판 번호(rev) + 내용 해시 · 두 기기 모두 바뀌었을 때만 물어봄 · 직전본 1개는 서버에 남음(되돌리기)
-import { SAVES, SAVES_ALWAYS } from './catalog.js?v=0.99.21';
-import * as A from './account.js?v=0.99.21';
+import { SAVES, SAVES_ALWAYS } from './catalog.js?v=0.99.22';
+import * as A from './account.js?v=0.99.22';
 
 const META = 'oad_sync';
 const meta = () => { try { return JSON.parse(localStorage.getItem(META) || '{}'); } catch { return {}; } };
@@ -48,20 +48,30 @@ const withTimeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeou
 const serverOf = g => ((A.current() || {}).saves || []).find(s => s.game === g) || null;
 
 // 올리기: force 면 서버 것을 덮어씀(직전본은 서버에 남음)
+//   게임이 「처음부터」를 알려 온 뒤(meta.reset)에는 늘 force — 처음부터는 사용자가 고른 마지막 일이라 계정의 옛 판이 이기면 안 됨 (2026-11-11 마루미 제보)
+//   올린 뒤 meta 는 이 올리기가 「처음부터 표시」보다 나중에 시작했을 때만 표시를 지움 (먼저 시작한 옛 올리기가 표시를 지우지 않게)
 export async function push(g, { force = false, keepalive = false } = {}) {
   if (!on(g)) return { skip: true };
-  const keys = pack(g); if (!Object.keys(keys).length) return { skip: true };
+  const t0 = Date.now(), keys = pack(g); if (!Object.keys(keys).length) return { skip: true };
   const h = await hashOf(keys), m = meta()[g] || { rev: 0 };
+  if (m.reset) force = true;
   if (!force && m.hash === h && m.rev) return { same: true };
   const { data, z } = await zip(JSON.stringify({ keys }));
+  const done = rev => { const cur = meta()[g] || {}; setMeta(g, { rev, hash: h, at: Date.now(), ...(cur.reset && cur.reset > t0 ? { reset: cur.reset } : {}) });
+    const me = A.current(); if (me) { me.saves = (me.saves || []).filter(s => s.game !== g).concat({ game: g, rev, hash: h, sum: summary(keys), at: new Date().toISOString() }); } };
+  const body = { act: 'push', game: g, base: m.rev || 0, data, z, hash: h, sum: summary(keys), ver: window.OAD_VERSION || '', force };
+  /* 앱이 뒤로 갈 때: keepalive 로 보내고, 페이지가 살아 있으면 답을 받아 meta 도 맞춤 — 예전엔 meta 를 안 고쳐서 다음 올리기가 늘 충돌(409) → 다시 열 때 「어느 기록으로」를 물었음 */
+  if (keepalive) { const t = await A.token(); fetch('/api/me', { method: 'POST', keepalive: true, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.ok ? r.json() : null).then(j => { if (j && j.ok) done(j.rev); }).catch(() => {}); return { sent: true }; }
   let r;
-  if (keepalive) { const t = await A.token(); fetch('/api/me', { method: 'POST', keepalive: true, headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'push', game: g, base: m.rev || 0, data, z, hash: h, sum: summary(keys), ver: window.OAD_VERSION || '', force }) }).catch(() => {}); return { sent: true }; }
-  try { r = await A.call({ act: 'push', game: g, base: m.rev || 0, data, z, hash: h, sum: summary(keys), ver: window.OAD_VERSION || '', force }); }
+  try { r = await A.call(body); }
   catch (e) { if (e.conflict) return { conflict: true, server: { rev: e.rev, sum: e.sum, at: e.at }, local: { sum: summary(keys) } }; return { error: e.message }; }
-  setMeta(g, { rev: r.rev, hash: h, at: Date.now() });
-  const me = A.current(); if (me) { me.saves = (me.saves || []).filter(s => s.game !== g).concat({ game: g, rev: r.rev, hash: h, sum: summary(keys), at: new Date().toISOString() }); }
+  done(r.rev);
   return { ok: true, rev: r.rev };
 }
+// 게임이 「처음부터」를 알려 옴 (iframe → 앱 'oad:reset'): 표시를 남기고 바로 덮어 올림 · 못 올리면 표시가 남아 다음 열기/닫기 때 올림
+//   표시가 있는 동안 beforePlay 는 계정 쪽을 내려받거나 묻지 않음
+export function markReset(g) { if (!SAVES[g]) return; const m = meta()[g] || {}; setMeta(g, { ...m, reset: Date.now() }); if (on(g)) push(g).catch(() => {}); }
+export const resetPending = g => !!(meta()[g] || {}).reset;
 // 내려받아 이 기기 저장을 바꿈 (그 게임 키만)
 export async function pull(g) {
   const r = await A.call({ act: 'pull', game: g }); if (!r.rev) return { empty: true };
@@ -80,6 +90,7 @@ export async function beforePlay(g) {
     await withTimeout(A.refresh(), 1500);
     const sv = serverOf(g), m = meta()[g] || {}, keys = pack(g), h = Object.keys(keys).length ? await hashOf(keys) : '';
     if (!sv) { if (h) await push(g); return { act: 'push' }; }
+    if (m.reset && h) { await withTimeout(push(g), 4000).catch(() => {}); return { act: 'push' }; }   /* 처음부터 한 뒤 아직 못 올림 → 이 기기(새 판)가 이김 */
     if (sv.hash === h) { setMeta(g, { rev: sv.rev, hash: h, at: Date.now() }); return { act: 'none' }; }
     const localChanged = h && h !== m.hash, serverChanged = sv.rev !== m.rev;
     if (serverChanged && !localChanged) { await withTimeout(pull(g), 4000); return { act: 'pull', sum: sv.sum }; }

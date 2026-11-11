@@ -1,12 +1,12 @@
 // 봇 (개입 0): 사람과 같은 입력(조이스틱 IN)으로 걷고, 책상 카드는 같은 단추 일(pads.buyDesk)을 눌러요 — 돈 · 칸 · 손님을 직접 바꾸지 않음
 //   ?bot=1 (?speed=N 배속) · ?bot=human = 사람 흉내 (곧게 끌기 + 0.6~3초마다 손 뗌 · 목적 없이 돌아다님 — 실수 결제 시험 P1)
 //   기록: window.__bot = { opens:[[초, id, 값]], t, err } · 시험 도구(gate_*.mjs)가 읽음
-import { S } from './state.js?v=0.99.21';
-import { IN } from './ui.js?v=0.99.21';
-import { isDesk } from './pads.js?v=0.99.21';
-import { hand } from './rules.js?v=0.99.21';
-import { tableSide } from './space.js?v=0.99.21';
-import { CHAIN, INTER, slotOf } from './data.js?v=0.99.21';
+import { S } from './state.js?v=0.99.22';
+import { IN } from './ui.js?v=0.99.22';
+import { isDesk } from './pads.js?v=0.99.22';
+import { hand } from './rules.js?v=0.99.22';
+import { tableSide } from './space.js?v=0.99.22';
+import { CHAIN, INTER, slotOf } from './data.js?v=0.99.22';
 const DISP = ['bagel', 'cream', 'coffee', 'drink'];
 
 export function startBot(app, q) {

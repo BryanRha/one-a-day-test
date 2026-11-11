@@ -1,6 +1,6 @@
 // 저장 (localStorage 'gamsung_v2' · 0.2.0 개편): 돈 · 마음 · 경험치 · 원두 · 지점별 가구/머신/진열/열린 단계/공사/금고 · 동료 · 사장님 강화 · 단골 · 광고 바구니 · 골드 상품 · 오늘(판매·주문서·출석·쿠폰)
 //   저장 이사: 예전 'gamsung_v1' 이 있으면 처음 열 때 v2 로 옮김 (돈 · ♥ · 레벨 · 단골 · 시 · 동료 · 꾸미기 위치 그대로 · 지금 방 = 각 지점의 0단계) · 옛 키는 남김(되돌리기용)
-import { XP, ORDER_POOL, COUPON, FURN, STORES } from './data.js?v=0.99.21';
+import { XP, ORDER_POOL, COUPON, FURN, STORES } from './data.js?v=0.99.22';
 export const KEY = 'gamsung_v2', OLD_KEY = 'gamsung_v1';
 /* 시계: 시험용 배속(?speed)일 때 머신·로스터 시간도 같이 빨라지게 */
 let skew = 0; export const now = () => Date.now() + skew; export const addSkew = ms => { skew += ms; };
@@ -35,8 +35,20 @@ export function loadSave() {
   if (!S.stores[S.si]) S.si = 0; for (const k of ['coins', 'hearts', 'xp', 'beans']) if (!Number.isFinite(S[k])) S[k] = 0;
   S.lv = levelOf(S.xp); dayTick(); return S;
 }
+/* 처음부터 (2026-11-11 마루미 제보와 같은 구조 · 근본 수정): save() 가 0.4초 뒤 쓰는 타이머를 남겨, 처음부터 → reload 사이에 옛 판(S)을 다시 써 버렸음
+   ① 이 판의 처음부터 시각(resetAt)을 저장에 적고, 모든 쓰기는 저장의 resetAt 이 내 것보다 새로우면 쓰지 않고 다시 엶 (남은 타이머 · 다른 탭)
+   ② 걸린 타이머를 지우고 __noSave 먼저 ③ 원어데이 앱에 oad:reset → 계정 저장도 새 판으로 덮어 올림 (직전본은 서버에 남음)
+   키를 지우지 않고 새 판 · 지움 표시로 덮음 — 지우면 원어데이 클라우드가 옛 저장을 다시 내려받을 수 있음 */
 let tm = null;
-export function save(now) { if (window.__noSave) return; S.last = Date.now(); clearTimeout(tm); const f = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 저장 공간 없음 */ } }; if (now) f(); else tm = setTimeout(f, 400); }
+const staleHere = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return !!(v && +v.resetAt > (+S.resetAt || 0)); } catch { return false; } };
+function write() {
+  if (window.__noSave) return;
+  if (staleHere()) { window.__noSave = true; clearTimeout(tm); try { location.reload(); } catch { /* */ } return; }
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 저장 공간 없음 */ } }
+export function resetAll() { window.__noSave = true; clearTimeout(tm); tm = null;
+  const n = fresh(); n.resetAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(n)); localStorage.setItem(OLD_KEY, JSON.stringify({ v: 0, reset: n.resetAt })); } catch { /* */ }
+  try { if (parent !== window) parent.postMessage({ type: 'oad:reset' }, '*'); } catch { /* 단독 실행 */ } }
+export function save(now) { if (window.__noSave) return; S.last = Date.now(); clearTimeout(tm); if (now) write(); else tm = setTimeout(write, 400); }
 export const ST = () => S.stores[S.si];
 export const levelOf = xp => { let l = 1; for (let i = 1; i < XP.length; i++) if (xp >= XP[i]) l = i + 1; return l; };
 // 하루가 바뀌면: 판매 수 · 주문서 3장 · 쿠폰

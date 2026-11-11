@@ -4,11 +4,11 @@
 //   지휘관 영입: 일반 작전으로도 합류하는 지휘관을 먼저 데려옴 (막힌 길을 여는 게 아님 · 능력치는 원래 그대로)
 //   사는 길 세 가지: 훈장(플레이로 모이는 게임 재화) · 원어데이 골드(서버 가격표에 있을 때만) · 광고(보급품만, 하루 SHOPW.adPerDay 번)
 //   원어데이 밖이면 훈장 길만 (골드 · 광고 버튼 숨김)
-import { bm } from './oad_bm.js?v=0.99.21';
-import { load, save } from './save.js?v=0.99.21';
-import { COS } from './core/data.js?v=0.99.21';
-import { shopOn, owned, track } from './bmwar.js?v=0.99.21';
-import { STAGES } from './meta.js?v=0.99.21';
+import { bm } from './oad_bm.js?v=0.99.22';
+import { load, save } from './save.js?v=0.99.22';
+import { COS } from './core/data.js?v=0.99.22';
+import { shopOn, owned, track } from './bmwar.js?v=0.99.22';
+import { STAGES } from './meta.js?v=0.99.22';
 
 export const SHOPW = { adPerDay: 3, coMedal: 30 };
 export const KITS = {

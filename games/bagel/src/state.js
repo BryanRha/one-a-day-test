@@ -1,6 +1,6 @@
 // 저장 (localStorage 'marumi_v3' · 0.4 재설계): 돈 · 지점별 산 것(own) · 칸에 부은 돈(paid) · 공사 · 재고 · 단골 · 숙련 · 꾸미기 · BM
 //   예전 저장 v2(0.3.x) · v1(0.2) 은 처음 열 때 한 번 옮김 — 같은 시설은 그대로 열고, 없어진 방에 낸 값은 돈으로 돌려주고, 진행률은 줄지 않게 · 옛 키는 지우지 않음(되돌리기용)
-import { COUPON, BRANCHES, SEASON } from './data.js?v=0.99.21';
+import { COUPON, BRANCHES, SEASON } from './data.js?v=0.99.22';
 export const KEY = 'marumi_v3', OLD2 = 'marumi_v2', OLD1 = 'marumi_v1';
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fresh = () => ({ v: 3, coins: 205, earned: 0, bi: 0, maxBi: 0, branch: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'],
@@ -55,10 +55,24 @@ export function loadSave() {
   for (const k of ['coins', 'earned', 'vipUntil', 'inst', 'born']) if (!Number.isFinite(+S[k])) S[k] = k === 'born' ? Date.now() : 0;
   if (S.vipUntil > Date.now() + 28 * 864e5) S.vipUntil = Date.now() + 28 * 864e5;   /* 시계를 앞으로 돌려도 최대 28일 */
   dayTick(); return S; }
-/* 처음부터: v3 를 새 판으로 쓰고 옛 저장(v2 · v1)은 「지움 표시」로 덮음 — 키를 지우면 원어데이 클라우드가 옛 저장을 다시 내려받을 수 있어서, 지우지 않고 덮어써 새 판이 올라가게 함 */
-export function resetAll() { const n = fresh(); n.resetAt = Date.now(); const tomb = JSON.stringify({ v: 0, reset: n.resetAt }); try { localStorage.setItem(KEY, JSON.stringify(n)); localStorage.setItem(OLD2, tomb); localStorage.setItem(OLD1, tomb); } catch { /* */ } window.__noSave = true; }
+/* 처음부터 (2026-11-11 대표 제보 「처음부터 했는데 예전 판으로 열림」 근본 수정)
+   원인: 판매 · 5초마다 부르는 save() 가 0.4초 뒤에 쓰는 타이머를 남김 → 확인 창을 닫자마자 resetAll 이 새 판을 쓰고 location.reload() 를 걸어도,
+         새 페이지가 뜨기 전에 그 타이머가 돌아 메모리의 옛 판(S)을 다시 써 버림 (__noSave 는 save() 입구만 막고 이미 걸린 타이머는 못 막았음)
+   막는 법 (쓰는 길이 어디든):
+     ① 이 판의 「처음부터 시각」(resetAt) 을 저장에 적음 → 모든 쓰기(write)는 저장에 적힌 resetAt 이 내 것보다 새로우면 쓰지 않고 다시 엶 (남은 타이머 · 다른 탭 · 지운 뒤 남은 화면)
+     ② 걸려 있던 타이머를 지우고 __noSave 를 먼저 켬
+     ③ 원어데이 앱에 알림(oad:reset) → 앱이 계정 저장을 새 판으로 덮어 올림(직전본은 서버에 남음) · 그 전까지는 계정 쪽을 내려받거나 묻지 않음
+   옛 저장(v2 · v1)은 「지움 표시」로 덮음 — 키를 지우면 원어데이 클라우드가 옛 저장을 다시 내려받을 수 있어서, 지우지 않고 덮어써 새 판이 올라가게 함 */
 let tm = null;
-export function save(now) { if (window.__noSave) return; S.last = Date.now(); clearTimeout(tm); const f = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* */ } }; if (now) f(); else tm = setTimeout(f, 400); }
+const staleHere = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return !!(v && +v.resetAt > (+S.resetAt || 0)); } catch { return false; } };
+function write() {
+  if (window.__noSave) return;
+  if (staleHere()) { window.__noSave = true; clearTimeout(tm); try { location.reload(); } catch { /* */ } return; }   /* 다른 곳에서 처음부터 한 뒤의 옛 판 → 쓰지 않고 새 판으로 다시 엶 */
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* */ } }
+export function resetAll() { window.__noSave = true; clearTimeout(tm); tm = null;
+  const n = fresh(); n.resetAt = Date.now(); const tomb = JSON.stringify({ v: 0, reset: n.resetAt }); try { localStorage.setItem(KEY, JSON.stringify(n)); localStorage.setItem(OLD2, tomb); localStorage.setItem(OLD1, tomb); } catch { /* */ }
+  try { if (parent !== window) parent.postMessage({ type: 'oad:reset' }, '*'); } catch { /* 단독 실행 */ } }
+export function save(now) { if (window.__noSave) return; S.last = Date.now(); clearTimeout(tm); if (now) write(); else tm = setTimeout(write, 400); }
 export function dayTick() { if (S.day !== today()) { S.day = today(); S.sold = 0; S.coupon = null; S.miss = {}; S.missDone = {}; } }
 export function addSold(n) { dayTick(); S.sold += n; S.totalSold += n; mission('sell', n); passXp(n); save(); }
 export const couponReady = () => S.sold >= COUPON.goal && !S.coupon;

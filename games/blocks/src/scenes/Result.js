@@ -1,14 +1,14 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.99.21';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.21';
-import { audio } from '../audio.js?v=0.99.21';
-import { sky } from '../sky.js?v=0.99.21';
-import { load } from '../save.js?v=0.99.21';
-import * as M from '../meta.js?v=0.99.21';
-import { bm } from '../oad_bm.js?v=0.99.21';
-import { canDouble } from '../core/cont.js?v=0.99.21';
-import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.99.21';
-import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.99.21';
+import { W, H } from '../config.js?v=0.99.22';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.22';
+import { audio } from '../audio.js?v=0.99.22';
+import { sky } from '../sky.js?v=0.99.22';
+import { load } from '../save.js?v=0.99.22';
+import * as M from '../meta.js?v=0.99.22';
+import { bm } from '../oad_bm.js?v=0.99.22';
+import { canDouble } from '../core/cont.js?v=0.99.22';
+import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.99.22';
+import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.99.22';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }

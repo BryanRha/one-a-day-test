@@ -1,11 +1,11 @@
 // 마루미 지도 (DESIGN 10장 · 시안 mock_map.html): 송파 · 강동 동네 길 하나에 실제 4지점 · 매장 카드(실제 사진 · 주소 · 시그니처 메뉴 2 · 게임 특색 · 열리는 조건)
 //   「📍 매장 가 보기」(지도 앱 · bg_store) · 「🎟 열면 받는 쿠폰」(의뢰사 확인 전 시험용) · 광고판 = 원어데이 교차 홍보 · 다음 동네 · TOKYO 자리
-import { UI } from './ui.js?v=0.99.21';
-import { S, save } from './state.js?v=0.99.21';
-import { BRANCHES, BRANCH_INFO, BRANCH_MENU, STORE_MAP, IDLE } from './data.js?v=0.99.21';
-import { SPACES, FEATURES } from './space.js?v=0.99.21';
-import { sfx, music, BGM } from './audio.js?v=0.99.21';
-import { pushBack, track } from './oad.js?v=0.99.21';
+import { UI } from './ui.js?v=0.99.22';
+import { S, save } from './state.js?v=0.99.22';
+import { BRANCHES, BRANCH_INFO, BRANCH_MENU, STORE_MAP, IDLE } from './data.js?v=0.99.22';
+import { SPACES, FEATURES } from './space.js?v=0.99.22';
+import { sfx, music, BGM } from './audio.js?v=0.99.22';
+import { pushBack, track } from './oad.js?v=0.99.22';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 const SPOT = [[96, 270], [203, 398], [52, 500], [262, 560]];   /* 지점 자리 (390×844 기준) */
