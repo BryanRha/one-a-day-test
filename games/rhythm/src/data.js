@@ -69,7 +69,7 @@ export const DAYS = [
     ], choice: ['수고했어요', '내일도 끊기지 않게 할게요'], after: [
       P('miyu', '내일은 벨라 차례예요. 1분 안에 끝나니까 준비 단단히 하세요. 후후.'),
       P('miyu', '아, 그리고… 에델이 프로듀서님 손 좋다고 했어요. 걔가 칭찬하는 거 처음 봐요.'),
-    ], piece: { img: 'assets/img/p01_miyu.jpg', step: 1, caption: '간호사 명찰을 뒤집어 놓은 탁자 위, 식은 컵을 쥔 손' } },
+    ], piece: { img: 'assets/img/p01_miyu.jpg', step: 1, caption: '간호사 명찰을 뒤집어 놓은 탁자 위, 얼음이 다 녹은 아이스커피를 쥔 손' } },
     tomorrow: { who: 'bella', title: '째깍째깍 · 55초 안에 끝내야 하는 방송', text: '내일 저녁 7시, 시계방 카운터에서요. 손님 오면 끊어야 하니까 빨리요~', img: 'assets/img/d4_tease.jpg' },
   },
   {
@@ -299,7 +299,7 @@ export const DAYS = [
       P('media', '틀리는데 멈추지 않는 노래. 그게 뭔지 저는 잘 모르겠네요.'),
     ], choice: ['직접 불러 보면 알아요', '다음엔 더 정확하게'], after: [
       P('media', '…회사에 보고하겠습니다. 오늘 일은.'),
-      P('rose', '(로제) 1막 끝. 잘했어. 진짜 시작은 지금부터야.'),
+      P('rose', '1막 끝. 잘했어. 진짜 시작은 지금부터야.'),
     ], piece: { img: 'assets/img/p10_media.jpg', step: 1, caption: '오르골 녹음 부스, 틀린 곳 하나 없는 악보 위의 손' } },
     tomorrow: { who: 'bella', title: '11화 준비 중', text: '시즌 1은 계속돼요. 다음 방송은 곧 열려요~', img: 'assets/img/d4_tease.jpg' },
   },

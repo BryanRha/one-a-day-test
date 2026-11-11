@@ -6,8 +6,8 @@
 //   · v0.3.1 (검수 A1 · A2): 판정 위계는 '모양'으로 — PERFECT 금 핵 + 링 2겹 + 빛기둥 + 파티클 · GREAT 장미색 링 1겹 · GOOD 작은 빛점
 //     판정 색(금 · 장미 · 세이지)은 레인 · 노트 색(얼음 · 라벤더)과 겹치지 않게 · 빛 예산(밝기 상한)으로 판정선이 하얗게 타지 않게
 //   · 색 · 파티클 모양 · 롱노트 불꽃은 테마(themes.js)에서 읽음 → setTheme 로 바꿔 끼움
-import { GEO, P } from './render.js?v=0.99.27';
-import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.27';
+import { GEO, P } from './render.js?v=0.99.28';
+import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.28';
 
 const { L, LW, YJ } = GEO;
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;

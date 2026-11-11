@@ -6,7 +6,9 @@ export const pad = n => String(n).padStart(2, '0');
 /* 시험용: ?day=2026-11-10 처럼 날짜를 바꿔 볼 수 있음 · 하루는 아침 7시에 바뀜 (새 곡 시각)
    ?day=7 처럼 숫자만 쓰면 '오늘'을 7화로 (저장의 첫날은 그대로) · ?dev=1 은 방송 목록 전부 열림 (테스트 서버 · localhost 는 기본으로 켜짐, ?dev=0 으로 끔) */
 export const EP = /^\d{1,2}$/.test(Q.get('day') || '') ? +Q.get('day') : 0;
-export const DEV = Q.get('dev') === '1' || (Q.get('dev') !== '0' && ((window.OAD_ENV && window.OAD_ENV !== 'prod') || /^(localhost|127\.)/.test(location.hostname)));   /* 원어데이 테스트 빌드(OAD_ENV=test, 주소와 무관)·로컬은 늘 시험 모드 · ?dev=0 으로 끔 (2026-11-11 대표: 테스트는 모든 곡 플레이) */
+/* 실서버(OAD_ENV === 'prod')에서는 ?dev=1 도 무시 (재검수 v0.4 B-1: 안 열린 화 스포일러 · 광고 · 골드 우회 막기) */
+export const PROD = typeof window !== 'undefined' && window.OAD_ENV === 'prod';
+export const DEV = !PROD && (Q.get('dev') === '1' || (Q.get('dev') !== '0' && (!!(typeof window !== 'undefined' && window.OAD_ENV) || /^(localhost|127\.)/.test(location.hostname))));   /* 원어데이 테스트 빌드(OAD_ENV=test · dev, 주소와 무관) · 로컬은 늘 시험 모드 · ?dev=0 으로 끔 (2026-11-11 대표: 테스트는 모든 곡 플레이) */
 export function now() { const q = Q.get('day'); if (q && !EP) { const [y, m, d] = q.split('-').map(Number); return new Date(y, m - 1, d, 12); } return new Date(); }
 export function dayKey(d = now()) { const x = new Date(d.getTime() - 7 * 3600e3); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; }
 export function nextOpen(d = now()) { const n = new Date(d); n.setHours(7, 0, 0, 0); if (n <= d) n.setDate(n.getDate() + 1); return n; }

@@ -511,3 +511,39 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #story.dm .btns{opacity:0;pointer-events:none;transition:opacity .5s}
 #story.dm.end .btns{opacity:1;pointer-events:auto}
 #story.dm .msgs>*{flex:none}   /* 말풍선 · 조각 카드가 줄어들지 않게 */
+
+/* ---------- v0.4.1 재검수 반영 ---------- */
+/* C-4 채팅 글자 12px · 4줄 */
+#play .chat{width:118px;gap:5px}
+#play .chat .cl{font-size:12px;line-height:1.4}
+#play .chat .cl em{font-size:11px}
+/* C-3 100 COMBO 띠: 노트가 지나는 레인 위가 아니라 왼쪽 위 레인 바깥 여백 (말풍선은 100 단위에 안 나옴) */
+#play .mile{top:196px;left:14px;right:auto;text-align:left;width:140px}
+#play .mile b{font-size:28px}
+#play .mile span{display:block;margin:2px 0 0;font-size:11px;letter-spacing:4px}
+/* B-3 방송 기록 「내일 예고」: 오른쪽 얼굴 자리 비우고 제목 두 줄까지 */
+#book .tmr{height:150px}
+#book .tmr .in{padding-right:70px}
+#book .tmr b{font-size:17px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#book .tmr q{width:auto;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#book .pages{top:366px}
+/* B-4 첫 판 조작 안내 (한 장 · 짧게) */
+#play .guide{position:absolute;inset:0;z-index:8;pointer-events:none;opacity:0;transition:opacity .45s}
+#play .guide.on{opacity:1}
+#play .guide .card{position:absolute;left:36px;right:36px;top:360px;padding:16px 18px 14px;border-radius:18px;text-align:center;background:rgba(10,11,26,.78);border:1px solid rgba(255,255,255,.14);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+#play .guide em{font:700 10.5px 'Rajdhani';font-style:normal;letter-spacing:3px;color:#ff8ea0}
+#play .guide b{display:block;font:800 18px/1.45 'NMJ',serif;margin:4px 0 12px}
+#play .guide .tips{display:flex;justify-content:center;gap:14px}
+#play .guide .tips span{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,255,255,.85)}
+#play .guide .tips i{display:block;height:28px;width:34px;position:relative}
+#play .guide .t-tap::before,#play .guide .t-chord::before,#play .guide .t-chord::after{content:'';position:absolute;bottom:4px;width:30px;height:9px;border-radius:3px;background:#D6F6FF;box-shadow:0 0 8px rgba(159,240,255,.8)}
+#play .guide .t-tap::before{left:2px;animation:gtap 1.1s ease-in-out infinite}
+#play .guide .t-long::before{content:'';position:absolute;left:12px;bottom:4px;width:10px;height:24px;border-radius:3px;background:linear-gradient(180deg,rgba(159,240,255,.25),rgba(159,240,255,.9));box-shadow:0 0 8px rgba(159,240,255,.6)}
+#play .guide .t-chord::before{left:-10px;width:24px}
+#play .guide .t-chord::after{right:-10px;width:24px;background:#C9B6FF;box-shadow:0 0 8px rgba(195,173,255,.8)}
+@keyframes gtap{0%,100%{transform:translateY(-6px);opacity:.6}50%{transform:none;opacity:1}}
+#play .guide small{display:block;margin-top:12px;font-size:10.5px;color:var(--sub)}
+#play .guide .pads i{position:absolute;top:722px;width:58px;height:30px;margin-left:-29px;border-radius:50%;border:2px solid rgba(255,255,255,.75);opacity:0;animation:gpad 1.6s ease-out infinite}
+#play .guide .pads i:nth-child(1){left:75px}#play .guide .pads i:nth-child(2){left:155px;animation-delay:.4s}#play .guide .pads i:nth-child(3){left:235px;animation-delay:.8s}#play .guide .pads i:nth-child(4){left:315px;animation-delay:1.2s}
+@keyframes gpad{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
+#book .pg{height:86px;aspect-ratio:auto}   /* 칸이 위아래로 겹치던 것 (줄 높이가 칸 비율을 못 따라감) */

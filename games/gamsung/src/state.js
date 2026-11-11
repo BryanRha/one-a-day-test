@@ -1,6 +1,6 @@
 // 저장 (localStorage 'gamsung_v2' · 0.2.0 개편): 돈 · 마음 · 경험치 · 원두 · 지점별 가구/머신/진열/열린 단계/공사/금고 · 동료 · 사장님 강화 · 단골 · 광고 바구니 · 골드 상품 · 오늘(판매·주문서·출석·쿠폰)
 //   저장 이사: 예전 'gamsung_v1' 이 있으면 처음 열 때 v2 로 옮김 (돈 · ♥ · 레벨 · 단골 · 시 · 동료 · 꾸미기 위치 그대로 · 지금 방 = 각 지점의 0단계) · 옛 키는 남김(되돌리기용)
-import { XP, ORDER_POOL, COUPON, FURN, STORES } from './data.js?v=0.99.27';
+import { XP, ORDER_POOL, COUPON, FURN, STORES } from './data.js?v=0.99.28';
 export const KEY = 'gamsung_v2', OLD_KEY = 'gamsung_v1';
 /* 시계: 시험용 배속(?speed)일 때 머신·로스터 시간도 같이 빨라지게 */
 let skew = 0; export const now = () => Date.now() + skew; export const addSkew = ms => { skew += ms; };

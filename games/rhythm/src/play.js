@@ -1,16 +1,17 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.27';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.27';
-import { makeRenderer, laneAt } from './render.js?v=0.99.27';
-import { makeFx } from './fx.js?v=0.99.27';
-import { Live } from './live.js?v=0.99.27';
+import { A } from './audio.js?v=0.99.28';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.28';
+import { makeRenderer, laneAt } from './render.js?v=0.99.28';
+import { makeFx } from './fx.js?v=0.99.28';
+import { Live } from './live.js?v=0.99.28';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
 const KEYS = { d: 0, f: 1, j: 2, k: 3, D: 0, F: 1, J: 2, K: 3 };
 const LEAD = 3.4;   /* 첫 노트 전 여유 (곡이 이만큼 뒤에 시작) · 제목 카드 → READY(−1.6초) → GO(−0.35초) */
+const GUIDE_LEAD = 7.4;   /* 첫 판만: 제목 카드 1.6초 → 조작 안내 약 4초 → READY · GO (재검수 v0.4 B-4) */
 const READY_AT = -1.6, GO_AT = -0.35;
 /* 판정 글자 애니메이션 (등장 · 튐 · 머묾 · 사라짐) — Web Animations: 강제 레이아웃 없음 */
 /* v0.3.1 검수 A1: 첫 프레임부터 불투명(바로 읽힘) · 크기만 1.4 → 1 로 튐 */
@@ -37,7 +38,8 @@ export const Play = {
     this.endAt = Math.min(opt.entry.dur, this.lastT + 2.2);
     if (!this.fxs) this.fxs = makeFx(opt.theme);
     this.fxs.setTheme(opt.theme); this.fxs.reset(); this.fxs.lite = !!opt.lite;
-    this.st = { p: -LEAD, notes, spd: 12 + opt.speed * 5, clk: clock(opt.chart, opt.entry.shift), missAt: WIN.good, pressed: [false, false, false, false], flash: [0, 0, 0, 0], drawFrom: 0, now: performance.now() / 1000, dt: 0.016, pulse: 0, fever: 0, held: [false, false, false, false], fx: this.fxs, theme: this.fxs.theme };
+    this.lead = opt.guide ? GUIDE_LEAD : LEAD; this.guideState = '';
+    this.st = { p: -this.lead, notes, spd: 12 + opt.speed * 5, clk: clock(opt.chart, opt.entry.shift), missAt: WIN.good, pressed: [false, false, false, false], flash: [0, 0, 0, 0], drawFrom: 0, now: performance.now() / 1000, dt: 0.016, pulse: 0, fever: 0, held: [false, false, false, false], fx: this.fxs, theme: this.fxs.theme };
     this.down = [0, 0, 0, 0]; this.ptr = new Map(); this.shown = 0; this.lastCheer = 0;
     this.pend = []; this.prevCombo = 0; this.fcShown = false; this.readyState = ''; this.chordSeen = new Set(); this.work = 0; this.iv = []; this.refresh = 0; this.offRate = false; this.slowT = 0; this.autoLite = false; this.txt = {};
     this.dens = density(notes);
@@ -50,14 +52,15 @@ export const Play = {
     $('#p_title').textContent = opt.song.title; $('#p_sub').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
     $('#p_len').textContent = fmt(opt.entry.dur); $('#p_t').textContent = '0:00'; $('#p_bar').style.width = '0';
     $('#p_score').textContent = '0'; $('#p_acc').textContent = '100.00%'; $('#p_fc').className = 'fcm'; $('#p_shake').classList.remove('fcing');
-    $('#p_chap').innerHTML = `<b>${opt.chapter}</b> · 끝까지 들으면 장면이 열려요`; $('#p_chap').style.opacity = 1;
+    $('#p_chap').innerHTML = `<b>${opt.chapter}</b> · 끝까지 송출하면 개인 채널이 열려요`; $('#p_chap').style.opacity = 1;
     const cb = $('#p_combo'); cb.classList.remove('on', 'gold'); cb.querySelector('b').textContent = '0'; cb.style.transform = '';
     $('#p_judge').className = 'judge'; $('#p_judge b').textContent = ''; $('#p_judge small').textContent = ''; $('#p_ready').className = 'ready'; $('#p_mile').className = 'mile'; $('#p_cut').classList.remove('on'); $('#p_banner').className = 'banner';
     const it = $('#p_intro'); it.querySelector('em').textContent = `${opt.diff === 'easy' ? 'EASY' : opt.diff === 'hard' ? 'HARD' : 'NORMAL'} · LV.${opt.chart.diffs[opt.diff].lv}`;
     it.querySelector('b').textContent = opt.song.title; it.querySelector('span').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
     it.classList.remove('on'); void it.offsetWidth; it.classList.add('on');
     $('#p_cut .face').style.backgroundImage = `url(${opt.diva.face})`; $('#p_cut small').textContent = opt.diva.en;
-    const t0 = A.play(opt.entry, -LEAD, 0.08);
+    const t0 = A.play(opt.entry, -this.lead, 0.08);
+    $('#p_guide').className = 'guide';
     A.fxPlay('whoosh', 0.5);
     /* READY · GO 소리: 곡 위치에 맞춰 오디오 시계로 예약 (화면 글자와 같은 순간) */
     if (opt.hitsnd !== false) { A.fxPlay('ready', opt.sfx * 0.7, t0 + READY_AT); A.fxPlay('go', opt.sfx * 0.8, t0 + GO_AT); }
@@ -214,7 +217,9 @@ export const Play = {
     const bw = Math.min(100, Math.max(0, p / P.opt.entry.dur * 100)).toFixed(1); if (P.txt.bar !== bw) { P.txt.bar = bw; $('#p_bar').style.width = bw + '%'; }
     /* 배경(캐스트 아바타 그림)이 박에 맞춰 살짝 숨쉼 · 피버면 두 배 */
     if (!P.fxs.lite) { const k = st.pulse * (1 + st.fever); $('#p_cov').style.transform = `scale(${(1.02 + 0.01 * k).toFixed(4)})`; $('#p_cov').style.opacity = (0.55 + 0.06 * k).toFixed(3); }
-    if (p > READY_AT - 0.2 && P.introOff !== true) { P.introOff = true; $('#p_intro').classList.remove('on'); }
+    if ((p > READY_AT - 0.2 || (P.opt.guide && p > -P.lead + 1.7)) && P.introOff !== true) { P.introOff = true; $('#p_intro').classList.remove('on'); }
+    /* 첫 판 조작 안내: 제목 카드 뒤 ~ READY 전 */
+    if (P.opt.guide) { const gs = p > -P.lead + 1.8 && p < READY_AT - 0.3 ? 'on' : ''; if (gs !== P.guideState) { P.guideState = gs; $('#p_guide').className = 'guide' + (gs ? ' on' : ''); } }
     if (p > 12) $('#p_chap').style.opacity = 0;
     P.work = P.work * 0.9 + (performance.now() - ms) * 0.1;   /* frame() 안 작업 시간 (ms, 이동 평균) */
     if (!P.ended && P.sess.finished && p > P.lastT + 0.4) P.finish();
@@ -247,7 +252,7 @@ export const Play = {
   },
   async pause() { if (!this.on || this.paused || this.ended) return; this.paused = true; for (let l = 0; l < 4; l++) { this.down[l] = 1; this.release(l, performance.now()); } this.ptr.clear(); await A.suspend(); },
   async resume() { if (!this.paused) return; await A.resume(); this.paused = false; },
-  quit() { Live.stop(); this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
+  quit() { Live.stop(); $('#p_guide').className = 'guide'; this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
 
   /* 봇 · 자동 연주 (시험용): auto = { jitter: ms, miss: 확률 } — 실제 입력 길(press/release)을 그대로 씀 */
   /* dom: 진짜 화면 터치처럼 PointerEvent 를 보냄 (레인 계산 · 손가락 추적 길까지 시험) */

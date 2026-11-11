@@ -2,13 +2,13 @@
 //   오늘의 방송은 그날 하루 무제한 무료 · 지난 방송은 보상형 광고(하루 3회) 또는 골드 · 소장이면 무료 (ONAIR_PLAN 6장 · 7-4)
 //   방송 목록: 지금까지 열린 화(오늘까지)의 곡을 다시 고를 수 있음 · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.27';
-import { Play } from './play.js?v=0.99.27';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME } from './data.js?v=0.99.27';
-import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, DEV } from './save.js?v=0.99.27';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.27';
-import { bm } from './oad_bm.js?v=0.99.27';
-import { THEMES } from './themes.js?v=0.99.27';
+import { A } from './audio.js?v=0.99.28';
+import { Play } from './play.js?v=0.99.28';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME } from './data.js?v=0.99.28';
+import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, DEV, PROD } from './save.js?v=0.99.28';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.28';
+import { bm } from './oad_bm.js?v=0.99.28';
+import { THEMES } from './themes.js?v=0.99.28';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
@@ -66,14 +66,19 @@ function renderToday() {
   $('#t_list').classList.toggle('dot', !past() && !t.plays);
   if (entry && A.ac && A.ac.state === 'running' && !A.pv && !Play.on) A.preview(entry, ...song.preview);
 }
-/* 지난 방송 값 표시: 소장 · 원어데이 밖 · 상품 등록 전 · ?dev=1 이면 무료 */
+/* 지난 방송 이용 방법 (재검수 v0.4 B-2: 값을 못 받으면 무료로 열지 않음 · 없는 값은 보여 주지 않음)
+   free = 소장 · 시험 모드 · 원어데이 밖(공통 규칙: 앱 밖은 무료) / 앱 안: 광고(하루 3회 · 앱이 광고를 줄 때) · 골드(서버 값이 있을 때) / 둘 다 없으면 닫힘 */
 function pastPrice() { return bm.price('replay') || bm.price('retry'); }
-function retryLabel() {
-  if (!past()) return '오늘 무제한 무료';
-  const h = bm.info; if (DEV || !h.ok || h.owned) return h.owned ? '소장 · 무료' : '시험판 무료';
-  if (!pastPrice() && !(h.ads && h.ads.reward)) return '시험판 무료';
-  return `광고 ${Math.max(0, PAST_ADS - (today().ads || 0))}회 · 🪙${pastPrice() || 10}`;
+function pastWay() {
+  const h = bm.info;
+  if (DEV) return { free: true, label: '시험 모드 · 무료' };
+  if (h.owned) return { free: true, label: '소장 · 무료' };
+  if (!h.ok) return { free: true, label: PROD ? '무료' : '앱 밖 · 무료' };
+  const adsLeft = Math.max(0, PAST_ADS - (today().ads || 0)), ad = !!(h.ads && h.ads.reward) && adsLeft > 0, price = pastPrice();
+  const parts = []; if (ad) parts.push(`광고 ${adsLeft}회`); if (price) parts.push(`🪙${price}`);
+  return { free: false, ad, adsLeft, price, closed: !ad && !price, label: parts.length ? parts.join(' · ') : '지금은 열 수 없어요' };
 }
+function retryLabel() { return past() ? pastWay().label : '오늘 무제한 무료'; }
 $('#t_diff').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.diff = b.dataset.d; save(); A.fxPlay('tick', S.sfx * 0.5); renderToday(); });
 $('#t_back').addEventListener('click', () => { if (inOAD) exitToOAD(); else toast('원어데이 앱 안에서는 원어데이로 돌아가요'); });
 $('#t_book').addEventListener('click', () => openBook());
@@ -83,15 +88,18 @@ $('#t_start').addEventListener('click', async () => {
   if (!entry) { toast('음악을 불러오는 중이에요'); return; }
   /* 오늘의 방송: 그날 하루 무제한 무료 (대표 확정 · ONAIR_PLAN 7-4) */
   if (!past()) return startBroadcast();
-  /* 지난 방송: 소장 · 원어데이 밖 · 상품 등록 전 · ?dev=1 이면 무료, 아니면 보상형 광고(하루 3회) 또는 골드 */
-  const h = bm.info, price = pastPrice(), adsLeft = PAST_ADS - (today().ads || 0), canAd = h.ads && h.ads.reward && adsLeft > 0;
-  if (DEV || !h.ok || h.owned || (!price && !canAd)) return startBroadcast();
-  modal(`<h3>지난 방송 다시 듣기</h3><p>오늘의 방송은 몇 번이든 무료예요. 지난 방송은 광고나 골드로 다시 열어요. 소장하면 언제든 무료예요.</p>${canAd ? `<button class="main" data-a="ad">📺 광고 보고 듣기 <small>오늘 ${adsLeft}회 남음</small></button>` : ''}${price ? `<button class="gold" data-a="gold">🪙 ${price} 골드로 듣기</button>` : ''}<button data-a="close">다음에 할게요</button>`, async a => {
+  /* 지난 방송 */
+  const w = pastWay();
+  if (w.free) return startBroadcast();
+  if (w.closed) return toast('지금은 지난 방송을 열 수 없어요. 잠시 뒤 다시 해 주세요', 2600);
+  modal(`<h3>지난 방송 다시 듣기</h3><p>오늘의 방송은 몇 번이든 무료예요. 지난 방송은 광고나 골드로 다시 열어요. 소장하면 언제든 무료예요.</p>${w.ad ? `<button class="main" data-a="ad">📺 광고 보고 듣기 <small>오늘 ${w.adsLeft}회 남음</small></button>` : ''}${w.price ? `<button class="gold" data-a="gold">🪙 ${w.price} 골드로 듣기</button>` : ''}<button data-a="close">다음에 할게요</button>`, async a => {
     if (a === 'close') return closeModal();
     closeModal();
     const r = a === 'ad' ? await bm.rewardedAd('replay') : await bm.spend(bm.price('replay') ? 'replay' : 'retry');
-    if (r.ok) { if (a === 'ad') { today().ads = (today().ads || 0) + 1; save(); } startBroadcast(); }
-    else if (r.reason !== 'cancel') toast(r.reason === 'short' ? '골드가 조금 모자라요' : r.reason === 'limit' ? '오늘 광고는 다 봤어요' : '지금은 할 수 없어요');
+    if (r.ok) { if (a === 'ad') { today().ads = (today().ads || 0) + 1; save(); } startBroadcast(); return; }
+    if (r.reason === 'cancel') return;
+    /* 실패 이유별 문구 (재검수 v0.4 B-2: 골드 한도를 '광고' 로 말하던 것 고침) */
+    toast(r.reason === 'short' ? '골드가 조금 모자라요' : r.reason === 'limit' ? (a === 'ad' ? '오늘 광고는 다 봤어요' : '오늘 골드로 듣기는 다 썼어요') : r.reason === 'login' ? '로그인하면 골드로 들을 수 있어요' : '지금은 할 수 없어요', 2400);
   });
 });
 /* 방송 시작: 그 화의 '방송 전' 장면을 처음 한 번 보여 주고(다시 하기 · 지난 방송은 바로) 생방송으로 */
@@ -156,9 +164,11 @@ function go() {
   Play.start({
     song, chart: charts[song.id], diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
     hitsnd: S.hitsnd, el: S.el, lite: S.lite, theme: DEV && THEMES[S.theme] ? S.theme : 'base',
+    guide: !S.guide && Q.get('guide') !== '0',   /* 첫 판만 레인 조작 안내 (?guide=0 이면 끔 · 시험 도구) */
     cover: day.hero, diva: { ...dv, name: singer(day) }, chapter: `${day.no}화 · ${day.chapter}`, cheer: CHEER, live: day.live, subs: day.subs,
     onPause: () => pauseMenu(), onEnd: r => onResult(r),
   });
+  if (!S.guide) { S.guide = true; save(); }
   try { window.parent.postMessage({ type: 'oad:track', name: 'play', p: { diff: S.diff, day: day.no, song: song.id, past: past() } }, '*'); } catch { /* */ }
 }
 function pauseMenu() {

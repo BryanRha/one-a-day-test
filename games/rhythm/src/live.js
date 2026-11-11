@@ -1,8 +1,8 @@
 // 생방송 오버레이 (연출만 · 점수 · 판정과 무관) — ONAIR_PLAN 8-3
-//   왼쪽 위 「● LIVE · 시청 N」 · 오른쪽 채팅 5줄(레인 바깥 여백, 위로 흘러 사라짐) · 오른쪽 가장자리에서 솟는 하트
+//   왼쪽 위 「● LIVE · 시청 N」 · 오른쪽 채팅 4줄(글자 12px — 재검수 v0.4 C-4)(레인 바깥 여백, 위로 흘러 사라짐) · 오른쪽 가장자리에서 솟는 하트
 //   채팅은 미리 쓴 문장만(data.js CHAT + 그날 방송 live.chat) · DOM 요소는 시작할 때 만들어 두고 다시 씀(풀)
 //   한 판에 DOM 쓰기는 채팅 1.2~2초에 한 번 · 시청자 수 1초에 한 번 · 하트는 CSS 애니메이션만
-import { CHAT } from './data.js?v=0.99.27';
+import { CHAT } from './data.js?v=0.99.28';
 
 const $ = s => document.querySelector(s);
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -14,7 +14,7 @@ export const Live = {
   start(cfg) {
     this.cfg = cfg; this.lite = !!cfg.lite; this.dayIdx = 0; this.combo = 0; this.streak = 0; this.queue = [];
     const box = $('#p_chat'), hb = $('#p_hearts');
-    if (!this.lines.length) { for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'cl'; box.appendChild(d); this.lines.push(d); } }
+    if (!this.lines.length) { for (let i = 0; i < 4; i++) { const d = document.createElement('div'); d.className = 'cl'; box.appendChild(d); this.lines.push(d); } }
     if (!this.hearts.length) { for (let i = 0; i < 10; i++) { const h = document.createElement('i'); hb.appendChild(h); this.hearts.push(h); } }
     for (const d of this.lines) { d.className = 'cl'; d.innerHTML = ''; }
     this.viewers = Math.round(cfg.subs[0] * 0.35 + 30); this.shownV = -1; this.vAt = 0; this.nextAt = 0;

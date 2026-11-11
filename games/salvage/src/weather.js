@@ -6,11 +6,11 @@
 //  · 독수: 초록 독 웅덩이 → 독 게이지(쌓이면 초마다 아픔 · 아주 천천히 빠짐) → 연고 · 붕대 · 해독제 · 소독 샤워로 씻음 — 해독 필터 = 1/3 · 빨리 빠짐
 //  모든 큰 피해 예고 규칙: 판 상태 피해는 게이지가 먼저 보이고(30 · 55 경고), 작은 피해만 천천히 (hurtRaw · 한 번에 3 이하)
 import * as THREE from 'three';
-import { WEATHER, WX_OF, COLD, TOXIC, LAMP_GEAR, wxPlan } from './data/weather.js?v=0.99.27';
-import { ITEMS } from './data.js?v=0.99.27';
-import { sfx } from './audio.js?v=0.99.27';
-import { glowSprite } from './enemy3d.js?v=0.99.27';
-import { flarePools } from './arms.js?v=0.99.27';
+import { WEATHER, WX_OF, COLD, TOXIC, LAMP_GEAR, wxPlan } from './data/weather.js?v=0.99.28';
+import { ITEMS } from './data.js?v=0.99.28';
+import { sfx } from './audio.js?v=0.99.28';
+import { glowSprite } from './enemy3d.js?v=0.99.28';
+import { flarePools } from './arms.js?v=0.99.28';
 
 const tv = new THREE.Vector3(), tm = new THREE.Matrix4(), tq = new THREE.Quaternion(), ts = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 let ICE_T = null, TOX_T = null;
