@@ -1,0 +1,470 @@
+{
+ "tempo": {
+  "bpm": 193
+ },
+ "dens": {
+  "easy": 0.895,
+  "normal": 0.809,
+  "hard": 1.115
+ },
+ "mel": 0.25,
+ "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
+ "sections": [
+  {
+   "from": 0,
+   "to": 12,
+   "lvl": 1,
+   "mel": 0.9,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 4,
+    "longGap": 8
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     3,
+     3
+    ],
+    "follow": 0.3
+   },
+   "_": "합창 도입"
+  },
+  {
+   "from": 12,
+   "to": 14,
+   "lvl": 3,
+   "all": {
+    "chordCols": [
+     0
+    ]
+   },
+   "_": "합창 타격",
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   }
+  },
+  {
+   "from": 14,
+   "to": 28,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "현악 빌드"
+  },
+  {
+   "from": 28,
+   "to": 33,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "빌드"
+  },
+  {
+   "from": 33,
+   "to": 41,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "하드코어 드롭 1"
+  },
+  {
+   "from": 41,
+   "to": 49,
+   "lvl": 2,
+   "normal": {
+    "pick": [
+     [
+      "lo",
+      0.25
+     ],
+     [
+      "mi",
+      0.3
+     ]
+    ]
+   },
+   "hard": {
+    "pick": [
+     [
+      "lo",
+      0.2
+     ],
+     [
+      "mi",
+      0.25
+     ]
+    ],
+    "perBar": [
+     6,
+     9,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "드롭 1 후반"
+  },
+  {
+   "from": 49,
+   "to": 57,
+   "lvl": 1,
+   "mel": 0.9,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 4,
+    "longGap": 8
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     3,
+     3
+    ],
+    "follow": 0.3
+   },
+   "_": "합창 브레이크"
+  },
+  {
+   "from": 57,
+   "to": 59,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "빌드"
+  },
+  {
+   "from": 59,
+   "to": 67,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "드롭 2"
+  },
+  {
+   "from": 67,
+   "to": 75,
+   "lvl": 2,
+   "normal": {
+    "pick": [
+     [
+      "hi",
+      0.25
+     ],
+     [
+      "mi",
+      0.25
+     ]
+    ],
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "pick": [
+     [
+      "hi",
+      0.2
+     ],
+     [
+      "mi",
+      0.2
+     ]
+    ],
+    "chord": 0.25
+   },
+   "_": "드롭 2 후반"
+  },
+  {
+   "from": 75,
+   "to": 79,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "숨"
+  },
+  {
+   "from": 79,
+   "to": 83,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "빌드"
+  },
+  {
+   "from": 83,
+   "to": 94,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "드롭 3"
+  },
+  {
+   "from": 94,
+   "to": 95,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "멈칫"
+  },
+  {
+   "from": 95,
+   "to": 103,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "마지막 빌드"
+  },
+  {
+   "from": 103,
+   "to": 111,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ],
+    "perBar": [
+     4,
+     6,
+     9
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "perBar": [
+     6,
+     10,
+     15
+    ],
+    "grid": 1,
+    "minGap": 1,
+    "chord": 0.3
+   },
+   "_": "최종 드롭"
+  },
+  {
+   "from": 111,
+   "to": 112,
+   "lvl": 3,
+   "all": {
+    "chordCols": [
+     0
+    ]
+   },
+   "_": "끝",
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   }
+  }
+ ],
+ "edit": {
+  "easy": {
+   "add": []
+  },
+  "normal": {
+   "add": []
+  },
+  "hard": {
+   "add": []
+  }
+ },
+ "lastBeat": 444,
+ "cap": {
+  "hard": {
+   "grid": 2,
+   "minGap": 2
+  }
+ }
+}

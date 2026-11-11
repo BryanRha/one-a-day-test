@@ -1,6 +1,6 @@
 // ③ 이동 · 충돌 하나 — 장애물 표(space.js obstacles) 1벌 → 격자 1벌 → 사장 · 직원 · 봇이 같은 길 찾기와 같은 밀어내기
 //   손님은 정해진 고리(줄 · 통로 · 나감 길) 위를 걸어서 길 찾기가 필요 없어요 (space.js entryPath · seatPath · exitPath)
-import { R } from './space.js?v=0.99.26';
+import { R } from './space.js?v=0.99.27';
 
 const CELL = 20, X0 = -640, Z0 = -40, X1 = 1640, Z1 = 1840, NX = Math.ceil((X1 - X0) / CELL), NZ = Math.ceil((Z1 - Z0) / CELL);
 export class Nav {

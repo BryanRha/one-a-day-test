@@ -1,4 +1,4 @@
-// 원트랙 판정 엔진 (화면 · 소리 없이 시간만 다룸 → Node 에서 바로 시험)
+// 프로듀서 온에어 판정 엔진 (화면 · 소리 없이 시간만 다룸 → Node 에서 바로 시험)
 //   시간은 모두 '곡 위치(초)' — 오디오 시계(AudioContext)에서 계산한 값을 play.js 가 넣어 줌
 //   판정은 너그럽게 (유능감): 이른 헛누름은 벌하지 않고 무시, 롱노트 끝은 조금 일찍 떼도 PERFECT
 
@@ -95,6 +95,21 @@ export class Session {
     return this.judge(n.tail, n, lane, 0, true);
   }
   advance() { while (this.cursor < this.notes.length) { const n = this.notes[this.cursor]; if (n.head && (n.kind === 'tap' || n.tail)) this.cursor++; else break; } }
+  /* 누르기 직전: 그 이벤트 시각 기준으로 창이 이미 지난 앞 노트들을 먼저 MISS 로 확정 (v0.3.1 재검수 B-2)
+     → 판정은 언제나 이벤트 시각 순서: 'A miss → B perfect' (유예 MISS_GRACE 는 아직 안 온 입력을 기다릴 때만) */
+  settle(t) {
+    const out = [];
+    for (let i = this.cursor; i < this.notes.length; i++) {
+      const n = this.notes[i];
+      if (n.t > t) break;
+      if (!n.head && t - n.t > WIN.good) {
+        n.head = 'miss'; out.push(this.judge('miss', n, n.l, 0));
+        if (n.kind === 'long') { n.tail = 'miss'; out.push(this.judge('miss', n, n.l, 0, true)); }
+      }
+    }
+    this.advance();
+    return out;
+  }
   /* 매 프레임: 지나간 노트 MISS · 끝까지 누른 롱노트 자동 완료 */
   update(t) {
     const out = [];

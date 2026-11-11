@@ -2,12 +2,12 @@
 //  한 주 = 월요일 시작(한국 날짜 · threat.weekOf) · 도전 번호 #N = 그 주 - CH.epoch 주 + 1
 //  weekly(N) → 그 주 판의 전부(지도 · seed · 날씨 · 위협 Lv · 규칙 3 · 지급 장비) — 주 번호만으로 정해짐(내 저장과 상관없음) = 모두 같은 판
 //  순위표: 지금 서버에 랭킹 표가 없음 → 내 기록(주마다 최고 점수 · 메달)만. 나중에 붙일 자리 = BOARD.submit / BOARD.fetch (null 이면 화면에 '곧 열려요')
-import { CH, CH_RULES, CH_RULE_KEYS, TITLES } from './data/m5b.js?v=0.99.26';
-import { WEAPONS, FACILITIES, FAC_KEYS, freshMods, MAPS, ENEMIES, GEAR } from './data.js?v=0.99.26';
-import { loadout, kstDay } from './econ.js?v=0.99.26';
-import { rng } from './plan.js?v=0.99.26';
-import { threatOf, weekOf, dayNum } from './threat.js?v=0.99.26';
-import { forecast } from './data/weather.js?v=0.99.26';
+import { CH, CH_RULES, CH_RULE_KEYS, TITLES } from './data/m5b.js?v=0.99.27';
+import { WEAPONS, FACILITIES, FAC_KEYS, freshMods, MAPS, ENEMIES, GEAR } from './data.js?v=0.99.27';
+import { loadout, kstDay } from './econ.js?v=0.99.27';
+import { rng } from './plan.js?v=0.99.27';
+import { threatOf, weekOf, dayNum } from './threat.js?v=0.99.27';
+import { forecast } from './data/weather.js?v=0.99.27';
 
 export const BOARD = { submit: null, fetch: null }; /* 나중에: 원어데이 서버 주간 순위 (oad_bm submitScore/board 같은 모양 — { week, score, medal }) */
 

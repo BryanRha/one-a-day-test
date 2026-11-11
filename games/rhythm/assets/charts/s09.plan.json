@@ -1,0 +1,256 @@
+{
+ "tempo": {
+  "bpm": 150
+ },
+ "dens": {
+  "easy": 0.614,
+  "normal": 0.555,
+  "hard": 0.569
+ },
+ "mel": 0.5,
+ "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
+ "sections": [
+  {
+   "from": 0,
+   "to": 4,
+   "lvl": 2,
+   "_": "신스 리프"
+  },
+  {
+   "from": 4,
+   "to": 8,
+   "lvl": 3,
+   "mel": 0.9,
+   "normal": {
+    "chordCols": [
+     0
+    ],
+    "pick": [
+     [
+      "mel",
+      0.25
+     ],
+     [
+      "mi",
+      0.3
+     ],
+     [
+      "hi",
+      0.3
+     ]
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     8
+    ]
+   },
+   "_": "벌스 · 아침이 오면"
+  },
+  {
+   "from": 8,
+   "to": 12,
+   "lvl": 2,
+   "normal": {
+    "pick": [
+     [
+      "lo",
+      0.25
+     ],
+     [
+      "mi",
+      0.3
+     ]
+    ]
+   },
+   "hard": {
+    "pick": [
+     [
+      "lo",
+      0.2
+     ],
+     [
+      "mi",
+      0.25
+     ]
+    ],
+    "perBar": [
+     6,
+     9,
+     12
+    ]
+   },
+   "_": "벌스 2"
+  },
+  {
+   "from": 12,
+   "to": 16,
+   "lvl": 2,
+   "normal": {
+    "pick": [
+     [
+      "hi",
+      0.25
+     ],
+     [
+      "mi",
+      0.25
+     ]
+    ],
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "pick": [
+     [
+      "hi",
+      0.2
+     ],
+     [
+      "mi",
+      0.2
+     ]
+    ]
+   },
+   "_": "프리코러스"
+  },
+  {
+   "from": 16,
+   "to": 23,
+   "lvl": 3,
+   "mel": 0.9,
+   "normal": {
+    "chordCols": [
+     0
+    ],
+    "pick": [
+     [
+      "mel",
+      0.25
+     ],
+     [
+      "mi",
+      0.3
+     ],
+     [
+      "hi",
+      0.3
+     ]
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     8
+    ]
+   },
+   "_": "One track, one day"
+  },
+  {
+   "from": 23,
+   "to": 25,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     8
+    ]
+   },
+   "_": "리프"
+  },
+  {
+   "from": 25,
+   "to": 26,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "멈칫"
+  },
+  {
+   "from": 26,
+   "to": 33,
+   "lvl": 3,
+   "mel": 0.9,
+   "normal": {
+    "chordCols": [
+     0
+    ],
+    "pick": [
+     [
+      "mel",
+      0.25
+     ],
+     [
+      "mi",
+      0.3
+     ],
+     [
+      "hi",
+      0.3
+     ]
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     8
+    ]
+   },
+   "_": "마지막 후렴"
+  },
+  {
+   "from": 33,
+   "to": 34,
+   "lvl": 3,
+   "all": {
+    "chordCols": [
+     0
+    ]
+   },
+   "_": "끝"
+  }
+ ],
+ "edit": {
+  "easy": {
+   "add": []
+  },
+  "normal": {
+   "add": []
+  },
+  "hard": {
+   "add": []
+  }
+ },
+ "lastBeat": 136
+}
