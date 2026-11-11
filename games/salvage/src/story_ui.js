@@ -1,19 +1,19 @@
 // 이야기 화면 (DOM) — 대화(말풍선 · 선택지 · 상반신) · 컷신 · 이름 · 열쇠 기억 맡기기 · 기억 도감 · 설정/기록실 · 은신처 창 여섯 + 세 등불 · 결과 화면 이야기 칸
 //  흐름: 은신처에 들어올 때마다 onHideout() — 튜토리얼 장면 → 녹음기 → 끝낸 걸음 장면 → 오늘의 장면(하루 한 걸음) → 하루 끝 인사
 //  대사 글은 talk/*.js 를 필요할 때 받음 (첫 진입 용량에 안 들어감) · 소리는 sfx 이름만 부름(audio.js 는 오디오 세션 몫 — 없는 이름이면 조용히 넘어감)
-import { S, save, today } from './save.js?v=0.99.29';
-import * as ST from './story.js?v=0.99.29';
-import * as B from './board.js?v=0.99.29';
-import { frac } from './chips.js?v=0.99.29'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.29';
-import { COS } from './look.js?v=0.99.29';
-import { A } from './assets.js?v=0.99.29';
-import { sfx, unlock, setScore } from './audio.js?v=0.99.29'; /* M5-A setScore: 엔딩 · 크레딧 배경음 */
-import { shakeLabel, cycleShake } from './fx.js?v=0.99.29'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
-import { StoryRaid } from './story_raid.js?v=0.99.29';
-import { NpcHome } from './npc_home.js?v=0.99.29';
-import { ART } from './talk/art.js?v=0.99.29';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
-import * as A11Y from './a11y.js?v=0.99.29'; /* M6-C 접근성 설정 줄 */
+import { S, save, today } from './save.js?v=0.99.30';
+import * as ST from './story.js?v=0.99.30';
+import * as B from './board.js?v=0.99.30';
+import { frac } from './chips.js?v=0.99.30'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import { ITEMS, QUESTS, MAPS, FACILITIES, MATS } from './data.js?v=0.99.30';
+import { COS } from './look.js?v=0.99.30';
+import { A } from './assets.js?v=0.99.30';
+import { sfx, unlock, setScore } from './audio.js?v=0.99.30'; /* M5-A setScore: 엔딩 · 크레딧 배경음 */
+import { shakeLabel, cycleShake } from './fx.js?v=0.99.30'; /* 설정 '화면 흔들림' (v0.6.1 손맛 · 검수 M3 Top 5) */
+import { StoryRaid } from './story_raid.js?v=0.99.30';
+import { NpcHome } from './npc_home.js?v=0.99.30';
+import { ART } from './talk/art.js?v=0.99.30';   /* 있는 그림 목록 (tools/artlist.mjs 가 만듦 — 없는 그림은 안 받음 → 404 없음) */
+import * as A11Y from './a11y.js?v=0.99.30'; /* M6-C 접근성 설정 줄 */
 
 const Q = new URLSearchParams(location.search);
 /* M5-A 6장 · 엔딩 화면 모양 (story_m5a.css — 공용 style.css 와 따로) */
@@ -25,7 +25,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 /* ───── 대사 파일 나눠 받기 ───── */
-const FILES = { t0: () => import('./talk/t0.js?v=0.99.29'), t1: () => import('./talk/t1.js?v=0.99.29'), t2: () => import('./talk/t2.js?v=0.99.29'), t3: () => import('./talk/t3.js?v=0.99.29'), t4: () => import('./talk/t4.js?v=0.99.29'), t5: () => import('./talk/t5.js?v=0.99.29'), t6: () => import('./talk/t6.js?v=0.99.29'), common: () => import('./talk/common.js?v=0.99.29'), memo: () => import('./talk/memo.js?v=0.99.29') };
+const FILES = { t0: () => import('./talk/t0.js?v=0.99.30'), t1: () => import('./talk/t1.js?v=0.99.30'), t2: () => import('./talk/t2.js?v=0.99.30'), t3: () => import('./talk/t3.js?v=0.99.30'), t4: () => import('./talk/t4.js?v=0.99.30'), t5: () => import('./talk/t5.js?v=0.99.30'), t6: () => import('./talk/t6.js?v=0.99.30'), common: () => import('./talk/common.js?v=0.99.30'), memo: () => import('./talk/memo.js?v=0.99.30') };
 const cache = {}, got = {};
 export function talk(k) { return (cache[k] ||= FILES[k]().then(m => (got[k] = m))); }
 export const T = got;
@@ -168,7 +168,7 @@ class Player {
     if (s.fx === 'quest') { if (!R) this.story.wantTab = 'quest'; return; }
     if (s.fx === 'windows') { if (this.skipping) return; document.querySelector('.post')?.classList.add('hl'); return; }
     if (s.fx === 'ending') { this.skipping = false; if (R) { await this.story.playEnding(st.ending || ST.endingChoices(S)[0], this); return; } await this.story.endingPick(this); return; } /* M5-A 엔딩 고르기 → 엔딩 → 크레딧 */
-    if (s.fx === 'deep') { if (this.skipping || R) return; const ok = await import('./abyss.js?v=0.99.29').then(m => { m.markEnding?.(S, st.ending); save(); return true; }).catch(() => false); /* M5-B 깊은 물 훅 */
+    if (s.fx === 'deep') { if (this.skipping || R) return; const ok = await import('./abyss.js?v=0.99.30').then(m => { m.markEnding?.(S, st.ending); save(); return true; }).catch(() => false); /* M5-B 깊은 물 훅 */
       if (ok) await this.showCard(`<small class="kick">엔딩 뒤 도전</small><b>깊은 물이 열렸어요</b><p>대수문 안쪽 · 출격 준비에서 켜고 끌 수 있어요</p>`, 0, true); return; }
   }
   /* 가운데 카드 (ms 뒤 저절로 · keep 이면 눌러야 닫힘) */
@@ -330,7 +330,7 @@ export class Story {
   /* 고른 길 기록 (처음이면 ended · 본 길 모음 · 깊은 물 훅) — 기록실 '마지막 선택 다시' 도 여기 */
   chooseEnding(k) {
     const st = S.story; ST.setEnding(S, k, today()); for (const x of Object.keys(ST.ENDINGS)) delete st.flags['end_' + x]; st.flags['end_' + k] = 1; this.lampFlash = k; save();
-    import('./abyss.js?v=0.99.29').then(m => { m.markEnding?.(S, k); save(); }).catch(() => {}); /* M5-B 깊은 물 (없으면 조용히 — abyss.endingSeen 이 S.story.ending 을 봄) */
+    import('./abyss.js?v=0.99.30').then(m => { m.markEnding?.(S, k); save(); }).catch(() => {}); /* M5-B 깊은 물 (없으면 조용히 — abyss.endingSeen 이 S.story.ending 을 봄) */
   }
   async playEnding(k, P) {
     const T6 = await talk('t6'); try { setScore?.('ending'); } catch { /* */ }

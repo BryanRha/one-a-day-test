@@ -2,8 +2,8 @@
 //  그리기 횟수: 바닥/벽 그림 1 + 빛 웅덩이 1 + 지도 밖 물 1 + 소품·랜드마크(정점 색 재질 2개 — 구역별로 합침) → 지도당 +5~8
 //  그림 조각은 코드로 그림(내려받기 0) · 한 번 만들어 계속 씀
 import * as THREE from 'three';
-import { dress } from './dress.js?v=0.99.29';
-import { prop, A } from './assets.js?v=0.99.29';
+import { dress } from './dress.js?v=0.99.30';
+import { prop, A } from './assets.js?v=0.99.30';
 
 /* ───── 아틀라스: 1024² · 128px 칸 8×8 (표지판은 가로로 여러 칸) ───── */
 const S = 128, N = 8;

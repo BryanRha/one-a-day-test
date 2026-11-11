@@ -1,10 +1,10 @@
 // 판 상태 5 · 맵 장비 화면 조각 (M4-B) — 출격 준비(예보 + 권장 장비 고르기) · 은신처 장비 탭(맵 장비 3 제작)
 //  ui.js · ui_grow.js 는 한 줄씩만 부름 (html → 끼우기 · bind → 누르기)
-import { S, save } from './save.js?v=0.99.29';
-import * as E from './econ.js?v=0.99.29';
-import { MAP_GEAR, MAP_GEAR_KEYS, MATS, ITEMS } from './data.js?v=0.99.29';
-import { WEATHER, WX_MAP, WX_OF, forecast } from './data/weather.js?v=0.99.29';
-import { sfx } from './audio.js?v=0.99.29';
+import { S, save } from './save.js?v=0.99.30';
+import * as E from './econ.js?v=0.99.30';
+import { MAP_GEAR, MAP_GEAR_KEYS, MATS, ITEMS } from './data.js?v=0.99.30';
+import { WEATHER, WX_MAP, WX_OF, forecast } from './data/weather.js?v=0.99.30';
+import { sfx } from './audio.js?v=0.99.30';
 
 const chips = cost => Object.entries(cost).map(([k, n]) => `<span class="chip">${k === 'shells' ? '🐚' : (MATS[k]?.name || ITEMS[k]?.name || k)} ${n}</span>`).join(' ');
 const wantFor = wx => MAP_GEAR_KEYS.find(k => MAP_GEAR[k].wx.includes(wx)) || null;

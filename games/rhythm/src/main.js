@@ -2,13 +2,13 @@
 //   오늘의 방송은 그날 하루 무제한 무료 · 지난 방송은 보상형 광고(하루 3회) 또는 골드 · 소장이면 무료 (ONAIR_PLAN 6장 · 7-4)
 //   방송 목록: 지금까지 열린 화(오늘까지)의 곡을 다시 고를 수 있음 · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.29';
-import { Play } from './play.js?v=0.99.29';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, josa, joinStage } from './data.js?v=0.99.29';
-import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, PROD } from './save.js?v=0.99.29';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.29';
-import { bm } from './oad_bm.js?v=0.99.29';
-import { THEMES } from './themes.js?v=0.99.29';
+import { A } from './audio.js?v=0.99.30';
+import { Play } from './play.js?v=0.99.30';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, josa, joinStage } from './data.js?v=0.99.30';
+import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, PROD } from './save.js?v=0.99.30';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.30';
+import { bm } from './oad_bm.js?v=0.99.30';
+import { THEMES } from './themes.js?v=0.99.30';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
@@ -272,10 +272,12 @@ function renderResult() {
     <div class="score"><b class="tnum" id="r_sc">0</b><span>정확도 ${(r.acc * 100).toFixed(2)}%</span></div>
     <div class="grid"><div class="p"><em>PERFECT</em><b>${r.count.perfect}</b></div><div class="g"><em>GREAT</em><b>${r.count.great}</b></div><div class="d"><em>GOOD</em><b>${r.count.good}</b></div><div class="m"><em>MISS</em><b>${r.count.miss}</b></div></div>
     <div class="line2"><span>최고 콤보<b>${r.maxCombo}</b></span><span>FAST<b>${r.fast}</b> · SLOW<b>${r.slow}</b></span></div>
+    <div class="low">
     <div class="say"><div class="av" style="background-image:url(${dv.face})"></div><div class="bub"><i>${dv.en}</i>${esc(praise)}</div></div>
-    <div class="best">${b ? `이 난이도 최고 <b>${b.score.toLocaleString('en-US')}</b> · ${b.rank}` : ''}${syncHint(r)}</div>
+    ${b ? `<div class="best">이 난이도 최고 <b>${b.score.toLocaleString('en-US')}</b> · ${b.rank}</div>` : ''}${syncHint(r)}
     <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}</div>
     <div class="subs"><span>${GAME.studio} 구독자</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>
+    </div>
     <div class="btns"><button class="sec" data-n="again">한 번 더<small>${retryLabel()}</small></button><button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button></div>`;
   /* 점수 올라가는 연출 */
   const el = $('#r_sc'), t0 = performance.now();
@@ -290,7 +292,7 @@ function renderResult() {
 /* S 이상: 등급 주변으로 퍼지는 금빛 알갱이 (CSS 만) */
 function sparks() { let h = ''; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + Math.random() * 0.3, r = 70 + Math.random() * 60; h += `<i class="sp" style="left:50%;top:50%;--dx:${(Math.cos(a) * r).toFixed(0)}px;--dy:${(Math.sin(a) * r * 0.8).toFixed(0)}px;animation-delay:${(0.75 + Math.random() * 0.4).toFixed(2)}s"></i>`; } return h; }
 /* 판정이 한쪽으로 쏠리면 싱크 맞추기 권함 (부드럽게) */
-function syncHint(r) { const n = r.fast + r.slow; if (n < 12) return ''; const k = (r.slow - r.fast) / n; return Math.abs(k) > 0.55 ? `<br>${k > 0 ? '조금 늦게' : '조금 빠르게'} 누르는 편이에요 · 싱크 맞추기를 해 보세요` : ''; }
+function syncHint(r) { const n = r.fast + r.slow; if (n < 12) return ''; const k = (r.slow - r.fast) / n; return Math.abs(k) > 0.55 ? `<div class="synch">${k > 0 ? '조금 늦게' : '조금 빠르게'} 누르는 편이에요 · 싱크 맞추기를 해 보세요</div>` : ''; }
 $('#result').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (!b) return; if (b.dataset.n === 'story') openStory(); if (b.dataset.n === 'again') { show('today', 'root'); $('#t_start').click(); } });
 
 /* ---------- ④ 개인 채널 (방송 후 DM · 오늘의 조각) — id 는 v0.3 그대로 #story ---------- */
@@ -482,24 +484,31 @@ async function openCalib() {
   await A.unlock(); A.stopPreview();
   $('#calib').innerHTML = `
     <div class="top"><button class="ic" data-c="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">싱크 맞추기</div><span style="width:36px"></span></div>
-    <div class="ttl"><b>소리에 맞춰 두드려 주세요</b><span>‘톡’ 소리가 들리는 순간 화면 아무 곳이나 8번.<br>이어폰을 쓰면 이어폰을 낀 채로 맞춰 주세요.</span></div>
+    <div class="ttl"><b>소리에 맞춰 두드려 주세요</b><span>‘톡’ 소리가 들리는 순간 화면 아무 곳이나 8번.<br>이어폰을 쓰면 이어폰을 낀 채로 맞춰 주세요.<br>한 번만 맞추면 모든 곡에 적용돼요.</span></div>
     <div class="pad" data-c="tap"></div>
     <div class="ring"><i></i><b>0</b><small>/ 8</small></div>
+    <div class="cdone"><em>SYNC</em><b id="c_dv"></b><span id="c_ds"></span><button data-c="again">다시 재기</button></div>
     <div class="dots">${'<i></i>'.repeat(8)}</div>
     <div class="val">지금 싱크 <b id="c_v">${S.offset > 0 ? '+' : ''}${S.offset}</b>ms</div>
     <div class="adj"><button data-c="-">−5</button><button data-c="reset">0</button><button data-c="+">+5</button></div>
     <div class="btns"><button class="ice" data-c="done" style="flex:1">완료</button></div>`;
   show('calib');
-  /* 120 BPM 메트로놈 — 오디오 시계로 미리 예약 */
+  calStart();
+}
+/* 120 BPM 메트로놈 — 오디오 시계로 미리 예약 (멈출 때 예약한 소리도 취소) */
+function calStart() {
   const ac = A.ac, spb = 0.5;
-  cal = { t0: ac.currentTime + 0.6, k: 0, taps: [], raf: 0, iv: 0, lastBeat: -1 };
-  const sched = () => { while (cal && cal.t0 + cal.k * spb < ac.currentTime + 1.2) { A.fxPlay(cal.k % 4 ? 'tock' : 'tick', 0.9, cal.t0 + cal.k * spb); cal.k++; } };
+  if (cal) { clearInterval(cal.iv); cancelAnimationFrame(cal.raf); clearTimeout(cal.closeT); for (const x of cal.srcs) { try { x.stop(); } catch { /* */ } } }
+  cal = { t0: ac.currentTime + 0.6, k: 0, taps: [], raf: 0, iv: 0, lastBeat: -1, srcs: [], done: false, closeT: 0, id: (calStart.n = (calStart.n || 0) + 1) };
+  $('#calib').classList.remove('done');
+  const ring = $('#calib .ring'); ring.querySelector('b').textContent = 0; $('#calib .dots').querySelectorAll('i').forEach(x => x.classList.remove('on'));
+  const sched = () => { while (cal && !cal.done && cal.t0 + cal.k * spb < ac.currentTime + 1.2) { const x = A.fxPlay(cal.k % 4 ? 'tock' : 'tick', 0.9, cal.t0 + cal.k * spb); if (x) cal.srcs.push(x); cal.k++; } if (cal.srcs.length > 16) cal.srcs.splice(0, cal.srcs.length - 16); };
   sched(); cal.iv = setInterval(sched, 200);
-  const frame = () => { if (!cal) return; cal.raf = requestAnimationFrame(frame); A.sample(); const b = Math.floor((A.heard() - cal.t0) / spb); if (b >= 0 && b !== cal.lastBeat) { cal.lastBeat = b; const i = $('#calib .ring i'); if (i) { i.classList.remove('go'); void i.offsetWidth; i.classList.add('go'); } } };
+  const frame = () => { if (!cal || cal.done) return; cal.raf = requestAnimationFrame(frame); A.sample(); const b = Math.floor((A.heard() - cal.t0) / spb); if (b >= 0 && b !== cal.lastBeat) { cal.lastBeat = b; const i = $('#calib .ring i'); if (i) { i.classList.remove('go'); void i.offsetWidth; i.classList.add('go'); } } };
   frame();
 }
 function calTap(e) {
-  if (!cal) return;
+  if (!cal || cal.done) return;
   const h = A.heard(Play.evMs(e)), k = Math.round((h - cal.t0) / 0.5), d = h - (cal.t0 + k * 0.5);
   if (k < 1 || Math.abs(d) > 0.25) return;
   cal.taps.push(d * 1000);
@@ -509,17 +518,26 @@ function calTap(e) {
     const t = cal.taps.slice(-8).sort((a, b) => a - b), med = (t[3] + t[4]) / 2;
     S.offset = Math.max(-300, Math.min(300, Math.round(med / 5) * 5)); S.calibrated = true; save();
     $('#c_v').textContent = (S.offset > 0 ? '+' : '') + S.offset;
-    toast(`싱크를 ${S.offset > 0 ? '+' : ''}${S.offset}ms 로 맞췄어요`);
-    cal.taps = [];
+    calDone();
   }
 }
-function closeCalib() { if (!cal) return; clearInterval(cal.iv); cancelAnimationFrame(cal.raf); cal = null; }
+/* 8번 채움 (v0.5.2 · 대표 폰: 끝난 줄 모름) → 메트로놈 멈춤 · 링 자리에 「싱크를 ○ms 로 맞췄어요」 크게 · 1.2초 뒤 이전 화면으로(뒤로와 같은 길)
+   그 사이 「다시 재기」면 닫지 않고 다시 잼 · 타이머는 그 측정(id)이 아직 이 화면에 있을 때만 닫음 (화면을 떠난 뒤 엉뚱한 화면을 닫지 않게) */
+const CAL_CLOSE_MS = 1200;
+function calDone() {
+  cal.done = true; clearInterval(cal.iv); cancelAnimationFrame(cal.raf); for (const x of cal.srcs) { try { x.stop(); } catch { /* */ } }
+  $('#c_dv').textContent = `${S.offset > 0 ? '+' : S.offset < 0 ? '' : '±'}${S.offset}ms`; $('#c_ds').textContent = `싱크를 ${S.offset > 0 ? '+' : ''}${S.offset}ms 로 맞췄어요 · 곧 이전 화면으로`;
+  $('#calib').classList.add('done'); A.fxPlay('chime', S.sfx * 0.5);
+  const id = cal.id; cal.closeT = setTimeout(() => { if (cal && cal.id === id && cal.done && cur() === 'calib') runBack(); }, CAL_CLOSE_MS);
+}
+function closeCalib() { if (!cal) return; clearInterval(cal.iv); cancelAnimationFrame(cal.raf); clearTimeout(cal.closeT); for (const x of cal.srcs) { try { x.stop(); } catch { /* */ } } cal = null; $('#calib').classList.remove('done'); }
 $('#calib').addEventListener('pointerdown', e => { if (e.target.closest('[data-c="tap"]') || e.target.closest('.ring')) calTap(e); });
 $('#calib').addEventListener('click', e => {
   const b = e.target.closest('[data-c]'); if (!b || b.dataset.c === 'tap') return;
   const c = b.dataset.c;
   if (c === '-' || c === '+') S.offset = Math.max(-300, Math.min(300, S.offset + (c === '+' ? 5 : -5)));
   if (c === 'reset') S.offset = 0;
+  if (c === 'again') { calStart(); return; }
   if (c === 'back' || c === 'done') { save(); return runBack(); }
   save(); $('#c_v').textContent = (S.offset > 0 ? '+' : '') + S.offset;
 });
@@ -561,4 +579,6 @@ document.addEventListener('pointerdown', async () => { await A.unlock(); A.setVo
 })();
 
 /* 시험용 손잡이 */
-window.__ot = { S, Play, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, get entry() { return entry; }, openCasts, joined, go, openStory, openBook, openStages, setDay, onResult, dayKey };
+/* 결과 화면 줄 겹침 시험용 (tools/layout_check.mjs): r · 신기록 여부를 넣어 결과를 그림 */
+function testResult(r, nb = false) { last = { r, nb, firstClear: false, newPage: false, diff: S.diff }; renderResult(); show('result', 'root'); }
+window.__ot = { S, Play, testResult, openCalib, CAL_CLOSE_MS, get cal() { return cal; }, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, get entry() { return entry; }, openCasts, joined, go, openStory, openBook, openStages, setDay, onResult, dayKey };

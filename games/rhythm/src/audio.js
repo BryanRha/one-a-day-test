@@ -2,7 +2,7 @@
 //   시계 원칙: 노트 위치와 판정은 모두 '스피커에서 지금 나오는 소리의 오디오 시계 시각'(heard) 기준
 //   heard = getOutputTimestamp().contextTime (출력 지연 포함) 을 performance.now() 로 부드럽게 이음
 //   지원 안 하는 브라우저는 currentTime − outputLatency(baseLatency)
-import { makeSounds } from './sfx.js?v=0.99.29';
+import { makeSounds } from './sfx.js?v=0.99.30';
 
 export const A = {
   ac: null, master: null, music: null, sfx: null, bufs: {}, src: null, t0: 0, off: null, vol: { music: 0.9, sfx: 0.55 },
@@ -99,6 +99,6 @@ export const A = {
   loadPerc() { const S = makeSounds(this.ac.sampleRate); for (const [k, x] of Object.entries(S)) { const b = this.ac.createBuffer(1, x.length, this.ac.sampleRate); b.getChannelData(0).set(x); this.fx[k] = b; } },
   fxPlay(name, vol = 1, when = 0) {
     if (!this.ac || !this.fx || this.ac.state !== 'running') return;
-    if (!this.fx[name]) return; const s = this.ac.createBufferSource(), g = this.ac.createGain(); s.buffer = this.fx[name]; g.gain.value = vol; s.connect(g); g.connect(this.sfx); s.start(Math.max(when || 0, this.ac.currentTime));
+    if (!this.fx[name]) return; const s = this.ac.createBufferSource(), g = this.ac.createGain(); s.buffer = this.fx[name]; g.gain.value = vol; s.connect(g); g.connect(this.sfx); s.start(Math.max(when || 0, this.ac.currentTime)); return s;   /* 예약한 소리를 취소할 수 있게 (연습 다시 내리기 때 READY · GO) */
   },
 };

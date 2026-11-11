@@ -9,6 +9,8 @@ export const TAIL_EARLY = 0.16;
 export const MISS_GRACE = 0.08;
 /* 페이더: 끝 시각 + 이만큼 전까지 목표 레인에 닿으면 꼬리 PERFECT (가는 길의 시점은 따지지 않음 · 롱노트 꼬리처럼 너그럽게) */
 export const FADER_LATE = 0.15;                                 /* 롱노트 끝: 이만큼 일찍 떼도 끝까지 누른 걸로 */
+/* 연습 페이더(v0.5.2 · 재검수 B-1): 머리를 보통 창(±0.15초)이 아니라 몸통이 지나가는 동안(끝 이만큼 전까지) 언제 눌러도 잡힘 — 연습은 타이밍을 묻지 않음 */
+export const PRACTICE_TAIL = 0.6;
 export const ACC = { perfect: 1, great: 0.8, good: 0.5, miss: 0 };
 export const JUDGES = ['perfect', 'great', 'good', 'miss'];
 
@@ -99,7 +101,7 @@ export class Session {
       const n = this.notes[i];
       if (n.t - t > WIN.good) break;
       if (n.l !== lane || n.head) continue;
-      if (Math.abs(t - n.t) <= WIN.good) { best = n; break; }
+      if (Math.abs(t - n.t) <= WIN.good || (n.practice && t > n.t && t <= n.end - PRACTICE_TAIL)) { best = n; break; }
     }
     if (!best) return null;
     const d = t - best.t, a = Math.abs(d);
@@ -114,6 +116,7 @@ export class Session {
     const n = this.held[lane]; if (!n) return null;
     this.held[lane] = null; n.holding = false;
     if (n.sp === 'fader' && !n.reached) { n.tail = 'miss'; return this.judge('miss', n, lane, 0, true); }   /* 목표 레인에 못 닿고 뗌 */
+    if (n.practice) { n.tail = 'perfect'; return this.judge('perfect', n, lane, 0, true); }   /* 연습: 목표에 닿았으면 언제 떼도 성공 */
     if (t >= n.end - TAIL_EARLY) { n.tail = 'perfect'; return this.judge('perfect', n, lane, 0, true); }
     const part = (t - n.t) / Math.max(0.01, n.end - n.t);
     n.tail = part >= 0.5 ? 'good' : 'miss';
@@ -138,7 +141,7 @@ export class Session {
     for (let i = this.cursor; i < this.notes.length; i++) {
       const n = this.notes[i];
       if (n.t > t) break;
-      if (!n.head && t - n.t > WIN.good) {
+      if (!n.head && (n.practice ? t > n.end - PRACTICE_TAIL : t - n.t > WIN.good)) {
         n.head = 'miss'; out.push(this.judge('miss', n, n.l, 0));
         if (n.kind === 'long') { n.tail = 'miss'; out.push(this.judge('miss', n, n.l, 0, true)); }
       }
@@ -161,7 +164,7 @@ export class Session {
     for (let i = this.cursor; i < this.notes.length; i++) {
       const n = this.notes[i];
       if (n.t > t) break;
-      if (!n.head && t - n.t > WIN.good + MISS_GRACE) {
+      if (!n.head && (n.practice ? t > n.end - PRACTICE_TAIL + MISS_GRACE : t - n.t > WIN.good + MISS_GRACE)) {
         n.head = 'miss'; out.push(this.judge('miss', n, n.l, 0));
         if (n.kind === 'long') { n.tail = 'miss'; out.push(this.judge('miss', n, n.l, 0, true)); }
       }

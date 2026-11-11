@@ -1,15 +1,15 @@
 // 시작: 렌더러 · 직교 카메라 · 저장 불러오기 · 쉬는 동안 번 돈 · 루프
 import * as THREE from 'three';
-import { Game } from './game.js?v=0.99.29';
-import { UI, IN } from './ui.js?v=0.99.29';
-import './ui_menu.js?v=0.99.29';
-import './desk.js?v=0.99.29';
-import './map.js?v=0.99.29';
-import { S, loadSave, save, resetAll } from './state.js?v=0.99.29';
-import { BRANCHES } from './data.js?v=0.99.29';
-import { setAudio, preload } from './audio.js?v=0.99.29';
-import { installBack, track, flushDay } from './oad.js?v=0.99.29';
-import { bm } from './oad_bm.js?v=0.99.29';
+import { Game } from './game.js?v=0.99.30';
+import { UI, IN } from './ui.js?v=0.99.30';
+import './ui_menu.js?v=0.99.30';
+import './desk.js?v=0.99.30';
+import './map.js?v=0.99.30';
+import { S, loadSave, save, resetAll } from './state.js?v=0.99.30';
+import { BRANCHES } from './data.js?v=0.99.30';
+import { setAudio, preload } from './audio.js?v=0.99.30';
+import { installBack, track, flushDay } from './oad.js?v=0.99.30';
+import { bm } from './oad_bm.js?v=0.99.30';
 
 const app = {}; window.__app = app; window.__IN = IN; window.__S = () => S;   /* 시험 도구: 같은 입력 · 같은 저장 객체 */
 const canvas = document.getElementById('view');
@@ -37,7 +37,7 @@ flushDay();
 const sess = {}; setInterval(() => { if (document.visibilityState === 'hidden' || app.paused) return; S.time[S.bi] = (S.time[S.bi] || 0) + 1; sess[S.bi] = (sess[S.bi] || 0) + 1; }, 1000);
 addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Object.keys(sess).length) { track('bg_time', { ...Object.fromEntries(Object.entries(sess).map(([k, v]) => ['b' + k, v])) }); for (const k of Object.keys(sess)) delete sess[k]; } });
 bm.onPause = on => { app.paused = !!on; };
-if (q.get('bot')) import('./bot.js?v=0.99.29').then(m => m.startBot(app, q));
+if (q.get('bot')) import('./bot.js?v=0.99.30').then(m => m.startBot(app, q));
 /* 한 프레임의 오류가 화면 전체를 멈추지 않게: 기록하고 그리기는 계속 */
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 */ } };

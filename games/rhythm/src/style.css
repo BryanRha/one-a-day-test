@@ -674,3 +674,21 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #casts .cc.today{border-color:rgba(242,212,154,.45)}
 #casts .cc.today i{box-shadow:0 0 0 2px rgba(242,212,154,.7)}
 #casts .cc.next{border-color:rgba(159,240,255,.3)}
+
+/* ---------- v0.5.2 결과 화면 아래 줄: 흐름 배치 (대표 폰 412폭 겹침) ----------
+   원인: 캐스트 말 · 최고 기록 · 싱크 안내 · 슈퍼챗 칩 · 수습 줄 · 구독자를 각각 고정 top 으로 놓음 → 싱크 안내(줄 하나 더)나 말풍선 두 줄이면 아래 줄 위에 겹침
+   → 한 세로 흐름(.low) 안에서 위에서부터 쌓음 · 아래 끝은 단추 위 10px (최악 조합도 layout_check 가 잼) */
+#result .low{position:absolute;top:506px;left:16px;right:16px;bottom:90px;z-index:2;display:flex;flex-direction:column;align-items:stretch;gap:7px}
+#result .low>*{position:static;flex:none;left:auto;right:auto;top:auto}
+#result .low .say{margin-bottom:5px}
+#result .low .best,#result .low .synch{text-align:center;font-size:11.5px;line-height:1.45;color:var(--sub)}
+#result .low .extra{margin:0}
+#result .low .subs{margin-top:2px}
+/* v0.5.2 싱크 맞추기: 8번 채우면 링 자리에 결과를 크게 → 1.2초 뒤 이전 화면 (「다시 재기」로 다시) */
+#calib .cdone{position:absolute;left:30px;right:30px;top:330px;height:200px;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-radius:24px;background:rgba(10,12,30,.92);border:1px solid rgba(159,240,255,.45);box-shadow:0 0 40px rgba(159,240,255,.25);opacity:0;pointer-events:none;transform:scale(.94);transition:opacity .25s,transform .25s}
+#calib.done .cdone{opacity:1;pointer-events:auto;transform:none}
+#calib.done .ring,#calib.done .dots{opacity:0}
+#calib .cdone em{font:700 11px 'Rajdhani';font-style:normal;letter-spacing:3px;color:var(--ice)}
+#calib .cdone b{font:600 52px/1.1 'Rajdhani';color:#fff;margin-top:4px}
+#calib .cdone span{font-size:13px;color:var(--sub);margin-top:4px}
+#calib .cdone button{margin-top:14px;height:44px;padding:0 20px;border-radius:14px;font-size:14px;font-weight:700;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}

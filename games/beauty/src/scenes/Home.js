@@ -1,16 +1,16 @@
 // 매장 (원작의 식당 꾸미기): 낡은 가게 → 할 일(코인)로 이야기 · 수리 · 디자인 3종 선택(언제든 무료 변경)
-import { W, H } from '../config.js?v=0.99.29';
-import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip } from '../ui.js?v=0.99.29';
-import { load as loadSave } from '../save.js?v=0.99.29';
-import { audio } from '../audio.js?v=0.99.29';
-import { load, save } from '../save.js?v=0.99.29';
-import { hud } from '../hud.js?v=0.99.29';
-import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.99.29';
-import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.99.29';
-import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.99.29';
-import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.99.29';
-import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.99.29';
-import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.99.29';
+import { W, H } from '../config.js?v=0.99.30';
+import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip } from '../ui.js?v=0.99.30';
+import { load as loadSave } from '../save.js?v=0.99.30';
+import { audio } from '../audio.js?v=0.99.30';
+import { load, save } from '../save.js?v=0.99.30';
+import { hud } from '../hud.js?v=0.99.30';
+import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.99.30';
+import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.99.30';
+import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.99.30';
+import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.99.30';
+import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.99.30';
+import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.99.30';
 
 const OWNER_POS = [444, 1470, 150];
 // 받침 그림 (한 번만 만듦): 금 받침 · 크림 대리석 기둥(세로 홈) · 금 머리 · 진홍 벨벳

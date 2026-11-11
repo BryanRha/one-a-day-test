@@ -1,15 +1,15 @@
 // 홈: 세계 지도(출정) · 강화 · 영웅 · 기록 — 아래 탭 4개, 시작까지 탭 1번
-import { W, H, C, FONT } from '../config.js?v=0.99.29';
-import { T, CHAPTERS, STAGE_NAMES, UP_NAMES, HERO_UP_NAMES, HERO_NAMES, ITEM_NAMES, ITEM_ICONS, UNIT_ICONS, itemDesc, SPECIAL_NAMES } from '../core/data.js?v=0.99.29';
-import * as M from '../core/meta.js?v=0.99.29';
-import { AWARDS, missions, claimMission, checkAwards, MISSION_REWARD, MISSION_BONUS } from '../core/awards.js?v=0.99.29';
-import { EST } from '../core/balance.js?v=0.99.29';
-import { text, panel, button, toast, icon, scrollList } from '../ui.js?v=0.99.29';
-import { audio } from '../audio.js?v=0.99.29';
-import { load, save, loadResume, saveResume, dayKey } from '../save.js?v=0.99.29';
-import { FRAME_ATLAS, queueHome, indexFrames } from './Boot.js?v=0.99.29';
-import { pushBack } from '../oad.js?v=0.99.29';
-import { oadOn, owned, bm, track } from '../bmflow.js?v=0.99.29';
+import { W, H, C, FONT } from '../config.js?v=0.99.30';
+import { T, CHAPTERS, STAGE_NAMES, UP_NAMES, HERO_UP_NAMES, HERO_NAMES, ITEM_NAMES, ITEM_ICONS, UNIT_ICONS, itemDesc, SPECIAL_NAMES } from '../core/data.js?v=0.99.30';
+import * as M from '../core/meta.js?v=0.99.30';
+import { AWARDS, missions, claimMission, checkAwards, MISSION_REWARD, MISSION_BONUS } from '../core/awards.js?v=0.99.30';
+import { EST } from '../core/balance.js?v=0.99.30';
+import { text, panel, button, toast, icon, scrollList } from '../ui.js?v=0.99.30';
+import { audio } from '../audio.js?v=0.99.30';
+import { load, save, loadResume, saveResume, dayKey } from '../save.js?v=0.99.30';
+import { FRAME_ATLAS, queueHome, indexFrames } from './Boot.js?v=0.99.30';
+import { pushBack } from '../oad.js?v=0.99.30';
+import { oadOn, owned, bm, track } from '../bmflow.js?v=0.99.30';
 
 const TOP = 150, TAB = 176;
 const CH_POS = [[0.28, 0.83], [0.70, 0.67], [0.25, 0.43], [0.74, 0.29], [0.28, 0.10]];

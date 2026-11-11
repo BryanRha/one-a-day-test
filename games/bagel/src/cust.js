@@ -2,12 +2,12 @@
 //   길은 정해진 고리 위 (space.js entryPath · seatPath · exitPath) — 길 찾기 · 비켜가기 · 갇힘 순간이동 없음
 //   창구 손님(픽업 걷기 · 드라이브 차)은 매장 밖 동쪽 길에서 따로 줄을 서요
 import * as THREE from 'three';
-import { queueSlot, entryPath, seatPath, exitPath, R } from './space.js?v=0.99.29';
-import { person, car, item } from './models.js?v=0.99.29';
-import { CUST_COLORS, MENU, MOOD, REGULARS, FAVOR, EVENTS, DECO } from './data.js?v=0.99.29';
-import { S, save, mission } from './state.js?v=0.99.29';
-import { sfx } from './audio.js?v=0.99.29';
-import { favLv } from './game.js?v=0.99.29';
+import { queueSlot, entryPath, seatPath, exitPath, R } from './space.js?v=0.99.30';
+import { person, car, item } from './models.js?v=0.99.30';
+import { CUST_COLORS, MENU, MOOD, REGULARS, FAVOR, EVENTS, DECO } from './data.js?v=0.99.30';
+import { S, save, mission } from './state.js?v=0.99.30';
+import { sfx } from './audio.js?v=0.99.30';
+import { favLv } from './game.js?v=0.99.30';
 
 const SPD = 230, TAKEOUT = 0.22;
 export class Cust {

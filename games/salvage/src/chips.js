@@ -1,9 +1,9 @@
 // 재료 · 수량 칩 공통 (v0.6.1 · 검수 M3 Top 2) — 모든 화면 '가진 / 필요' 한 가지
 //  · 모자라면 가진 수만 빨강(.hv.no) · 다 모이면 칩 끝에 ✓
 //  · 쓰는 곳: 시설 단계표 · 무기 제작 · 개조 · 탄약 · 장비 · 소모품 · 요리 · 부적(ui_grow.js) · 의뢰 · 인물 의뢰 · 오늘의 인양(ui.js · story_ui.js) · 상인 값(가진 조개 < 값)
-import { ITEMS, MATS } from './data.js?v=0.99.29';
-import { S } from './save.js?v=0.99.29';
-import * as E from './econ.js?v=0.99.29';
+import { ITEMS, MATS } from './data.js?v=0.99.30';
+import { S } from './save.js?v=0.99.30';
+import * as E from './econ.js?v=0.99.30';
 
 const n0 = n => Number(n).toLocaleString('ko-KR');
 /* 가진 / 필요 — lack=false 면 빨강 없이(처치 수 같은 진행) */

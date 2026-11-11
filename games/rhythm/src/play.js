@@ -1,11 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.29';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.29';
-import { makeRenderer, laneAt, laneU } from './render.js?v=0.99.29';
-import { makeFx } from './fx.js?v=0.99.29';
-import { Live } from './live.js?v=0.99.29';
+import { A } from './audio.js?v=0.99.30';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.30';
+import { makeRenderer, laneAt, laneU } from './render.js?v=0.99.30';
+import { makeFx } from './fx.js?v=0.99.30';
+import { Live } from './live.js?v=0.99.30';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -88,7 +88,7 @@ export const Play = {
     $('#p_guide').className = 'guide'; $('#p_sc').className = 'scb'; $('#p_prac').className = 'prac';
     A.fxPlay('whoosh', 0.5);
     /* READY · GO 소리: 곡 위치에 맞춰 오디오 시계로 예약 (화면 글자와 같은 순간) */
-    if (opt.hitsnd !== false) { A.fxPlay('ready', opt.sfx * 0.7, t0 + READY_AT); A.fxPlay('go', opt.sfx * 0.8, t0 + GO_AT); }
+    this.schedCues(t0); this.pracRetry = 0;
     this.bind();
     cancelAnimationFrame(this.raf); this.raf = requestAnimationFrame(this.frame);
   },
@@ -173,18 +173,35 @@ export const Play = {
     const first = o.firstSc && this.scGot === 1;
     if (now > this.scAt) { this.scAt = now + 4; this.cutin(first ? '어, 첫 슈퍼챗이에요! 고마워요!' : `${nick}님, 고마워요!`); }
   },
+  /* READY · GO 소리를 오디오 시계로 예약 (연습을 다시 내리면 취소하고 새 시각으로) */
+  schedCues(t0) {
+    for (const c of this.cueSrc || []) { try { c.stop(); } catch { /* */ } }
+    this.cueSrc = [];
+    if (this.opt.hitsnd !== false) this.cueSrc = [A.fxPlay('ready', this.opt.sfx * 0.7, t0 + READY_AT), A.fxPlay('go', this.opt.sfx * 0.8, t0 + GO_AT)].filter(Boolean);
+  },
+  /* 연습을 못 했으면 한 번만 다시 내림 (재검수 B-1): 곡은 아직 소리 없는 구간이라 시계만 연습 앞으로 되감음 → 노트가 다시 위에서 내려옴
+     두 번째도 못 하면 그대로 곡으로 (막힘 없음) */
+  pracAgain() {
+    const n = this.prac, s = this.sess, fall = 48 / this.st.spd;
+    n.head = n.tail = null; n.holding = false; n.reached = false; n.hitAt = 0; n._at = null; n._skip = false;
+    for (let l = 0; l < 4; l++) if (s.held[l] === n) s.held[l] = null;
+    s.cursor = 0; this.st.drawFrom = 0; this.st.slideU.fill(null); if (this.auto) this.auto.i = 0;
+    const from = Math.max(this.guideEnd + 0.1, n.t - fall - 0.5);
+    const t0 = A.play(this.opt.entry, from, 0.05); this.schedCues(t0);
+  },
   /* 연습 페이더 (판정 없음): 머리 = 누름 터짐 · 끝 = 닿았으면 마무리 터짐 + 「좋아요」 / 못 닿았으면 부드럽게 */
   practiceFx(e, now) {
     const F = this.fxs, o = this.opt;
     if (!e.tail) { if (e.j !== 'miss') { F.hit(e.lane, 'perfect', now); if (o.hitsnd !== false) A.hit('perfect', o.sfx); } return; }
     if (e.j === 'perfect') { F.tail(e.note.to, now); if (o.hitsnd !== false) A.hit('tail', o.sfx); this.pracSay('ok'); }
+    else if (!this.pracRetry) { this.pracRetry = 1; this.pracSay('retry'); this.pracAgain(); }
     else this.pracSay('again');
   },
   /* 연습 안내 글: 떨어질 때 · 잡았을 때 · 닿았을 때 · 끝 */
   pracSay(k) {
-    if (this.pracState === k || this.pracState === 'ok') return; this.pracState = k;
+    if (this.pracState === k || this.pracState === 'ok' || (this.pracState === 'retry' && k === 'fall' && Date.now() < this.pracRetryAt)) return; this.pracState = k; if (k === 'retry') this.pracRetryAt = Date.now() + 1300;
     const n = this.prac, dir = n && n.to > n.l ? '오른쪽' : '왼쪽';
-    const T = { fall: ['연습 · 점수 없음', `떨어지면 꾹 누르고 ${dir} 레인까지 밀어요`], hold: ['좋아요, 그대로', `${dir}으로 쭉 밀어요`], ok: ['좋아요!', '곡에서도 이렇게 밀면 돼요'], again: ['괜찮아요', '곡에서 몇 번 더 나와요 · 천천히 밀어 봐요'] }[k];
+    const T = { fall: ['연습 · 점수 없음', `떨어지면 꾹 누르고 ${dir} 레인까지 밀어요`], hold: ['좋아요, 그대로', `${dir}으로 쭉 밀어요`], ok: ['좋아요!', '곡에서도 이렇게 밀면 돼요'], wrong: ['반대쪽이에요', `${dir}으로 밀어요 ${n && n.to > n.l ? '→' : '←'}`], retry: ['괜찮아요', '한 번 더 내려와요 · 언제 잡아도 돼요'], again: ['괜찮아요', '곡에서 몇 번 더 나와요 · 천천히 밀어 봐요'] }[k];
     const el = $('#p_prac'); el.innerHTML = `<b>${T[0]}</b><span>${T[1]}</span>`; el.className = 'prac on ' + k;
     clearTimeout(this.pracT); if (k === 'ok' || k === 'again') this.pracT = setTimeout(() => { el.className = 'prac'; }, 1500);
   },
@@ -313,7 +330,10 @@ export const Play = {
     /* 첫 판 조작 안내: 제목 카드 뒤 ~ READY 전 */
     if (P.opt.guides && P.opt.guides.length) { const gs = p > -P.lead + GUIDE_AT && p < Math.min(P.guideEnd, READY_AT - 0.3) ? 'on' : ''; if (gs !== P.guideState) { P.guideState = gs; $('#p_guide').className = 'guide' + (gs ? ' on' : ''); } }
     /* 연습 페이더 안내 글 */
-    if (P.prac && !P.prac.tail) { if (P.prac.holding) P.pracSay('hold'); else if (!P.prac.head && p > P.prac.t - 48 / st.spd) P.pracSay('fall'); }
+    if (P.prac && !P.prac.tail) {
+      const n = P.prac, su = st.slideU[n.l], wrong = su != null && (n.to > n.l ? su < n.l + 0.15 : su > n.l + 0.85);   /* 출발 레인 반대쪽 끝을 넘어 밂 */
+      if (n.holding) P.pracSay(wrong ? 'wrong' : 'hold'); else if (!n.head && p > n.t - 48 / st.spd) P.pracSay('fall');
+    }
     /* 안내 '봤음' 저장은 READY 를 지난 뒤 (안내 중에 나가면 다음 판에 다시 · 검수 C-1) */
     if (!P.readyFired && p >= READY_AT) { P.readyFired = true; P.opt.onReady && P.opt.onReady(); }
     if (p > 12) $('#p_chap').style.opacity = 0;

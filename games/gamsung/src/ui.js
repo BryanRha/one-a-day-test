@@ -1,14 +1,14 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.29';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.29';
-import { cup } from './models.js?v=0.99.29';
-import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.99.29';
-import { bm } from './oad_bm.js?v=0.99.29';
-import { sfx, setAudio } from './audio.js?v=0.99.29';
-import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.29';
-import { UI2 } from './ui2.js?v=0.99.29';
-import { FLOORS, FINISHED } from './layout.js?v=0.99.29';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.30';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.30';
+import { cup } from './models.js?v=0.99.30';
+import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong } from './game.js?v=0.99.30';
+import { bm } from './oad_bm.js?v=0.99.30';
+import { sfx, setAudio } from './audio.js?v=0.99.30';
+import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.30';
+import { UI2 } from './ui2.js?v=0.99.30';
+import { FLOORS, FINISHED } from './layout.js?v=0.99.30';
 
 const $ = s => document.querySelector(s);
 const SLOT = 'gamsung_slot_', SKEY = 'gamsung_v2', CLOUD_MAX = 3;

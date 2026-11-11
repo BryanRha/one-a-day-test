@@ -1,14 +1,14 @@
 // M5-B 화면 — 은신처 '도전' 탭(주간 도전 · 깊은 물 · 업적) · 도전 결과 · 출격 준비 깊은 물 카드 · 업적 알림 · 칭호
 //  스타일은 여기서 넣음(style.css 안 건드림) · 로직은 challenge.js · abyss.js · ach.js
-import { S, save } from './save.js?v=0.99.29';
-import { MAPS, ENEMIES, GEAR, WEAPONS } from './data.js?v=0.99.29';
-import { ACHIEVEMENTS, ACH_CATS, ACH_CAT_KEYS } from './data/achievements.js?v=0.99.29';
-import { CH, CH_RULES, ABYSS, TITLES, M5B_COS } from './data/m5b.js?v=0.99.29';
-import { WEATHER } from './data/weather.js?v=0.99.29';
-import * as CHL from './challenge.js?v=0.99.29';
-import * as AB from './abyss.js?v=0.99.29';
-import * as AC from './ach.js?v=0.99.29';
-import { sfx, unlock } from './audio.js?v=0.99.29';
+import { S, save } from './save.js?v=0.99.30';
+import { MAPS, ENEMIES, GEAR, WEAPONS } from './data.js?v=0.99.30';
+import { ACHIEVEMENTS, ACH_CATS, ACH_CAT_KEYS } from './data/achievements.js?v=0.99.30';
+import { CH, CH_RULES, ABYSS, TITLES, M5B_COS } from './data/m5b.js?v=0.99.30';
+import { WEATHER } from './data/weather.js?v=0.99.30';
+import * as CHL from './challenge.js?v=0.99.30';
+import * as AB from './abyss.js?v=0.99.30';
+import * as AC from './ach.js?v=0.99.30';
+import { sfx, unlock } from './audio.js?v=0.99.30';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
