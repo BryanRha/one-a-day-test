@@ -67,8 +67,17 @@ export function makeSounds(sr) {
   S.go = mix(breath(sr, 0.5, 1100, 0.7, 0.55, 41, (t) => Math.min(1, t / 0.04) * Math.exp(-t * 6)), perc(sr, { len: 0.25, body: 120, drop: 0.8, bodyAmp: 0.8, bodyDecay: 14, click: 900, q: 0.9, clickAmp: 0.8, clickDecay: 40, seed: 42, lp: 2400 }));
   S.chime = breath(sr, 0.6, 750, 0.8, 0.45, 51, (t) => Math.min(1, t / 0.05) * Math.exp(-t * 5));
   S.fc = mix(breath(sr, 1.6, 950, 0.8, 0.5, 61, (t) => Math.min(1, t / 0.12) * Math.exp(-t * 2.2)), breath(sr, 1.6, 600, 0.7, 0.35, 62, (t) => Math.min(1, t / 0.2) * Math.exp(-t * 1.8)), perc(sr, { len: 0.5, body: 95, drop: 0.9, bodyAmp: 0.9, bodyDecay: 7, click: 800, q: 0.8, clickAmp: 0.6, clickDecay: 20, seed: 63, lp: 2000 }));
+  /* v0.5 전용 노트 소리 — 같은 규칙(음정감 약하게 · 2kHz 위 적게) */
+  /* 슈퍼챗: 동전 '찰랑' = 짧은 대역 잡음 두세 번 (1.1 · 1.6kHz) + 가벼운 몸통 */
+  S.coin = mix(perc(sr, { len: 0.08, body: 260, drop: 0.3, bodyAmp: 0.2, bodyDecay: 80, click: 1500, q: 2.2, clickAmp: 9, clickDecay: 70, seed: 71, lp: 2600 }),
+    delay(perc(sr, { len: 0.07, body: 300, drop: 0.2, bodyAmp: 0.1, bodyDecay: 90, click: 1150, q: 2.4, clickAmp: 7, clickDecay: 80, seed: 72, lp: 2400 }), sr, 0.045),
+    delay(perc(sr, { len: 0.12, body: 300, drop: 0.2, bodyAmp: 0.1, bodyDecay: 60, click: 1350, q: 2.6, clickAmp: 5, clickDecay: 45, seed: 73, lp: 2400 }), sr, 0.09));
+  /* 큐: ON AIR 스위치 '탁' + 낮은 숨 */
+  S.cue = mix(perc(sr, { len: 0.1, body: 140, drop: 0.9, bodyAmp: 0.7, bodyDecay: 35, click: 900, q: 1.0, clickAmp: 8, clickDecay: 120, seed: 74, lp: 2200 }), breath(sr, 0.3, 800, 0.7, 0.35, 75, t => Math.min(1, t / 0.02) * Math.exp(-t * 12)));
+  /* 페이더 닿음: 밀어 올리는 '쉬익' (대역 중심이 0.55 → 1.1kHz 로 오름) */
+  S.reach = (() => { const n = Math.floor(sr * 0.26), R = noise(76), y = new Float32Array(n); let a = [0, 0, 0, 0]; for (let i = 0; i < n; i++) { const t = i / sr, f0 = 550 + 550 * (t / 0.26), w = 2 * Math.PI * f0 / sr, q = 1.2, al = Math.sin(w) / (2 * q), c = Math.cos(w), a0 = 1 + al, x = R(); const v = (al / a0) * x + (-al / a0) * a[1] - (-2 * c / a0) * a[2] - ((1 - al) / a0) * a[3]; a = [x, a[0], v, a[2]]; y[i] = v * 4 * Math.min(1, t / 0.12) * Math.exp(-Math.max(0, t - 0.15) * 25); } return y; })();
   /* 크기 맞추기: 각 소리 최고값 = 정해 둔 값 (판정이 낮을수록 작게) */
-  const PEAK = { hitP: 0.9, hitG: 0.72, hitD: 0.52, chord: 0.95, tail: 0.7, soft: 0.35, ready: 0.7, go: 0.85, chime: 0.55, fc: 0.85 };
+  const PEAK = { coin: 0.75, cue: 0.85, reach: 0.6, hitP: 0.9, hitG: 0.72, hitD: 0.52, chord: 0.95, tail: 0.7, soft: 0.35, ready: 0.7, go: 0.85, chime: 0.55, fc: 0.85 };
   for (const [k, x] of Object.entries(S)) { let m = 0; for (const v of x) m = Math.max(m, Math.abs(v)); const g = (PEAK[k] || 0.7) / (m || 1); for (let i = 0; i < x.length; i++) x[i] *= g; }
   return S;
 }

@@ -1,12 +1,12 @@
 // 화면 (DESIGN 9장): 상시 버튼 4개(돈 · 진행 막대 + 지점 이름 · ≡ 메뉴 · 📺 부스트) · 빨간 점 ≤ 1 · 글자 띄우기 분당 ≤ 20 · 칸 이름표는 칸 위 · 줄 맨 앞 1명만 말풍선 · 안내 한 줄 + 화살표 하나
 //   창(메뉴 · 상점 · 단골 · 꾸미기 · 미션 · 설정 · 쿠폰 · 광고 · 골드)은 ui_menu.js · 별채 책상 카드는 desk.js · 지도는 map.js
 import * as THREE from 'three';
-import { BRANCHES, COUPON, AD_DAY, AD_PLACES, STAFF, MENU } from './data.js?v=0.99.28';
-import { S, save, couponReady, vipOn, today, missionNew, PASS_HOOK } from './state.js?v=0.99.28';
-import { sfx } from './audio.js?v=0.99.28';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.28';
-import { bm } from './oad_bm.js?v=0.99.28';
-import { PAD_COLOR } from './pads.js?v=0.99.28';
+import { BRANCHES, COUPON, AD_DAY, AD_PLACES, STAFF, MENU } from './data.js?v=0.99.29';
+import { S, save, couponReady, vipOn, today, missionNew, PASS_HOOK } from './state.js?v=0.99.29';
+import { sfx } from './audio.js?v=0.99.29';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.29';
+import { bm } from './oad_bm.js?v=0.99.29';
+import { PAD_COLOR } from './pads.js?v=0.99.29';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };

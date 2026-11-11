@@ -17,8 +17,32 @@ export const CASTS = {
   moa: { name: '모아', en: 'MOA', gen: '3기', role: '1등 막내', face: 'assets/img/f_moa.jpg', color: '#FF9AD5', fix: '지금 거 없던 걸로! …봤으면 잊어 줘!' },
   yuha: { name: '유하', en: 'YUHA', gen: '4기 리더', role: '바람 따라', face: 'assets/img/f_yuha.jpg', color: '#9FF0D8', fix: '바람이 한 번 쉬어 간 거야.' },
   media: { name: '메디아', en: 'MEDIA', gen: '오르골', role: '오르골 간판 · 완벽한 한 곡', face: 'assets/img/f_media.jpg', color: '#C9D8FF', fix: '오차 발생. …계속합니다.' },
-  rose: { name: '로제', en: 'ROSE', gen: '대표', role: '하루 스튜디오 대표', face: 'assets/img/f_rose.jpg', color: '#E6B0FF', fix: '' },
+  rose: { name: '로제', en: 'ROSE', gen: '1기 · 대표', role: '하루 스튜디오 대표', face: 'assets/img/f_rose.jpg', color: '#E6B0FF', fix: '방송은 내가 책임진다. 넌 손만 움직여.' },
+  silva: { name: '실바', en: 'SILVA', gen: '1기', role: '옥상 정원', face: 'assets/img/f_silva.jpg', color: '#B8E6A0', fix: '잠깐 물 주고 올게요. …농담이에요, 계속 가요.' },
+  kira: { name: '키라', en: 'KIRA', gen: '2기', role: '한정판 B사이드', face: 'assets/img/f_kira.jpg', color: '#FF9C9C', fix: '방금 거 한정판 B사이드예요. 어디서도 못 들어요!' },
+  coral: { name: '코랄', en: 'CORAL', gen: '3기', role: '선장 아닌 승무원', face: 'assets/img/f_coral.jpg', color: '#B7A3FF', fix: '파도 한 번 탄 거야! 키는 내가 잡았어.' },
 };
+/* 캐스트 목록 12칸 (ONAIR_PLAN 3-2 시즌 1 인원) · join = 합류하는 화(그 화 방송을 끝까지 하면 합류) · 메디아는 오르골 소속(시즌 2) · 로제는 19화 방송 복귀
+   theme = 옆자리 게스트로 앉혔을 때 방송 연출(themes.js) · guest = 게스트로 앉았을 때 오늘의 캐스트에게 하는 한마디 */
+/* 받침에 맞는 조사: josa('에델', '이/가') → '에델이' · josa('코랄', '은/는') → '코랄은' (검수 B-3 「에델가」 「코랄는」) */
+export const josa = (w, pair) => { const c = w.charCodeAt(w.length - 1), has = c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 > 0, [a, b] = pair.split('/'); return w + (has ? a : b); };
+/* 잠긴 캐스트의 합류 단계 (검수 B-3 · 사업 B-1 — 지킬 수 없는 약속 금지): 'season2'(join 0) · 'soon'(아직 없는 화) · 'today' · 'next'(내일) · 'past'(놓친 화) · 'later' */
+export function joinStage(join, homeNo, daysLen) { if (!join) return 'season2'; if (join > daysLen) return 'soon'; if (join === homeNo) return 'today'; if (join === homeNo + 1) return 'next'; return join < homeNo ? 'past' : 'later'; }
+/* bio = 캐스트 목록 카드 한 줄 소개 (11자 이하 · 검수 B-3 글자 잘림) */
+export const ROSTER = [
+  { id: 'miyu', bio: '1기 리더 · 종탑', join: 1, theme: 'miyu', guest: '오늘은 옆에서 숨 같이 쉴게요.' },
+  { id: 'bella', bio: '2기 리더 · 디스코', join: 2, theme: 'bella', guest: '게스트 벨라 왔어요~ 1분은 넘겨 볼까요?' },
+  { id: 'tina', bio: '3기 리더 · 행진', join: 3, theme: 'tina', guest: '박은 내가 센다. 조율사는 손만.' },
+  { id: 'liv', bio: '2기 · 기록 보관인', join: 4, theme: 'liv', guest: '오늘 방송도 옆에서 기록할게요.' },
+  { id: 'moa', bio: '3기 · 1등 막내', join: 5, theme: 'moa', guest: '게스트라도 1등 게스트 할 거예요!' },
+  { id: 'edel', bio: '1기 · 침묵의 천사', join: 6, theme: 'edel', guest: '…(채팅) 옆에 있을게.' },
+  { id: 'yuha', bio: '4기 리더 · 바람', join: 7, theme: 'yuha', guest: '바람 부는 쪽으로 같이 가 보자.' },
+  { id: 'media', bio: '오르골 간판', join: 0, theme: 'media', note: '시즌 2', guest: '' },
+  { id: 'silva', bio: '1기 · 옥상 정원', join: 11, theme: null, guest: '' },
+  { id: 'kira', bio: '2기 · B사이드', join: 12, theme: null, guest: '' },
+  { id: 'coral', bio: '3기 · 승무원', join: 13, theme: null, guest: '' },
+  { id: 'rose', bio: '스튜디오 대표', join: 19, theme: null, guest: '' },
+];
 /* 대사에서 쓰는 특수 화자: pd = 나(프로듀서, 얼굴 없음) · sys = 지문 */
 
 /* 곡: preview = [시작 초, 길이] (후렴 8마디) · tier = 곡 성격 */

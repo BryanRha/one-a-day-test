@@ -547,3 +547,130 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #play .guide .pads i:nth-child(1){left:75px}#play .guide .pads i:nth-child(2){left:155px;animation-delay:.4s}#play .guide .pads i:nth-child(3){left:235px;animation-delay:.8s}#play .guide .pads i:nth-child(4){left:315px;animation-delay:1.2s}
 @keyframes gpad{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
 #book .pg{height:86px;aspect-ratio:auto}   /* 칸이 위아래로 겹치던 것 (줄 높이가 칸 비율을 못 따라감) */
+
+/* ---------- v0.5 전용 노트 · 수습 ---------- */
+/* 슈퍼챗 띠: 판 위쪽을 가로질러 흐름 (레인 밖 HUD 아래) */
+#play .scb{position:absolute;left:58px;top:178px;z-index:7;display:flex;align-items:center;gap:7px;height:30px;padding:0 12px 0 4px;border-radius:15px;background:linear-gradient(90deg,#ffcf6a,#ffe6a8);color:#3a2400;box-shadow:0 6px 18px rgba(255,190,80,.45);opacity:0;transform:translateX(-30px);pointer-events:none;max-width:290px;white-space:nowrap;overflow:hidden}
+#play .scb.on{animation:scIn 2.2s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes scIn{0%{opacity:0;transform:translateX(-30px)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateX(10px)}}
+#play .scb i{width:22px;height:22px;border-radius:50%;background:#7a4a00;color:#FFE6A8;font:800 13px/22px 'Rajdhani';font-style:normal;text-align:center}
+#play .scb b{font:700 15px 'Rajdhani'}
+#play .scb span{font-size:11px;font-weight:700}
+#play .scb em{font-style:normal;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+/* 수습 표시: 콤보 아래 작은 칩 */
+#play .guardc{position:absolute;left:0;right:0;top:348px;z-index:6;text-align:center;opacity:0;pointer-events:none}
+#play .guardc b{display:inline-block;font:800 13px 'Noto Sans KR';padding:3px 10px;border-radius:12px;background:rgba(255,142,160,.18);border:1px solid rgba(255,142,160,.6);color:#ffd2da;margin-right:6px}
+#play .guardc span{font-size:11px;color:var(--sub)}
+#play .guardc.on{animation:guardIn 1.6s ease-out forwards}
+@keyframes guardIn{0%{opacity:0;transform:scale(1.2)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+/* 새 노트 안내 줄 */
+#play .guide .new{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:10px;text-align:left}
+#play .guide .new.only{margin-top:6px;padding-top:4px;border:0}
+#play .guide .row{display:flex;gap:12px;align-items:center}
+#play .guide .row p{flex:1;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.88)}
+#play .guide .row p b{display:block;font:800 14px 'Noto Sans KR';margin:0 0 1px;color:#fff}
+#play .guide .row i{flex:none;width:44px;height:30px;border-radius:6px;position:relative;font-style:normal}
+#play .guide .g-sc{background:#FFD27A;box-shadow:0 0 12px rgba(255,210,122,.7);color:#7a4a00;font:800 16px/30px 'Rajdhani';text-align:center;animation:gtap 1.1s ease-in-out infinite}
+#play .guide .g-fader{background:transparent}
+#play .guide .g-fader::before{content:'';position:absolute;left:4px;top:20px;width:16px;height:9px;border-radius:3px;background:#EFFFF8;box-shadow:0 0 8px rgba(120,240,200,.9)}
+#play .guide .g-fader::after{content:'';position:absolute;left:8px;top:2px;width:30px;height:18px;border-radius:3px;background:linear-gradient(60deg,rgba(120,240,200,.15),rgba(120,240,200,.7));transform:skewX(-35deg)}
+#play .guide .g-fader u{position:absolute;left:4px;top:20px;width:16px;height:9px;border-radius:3px;background:#fff;animation:gslide 1.4s ease-in-out infinite}
+@keyframes gslide{0%{transform:none;opacity:1}70%{transform:translate(22px,-16px);opacity:1}100%{transform:translate(22px,-16px);opacity:0}}
+#play .guide .g-cue{background:#FF5F73;box-shadow:0 0 12px rgba(255,95,115,.7)}
+#play .guide .g-cue s{position:absolute;inset:0;text-decoration:none;font:800 18px/30px 'Rajdhani';color:#fff;text-align:center;opacity:0;animation:gcount 2.4s linear infinite}
+#play .guide .g-cue s:nth-child(2){animation-delay:.8s}#play .guide .g-cue s:nth-child(3){animation-delay:1.6s}
+@keyframes gcount{0%{opacity:0;transform:scale(1.4)}5%{opacity:1;transform:none}30%{opacity:1}34%,100%{opacity:0}}
+/* ---------- v0.5 캐스트 · 게스트 ---------- */
+.diva .guestb{position:absolute;right:12px;top:-13px;height:26px;padding:0 10px 0 4px;border-radius:13px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#ffe9c4;background:rgba(20,18,40,.92);border:1px solid rgba(242,212,154,.55);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.diva .guestb span:only-child{padding-left:6px}
+.diva .guestb i{width:20px;height:20px;border-radius:50%;background:center/cover;box-shadow:0 0 0 1.5px var(--gold)}
+#casts{background:radial-gradient(420px 260px at 50% 0,rgba(242,212,154,.12),transparent 70%),var(--bg)}
+#casts .ttl{position:absolute;top:100px;left:20px;right:20px}
+#casts .ttl em{font:700 10.5px 'Rajdhani';font-style:normal;letter-spacing:2.5px;color:var(--gold)}
+#casts .ttl b{display:block;font:800 22px/1.3 'NMJ',serif;margin-top:2px}
+#casts .ttl span{display:block;font-size:11.5px;color:var(--sub);margin-top:4px;line-height:1.5}
+#casts .gs{position:absolute;top:208px;left:16px;right:16px;height:72px;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:12px;background:rgba(242,212,154,.08);border:1px solid rgba(242,212,154,.35)}
+#casts .gs i{width:44px;height:44px;border-radius:50%;background:center/cover;flex:none;box-shadow:0 0 0 2px var(--gold)}
+#casts .gs div{flex:1;min-width:0}
+#casts .gs em{font:700 10px 'Rajdhani';font-style:normal;letter-spacing:2px;color:var(--gold)}
+#casts .gs b{display:block;font-size:15px;line-height:1.35}
+#casts .gs small{display:block;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#casts .gs button{flex:none;font-size:11.5px;padding:6px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.2);color:var(--sub)}
+#casts .grid{position:absolute;top:294px;left:16px;right:16px;bottom:20px;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:9px;align-content:start;scrollbar-width:none}
+#casts .grid::-webkit-scrollbar{display:none}
+#casts .cc{position:relative;height:150px;border-radius:14px;padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);text-align:center}
+#casts .cc i{width:62px;height:62px;border-radius:50%;background:center/cover;box-shadow:0 0 0 2px rgba(255,255,255,.2);margin-bottom:4px}
+#casts .cc i.sil{filter:brightness(0) saturate(0);opacity:.55}
+#casts .cc.lock i{filter:grayscale(.85) brightness(.55)}
+#casts .cc.lock i.sil{filter:brightness(0);opacity:.5}
+#casts .cc b{font-size:14px}
+#casts .cc small{font-size:9.5px;color:var(--sub);line-height:1.3;max-height:25px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#casts .cc .tg{position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(159,240,255,.16);color:var(--ice)}
+#casts .cc .tg.g{background:var(--gold);color:#2a1c06}
+#casts .cc .tg.lock{position:static;margin-top:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,255,255,.06);color:var(--sub)}
+#casts .cc.guest{border-color:var(--gold);box-shadow:0 0 16px rgba(242,212,154,.3)}
+#casts .cc.guest i{box-shadow:0 0 0 2.5px var(--gold)}
+#result .rank .tags span.gd{background:rgba(255,142,160,.2);color:#ffd2da;border:1px solid rgba(255,142,160,.6)}
+#result .best .gd,#stages .gd{font-style:normal;font-size:10px;font-weight:700;color:#ffb3c1;margin-left:4px}
+
+/* ---------- v0.5.1 검수 반영 (quality_gate_v05 · 사업 v05) ---------- */
+/* C-2 · C-3(지난 C): 채팅 상자 ↔ 레인 바깥 테두리 여백 4~6px (채팅 아래 끝 y 348 에서 테두리 x ≈ 262 → 왼쪽 267) · 낱말 단위 줄바꿈 */
+#play .chat{width:115px}
+#play .chat .cl{word-break:keep-all;overflow-wrap:anywhere}
+/* C-5 안내 카드: 마지막 낱말 하나만 다음 줄로 떨어지지 않게 */
+#play .guide .row p,#play .guide b,#play .guide small{word-break:keep-all;text-wrap:balance}
+/* B-4 · C-4 수습 칩: 레인 한가운데가 아니라 왼쪽 레인 바깥(말풍선 아래) · 실제로 수습한 캐스트 이름 · 읽히는 크기 */
+#play .guardc{left:14px;right:auto;top:276px;text-align:left;display:flex;align-items:center;gap:6px}
+#play .guardc b{margin:0;font-size:13px;background:rgba(242,212,154,.2);border-color:rgba(242,212,154,.75);color:#ffeccb}
+#play .guardc span{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+/* B-1 연습 페이더 안내 (판정 없음) */
+#play .prac{position:absolute;left:30px;right:30px;top:392px;z-index:8;text-align:center;pointer-events:none;opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s}
+#play .prac.on{opacity:1;transform:none}
+#play .prac b{display:inline-block;font:800 13px 'Noto Sans KR';padding:3px 12px;border-radius:12px;background:rgba(120,240,200,.18);border:1px solid rgba(120,240,200,.7);color:#d8fff0}
+#play .prac span{display:block;margin-top:8px;font:800 17px/1.4 'Noto Sans KR';color:#fff;text-shadow:0 2px 10px #000,0 0 18px rgba(0,0,0,.8);word-break:keep-all}
+#play .prac.ok b{background:rgba(242,212,154,.25);border-color:var(--gold);color:#fff3d6}
+#play .prac.again b{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.4);color:#e8ecf6}
+/* B-5 게스트 연출 한 줄 (제목 카드) */
+#play .intro i{display:block;margin-top:8px;font:700 11.5px 'Noto Sans KR';font-style:normal;letter-spacing:.5px;color:var(--gold)}
+#play .intro i:empty{display:none}
+/* B-4 결과: 수습은 고마움 한 줄(중립) · 슈퍼챗은 금빛 칸 따로 (C-3) */
+#result .best{top:606px}
+#result .extra{position:absolute;top:630px;left:16px;right:16px;z-index:2;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px;font-size:11.5px;color:var(--sub)}
+#result .extra:empty{display:none}
+#result .extra .scg{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px 0 4px;border-radius:12px;background:rgba(255,210,122,.1);border:1px solid rgba(255,210,122,.45);color:#ffe6a8;font-weight:700}
+#result .extra .scg i{width:17px;height:17px;border-radius:50%;background:#7a4a00;color:#FFE6A8;font:800 10px/17px 'Rajdhani';font-style:normal;text-align:center}
+#result .extra .scg b{font:700 13px 'Rajdhani';color:#fff}
+#result .extra .scg.full{background:linear-gradient(90deg,rgba(255,207,106,.28),rgba(255,230,168,.16));border-color:#ffcf6a}
+#result .extra .gdl{color:#e9dcc2}
+#result .subs{top:676px}
+/* B-3 오늘 화면 「+ 게스트」: 보이는 단추 30px · 누르는 영역 44px */
+.diva .guestb{height:30px;top:-15px;border-radius:15px;z-index:2}
+.diva .guestb::after{content:'';position:absolute;left:-4px;right:-4px;top:-8px;bottom:-8px}
+/* B-3 캐스트 목록 */
+#casts .ttl span{word-break:keep-all}
+#casts .gs{top:214px;height:auto;min-height:72px;align-items:center}
+#casts .gs.has{padding:9px 10px 9px 12px}
+#casts .gs b{display:flex;align-items:baseline;gap:7px}
+#casts .gs b small{font-size:10.5px;font-weight:500;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#casts .gs q{display:block;font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.82);margin-top:2px;word-break:keep-all;quotes:'「' '」'}
+#casts .gs:not(.has) q{color:var(--sub);quotes:none;margin-bottom:2px}
+#casts .gs:not(.has) q::before,#casts .gs:not(.has) q::after{content:none}
+#casts .gs button{min-height:36px}
+#casts .grid{top:306px}
+#casts .cc{height:146px;padding:12px 6px 9px}
+#casts .cc small{font-size:10px;max-height:none;height:14px;line-height:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;-webkit-line-clamp:unset}
+#casts .cc .tg,#casts .cc .tg.lock{position:static;margin-top:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;padding:2px 7px;border-radius:8px}
+#casts .cc .tg.on{background:rgba(159,240,255,.14);color:var(--ice)}
+#casts .cc .tg.lock{background:rgba(255,255,255,.06);color:var(--sub)}
+#casts .cc .tg.lock.today{background:rgba(242,212,154,.22);color:#ffe9c4;border:1px solid rgba(242,212,154,.6)}
+#casts .cc .tg.lock.next{background:rgba(159,240,255,.14);color:var(--ice);border:1px solid rgba(159,240,255,.45)}
+/* 잠김 = 검은 원이 아니라 남색으로 흐린 얼굴 + 옅은 테두리 빛 (누굴까 궁금하게) · 오늘의 캐스트는 얼굴 그대로 */
+#casts .cc.lock i,#casts .cc.lock i.sil,#casts .cc i.sil{filter:none;opacity:1}
+#casts .cc i{position:relative;overflow:hidden}
+#casts .cc i.sil,#casts .cc.lock i.sil{background-image:none!important;background-color:#141a3c;box-shadow:0 0 0 1.5px rgba(150,176,255,.55),0 0 16px rgba(120,150,255,.4)}
+#casts .cc i.sil::before{content:'';position:absolute;inset:-4px;background-image:var(--f);background-size:cover;background-position:center;filter:grayscale(1) brightness(.9) contrast(1.1) blur(2.4px)}
+#casts .cc i.sil::after{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 36%,rgba(96,124,230,.5),rgba(26,34,92,.86) 74%);mix-blend-mode:multiply}
+#casts .cc.lock:not(.today) b{color:rgba(255,255,255,.72)}
+#casts .cc.today{border-color:rgba(242,212,154,.45)}
+#casts .cc.today i{box-shadow:0 0 0 2px rgba(242,212,154,.7)}
+#casts .cc.next{border-color:rgba(159,240,255,.3)}

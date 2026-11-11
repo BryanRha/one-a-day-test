@@ -2,7 +2,7 @@
 //   시계 원칙: 노트 위치와 판정은 모두 '스피커에서 지금 나오는 소리의 오디오 시계 시각'(heard) 기준
 //   heard = getOutputTimestamp().contextTime (출력 지연 포함) 을 performance.now() 로 부드럽게 이음
 //   지원 안 하는 브라우저는 currentTime − outputLatency(baseLatency)
-import { makeSounds } from './sfx.js?v=0.99.28';
+import { makeSounds } from './sfx.js?v=0.99.29';
 
 export const A = {
   ac: null, master: null, music: null, sfx: null, bufs: {}, src: null, t0: 0, off: null, vol: { music: 0.9, sfx: 0.55 },

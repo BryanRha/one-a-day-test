@@ -14,7 +14,7 @@ export function dayKey(d = now()) { const x = new Date(d.getTime() - 7 * 3600e3)
 export function nextOpen(d = now()) { const n = new Date(d); n.setHours(7, 0, 0, 0); if (n <= d) n.setDate(n.getDate() + 1); return n; }
 
 export function fresh() {
-  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'normal', days: {}, best: {}, book: {}, pre: {}, dm: {}, plays: 0, calibrated: false };
+  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'normal', days: {}, best: {}, book: {}, pre: {}, dm: {}, seen: {}, guest: null, vib: true, guard: true, cast: {}, plays: 0, calibrated: false };
 }
 export let S = fresh();
 export function load() {
@@ -35,9 +35,21 @@ export function dayNo(max) { if (EP) return Math.max(1, Math.min(max, EP)); cons
 export function record(song, diff, r) {
   const b = (S.best[song] ||= {}), o = b[diff];
   const isBest = !o || r.score > o.score;
-  if (isBest) b[diff] = { score: r.score, acc: r.acc, rank: r.rank, fc: r.fc || (o && o.fc), ap: r.ap || (o && o.ap), maxCombo: Math.max(r.maxCombo, o ? o.maxCombo : 0) };
+  if (isBest) b[diff] = { score: r.score, acc: r.acc, rank: r.rank, fc: r.fc || (o && o.fc), ap: r.ap || (o && o.ap), maxCombo: Math.max(r.maxCombo, o ? o.maxCombo : 0), guard: r.guard || 0 };   /* guard = 그 기록 판의 수습 횟수 (순위 표시 「수습」) */
   else { o.fc = o.fc || r.fc; o.ap = o.ap || r.ap; o.maxCombo = Math.max(o.maxCombo, r.maxCombo); }
   return isBest && !!o;
+}
+/* 이번 판 안내 (검수 C-2: 한 장에 최대 두 가지) — here = 이번 채보의 전용 노트 종류 Set
+   첫 판이면 조작 안내 + 새 노트 1개, 아니면 새 노트 2개 · 손을 옮기는 페이더 → 박을 세는 큐 → 그냥 톡인 슈퍼챗 순 · 나머지는 다음 판 */
+export function guidesFor(here, st = S) {
+  const fresh = ['fader', 'cue', 'sc'].filter(k => here.has(k) && !(st.seen || {})[k]);
+  return [...(!st.guide ? ['lane'] : []), ...fresh.slice(0, st.guide ? 2 : 1)];
+}
+/* 캐스트별 함께한 방송 (v0.5.1 · 사업 B-2): 판이 끝날 때 그 화 캐스트 · 옆자리 게스트에 판 수 · 받은 슈퍼챗 · 수습 횟수를 쌓음
+   화면에는 아직 안 보임 — v0.6 구독자 공식이 이 값을 그대로 소급 · 옛 저장(cast 없음)도 fresh() 와 합쳐져 {} 로 시작 */
+export function castLog(ids, r) {
+  if (!S.cast || typeof S.cast !== 'object') S.cast = {};
+  for (const id of new Set(ids.filter(Boolean))) { const c = (S.cast[id] ||= { plays: 0, sc: 0, guards: 0 }); c.plays++; c.sc += (r.sc && r.sc[0]) || 0; c.guards += r.guard || 0; }
 }
 /* 방송 기록: 화 → { rank(가장 좋은 것), date } · 테두리 = 기본 · 은박(A↑) · 금박(S↑) */
 const RO = ['C', 'B', 'A', 'S', 'SS'];

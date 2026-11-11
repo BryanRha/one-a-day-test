@@ -1,7 +1,7 @@
 // 경제 · 성장 계산 (화면 · three 없이 — node 시뮬 · 시험에서도 그대로 씀)
 //  S = 저장 상태(save.js). 모든 함수는 S 를 직접 바꾸고 { ok, why } 를 돌려줌
 import { MARKET, ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, MODS, MOD_KEYS, MOD_COST, TIER_MUL, GEAR, CRAFTS, MEALS, QUESTS, DAILY_POOL, DAILY_MUL, PLAYER, MAPS, MAP_KEYS, DAILY_MAP, ENEMIES, O2,
-  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS, STAR, PETS, PET_MAX } from './data.js?v=0.99.28';
+  AMMO, MOD_MAX, freshMods, MAP_GEAR, CHARMS, CHARM_KEYS, DIFF, MERCHANTS, ACHIEVEMENTS, FAC_TOTAL, GEAR_MAX, WEAPON_KEYS, STAR, PETS, PET_MAX } from './data.js?v=0.99.29';
 
 export const kstDay = (t = Date.now()) => new Date(t + 324e5).toISOString().slice(0, 10);
 const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -292,7 +292,7 @@ export function loadout(S) {
 export function power(S) { const L = loadout(S); const w = L.weapons[0]; return Math.round(ttk(w, 1000, w.melee ? 2 : 7).dps * (L.hp / 100) / (1 - L.armor)); }
 
 /* ═════ M3-A 성장 뼈대 (v0.6): 탄약 · 부적 · 상인 · 업적 · 난이도 — 숫자는 data/*.js ═════ */
-import { COS } from './look.js?v=0.99.28';
+import { COS } from './look.js?v=0.99.29';
 const ITEM_LIST = Object.keys(ITEMS);
 /* ───── 탄약 상자 (관통 · 전기) — 한 판에 1상자, 출격 때 씀 ───── */
 export const ammoCount = (S, k) => (S.ammo?.[k] || 0);
@@ -377,6 +377,6 @@ export function sellAt(S, m, k) {
   S.stash.splice(i, 1); S.shells += v; S.stats.sold = (S.stats.sold || 0) + v; (S.stats.traded ||= {})[m] = 1; return v;
 }
 /* ───── 업적 50 (M5-B) — ach.js 로 옮김 (칭호 · 받아 둔 꾸미기 · 판 기록) · 이름은 그대로 내보냄 ───── */
-export { achValue, achTick } from './ach.js?v=0.99.28';
+export { achValue, achTick } from './ach.js?v=0.99.29';
 /* ───── 난이도 (언제든) ───── */
 export function setDiff(S, k) { if (!DIFF[k]) return { ok: false }; S.diff = k; return { ok: true }; }

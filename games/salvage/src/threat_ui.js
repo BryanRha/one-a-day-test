@@ -1,7 +1,7 @@
 // '오늘 위협' · 주간 변주 표시 (M4-A) — 몰래 난이도를 올리지 않게: 출격 준비 카드 한 장 + 판 시작 띠 한 줄
-import * as TH from './threat.js?v=0.99.28';
-import { kstDay } from './econ.js?v=0.99.28';
-import { WEEKS } from './data/enemies.js?v=0.99.28';
+import * as TH from './threat.js?v=0.99.29';
+import { kstDay } from './econ.js?v=0.99.29';
+import { WEEKS } from './data/enemies.js?v=0.99.29';
 
 let css = false;
 function style() {

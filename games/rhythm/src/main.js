@@ -2,13 +2,13 @@
 //   오늘의 방송은 그날 하루 무제한 무료 · 지난 방송은 보상형 광고(하루 3회) 또는 골드 · 소장이면 무료 (ONAIR_PLAN 6장 · 7-4)
 //   방송 목록: 지금까지 열린 화(오늘까지)의 곡을 다시 고를 수 있음 · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.28';
-import { Play } from './play.js?v=0.99.28';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME } from './data.js?v=0.99.28';
-import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, DEV, PROD } from './save.js?v=0.99.28';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.28';
-import { bm } from './oad_bm.js?v=0.99.28';
-import { THEMES } from './themes.js?v=0.99.28';
+import { A } from './audio.js?v=0.99.29';
+import { Play } from './play.js?v=0.99.29';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, josa, joinStage } from './data.js?v=0.99.29';
+import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, PROD } from './save.js?v=0.99.29';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.29';
+import { bm } from './oad_bm.js?v=0.99.29';
+import { THEMES } from './themes.js?v=0.99.29';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
@@ -55,12 +55,16 @@ function renderToday() {
   $('#t_off').textContent = (S.offset > 0 ? '+' : S.offset < 0 ? '' : '±') + S.offset;
   $('#t_av').style.backgroundImage = `url(${dv.face})`;
   $('#t_dn').textContent = day.singer || dv.name; $('#t_dr').textContent = `${dv.gen} · ${dv.role}`;
+  const gid = guestId(), gr = gid && rosterOf(gid);
+  $('#t_guest').innerHTML = gid ? `<i style="background-image:url(${CASTS[gid].face})"></i><span>게스트 ${esc(CASTS[gid].name)}</span>` : '<span>+ 게스트</span>';
+  $('#t_guest').title = gid ? (gid === day.cast ? '오늘은 단독 방송' : gr.guest) : '옆자리 게스트 고르기';
+  /* 캐스트 카드 말풍선은 오늘의 캐스트 말만 (게스트 인사는 생방송 채팅 첫 줄로 · 검수 C-6) */
   $('#t_hello').textContent = !past() && t.plays ? '또 와 주셨네요. 오늘 방송은 몇 번이든 무료예요.' : day.hello;
   $('#t_steps').innerHTML = DAYS.map((_, i) => `<i class="${S.book[i + 1] ? 'on' : i + 1 === day.no ? 'now' : ''}"></i>`).join('');
   $('#t_diff').innerHTML = DIFFS.map(([d, n]) => { const b = (S.best[song.id] || {})[d]; return `<button data-d="${d}" class="${S.diff === d ? 'on' : ''}"><span>${n}</span><b>LV.${ch.diffs[d].lv}</b>${b ? `<small>${b.rank}${b.ap ? ' · AP' : b.fc ? ' · FC' : ''}</small>` : ''}</button>`; }).join('');
   $('#t_hint span').textContent = S.book[day.no] ? `${day.no}화 방송은 방송 기록에 있어요 · 더 높은 등급이면 금박 테두리` : `끝까지 송출하면 ${dv.name}의 개인 채널과 오늘의 조각이 열려요`;
   const st = $('#t_start'); st.className = 'start onair';
-  if (past()) st.innerHTML = `<b>지난 방송 다시 듣기</b><span>${retryLabel()}</span>`;
+  if (past()) st.innerHTML = `<b>지난 방송 다시 방송하기</b><span>${retryLabel()}</span>`;
   else if (!t.plays) st.innerHTML = '<b><i class="lamp"></i>생방송 시작</b><span>오늘 무제한 무료</span>';
   else st.innerHTML = '<b><i class="lamp"></i>한 번 더 송출</b><span>오늘 무제한 무료</span>';
   $('#t_list').classList.toggle('dot', !past() && !t.plays);
@@ -82,6 +86,8 @@ function retryLabel() { return past() ? pastWay().label : '오늘 무제한 무�
 $('#t_diff').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.diff = b.dataset.d; save(); A.fxPlay('tick', S.sfx * 0.5); renderToday(); });
 $('#t_back').addEventListener('click', () => { if (inOAD) exitToOAD(); else toast('원어데이 앱 안에서는 원어데이로 돌아가요'); });
 $('#t_book').addEventListener('click', () => openBook());
+$('#t_guest').addEventListener('click', e => { e.stopPropagation(); openCasts(); });
+$('#t_cast').addEventListener('click', () => openCasts());
 $('#t_sync').addEventListener('click', () => openSheet());
 $('#t_start').addEventListener('click', async () => {
   await A.unlock();
@@ -92,14 +98,14 @@ $('#t_start').addEventListener('click', async () => {
   const w = pastWay();
   if (w.free) return startBroadcast();
   if (w.closed) return toast('지금은 지난 방송을 열 수 없어요. 잠시 뒤 다시 해 주세요', 2600);
-  modal(`<h3>지난 방송 다시 듣기</h3><p>오늘의 방송은 몇 번이든 무료예요. 지난 방송은 광고나 골드로 다시 열어요. 소장하면 언제든 무료예요.</p>${w.ad ? `<button class="main" data-a="ad">📺 광고 보고 듣기 <small>오늘 ${w.adsLeft}회 남음</small></button>` : ''}${w.price ? `<button class="gold" data-a="gold">🪙 ${w.price} 골드로 듣기</button>` : ''}<button data-a="close">다음에 할게요</button>`, async a => {
+  modal(`<h3>지난 방송 다시 방송하기</h3><p>오늘의 방송은 몇 번이든 무료예요. 지난 방송은 광고나 골드로 다시 열어요. 소장하면 언제든 무료예요.</p>${w.ad ? `<button class="main" data-a="ad">📺 광고 보고 방송하기 <small>오늘 ${w.adsLeft}회 남음</small></button>` : ''}${w.price ? `<button class="gold" data-a="gold">🪙 ${w.price} 골드로 방송하기</button>` : ''}<button data-a="close">다음에 할게요</button>`, async a => {
     if (a === 'close') return closeModal();
     closeModal();
     const r = a === 'ad' ? await bm.rewardedAd('replay') : await bm.spend(bm.price('replay') ? 'replay' : 'retry');
     if (r.ok) { if (a === 'ad') { today().ads = (today().ads || 0) + 1; save(); } startBroadcast(); return; }
     if (r.reason === 'cancel') return;
     /* 실패 이유별 문구 (재검수 v0.4 B-2: 골드 한도를 '광고' 로 말하던 것 고침) */
-    toast(r.reason === 'short' ? '골드가 조금 모자라요' : r.reason === 'limit' ? (a === 'ad' ? '오늘 광고는 다 봤어요' : '오늘 골드로 듣기는 다 썼어요') : r.reason === 'login' ? '로그인하면 골드로 들을 수 있어요' : '지금은 할 수 없어요', 2400);
+    toast(r.reason === 'short' ? '골드가 조금 모자라요' : r.reason === 'limit' ? (a === 'ad' ? '오늘 광고는 다 봤어요' : '오늘 골드로 다시 방송하기는 다 썼어요') : r.reason === 'login' ? '로그인하면 골드로 다시 방송할 수 있어요' : '지금은 할 수 없어요', 2400);
   });
 });
 /* 방송 시작: 그 화의 '방송 전' 장면을 처음 한 번 보여 주고(다시 하기 · 지난 방송은 바로) 생방송으로 */
@@ -156,20 +162,74 @@ $('#pre').addEventListener('click', e => {
 });
 
 /* ---------- ② 플레이 ---------- */
+/* ---------- 캐스트 · 옆자리 게스트 (ONAIR_PLAN 6장 · v0.5) ---------- */
+const rosterOf = id => ROSTER.find(r => r.id === id);
+/* 합류 = 그 캐스트가 주인공인 화를 끝까지 송출함 (처음 방송한 날 무료 합류) · 시험 모드는 1~10화 캐스트 모두 */
+function joined(id) { const r = rosterOf(id); if (!r || !r.join) return false; if (DEV && r.join <= DAYS.length) return true; return DAYS.some(d => d.cast === id && S.book[d.no]); }
+function guestId() { return S.guest && joined(S.guest) ? S.guest : null; }
+/* 오늘 방송의 연출 테마: 게스트 → 오늘의 캐스트 → 기본 (시험 모드 ?theme= 이 먼저) */
+function themeNow() { if (DEV && Q.get('theme') && THEMES[Q.get('theme')]) return Q.get('theme'); const g = guestId(); const t = g ? rosterOf(g).theme : (rosterOf(day.cast) || {}).theme; return t && THEMES[t] ? t : 'base'; }
+/* 잠긴 캐스트가 언제 · 어떻게 합류하나 (v0.5.1 · 검수 B-3 · 사업 B-1): 지킬 수 없는 약속 금지
+   오늘 = 오늘 방송 끝내면 · 내일 = 내일 · 지난 화 = 지난 방송에서 · 아직 없는 화(join > 들어 있는 화 수) = 「시즌 1 · 곧 합류」 · 메디아 = 시즌 2 */
+function joinWhen(r) {
+  const st = joinStage(r.join, home.no, DAYS.length), nm = CASTS[r.id].name;
+  if (st === 'season2') return { tag: esc(r.note || ''), cls: '', say: `${josa(nm, '은/는')} ${esc(r.note || '다음 시즌')}에 합류해요` };
+  if (st === 'soon') return { tag: '시즌 1 · 곧 합류', cls: '', say: `${josa(nm, '은/는')} 시즌 1 뒤쪽 방송에서 곧 합류해요` };
+  if (st === 'today') return { tag: '오늘 합류', cls: 'today', say: `오늘 방송을 끝까지 송출하면 ${josa(nm, '이/가')} 합류해요`, face: true };
+  if (st === 'next') return { tag: '내일 합류', cls: 'next', say: `${josa(nm, '은/는')} 내일 ${r.join}화 방송에서 합류해요` };
+  if (st === 'past') return { tag: `지난 ${r.join}화에서 합류`, cls: 'past', say: `방송 목록에서 지난 ${r.join}화를 끝까지 하면 ${josa(nm, '이/가')} 합류해요` };
+  return { tag: `${r.join}화에 합류`, cls: '', say: `${josa(nm, '은/는')} ${r.join}화 방송에서 합류해요` };
+}
+function openCasts() {
+  const g = guestId();
+  const cards = ROSTER.map(r => {
+    const c = CASTS[r.id], on = joined(r.id), w = on ? null : joinWhen(r), seen = on || (w && w.face) || r.id === 'media' && S.book[10];
+    const tag = on ? (g === r.id ? '<span class="tg g">게스트</span>' : '<span class="tg on">합류</span>') : `<span class="tg lock ${w.cls}">${w.tag}</span>`;
+    return `<button class="cc ${on ? 'on' : 'lock'} ${g === r.id ? 'guest' : ''} ${w ? w.cls : ''}" data-c="${r.id}" ${on ? '' : 'aria-disabled="true"'}><i style="background-image:url(${c.face});--f:url(${new URL(c.face, location.href).href})" class="${on || seen ? '' : 'sil'}"></i><b>${esc(c.name)}</b><small>${esc(r.bio || c.gen)}</small>${tag}</button>`;
+  }).join('');
+  const gc = g ? CASTS[g] : null;
+  $('#casts').innerHTML = `
+    <div class="top"><button class="ic" data-x="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">캐스트</div><span style="width:36px"></span></div>
+    <div class="ttl"><em>${GAME.studio} · 시즌 1</em><b>캐스트 ${ROSTER.filter(r => joined(r.id)).length} / ${ROSTER.length}명 합류</b><span>합류한 캐스트를 옆자리 게스트로 앉히면 방송 연출과 사고 수습이 그 캐스트 것으로 바뀌어요 · 점수에는 영향 없어요</span></div>
+    <div class="gs ${gc ? 'has' : ''}">${gc ? `<i style="background-image:url(${gc.face})"></i><div><em>옆자리 게스트</em><b>${esc(gc.name)}<small>연출 · ${esc(THEMES[rosterOf(g).theme].name.replace(/^[^·]+· /, ''))}</small></b><q>${esc(gc.fix)}</q></div><button data-x="clear">비우기</button>` : '<div><em>옆자리 게스트</em><b>비어 있어요</b><q>비어 있으면 오늘의 캐스트 연출로 방송해요</q></div>'}</div>
+    <div class="grid">${cards}</div>`;
+  show('casts');
+  /* 게스트 수습 대사가 두 줄이면 게스트 칸이 커짐 → 목록은 그 아래에서 시작 (겹침 없음) */
+  { const gs = $('#casts .gs'); $('#casts .grid').style.top = `${gs.offsetTop + gs.offsetHeight + 10}px`; }
+}
+$('#casts').addEventListener('click', e => {
+  const b = e.target.closest('[data-x],[data-c]'); if (!b) return;
+  if (b.dataset.x === 'back') return runBack();
+  if (b.dataset.x === 'clear') { S.guest = null; save(); A.fxPlay('tick', S.sfx * 0.5); return openCasts(); }
+  const id = b.dataset.c; if (!id) return;
+  if (!joined(id)) return toast(joinWhen(rosterOf(id)).say, 2400);
+  S.guest = S.guest === id ? null : id; save(); A.fxPlay('tick', S.sfx * 0.6);
+  if (S.guest) toast(`${josa(CASTS[id].name, '이/가')} 옆자리 게스트로 앉았어요`);
+  stack.pop(); openCasts();
+});
+
 function go() {
   A.stopPreview();
-  const dv = CASTS[day.cast];
+  const dv = CASTS[day.cast], gid = guestId(), gc = gid ? CASTS[gid] : dv;
+  /* 처음 보는 노트 · 첫 판 안내 (한 장) */
+  const ch = charts[song.id], here = new Set(ch.diffs[S.diff].notes.map(n => n[3]).filter(Boolean));
+  const guides = Q.get('guide') === '0' ? [] : guidesFor(here);   /* 한 판에 최대 두 가지 (검수 C-2) */
   show('play');
   Play.auto = Q.get('auto') ? { jitter: +(Q.get('jitter') || 18), miss: +(Q.get('miss') || 0), dom: Q.get('auto') === 'dom' } : null;
   Play.start({
     song, chart: charts[song.id], diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
-    hitsnd: S.hitsnd, el: S.el, lite: S.lite, theme: DEV && THEMES[S.theme] ? S.theme : 'base',
-    guide: !S.guide && Q.get('guide') !== '0',   /* 첫 판만 레인 조작 안내 (?guide=0 이면 끔 · 시험 도구) */
-    cover: day.hero, diva: { ...dv, name: singer(day) }, chapter: `${day.no}화 · ${day.chapter}`, cheer: CHEER, live: day.live, subs: day.subs,
+    hitsnd: S.hitsnd, el: S.el, lite: S.lite, vib: S.vib !== false, theme: DEV && Q.get('theme') ? themeNow() : DEV && THEMES[S.theme] && S.theme !== 'base' ? S.theme : themeNow(),
+    guides,   /* ?guide=0 이면 끔 · 시험 도구 */
+    guards: S.guard === false ? 0 : 1, firstSc: !S.seen.scHit,   /* 사고 수습 한 판 1회 · 설정에서 끔(명예의 전당 도전) · 구독자 단계는 v0.6 */
+    cover: day.hero, diva: { ...dv, name: singer(day), fix: gc.fix || dv.fix, face: gid ? gc.face : dv.face, en: gid ? gc.en : dv.en }, chapter: `${day.no}화 · ${day.chapter}`, cheer: CHEER, live: day.live, subs: day.subs,
+    helper: { name: gc.name, en: gc.en, face: gc.face, fix: gc.fix || dv.fix },   /* 수습하는 캐스트 = 게스트(없으면 오늘의 캐스트) */
+    themeLine: gid && gid !== day.cast && THEMES[rosterOf(gid).theme] ? `연출 · ${THEMES[rosterOf(gid).theme].name}` : '',
+    guestHello: gid && gid !== day.cast && rosterOf(gid).guest ? { name: gc.name, text: rosterOf(gid).guest } : null,
+    /* 안내 '봤음'은 READY 를 지난 뒤 저장 (안내 중에 나가면 다음 판에 다시 · 검수 C-1) */
+    onReady: () => { if (!guides.length) return; if (guides.includes('lane')) S.guide = true; for (const k of guides) S.seen[k] = true; save(); },
     onPause: () => pauseMenu(), onEnd: r => onResult(r),
   });
-  if (!S.guide) { S.guide = true; save(); }
-  try { window.parent.postMessage({ type: 'oad:track', name: 'play', p: { diff: S.diff, day: day.no, song: song.id, past: past() } }, '*'); } catch { /* */ }
+  try { window.parent.postMessage({ type: 'oad:track', name: 'play', p: { diff: S.diff, day: day.no, song: song.id, past: past(), guest: gid || null } }, '*'); } catch { /* */ }
 }
 function pauseMenu() {
   if (!Play.on || Play.ended) return;
@@ -188,6 +248,11 @@ function countdown() {
 
 /* ---------- ③ 결과 ---------- */
 function onResult(r) {
+  r.sc = [Play.scGot, Play.scTotal]; r.scSum = Play.scSum; if (Play.scGot) S.seen.scHit = true;
+  const gid = guestId(); r.helper = gid ? CASTS[gid].name : CASTS[day.cast].name;
+  castLog([day.cast, gid], r);   /* 캐스트별 함께한 방송 (사업 B-2 · 화면 노출 없음 · v0.6 구독자 소급) */
+  /* 명예의 전당(원어데이 공용): 수습한 판은 assisted → 순위에 안 올라감 (ONAIR_PLAN 6장 순위 공정성) */
+  if (bm.info.ok) bm.submitScore(r.score, { assisted: r.guard > 0 }).catch(() => { /* */ });
   const t = today(); S.plays++;
   const firstClear = !S.book[day.no];
   if (!past()) { t.plays++; t.done = true; }
@@ -209,6 +274,7 @@ function renderResult() {
     <div class="line2"><span>최고 콤보<b>${r.maxCombo}</b></span><span>FAST<b>${r.fast}</b> · SLOW<b>${r.slow}</b></span></div>
     <div class="say"><div class="av" style="background-image:url(${dv.face})"></div><div class="bub"><i>${dv.en}</i>${esc(praise)}</div></div>
     <div class="best">${b ? `이 난이도 최고 <b>${b.score.toLocaleString('en-US')}</b> · ${b.rank}` : ''}${syncHint(r)}</div>
+    <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}</div>
     <div class="subs"><span>${GAME.studio} 구독자</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>
     <div class="btns"><button class="sec" data-n="again">한 번 더<small>${retryLabel()}</small></button><button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button></div>`;
   /* 점수 올라가는 연출 */
@@ -348,7 +414,7 @@ function openStages() {
   const open = d => DEV || d.no <= home.no;
   const rows = DAYS.slice().sort((a, b) => (b === home) - (a === home) || a.no - b.no).map(d => {
     const sg = SONGS[d.song], dv = CASTS[d.cast], best = S.best[sg.id] || {}, ch = charts[sg.id];
-    const rk = ['hard', 'normal', 'easy'].map(x => best[x] && best[x].rank).find(Boolean);
+    const bx = ['hard', 'normal', 'easy'].map(x => best[x]).find(Boolean), rk = bx && bx.rank;   /* 「수습」 표시는 순위표에만 (검수 B-4) */
     if (!open(d)) return `<div class="st lock"><div class="cv"><span>${d.no}</span></div><div class="tx"><em>NO.${String(d.no).padStart(3, '0')} · ${d.no - home.no}일 뒤</em><b>???</b><span>${dv.name}의 방송 · 아직 열리지 않았어요</span></div></div>`;
     return `<button class="st ${d === home ? 'today' : ''} ${d === day ? 'cur' : ''}" data-s="${d.no}"><div class="cv" style="background-image:url(${d.cut})"></div><div class="tx"><em>${d === home ? 'TODAY' : 'NO.' + String(d.no).padStart(3, '0')} · ${esc(sg.tier)}</em><b>${esc(sg.title)}</b><span>${esc(singer(d))} · ${d.chapter}</span></div><div class="rk">${rk ? `<b>${rk}</b>` : ''}<small>${ch ? `LV.${ch.diffs.easy.lv}~${ch.diffs.hard.lv}` : ''}</small></div></button>`;
   }).join('');
@@ -381,6 +447,8 @@ function openSheet() {
     ${row('music', '음악', '노래 크기', Math.round(S.music * 10))}
     <div class="row"><span>타격음<small>판정마다 짧은 소리 (크기는 효과음)</small></span><button class="tg ${S.hitsnd ? 'on' : ''}" data-k="hitsnd"></button></div>
     <div class="row"><span>EARLY / LATE 표시<small>GREAT · GOOD 때 빠름 · 늦음 글씨</small></span><button class="tg ${S.el ? 'on' : ''}" data-k="el"></button></div>
+    <div class="row"><span>사고 수습<small>MISS 한 번은 캐스트가 콤보를 이어 줘요 · 끄면 명예의 전당 도전</small></span><button class="tg ${S.guard !== false ? 'on' : ''}" data-k="guard"></button></div>
+    <div class="row"><span>진동<small>슈퍼챗 · 큐 · 페이더 · 수습 때 짧게 (안드로이드)</small></span><button class="tg ${S.vib !== false ? 'on' : ''}" data-k="vib"></button></div>
     <div class="row"><span>화면 흔들림<small>100콤보 · 풀콤보 때 아주 살짝</small></span><button class="tg ${S.shake ? 'on' : ''}" data-k="shake"></button></div>
     <div class="row"><span>연출 줄이기<small>오래된 폰 · 배터리 아끼기 (파티클 · 빛기둥 끔)</small></span><button class="tg ${S.lite ? 'on' : ''}" data-k="lite"></button></div>
     ${DEV ? `<div class="row"><span>연출 테마 <small>시험 모드 · 캐스트 테마 미리보기</small></span><button class="pill3" data-k="theme">${esc((THEMES[S.theme] || THEMES.base).name)}</button></div>` : ''}
@@ -401,6 +469,8 @@ $('#sheet').addEventListener('click', e => {
   if (k === 'shake') S.shake = !S.shake;
   if (k === 'hitsnd') { S.hitsnd = !S.hitsnd; if (S.hitsnd) A.unlock().then(() => A.hit('perfect', S.sfx)); }
   if (k === 'el') S.el = !S.el;
+  if (k === 'guard') S.guard = S.guard === false;
+  if (k === 'vib') { S.vib = S.vib === false; if (S.vib && navigator.vibrate) try { navigator.vibrate(15); } catch { /* */ } }
   if (k === 'lite') { S.lite = !S.lite; document.body.classList.toggle('lite', S.lite); }
   if (k === 'theme') { const ids = Object.keys(THEMES); S.theme = ids[(ids.indexOf(S.theme) + 1) % ids.length]; }
   save(); openSheet(); renderToday();
@@ -491,4 +561,4 @@ document.addEventListener('pointerdown', async () => { await A.unlock(); A.setVo
 })();
 
 /* 시험용 손잡이 */
-window.__ot = { S, Play, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, get entry() { return entry; }, go, openStory, openBook, openStages, setDay, onResult, dayKey };
+window.__ot = { S, Play, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, get entry() { return entry; }, openCasts, joined, go, openStory, openBook, openStages, setDay, onResult, dayKey };

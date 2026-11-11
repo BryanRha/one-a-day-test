@@ -4,7 +4,7 @@
  *  - 셰이더는 모든 적 재질이 한 프로그램을 같이 씀(customProgramCacheKey) · 값은 재질마다 uniform
  */
 import * as THREE from 'three';
-import { rimCol } from './a11y.js?v=0.99.28';
+import { rimCol } from './a11y.js?v=0.99.29';
 
 export const RIM_COL = { anchor: 0xff8a3a, moss: 0x46e6cf, machine: 0xe6eef6, beast: 0xff7c9c };
 const RIM_K = { base: 0.34, dark: 0.55 }; /* 밝은 지도 / 어두운 지도(터널 · 공장 · 밤) */

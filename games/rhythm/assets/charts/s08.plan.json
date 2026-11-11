@@ -444,5 +444,15 @@
    "add": []
   }
  },
- "lastBeat": 432
+ "lastBeat": 432,
+ "special": {
+  "sc": 3,
+  "fader": {
+   "easy": 1,
+   "normal": 5,
+   "hard": 7
+  },
+  "cue": true
+ },
+ "_special": "6화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)"
 }

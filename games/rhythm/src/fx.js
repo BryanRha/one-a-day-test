@@ -6,8 +6,9 @@
 //   · v0.3.1 (검수 A1 · A2): 판정 위계는 '모양'으로 — PERFECT 금 핵 + 링 2겹 + 빛기둥 + 파티클 · GREAT 장미색 링 1겹 · GOOD 작은 빛점
 //     판정 색(금 · 장미 · 세이지)은 레인 · 노트 색(얼음 · 라벤더)과 겹치지 않게 · 빛 예산(밝기 상한)으로 판정선이 하얗게 타지 않게
 //   · 색 · 파티클 모양 · 롱노트 불꽃은 테마(themes.js)에서 읽음 → setTheme 로 바꿔 끼움
-import { GEO, P } from './render.js?v=0.99.28';
-import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.28';
+//   · 파티클 모양은 판정 색의 진한 쪽(c1)을 주로 칠함 — 모양이 바뀌어도 판정 색 위계가 그대로 (feel_check 가 테마 10개 모두 잼)
+import { GEO, P } from './render.js?v=0.99.29';
+import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.29';
 
 const { L, LW, YJ } = GEO;
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
@@ -17,17 +18,27 @@ function sprite(w, h, draw) { const c = document.createElement('canvas'); c.widt
 const SHAPE = {
   spark: (g, c0, c1) => { const r = g.createRadialGradient(12, 12, 0, 12, 12, 12); r.addColorStop(0, rgba(c0, 1)); r.addColorStop(0.35, rgba(c1, 0.8)); r.addColorStop(1, rgba(c1, 0)); g.fillStyle = r; g.fillRect(0, 0, 24, 24); },
   petal: (g, c0, c1) => { const r = g.createLinearGradient(4, 4, 20, 20); r.addColorStop(0, rgba(c0, 1)); r.addColorStop(1, rgba(c1, 0.85)); g.fillStyle = r; g.beginPath(); g.moveTo(12, 2); g.bezierCurveTo(22, 6, 20, 18, 12, 22); g.bezierCurveTo(4, 18, 2, 6, 12, 2); g.fill(); g.strokeStyle = rgba(c0, 0.6); g.lineWidth = 0.8; g.beginPath(); g.moveTo(12, 4); g.lineTo(12, 20); g.stroke(); },
+  bell: (g, c0, c1) => { g.fillStyle = rgba(c1, 0.9); g.beginPath(); g.moveTo(12, 3); g.quadraticCurveTo(19, 4, 19, 15); g.lineTo(21, 18); g.lineTo(3, 18); g.lineTo(5, 15); g.quadraticCurveTo(5, 4, 12, 3); g.fill(); g.fillStyle = rgba(c0, 1); g.beginPath(); g.arc(12, 20, 2.5, 0, Math.PI * 2); g.fill(); },
+  star: (g, c0, c1) => { g.fillStyle = rgba(c1, 1); g.shadowColor = rgba(c0, 0.8); g.shadowBlur = 3; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4.5 : 10; g.lineTo(12 + Math.cos(a) * r, 12 + Math.sin(a) * r); } g.closePath(); g.fill(); },
+  gear: (g, c0, c1) => { g.fillStyle = rgba(c1, 0.95); g.beginPath(); for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? 7.5 : 10.5; g.lineTo(12 + Math.cos(a) * r, 12 + Math.sin(a) * r); } g.closePath(); g.fill(); g.fillStyle = rgba(c0, 1); g.beginPath(); g.arc(12, 12, 3, 0, Math.PI * 2); g.fill(); },
+  page: (g, c0, c1) => { g.fillStyle = rgba(c1, 0.9); g.fillRect(5, 3, 14, 18); g.strokeStyle = rgba(c0, 0.8); g.lineWidth = 1; for (let y = 7; y < 19; y += 3) { g.beginPath(); g.moveTo(7, y); g.lineTo(17, y); g.stroke(); } },
+  flag: (g, c0, c1) => { g.fillStyle = rgba(c1, 0.95); g.beginPath(); g.moveTo(5, 4); g.lineTo(20, 9); g.lineTo(5, 15); g.closePath(); g.fill(); g.strokeStyle = rgba(c0, 1); g.lineWidth = 1.6; g.beginPath(); g.moveTo(5, 3); g.lineTo(5, 22); g.stroke(); },
+  heart: (g, c0, c1) => { g.fillStyle = rgba(c1, 1); g.beginPath(); g.moveTo(12, 21); g.bezierCurveTo(2, 14, 2, 5, 8, 5); g.bezierCurveTo(10.5, 5, 12, 7, 12, 8.5); g.bezierCurveTo(12, 7, 13.5, 5, 16, 5); g.bezierCurveTo(22, 5, 22, 14, 12, 21); g.fill(); g.fillStyle = rgba(c0, 0.8); g.beginPath(); g.arc(8.5, 9, 1.8, 0, Math.PI * 2); g.fill(); },
+  shard: (g, c0, c1) => { const r = g.createLinearGradient(4, 4, 20, 20); r.addColorStop(0, rgba(c0, 0.9)); r.addColorStop(0.35, rgba(c1, 1)); r.addColorStop(1, rgba(c1, 0.75)); g.fillStyle = r; g.beginPath(); g.moveTo(12, 1); g.lineTo(18, 12); g.lineTo(12, 23); g.lineTo(6, 12); g.closePath(); g.fill(); },
   feather: (g, c0, c1) => { g.strokeStyle = rgba(c0, 0.9); g.lineWidth = 1; g.beginPath(); g.moveTo(12, 1); g.lineTo(12, 23); g.stroke(); g.fillStyle = rgba(c1, 0.75); g.beginPath(); g.moveTo(12, 2); g.quadraticCurveTo(22, 10, 12, 22); g.quadraticCurveTo(3, 10, 12, 2); g.fill(); },
 };
 
+/* 노트 종류 색 (테마와 무관 · 노트 색과 같은 계열): 큐 = 빨간 ON AIR · 페이더 = 민트 · 슈퍼챗 = 금화 */
+const NOTE_COL = { cue: [[255, 222, 228], [255, 95, 115]], fader: [[222, 255, 242], [120, 240, 200]], coin: [[255, 244, 210], [255, 196, 80]] };
 function bake(T) {
   const S = {};
-  for (const [k, [c0, c1]] of Object.entries(T.col)) {
+  for (const [k, [c0, c1]] of Object.entries({ ...T.col, ...NOTE_COL })) {
     S[k] = {
       glow: sprite(128, 128, (g, w) => { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, rgba(c0, 1)); r.addColorStop(0.22, rgba(c0, 0.85)); r.addColorStop(0.45, rgba(c1, 0.45)); r.addColorStop(1, rgba(c1, 0)); g.fillStyle = r; g.fillRect(0, 0, w, w); }),
       ring: sprite(256, 256, g => { g.strokeStyle = rgba(c1, 0.35); g.lineWidth = 14; g.beginPath(); g.arc(128, 128, 112, 0, Math.PI * 2); g.stroke(); g.strokeStyle = rgba(c1, 0.8); g.lineWidth = 5; g.stroke(); g.strokeStyle = rgba(c0, 1); g.lineWidth = 2; g.stroke(); }),
       pillar: sprite(48, 256, (g, w, h) => { const v = g.createLinearGradient(0, h, 0, 0); v.addColorStop(0, rgba(c0, 1)); v.addColorStop(0.25, rgba(c1, 0.7)); v.addColorStop(1, rgba(c1, 0)); g.fillStyle = v; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'destination-in'; const m = g.createLinearGradient(0, 0, w, 0); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(0.5, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = m; g.fillRect(0, 0, w, h); }),
       dot: sprite(24, 24, g => (SHAPE[T.particle] || SHAPE.spark)(g, c0, c1)),
+      spark: sprite(24, 24, g => SHAPE.spark(g, c0, c1)),   /* GREAT · GOOD 는 테마와 무관하게 둥근 불씨 → 캐스트 모양은 PERFECT 이상의 '보상' (위계 유지) */
       bar: sprite(256, 32, (g, w, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, rgba(c1, 0)); v.addColorStop(0.5, rgba(c0, 1)); v.addColorStop(1, rgba(c1, 0)); g.fillStyle = v; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'destination-in'; const m = g.createLinearGradient(0, 0, w, 0); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(0.15, 'rgba(0,0,0,1)'); m.addColorStop(0.85, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = m; g.fillRect(0, 0, w, h); }),
     };
   }
@@ -58,7 +69,7 @@ export function makeFx(themeId = DEFAULT_THEME) {
     const spread = o.spread ?? 0.85, sp = o.speed ?? 1;
     for (let i = 0; i < n; i++) {
       const p = take(parts), a = -Math.PI / 2 + (Math.random() * 2 - 1) * spread * Math.PI / 2, v = (180 + Math.random() * 260) * sp;
-      p.on = true; p.t0 = now; p.x = x + (Math.random() - 0.5) * 14; p.y = y; p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v; p.life = (o.life ?? 0.45) * (0.7 + Math.random() * 0.6); p.size = (o.size ?? 9) * (0.6 + Math.random() * 0.8); p.col = col; p.grav = (o.grav ?? 620) * T.gravity / 620; p.rot = Math.random() * 6.3; p.vr = (Math.random() - 0.5) * 9;
+      p.on = true; p.t0 = now; p.x = x + (Math.random() - 0.5) * 14; p.y = y; p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v; p.life = (o.life ?? 0.45) * (0.7 + Math.random() * 0.6); p.size = (o.size ?? 9) * (0.6 + Math.random() * 0.8); p.col = col; p.plain = !!o.plain; p.grav = (o.grav ?? 620) * T.gravity / 620; p.rot = Math.random() * 6.3; p.vr = (Math.random() - 0.5) * 9;
     }
   }
   function ring(x, y, col, now, r0, r1, life, squash = 0.32) { const r = take(rings); r.on = true; r.t0 = now; r.x = x; r.y = y; r.col = col; r.r0 = r0; r.r1 = r1; r.life = life; r.sq = squash; }
@@ -74,11 +85,29 @@ export function makeFx(themeId = DEFAULT_THEME) {
       const x = lx(lane), b = take(bursts);
       b.on = true; b.t0 = now; b.x = x; b.y = YJ; b.s = s; b.kind = 'hit';
       if (s.rings > 0) ring(x, YJ, s.col, now, 16, s.size * 0.7, s.life * 1.1);
-      if (s.rings > 1 && !st.lite) ring(x, YJ, 'gold', now + 0.035, 22, s.size * 1.05, s.life * 1.6, 0.3);
-      if (s.parts) particles(x, YJ - 4, s.parts, s.col, now);
+      if (s.rings > 1 && !st.lite) ring(x, YJ, s.col, now + 0.035, 22, s.size * 1.05, s.life * 1.6, 0.3);   /* 둘째 링도 판정 색 (테마 강조색은 이정표 · 풀콤보에만 — 캐스트 테마에서도 PERFECT 는 늘 금빛) */
+      if (s.parts) particles(x, YJ - 4, s.parts, s.col, now, { plain: j !== 'perfect' });
       st.laneFlash[lane] = Math.max(st.laneFlash[lane], s.flash); st.laneCol[lane] = s.col;
     },
     miss(lane) { st.laneDim[lane] = 1; },
+    /* 슈퍼챗(금화): 판정 터짐 위에 금화 분수 + 금빛 고리 (점수는 같음 · 연출만) */
+    superchat(lane, now) {
+      const x = lx(lane), b = take(bursts); b.on = true; b.t0 = now; b.x = x; b.y = YJ; b.s = { size: 130, life: 0.42, pillar: 0, col: 'coin', core: 0.7, w: 0.2 }; b.kind = 'hit';   /* 동전 빛 — 기둥 없이 둥근 금빛 */
+      ring(x, YJ, 'coin', now, 20, 140, 0.5, 0.34); ring(x, YJ - 60, 'coin', now + 0.06, 10, 90, 0.5, 1);
+      particles(x, YJ - 6, 14, 'coin', now, { speed: 1.5, life: 0.75, grav: 900, spread: 0.55, size: 11 });
+    },
+    /* 큐: 빨간 ON AIR 램프가 켜짐 — 판정선 레인 위 붉은 빛 + 두 겹 고리 */
+    cue(lane, now) {
+      const x = lx(lane), b = take(bursts); b.on = true; b.t0 = now; b.x = x; b.y = YJ; b.s = { size: 150, life: 0.45, pillar: st.lite ? 0 : 320, col: 'cue', core: 0.9, w: 0.2 }; b.kind = 'hit';
+      ring(x, YJ, 'cue', now, 18, 120, 0.45); if (!st.lite) ring(x, YJ, 'cue', now + 0.08, 30, 190, 0.7, 0.28);
+      particles(x, YJ - 4, 12, 'cue', now, { speed: 1.2 });
+    },
+    /* 페이더가 목표 레인에 닿음: 출발 → 목표 레인을 잇는 민트 띠 + 레벨미터처럼 위로 솟는 빛 */
+    faderReach(l0, l1, now) {
+      const b = take(bands); b.on = true; b.t0 = now; b.x0 = lx(Math.min(l0, l1)); b.x1 = lx(Math.max(l0, l1)); b.kind = 'chord'; b.life = 0.35; b.col = 'fader';
+      const x = lx(l1), bu = take(bursts); bu.on = true; bu.t0 = now; bu.x = x; bu.y = YJ; bu.s = { size: 110, life: 0.4, pillar: st.lite ? 0 : 380, col: 'fader', core: 0.6, w: 0.8 }; bu.kind = 'hit';
+      particles(x, YJ - 4, 10, 'fader', now, { speed: 1.3, spread: 0.35 });
+    },
     /* 동시치기: 두 레인 사이 빛 막대 + 가로 충격파 */
     chord(l0, l1, now) {
       const b = take(bands); b.on = true; b.t0 = now; b.x0 = lx(Math.min(l0, l1)); b.x1 = lx(Math.max(l0, l1)); b.kind = 'chord'; b.life = 0.3; b.col = 'perfect';
@@ -112,6 +141,7 @@ export function makeFx(themeId = DEFAULT_THEME) {
     draw(g, now, dt, held, pulse, ratio = 1) {
       g.globalCompositeOperation = 'lighter';
       /* 빛 예산: 지금 켜진 빛의 합 → 상한을 넘으면 모든 이펙트 알파에 같은 배율 */
+      /* 슈퍼챗 · 큐 빛(w 0.2)은 곡당 몇 번뿐인 '보상' → 예산에 조금만 잡아 PERFECT 위에 확실히 더해지게. 연타 하얗게 뜸은 일반 판정 빛이 정함 */
       let light = st.line;
       for (const b of bursts) if (b.on && now >= b.t0) light += (1 - (now - b.t0) / b.s.life) * (b.s.w ?? 1);
       for (let l = 0; l < L; l++) light += st.laneFlash[l] * 0.4 + (held[l] ? 0.5 : 0);
@@ -154,14 +184,15 @@ export function makeFx(themeId = DEFAULT_THEME) {
       /* 띠: 동시치기 막대 · 금빛 쓸기 */
       for (const b of bands) {
         if (!b.on) continue; const t = now - b.t0; if (t < 0) continue; const k = t / b.life; if (k >= 1) { b.on = false; continue; }
-        if (b.kind === 'chord') { const pad = 30; g.globalAlpha = (1 - k) * K; g.drawImage(SP.perfect.bar, b.x0 - pad, YJ - 12 - 6 * (1 - k), b.x1 - b.x0 + pad * 2, 24 + 12 * (1 - k)); }
+        if (b.kind === 'chord') { const pad = 30; g.globalAlpha = (1 - k) * K; g.drawImage(SP[b.col || 'perfect'].bar, b.x0 - pad, YJ - 12 - 6 * (1 - k), b.x1 - b.x0 + pad * 2, 24 + 12 * (1 - k)); }
         else { const a = P(-0.05, 0), z = P(L + 0.05, 0), x = a[0] + (z[0] - a[0]) * k; g.globalAlpha = Math.sin(Math.PI * k) * K; g.drawImage(SP.gold.glow, x - 70, YJ - 40, 140, 80); g.drawImage(SP.gold.bar, a[0], YJ - 10, z[0] - a[0], 20); }
       }
       /* 파티클 */
       for (const p of parts) {
         if (!p.on) continue; const t = now - p.t0; if (t < 0) continue; const k = t / p.life; if (k >= 1) { p.on = false; continue; }
         p.vy += p.grav * dt; p.vx *= 1 - 2.2 * dt; p.vy *= 1 - 1.2 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
-        const sz = p.size * (1 - k * 0.6) * (T.spin ? 1.3 : 1); g.globalAlpha = (1 - k * k) * Math.sqrt(K);
+        const sz = p.size * (1 - k * 0.6); g.globalAlpha = (1 - k * k) * Math.sqrt(K);
+        if (p.plain) { g.drawImage(SP[p.col].spark, p.x - sz, p.y - sz, sz * 2, sz * 2); continue; }
         if (T.spin) { p.rot += p.vr * dt; const c = Math.cos(p.rot), si = Math.sin(p.rot); g.setTransform(c * ratio, si * ratio, -si * ratio, c * ratio, p.x * ratio, p.y * ratio); g.drawImage(SP[p.col].dot, -sz, -sz, sz * 2, sz * 2); }
         else g.drawImage(SP[p.col].dot, p.x - sz, p.y - sz, sz * 2, sz * 2);
       }
