@@ -1,6 +1,6 @@
 // 작전 조언 (v0.12 · 테스터 시트 #5 · #7): 지도를 읽어 '강 건너는 법'과 '이번 작전에 필요한 유닛'을 알려 줌 (화면과 무관 — Node 시험에서도 씀)
-import { TCH } from './core/sim.js?v=0.99.36';
-import { UNITS } from './core/data.js?v=0.99.36';
+import { TCH } from './core/sim.js?v=0.99.37';
+import { UNITS } from './core/data.js?v=0.99.37';
 
 // 강 건너기 안내 (보병 · 차량 · 하늘) — 지도에 강이 있을 때
 export const RIVER_HOW = [

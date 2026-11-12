@@ -833,3 +833,30 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* QA 6 결과 등급 빛 쓸기가 끝난 뒤 끝 조각이 남던 것: 끝에서 사라지게 (이름도 따로 — 'shine' 은 시작 단추와 겹쳐 있었음) */
 #result .rank .shine::before{animation:rkShine .7s 1s ease-in-out both}
 @keyframes rkShine{from{left:-60%;opacity:1}85%{opacity:1}to{left:130%;opacity:0}}
+
+/* ---------- v0.7.1 첫 실행 리허설 · '그때' 안내 (tutorial.md) ---------- */
+/* 결과 칩 = 채널로 가는 단추 (누르는 영역 44px) */
+#result .extra .chg{position:relative;font:inherit;font-weight:700;cursor:pointer}
+#result .extra .chg::after{content:'';position:absolute;left:-2px;right:-2px;top:-10px;bottom:-10px}
+#result .extra .chg em.full{background:rgba(159,240,255,.2);color:#dff8ff}
+#result .extra .tipl{flex-basis:100%;text-align:center;font-size:11px;line-height:1.45;color:#ffe9c4;word-break:keep-all}
+/* 난이도 안내: 세 칸 위 한 줄을 금빛 글로 · 보통 칸이 세 번 숨 쉼 */
+.btns .again.tip::before{content:attr(data-tip);color:#ffe9c4;letter-spacing:0;white-space:nowrap;left:0;right:auto;text-align:left}
+.btns .again button.nudge{animation:nudge 1.2s .9s ease-in-out 3}
+@keyframes nudge{50%{border-color:var(--gold);box-shadow:0 0 16px rgba(242,212,154,.55)}}
+/* 채널 맨 위 「구독자가 쌓이는 길」 */
+#sheet .chs .how{list-style:none;margin:10px 0 2px;padding:8px 10px;border-radius:12px;background:rgba(159,240,255,.06);border:1px solid rgba(159,240,255,.22)}
+#sheet .chs .how li{display:grid;grid-template-columns:72px 1fr auto;gap:6px;align-items:baseline;padding:3px 0;font-size:11.5px;color:var(--sub)}
+#sheet .chs .how li b{color:#fff;font-weight:700}
+#sheet .chs .how li span{word-break:keep-all}
+#sheet .chs .how li em{font:700 12px 'Rajdhani';font-style:normal;color:var(--ice)}
+/* 리허설 안내 · 건너뛰기 */
+#play .prac.drill span{font-size:16px}
+#play .prac .dskip{pointer-events:auto;display:inline-block;margin-top:10px;height:36px;padding:0 16px;border-radius:18px;font-size:12px;font-weight:700;color:#e8ecf6;background:rgba(10,11,26,.7);border:1px solid rgba(255,255,255,.3);position:relative}
+#play .prac .dskip::after{content:'';position:absolute;inset:-5px}
+#play .prac:not(.on) .dskip{pointer-events:none}
+/* v0.7.1 결과 아래 흐름: 안내 한 줄이 들어가는 최악 조합(360 · 칩 + 안내 + 수습 + 싱크 + 최고 기록)도 단추 위에 (2px 모자랐음) */
+#result .low{gap:6px}
+#result .extra .tipl{line-height:1.35}
+/* v0.7.1 안내는 캐스트 말풍선이 (새 줄 없음) — 금빛 테두리 · TIP 표시 */
+#result .say .bub.tip{background:rgba(255,246,226,.97);box-shadow:0 0 0 1.5px var(--gold),0 10px 30px rgba(0,0,0,.4)}

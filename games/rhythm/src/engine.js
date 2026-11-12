@@ -37,6 +37,7 @@ export function parseChart(chart, diff, shift = 0, meet = null) {
     return o;
   });
   if (meet && meet.fader) notes = meetFader(notes, meet.fader);
+  if (meet && meet.drill) notes = [...meet.drill.map(d => ({ id: -1, beat: null, t: d.t, l: d.l, kind: d.len ? 'long' : 'tap', end: d.t + (d.len || 0), chord: false, head: null, tail: null, holding: false, delta: 0, sp: d.sp || null, drill: d.step })), ...notes];   /* 리허설 노트 (곡 앞 소리 없는 구간 · 점수에 안 셈) */
   notes.sort((a, b) => a.t - b.t || a.l - b.l);
   notes.forEach((n, i) => { n.id = i; });   /* 동시치기 짝(pair)은 정렬된 뒤의 번호로 (연습 노트가 앞에 끼어도 어긋나지 않게) */
   for (let i = 0; i < notes.length; i++) for (let j = i + 1; j < notes.length && notes[j].t - notes[i].t < 0.002; j++) { notes[i].chord = notes[j].chord = true; notes[i].pair = notes[j].id; notes[j].pair = notes[i].id; }
@@ -68,7 +69,7 @@ export function rankOf(acc, miss) {
 export class Session {
   constructor(notes) {
     this.notes = notes;
-    this.total = notes.reduce((s, n) => s + (n.practice ? 0 : n.kind === 'long' ? 2 : 1), 0);   /* 연습 노트는 안 셈 */
+    this.total = notes.reduce((s, n) => s + (n.practice || n.drill ? 0 : n.kind === 'long' ? 2 : 1), 0);   /* 연습 · 리허설 노트는 안 셈 */
     this.count = { perfect: 0, great: 0, good: 0, miss: 0 };
     this.fast = 0; this.slow = 0;
     this.combo = 0; this.maxCombo = 0; this.done = 0; this.accSum = 0;
@@ -85,7 +86,7 @@ export class Session {
   get acc() { return this.done ? this.accSum / this.done : 1; }        /* 지금까지 친 것 기준 (화면 표시용) */
   get finished() { return this.done >= this.total; }
   judge(j, n, lane, delta, tail = false) {
-    if (n.practice) { const e = { type: 'judge', j, lane, delta, note: n, tail, combo: this.combo, guard: false, practice: true }; this.events.push(e); return e; }   /* 연습: 보여 주기만 (점수 · 콤보 · 수습 그대로) */
+    if (n.practice || n.drill) { const e = { type: 'judge', j, lane, delta, note: n, tail, combo: this.combo, guard: false, practice: true }; this.events.push(e); return e; }   /* 연습 · 리허설(v0.7.1 첫 실행): 보여 주기만 (점수 · 콤보 · 수습 · 판정 개수 그대로) — 판정 창은 보통 노트와 같음 */
     const guarded = j === 'miss' && this.hooks.miss ? this.hooks.miss(n, lane, tail) === 'guard' : false;
     this.count[j]++; this.done++; this.accSum += ACC[j];
     if (j === 'miss') { this.rawCombo = 0; if (guarded) this.guard++; else this.combo = 0; }

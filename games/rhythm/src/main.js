@@ -2,19 +2,19 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.36';
-import { Play } from './play.js?v=0.99.36';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.36';
-import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.36';
-import * as CH from './channel.js?v=0.99.36';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.36';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.36';
-import { bm } from './oad_bm.js?v=0.99.36';
-import { THEMES } from './themes.js?v=0.99.36';
+import { A } from './audio.js?v=0.99.37';
+import { Play } from './play.js?v=0.99.37';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.37';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.37';
+import * as CH from './channel.js?v=0.99.37';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.37';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.37';
+import { bm } from './oad_bm.js?v=0.99.37';
+import { THEMES } from './themes.js?v=0.99.37';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.7.0';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.7.1';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -250,11 +250,11 @@ function openChannel(id) {
     <div class="hd"><i style="background-image:url(${c.face})"></i><div><em>${esc(c.gen)} · 캐스트 채널</em><b>${esc(c.name)}<small>${st ? `${st}단계` : '합류'}${awake(id) ? ' · 각성' : ''}</small></b>${fo ? `<span class="real">${esc(F.name)} · ${F.age} · ${esc(F.job)}</span>` : ''}<span>구독자 <b class="tnum">${subs.toLocaleString('en-US')}</b>${nxt ? ` · 다음 ${nxt.toLocaleString('en-US')}` : st >= 3 ? ' · 완료' : ''}</span></div></div>
     <u class="pb big"><s style="width:${stagePct(subs, id)}%"></s></u>
     <div class="stat"><span>함께한 방송 <b>${lg.plays}</b> · 함께 수습 <b>${lg.guards}</b></span><span>오늘 함께한 방송 <b>${Math.min(t.cred || 0, CH.CAP)}/${CH.CAP}</b></span></div>
+    <ul class="how"><li><b>함께한 방송</b><span>그 캐스트와 끝까지 · 하루 ${CH.CAP}판까지</span><em>+${CH.GAIN.play}</em></li><li><b>화 첫 방송</b><span>그 캐스트의 화를 처음 끝까지</span><em>+${CH.GAIN.ep}</em></li><li><b>첫 달성</b><span>곡 · 난이도마다 첫 완주 · 첫 S · 첫 풀콤보</span><em>+${CH.GAIN.first.clear}~${CH.GAIN.first.fc}</em></li></ul>
     <h4>단계 보상</h4><ul class="gifts">${gifts}</ul>
     ${pcs ? `<h4>조각</h4><div class="pcs">${pcs}</div>` : ''}
     <h4>카드</h4>${cards || '<div class="none">그 캐스트 화를 끝까지 송출하면 카드를 받아요</div>'}
     ${msgs ? `<h4>채널 메시지</h4><div class="msg">${msgs}</div>` : ''}
-    <div class="note">구독자는 함께한 방송(하루 ${CH.CAP}판까지) · 곡별 난이도 첫 달성 · 화 첫 방송으로 쌓여요 · 점수에는 영향 없어요</div>
   </div><button class="seat ${S.guest === id ? 'off' : ''}" data-k="seat" data-c="${id}">${S.guest === id ? '옆자리에서 내리기' : '옆자리 게스트로 앉히기'}</button></div>`;
   sh.classList.add('on'); moreHint(sh); save();
   trk('channel_open', { cast: id });
@@ -272,13 +272,16 @@ function go() {
   const dv = CASTS[day.cast], gid = guestId(), gc = gid ? CASTS[gid] : dv;
   /* 처음 보는 노트 · 첫 판 안내 (한 장) */
   const ch = charts[song.id], here = new Set(ch.diffs[S.diff].notes.map(n => n[3]).filter(Boolean));
-  const guides = Q.get('guide') === '0' ? [] : guidesFor(here);   /* 한 판에 최대 두 가지 (검수 C-2) */
+  /* 첫 실행 리허설 (v0.7.1): 처음 하는 사람(조작 안내를 아직 안 본 저장)에게만 · ?guide=0 이면 끔 · 리허설이 조작 · 슈퍼챗을 가르치므로 그 두 안내 카드는 빼고 나머지(페이더 · 큐)는 그 화에서 그대로 */
+  const gAll = Q.get('guide') === '0' ? [] : guidesFor(here), drillSc = here.has('sc') && !(S.seen || {}).sc;
+  const drill = Q.get('guide') !== '0' && !S.guide && !S.drill && gAll.every(k => k === 'lane' || (k === 'sc' && drillSc));   /* 리허설은 다른 새 노트 카드가 없는 판에서만(새 유저 1화) */
+  const guides = drill ? [] : gAll;   /* 한 판에 최대 두 가지 (검수 C-2) */
   show('play');
   Play.auto = Q.get('auto') && Q.get('auto') !== '0' ? { jitter: +(Q.get('jitter') || 18), miss: +(Q.get('miss') || 0), dom: Q.get('auto') === 'dom', wait: Q.get('gwait') === '1' } : null;   /* gwait=1: 자동 연주라도 안내 「확인」은 직접 (시험용) */
   Play.start({
     song, chart: charts[song.id], diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
     hitsnd: S.hitsnd, el: S.el, lite: S.lite, vib: S.vib !== false, theme: DEV && Q.get('theme') ? themeNow() : DEV && THEMES[S.theme] && S.theme !== 'base' ? S.theme : themeNow(),
-    guides,   /* ?guide=0 이면 끔 · 시험 도구 */
+    guides, drill, drillSc: drill && drillSc,   /* ?guide=0 이면 끔 · 시험 도구 · 리허설은 다른 안내 카드가 없는 판에서만(1화가 보통) */
     guards: S.guard === false ? 0 : (awake(gid || day.cast) ? 3 : CH.guardsFor(CH.stageOfCast(S, gid || day.cast))), firstSc: !S.seen.scHit,   /* v0.7: 각성하면 3회 */   /* 사고 수습: 수습하는 캐스트(게스트 → 오늘 캐스트)의 구독자 단계로 1 · 1 · 2 · 2회 (v0.6) · 설정에서 끔 */
     fan: [day.cast, gid].filter((x, i, a) => x && a.indexOf(x) === i && CH.stageOfCast(S, x) >= 1 && CHANNEL[x]).flatMap(x => CHANNEL[x].fan),   /* 단계 1: 그 캐스트 팬 채팅 (글만 · 채팅 4줄 안) */
     burst: CH.stageOfCast(S, gid || day.cast) >= 2,   /* 단계 2: 콤보 10마다 채팅 응원 + 하트 (50 · 100 이정표와 겹치지 않게) */
@@ -293,7 +296,7 @@ function go() {
     themeLine: gid && gid !== day.cast && THEMES[rosterOf(gid).theme] ? `연출 · ${THEMES[rosterOf(gid).theme].name}` : !gid && skinOn() ? `연출 · ${THEMES.owner.name}` : '',
     guestHello: gid && gid !== day.cast && rosterOf(gid).guest ? { name: gc.name, text: rosterOf(gid).guest } : null,
     /* 안내 '봤음'은 READY 를 지난 뒤 저장 (안내 중에 나가면 다음 판에 다시 · 검수 C-1) */
-    onReady: () => { if (!guides.length) return; if (guides.includes('lane')) S.guide = true; for (const k of guides) S.seen[k] = true; save(); },
+    onReady: () => { if (Play.drill) { S.drill = true; S.guide = true; if (drill && drillSc) S.seen.sc = true; save(); trk('tutorial', { step: Play.drill.skipped ? 'skip' : 'done' }); } if (!guides.length) return; if (guides.includes('lane')) S.guide = true; for (const k of guides) S.seen[k] = true; save(); },
     onPause: () => pauseMenu(), onEnd: r => onResult(r),
   });
   /* 판 시작 기록 (v0.5.4): 곡 · 난이도 · 그 화의 자리(kind) · 그날 몇 번째 판(n) — 다시 하기가 자유로워진 뒤 하루 판 수 = v0.6 하루 상한 자료 */
@@ -329,7 +332,7 @@ function onResult(r) {
   /* v0.6 캐스트 채널 정산: 하루 상한 = 그날 끝까지 한 판 수(곡 · 캐스트 무관) 첫 CAP 판 · 앵콜은 그날 첫 완주 1회 · 골드 없음 · 점수 영향 0 (판이 끝난 뒤 계산만) */
   t.cred = (t.cred || 0) + 1; const credited = t.cred <= CH.CAP, enc = kind() === 'encore' && !t.enc; if (enc) t.enc = true;
   const chg = CH.settle(S, { day, guest: gid, r, credited, epFirst: firstClear, encore: enc, joinable: isJoinable, cardDefs: CARDS, songId: song.id, diff: S.diff });
-  const capNote = !credited && !t.capSeen; if (capNote) t.capSeen = true;
+  const full = credited && t.cred === CH.CAP;   /* 그날 4번째 판 = 오늘 몫을 다 채운 순간 (v0.7.1 · 넘친 뒤가 아니라 채운 그때) */
   if (t.cred === CH.CAP) trk('daily_cap', { n: t.cred });
   for (const u of chg.stageUps) trk('cast_stage', { cast: u.cast, stage: u.stage });
   for (const f of chg.firsts) trk('first_clear', { song: song.id, diff: S.diff, kind: f.kind, cast: f.cast });
@@ -337,7 +340,10 @@ function onResult(r) {
   /* v0.7: 각성(그 화 끝까지 + 3단계 · 곡이 온 화만) · 얼굴 열림 기록 */
   chg.awk = CH.awkCheck(S, { awk: AWK, days: DAYS, dayNo: dayRaw() }); for (const id of chg.awk) trk('awaken', { cast: id });
   faceMark();
-  last = { r, nb, firstClear, newPage: pageIn(day.no, r.rank), diff: S.diff, ch: chg, capNote };
+  last = { r, nb, firstClear, newPage: pageIn(day.no, r.rank), diff: S.diff, ch: chg, full };
+  last.tip = pickTip(chg, full); last.dtip = pickDiffTip(r, S.diff);
+  if (last.tip) trk('tip', { k: last.tip.k }); if (last.dtip) trk('tip', { k: last.dtip.k });
+  save(true);
   save(true);
   try { window.parent.postMessage({ type: 'oad:track', name: 'clear', p: { rank: r.rank, acc: Math.round(r.acc * 1000) / 10, diff: S.diff, song: song.id } }, '*'); } catch { /* */ }
   renderResult(); show('result', 'root'); stack = ['today', 'result'];
@@ -355,12 +361,12 @@ function renderResult() {
     <div class="grid"><div class="p"><em>PERFECT</em><b>${r.count.perfect}</b></div><div class="g"><em>GREAT</em><b>${r.count.great}</b></div><div class="d"><em>GOOD</em><b>${r.count.good}</b></div><div class="m"><em>MISS</em><b>${r.count.miss}</b></div></div>
     <div class="line2"><span>최고 콤보<b>${r.maxCombo}</b></span><span>FAST<b>${r.fast}</b> · SLOW<b>${r.slow}</b></span></div>
     <div class="low">
-    <div class="say"><div class="av" style="background-image:url(${dv.face})"></div><div class="bub"><i>${dv.en}</i>${esc(praise)}</div></div>
+    <div class="say"><div class="av" style="background-image:url(${dv.face})"></div><div class="bub${last.tip ? ' tip' : ''}"><i>${dv.en}${last.tip ? ' · TIP' : ''}</i>${esc(last.tip ? last.tip.text : praise)}</div></div>
     ${b ? `<div class="best">이 난이도 최고 <b>${b.score.toLocaleString('en-US')}</b> · ${b.rank}</div>` : ''}${syncHint(r)}
-    <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}${chChip(last.ch, last.capNote)}</div>
-    <div class="subs"><span>${GAME.studio} 구독자</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>
+    <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}${chChip(last.ch, last.full, last.tip)}</div>
+    <div class="subs"><span>${GAME.studio} 채널</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>
     </div>
-    <div class="btns"><div class="again" role="group" aria-label="한 번 더">${DIFFS.map(([d, n]) => `<button class="${d === last.diff ? 'on' : ''}" data-n="again" data-d="${d}" aria-label="${n}으로 한 번 더"><b>${n}</b><small>${d === last.diff ? '한 번 더' : `LV.${charts[song.id].diffs[d].lv}`}</small></button>`).join('')}</div><button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button></div>`;
+    <div class="btns"><div class="again${last.dtip ? ' tip' : ''}" role="group" aria-label="한 번 더"${last.dtip ? ` data-tip="${esc(last.dtip.text)}"` : ''}>${DIFFS.map(([d, n]) => `<button class="${d === last.diff ? 'on' : ''}${last.dtip && d === 'normal' ? ' nudge' : ''}" data-n="again" data-d="${d}" aria-label="${n}으로 한 번 더"><b>${n}</b><small>${d === last.diff ? '한 번 더' : `LV.${charts[song.id].diffs[d].lv}`}</small></button>`).join('')}</div><button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button></div>`;
   /* 점수 올라가는 연출 */
   const el = $('#r_sc'), t0 = performance.now();
   const up = () => { const k = Math.min(1, (performance.now() - t0) / 1100), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(r.score * e).toLocaleString('en-US'); if (k < 1) requestAnimationFrame(up); };
@@ -376,18 +382,41 @@ function renderResult() {
 const FIRST_NM = { clear: '첫 완주', s: '첫 S', fc: '첫 풀콤보' };
 /* 얼굴이 열린 캐스트에 연 날(faceAt) 기록 + face_open (설치 뒤 날 수) — 판 끝 · 처음 열 때(그림이 나중에 들어온 경우) */
 function faceMark() { for (const id of Object.keys(FACE)) { const rec = CH.ensure(S).casts[id]; if (rec && !rec.faceAt && faceOpen(id)) { rec.faceAt = dayKey(); trk('face_open', { cast: id, day: dayRaw() }); } } }
-function chChip(ch, capNote) {
+/* ---------- v0.7.1 '일이 일어난 그때' 안내 (team/dev/tasks/261112-rhythm-v07/tutorial.md) ----------
+   결과 칩 아래 한 줄 · 한 판에 하나 · 처음 한 번만(S.tips) · 설정 「안내 다시 보기」로 다시 · 창 없음 */
+const TIP_MAX = '미유 4단계! 채널에 새 이야기가 열렸어요. ☰ 캐스트에서 봐요.';   /* 가장 긴 안내 (layout_check) */
+function pickTip(ch, full) {
+  const T = (S.tips ||= {}), gains = Object.entries((ch && ch.gain) || {}).filter(([, n]) => n > 0), chip = gains.length > 0;
+  let tip = null;
+  if (chip && !T.grow) tip = { k: 'grow', text: '끝까지 같이 방송하면 구독자가 올라요. 아래 칩을 눌러 봐요.' };
+  if (!tip && full && !T.cap) tip = { k: 'cap', text: `오늘 ${CH.CAP}판 다 채웠어요! 방송은 계속 · 아침 7시에 다시 쌓여요` };
+  if (!tip && T.grow && !T.stage) { const w = ROSTER.find(r => joined(r.id) && shown(r.id) >= 1); if (w) tip = { k: 'stage', text: `${CASTS[w.id].name} ${shown(w.id)}단계! 채널에 새 이야기가 열렸어요. ${chip ? '칩을 눌러 봐요.' : '☰ 캐스트에서 봐요.'}` }; }
+  if (!tip && T.grow && !T.first && ch && ch.firsts.some(f => f.kind !== 'clear')) tip = { k: 'first', text: '난이도마다 첫 완주 · 첫 S · 첫 풀콤보엔 구독자 보너스!' };
+  if (tip) T[tip.k] = dayKey();
+  return tip;
+}
+/* 난이도 안내 (대표 11-12): 쉬움을 처음 끝낸 결과 · 쉬움에서 처음 S 이상 — 결과의 난이도 세 칸 위 한 줄을 바꾸고 보통 칸이 한 번 숨 쉼 (새 줄 · 창 없음) */
+function pickDiffTip(r, diff) {
+  const T = (S.tips ||= {}); if (diff !== 'easy') return null;
+  let tip = null;
+  if (!T.diff) tip = { k: 'diff', text: '잘했어요! 보통 · 어려움도 있어요 — 누르면 바로' };
+  else if (!T.diffS && (r.rank === 'S' || r.rank === 'SS')) tip = { k: 'diffS', text: `쉬움 ${r.rank}! 보통에 도전해 볼래요?` };
+  if (tip) T[tip.k] = dayKey();
+  return tip;
+}
+function chChip(ch, full, tip) {
   if (!ch) return '';
   const g = Object.entries(ch.gain).filter(([, n]) => n > 0), up = ch.stageUps.filter(u => u.stage <= shown(u.cast)).pop();   /* 그림이 없는 4단계는 칩에도 안 냄 */
-  const chip = g.length ? `<span class="chg${up ? ' up' : ''}"><i>♪</i>${g.map(([id, n]) => `${esc(CASTS[id].name)} <b>+${n.toLocaleString('en-US')}</b>`).join(' · ')}${ch.firsts.length ? `<em>${FIRST_NM[['fc', 's', 'clear'].find(k => ch.firsts.some(f => f.kind === k))]}</em>` : ''}${up ? `<em class="st">${esc(CASTS[up.cast].name)} ${up.stage}단계${up.stage === 4 ? ' · 얼굴 조각' : ''}</em>` : ''}${ch.awk && ch.awk.length ? `<em class="st">${esc(CASTS[ch.awk[0]].name)} 각성</em>` : ''}</span>` : '';
-  return chip + (capNote ? '<span class="capl">오늘 몫은 다 받았어요 · 아침 7시에 다시 쌓여요 · 연습은 계속 자유</span>' : '');
+  const top = g.length ? g.slice().sort((a, b) => b[1] - a[1])[0][0] : '';   /* 칩을 누르면 가장 많이 오른 캐스트의 채널 (v0.7.1) */
+  const chip = g.length ? `<button class="chg${up ? ' up' : ''}" data-n="chan" data-c="${top}" aria-label="${esc(CASTS[top].name)} 채널 열기"><i>♪</i>구독자 ${g.map(([id, n]) => `${esc(CASTS[id].name)} <b>+${n.toLocaleString('en-US')}</b>`).join(' · ')}${ch.firsts.length ? `<em>${FIRST_NM[['fc', 's', 'clear'].find(k => ch.firsts.some(f => f.kind === k))]}</em>` : ''}${up ? `<em class="st">${esc(CASTS[up.cast].name)} ${up.stage}단계${up.stage === 4 ? ' · 얼굴 조각' : ''}</em>` : ''}${ch.awk && ch.awk.length ? `<em class="st">${esc(CASTS[ch.awk[0]].name)} 각성</em>` : ''}${full ? `<em class="full">오늘 ${CH.CAP}/${CH.CAP} ✓</em>` : ''}</button>` : '';
+  return chip;   /* v0.7.1: 안내는 새 줄이 아니라 캐스트 말풍선이 말함 (결과 아래 흐름이 넘치지 않게) */
 }
 /* S 이상: 등급 주변으로 퍼지는 금빛 알갱이 (CSS 만) */
 function sparks() { let h = ''; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + Math.random() * 0.3, r = 70 + Math.random() * 60; h += `<i class="sp" style="left:50%;top:50%;--dx:${(Math.cos(a) * r).toFixed(0)}px;--dy:${(Math.sin(a) * r * 0.8).toFixed(0)}px;animation-delay:${(0.75 + Math.random() * 0.4).toFixed(2)}s"></i>`; } return h; }
 /* 판정이 한쪽으로 쏠리면 싱크 맞추기 권함 (부드럽게) */
 function syncHint(r) { const n = r.fast + r.slow; if (n < 12) return ''; const k = (r.slow - r.fast) / n; return Math.abs(k) > 0.55 ? `<div class="synch">${k > 0 ? '조금 늦게' : '조금 빠르게'} 누르는 편이에요 · 싱크 맞추기를 해 보세요</div>` : ''; }
 /* 결과 「한 번 더」: 난이도 세 칸 — 같은 난이도도 다른 난이도도 한 번에 시작 (v0.5.4 · 의도서 4: 탭 2번 안) */
-$('#result').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (!b) return; if (b.dataset.n === 'story') openStory(); if (b.dataset.n === 'again') { if (b.dataset.d) { S.diff = b.dataset.d; save(); } show('today', 'root'); $('#t_start').click(); } });
+$('#result').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (!b) return; if (b.dataset.n === 'chan') { A.fxPlay('tick', S.sfx * 0.5); return openChannel(b.dataset.c); } if (b.dataset.n === 'story') openStory(); if (b.dataset.n === 'again') { if (b.dataset.d) { S.diff = b.dataset.d; save(); } show('today', 'root'); $('#t_start').click(); } });
 
 /* ---------- ④ 개인 채널 (방송 후 DM · 오늘의 조각) — id 는 v0.3 그대로 #story ---------- */
 let dm = null;
@@ -567,6 +596,7 @@ function openSheet() {
     ${skinOK() ? tg('skin', '백금 무대', '소장 꾸미기 · 판정선 · 키 패드 · 테두리가 백금빛 (게스트가 있으면 게스트 연출)', skinOn()) : bm.info.ok ? '<div class="row"><span>백금 무대<small>소장 꾸미기 · 원어데이에서 이 게임을 소장하면 쓸 수 있어요</small></span><b class="lk">소장</b></div>' : ''}
     ${tg('shake', '화면 흔들림', '100콤보 · 풀콤보 때 아주 살짝', S.shake)}
     ${tg('lite', '연출 줄이기', '오래된 폰 · 배터리 아끼기 (파티클 · 빛기둥 끔)', S.lite)}
+    <div class="row"><span>안내 다시 보기<small>첫 리허설과 구독자 · 단계 · 난이도 안내를 다음 방송부터 한 번씩 다시</small></span><button class="pill3" data-k="tips">다시 보기</button></div>
     ${DEV ? `<div class="row"><span>연출 테마 <small>시험 모드 · 캐스트 테마 미리보기</small></span><button class="pill3" data-k="theme">${esc((THEMES[S.theme] || THEMES.base).name)}</button></div>` : ''}
     <div class="cred"><b>${GAME.name}</b> · ${GAME.studio} · ${VER}<br><b>음악</b> Suno 로 만든 오리지널 곡 10곡 (회사 유료 구독 · 상업 이용)<br><b>캐릭터 원화</b> 그라나사 (권리자 허락) · <b>채보 · 화면</b> 원어데이<br>키보드: D F J K</div>
     </div><button class="close" data-k="close">닫기</button></div>`;
@@ -588,6 +618,7 @@ $('#sheet').addEventListener('click', e => {
   if (k === 'faceclose') { const f = $('#sheet .fbig'); if (f) f.remove(); return; }
   if (k === 'seat') { const id = b.dataset.c; seat(id); closeSheet(); if (cur() === 'casts') { stack.pop(); openCasts(); } return; }   /* 캐스트 채널 시트 */
   if (k === 'calib') { closeSheet(); return openCalib(); }
+  if (k === 'tips') { S.tips = {}; S.drill = false; S.guide = false; save(true); closeSheet(); return toast('다음 방송부터 리허설과 안내를 다시 보여 줘요', 2400); }
   if (k === 'offset') S.offset = Math.max(-300, Math.min(300, S.offset + v * 5));
   if (k === 'speed') S.speed = Math.max(1, Math.min(10, S.speed + v));
   if (k === 'sfx') { S.sfx = Math.max(0, Math.min(1, Math.round(S.sfx * 10 + v) / 10)); A.unlock().then(() => A.hit('perfect', S.sfx)); }
@@ -711,5 +742,5 @@ document.addEventListener('pointerdown', async () => { await A.unlock(); A.setVo
 
 /* 시험용 손잡이 */
 /* 결과 화면 줄 겹침 시험용 (tools/layout_check.mjs): r · 신기록 여부를 넣어 결과를 그림 */
-function testResult(r, nb = false, ch = null, capNote = false) { last = { r, nb, firstClear: false, newPage: false, diff: S.diff, ch, capNote }; renderResult(); show('result', 'root'); }
+function testResult(r, nb = false, ch = null, tip = false, dtip = false) { last = { r, nb, firstClear: false, newPage: false, diff: S.diff, ch, full: !!tip, tip: tip ? { k: 'cap', text: TIP_MAX } : null, dtip: dtip ? { k: 'diff', text: '잘했어요! 보통 · 어려움도 있어요 — 누르면 바로' } : null }; renderResult(); show('result', 'root'); }
 window.__ot = { S, Play, testResult, openCalib, CAL_CLOSE_MS, get cal() { return cal; }, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, days: DAYS, get entry() { return entry; }, openCasts, openChannel, openSheet, CH, get encore() { return encore; }, get tonight() { return tonight(); }, joined, go, openStory, openBook, openStages, setDay, onResult, dayKey };

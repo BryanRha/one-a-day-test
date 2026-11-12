@@ -13,12 +13,13 @@ export function now() { const q = Q.get('day'); if (q && !EP) { const [y, m, d] 
 export function dayKey(d = now()) { const x = new Date(d.getTime() - 7 * 3600e3); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; }
 export function nextOpen(d = now()) { const n = new Date(d); n.setHours(7, 0, 0, 0); if (n <= d) n.setDate(n.getDate() + 1); return n; }
 
+/* v0.7.1 (대표 11-12): 새 유저 첫 판은 쉬움 — 기존 저장은 마지막으로 고른 난이도 그대로(저장에 diff 가 있음) */
 export function fresh() {
-  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'normal', days: {}, best: {}, book: {}, pre: {}, dm: {}, seen: {}, guest: null, vib: true, guard: true, cast: {}, plays: 0, calibrated: false };
+  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'easy', days: {}, best: {}, book: {}, pre: {}, dm: {}, seen: {}, guest: null, vib: true, guard: true, cast: {}, plays: 0, calibrated: false };
 }
 export let S = fresh();
 export function load() {
-  try { const raw = NOSAVE ? null : localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && o.v === 1) S = Object.assign(fresh(), o); } } catch { S = fresh(); }
+  try { const raw = NOSAVE ? null : localStorage.getItem(KEY); S = fresh(); if (raw) { const o = JSON.parse(raw); if (o && o.v === 1) S = Object.assign(fresh(), o); } } catch { S = fresh(); }   /* 저장이 없으면 새로 (v0.7.1: ?reset=1 이 앞서 읽은 값을 남기던 것) */
   /* v0.5.4: 열린 화는 모두 그냥 시작 → 옛 저장의 하루 기록에 남은 광고 횟수(ads) · retries 는 읽지 않고 지움 */
   if (!S.days || typeof S.days !== 'object') S.days = {};
   for (const d of Object.values(S.days)) if (d && typeof d === 'object') { delete d.ads; delete d.retries; }
