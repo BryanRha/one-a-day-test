@@ -2,13 +2,13 @@
 //   오늘의 방송은 그날 하루 무제한 무료 · 지난 방송은 보상형 광고(하루 3회) 또는 골드 · 소장이면 무료 (ONAIR_PLAN 6장 · 7-4)
 //   방송 목록: 지금까지 열린 화(오늘까지)의 곡을 다시 고를 수 있음 · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.30';
-import { Play } from './play.js?v=0.99.30';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, josa, joinStage } from './data.js?v=0.99.30';
-import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, PROD } from './save.js?v=0.99.30';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.30';
-import { bm } from './oad_bm.js?v=0.99.30';
-import { THEMES } from './themes.js?v=0.99.30';
+import { A } from './audio.js?v=0.99.31';
+import { Play } from './play.js?v=0.99.31';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, josa, joinStage } from './data.js?v=0.99.31';
+import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, PROD } from './save.js?v=0.99.31';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.31';
+import { bm } from './oad_bm.js?v=0.99.31';
+import { THEMES } from './themes.js?v=0.99.31';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
@@ -215,7 +215,7 @@ function go() {
   const ch = charts[song.id], here = new Set(ch.diffs[S.diff].notes.map(n => n[3]).filter(Boolean));
   const guides = Q.get('guide') === '0' ? [] : guidesFor(here);   /* 한 판에 최대 두 가지 (검수 C-2) */
   show('play');
-  Play.auto = Q.get('auto') ? { jitter: +(Q.get('jitter') || 18), miss: +(Q.get('miss') || 0), dom: Q.get('auto') === 'dom' } : null;
+  Play.auto = Q.get('auto') && Q.get('auto') !== '0' ? { jitter: +(Q.get('jitter') || 18), miss: +(Q.get('miss') || 0), dom: Q.get('auto') === 'dom', wait: Q.get('gwait') === '1' } : null;   /* gwait=1: 자동 연주라도 안내 「확인」은 직접 (시험용) */
   Play.start({
     song, chart: charts[song.id], diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
     hitsnd: S.hitsnd, el: S.el, lite: S.lite, vib: S.vib !== false, theme: DEV && Q.get('theme') ? themeNow() : DEV && THEMES[S.theme] && S.theme !== 'base' ? S.theme : themeNow(),

@@ -1,9 +1,9 @@
 // 로딩: manifest.json 을 읽고 모든 리소스를 불러오며 진행 막대를 보여준다.
-import { W, H, TXT, setH, asset } from '../config.js?v=0.99.30';
-import { t } from '../i18n.js?v=0.99.30';
-import { pickTip } from '../tips.js?v=0.99.30';
-import { audio } from '../audio.js?v=0.99.30';
-import { helloOnce } from '../bmflow.js?v=0.99.30';
+import { W, H, TXT, setH, asset } from '../config.js?v=0.99.31';
+import { t } from '../i18n.js?v=0.99.31';
+import { pickTip } from '../tips.js?v=0.99.31';
+import { audio } from '../audio.js?v=0.99.31';
+import { helloOnce } from '../bmflow.js?v=0.99.31';
 
 
 export class BootScene extends Phaser.Scene {

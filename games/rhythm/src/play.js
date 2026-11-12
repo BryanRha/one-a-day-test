@@ -1,19 +1,21 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.30';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.30';
-import { makeRenderer, laneAt, laneU } from './render.js?v=0.99.30';
-import { makeFx } from './fx.js?v=0.99.30';
-import { Live } from './live.js?v=0.99.30';
+import { A } from './audio.js?v=0.99.31';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.31';
+import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.31';
+import { makeFx } from './fx.js?v=0.99.31';
+import { Live } from './live.js?v=0.99.31';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
 const KEYS = { d: 0, f: 1, j: 2, k: 3, D: 0, F: 1, J: 2, K: 3 };
 const LEAD = 3.4;   /* 첫 노트 전 여유 (곡이 이만큼 뒤에 시작) · 제목 카드 → READY(−1.6초) → GO(−0.35초) */
-const GUIDE_LEAD = 7.4;   /* 첫 판만: 제목 카드 1.6초 → 조작 안내 약 4초 → READY · GO (재검수 v0.4 B-4) */
+/* 안내 카드 (v0.5.3 대표: 확인 단추) — 제목 카드 1.8초 → 곡 시계를 멈추고 안내 카드(「확인」을 누를 때까지 기다림, 두 장이면 한 장씩)
+   → 확인 시점부터 다시 예약: POST 초 뒤 (연습 페이더) → READY → GO → 곡. 안내가 없는 판은 그대로 LEAD */
+const POST = 0.6;
 const READY_AT = -1.6, GO_AT = -0.35;
-const GUIDE_AT = 1.8, GUIDE_DUR = 3.7;   /* 안내 카드: 시작 1.8초 뒤부터 3.7초 */
+const GUIDE_AT = 1.8;   /* 안내 카드가 뜨는(시계가 멈추는) 자리: 시작 1.8초 뒤 */
 /* 페이더 첫 만남 (v0.5.1 · 검수 B-1): 안내 카드 → 판정 없는 느린 연습 페이더 1개(곡 앞 소리 없는 구간) → READY
    PRACTICE_LEN = 연습 페이더 길이(초, 곡의 페이더 0.6~1.8초보다 느긋하게) · 연습이 끝나고 READY 까지 0.8초 */
 const PRACTICE_LEN = 2.2, PRACTICE_GAP = 0.8;
@@ -48,8 +50,9 @@ export const Play = {
     this.opt = opt; this.on = true; this.paused = false; this.ended = false; this.introOff = false;
     /* 페이더 첫 만남이면 연습 페이더 시각을 노트 속도로 정함 (안내 카드가 사라진 뒤 떨어지기 시작) */
     const spd = 12 + opt.speed * 5, fall = 48 / spd, guided = !!(opt.guides && opt.guides.length), prac = guided && opt.guides.includes('fader');
-    this.lead = prac ? GUIDE_AT + GUIDE_DUR + fall + 0.5 + PRACTICE_LEN + PRACTICE_GAP - READY_AT : guided ? GUIDE_LEAD : LEAD;
-    this.guideEnd = -this.lead + GUIDE_AT + GUIDE_DUR;
+    this.lead = prac ? GUIDE_AT + POST + fall + PRACTICE_LEN + PRACTICE_GAP - READY_AT : guided ? GUIDE_AT + POST + 0.3 - READY_AT : LEAD;
+    this.pHold = -this.lead + GUIDE_AT; this.guideEnd = this.pHold;   /* 확인 전엔 곡 위치가 여기서 멈춤 */
+    this.waiting = guided; this.frozen = false;
     const notes = parseChart(opt.chart, opt.diff, opt.entry.shift, prac ? { fader: { at: READY_AT - PRACTICE_GAP - PRACTICE_LEN, len: PRACTICE_LEN, calm: 15 } } : null);
     this.prac = prac ? notes.find(n => n.practice) : null; this.pracState = '';
     this.sess = new Session(notes); this.notes = notes;
@@ -58,7 +61,7 @@ export const Play = {
     if (!this.fxs) this.fxs = makeFx(opt.theme);
     this.fxs.setTheme(opt.theme); this.fxs.reset(); this.fxs.lite = !!opt.lite;
     this.guideState = ''; this.readyFired = false;
-    this.st = { slideU: [null, null, null, null], p: -this.lead, notes, spd, clk: clock(opt.chart, opt.entry.shift), missAt: WIN.good, pressed: [false, false, false, false], flash: [0, 0, 0, 0], drawFrom: 0, now: performance.now() / 1000, dt: 0.016, pulse: 0, fever: 0, held: [false, false, false, false], fx: this.fxs, theme: this.fxs.theme };
+    this.st = { slideU: [null, null, null, null], slideU0: [null, null, null, null], wrong: [false, false, false, false], hint: [0, 0, 0, 0], p: -this.lead, notes, spd, clk: clock(opt.chart, opt.entry.shift), missAt: WIN.good, pressed: [false, false, false, false], flash: [0, 0, 0, 0], drawFrom: 0, now: performance.now() / 1000, dt: 0.016, pulse: 0, fever: 0, held: [false, false, false, false], fx: this.fxs, theme: this.fxs.theme };
     this.down = [0, 0, 0, 0]; this.ptr = new Map(); this.shown = 0; this.lastCheer = 0;
     this.pend = []; this.prevCombo = 0; this.fcShown = false; this.readyState = ''; this.chordSeen = new Set(); this.work = 0; this.iv = []; this.refresh = 0; this.offRate = false; this.slowT = 0; this.autoLite = false; this.txt = {};
     this.dens = density(notes);
@@ -99,7 +102,7 @@ export const Play = {
 
   /* ---------- 입력 ---------- */
   press(lane, ms) {
-    if (!this.on || this.paused || this.ended) return;
+    if (!this.on || this.paused || this.ended || this.waiting) return;   /* 안내 카드를 확인하기 전엔 누름 없음 */
     this.down[lane]++; this.st.pressed[lane] = true; this.st.flash[lane] = 1;
     const t = this.pos(ms);
     /* 페이더를 잡은 채 목표 레인을 누름(키보드 · 두 번째 손가락) = 밀기 (지나가는 레인은 채보 규칙상 비어 있음) */
@@ -120,12 +123,12 @@ export const Play = {
     if (this.bound) return; this.bound = true;
     const tz = $('#p_touch'), toLane = e => { const r = $('#box').getBoundingClientRect(), s = r.width / 390; return laneAt((e.clientX - r.left) / s); };
     const toU = e => { const r = $('#box').getBoundingClientRect(), s = r.width / 390; return laneU((e.clientX - r.left) / s); };
-    tz.addEventListener('pointerdown', e => { e.preventDefault(); const l = toLane(e); this.ptr.set(e.pointerId, l); this.st.slideU[l] = null; try { tz.setPointerCapture(e.pointerId); } catch { /* */ } this.press(l, this.evMs(e)); });
+    tz.addEventListener('pointerdown', e => { e.preventDefault(); const l = toLane(e); this.ptr.set(e.pointerId, l); this.st.slideU[l] = null; this.st.slideU0[l] = toU(e); this.st.wrong[l] = false; try { tz.setPointerCapture(e.pointerId); } catch { /* */ } this.press(l, this.evMs(e)); });
     /* 손가락이 옆 레인으로 미끄러지면: 원래 레인은 떼고 새 레인 누름 (롱노트 잡는 중이면 그대로) */
     tz.addEventListener('pointermove', e => {
       if (!this.ptr.has(e.pointerId)) return; const l = toLane(e), o = this.ptr.get(e.pointerId);
       /* 페이더를 잡은 손가락: 손잡이 · 키 패드가 손가락 자리를 따라감 (레인 안 움직임도) */
-      if (this.sess && this.sess.held[o] && this.sess.held[o].sp === 'fader') this.st.slideU[o] = toU(e);
+      if (this.sess && this.sess.held[o] && this.sess.held[o].sp === 'fader') { const h = this.sess.held[o], u = toU(e), u0 = this.st.slideU0[o] ?? h.l + 0.5; this.st.slideU[o] = u; this.st.wrong[o] = !h.reached && wrongWay(this.st.wrong[o], (u - u0) * Math.sign(h.to - h.l)); }   /* 반대로 미는가 (FEEL.md 10-7) */
       if (l === o) return;
       const h = this.sess && this.sess.held[o];
       /* 페이더 잡은 손가락이 옆으로: 원래 레인은 그대로 잡고(뗄 때 꼬리 판정) 목표 쪽 도달만 확인 */
@@ -134,7 +137,8 @@ export const Play = {
     });
     const up = e => { if (!this.ptr.has(e.pointerId)) return; const l = this.ptr.get(e.pointerId); this.ptr.delete(e.pointerId); this.st.slideU[l] = null; this.release(l, this.evMs(e)); };
     tz.addEventListener('pointerup', up); tz.addEventListener('pointercancel', up); tz.addEventListener('lostpointercapture', up);
-    addEventListener('keydown', e => { if (!this.on || e.repeat) return; if (e.key in KEYS) { e.preventDefault(); this.press(KEYS[e.key], this.evMs(e)); } });
+    $('#p_guide').addEventListener('click', e => { if (e.target.closest('[data-g=ok]')) this.confirm(); });
+    addEventListener('keydown', e => { if (!this.on || e.repeat) return; if (this.waiting && this.frozen && !this.paused && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return this.confirm(); } if (e.key in KEYS) { e.preventDefault(); this.press(KEYS[e.key], this.evMs(e)); } });
     addEventListener('keyup', e => { if (!this.on) return; if (e.key in KEYS) this.release(KEYS[e.key], this.evMs(e)); });
     $('#p_pause').addEventListener('click', () => this.opt.onPause && this.opt.onPause());
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.on && !this.paused && !this.ended) this.opt.onPause && this.opt.onPause(); });
@@ -177,7 +181,7 @@ export const Play = {
   schedCues(t0) {
     for (const c of this.cueSrc || []) { try { c.stop(); } catch { /* */ } }
     this.cueSrc = [];
-    if (this.opt.hitsnd !== false) this.cueSrc = [A.fxPlay('ready', this.opt.sfx * 0.7, t0 + READY_AT), A.fxPlay('go', this.opt.sfx * 0.8, t0 + GO_AT)].filter(Boolean);
+    if (t0 != null && this.opt.hitsnd !== false) this.cueSrc = [A.fxPlay('ready', this.opt.sfx * 0.7, t0 + READY_AT), A.fxPlay('go', this.opt.sfx * 0.8, t0 + GO_AT)].filter(Boolean);
   },
   /* 연습을 못 했으면 한 번만 다시 내림 (재검수 B-1): 곡은 아직 소리 없는 구간이라 시계만 연습 앞으로 되감음 → 노트가 다시 위에서 내려옴
      두 번째도 못 하면 그대로 곡으로 (막힘 없음) */
@@ -216,12 +220,24 @@ export const Play = {
   /* 진동 (안드로이드 · 설정에서 끔) — 전용 노트 · 수습 · 풀콤보에만 짧게 */
   vib(ms) { if (this.opt.vib === false || !navigator.vibrate) return; try { navigator.vibrate(ms); } catch { /* */ } },
   /* 첫 판 · 새 노트 첫 등장 안내 (한 장): keys = ['lane', 'sc', 'fader', 'cue'] 중 처음 보는 것 */
+  /* 안내는 한 장에 하나씩 (조작 안내 · 새 노트마다) · 「확인」 단추(44px↑ · 카드 아래 · PC Enter/Space) */
   buildGuide(keys) {
-    const g = $('#p_guide'); if (!keys.length) { g.innerHTML = ''; return; }
-    const rows = keys.filter(k => k !== 'lane').map(k => GUIDE_ROW[k]).join('');
-    g.innerHTML = keys.includes('lane')
-      ? `<div class="card"><em>FIRST ON AIR</em><b>노트가 판정선에 닿는 순간,<br>그 레인을 톡</b><div class="tips"><span><i class="t-tap"></i>톡</span><span><i class="t-long"></i>끝까지 누르기</span><span><i class="t-chord"></i>둘 다 함께</span></div>${rows ? `<div class="new">${rows}</div>` : ''}<small>틀려도 괜찮아요 · 판정은 넉넉해요 · PC는 D F J K</small></div><div class="pads"><i></i><i></i><i></i><i></i></div>`
-      : `<div class="card"><em>NEW · 오늘 처음 나오는 노트</em><div class="new only">${rows}</div><small>판정은 다른 노트와 똑같이 넉넉해요</small></div>`;
+    const g = $('#p_guide'); this.gPages = []; this.gPage = 0; if (!keys.length) { g.innerHTML = ''; return; }
+    if (keys.includes('lane')) this.gPages.push(`<div class="card"><em>FIRST ON AIR</em><b>노트가 판정선에 닿는 순간,<br>그 레인을 톡</b><div class="tips"><span><i class="t-tap"></i>톡</span><span><i class="t-long"></i>끝까지 누르기</span><span><i class="t-chord"></i>둘 다 함께</span></div><small>틀려도 괜찮아요 · 판정은 넉넉해요 · PC는 D F J K</small>@OK</div><div class="pads"><i></i><i></i><i></i><i></i></div>`);
+    for (const k of keys.filter(x => x !== 'lane')) this.gPages.push(`<div class="card"><em>NEW · 오늘 처음 나오는 노트</em><div class="new only">${GUIDE_ROW[k]}</div><small>판정은 다른 노트와 똑같이 넉넉해요</small>@OK</div>`);
+    this.showPage();
+  },
+  showPage() {
+    const n = this.gPages.length, i = this.gPage;
+    $('#p_guide').innerHTML = this.gPages[i].replace('@OK', `<button class="gok" data-g="ok">확인${n > 1 ? `<small>${i + 1}/${n}</small>` : ''}</button>`);
+  },
+  /* 확인: 다음 장 → 마지막 장이면 멈춘 자리부터 곡 시계를 다시 예약 (READY · GO 소리도) */
+  confirm() {
+    if (!this.waiting || !this.frozen || this.paused || this.ended) return;
+    A.fxPlay('tick', (this.opt.sfx || 0.5) * 0.6);
+    if (this.gPage < this.gPages.length - 1) { this.gPage++; this.showPage(); return; }
+    this.waiting = false; this.frozen = false;
+    const t0 = A.play(this.opt.entry, this.pHold, 0.05); this.schedCues(t0);
   },
   /* 프레임마다 한 번: 판정 글자(마지막 것) · 콤보 · 이정표 */
   flush(now) {
@@ -284,7 +300,9 @@ export const Play = {
     P.raf = requestAnimationFrame(P.frame);
     if (P.paused) return;
     A.sample();
-    const ms = performance.now(), p = P.pos(ms), st = P.st;
+    const ms = performance.now(), st = P.st; let p = P.pos(ms);
+    /* 안내 카드 자리에 오면 곡 시계를 멈춤: 노래 정지 · READY/GO 예약 취소 → 확인 때 다시 예약 (자동 연주는 확인을 자동으로 누름 · ?gwait=1 이면 기다림) */
+    if (P.waiting) { if (!P.frozen && p >= P.pHold) { P.frozen = true; A.stop(); P.schedCues(null); if (P.auto && !P.auto.wait) P.autoOk = setTimeout(() => { while (P.waiting) { const g = P.gPage; P.confirm(); if (P.gPage === g && P.waiting) break; } }, 400); } if (P.frozen) p = P.pHold; }
     st.dt = Math.min(0.05, Math.max(0.001, ms / 1000 - st.now)); st.p = p; st.now = ms / 1000;
     /* 느린 기기 판단 (검수 A4): 프레임 '간격'이 아니라 화면 주사율 대비 ① 놓친 프레임 비율 ② frame() 안 작업 시간
        주사율 = 처음 1초 간격의 하위 20% 값 (30Hz 저전력 모드면 33ms 가 주사율이라 그대로는 안 줄임) */
@@ -304,7 +322,7 @@ export const Play = {
     if (P.auto) P.autoplay(p, ms);
     const evs = P.sess.update(p);
     for (const e of evs) P.fx(e);
-    for (let l = 0; l < 4; l++) { st.held[l] = !!P.sess.held[l]; const away = st.held[l] && st.slideU[l] != null && Math.floor(st.slideU[l]) !== l; if (!st.pressed[l] || away) st.flash[l] = Math.max(0, st.flash[l] - st.dt * 6.5); if (!st.held[l]) st.slideU[l] = null; }
+    for (let l = 0; l < 4; l++) { st.held[l] = !!P.sess.held[l]; const away = st.held[l] && st.slideU[l] != null && Math.floor(st.slideU[l]) !== l; if (!st.pressed[l] || away) st.flash[l] = Math.max(0, st.flash[l] - st.dt * 6.5); if (!st.held[l]) { st.slideU[l] = null; st.wrong[l] = false; } else if (P.sess.held[l].reached) st.wrong[l] = false; }
     /* 박 맥동 (박 지도 기준) · 마디 첫 박은 세게 */
     const bf = st.clk.beatOf(p), fb = Math.floor(bf), ph = bf - fb; st.pulse = p > 0 ? Math.pow(1 - ph, 3) * (((fb % 4) + 4) % 4 === 0 ? 1 : 0.62) : 0;
     /* 피버: 앞뒤 1초 밀도가 곡 상위 25% 이상 + 10콤보 이상 → 0.6초에 걸쳐 켜지고 꺼짐 */
@@ -328,10 +346,10 @@ export const Play = {
     if (!P.fxs.lite) { const k = st.pulse * (1 + st.fever); $('#p_cov').style.transform = `scale(${(1.02 + 0.01 * k).toFixed(4)})`; $('#p_cov').style.opacity = (0.55 + 0.06 * k).toFixed(3); }
     if ((p > READY_AT - 0.2 || (P.opt.guides && P.opt.guides.length && p > -P.lead + 1.7)) && P.introOff !== true) { P.introOff = true; $('#p_intro').classList.remove('on'); }
     /* 첫 판 조작 안내: 제목 카드 뒤 ~ READY 전 */
-    if (P.opt.guides && P.opt.guides.length) { const gs = p > -P.lead + GUIDE_AT && p < Math.min(P.guideEnd, READY_AT - 0.3) ? 'on' : ''; if (gs !== P.guideState) { P.guideState = gs; $('#p_guide').className = 'guide' + (gs ? ' on' : ''); } }
+    if (P.opt.guides && P.opt.guides.length) { const gs = P.waiting && P.frozen ? 'on' : ''; if (gs !== P.guideState) { P.guideState = gs; $('#p_guide').className = 'guide' + (gs ? ' on' : ''); } }
     /* 연습 페이더 안내 글 */
     if (P.prac && !P.prac.tail) {
-      const n = P.prac, su = st.slideU[n.l], wrong = su != null && (n.to > n.l ? su < n.l + 0.15 : su > n.l + 0.85);   /* 출발 레인 반대쪽 끝을 넘어 밂 */
+      const n = P.prac, wrong = st.wrong[n.l];   /* 누른 자리에서 반대로 0.25 레인 넘게 (v0.5.3 · 전엔 출발 레인 반대쪽 끝을 넘어야 떴음) */
       if (n.holding) P.pracSay(wrong ? 'wrong' : 'hold'); else if (!n.head && p > n.t - 48 / st.spd) P.pracSay('fall');
     }
     /* 안내 '봤음' 저장은 READY 를 지난 뒤 (안내 중에 나가면 다음 판에 다시 · 검수 C-1) */
@@ -368,7 +386,7 @@ export const Play = {
   },
   async pause() { if (!this.on || this.paused || this.ended) return; this.paused = true; for (let l = 0; l < 4; l++) { this.down[l] = 1; this.release(l, performance.now()); } this.ptr.clear(); await A.suspend(); },
   async resume() { if (!this.paused) return; await A.resume(); this.paused = false; },
-  quit() { Live.stop(); $('#p_guide').className = 'guide'; this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
+  quit() { clearTimeout(this.autoOk); this.schedCues(null); this.waiting = false; Live.stop(); $('#p_guide').className = 'guide'; this.on = false; this.ended = true; this.paused = false; cancelAnimationFrame(this.raf); clearTimeout(this.endT); A.stop(0.3); A.resume(); },
 
   /* 봇 · 자동 연주 (시험용): auto = { jitter: ms, miss: 확률 } — 실제 입력 길(press/release)을 그대로 씀 */
   /* dom: 진짜 화면 터치처럼 PointerEvent 를 보냄 (레인 계산 · 손가락 추적 길까지 시험) */

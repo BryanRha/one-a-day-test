@@ -4,10 +4,10 @@
 //   · 색 = 16×16 팔레트 DataTexture (알파 = 빛 가림: 0 이면 스스로 빛남) · 털 · 무늬 · 의상 · 총 스킨은 칸 색만 바꿈
 //   · 판 안에서는 장착한 파일만 받음(ensure) · 옷장에서만 나머지를 늦게 받음
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.30';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.30';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.30';
-import { CELLS } from './hero_gen.js?v=0.99.30';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.31';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.31';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.31';
+import { CELLS } from './hero_gen.js?v=0.99.31';
 
 export const HERO_SCALE = 0.8; /* 쉬는 자세 키 약 2.1 → 화면 1.7m (장착물에 따라 바뀌지 않게 고정) */
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);

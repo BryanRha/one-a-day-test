@@ -1,19 +1,19 @@
 // 마루미 0.4 — 게임 한 판(지점 하나)의 바탕: 지점 짓기 · 생산 줄(받침 자동 넘김) · 손 · 진열 · 계산 · 돈 더미 · 테이블 · 카메라 · 한 프레임
 //   공간 = space.js · 이동 = nav.js · 손님 = cust.js · 직원 = staff.js · 칸 = pads.js · 규칙표 = rules.js · 안내 = guide.js · 소리 = audio.js
 import * as THREE from 'three';
-import { SPACES, R, seatsOf, tableSide } from './space.js?v=0.99.30';
-import { Nav, separate } from './nav.js?v=0.99.30';
-import { BRANCHES, MENU, PROD, CHAIN, IN_CAP, slotOf, outsOf, INTER, PLAYER, handCap, TRAY_MAX, HAND_VIS, MASTERY, MASTERY_K, setBranchMenu, BRAND, TIER_AT, tierOf, REGULARS, FAVOR, DECO, REST, VIP, EVENTS } from './data.js?v=0.99.30';
-import { item, person, STATION, tierDeco, ownerRing, billBundle, bill, ghostify, M, ITEM_H, balloon } from './models.js?v=0.99.30';
-import { buildWorld, buildDeco } from './world.js?v=0.99.30';
-import { S, save, addSold, mission, vipOn } from './state.js?v=0.99.30';
-import { sfx, loopLevel, music, BGM, stopLoops } from './audio.js?v=0.99.30';
-import { applyRules, hand, FOOD } from './rules.js?v=0.99.30';
-import { Cust } from './cust.js?v=0.99.30';
-import { Staff } from './staff.js?v=0.99.30';
-import { Pads } from './pads.js?v=0.99.30';
-import { Guide } from './guide.js?v=0.99.30';
-import { track } from './oad.js?v=0.99.30';
+import { SPACES, R, seatsOf, tableSide } from './space.js?v=0.99.31';
+import { Nav, separate } from './nav.js?v=0.99.31';
+import { BRANCHES, MENU, PROD, CHAIN, IN_CAP, slotOf, outsOf, INTER, PLAYER, handCap, TRAY_MAX, HAND_VIS, MASTERY, MASTERY_K, setBranchMenu, BRAND, TIER_AT, tierOf, REGULARS, FAVOR, DECO, REST, VIP, EVENTS } from './data.js?v=0.99.31';
+import { item, person, STATION, tierDeco, ownerRing, billBundle, bill, ghostify, M, ITEM_H, balloon } from './models.js?v=0.99.31';
+import { buildWorld, buildDeco } from './world.js?v=0.99.31';
+import { S, save, addSold, mission, vipOn } from './state.js?v=0.99.31';
+import { sfx, loopLevel, music, BGM, stopLoops } from './audio.js?v=0.99.31';
+import { applyRules, hand, FOOD } from './rules.js?v=0.99.31';
+import { Cust } from './cust.js?v=0.99.31';
+import { Staff } from './staff.js?v=0.99.31';
+import { Pads } from './pads.js?v=0.99.31';
+import { Guide } from './guide.js?v=0.99.31';
+import { track } from './oad.js?v=0.99.31';
 
 export const V = (x, z) => new THREE.Vector3(x, 0, z);
 /* 쌓이는 곳 이름(진열 칸 기준): 반죽기 dough · 숙성고 aged · 솥 boiled · 오븐 bagel(플레인 · 쫄깃) · 작업대 cream · 냉장고 coffee · 커피 drink — CHAIN 에서 */

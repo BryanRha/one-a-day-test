@@ -17,6 +17,10 @@ export const laneU = x => Math.max(0.02, Math.min(L - 0.02, (x - (CX - L / 2 * L
 /* 큐 3 · 2 · 1 (v0.5.1 · 검수 B-2 — docs/FEEL.md 10-2): 숫자를 노트가 아니라 그 레인 판정선 위 고정 자리에 크게 · 박마다 튐
    원인: 숫자를 원근 레인의 노트에 붙이면 먼 곳 「3」이 가장 작음(10px) · 「2」가 화면 가운데 콤보와 겹침
    CUE_SPOT.d = 판정선에서의 거리(레인 좌표) → 화면 y ≈ 578 (콤보 262~360 · 판정 글자 452~510 아래) · size = 글자 크기(px, 튀는 순간 ×1.35) */
+/* 페이더를 반대로 미는가 (v0.5.3 · FEEL.md 10-7): du = 누른 자리에서 목표 쪽으로 움직인 양(레인 단위, 반대면 음수)
+   0.25 넘게 반대면 켜짐 · 0.1 안쪽으로 돌아오면 꺼짐(사이에선 앞 상태 유지 → 떨림 ±0.1 엔 절대 안 켜짐) */
+export const WRONG = { on: 0.25, off: 0.1 };
+export function wrongWay(prev, du) { if (du < -WRONG.on) return true; if (du > -WRONG.off) return false; return !!prev; }
 export const CUE_SPOT = { d: 2.2, size: 48, pop: 0.35 };
 /* 박 지도 기준 남은 박 → 숫자(1~3)와 튐(박 직후 1 → 0) · 0 이 되는 박이 치는 순간 */
 export function cueCount(noteBeat, beatNow) { const left = noteBeat - beatNow, num = Math.ceil(left - 1e-9); if (num < 1 || num > 3) return null; const k = num - left; return { num, pop: Math.pow(1 - k, 3) }; }
@@ -63,6 +67,7 @@ export function makeRenderer(cv) {
     g.setTransform(ratio, 0, 0, ratio, 0, 0);
     g.clearRect(0, 0, 390, 844);
     const spd = s.spd, p = s.p, dOf = t => (t - p) * spd, th = s.theme, pulse = s.pulse || 0, fev = s.fever || 0;
+    if (s.hint) s.hint.fill(0);
     beams(th);
     /* 1 표면 */
     quad(0, L, DK, DMAX); g.fillStyle = surf; g.fill();
@@ -133,6 +138,8 @@ export function makeRenderer(cv) {
     if (s.slideU) for (let l = 0; l < L; l++) { const u = s.slideU[l]; if (u == null || !s.held[l]) continue; pad[l] = false; pad[Math.min(L - 1, Math.floor(u))] = true; }
     for (let l = 0; l < L; l++) {
       const on = pad[l], f = s.flash[l];
+      /* 반대로 미는 중: 목표 레인 키 패드가 민트로 은은히 숨 쉼 (FEEL.md 10-7) */
+      if (s.hint && s.hint[l] && !on) { const a = 0.14 + 0.12 * Math.sin(s.now * 9); quad(l + 0.05, l + 0.95, -0.22, DK + 0.05); g.fillStyle = `rgba(${C.fader},${a.toFixed(3)})`; g.fill(); g.strokeStyle = `rgba(${C.fader},.85)`; g.lineWidth = 1.6; g.stroke(); continue; }
       quad(l + 0.05, l + 0.95, -0.22, DK + 0.05);
       g.fillStyle = on ? `rgba(${th.beam[l]},${0.18 + 0.2 * f})` : 'rgba(8,10,28,.85)'; g.fill();
       g.strokeStyle = on ? `rgba(${th.beam[l]},1)` : `rgba(${th.accent ? acc : '159,180,216'},.55)`; g.lineWidth = on ? 1.6 : 1; g.stroke();
@@ -207,6 +214,14 @@ export function makeRenderer(cv) {
       g.strokeStyle = `rgba(${C.fader},.85)`; g.lineWidth = 4; g.lineCap = 'round'; line(a[0], a[1], b[0], b[1]); g.lineCap = 'butt';
       quad(hu - 0.4, hu + 0.4, -0.05, 0.55); g.fillStyle = n.reached ? '#ffffff' : '#EFFFF8'; g.fill(); g.strokeStyle = `rgba(${C.fader},1)`; g.lineWidth = 2.4; g.stroke();
       const m0 = P(hu, 0.05), m1 = P(hu, 0.5); g.strokeStyle = 'rgba(20,60,50,.8)'; g.lineWidth = 2; line(m0[0], m0[1], m1[0], m1[1]);
+    }
+    /* 반대로 미는 중 (곡 안 · 연습 모두): 손잡이 옆 목표 쪽 화살표 3개가 차례로 깜빡 + 목표 레인 키 패드 숨쉬기(7 키 패드에서) — 글자 없음 · 빨강 없음 */
+    if (held && !dead && !n.reached && s.wrong && s.wrong[n.l]) {
+      const su = s.slideU && s.slideU[n.l], hu = su != null ? su : n.l + 0.5, dir = Math.sign(n.to - n.l);
+      g.lineCap = 'round'; g.lineWidth = 3.5;
+      for (let k = 0; k < 3; k++) { const ph = (s.now * 3 - k * 0.22) % 1, a = Math.max(0, Math.sin(Math.PI * Math.max(0, ph))); const c = P(hu + dir * (0.62 + 0.3 * k), 0.25), w = 9; g.strokeStyle = `rgba(${C.fader},${0.25 + 0.75 * a})`; g.beginPath(); g.moveTo(c[0] - dir * w * 0.6, c[1] - w); g.lineTo(c[0] + dir * w * 0.4, c[1]); g.lineTo(c[0] - dir * w * 0.6, c[1] + w); g.stroke(); }
+      g.lineCap = 'butt';
+      s.hint = s.hint || [0, 0, 0, 0]; s.hint[n.to] = 1;
     }
     /* 연습 페이더: 위에 「연습」 표시 (판정 없음) */
     if (n.practice && !held && dOf(n.t) <= DMAX - 4 && dOf(n.t) >= 0) { const d1 = dOf(n.t), c = P(n.l + 0.5, d1 + 1.4), z = 1 / (1 + d1 * K); g.font = `700 ${Math.round(11 + 9 * z)}px 'Noto Sans KR',sans-serif`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = 'rgba(200,255,236,.95)'; g.fillText('연습', c[0], c[1]); }

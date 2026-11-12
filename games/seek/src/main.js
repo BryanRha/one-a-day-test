@@ -1,18 +1,18 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.30';
-import { audio } from './audio.js?v=0.99.30';
-import { BootScene } from './scenes/Boot.js?v=0.99.30';
-import { LibraryScene } from './scenes/Library.js?v=0.99.30';
-import { StoryScene } from './scenes/Story.js?v=0.99.30';
-import { HuntScene } from './scenes/Hunt.js?v=0.99.30';
-import { EvidenceScene } from './scenes/Evidence.js?v=0.99.30';
-import { ToonScene } from './scenes/Toon.js?v=0.99.30';
-import { CafeScene } from './scenes/Cafe.js?v=0.99.30';
-import { CatHuntScene } from './scenes/CatHunt.js?v=0.99.30';
-import { CatDexScene } from './scenes/CatDex.js?v=0.99.30';
-import { CoordScene } from './scenes/Coord.js?v=0.99.30';
-import { installBack } from './oad.js?v=0.99.30';
-import { installNav } from './nav.js?v=0.99.30';
-import { bm } from './oad_bm.js?v=0.99.30';
+import { W, BASE_H, setH } from './config.js?v=0.99.31';
+import { audio } from './audio.js?v=0.99.31';
+import { BootScene } from './scenes/Boot.js?v=0.99.31';
+import { LibraryScene } from './scenes/Library.js?v=0.99.31';
+import { StoryScene } from './scenes/Story.js?v=0.99.31';
+import { HuntScene } from './scenes/Hunt.js?v=0.99.31';
+import { EvidenceScene } from './scenes/Evidence.js?v=0.99.31';
+import { ToonScene } from './scenes/Toon.js?v=0.99.31';
+import { CafeScene } from './scenes/Cafe.js?v=0.99.31';
+import { CatHuntScene } from './scenes/CatHunt.js?v=0.99.31';
+import { CatDexScene } from './scenes/CatDex.js?v=0.99.31';
+import { CoordScene } from './scenes/Coord.js?v=0.99.31';
+import { installBack } from './oad.js?v=0.99.31';
+import { installNav } from './nav.js?v=0.99.31';
+import { bm } from './oad_bm.js?v=0.99.31';
 
 async function start() {
   installNav();
