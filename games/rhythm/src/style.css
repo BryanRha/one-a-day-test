@@ -720,3 +720,84 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #stages .dfs b em{font:700 9px 'Rajdhani';font-style:normal;letter-spacing:1px;color:#2a1c06;background:var(--ice);padding:0 4px;border-radius:5px}
 #sheet .row .lk{flex:none;font-size:11px;font-weight:700;color:var(--sub);border:1px solid rgba(255,255,255,.2);padding:3px 9px;border-radius:10px}
 #stages .st .boss{font:700 9px 'Rajdhani';font-style:normal;letter-spacing:1px;color:#fff;background:rgba(255,110,140,.55);padding:1px 5px;border-radius:6px;margin-left:6px}
+
+/* ---------- v0.6 「카드 강화」 · 검수 v0.5.4 B 3건 ---------- */
+/* B-1 오늘 화면 캐스트 말: 두 줄까지 (한 줄 고정이라 6개 화에서 「…」) — 카드를 위로 14px 키움 · 아래 끝(638)은 그대로 */
+.diva{top:534px;height:104px;padding:13px 14px}
+.diva q{white-space:normal;word-break:keep-all;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.45;max-height:37px;font-size:12.5px}
+.diva .steps{margin-top:6px}
+.diva .tx{display:flex;flex-direction:column;justify-content:center}
+.diva .tx>*{flex:none}
+.steps i.today{box-shadow:0 0 0 1.5px var(--ice);background:rgba(159,240,255,.35)}
+/* B-2 이어 보기 ↔ 오늘 방송 길 (안내 줄 오른쪽 · 누르는 영역 44px) */
+.hint span{flex:1;min-width:0;word-break:keep-all}
+.hint .go{flex:none;position:relative;height:26px;padding:0 11px;border-radius:13px;font-size:11.5px;font-weight:700;color:var(--ice);background:rgba(159,240,255,.1);border:1px solid rgba(159,240,255,.5)}
+.hint .go::after{content:'';position:absolute;left:-4px;right:-4px;top:-9px;bottom:-9px}
+/* 캐스트 목록: 단계 막대 · 새 합류 / 단계 오름 점 (한 번) */
+#casts .cc{overflow:hidden}
+#casts .cc .pb{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.08)}
+#casts .cc .pb s{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ffe9c4);text-decoration:none}
+#casts .cc.newst{border-color:rgba(159,240,255,.6)}
+#casts .cc.newst::after{content:'';position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice)}
+#t_cast.dot::after{content:'';position:absolute;right:1px;top:1px;width:8px;height:8px;border-radius:50%;background:var(--ice);box-shadow:0 0 8px var(--ice)}
+#t_cast{position:relative}
+/* 결과 칩: 구독자 · 첫 달성 · 단계 오름 (칩 줄 안 · 새 줄 없음) */
+#result .extra .chg{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 6px;min-height:24px;padding:2px 10px 2px 5px;border-radius:12px;background:rgba(159,240,255,.08);border:1px solid rgba(159,240,255,.4);color:#dff8ff;font-weight:700;word-break:keep-all}
+#result .extra .chg i{width:17px;height:17px;border-radius:50%;background:rgba(159,240,255,.25);font:800 10px/17px 'Noto Sans KR';font-style:normal;text-align:center;color:#fff}
+#result .extra .chg b{font:700 13px 'Rajdhani';color:#fff}
+#result .extra .chg em{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:8px;background:rgba(242,212,154,.22);color:#ffe9c4}
+#result .extra .chg.up{background:linear-gradient(90deg,rgba(255,207,106,.26),rgba(255,230,168,.12));border-color:#ffcf6a;color:#fff3d6}
+#result .extra .chg em.st{background:var(--gold);color:#2a1c06}
+#result .extra .capl{flex-basis:100%;text-align:center;font-size:11px;line-height:1.45;color:#cfe9ef;word-break:keep-all}
+/* 개인 채널 끝 합류 줄 */
+#story .joinl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 4px 4px;padding:9px 10px 9px 14px;border-radius:14px;background:rgba(242,212,154,.1);border:1px solid rgba(242,212,154,.45);font-size:12.5px;color:#ffe9c4;word-break:keep-all}
+#story .joinl button{flex:none;height:44px;padding:0 14px;border-radius:12px;font-size:12.5px;font-weight:800;color:#2a1c06;background:linear-gradient(90deg,#ffe6b4,var(--gold))}
+/* 시트 공통 (설정 · 캐스트 채널): 제목 · 스크롤 몸통 · 아래 붙박이 단추 */
+#sheet .pan.set,#sheet .pan.chs{display:flex;flex-direction:column;overflow:hidden;padding:20px 20px 22px}
+#sheet .pan .body{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;margin:0 -4px;padding:0 4px}
+#sheet .pan .body::-webkit-scrollbar{display:none}
+#sheet .pan .body.more{-webkit-mask-image:linear-gradient(#000 calc(100% - 36px),transparent);mask-image:linear-gradient(#000 calc(100% - 36px),transparent)}
+#sheet h4{font:700 11px 'Noto Sans KR';letter-spacing:1px;color:var(--gold);margin:14px 0 2px}
+#sheet h4:first-child{margin-top:0}
+#sheet .row>span{flex:1;min-width:0;padding-right:12px;word-break:keep-all}
+#sheet .tg{flex:none}
+#sheet .row.tgr{cursor:pointer}
+#sheet .close{flex:none;margin-top:12px}
+/* 캐스트 채널 시트 */
+#sheet .chs .hd{display:flex;gap:12px;align-items:center}
+#sheet .chs .hd>i{width:56px;height:56px;border-radius:50%;flex:none;background:center/cover;box-shadow:0 0 0 2px var(--gold)}
+#sheet .chs .hd em{font:700 10px 'Noto Sans KR';font-style:normal;letter-spacing:1px;color:var(--gold)}
+#sheet .chs .hd>div>b{display:flex;align-items:baseline;gap:8px;font:800 20px 'NMJ',serif}
+#sheet .chs .hd>div>b small{font:700 11px 'Noto Sans KR';color:#2a1c06;background:var(--gold);padding:1px 7px;border-radius:8px}
+#sheet .chs .hd span{display:block;font-size:12px;color:var(--sub);margin-top:2px}
+#sheet .chs .hd span b{color:#fff;font:600 15px 'Rajdhani'}
+#sheet .chs .pb{display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+#sheet .chs .pb s{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ffe9c4);text-decoration:none}
+#sheet .chs .pb.big{margin:12px 0 8px;height:6px;border-radius:3px}
+#sheet .chs .stat{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--sub)}
+#sheet .chs .stat b{color:#fff;font-weight:700}
+#sheet .chs .gifts{list-style:none;margin:4px 0 0;padding:0}
+#sheet .chs .gifts li{display:grid;grid-template-columns:44px 52px 1fr;align-items:baseline;gap:6px;padding:7px 0;border-top:1px solid var(--line);font-size:12px;color:var(--sub)}
+#sheet .chs .gifts li b{font-weight:700;color:rgba(255,255,255,.6)}
+#sheet .chs .gifts li em{font:600 12px 'Rajdhani';font-style:normal}
+#sheet .chs .gifts li p{word-break:keep-all;line-height:1.45}
+#sheet .chs .gifts li.on b,#sheet .chs .gifts li.on p{color:#fff}
+#sheet .chs .gifts li.on b::after{content:' ✓';color:var(--gold)}
+#sheet .chs .gifts li.aw p{color:var(--sub)}
+#sheet .chs .cd{display:flex;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+#sheet .chs .cd>i{width:64px;height:64px;border-radius:10px;flex:none;background:center/cover;box-shadow:0 0 0 1px rgba(255,255,255,.2)}
+#sheet .chs .cd>div{flex:1;min-width:0}
+#sheet .chs .cd em{font-size:10.5px;font-style:normal;color:var(--gold)}
+#sheet .chs .cd b{display:block;font:700 17px 'Rajdhani'}
+#sheet .chs .cd b small{font-size:12px;color:var(--sub)}
+#sheet .chs .cd p{font-size:11px;color:var(--sub);margin-top:4px;word-break:keep-all}
+#sheet .chs .none,#sheet .chs .note{font-size:11.5px;color:var(--sub);padding:8px 0;line-height:1.5;word-break:keep-all}
+#sheet .chs .note{margin-top:10px;border-top:1px solid var(--line)}
+#sheet .chs .msg p{margin:6px 0;padding:9px 12px;border-radius:4px 14px 14px 14px;background:rgba(255,255,255,.07);font-size:12.5px;line-height:1.5;word-break:keep-all}
+#sheet .chs .seat{flex:none;height:48px;margin-top:12px;border-radius:14px;font-size:15px;font-weight:800;color:#2a1c06;background:linear-gradient(90deg,#ffe6b4,var(--gold))}
+#sheet .chs .seat.off{color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}
+#sheet .chs .pc{display:flex;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+#sheet .chs .pc>i{width:64px;height:64px;border-radius:10px;flex:none;background:rgba(255,255,255,.05) center/cover;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+#sheet .chs .pc p{flex:1;min-width:0;font-size:11.5px;line-height:1.5;color:var(--sub);word-break:keep-all}
+#sheet .chs .pc p em{display:block;font-style:normal;font-size:10.5px;color:var(--gold)}
+#sheet .chs .pc.on p{color:#fff}

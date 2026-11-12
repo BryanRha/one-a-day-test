@@ -1,11 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.32';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.32';
-import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.32';
-import { makeFx } from './fx.js?v=0.99.32';
-import { Live } from './live.js?v=0.99.32';
+import { A } from './audio.js?v=0.99.33';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.33';
+import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.33';
+import { makeFx } from './fx.js?v=0.99.33';
+import { Live } from './live.js?v=0.99.33';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -68,7 +68,7 @@ export const Play = {
     if (!this.R) this.R = makeRenderer($('#p_cv'));
     this.fit();
     $('#play').className = 'scr on ' + this.fxs.theme.judge;
-    Live.start({ live: opt.live, subs: opt.subs || [300, 300], lite: !!opt.lite }); this.fixAt = 0; this.scAt = 0; this.scGot = 0; this.scSum = 0; this.scTotal = notes.filter(n => n.sp === 'sc').length;
+    Live.start({ live: opt.live, subs: opt.subs || [300, 300], lite: !!opt.lite, fan: opt.fan || [], burst: !!opt.burst });   /* fan · burst = v0.6 캐스트 채널 단계 1 · 2 (채팅 · 하트 안에서만) */ this.fixAt = 0; this.scAt = 0; this.scGot = 0; this.scSum = 0; this.scTotal = notes.filter(n => n.sp === 'sc').length;
     if (opt.guestHello) Live.queue.push({ cast: true, who: opt.guestHello.name, text: opt.guestHello.text });   /* 게스트 인사는 생방송 채팅으로 (오늘 화면 캐스트 카드에 섞지 않음 · 검수 C-6) */
     /* 사고 수습 (ONAIR_PLAN 6장 · v0.5): 한 판 opt.guards 회 — 머리 MISS 를 콤보만 이어 줌 (점수 · 판정 개수 그대로 · engine 이 보장) */
     this.guardsLeft = opt.guards || 0;

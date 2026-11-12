@@ -1,15 +1,15 @@
 // 지도 장면 만들기 — 배치 계획은 plan.js (three 없이), 여기선 그림 · 판정 상자 · 잠긴 문 · 발전기
 //  v0.4: 지도마다 바닥 · 벽 · 엄폐물 모양(STYLE) + 항구(등불 · 등대 · 크레인 · 바다) · 터널(막힌 모서리 · 화물칸 · 레일 · 잠긴 방 · 공기 방울 · 물살)
 import * as THREE from 'three';
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.32';
-import { prop } from './assets.js?v=0.99.32';
-import { buildDress, farWater } from './dress_art.js?v=0.99.32';
-import { buildFactory } from './factory.js?v=0.99.32'; /* M3-B 가라앉은 공장 */
-import { buildLab } from './lab.js?v=0.99.32'; /* M4-B 심해 연구소 */
-import { buildGate } from './gate.js?v=0.99.32'; /* M5-A 대수문 꼭대기 */
-import { DUCK, TONE, duckWallH, addBand, addDoor, floorMat, standMat } from './look_duck.js?v=0.99.32'; /* 시안용 ?look=duck */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.33';
+import { prop } from './assets.js?v=0.99.33';
+import { buildDress, farWater } from './dress_art.js?v=0.99.33';
+import { buildFactory } from './factory.js?v=0.99.33'; /* M3-B 가라앉은 공장 */
+import { buildLab } from './lab.js?v=0.99.33'; /* M4-B 심해 연구소 */
+import { buildGate } from './gate.js?v=0.99.33'; /* M5-A 대수문 꼭대기 */
+import { DUCK, TONE, duckWallH, addBand, addDoor, floorMat, standMat } from './look_duck.js?v=0.99.33'; /* 시안용 ?look=duck */
 
-import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.32';
+import { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow, SOLID } from './plan.js?v=0.99.33';
 export { plan, rng, rollLoot, T, RT, COLS, ROWS, RS, zoneOfRow };
 
 /* 판정 크기(벽 · 엄폐물) — 반지름(가로, 세로) · 총알 막음 여부 */

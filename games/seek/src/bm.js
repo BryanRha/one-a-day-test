@@ -9,10 +9,10 @@
 //   peek    그림 미리 보기 🪙20 (use, 하루 10) : 숨은 물건 — 아래 칸 물건 전부의 자리를 3초 반짝 (QA 시트 #3, 2026-11-09) · 무료 길 = 코인 힌트 · 광고 단서 · 서버 표에 없으면 버튼 숨김
 //   clue    광고 보고 단서 자리 (하루 3) : 숨은 물건 돋보기 옆 — 아래 칸의 주요 단서(분홍) 자리를 짚어 줌 (QA 시트 #5)
 //   skip    광고 보고 다음 화 바로 (하루 2) : 4화부터 3시간 기다림 창 — 골드 instN 버튼 옆 같은 크기 (QA 시트 #7)
-import { bm } from './oad_bm.js?v=0.99.32';
-import { inOAD } from './oad.js?v=0.99.32';
-import { load, save } from './save.js?v=0.99.32';
-import { EPISODES } from './episodes.js?v=0.99.32';
+import { bm } from './oad_bm.js?v=0.99.33';
+import { inOAD } from './oad.js?v=0.99.33';
+import { load, save } from './save.js?v=0.99.33';
+import { EPISODES } from './episodes.js?v=0.99.33';
 
 export { bm };
 export const HINT_COST = 10;                   // 힌트 = 게임 코인 10 (골드 상품 아님)

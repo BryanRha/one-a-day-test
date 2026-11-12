@@ -31,9 +31,12 @@ export function save(nowNow = false) {
   clearTimeout(tm); if (nowNow) w(); else tm = setTimeout(w, 150);
 }
 export function reset() { S = fresh(); save(true); }
-/* 하루 기록: plays = 그날 오늘 화를 끝까지 한 판 수 · done = 오늘 화를 한 번이라도 끝냄 · n = 그날 시작한 모든 판 수(곡 · 난이도 무관 — oad:track 으로 v0.6 하루 상한 자료) */
+/* 하루 기록: plays = 그날 오늘 화를 끝까지 한 판 수 · done = 오늘 화를 한 번이라도 끝냄 · n = 그날 시작한 모든 판 수(곡 · 난이도 무관)
+   v0.6: cred = 그날 끝까지 한 모든 판 수(곡 · 캐스트 무관 — 하루 상한 channel.CAP 을 이걸로 셈) · enc = 앵콜 보너스 받음 · capSeen = 상한 안내를 한 번 보여 줌 */
 export function today() { const k = dayKey(); const t = S.days[k] || (S.days[k] = { plays: 0, done: false, n: 0 }); t.n ||= 0; return t; }
 /* 오늘이 시즌 몇 화인지: 처음 연 날 = 1화 (들어 있는 화까지만 · 마지막 화 다음 날도 마지막 화) */
+/* 달력상 몇 번째 날인지 (상한 없음 · v0.6 앵콜 방송용: 마지막 화 다음 날부터) · ?day=N 이면 N */
+export function dayRaw() { if (EP) return EP; const a = new Date(S.first + 'T12:00:00'), b = new Date(dayKey() + 'T12:00:00'); return Math.max(1, Math.round((b - a) / 864e5) + 1); }
 export function dayNo(max) { if (EP) return Math.max(1, Math.min(max, EP)); const a = new Date(S.first + 'T12:00:00'), b = new Date(dayKey() + 'T12:00:00'); return Math.max(1, Math.min(max, Math.round((b - a) / 864e5) + 1)); }
 /* 기록: 곡 · 난이도별 최고 */
 export function record(song, diff, r) {

@@ -1,8 +1,8 @@
 // 시험용 자동 플레이 (?bot=1&speed=4): 0.2.0 — 사장님이 바에서 손 추출(사람 손 속도 · 금빛 랜덤) · 라떼아트 · 쟁반 · 바를 떠나 홀 일(일감 레일 맨 앞) · 볶기 · 동료 · 구역 열기 · 지점 계약
 //   &gold=0.7&hand=2.6 (금빛 성공률 · 한 잔 손 시간) · &expand=0 (구역을 안 열고 장사만 · 성장 곡선 측정) · &owner=0 (사장님이 바만)
-import { MENU, ROAST, FURN, STAFF, ART, STORES } from './data.js?v=0.99.32';
-import { S, ST, save } from './state.js?v=0.99.32';
-import { storeMult, priceMult, isJeong } from './game.js?v=0.99.32';
+import { MENU, ROAST, FURN, STAFF, ART, STORES } from './data.js?v=0.99.33';
+import { S, ST, save } from './state.js?v=0.99.33';
+import { storeMult, priceMult, isJeong } from './game.js?v=0.99.33';
 
 export function startBot(app) {
   const g = app.game, ui = app.ui; let t = 0, furnT = 0, logT = 0, handT = 0, moveT = 0, jobT = 0; window.__bot = true; S.fg = 3;

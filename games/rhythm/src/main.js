@@ -2,26 +2,29 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.32';
-import { Play } from './play.js?v=0.99.32';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, josa, joinStage } from './data.js?v=0.99.32';
-import { S, load, save, today, dayNo, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.32';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.32';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.32';
-import { bm } from './oad_bm.js?v=0.99.32';
-import { THEMES } from './themes.js?v=0.99.32';
+import { A } from './audio.js?v=0.99.33';
+import { Play } from './play.js?v=0.99.33';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, josa, joinStage } from './data.js?v=0.99.33';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.33';
+import * as CH from './channel.js?v=0.99.33';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.33';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.33';
+import { bm } from './oad_bm.js?v=0.99.33';
+import { THEMES } from './themes.js?v=0.99.33';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.5.4';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.6.1';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmtT = t => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
-let charts = {}, entry = null, day = null, song = null, last = null, home = null;
-const past = () => day !== home;   /* 지금 보는 곡이 오늘 화가 아닌가 (뒤로 = 오늘 화로) */
-const kind = () => epKind(day.no, home.no, S.book);   /* tonight · catchup(놓친 화 첫 방송) · replay · ahead(시험 모드) */
-const upNext = () => DAYS[nextUp(home.no, S.book) - 1];   /* 다음 차례: 놓친 화가 있으면 가장 앞 화 · 없으면 오늘 화 */
+let charts = {}, entry = null, day = null, song = null, last = null, home = null, encore = null;
+/* 앵콜 방송 (v0.6 · 대표 11-12): 시즌 마지막 화 다음 날부터 열린 화를 1화부터 차례로 '오늘' 자리에 (home 은 마지막 화 그대로 — 열림 규칙은 home 기준) */
+const tonight = () => encore || home;
+const past = () => day !== tonight();   /* 지금 보는 곡이 오늘 방송이 아닌가 (뒤로 = 오늘 방송으로) */
+const kind = () => (encore && day === encore ? 'encore' : epKind(day.no, home.no, S.book));   /* tonight · encore · catchup(놓친 화 첫 방송) · replay · ahead(시험 모드) */
+const upNext = () => { const n = nextUp(home.no, S.book); return n === home.no ? tonight() : DAYS[n - 1]; };   /* 다음 차례: 놓친 화가 있으면 가장 앞 화 · 없으면 오늘 방송 */
 const DNAME = Object.fromEntries(DIFFS);
 const singer = d => d.singer || CASTS[d.cast].name;
 
@@ -51,7 +54,7 @@ function renderToday() {
   if (!ch) return;
   $('#today .hero').style.backgroundImage = `url(${day.hero})`;
   const k = kind(), late = behind(home.no, S.book);
-  $('#t_no').textContent = `${{ tonight: 'TONIGHT', catchup: 'UP NEXT', replay: 'REPLAY', ahead: 'PREVIEW' }[k]} · NO.${String(day.no).padStart(3, '0')}`;
+  $('#t_no').textContent = `${{ tonight: 'TONIGHT', encore: 'ENCORE', catchup: '이어 보기', replay: 'REPLAY', ahead: 'PREVIEW' }[k]} · NO.${String(day.no).padStart(3, '0')}`;
   $('#t_ch').textContent = `${day.no}화 · ${day.chapter}`;
   $('#t_title').innerHTML = `${esc(song.title)}<small>${esc(song.en)}</small>`;
   $('#t_title').classList.toggle('long', song.title.length > 7);
@@ -64,20 +67,29 @@ function renderToday() {
   $('#t_guest').innerHTML = gid ? `<i style="background-image:url(${CASTS[gid].face})"></i><span>게스트 ${esc(CASTS[gid].name)}</span>` : '<span>+ 게스트</span>';
   $('#t_guest').title = gid ? (gid === day.cast ? '오늘은 단독 방송' : gr.guest) : '옆자리 게스트 고르기';
   /* 캐스트 카드 말풍선은 오늘의 캐스트 말만 (게스트 인사는 생방송 채팅 첫 줄로 · 검수 C-6) */
+  /* 말풍선은 두 줄까지 (검수 v0.5.4 B-1 — 한 줄 고정이라 6개 화에서 잘렸음 · 글자 수 잣대는 test_logic 11-2 · 실제 넘침은 layout_check) */
   $('#t_hello').textContent = k === 'catchup' ? `${day.no}화부터 차례로 같이 가요.` : k === 'tonight' && t.plays ? '또 와 주셨네요. 몇 번이든, 어느 난이도로든 다시 가요.' : day.hello;
-  $('#t_steps').innerHTML = DAYS.map((_, i) => `<i class="${S.book[i + 1] ? 'on' : i + 1 === day.no ? 'now' : ''}"></i>`).join('');
+  /* 진행 점: 끝낸 화 · 지금 보는 화 · 오늘 화(따라잡는 중이면 테두리로 — 검수 B-2) */
+  $('#t_steps').innerHTML = DAYS.map((_, i) => `<i class="${S.book[i + 1] ? 'on' : i + 1 === day.no ? 'now' : ''}${i + 1 === tonight().no && i + 1 !== day.no ? ' today' : ''}"></i>`).join('');
   $('#t_diff').innerHTML = DIFFS.map(([d, n]) => { const b = (S.best[song.id] || {})[d]; return `<button data-d="${d}" class="${S.diff === d ? 'on' : ''}"><span>${n}</span><b>LV.${ch.diffs[d].lv}</b>${b ? `<small>${b.rank}${b.ap ? ' · AP' : b.fc ? ' · FC' : ''}</small>` : ''}</button>`; }).join('');
-  /* 안내 한 줄: 놓친 화가 있으면 오늘 화면에서도 '차례로 이어 보기'를 먼저 (벌이 아니라 이어 볼 거리) */
-  $('#t_hint span').textContent = k === 'tonight' && late ? `${nextUp(home.no, S.book)}화부터 놓친 방송 ${late}편 · 방송 목록에서 차례로 이어 봐요` : k === 'catchup' ? `끝까지 송출하면 ${dv.name}의 개인 채널이 열리고, 다음 화로 이어져요` : S.book[day.no] ? `${day.no}화 방송은 방송 기록에 있어요 · 더 높은 등급이면 금박 테두리` : `끝까지 송출하면 ${dv.name}의 개인 채널과 오늘의 조각이 열려요`;
+  /* 안내 한 줄: 놓친 화가 있으면 '쌓여 있는 이어 볼 거리'로 (벌이 아니라) · 이어 보기 화면엔 오늘 화로 가는 길, 오늘 화면엔 이어 보기로 가는 길 (검수 v0.5.4 B-2) */
+  const tn = tonight(), hb = (late && (k === 'catchup' || day === tn)) ? (k === 'catchup' ? `<button class="go" data-go="today">오늘 ${tn.no}화 먼저</button>` : `<button class="go" data-go="next">이어 보기</button>`) : '';
+  const encTo = k === 'encore' ? CASTS[CH.targetOf(day, guestId(), isJoinable)].name : '';
+  $('#t_hint span').textContent = k === 'catchup' ? `쉬는 동안 ${late}편이 열렸어요 · ${day.no}화부터 차례로` : day === tn && late ? `${nextUp(home.no, S.book)}화부터 놓친 방송 ${late}편이 쌓여 있어요` : k === 'encore' ? (t.enc ? '오늘 앵콜 보너스는 받았어요 · 몇 번이든 다시' : `앵콜 방송 · 오늘 처음 끝까지 하면 ${josa(encTo, '이/가')} 기뻐해요`) : S.book[day.no] ? (['S', 'SS'].includes(S.book[day.no].rank) ? `${day.no}화 방송은 금박으로 방송 기록에 있어요` : `${day.no}화 방송은 방송 기록에 있어요 · S 이상이면 금박 테두리`) : `끝까지 송출하면 ${dv.name}의 개인 채널과 오늘의 조각이 열려요`;
+  { const h = $('#t_hint'), o = h.querySelector('.go'); if (o) o.remove(); if (hb) h.insertAdjacentHTML('beforeend', hb); }
   const st = $('#t_start'); st.className = 'start onair';
   if (k === 'catchup') st.innerHTML = `<b><i class="lamp"></i>${day.no}화 첫 방송</b><span>차례로 이어 보기</span>`;
+  else if (k === 'encore') st.innerHTML = `<b><i class="lamp"></i>${t.plays ? '한 번 더 앵콜' : '앵콜 방송 시작'}</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
   else if (k !== 'tonight') st.innerHTML = `<b>다시 방송하기</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
   else if (!t.plays) st.innerHTML = `<b><i class="lamp"></i>생방송 시작</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
   else st.innerHTML = `<b><i class="lamp"></i>한 번 더 송출</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
-  $('#t_list').classList.toggle('dot', k === 'tonight' && (!t.plays || late > 0));
+  $('#t_list').classList.toggle('dot', (k === 'tonight' || k === 'encore') && (!t.plays || late > 0));
+  $('#t_cast').classList.toggle('dot', castDot());
   if (entry && A.ac && A.ac.state === 'running' && !A.pv && !Play.on) A.preview(entry, ...song.preview);
 }
 $('#t_diff').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.diff = b.dataset.d; save(); A.fxPlay('tick', S.sfx * 0.5); renderToday(); });
+/* 이어 보기 ↔ 오늘 방송 (검수 B-2) */
+$('#t_hint').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (!b) return; A.fxPlay('tick', S.sfx * 0.5); setDay(b.dataset.go === 'today' ? tonight() : upNext()); });
 $('#t_back').addEventListener('click', () => { if (inOAD) exitToOAD(); else toast('원어데이 앱 안에서는 원어데이로 돌아가요'); });
 $('#t_book').addEventListener('click', () => openBook());
 $('#t_guest').addEventListener('click', e => { e.stopPropagation(); openCasts(); });
@@ -148,6 +160,16 @@ const rosterOf = id => ROSTER.find(r => r.id === id);
 /* 합류 = 그 캐스트가 주인공인 화를 끝까지 송출함 (처음 방송한 날 무료 합류) · 시험 모드는 1~10화 캐스트 모두 */
 function joined(id) { const r = rosterOf(id); if (!r || !r.join) return false; if (DEV && r.join <= DAYS.length) return true; return DAYS.some(d => d.cast === id && S.book[d.no]); }
 function guestId() { return S.guest && joined(S.guest) ? S.guest : null; }
+/* v0.6 캐스트 채널: 합류하는 캐스트인가(메디아 = 시즌 2 · 아님) · 기록 보내기 · ☰ 캐스트 점(새 합류 · 단계 오름 때만 한 번) */
+function isJoinable(id) { return !!(ROSTER.find(r => r.id === id) || {}).join; }
+function trk(name, p) { try { window.parent.postMessage({ type: 'oad:track', name, p }, '*'); } catch { /* */ } }
+function castDot() { const c = CH.ensure(S).casts; return ROSTER.some(r => joined(r.id) && (!(c[r.id] || {}).jn || (c[r.id].seen || 0) < CH.stageOfCast(S, r.id))); }
+/* 단계 진행 막대 0~100 (3단계면 100 — 각성은 v0.7) */
+function stagePct(subs) { const st = CH.stageOf(subs), a = CH.STAGES[st], b = CH.STAGES[st + 1]; return b ? Math.max(0, Math.min(100, Math.round((subs - a) / (b - a) * 100))) : 100; }
+const STAGE_GIFT = { 1: '전용 DM · 생방송에 팬 채팅', 2: '사고 수습 한 판 2번 · 콤보 10마다 채팅 응원', 3: '전용 결과 대사' };
+/* 단계 조각 (방 · 뒷모습): 그림이 들어온 것(ready)만 — 없으면 어디에도 안 보임 (얻을 길 없는 빈 칸 금지) */
+const readyPieces = id => ((CHANNEL[id] || {}).pieces || []).filter(q => q.ready);
+const cardDef = id => CARDS.find(c => c.id === id);
 /* 소장 전용 꾸미기 「백금 무대」(v0.5.4): 소장자만 · 설정에서 켬/끔(기본 켬) · 시험 모드는 설정에서 켜 봄(기본 끔) */
 const skinOK = () => !!bm.info.owned || DEV;
 const skinOn = () => skinOK() && (S.skin ?? !!bm.info.owned);
@@ -168,13 +190,18 @@ function openCasts() {
   const g = guestId();
   const cards = ROSTER.map(r => {
     const c = CASTS[r.id], on = joined(r.id), w = on ? null : joinWhen(r), seen = on || (w && w.face) || r.id === 'media' && S.book[10];
-    const tag = on ? (g === r.id ? '<span class="tg g">게스트</span>' : '<span class="tg on">합류</span>') : `<span class="tg lock ${w.cls}">${w.tag}</span>`;
-    return `<button class="cc ${on ? 'on' : 'lock'} ${g === r.id ? 'guest' : ''} ${w ? w.cls : ''}" data-c="${r.id}" ${on ? '' : 'aria-disabled="true"'}><i style="background-image:url(${c.face});--f:url(${new URL(c.face, location.href).href})" class="${on || seen ? '' : 'sil'}"></i><b>${esc(c.name)}</b><small>${esc(r.bio || c.gen)}</small>${tag}</button>`;
+    /* 합류한 캐스트: 단계 딱지 + 카드 아래 얇은 막대 (v0.6 · 12칸 그대로) · 새 합류 · 단계 오름은 테두리 점 한 번 */
+    const rec = CH.ensure(S).casts[r.id] || { subs: 0 }, stg = CH.stageOf(rec.subs || 0), nw = on && (!rec.jn || (rec.seen || 0) < stg);
+    const lbl = stg ? `${stg}단계` : '합류', tag = on ? (g === r.id ? `<span class="tg g">게스트${stg ? ` · ${stg}단계` : ''}</span>` : `<span class="tg on">${lbl}</span>`) : `<span class="tg lock ${w.cls}">${w.tag}</span>`;
+    return `<button class="cc ${on ? 'on' : 'lock'} ${g === r.id ? 'guest' : ''} ${w ? w.cls : ''} ${nw ? 'newst' : ''}" data-c="${r.id}" ${on ? '' : 'aria-disabled="true"'}><i style="background-image:url(${c.face});--f:url(${new URL(c.face, location.href).href})" class="${on || seen ? '' : 'sil'}"></i><b>${esc(c.name)}</b><small>${esc(r.bio || c.gen)}</small>${tag}${on ? `<u class="pb"><s style="width:${stagePct(rec.subs || 0)}%"></s></u>` : ''}</button>`;
   }).join('');
+  /* 봤음: 이번에 점을 보여 준 뒤 지움 (다음에 열면 점 없음) */
+  for (const r of ROSTER) if (joined(r.id)) { const rc = CH.castRec(S, r.id); rc.jn = true; rc.seen = CH.stageOf(rc.subs); }
+  save();
   const gc = g ? CASTS[g] : null;
   $('#casts').innerHTML = `
     <div class="top"><button class="ic" data-x="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">캐스트</div><span style="width:36px"></span></div>
-    <div class="ttl"><em>${GAME.studio} · 시즌 1</em><b>캐스트 ${ROSTER.filter(r => joined(r.id)).length} / ${ROSTER.length}명 합류</b><span>합류한 캐스트를 옆자리 게스트로 앉히면 방송 연출과 사고 수습이 그 캐스트 것으로 바뀌어요 · 점수에는 영향 없어요</span></div>
+    <div class="ttl"><em>${GAME.studio} · 시즌 1</em><b>캐스트 ${ROSTER.filter(r => joined(r.id)).length} / ${ROSTER.length}명 합류</b><span>캐스트를 누르면 채널이 열려요 · 옆자리 게스트로 앉히면 연출과 사고 수습이 그 캐스트 것으로 · 점수에는 영향 없어요</span></div>
     <div class="gs ${gc ? 'has' : ''}">${gc ? `<i style="background-image:url(${gc.face})"></i><div><em>옆자리 게스트</em><b>${esc(gc.name)}<small>연출 · ${esc(THEMES[rosterOf(g).theme].name.replace(/^[^·]+· /, ''))}</small></b><q>${esc(gc.fix)}</q></div><button data-x="clear">비우기</button>` : '<div><em>옆자리 게스트</em><b>비어 있어요</b><q>비어 있으면 오늘의 캐스트 연출로 방송해요</q></div>'}</div>
     <div class="grid">${cards}</div>`;
   show('casts');
@@ -187,10 +214,37 @@ $('#casts').addEventListener('click', e => {
   if (b.dataset.x === 'clear') { S.guest = null; save(); A.fxPlay('tick', S.sfx * 0.5); return openCasts(); }
   const id = b.dataset.c; if (!id) return;
   if (!joined(id)) return toast(joinWhen(rosterOf(id)).say, 2400);
-  S.guest = S.guest === id ? null : id; save(); A.fxPlay('tick', S.sfx * 0.6);
-  if (S.guest) toast(`${josa(CASTS[id].name, '이/가')} 옆자리 게스트로 앉았어요`);
-  stack.pop(); openCasts();
+  A.fxPlay('tick', S.sfx * 0.5); openChannel(id);   /* v0.6: 카드를 누르면 캐스트 채널(단계 · 카드 · 메시지) → 시트 아래 단추로 앉히기 */
 });
+/* 옆자리 게스트 앉히기 · 내리기 (채널 시트 단추 · 개인 채널 끝 줄) */
+function seat(id, on = S.guest !== id) {
+  S.guest = on ? id : null; save(); A.fxPlay('tick', S.sfx * 0.6);
+  if (on) { toast(`${josa(CASTS[id].name, '이/가')} 옆자리 게스트로 앉았어요`); trk('guest_pick', { cast: id }); }
+}
+/* ---------- 캐스트 채널 (v0.6 · 의도서 2-(마)): 단계 · 막대 · 단계 보상 · 카드 · 열린 메시지 · 앉히기 단추 ---------- */
+function openChannel(id) {
+  const c = CASTS[id], rec = CH.castRec(S, id), subs = rec.subs, st = CH.stageOf(subs), nxt = CH.STAGES[st + 1], L = CHANNEL[id] || {}, t = today(), lg = (S.cast || {})[id] || { plays: 0, guards: 0 };
+  const gifts = [1, 2, 3].map(k => { const pcs = readyPieces(id).filter(q => q.stage === k).map(q => `조각 「${q.kind}」`); return `<li class="${st >= k ? 'on' : ''}"><b>${k}단계</b><em class="tnum">${CH.STAGES[k].toLocaleString('en-US')}</em><p>${[...pcs, STAGE_GIFT[k]].join(' · ')}</p></li>`; }).join('')
+    + '<li class="aw"><b>각성</b><em></em><p>얼굴 조각 · 진짜 이름 — 시즌 1 후반에 공개</p></li>';
+  const cards = CH.cardsOf(S, id).map(cd => { const df = cardDef(cd.id), d = DAYS[df.day - 1], a = CH.expFor(cd.lv), b = cd.lv < CH.CARD.maxLv ? CH.expFor(cd.lv + 1) : a, pc = b > a ? Math.round((cd.exp - a) / (b - a) * 100) : 100;
+    return `<div class="cd"><i style="background-image:url(${d.dm.piece.img})"></i><div><em>★1 일상 스냅 · ${df.day}화</em><b>Lv.${cd.lv}<small> / ${CH.CARD.maxLv}</small></b><u class="pb"><s style="width:${pc}%"></s></u><p>${cd.lv >= 10 ? '짧은 DM 열림' : 'Lv10 짧은 DM'} · ${cd.lv >= 20 ? '전용 결과 대사 열림' : 'Lv20 전용 결과 대사'}</p></div></div>`; }).join('');
+  /* 단계 조각: 그림이 들어온 것만 칸으로 — 열렸으면 사진 + 설명, 아직이면 「○단계에서 열려요」 */
+  const pcs = readyPieces(id).map(q => st >= q.stage ? `<div class="pc on"><i style="background-image:url(${q.img})"></i><p><em>조각 「${q.kind}」 · ${q.stage}단계</em>${esc(q.caption)}</p></div>` : `<div class="pc"><i></i><p><em>조각 「${q.kind}」</em>${q.stage}단계에서 열려요</p></div>`).join('');
+  const msgs = [...(st >= 1 && L.dm1 ? L.dm1 : []), ...CH.cardsOf(S, id).filter(cd => cd.lv >= 10).flatMap(cd => cardDef(cd.id).lv10)].map(x => `<p>${esc(x)}</p>`).join('');
+  const sh = $('#sheet');
+  sh.innerHTML = `<div class="pan chs"><div class="body">
+    <div class="hd"><i style="background-image:url(${c.face})"></i><div><em>${esc(c.gen)} · 캐스트 채널</em><b>${esc(c.name)}<small>${st ? `${st}단계` : '합류'}</small></b><span>구독자 <b class="tnum">${subs.toLocaleString('en-US')}</b>${nxt ? ` · 다음 ${nxt.toLocaleString('en-US')}` : ''}</span></div></div>
+    <u class="pb big"><s style="width:${stagePct(subs)}%"></s></u>
+    <div class="stat"><span>함께한 방송 <b>${lg.plays}</b> · 함께 수습 <b>${lg.guards}</b></span><span>오늘 함께한 방송 <b>${Math.min(t.cred || 0, CH.CAP)}/${CH.CAP}</b></span></div>
+    <h4>단계 보상</h4><ul class="gifts">${gifts}</ul>
+    ${pcs ? `<h4>조각</h4><div class="pcs">${pcs}</div>` : ''}
+    <h4>카드</h4>${cards || '<div class="none">그 캐스트 화를 끝까지 송출하면 카드를 받아요</div>'}
+    ${msgs ? `<h4>채널 메시지</h4><div class="msg">${msgs}</div>` : ''}
+    <div class="note">구독자는 함께한 방송(하루 ${CH.CAP}판까지) · 곡별 난이도 첫 달성 · 화 첫 방송으로 쌓여요 · 점수에는 영향 없어요</div>
+  </div><button class="seat ${S.guest === id ? 'off' : ''}" data-k="seat" data-c="${id}">${S.guest === id ? '옆자리에서 내리기' : '옆자리 게스트로 앉히기'}</button></div>`;
+  sh.classList.add('on'); moreHint(sh);
+  trk('channel_open', { cast: id });
+}
 
 function go() {
   A.stopPreview();
@@ -204,7 +258,9 @@ function go() {
     song, chart: charts[song.id], diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
     hitsnd: S.hitsnd, el: S.el, lite: S.lite, vib: S.vib !== false, theme: DEV && Q.get('theme') ? themeNow() : DEV && THEMES[S.theme] && S.theme !== 'base' ? S.theme : themeNow(),
     guides,   /* ?guide=0 이면 끔 · 시험 도구 */
-    guards: S.guard === false ? 0 : 1, firstSc: !S.seen.scHit,   /* 사고 수습 한 판 1회 · 설정에서 끔(명예의 전당 도전) · 구독자 단계는 v0.6 */
+    guards: S.guard === false ? 0 : CH.guardsFor(CH.stageOfCast(S, gid || day.cast)), firstSc: !S.seen.scHit,   /* 사고 수습: 수습하는 캐스트(게스트 → 오늘 캐스트)의 구독자 단계로 1 · 1 · 2 · 2회 (v0.6) · 설정에서 끔 */
+    fan: [day.cast, gid].filter((x, i, a) => x && a.indexOf(x) === i && CH.stageOfCast(S, x) >= 1 && CHANNEL[x]).flatMap(x => CHANNEL[x].fan),   /* 단계 1: 그 캐스트 팬 채팅 (글만 · 채팅 4줄 안) */
+    burst: CH.stageOfCast(S, gid || day.cast) >= 2,   /* 단계 2: 콤보 10마다 채팅 응원 + 하트 (50 · 100 이정표와 겹치지 않게) */
     cover: day.hero, diva: { ...dv, name: singer(day), fix: gc.fix || dv.fix, face: gid ? gc.face : dv.face, en: gid ? gc.en : dv.en }, chapter: `${day.no}화 · ${day.chapter}`, cheer: CHEER, live: day.live, subs: day.subs,
     helper: { name: gc.name, en: gc.en, face: gc.face, fix: gc.fix || dv.fix },   /* 수습하는 캐스트 = 게스트(없으면 오늘의 캐스트) */
     themeLine: gid && gid !== day.cast && THEMES[rosterOf(gid).theme] ? `연출 · ${THEMES[rosterOf(gid).theme].name}` : !gid && skinOn() ? `연출 · ${THEMES.owner.name}` : '',
@@ -243,14 +299,24 @@ function onResult(r) {
   const firstClear = !S.book[day.no];
   if (!past()) { t.plays++; t.done = true; }
   const nb = record(song.id, S.diff, r);
-  last = { r, nb, firstClear, newPage: pageIn(day.no, r.rank), diff: S.diff };
+  /* v0.6 캐스트 채널 정산: 하루 상한 = 그날 끝까지 한 판 수(곡 · 캐스트 무관) 첫 CAP 판 · 앵콜은 그날 첫 완주 1회 · 골드 없음 · 점수 영향 0 (판이 끝난 뒤 계산만) */
+  t.cred = (t.cred || 0) + 1; const credited = t.cred <= CH.CAP, enc = kind() === 'encore' && !t.enc; if (enc) t.enc = true;
+  const chg = CH.settle(S, { day, guest: gid, r, credited, epFirst: firstClear, encore: enc, joinable: isJoinable, cardDefs: CARDS, songId: song.id, diff: S.diff });
+  const capNote = !credited && !t.capSeen; if (capNote) t.capSeen = true;
+  if (t.cred === CH.CAP) trk('daily_cap', { n: t.cred });
+  for (const u of chg.stageUps) trk('cast_stage', { cast: u.cast, stage: u.stage });
+  for (const f of chg.firsts) trk('first_clear', { song: song.id, diff: S.diff, kind: f.kind, cast: f.cast });
+  for (const l of chg.levelUps) trk('card_level', { cast: l.cast, card: l.card, lv: l.lv });
+  last = { r, nb, firstClear, newPage: pageIn(day.no, r.rank), diff: S.diff, ch: chg, capNote };
   save(true);
   try { window.parent.postMessage({ type: 'oad:track', name: 'clear', p: { rank: r.rank, acc: Math.round(r.acc * 1000) / 10, diff: S.diff, song: song.id } }, '*'); } catch { /* */ }
   renderResult(); show('result', 'root'); stack = ['today', 'result'];
 }
 function renderResult() {
   const { r, nb } = last, dv = CASTS[day.cast], b = (S.best[song.id] || {})[last.diff];
-  const praise = r.ap ? PRAISE.ap : r.fc ? PRAISE.fc : nb ? PRAISE.best : pick(PRAISE[r.rank]);
+  /* 칭찬: 단계 3 · 카드 Lv20 이면 그 캐스트 전용 대사가 가끔 섞임 (v0.6 · 올 퍼펙트 · 풀콤보 · 신기록 칭찬이 먼저) */
+  const spc = [...(CH.stageOfCast(S, day.cast) >= 3 && CHANNEL[day.cast] ? [CHANNEL[day.cast].res3] : []), ...CH.cardsOf(S, day.cast).filter(c => c.lv >= 20).map(c => cardDef(c.id).lv20)];
+  const praise = r.ap ? PRAISE.ap : r.fc ? PRAISE.fc : nb ? PRAISE.best : spc.length && Math.random() < 0.5 ? pick(spc) : pick(PRAISE[r.rank]);
   $('#result').innerHTML = `
     <div class="bgcov" style="background-image:url(${day.hero})"></div>
     <div class="head"><em>${last.diff.toUpperCase()} · LV.${charts[song.id].diffs[last.diff].lv}</em><b>${esc(song.title)}</b><span>${esc(song.artist)} · 노래 ${esc(singer(day))}</span></div>
@@ -261,7 +327,7 @@ function renderResult() {
     <div class="low">
     <div class="say"><div class="av" style="background-image:url(${dv.face})"></div><div class="bub"><i>${dv.en}</i>${esc(praise)}</div></div>
     ${b ? `<div class="best">이 난이도 최고 <b>${b.score.toLocaleString('en-US')}</b> · ${b.rank}</div>` : ''}${syncHint(r)}
-    <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}</div>
+    <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}${chChip(last.ch, last.capNote)}</div>
     <div class="subs"><span>${GAME.studio} 구독자</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>
     </div>
     <div class="btns"><div class="again" role="group" aria-label="한 번 더">${DIFFS.map(([d, n]) => `<button class="${d === last.diff ? 'on' : ''}" data-n="again" data-d="${d}" aria-label="${n}으로 한 번 더"><b>${n}</b><small>${d === last.diff ? '한 번 더' : `LV.${charts[song.id].diffs[d].lv}`}</small></button>`).join('')}</div><button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button></div>`;
@@ -274,6 +340,15 @@ function renderResult() {
   const su = () => { const k = Math.min(1, Math.max(0, (performance.now() - t1) / 1200)), e = 1 - Math.pow(1 - k, 3); se.textContent = Math.round(s0 + (s1 - s0) * e).toLocaleString('en-US'); if (k < 1) requestAnimationFrame(su); };
   requestAnimationFrame(su);
   A.fxPlay('chime', S.sfx * 0.6);
+}
+/* 결과 칩 (v0.6 · 새 줄 없이 기존 칩 줄 안): 「♪ 미유 +110 · 벨라 +110」 · 첫 달성은 가장 높은 것 하나 「첫 풀콤보」 · 단계 오름이면 칩만 금빛 「미유 2단계」
+   상한 남은 횟수는 결과에 내지 않음(사업 요청 6 — 채널 시트에만) · 상한 뒤 첫 판에만 안내 한 줄(칭찬 먼저 · 막는 말 없음) */
+const FIRST_NM = { clear: '첫 완주', s: '첫 S', fc: '첫 풀콤보' };
+function chChip(ch, capNote) {
+  if (!ch) return '';
+  const g = Object.entries(ch.gain).filter(([, n]) => n > 0), up = ch.stageUps[ch.stageUps.length - 1];
+  const chip = g.length ? `<span class="chg${up ? ' up' : ''}"><i>♪</i>${g.map(([id, n]) => `${esc(CASTS[id].name)} <b>+${n.toLocaleString('en-US')}</b>`).join(' · ')}${ch.firsts.length ? `<em>${FIRST_NM[['fc', 's', 'clear'].find(k => ch.firsts.some(f => f.kind === k))]}</em>` : ''}${up ? `<em class="st">${esc(CASTS[up.cast].name)} ${up.stage}단계</em>` : ''}</span>` : '';
+  return chip + (capNote ? '<span class="capl">오늘 몫은 다 받았어요 · 아침 7시에 다시 쌓여요 · 연습은 계속 자유</span>' : '');
 }
 /* S 이상: 등급 주변으로 퍼지는 금빛 알갱이 (CSS 만) */
 function sparks() { let h = ''; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + Math.random() * 0.3, r = 70 + Math.random() * 60; h += `<i class="sp" style="left:50%;top:50%;--dx:${(Math.cos(a) * r).toFixed(0)}px;--dy:${(Math.sin(a) * r * 0.8).toFixed(0)}px;animation-delay:${(0.75 + Math.random() * 0.4).toFixed(2)}s"></i>`; } return h; }
@@ -335,10 +410,12 @@ function dmPick(i) {
 function pieceHTML() {
   const pc = day.dm.piece, c = CASTS[day.cast];
   return `<div class="piece"><div class="ph" style="background-image:url(${pc.img})"></div><div class="tx"><em>오늘의 조각${pc.step ? ` ${pc.step}/4 · ${esc(c.name)}` : ' · 하루 스튜디오'}</em><p>${esc(pc.caption)}</p></div></div>
-    <div class="tmr2"><div class="fc" style="background-image:url(${CASTS[day.tomorrow.who].face})"></div><div><em>내일 예고 · ${day.no + 1}화</em><b>${esc(day.tomorrow.title)}</b><q>${esc(day.tomorrow.text)}</q></div></div>`;
+    <div class="tmr2"><div class="fc" style="background-image:url(${CASTS[day.tomorrow.who].face})"></div><div><em>${day.no < home.no ? '다음 화 예고' : '내일 예고'} · ${day.no + 1}화</em><b>${esc(day.tomorrow.title)}</b><q>${esc(day.tomorrow.text)}</q></div></div>`;
 }
 function dmEnd() {
   const box = $('#story .msgs'); box.insertAdjacentHTML('beforeend', pieceHTML());
+  /* 합류한 날: 「○○가 캐스트에 합류했어요 · [옆자리에 앉히기]」 1탭 (사업 v05 제안 3 · v0.6) */
+  if (last && last.firstClear && isJoinable(day.cast) && guestId() !== day.cast) box.insertAdjacentHTML('beforeend', `<div class="joinl"><span>${esc(josa(CASTS[day.cast].name, '이/가'))} 캐스트에 합류했어요</span><button data-s="seat">옆자리에 앉히기</button></div>`);
   $('#story').classList.add('end'); A.fxPlay('page', S.sfx);
   setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
 }
@@ -351,7 +428,7 @@ function dmAll() {
 function closeDM() { if (dm) clearTimeout(dm.t); dm = null; }
 $('#story').addEventListener('click', e => {
   const b = e.target.closest('[data-s],[data-c]');
-  if (b) { if (b.dataset.c != null) return dmPick(+b.dataset.c); if (b.dataset.s === 'book') openBook(); if (b.dataset.s === 'share') share(); if (b.dataset.s === 'back') runBack(); return; }
+  if (b) { if (b.dataset.c != null) return dmPick(+b.dataset.c); if (b.dataset.s === 'seat') { seat(day.cast, true); b.parentElement.innerHTML = `<span>${esc(josa(CASTS[day.cast].name, '이/가'))} 옆자리에 앉았어요</span>`; return; } if (b.dataset.s === 'book') openBook(); if (b.dataset.s === 'share') share(); if (b.dataset.s === 'back') runBack(); return; }
   if (dm && dm.phase !== 'choice' && dm.phase !== 'end') dmStep();   /* 탭하면 다음 말풍선 바로 */
 });
 async function share() {
@@ -370,7 +447,7 @@ function openBook() {
     <div class="ttl"><em>SEASON ${SEASON.no}</em><b>${SEASON.title}</b><span>${GAME.studio} 생방송 ${n} / ${SEASON.pages}회 · S 이상은 금박, A는 은박</span><div class="bar"><i style="width:${n / SEASON.pages * 100}%"></i></div></div>
     <div class="tmr"><div class="im" style="background-image:url(${tm.img})"></div><div class="fc" style="background-image:url(${dv.face})"></div><div class="in"><em>내일 예고 · ${home.no + 1}화</em><b>${esc(tm.title)}</b><q>${esc(tm.text)}</q><div class="cd"><small>다음 방송까지</small><span id="b_cd"></span></div></div></div>
     <div class="pages">${pages.join('')}</div>
-    <div class="btns"><button class="sec" data-b="share">공유</button><button class="ice" data-b="home">${upNext() !== home ? `이어서 ${upNext().no}화` : '오늘의 방송으로'}</button></div>`;
+    <div class="btns"><button class="sec" data-b="share">공유</button><button class="ice" data-b="home">${upNext() !== tonight() ? `이어서 ${upNext().no}화` : '오늘의 방송으로'}</button></div>`;
   const tick = () => { const ms = nextOpen() - new Date(), h = Math.floor(ms / 3600e3), m = Math.floor(ms / 60e3) % 60, s = Math.floor(ms / 1e3) % 60; const e = $('#b_cd'); if (e) e.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
   tick(); clearInterval(cdT); cdT = setInterval(tick, 1000);
   show('book');
@@ -409,11 +486,11 @@ function diffCells(d) {
 function stageRow(d) {
   const sg = SONGS[d.song], dv = CASTS[d.cast];
   if (!openNo(d)) return `<div class="st lock"><div class="cv"><span>${d.no}</span></div><div class="tx"><em>NO.${String(d.no).padStart(3, '0')} · ${d.no - home.no}일 뒤</em><b>???</b><span>${dv.name}의 방송 · 아직 열리지 않았어요</span></div></div>`;
-  const k = epKind(d.no, home.no, S.book), nx = d === upNext() && d !== home;
-  return `<div class="st ${d === home ? 'today' : ''} ${d === day ? 'cur' : ''} ${k === 'catchup' ? 'new' : ''}" data-s="${d.no}"><button class="main"><div class="cv" style="background-image:url(${d.cut})"></div><div class="tx"><em>${d === home ? 'TODAY' : 'NO.' + String(d.no).padStart(3, '0')} ${charts[d.song] && charts[d.song].len ? ` · ${fmtT(charts[d.song].len)}` : ''}${sg.tier === '보스' ? '<i class="boss">BOSS</i>' : ''}${k === 'catchup' ? `<i class="nw">${nx ? '다음 차례' : '첫 방송 전'}</i>` : ''}</em><b>${esc(sg.title)}</b><span>${esc(singer(d))} · ${d.chapter}</span></div></button><div class="dfs">${diffCells(d)}</div></div>`;
+  const k = epKind(d.no, home.no, S.book), nx = d === upNext() && d !== tonight(), tn = d === tonight();
+  return `<div class="st ${tn ? 'today' : ''} ${d === day ? 'cur' : ''} ${k === 'catchup' ? 'new' : ''}" data-s="${d.no}"><button class="main"><div class="cv" style="background-image:url(${d.cut})"></div><div class="tx"><em>${tn ? (encore ? 'ENCORE' : 'TODAY') : 'NO.' + String(d.no).padStart(3, '0')} ${charts[d.song] && charts[d.song].len ? ` · ${fmtT(charts[d.song].len)}` : ''}${sg.tier === '보스' ? '<i class="boss">BOSS</i>' : ''}${k === 'catchup' ? `<i class="nw">${nx ? '다음 차례' : '첫 방송 전'}</i>` : ''}</em><b>${esc(sg.title)}</b><span>${esc(singer(d))} · ${d.chapter}</span></div></button><div class="dfs">${diffCells(d)}</div></div>`;
 }
 function openStages() {
-  const rows = DAYS.slice().sort((a, b) => (b === home) - (a === home) || a.no - b.no).map(stageRow).join('');
+  const rows = DAYS.slice().sort((a, b) => (b === tonight()) - (a === tonight()) || a.no - b.no).map(stageRow).join('');
   const late = behind(home.no, S.book);
   $('#stages').innerHTML = `
     <div class="top"><button class="ic" data-g="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">방송 목록</div><span style="width:36px"></span></div>
@@ -436,32 +513,46 @@ $('#stages').addEventListener('click', async e => {
 });
 
 /* ---------- ⑥ 설정 시트 · 싱크 맞추기 ---------- */
+/* 설정 시트 (검수 v0.5.4 B-3): 묶음 셋(판정 · 싱크 / 소리 · 진동 / 화면) · 토글은 글 길이와 상관없이 같은 크기 · 줄 전체가 누르는 영역
+   닫기는 시트 아래 붙박이 · 더 있으면 아래가 흐려지는 표시 (스크롤 끝에서 사라짐) */
 function openSheet() {
   const sh = $('#sheet');
   const row = (k, name, sub, val) => `<div class="row"><span>${name}<small>${sub}</small></span><div class="st"><button data-k="${k}" data-v="-1">−</button><b>${val}</b><button data-k="${k}" data-v="1">+</button></div></div>`;
-  sh.innerHTML = `<div class="pan"><h3>연주 설정</h3>
+  const tg = (k, name, sub, on) => `<div class="row tgr" data-row="${k}"><span>${name}<small>${sub}</small></span><button class="tg ${on ? 'on' : ''}" data-k="${k}" aria-label="${name}"></button></div>`;
+  sh.innerHTML = `<div class="pan set"><h3>연주 설정</h3><div class="body">
+    <h4>판정 · 싱크</h4>
     <div class="row"><span>싱크 맞추기<small>박자에 맞춰 화면을 두드려 소리 지연을 재요</small></span><button class="pill3" data-k="calib">${S.offset > 0 ? '+' : ''}${S.offset}ms · 맞추기</button></div>
     ${row('offset', '싱크 직접 조절', '노트가 소리보다 빠르면 +, 느리면 −', (S.offset > 0 ? '+' : '') + S.offset + 'ms')}
     ${row('speed', '노트 속도', '높을수록 노트가 빨리 내려와요', S.speed)}
+    ${tg('el', 'EARLY / LATE 표시', 'GREAT · GOOD 때 빠름 · 늦음 글씨', S.el)}
+    ${tg('guard', '사고 수습', 'MISS 를 캐스트가 덮어 줘요(2단계부터 두 번) · 수습한 판은 명예의 전당에 안 올라가요', S.guard !== false)}
+    <h4>소리 · 진동</h4>
     ${row('sfx', '효과음', '누를 때 나는 소리', Math.round(S.sfx * 10))}
     ${row('music', '음악', '노래 크기', Math.round(S.music * 10))}
-    <div class="row"><span>타격음<small>판정마다 짧은 소리 (크기는 효과음)</small></span><button class="tg ${S.hitsnd ? 'on' : ''}" data-k="hitsnd"></button></div>
-    <div class="row"><span>EARLY / LATE 표시<small>GREAT · GOOD 때 빠름 · 늦음 글씨</small></span><button class="tg ${S.el ? 'on' : ''}" data-k="el"></button></div>
-    <div class="row"><span>사고 수습<small>MISS 한 번은 캐스트가 콤보를 이어 줘요 · 끄면 명예의 전당 도전</small></span><button class="tg ${S.guard !== false ? 'on' : ''}" data-k="guard"></button></div>
-    <div class="row"><span>진동<small>슈퍼챗 · 큐 · 페이더 · 수습 때 짧게 (안드로이드)</small></span><button class="tg ${S.vib !== false ? 'on' : ''}" data-k="vib"></button></div>
-    ${skinOK() ? `<div class="row"><span>백금 무대<small>소장 꾸미기 · 판정선 · 키 패드 · 테두리가 백금빛 (게스트가 있으면 게스트 연출)</small></span><button class="tg ${skinOn() ? 'on' : ''}" data-k="skin"></button></div>` : bm.info.ok ? '<div class="row"><span>백금 무대<small>소장 꾸미기 · 원어데이에서 이 게임을 소장하면 쓸 수 있어요</small></span><b class="lk">소장</b></div>' : ''}
-    <div class="row"><span>화면 흔들림<small>100콤보 · 풀콤보 때 아주 살짝</small></span><button class="tg ${S.shake ? 'on' : ''}" data-k="shake"></button></div>
-    <div class="row"><span>연출 줄이기<small>오래된 폰 · 배터리 아끼기 (파티클 · 빛기둥 끔)</small></span><button class="tg ${S.lite ? 'on' : ''}" data-k="lite"></button></div>
+    ${tg('hitsnd', '타격음', '판정마다 짧은 소리 (크기는 효과음)', S.hitsnd)}
+    ${tg('vib', '진동', '슈퍼챗 · 큐 · 페이더 · 수습 때 짧게 (안드로이드)', S.vib !== false)}
+    <h4>화면</h4>
+    ${skinOK() ? tg('skin', '백금 무대', '소장 꾸미기 · 판정선 · 키 패드 · 테두리가 백금빛 (게스트가 있으면 게스트 연출)', skinOn()) : bm.info.ok ? '<div class="row"><span>백금 무대<small>소장 꾸미기 · 원어데이에서 이 게임을 소장하면 쓸 수 있어요</small></span><b class="lk">소장</b></div>' : ''}
+    ${tg('shake', '화면 흔들림', '100콤보 · 풀콤보 때 아주 살짝', S.shake)}
+    ${tg('lite', '연출 줄이기', '오래된 폰 · 배터리 아끼기 (파티클 · 빛기둥 끔)', S.lite)}
     ${DEV ? `<div class="row"><span>연출 테마 <small>시험 모드 · 캐스트 테마 미리보기</small></span><button class="pill3" data-k="theme">${esc((THEMES[S.theme] || THEMES.base).name)}</button></div>` : ''}
     <div class="cred"><b>${GAME.name}</b> · ${GAME.studio} · ${VER}<br><b>음악</b> Suno 로 만든 오리지널 곡 10곡 (회사 유료 구독 · 상업 이용)<br><b>캐릭터 원화</b> 그라나사 (권리자 허락) · <b>채보 · 화면</b> 원어데이<br>키보드: D F J K</div>
-    <button class="close" data-k="close">닫기</button></div>`;
-  sh.classList.add('on');
+    </div><button class="close" data-k="close">닫기</button></div>`;
+  sh.classList.add('on'); moreHint(sh);
+}
+/* 시트 안 스크롤이 더 있으면 아래를 흐리게 (끝에 닿으면 없앰) */
+function moreHint(sh) {
+  const bd = sh.querySelector('.body'); if (!bd) return;
+  const upd = () => bd.classList.toggle('more', bd.scrollTop + bd.clientHeight < bd.scrollHeight - 4);
+  bd.onscroll = upd; requestAnimationFrame(upd);
 }
 $('#sheet').addEventListener('click', e => {
   if (e.target.id === 'sheet') return closeSheet();
-  const b = e.target.closest('[data-k]'); if (!b) return;
+  /* 토글 줄은 줄 어디를 눌러도 (검수 C-6) */
+  const b = e.target.closest('[data-k]') || (e.target.closest('.tgr') && e.target.closest('.tgr').querySelector('.tg')); if (!b) return;
   const k = b.dataset.k, v = +b.dataset.v || 0;
   if (k === 'close') return closeSheet();
+  if (k === 'seat') { const id = b.dataset.c; seat(id); closeSheet(); if (cur() === 'casts') { stack.pop(); openCasts(); } return; }   /* 캐스트 채널 시트 */
   if (k === 'calib') { closeSheet(); return openCalib(); }
   if (k === 'offset') S.offset = Math.max(-300, Math.min(300, S.offset + v * 5));
   if (k === 'speed') S.speed = Math.max(1, Math.min(10, S.speed + v));
@@ -475,7 +566,7 @@ $('#sheet').addEventListener('click', e => {
   if (k === 'skin') S.skin = !skinOn();
   if (k === 'lite') { S.lite = !S.lite; document.body.classList.toggle('lite', S.lite); }
   if (k === 'theme') { const ids = Object.keys(THEMES); S.theme = ids[(ids.indexOf(S.theme) + 1) % ids.length]; }
-  save(); openSheet(); renderToday();
+  const top = ($('#sheet .body') || {}).scrollTop || 0; save(); openSheet(); const bd = $('#sheet .body'); if (bd) bd.scrollTop = top; renderToday();
 });
 function closeSheet() { $('#sheet').classList.remove('on'); }
 
@@ -548,7 +639,7 @@ function back() {
   if ($('#sheet.on')) { closeSheet(); return true; }
   const c = cur();
   if (c === 'play') { pauseMenu(); return true; }
-  if (c === 'today' && stack.length === 1 && past()) { setDay(home); return true; }   /* 지난 방송을 보다가 뒤로 = 오늘의 방송으로 */
+  if (c === 'today' && stack.length === 1 && past()) { setDay(tonight()); return true; }   /* 지난 방송을 보다가 뒤로 = 오늘의 방송으로 */
   if (c === 'calib') closeCalib();
   if (c === 'pre') closePre();
   if (c === 'story') closeDM();
@@ -568,9 +659,12 @@ document.addEventListener('pointerdown', async () => { await A.unlock(); A.setVo
   if (Q.get('lite') === '1') S.lite = true;
   if (Q.get('reset') === '1') { localStorage.removeItem('onetrack_v1'); load(); }
   home = DAYS[dayNo(DAYS.length) - 1];
+  { const en = CH.encoreNo(dayRaw(), DAYS.length); encore = en && home.no === DAYS.length ? DAYS[en - 1] : null; }   /* 앵콜: 마지막 화 다음 날부터 */
+  /* v0.6 소급: v0.5.1 부터 쌓인 기록(함께한 방송 · 슈퍼챗 · 곡별 최고 · 방송 기록)을 처음 열 때 한 번 (상한 × 지난 날 수까지) */
+  if (CH.retro(S, { days: DAYS, cardDefs: CARDS, joinable: isJoinable, daysSince: dayRaw() })) save(true);
   const want = DAYS[(+Q.get('song') || 0) - 1];   /* 시험용: ?dev=1&song=7 → 7화 곡을 바로 고른 상태로 */
   /* 열 때: 놓친 화가 있으면 그 가장 앞 화부터 (v0.5.4 따라잡기) · ?day=N 시험 스위치는 그 화로 바로 */
-  await setDay(DEV && want ? want : EP ? home : upNext(), false);
+  await setDay(DEV && want ? want : EP ? tonight() : upNext(), false);
   bm.hello().then(() => { if (cur() === 'today') renderToday(); });
   show('today', 'root');
   setTimeout(() => $('#boot').classList.add('off'), 250);
@@ -581,5 +675,5 @@ document.addEventListener('pointerdown', async () => { await A.unlock(); A.setVo
 
 /* 시험용 손잡이 */
 /* 결과 화면 줄 겹침 시험용 (tools/layout_check.mjs): r · 신기록 여부를 넣어 결과를 그림 */
-function testResult(r, nb = false) { last = { r, nb, firstClear: false, newPage: false, diff: S.diff }; renderResult(); show('result', 'root'); }
-window.__ot = { S, Play, testResult, openCalib, CAL_CLOSE_MS, get cal() { return cal; }, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, days: DAYS, get entry() { return entry; }, openCasts, joined, go, openStory, openBook, openStages, setDay, onResult, dayKey };
+function testResult(r, nb = false, ch = null, capNote = false) { last = { r, nb, firstClear: false, newPage: false, diff: S.diff, ch, capNote }; renderResult(); show('result', 'root'); }
+window.__ot = { S, Play, testResult, openCalib, CAL_CLOSE_MS, get cal() { return cal; }, A, show, back, get stack() { return stack; }, get last() { return last; }, get day() { return day; }, get home() { return home; }, days: DAYS, get entry() { return entry; }, openCasts, openChannel, openSheet, CH, get encore() { return encore; }, get tonight() { return tonight(); }, joined, go, openStory, openBook, openStages, setDay, onResult, dayKey };

@@ -1,7 +1,7 @@
 // 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · Top 4) — 시설 탭 '가장 가까운 공사' · 카드 '거의 됨' 순서 · 출격 준비 '이번 판 목표' · '깊게' 권유
 //  three · DOM 없음 → node 시험(tools/test_grow.mjs) · 시뮬에서도 씀. 진행 = 칸마다 min(1, 가진/필요) 의 평균 (결과 화면 '다음엔?'과 같은 기준)
-import { ITEMS, MATS, MARKET, LOOT_TABLE, MAPS, MAP_KEYS, ENEMIES, FACILITIES, FAC_KEYS } from './data.js?v=0.99.32';
-import * as E from './econ.js?v=0.99.32';
+import { ITEMS, MATS, MARKET, LOOT_TABLE, MAPS, MAP_KEYS, ENEMIES, FACILITIES, FAC_KEYS } from './data.js?v=0.99.33';
+import * as E from './econ.js?v=0.99.33';
 
 /* 비용 하나의 진행 0~1 */
 export const progressOf = (S, cost) => { const c = Object.entries(cost || {}); return c.length ? c.reduce((s, [m, n]) => s + Math.min(1, E.count(S, m) / n), 0) / c.length : 1; };

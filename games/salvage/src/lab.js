@@ -6,12 +6,12 @@
 //  · 적: 포자낭(빛을 따라옴 · 둘레 원 예고 → 포자 터짐 + 이끼 자리 · 불에 약함) · 경비 기계(탐조 부채꼴 · 겨냥 줄 → 수압 탄 · 앞 방패 · 알아채면 경보)
 //  · 5장 보스 청록 어미: 덩굴 채찍(줄 경고 → 심장 산호 2초 약점 ×2) · 포자 비(원 4) · 빛 삼키기(60% 아래 · 둘레 큰 원 → 5초 어둠 + 포자낭 2)
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.32';
-import { PRESS, TANK, MOSS, TERM, BEAM, SPORE } from './data/map_lab.js?v=0.99.32';
-import { sfx } from './audio.js?v=0.99.32';
-import { glowSprite } from './enemy3d.js?v=0.99.32';
-import { flarePools } from './arms.js?v=0.99.32';
-import { hazard } from './a11y.js?v=0.99.32'; /* M6-C 색약 보조: 위험 예고 빗금 */
+import { BOSS } from './data.js?v=0.99.33';
+import { PRESS, TANK, MOSS, TERM, BEAM, SPORE } from './data/map_lab.js?v=0.99.33';
+import { sfx } from './audio.js?v=0.99.33';
+import { glowSprite } from './enemy3d.js?v=0.99.33';
+import { flarePools } from './arms.js?v=0.99.33';
+import { hazard } from './a11y.js?v=0.99.33'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V(), tq = new THREE.Quaternion(), ts = V(), tm = new THREE.Matrix4(), up = V(0, 1, 0);
