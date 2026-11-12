@@ -1,11 +1,11 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS } from './data.js?v=0.99.35';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS } from './data.js?v=0.99.36';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.35';
-import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.35';
-import { S, save, addSold, mission, today } from './state.js?v=0.99.35';
-import { sfx } from './audio.js?v=0.99.35';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.36';
+import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.36';
+import { S, save, addSold, mission, today } from './state.js?v=0.99.36';
+import { sfx } from './audio.js?v=0.99.36';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -26,8 +26,9 @@ export class Game {
   constructor(sc, cam, ui) { this.sc = sc; this.cam = cam; this.ui = ui; this.t = 0; this.fly = []; this.fx = []; }
   build(bi) {
     const sc = this.sc; sc.clear(); this.B = BRANCHES[bi]; const B = this.B; this.bi = bi; setBranchMenu(bi); LOOK.cream = MENU.cream.look; LOOK.coffee = MENU.coffee.look;
-    /* 새 지점은 앞 지점의 설비 업그레이드 단계를 이어받음 (테스터 #11) · 이미 올린 건 높은 쪽 */
-    if (bi > 0) { const br = (S.branch[bi] ||= { unl: [], staff: [], paid: {} }); if (!br.lvFrom) { const pv = S.branch[bi - 1]?.lv || {}, lv = (br.lv ||= {}); for (const [k, v] of Object.entries(pv)) lv[k] = Math.max(lv[k] || 0, v); br.lvFrom = bi; } }
+    /* 새 지점은 시설 업그레이드 Lv 0 · 기본 모습에서 시작 (0.6.1 대표 「지점을 새로 오픈하면 초기화 상태에서 시작해야」 — 기준판의 앞 지점 단계 물려받기(lvFrom · 테스터 #11)를 없앰)
+       이미 연 지점의 저장은 그 지점 단계(br.lv)를 그대로 둠 — 이미 물려받은 단계를 빼앗지 않음 */
+    if (bi > 0) S.branch[bi] ||= { unl: [], staff: [], paid: {} };   /* 지점 기록만 만듦 (단계 없음) */
     sc.background = new THREE.Color(BRAND.cream);
     const LT = B.theme.light || [0xFFF6EA, 0xC9A882, 1.6, 0xFFF1DC, 2.2];   /* 지점 빛 색 (기준판 재정비 ③) */
     sc.add(new THREE.HemisphereLight(LT[0], LT[1], LT[2])); const sun = new THREE.DirectionalLight(LT[3], LT[4]); sun.position.set(-500, 1200, 700); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
@@ -257,13 +258,23 @@ export class Game {
     cam.left = -w / 2 * k; cam.right = w / 2 * k; cam.top = h / 2 * k; cam.bottom = -h / 2 * k; cam.updateProjectionMatrix();
     const ox = (x0 + x1) / 2 - (L - R0) / 2 * k, oy = (y0 + y1) / 2 - (Bt - T) / 2 * k, rt = new V().setFromMatrixColumn(c0.matrixWorld, 0), up = new V().setFromMatrixColumn(c0.matrixWorld, 1);
     this.fitT = new V().addScaledVector(rt, ox).addScaledVector(up, oy); this.camT && this.camT.copy(this.fitT); }
-  collide(p, r) {
-    const B = this.B; p.x = Math.max(-B.W / 2 + 40 + r, Math.min(B.W / 2 - 20 - r, p.x)); p.z = Math.max(-B.D / 2 + 40 + r, Math.min(B.D / 2 - 20, p.z));
-    for (const o of this.decoObjs || []) if (o.r) { const d = Math.hypot(p.x - o.x, p.z - o.z), m = o.r + r; if (d < m && d > 0.1) { p.x = o.x + (p.x - o.x) / d * m; p.z = o.z + (p.z - o.z) / d * m; } }
+  /* 부딪힘 (0.6.1 대표 제보 「테라스를 열었는데 나갈 수가 없어」 · 기준판부터 있던 구조): 예전엔 가게 끌어오기 → 꾸미기 원 → 설비 상자를 한 번씩만 밀어서
+     원 · 상자 · 벽이 서로 반대로 미는 「설 자리 없는 칸」에 끼면 매 프레임 같은 자리로 되돌아감(갇힘) · 원 한가운데(d ≤ 0.1)면 밀지 않았음
+     → 겹침이 없어질 때까지 몇 번 풀고, 그래도 겹치면 가장 가까운 빈 자리로 (열린 곳에서는 예전과 똑같이 움직임) · 시험 tools/gate_reach.mjs */
+  collide(p, r) { for (let it = 0; it < 4 && this.push(p, r); it++); if (this.blocked(p, r)) { const f = this.freeNear(p, r); if (f) { p.x = f[0]; p.z = f[1]; } } }
+  push(p, r) { const B = this.B, x0 = p.x, z0 = p.z; p.x = Math.max(-B.W / 2 + 40 + r, Math.min(B.W / 2 - 20 - r, p.x)); p.z = Math.max(-B.D / 2 + 40 + r, Math.min(B.D / 2 - 20, p.z));
+    const ring = (cx, cz, m) => { let dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz); if (d >= m) return; if (d < 0.1) { dx = 1; dz = 1; d = Math.SQRT2; } p.x = cx + dx / d * m; p.z = cz + dz / d * m; };
+    for (const o of this.decoObjs || []) if (o.r) ring(o.x, o.z, o.r + r);
     for (const o of Object.values(this.st)) { const [hw, hd] = SIZE[o.type] || [0, 0]; if (!hw) continue;
-      if (o.type === 'bin' || o.type === 'plant') { const d = Math.hypot(p.x - o.x, p.z - o.z), m = hw + r; if (d < m && d > 0.1) { p.x = o.x + (p.x - o.x) / d * m; p.z = o.z + (p.z - o.z) / d * m; } continue; }
-      const dx = p.x - o.x, dz = p.z - o.z, ox = hw + r - Math.abs(dx), oz = hd + r - Math.abs(dz); if (ox > 0 && oz > 0) { if (ox < oz) p.x += Math.sign(dx) * ox; else p.z += Math.sign(dz) * oz; } }
-  }
+      if (o.type === 'bin' || o.type === 'plant') { ring(o.x, o.z, hw + r); continue; }
+      const dx = p.x - o.x, dz = p.z - o.z, ox = hw + r - Math.abs(dx), oz = hd + r - Math.abs(dz); if (ox > 0 && oz > 0) { if (ox < oz) p.x += (Math.sign(dx) || 1) * ox; else p.z += (Math.sign(dz) || 1) * oz; } }
+    return Math.abs(p.x - x0) + Math.abs(p.z - z0) > 0.01; }
+  blocked(p, r) { const B = this.B, e = 0.5; if (p.x < -B.W / 2 + 40 + r - e || p.x > B.W / 2 - 20 - r + e || p.z < -B.D / 2 + 40 + r - e || p.z > B.D / 2 - 20 + e) return true;
+    for (const o of this.decoObjs || []) if (o.r && Math.hypot(p.x - o.x, p.z - o.z) < o.r + r - e) return true;
+    for (const o of Object.values(this.st)) { const [hw, hd] = SIZE[o.type] || [0, 0]; if (!hw) continue; if (o.type === 'bin' || o.type === 'plant') { if (Math.hypot(p.x - o.x, p.z - o.z) < hw + r - e) return true; continue; }
+      if (hw + r - Math.abs(p.x - o.x) > e && hd + r - Math.abs(p.z - o.z) > e) return true; }
+    return false; }
+  freeNear(p, r) { const q = { x: 0, z: 0 }; for (let d = 6; d <= 600; d += 6) for (let a = 0; a < 24; a++) { q.x = p.x + Math.cos(a / 24 * 6.2832) * d; q.z = p.z + Math.sin(a / 24 * 6.2832) * d; if (!this.blocked(q, r)) return [q.x, q.z]; } return null; }
   near(w, x, z, r = R) { return Math.hypot(w.pos.x - x, w.pos.z - z) < r; }
   // 물건 쌓기 (보관 장소) · 사람 손으로 옮기기
   put(arr, m, x, y, z, kind) { m.position.set(x, y, z); this.sc.add(m); arr.push({ m, kind }); }

@@ -2,7 +2,7 @@
 //  방마다: 주제 소품 1 (벽에 붙임) · 바닥 무늬 2~3종 · 벽 장식 1 (윗벽 그림 조각 · 옆벽 배관) / 구역마다: 랜드마크 1 (빈 칸 · 지도 밖 물 위)
 //  ※ plan() 의 난수를 쓰지 않음(따로 seed) → 지도 · 상자 · 적 · 쓰러진 자리는 그대로. 소품은 문 · 상자 · 엄폐물 · 출구 · 발전기 · 등불 · 공기 방울과 떨어뜨림
 //  판정: 주제 소품 일부만 작은 판정(solid) — 벽 쪽으로 붙여 길을 막지 않음 (tools/reach.mjs 가 같이 검사)
-import { T, RT, RS, COLS, ROWS, zoneOfRow, mix32, rng, SOLID } from './plan.js?v=0.99.35';
+import { T, RT, RS, COLS, ROWS, zoneOfRow, mix32, rng, SOLID } from './plan.js?v=0.99.36';
 
 /* 벽 [높이, 두께] — map.js STYLE 과 같은 값 (꾸밈 위치 계산용) */
 const WALL = {

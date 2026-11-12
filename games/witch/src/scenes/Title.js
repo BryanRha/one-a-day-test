@@ -1,8 +1,8 @@
 // 타이틀: 달밤 하늘 + 로고 + 빗자루 마녀가 고양이와 지나감 → 터치하면 로비
-import { W, H, VERSION } from '../config.js?v=0.99.35';
-import { txt, fit } from '../ui.js?v=0.99.35';
-import { audio } from '../audio.js?v=0.99.35';
-import { load } from '../save.js?v=0.99.35';
+import { W, H, VERSION } from '../config.js?v=0.99.36';
+import { txt, fit } from '../ui.js?v=0.99.36';
+import { audio } from '../audio.js?v=0.99.36';
+import { load } from '../save.js?v=0.99.36';
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }

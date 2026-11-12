@@ -1,17 +1,17 @@
 // 은신처 성장 화면 (M3-A · v0.6) — 시설 카드 · 무기대(무기 10 · 탄약 3 · 개조 5칸) · 장비(5단 · 부적 2칸) · 상인 3 · 업적 · 난이도
 //  ui.js 의 탭이 여기를 부름. 글자 목록 대신 그림 · 단계 점 · '다음' 한 구절 · 모자란 것은 빨간 점 (QUALITY_M2 Top 7)
-import * as WXUI from './ui_wx.js?v=0.99.35'; /* M4-B 맵 장비 */
-import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.35';
-import { S, save } from './save.js?v=0.99.35';
-import * as E from './econ.js?v=0.99.35';
-import { A } from './assets.js?v=0.99.35';
-import { sfx, unlock } from './audio.js?v=0.99.35';
-import { COS } from './look.js?v=0.99.35';
-import * as BM from './bmflow.js?v=0.99.35';
-import * as GL from './goal.js?v=0.99.35'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
-import { costChips } from './chips.js?v=0.99.35'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
-import * as M5C from './ui_m5c.js?v=0.99.35'; /* M5-C 무기 19 계열 줄 · 단련 ★ · 반려 2 */
-import { fIco, wIco, hasIco } from './icons_m6c.js?v=0.99.35'; /* M6-C 렌더 아이콘 */
+import * as WXUI from './ui_wx.js?v=0.99.36'; /* M4-B 맵 장비 */
+import { ITEMS, MATS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, MK_NAME, GEAR, ROMAN, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, AMMO, AMMO_KEYS, CHARMS, CHARM_KEYS, DIFF, DIFF_KEYS, MERCHANTS, MERCHANT_KEYS, ACHIEVEMENTS, MAPS } from './data.js?v=0.99.36';
+import { S, save } from './save.js?v=0.99.36';
+import * as E from './econ.js?v=0.99.36';
+import { A } from './assets.js?v=0.99.36';
+import { sfx, unlock } from './audio.js?v=0.99.36';
+import { COS } from './look.js?v=0.99.36';
+import * as BM from './bmflow.js?v=0.99.36';
+import * as GL from './goal.js?v=0.99.36'; /* 가까운 목표 (v0.6.1 · 검수 M3 Top 1 · 4) */
+import { costChips } from './chips.js?v=0.99.36'; /* 재료 칩 공통 '가진 / 필요' (검수 M3 Top 2) */
+import * as M5C from './ui_m5c.js?v=0.99.36'; /* M5-C 무기 19 계열 줄 · 단련 ★ · 반려 2 */
+import { fIco, wIco, hasIco } from './icons_m6c.js?v=0.99.36'; /* M6-C 렌더 아이콘 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };

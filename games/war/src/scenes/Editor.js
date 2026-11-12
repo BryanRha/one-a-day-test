@@ -1,10 +1,10 @@
 // 지도 만들기 (원작 디자인 룸): 지형 · 건물 · 유닛을 칠해서 내 지도 3칸에 저장 → 자유 대전(AI·둘이서)에서 플레이
-import { W, H } from '../config.js?v=0.99.35';
-import { T, C, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.35';
-import { audio } from '../audio.js?v=0.99.35';
-import { UNITS, UNIT_ORDER, TERRAIN } from '../core/data.js?v=0.99.35';
-import { TCH } from '../core/sim.js?v=0.99.35';
-import { customMaps } from './Brief.js?v=0.99.35';
+import { W, H } from '../config.js?v=0.99.36';
+import { T, C, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.36';
+import { audio } from '../audio.js?v=0.99.36';
+import { UNITS, UNIT_ORDER, TERRAIN } from '../core/data.js?v=0.99.36';
+import { TCH } from '../core/sim.js?v=0.99.36';
+import { customMaps } from './Brief.js?v=0.99.36';
 
 const CH = Object.fromEntries(Object.entries(TCH).map(([c, t]) => [t, c]));
 const TERR = ['plain', 'forest', 'mountain', 'road', 'river', 'bridge', 'sea', 'reef', 'beach', 'farm', 'wheat', 'trench', 'pipe', 'seam', 'silo'];

@@ -6,10 +6,10 @@
 //  · 쇳물 도랑: 문 없는 벽 쪽을 따라 흐르는 쇳물(셰이더 하나) · 들어가면 피해(구르면 안 데임)
 //  · 보스 쇳물 감독관: 쇳물 붓기(줄 경고) · 내려찍기(원 경고 → 가슴 용광로 2초 약점 ×2) · 쇳물 비(체력 60% 아래 · 떨어질 자리 원 5개)
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.35';
-import { STEAM, MOLTEN, BELT, CRANE } from './data/map_factory.js?v=0.99.35';
-import { sfx } from './audio.js?v=0.99.35';
-import { hazard } from './a11y.js?v=0.99.35'; /* M6-C 색약 보조: 위험 예고 빗금 */
+import { BOSS } from './data.js?v=0.99.36';
+import { STEAM, MOLTEN, BELT, CRANE } from './data/map_factory.js?v=0.99.36';
+import { sfx } from './audio.js?v=0.99.36';
+import { hazard } from './a11y.js?v=0.99.36'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V();

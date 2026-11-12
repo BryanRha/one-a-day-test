@@ -1,11 +1,11 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.35';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.35';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.35';
-import { sfx, setAudio } from './audio.js?v=0.99.35';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.35';
-import { bm } from './oad_bm.js?v=0.99.35';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.36';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.36';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.36';
+import { sfx, setAudio } from './audio.js?v=0.99.36';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.36';
+import { bm } from './oad_bm.js?v=0.99.36';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };

@@ -3,10 +3,10 @@
 //  · populate(P, map, T, seed): plan() 이 만든 적 목록 위에 위협을 얹음 (지도 생성 · 막힘 검사는 그대로, 같은 seed 면 같은 결과 → 봇 · 시뮬 재현)
 //  · weekVar(S, day): 월요일마다 밤 → 폭풍 → 보스 주간 (논 날 7일부터) · 그 주에 맞는 판 상태는 예보 가중치로 더 자주(data/weather.js wxTable — 예보가 지도 상태를 정함)
 //  · '몰래' 올리지 않음: 출격 준비 · 판 시작에 Lv 과 늘어난 것을 글로 보여 줌(ui.js)
-import { ENEMIES, MAPS, CONDS, FACILITIES, FAC_KEYS, FAC_TOTAL } from './data.js?v=0.99.35';
-import { THREAT_K as K, WEEKS, WEEK_CYCLE, WEEK_FROM, M4_POOL, M4_COND_BIAS } from './data/enemies.js?v=0.99.35';
-import { rng, RS } from './plan.js?v=0.99.35';
-import { mapOpen } from './econ.js?v=0.99.35';
+import { ENEMIES, MAPS, CONDS, FACILITIES, FAC_KEYS, FAC_TOTAL } from './data.js?v=0.99.36';
+import { THREAT_K as K, WEEKS, WEEK_CYCLE, WEEK_FROM, M4_POOL, M4_COND_BIAS } from './data/enemies.js?v=0.99.36';
+import { rng, RS } from './plan.js?v=0.99.36';
+import { mapOpen } from './econ.js?v=0.99.36';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lin = ([s, base, per, cap], lv) => lv < s ? 0 : Math.min(cap, base + per * (lv - s));

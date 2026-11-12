@@ -1,9 +1,9 @@
 // 타이틀: 원작 전쟁 일러스트를 천천히 훑으며 로고 · 불씨 · 출정 버튼. 판 그림은 여기서 이어 받는다
-import { W, H, C } from '../config.js?v=0.99.35';
-import { text, button } from '../ui.js?v=0.99.35';
-import { audio } from '../audio.js?v=0.99.35';
-import { queueCore, queueHome, indexFrames } from './Boot.js?v=0.99.35';
-import { load } from '../save.js?v=0.99.35';
+import { W, H, C } from '../config.js?v=0.99.36';
+import { text, button } from '../ui.js?v=0.99.36';
+import { audio } from '../audio.js?v=0.99.36';
+import { queueCore, queueHome, indexFrames } from './Boot.js?v=0.99.36';
+import { load } from '../save.js?v=0.99.36';
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
