@@ -5,11 +5,11 @@
 //   단계 3 · 바뀜 2 (66% · 33%): 바뀌는 동안 무적(푸른 막) · 체력 바닥(hpFloor)이 다음 문턱이라 한 방에 건너뛰지 않음 → 바뀜은 늘 2번
 //  큰 공격 피해는 모두 raid.enemyAttack 안(예고 시간 = this.tele)에서 → '예고 없는 큰 피해' 검사 0
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.38';
-import { sfx } from './audio.js?v=0.99.38';
-import { glowSprite } from './enemy3d.js?v=0.99.38';
-import { GATE_ARENA as AR } from './plan_gate.js?v=0.99.38';
-import { hazard } from './a11y.js?v=0.99.38'; /* M6-C 색약 보조: 위험 예고 빗금 */
+import { BOSS } from './data.js?v=0.99.39';
+import { sfx } from './audio.js?v=0.99.39';
+import { glowSprite } from './enemy3d.js?v=0.99.39';
+import { GATE_ARENA as AR } from './plan_gate.js?v=0.99.39';
+import { hazard } from './a11y.js?v=0.99.39'; /* M6-C 색약 보조: 위험 예고 빗금 */
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const tv = V();

@@ -1,7 +1,7 @@
 // 저장 (localStorage 'marumi_v4' · 기준판 재정비 0.5.0 — 모양은 기준판 v1 과 같음): 돈 · 지점별 열린 것/직원/칸에 부은 돈 · 강화 · 오늘 판 개수(쿠폰) · 미션 · 출석
 //   처음 열 때 한 번 옮김(옛 키는 지우지 않음 · 되돌리기용): v3(0.4.x 테스터) → v2(0.3.x) → v1(0.2 · 지인 주소 판 — 모양이 같아 그대로)
 //   옮기는 원칙: 돈 손해 0(없어진 칸 · 방에 낸 값 · 부어 둔 돈 · 금고는 돈으로) · 진행률은 줄지 않게(모자라면 여는 순서대로 다음 칸을 열어 줌)
-import { COUPON, BRANCHES } from './data.js?v=0.99.38';
+import { COUPON, BRANCHES } from './data.js?v=0.99.39';
 export const KEY = 'marumi_v4', OLD = ['marumi_v3', 'marumi_v2', 'marumi_v1'];
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fresh = () => ({ v: 4, coins: 0, earned: 0, bi: 0, branch: {}, up: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), seen: {}, mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'], decoPos: {} });

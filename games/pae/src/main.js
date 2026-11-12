@@ -1,12 +1,12 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.38';
-import { audio } from './audio.js?v=0.99.38';
-import { BootScene } from './scenes/Boot.js?v=0.99.38';
-import { HomeScene } from './scenes/Home.js?v=0.99.38';
-import { PlayScene } from './scenes/Play.js?v=0.99.38';
-import { ResultScene } from './scenes/Result.js?v=0.99.38';
-import { BookScene } from './scenes/Book.js?v=0.99.38';
-import { installBack } from './oad.js?v=0.99.38';
-import { initBM } from './bmflow.js?v=0.99.38';
+import { W, BASE_H, setH } from './config.js?v=0.99.39';
+import { audio } from './audio.js?v=0.99.39';
+import { BootScene } from './scenes/Boot.js?v=0.99.39';
+import { HomeScene } from './scenes/Home.js?v=0.99.39';
+import { PlayScene } from './scenes/Play.js?v=0.99.39';
+import { ResultScene } from './scenes/Result.js?v=0.99.39';
+import { BookScene } from './scenes/Book.js?v=0.99.39';
+import { installBack } from './oad.js?v=0.99.39';
+import { initBM } from './bmflow.js?v=0.99.39';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }

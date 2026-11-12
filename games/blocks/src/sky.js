@@ -1,7 +1,7 @@
 // 블록 하늘 꾸밈 (2026-11-09 QA 시트 #1 · #9): 하늘 그림(bg_t*) 위로 흐르는 구름 · 떠다니는 보석 블록
 //   홈 · 클래식 · 어드벤처 · 결과 · 컬렉션이 모두 같은 하늘 세계 — 움직임은 아주 느리게(판에 눈이 가도록), 판 뒤(depth -1 ~ 1)
-import { W, H } from './config.js?v=0.99.38';
-import { THEMES, PALETTE } from './scenes/Boot.js?v=0.99.38';
+import { W, H } from './config.js?v=0.99.39';
+import { THEMES, PALETTE } from './scenes/Boot.js?v=0.99.39';
 
 // 떠다니는 보석 블록 한 장 (스킨과 무관한 고정 그림 · 판 블록과 헷갈리지 않게 작고 흐리게)
 function cubeTex(scene, k) {

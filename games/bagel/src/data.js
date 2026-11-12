@@ -5,7 +5,7 @@ export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO B
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.6.2' };   /* 0.6.2 (2026-11-12): 테라스 = 실제 손님 자리 · 머리 위 아이콘 · 길을 끊는 꾸미기 막기 (0.6.1 새 지점 Lv 0 · 0.6.0 기준판 재정비 2단계) */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.6.3' };   /* 0.6.3 (2026-11-13): 계속 움직이는 HUD 빼기(안내 글 박동 · 화살표 출렁임) · 쉬는 직원 아이콘은 화면 안에서만 · 테라스는 청소 직원 뒤 (0.6.2 테라스 손님 자리 · 머리 위 아이콘) */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)

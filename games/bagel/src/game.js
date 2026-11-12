@@ -1,11 +1,11 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS, TERRACE } from './data.js?v=0.99.38';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS, TERRACE } from './data.js?v=0.99.39';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.38';
-import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.38';
-import { S, save, addSold, mission, today } from './state.js?v=0.99.38';
-import { sfx } from './audio.js?v=0.99.38';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.39';
+import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.39';
+import { S, save, addSold, mission, today } from './state.js?v=0.99.39';
+import { sfx } from './audio.js?v=0.99.39';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -74,6 +74,8 @@ export class Game {
     if (anim) { g.scale.setScalar(0.01); this.fx.push({ t: 0, d: 0.5, f: u => g.scale.setScalar(u < 0.7 ? u / 0.7 * 1.15 : 1.15 - (u - 0.7) / 0.3 * 0.15) }); this.confetti(x, 120, z); }
     if (id === 'terrace') this.terraceSync(); if (this.pl) this.playerFree();
   }
+  /* 테라스는 그 지점에 청소 직원이 있어야 (0.6.3 퀄리티 실측: 사장이 치우러 다녀오면 8.7초 = 한 바퀴의 1.4배) · 이미 산 저장은 그대로 */
+  decoReady(id) { return id !== 'terrace' || (S.branch[this.bi]?.staff || []).includes('cleaner'); }
   decoAt(id) { const d = DECO.find(x => x.id === id), p = S.decoPos[this.bi]?.[id]; return p && Number.isFinite(p[0] + p[1]) ? p : d.pos; }
   /* 벽 소품 방향: 모델은 원래 벽(back = +z 를 봄 · left = +x 를 봄) 기준 → 다른 벽에 붙이면 돌림 */
   decoRot(d, x, z) { if (!d.wall) return 0; const on = this.wallOf(x, z); return on === d.wall ? 0 : d.wall === 'back' ? Math.PI / 2 : -Math.PI / 2; }
@@ -252,7 +254,8 @@ export class Game {
     for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; f.t += dt / f.d; f.f(Math.min(1, f.t)); if (f.t >= 1) this.fx.splice(i, 1); }
     for (const Z of this.zones) { const on = this.in(pl, Z); if (Z.ring) { Z.inner.material.opacity = on ? 1 : 0.6; continue; } Z.inner.material.color.copy(on ? Z.col : WHITE); Z.inner.material.opacity = on ? 0.85 : 0.55; }
     // 안내: 다음에 할 일 (설비 3개 열 때까지)
-    const gd = this.guide(dt); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], 150 + Math.sin(this.t * 6) * 14, gd[1]); this.arrow.rotation.y += dt * 2; } this.ui.hint(gd && gd[2]);
+    /* 0.6.3 (대표 「위아래로 계속 왔다 갔다」 · 퀄리티): 바닥 화살표는 출렁임 · 돌기 없이 가만히 · 첫 직원을 뽑은 뒤에는 조작이 3초 넘게 없을 때만 화살표 · 안내 글 */
+    const gd0 = this.guide(dt), gd = gd0 && (!this.staff.length || this.calmT > 3) ? gd0 : null; this.arrow.visible = !!gd; if (gd) this.arrow.position.set(gd[0], 150, gd[1]); this.ui.hint(gd && gd[2]);
     // 카메라 · 그림자 따라감
     const fo = this.focus; if (fo) { fo.t += dt; if (fo.t > 2.3) this.focus = null; }   /* 단계가 오른 설비를 잠깐 보여 줌 (1.7초 뒤 돌아옴) */
     if (this.fitT) this.camT.copy(this.fitT); else this.camT.lerp(fo && fo.t < 1.7 ? new V(fo.x, 0, fo.z) : this.placing ? this.placing.g.position : pl.pos, Math.min(1, dt * 5));   /* 꾸미기 자리 고를 땐 그림자를 따라감 */   /* 넓은 화면: 매장 전체 고정 · 폰: 주인공 따라감 */ this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
@@ -512,7 +515,7 @@ export class Game {
     return REGULARS.find(R0 => R0.need <= opened && (S.reg[R0.id]?.day !== d) && !this.cust.some(c => c.reg === R0)) || null; }
   regServed(f) { const R0 = f.reg, r = (S.reg[R0.id] ||= { f: 0, day: today(), lv: 0 }); r.f += 1 + (f.mood === 2 ? 1 : 0); const lv = favLv(r.f), mult = this.B.mult;
     this.ui.float(f.mood === 2 ? '♥♥ 호감 +2' : '♥ 호감 +1', f.pos.clone().setY(290), 'heart');
-    while ((r.lv || 0) < lv) { r.lv = (r.lv || 0) + 1; let gift = null; if (r.lv === 2 || r.lv === 4) { const id = R0.gift[r.lv === 2 ? 0 : 1]; if (this.addDeco(id)) gift = DECO.find(x => x.id === id).name; }
+    while ((r.lv || 0) < lv) { r.lv = (r.lv || 0) + 1; let gift = null; if (r.lv === 2 || r.lv === 4) { const id = R0.gift[r.lv === 2 ? 0 : 1]; if (this.decoReady(id) && this.addDeco(id)) gift = DECO.find(x => x.id === id).name; }
       let coins = 0; if (!gift) { coins = 150 * r.lv * mult; S.coins += coins; } this.ui.regLevel(R0, r.lv, gift, coins); sfx('reward'); }
     if (REGULARS.every(x => (S.reg[x.id]?.lv || 0) >= 5)) this.addDeco('photo');
     save(); }

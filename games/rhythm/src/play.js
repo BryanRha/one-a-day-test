@@ -1,11 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.38';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.38';
-import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.38';
-import { makeFx } from './fx.js?v=0.99.38';
-import { Live } from './live.js?v=0.99.38';
+import { A } from './audio.js?v=0.99.39';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.39';
+import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.39';
+import { makeFx } from './fx.js?v=0.99.39';
+import { Live } from './live.js?v=0.99.39';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };

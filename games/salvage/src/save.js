@@ -2,10 +2,10 @@
 //   v3(0.3.0): look(고른 겉모습 — 머리 · 몸 · 얼굴 · 등 장식 · 총 스킨 · 털 · 무늬 · 몽이) · owned(가진 꾸미기)
 //   v5(0.6.0 · M3-A · 키는 'salvage_v4' 그대로 — 계정 저장 목록 안 바꿈): 무기 개조 grip 칸 · ammo(관통 · 전기 상자 수) · ammoSel · charms{have, eq} · diff · ach(업적 받은 날) · trade(상인 그날 산 수) · 시설 4개 · 장비 5단
 //   v4(0.5.0): story(이야기 진행 · 인물 관계 · 기억 도감 · 세 등불 · 열쇠 기억 — story.js) · 주인공 이름은 저장에 안 넣음(기기에만: 'salvage_name')
-import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS, WEAPONS, freshMods, CHARMS, DIFF } from './data.js?v=0.99.38';
-import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.38';
-import { freshLook, COS } from './look.js?v=0.99.38';
-import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.38';
+import { DAILY_SORTIES, FACILITIES, FAC_KEYS, ITEMS, MAT_KEYS, WEAPONS, freshMods, CHARMS, DIFF } from './data.js?v=0.99.39';
+import { kstDay, stashCap as cap, facCur, syncDaily } from './econ.js?v=0.99.39';
+import { freshLook, COS } from './look.js?v=0.99.39';
+import { freshStory, fixStory, initStory, rollStory } from './story.js?v=0.99.39';
 export const KEY = 'salvage_v4';
 const OLD3 = 'salvage_v3', OLD2 = 'salvage_v2', OLD = 'salvage_v1';
 export const today = () => kstDay();

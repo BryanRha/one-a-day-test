@@ -1,11 +1,11 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.38';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.38';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.38';
-import { sfx, setAudio } from './audio.js?v=0.99.38';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.38';
-import { bm } from './oad_bm.js?v=0.99.38';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.39';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.39';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.39';
+import { sfx, setAudio } from './audio.js?v=0.99.39';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.39';
+import { bm } from './oad_bm.js?v=0.99.39';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -64,7 +64,7 @@ export class UI {
   adLeft() { const h = bm.info; if (h.ok) return h.group === 'A' ? 0 : Math.max(0, (h.ads && h.ads.rewardLeft) || 0); if (S.ads.day !== today()) S.ads = { day: today(), n: 0 }; return Math.max(0, AD_DAY - S.ads.n); }
   adOn() { const h = bm.info; return h.ok ? (h.group !== 'A' && !!(h.ads && h.ads.reward)) : this.adLeft() > 0; }
   adUi() { const b = $('#bAd'); if (!b) return; const h = bm.info; b.hidden = !!(h.ok && h.group === 'A'); b.classList.toggle('spent', !this.adOn() && !this.boost()); const n = $('#adN'); if (n) n.textContent = this.adOn() ? this.adLeft() : ''; }
-  hint(t) { const h = $('#hint'); if (t) { h.textContent = t; h.classList.remove('off'); } else if (h.textContent !== '어디든 끌어서 움직여요') h.classList.add('off'); }
+  hint(t) { const h = $('#hint'); if (t) { if (h.textContent !== t) { h.textContent = t; h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); } h.classList.remove('off'); } else if (h.textContent !== '어디든 끌어서 움직여요') h.classList.add('off'); }   /* 0.6.3: 계속 커졌다 작아지던 박동을 빼고, 글이 바뀔 때 한 번만 */
   frame(g) {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
     for (const p of g.padList()) { v.set(p.s.x, 30, p.s.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
@@ -98,12 +98,14 @@ export class UI {
      화면 밖이면 가장자리에 붙고 화살표가 그 사람 쪽을 가리킴 · 둘이 겹치면 위로 비켜 쌓음 · 주문 말풍선(188)보다 위(230) */
   heads(g, cam, W, H) { const L = [], v = new THREE.Vector3(), E = g.ev;   /* 아이콘 목록은 매 프레임 실제 상태에서 (풀리면 바로 사라짐) */
     if (E && E.type === 'complain' && E.P && (E.state === 'in' || E.state === 'wait')) L.push({ k: 'cmp', kind: 'complain', ic: '😤', p: E.pos, f: E.T ? Math.max(0, E.t / E.T) : 1 });
-    g.staff.forEach((w, i) => { if (w.rest) L.push({ k: 'zz' + w.k + i, kind: 'sleep', ic: '💤', p: w.pos }); });
-    const els = (this._heads ||= new Map()), live = new Set(), z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--z')) || 1, M0 = { l: 14, r: 96 * z, t: 118 * z, b: 150 * z }, put = [];
+    g.staff.forEach((w, i) => { if (w.rest) L.push({ k: 'zz' + w.k + i, kind: 'sleep', ic: '💤', p: w.pos, near: true }); });   /* 0.6.3: 쉬는 직원은 화면 안에 있을 때만 (가장자리 화살표 없음) — 가장자리는 시간 제한이 있는 컴플레인만 */
+    const els = (this._heads ||= new Map()), live = new Set(), z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--z')) || 1, M0 = { l: 14, r: 14, t: 118 * z, b: 150 * z }, sideB = $('.side')?.getBoundingClientRect(), put = [];   /* 오른쪽 단추 줄 높이 안에서만 단추 너비만큼 비움 (0.6.3) */
     for (const h of L) { live.add(h.k); let d = els.get(h.k); if (!d || !d.isConnected) { d = document.createElement('div'); d.className = 'hi ' + h.kind; d.innerHTML = `<b>${h.ic}</b><i></i>`; this.tags.append(d); els.set(h.k, d); }
-      v.set(h.p.x, 230, h.p.z).project(cam); let x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * H; const cx = Math.max(M0.l + 22, Math.min(W - M0.r - 22, x)), cy = Math.max(M0.t + 44, Math.min(H - M0.b, y)), edge = cx !== x || cy !== y;
+      v.set(h.p.x, 230, h.p.z).project(cam); let x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * H;
+      if (h.near && (x < 0 || x > W || y < 0 || y > H)) { live.delete(h.k); continue; }   /* 화면 밖 쉬는 직원: 표시 안 함 */
+      const rr = sideB && sideB.width && y > sideB.top - 44 && y < sideB.bottom + 44 ? W - sideB.left + 6 : M0.r, cx = Math.max(M0.l + 22, Math.min(W - rr - 22, x)), cy = Math.max(M0.t + 44, Math.min(H - M0.b, y)), edge = cx !== x || cy !== y, edgeOn = edge && !h.near;
       let fy = cy; while (put.some(q => Math.abs(q[0] - cx) < 40 && Math.abs(q[1] - fy) < 42)) fy -= 44; put.push([cx, fy]);   /* 겹치면 위로 비켜 쌓음 */
-      d.style.transform = `translate(${cx}px,${fy}px) translate(-50%,-100%)`; d.classList.toggle('edge', edge); if (edge) d.style.setProperty('--a', Math.atan2(y - cy, x - cx) + 'rad');
+      d.style.transform = `translate(${cx}px,${fy}px) translate(-50%,-100%)`; d.classList.toggle('edge', edgeOn); if (edgeOn) d.style.setProperty('--a', Math.atan2(y - cy, x - cx) + 'rad');
       if (h.f != null) d.style.setProperty('--f', (h.f * 360).toFixed(0) + 'deg'); }
     for (const [k, d] of els) if (!live.has(k)) { d.remove(); els.delete(k); } }
   /* 기준판 재정비 ①-8 (단추 6개 · 대표 캡처 화면): 왼쪽 단추 4개를 창 안 탭으로 — 업그레이드 창 = 설비 · 직원 · 꾸미기 · 상점 / 미션 창 = 미션 · 단골 · 메뉴 */
@@ -227,7 +229,7 @@ export class UI {
     const own = S.deco[S.bi] || [], g = this.app.game, sc = g.scent(), tab = this._dtab || 'deco';
     /* 소품: 안 산 것 = 누르면 놓일 자리를 반투명으로 미리 보고(#13) 그 자리에서 사기 · 산 것 = 옮기기(#14) · 꽃병은 테이블마다라 바로 사기 */
     const list = DECO.filter(d => !d.gift || own.includes(d.id)).map(d => { const has = own.includes(d.id), c = this.decoCost(d), mv = !!d.pos;
-      const btn = has ? (mv ? `<button class="btn sm ghost2" data-mv="${d.id}">↔ 옮기기</button>` : '<button class="btn sm off">놓음</button>') : mv ? `<button class="btn sm ${S.coins < c ? 'look' : ''}" data-pv="${d.id}">${S.coins < c ? '👁 미리 보기' : `<i class="c"></i>${fmt(c)}`}</button>` : `<button class="btn sm ${S.coins < c ? 'off' : ''}" data-d="${d.id}"><i class="c"></i>${fmt(c)}</button>`;
+      const lock = !has && !this.app.game.decoReady(d.id); const btn = lock ? '<button class="btn sm off">청소 직원 뒤</button>' : has ? (mv ? `<button class="btn sm ghost2" data-mv="${d.id}">↔ 옮기기</button>` : '<button class="btn sm off">놓음</button>') : mv ? `<button class="btn sm ${S.coins < c ? 'look' : ''}" data-pv="${d.id}">${S.coins < c ? '👁 미리 보기' : `<i class="c"></i>${fmt(c)}`}</button>` : `<button class="btn sm ${S.coins < c ? 'off' : ''}" data-d="${d.id}"><i class="c"></i>${fmt(c)}</button>`;
       return `<div class="upr ${has ? 'own' : ''}"><i>${d.icon}</i><div><b>${d.name} <em>향 +${d.score}</em></b><span>${d.desc}</span></div>${btn}</div>`; }).join('');
     /* 직원 (테스터 #7): 유니폼 · 모든 지점 공통 · 한 번 사면 언제든 바꿔 입힘 */
     const outfits = OUTFITS.map(o => { const has = S.outfits.includes(o.id), on = S.outfit === o.id, sw = o.id === 'basic' ? 'conic-gradient(#5A8AE0 0 25%, #7A4A2A 0 50%, #E2A020 0 75%, #6AB07A 0)' : `linear-gradient(135deg, ${hex(o.body)} 0 55%, ${hex(o.apronC)} 55%)`;
@@ -250,7 +252,7 @@ export class UI {
   placeUi() { const g = this.app.game, P = g.placing, ok = $('#plOk'), msg = $('#plMsg'); if (!P || !ok) return; const c = this.decoCost(P.d), buy = P.mode === 'buy', poor = buy && S.coins < c;
     msg.textContent = !P.ok ? '여기엔 놓을 수 없어요 · 설비 · 통로와 겹쳐요' : poor ? `돈이 ${fmt(c - S.coins)} 모자라요 · 자리는 미리 볼 수 있어요` : P.d.wall ? '끌어서 벽을 따라 옮겨요 · 초록이면 OK' : '바닥을 끌어서 옮겨요 · 초록이면 OK';
     msg.classList.toggle('bad', !P.ok || poor); ok.innerHTML = buy ? `<i class="c"></i>${fmt(c)} 사서 놓기` : '여기에 놓기'; ok.classList.toggle('off', !P.ok || poor); }
-  placeOk() { const g = this.app.game, P = g.placing; if (!P || !P.ok) return; if (P.mode === 'buy') { const c = this.decoCost(P.d); if (S.coins < c) return; const at = [Math.round(P.x), Math.round(P.z)]; g.cancelPlace(); S.coins -= c; g.addDeco(P.id, at); sfx('unlock', { vol: 0.6 }); this.toast(`${P.d.name} 놓았어요 · 향 +${P.d.score}`); }
+  placeOk() { const g = this.app.game, P = g.placing; if (!P || !P.ok) return; if (P.mode === 'buy' && !g.decoReady(P.id)) return; if (P.mode === 'buy') { const c = this.decoCost(P.d); if (S.coins < c) return; const at = [Math.round(P.x), Math.round(P.z)]; g.cancelPlace(); S.coins -= c; g.addDeco(P.id, at); sfx('unlock', { vol: 0.6 }); this.toast(`${P.d.name} 놓았어요 · 향 +${P.d.score}`); }
     else { g.confirmPlace(); sfx('drop', { vol: 0.4 }); this.toast(`${P.d.name} 옮겼어요`); } this.placeEnd(); this.progress(); }
   placeBack() { this.app.game.cancelPlace(); this.placeEnd(); this.decoShop(); }
   placeEnd() { $('#placebar')?.remove(); $('#app').classList.remove('placing'); this._pbk && this._pbk(); this._pbk = null; }
