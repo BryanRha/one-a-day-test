@@ -1,13 +1,13 @@
 // 업적 50 · 칭호 · 받아 둔 꾸미기 (M5-B · v0.8) — DOM 없음 (node 시험 test_m5b.mjs 가 같은 함수) · econ.js achValue/achTick 는 여기로 넘김
 //  판에서만 알 수 있는 기록(체력 · 남은 시간 · 몽이 주머니 · 맨몸)은 collect(raid) 가 판 끝(main.js endRaid, dispose 전)에 결과에 붙임 → noteRaid 가 S.stats 에 셈
-import { ACHIEVEMENTS, ACH_CATS } from './data/achievements.js?v=0.99.34';
-import { TITLES, M5B_COS } from './data/m5b.js?v=0.99.34';
-import { FAC_KEYS, WEAPONS, GEAR_MAX } from './data.js?v=0.99.34';
-import { COS } from './look.js?v=0.99.34';
-import { kstDay, give, bossKinds, facLvl } from './econ.js?v=0.99.34';
-import { freeCells } from './inv.js?v=0.99.34';
-import { endingSeen } from './abyss.js?v=0.99.34';
-import { points, medalMax, weeksPlayed } from './challenge.js?v=0.99.34';
+import { ACHIEVEMENTS, ACH_CATS } from './data/achievements.js?v=0.99.35';
+import { TITLES, M5B_COS } from './data/m5b.js?v=0.99.35';
+import { FAC_KEYS, WEAPONS, GEAR_MAX } from './data.js?v=0.99.35';
+import { COS } from './look.js?v=0.99.35';
+import { kstDay, give, bossKinds, facLvl } from './econ.js?v=0.99.35';
+import { freeCells } from './inv.js?v=0.99.35';
+import { endingSeen } from './abyss.js?v=0.99.35';
+import { points, medalMax, weeksPlayed } from './challenge.js?v=0.99.35';
 
 export const MAP_BOSSES = ['boss', 'captain', 'eel', 'smelter', 'mother'];
 const WX5 = ['night', 'storm', 'fog', 'cold', 'toxic'];

@@ -75,5 +75,6 @@ for (const [id, a] of Object.entries(ACCENT)) {
    캐스트 테마와 같은 구조: 늘 보이는 면(레인 테두리 · 판정선 · 키 패드 · 키빔 · 롱노트 불꽃)을 백금빛으로 · 파티클은 별 · 판정 색(J)은 그대로
    쓰는 곳: 소장자(설정에서 켬/끔 · 기본 켬) · 옆자리 게스트가 있으면 게스트 연출이 먼저 */
 THEMES.owner = cast('owner', '소장 · 백금 무대', 'star', [[255, 255, 255], [222, 228, 244]], null, [[240, 244, 255], [196, 206, 236]], ['222,228,244', '196,206,236'], '', true, 340);
-{ const t = THEMES.owner, a = [214, 222, 246], W = [255, 255, 255]; t.accent = a.join(','); t.beam = [0, 0, 0, 0].map(() => t.accent); t.press = mix(a, W, 0.45).join(','); t.col.long = [mix(a, W, 0.7), a]; }
+/* v0.7 (검수 C-1 · owner↔base 색 거리 30 턱걸이): 차가운 은빛 → 샴페인 백금으로 기본 테마(얼음 · 라벤더)와 멀게 */
+{ const t = THEMES.owner, a = [240, 226, 196], W = [255, 255, 255]; t.edgeFever = ['240,226,196', '255,236,214']; t.accent = a.join(','); t.beam = [0, 0, 0, 0].map(() => t.accent); t.press = mix(a, W, 0.45).join(','); t.col.long = [mix(a, W, 0.7), a]; }
 export const DEFAULT_THEME = 'base';

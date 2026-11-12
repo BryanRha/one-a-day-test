@@ -1,11 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.34';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.34';
-import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.34';
-import { makeFx } from './fx.js?v=0.99.34';
-import { Live } from './live.js?v=0.99.34';
+import { A } from './audio.js?v=0.99.35';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.35';
+import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.35';
+import { makeFx } from './fx.js?v=0.99.35';
+import { Live } from './live.js?v=0.99.35';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -60,7 +60,7 @@ export const Play = {
     this.endAt = Math.min(opt.entry.dur, this.lastT + 2.2);
     if (!this.fxs) this.fxs = makeFx(opt.theme);
     this.fxs.setTheme(opt.theme); this.fxs.reset(); this.fxs.lite = !!opt.lite;
-    this.guideState = ''; this.readyFired = false;
+    this.guideState = ''; this.readyFired = false; this.fevOn = false; this.bandAt = -99;
     this.st = { slideU: [null, null, null, null], slideU0: [null, null, null, null], wrong: [false, false, false, false], hint: [0, 0, 0, 0], p: -this.lead, notes, spd, clk: clock(opt.chart, opt.entry.shift), missAt: WIN.good, pressed: [false, false, false, false], flash: [0, 0, 0, 0], drawFrom: 0, now: performance.now() / 1000, dt: 0.016, pulse: 0, fever: 0, held: [false, false, false, false], fx: this.fxs, theme: this.fxs.theme };
     this.down = [0, 0, 0, 0]; this.ptr = new Map(); this.shown = 0; this.lastCheer = 0;
     this.pend = []; this.prevCombo = 0; this.fcShown = false; this.readyState = ''; this.chordSeen = new Set(); this.work = 0; this.iv = []; this.refresh = 0; this.offRate = false; this.slowT = 0; this.autoLite = false; this.txt = {};
@@ -175,7 +175,15 @@ export const Play = {
     b.className = 'scb'; void b.offsetWidth; b.className = 'scb on';
     Live.heart(3);
     const first = o.firstSc && this.scGot === 1;
-    if (now > this.scAt) { this.scAt = now + 4; this.cutin(first ? '어, 첫 슈퍼챗이에요! 고마워요!' : `${nick}님, 고마워요!`); }
+    if (now > this.scAt) { this.scAt = now + 4; this.cutin(first ? '어, 첫 슈퍼챗이에요! 고마워요!' : o.scThanks || `${nick}님, 고마워요!`); }   /* 캐스트 말투 (v0.7) */
+  },
+  /* 팬 일동 후원 띠 (v0.7 · 3단계 캐스트 · 피버가 켜질 때 한 번): 슈퍼챗 띠와 같은 자리(y 178~208 · 레인 맨 위 먼 곳) · 누를 수 없음 · 금액은 극 중 표기 · 점수 · 슈퍼챗 집계와 무관 */
+  fanBand() {
+    const o = this.opt; if (!o.fanBand) return;
+    const b = $('#p_sc'); if (b.classList.contains('on') && b.getAnimations().some(a => a.playState === 'running')) return;   /* 진짜 슈퍼챗 띠가 떠 있으면 양보 */
+    b.innerHTML = `<i>♥</i><b>10,000</b><span>${o.fanBand.name} 팬 일동</span><em>오늘 방송 최고</em>`;
+    b.className = 'scb fan'; void b.offsetWidth; b.className = 'scb fan on';
+    if (o.hitsnd !== false) A.fxPlay('coin', o.sfx * 0.45);
   },
   /* READY · GO 소리를 오디오 시계로 예약 (연습을 다시 내리면 취소하고 새 시각으로) */
   schedCues(t0) {
@@ -328,6 +336,7 @@ export const Play = {
     /* 피버: 앞뒤 1초 밀도가 곡 상위 25% 이상 + 10콤보 이상 → 0.6초에 걸쳐 켜지고 꺼짐 */
     const fi = Math.max(0, Math.min(P.dens.d.length - 1, Math.round(p * 4))), want = P.dens.d[fi] >= P.dens.th && P.sess.combo >= 10 ? 1 : 0;
     st.fever += (want - st.fever) * Math.min(1, st.dt / 0.25); P.fxs.st.fever = P.fxs.lite ? 0 : st.fever;
+    if (!P.fevOn && st.fever > 0.5) { P.fevOn = true; if (!(p < P.bandAt)) { P.bandAt = p + 15; P.fanBand(); } } else if (P.fevOn && st.fever < 0.15) P.fevOn = false;   /* 피버마다 최대 한 번 · 띠끼리 15초 넘게 띄움 (어려움은 피버가 잦아 띠가 몰림) */
     P.R.draw(st);
     P.flush(st.now);
     Live.frame(st.now, p, st.fever);
@@ -362,9 +371,10 @@ export const Play = {
   put(sel, v) { if (this.txt[sel] === v) return; this.txt[sel] = v; $(sel).textContent = v; },
   /* 풀콤보 · 올 퍼펙트 한 장면 (검수 B3): 화면이 밝아지고 캐스트 얼굴 + 큰 글자 · 약 3초 */
   fcMoment(r) {
-    const m = $('#p_fc'); m.querySelector('.fc-face').style.backgroundImage = `url(${this.opt.diva.face})`;
+    const who = this.opt.fcWho || this.opt.diva;   /* 얼굴과 이름이 같은 사람 (v0.7 · 지난 검수 C-1) · 각성 원화면 그 그림 */
+    const m = $('#p_fc'); m.querySelector('.fc-face').style.backgroundImage = `url(${who.face})`;
     m.querySelector('b').textContent = r.ap ? 'ALL PERFECT' : 'FULL COMBO';
-    m.querySelector('span').textContent = r.ap ? `모든 음이 완벽했어요 · ${this.opt.diva.name}` : `한 번도 끊기지 않았어요 · ${this.opt.diva.name}`;
+    m.querySelector('span').textContent = r.ap ? `모든 음이 완벽했어요 · ${who.name}` : `한 번도 끊기지 않았어요 · ${who.name}`;
     m.className = 'fcm ' + (r.ap ? 'ap' : 'fc'); void m.offsetWidth; m.className = 'fcm on ' + (r.ap ? 'ap' : 'fc');
     if (this.jAnim) this.jAnim.cancel(); if (this.sAnim) this.sAnim.cancel();   /* 마지막 판정 글자가 첫 프레임에 겹치지 않게 (재검수 C-3) */
     $('#p_shake').classList.add('fcing');   /* 콤보 · 판정 글자는 비켜 줌 */

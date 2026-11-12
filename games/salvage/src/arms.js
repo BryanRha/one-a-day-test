@@ -3,8 +3,8 @@
 //   여기서는 R.R()(판 씨앗 난수)를 부르지 않음 — 효과는 Math.random 만 (봇 · 시뮬 재현 그대로)
 //  근접 휘두르기(렌치) · 감전 연쇄(전류) · 조명탄(터짐 + 불 + 빛 웅덩이) · 물속 특화(잠수) · 탄약 × 적 방어/방패/기계
 import * as THREE from 'three';
-import { AMMO, ARMOR, MACHINE, WEAPONS, FEEL, SHAKE_MAX, AMMO_FX } from './data.js?v=0.99.34';
-import { sfx } from './audio.js?v=0.99.34';
+import { AMMO, ARMOR, MACHINE, WEAPONS, FEEL, SHAKE_MAX, AMMO_FX } from './data.js?v=0.99.35';
+import { sfx } from './audio.js?v=0.99.35';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };

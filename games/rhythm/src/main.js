@@ -2,19 +2,19 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.34';
-import { Play } from './play.js?v=0.99.34';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, josa, joinStage } from './data.js?v=0.99.34';
-import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.34';
-import * as CH from './channel.js?v=0.99.34';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.34';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.34';
-import { bm } from './oad_bm.js?v=0.99.34';
-import { THEMES } from './themes.js?v=0.99.34';
+import { A } from './audio.js?v=0.99.35';
+import { Play } from './play.js?v=0.99.35';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.35';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.35';
+import * as CH from './channel.js?v=0.99.35';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.35';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.35';
+import { bm } from './oad_bm.js?v=0.99.35';
+import { THEMES } from './themes.js?v=0.99.35';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.6.1';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.7.0';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -163,10 +163,18 @@ function guestId() { return S.guest && joined(S.guest) ? S.guest : null; }
 /* v0.6 캐스트 채널: 합류하는 캐스트인가(메디아 = 시즌 2 · 아님) · 기록 보내기 · ☰ 캐스트 점(새 합류 · 단계 오름 때만 한 번) */
 function isJoinable(id) { return !!(ROSTER.find(r => r.id === id) || {}).join; }
 function trk(name, p) { try { window.parent.postMessage({ type: 'oad:track', name, p }, '*'); } catch { /* */ } }
-function castDot() { const c = CH.ensure(S).casts; return ROSTER.some(r => joined(r.id) && (!(c[r.id] || {}).jn || (c[r.id].seen || 0) < CH.stageOfCast(S, r.id))); }
+function castDot() { const c = CH.ensure(S).casts; return ROSTER.some(r => joined(r.id) && (!(c[r.id] || {}).jn || (c[r.id].seen || 0) < shown(r.id) || (midOn(r.id) && !c[r.id].mid))); }
+/* v0.7: 보이는 단계(얼굴 그림이 없으면 3단계가 끝) · 3~4단계 사이 DM(그림이 있을 때만) · 얼굴 열림 · 각성 화가 시즌에 들어와 있나(곡이 왔나) */
+const shown = id => CH.shownStage(S, id, FACE[id]);
+const midOn = id => !!(FACE[id] && FACE[id].ready && (CH.ensure(S).casts[id] || {}).subs >= CH.MID34);
+const faceOpen = id => shown(id) >= 4;
+const awkIn = id => !!(AWK[id] && DAYS.some(d => d.no === AWK[id].ep));
+/* 시험 모드 ?awk=miyu : 그 캐스트를 각성한 것으로 (연출 확인용 · 저장 안 함 · 실서버 무시) */
+const awkTest = DEV ? (Q.get('awk') || '') : '';
+const awake = id => (awkTest && awkTest === id) || CH.isAwake(S, id);
 /* 단계 진행 막대 0~100 (3단계면 100 — 각성은 v0.7) */
-function stagePct(subs) { const st = CH.stageOf(subs), a = CH.STAGES[st], b = CH.STAGES[st + 1]; return b ? Math.max(0, Math.min(100, Math.round((subs - a) / (b - a) * 100))) : 100; }
-const STAGE_GIFT = { 1: '전용 DM · 생방송에 팬 채팅', 2: '사고 수습 한 판 2번 · 콤보 10마다 채팅 응원', 3: '전용 결과 대사' };
+function stagePct(subs, id) { const top = id ? shown(id) : 3, st = Math.min(CH.stageOf(subs), top), a = CH.STAGES[st], b = st < top ? CH.STAGES[st + 1] : 0; return b ? Math.max(0, Math.min(100, Math.round((subs - a) / (b - a) * 100))) : 100; }   /* 마지막 단계 뒤엔 숫자만 오름 (다음 잠금 칸 없음) */
+const STAGE_GIFT = { 1: '전용 DM · 생방송에 팬 채팅', 2: '사고 수습 한 판 2번 · 콤보 10마다 채팅 응원', 3: '전용 결과 대사 · 피버 때 팬 일동 후원 띠', 4: '얼굴 조각 · 진짜 이름' };
 /* 단계 조각 (방 · 뒷모습): 그림이 들어온 것(ready)만 — 없으면 어디에도 안 보임 (얻을 길 없는 빈 칸 금지) */
 const readyPieces = id => ((CHANNEL[id] || {}).pieces || []).filter(q => q.ready);
 const cardDef = id => CARDS.find(c => c.id === id);
@@ -174,7 +182,9 @@ const cardDef = id => CARDS.find(c => c.id === id);
 const skinOK = () => !!bm.info.owned || DEV;
 const skinOn = () => skinOK() && (S.skin ?? !!bm.info.owned);
 /* 오늘 방송의 연출 테마: 게스트 → 백금 무대(소장) → 오늘의 캐스트 → 기본 (시험 모드 ?theme= 이 먼저) */
-function themeNow() { if (DEV && Q.get('theme') && THEMES[Q.get('theme')]) return Q.get('theme'); const g = guestId(); if (!g && skinOn()) return 'owner'; const t = g ? rosterOf(g).theme : (rosterOf(day.cast) || {}).theme; return t && THEMES[t] ? t : 'base'; }
+function themeNow() { if (DEV && Q.get('theme') && THEMES[Q.get('theme')]) return Q.get('theme'); const g = guestId(); if (!g && skinOn()) return 'owner'; const t = g ? rosterOf(g).theme : (rosterOf(day.cast) || {}).theme; if (g && t && THEMES[t] && awake(g)) return awkTheme(t); return t && THEMES[t] ? t : 'base'; }
+/* 각성한 게스트: 그 캐스트 테마의 피버 테두리만 캐스트 색 + 금빛으로 (판정선 · 판정 색 그대로 · 판정선 띠 밖 — 플레이 감 표 11) */
+function awkTheme(t) { const k = t + '_awk'; if (!THEMES[k]) { const b = THEMES[t]; THEMES[k] = { ...b, id: k, name: b.name + ' · 각성', edgeFever: [b.accent || b.edgeFever[0], '255,214,140'] }; } return k; }
 /* 잠긴 캐스트가 언제 · 어떻게 합류하나 (v0.5.1 · 검수 B-3 · 사업 B-1): 지킬 수 없는 약속 금지
    오늘 = 오늘 방송 끝내면 · 내일 = 내일 · 지난 화 = 지난 방송에서 · 아직 없는 화(join > 들어 있는 화 수) = 「시즌 1 · 곧 합류」 · 메디아 = 시즌 2 */
 function joinWhen(r) {
@@ -191,12 +201,12 @@ function openCasts() {
   const cards = ROSTER.map(r => {
     const c = CASTS[r.id], on = joined(r.id), w = on ? null : joinWhen(r), seen = on || (w && w.face) || r.id === 'media' && S.book[10];
     /* 합류한 캐스트: 단계 딱지 + 카드 아래 얇은 막대 (v0.6 · 12칸 그대로) · 새 합류 · 단계 오름은 테두리 점 한 번 */
-    const rec = CH.ensure(S).casts[r.id] || { subs: 0 }, stg = CH.stageOf(rec.subs || 0), nw = on && (!rec.jn || (rec.seen || 0) < stg);
+    const rec = CH.ensure(S).casts[r.id] || { subs: 0 }, stg = on ? shown(r.id) : 0, nw = on && (!rec.jn || (rec.seen || 0) < stg || (midOn(r.id) && !rec.mid));
     const lbl = stg ? `${stg}단계` : '합류', tag = on ? (g === r.id ? `<span class="tg g">게스트${stg ? ` · ${stg}단계` : ''}</span>` : `<span class="tg on">${lbl}</span>`) : `<span class="tg lock ${w.cls}">${w.tag}</span>`;
-    return `<button class="cc ${on ? 'on' : 'lock'} ${g === r.id ? 'guest' : ''} ${w ? w.cls : ''} ${nw ? 'newst' : ''}" data-c="${r.id}" ${on ? '' : 'aria-disabled="true"'}><i style="background-image:url(${c.face});--f:url(${new URL(c.face, location.href).href})" class="${on || seen ? '' : 'sil'}"></i><b>${esc(c.name)}</b><small>${esc(r.bio || c.gen)}</small>${tag}${on ? `<u class="pb"><s style="width:${stagePct(rec.subs || 0)}%"></s></u>` : ''}</button>`;
+    return `<button class="cc ${on ? 'on' : 'lock'} ${g === r.id ? 'guest' : ''} ${w ? w.cls : ''} ${nw ? 'newst' : ''}" data-c="${r.id}" ${on ? '' : 'aria-disabled="true"'}><i style="background-image:url(${c.face});--f:url(${new URL(c.face, location.href).href})" class="${on || seen ? '' : 'sil'}"></i><b>${esc(c.name)}</b><small>${esc(r.bio || c.gen)}</small>${tag}${on ? `<u class="pb"><s style="width:${stagePct(rec.subs || 0, r.id)}%"></s></u>` : ''}</button>`;
   }).join('');
   /* 봤음: 이번에 점을 보여 준 뒤 지움 (다음에 열면 점 없음) */
-  for (const r of ROSTER) if (joined(r.id)) { const rc = CH.castRec(S, r.id); rc.jn = true; rc.seen = CH.stageOf(rc.subs); }
+  for (const r of ROSTER) if (joined(r.id)) { const rc = CH.castRec(S, r.id); rc.jn = true; rc.seen = shown(r.id); }
   save();
   const gc = g ? CASTS[g] : null;
   $('#casts').innerHTML = `
@@ -223,18 +233,22 @@ function seat(id, on = S.guest !== id) {
 }
 /* ---------- 캐스트 채널 (v0.6 · 의도서 2-(마)): 단계 · 막대 · 단계 보상 · 카드 · 열린 메시지 · 앉히기 단추 ---------- */
 function openChannel(id) {
-  const c = CASTS[id], rec = CH.castRec(S, id), subs = rec.subs, st = CH.stageOf(subs), nxt = CH.STAGES[st + 1], L = CHANNEL[id] || {}, t = today(), lg = (S.cast || {})[id] || { plays: 0, guards: 0 };
-  const gifts = [1, 2, 3].map(k => { const pcs = readyPieces(id).filter(q => q.stage === k).map(q => `조각 「${q.kind}」`); return `<li class="${st >= k ? 'on' : ''}"><b>${k}단계</b><em class="tnum">${CH.STAGES[k].toLocaleString('en-US')}</em><p>${[...pcs, STAGE_GIFT[k]].join(' · ')}</p></li>`; }).join('')
-    + '<li class="aw"><b>각성</b><em></em><p>얼굴 조각 · 진짜 이름 — 시즌 1 후반에 공개</p></li>';
+  const c = CASTS[id], rec = CH.castRec(S, id), subs = rec.subs, top = shown(id) >= 4 || (FACE[id] && FACE[id].ready) ? 4 : 3, st = shown(id), nxt = st < top ? CH.STAGES[st + 1] : 0, L = CHANNEL[id] || {}, t = today(), lg = (S.cast || {})[id] || { plays: 0, guards: 0 }, F = FACE[id], fo = faceOpen(id);
+  /* 단계 보상: 1~3단계 + (얼굴 그림이 있을 때만) 4단계 · 각성 줄은 그 각성 화가 시즌에 들어온 날부터만 (v0.7 · 곡이 없으면 '각성' 글자 0 — 사업 요청 2) */
+  const gifts = Array.from({ length: top }, (_, i) => i + 1).map(k => { const pcs = readyPieces(id).filter(q => q.stage === k).map(q => `조각 「${q.kind}」`); return `<li class="${st >= k ? 'on' : ''}"><b>${k}단계</b><em class="tnum">${CH.STAGES[k].toLocaleString('en-US')}</em><p>${[...pcs, STAGE_GIFT[k]].join(' · ')}</p></li>`; }).join('')
+    + (awkIn(id) ? `<li class="${awake(id) ? 'on' : ''}"><b>각성</b><em class="tnum">${AWK[id].ep}화</em><p>신형 엔진 데뷔 · ${AWK[id].ep}화를 끝까지 송출 · 구독자 ${CH.STAGES[3].toLocaleString('en-US')} 필요</p></li>` : '');
   const cards = CH.cardsOf(S, id).map(cd => { const df = cardDef(cd.id), d = DAYS[df.day - 1], a = CH.expFor(cd.lv), b = cd.lv < CH.CARD.maxLv ? CH.expFor(cd.lv + 1) : a, pc = b > a ? Math.round((cd.exp - a) / (b - a) * 100) : 100;
     return `<div class="cd"><i style="background-image:url(${d.dm.piece.img})"></i><div><em>★1 일상 스냅 · ${df.day}화</em><b>Lv.${cd.lv}<small> / ${CH.CARD.maxLv}</small></b><u class="pb"><s style="width:${pc}%"></s></u><p>${cd.lv >= 10 ? '짧은 DM 열림' : 'Lv10 짧은 DM'} · ${cd.lv >= 20 ? '전용 결과 대사 열림' : 'Lv20 전용 결과 대사'}</p></div></div>`; }).join('');
   /* 단계 조각: 그림이 들어온 것만 칸으로 — 열렸으면 사진 + 설명, 아직이면 「○단계에서 열려요」 */
-  const pcs = readyPieces(id).map(q => st >= q.stage ? `<div class="pc on"><i style="background-image:url(${q.img})"></i><p><em>조각 「${q.kind}」 · ${q.stage}단계</em>${esc(q.caption)}</p></div>` : `<div class="pc"><i></i><p><em>조각 「${q.kind}」</em>${q.stage}단계에서 열려요</p></div>`).join('');
-  const msgs = [...(st >= 1 && L.dm1 ? L.dm1 : []), ...CH.cardsOf(S, id).filter(cd => cd.lv >= 10).flatMap(cd => cardDef(cd.id).lv10)].map(x => `<p>${esc(x)}</p>`).join('');
+  const pcs = readyPieces(id).map(q => st >= q.stage ? `<div class="pc on"><i style="background-image:url(${q.img})"></i><p><em>조각 「${q.kind}」 · ${q.stage}단계</em>${esc(q.caption)}</p></div>` : `<div class="pc"><i></i><p><em>조각 「${q.kind}」</em>${q.stage}단계에서 열려요</p></div>`).join('')
+    /* 4단계 「얼굴」: 캐스트당 한 장 · 누르면 시트 안에서 크게 · 그림이 없으면 칸 없음 */
+    + (F && F.ready ? (fo ? `<div class="pc on face" data-k="face" data-c="${id}"><i style="background-image:url(${F.img})"></i><p><em>조각 「얼굴」 · 4단계 · 누르면 크게</em>${esc(F.caption)}</p></div>` : `<div class="pc"><i></i><p><em>조각 「얼굴」</em>4단계 · 구독자 ${CH.STAGES[4].toLocaleString('en-US')}에서 진짜 이름과 함께 열려요</p></div>`) : '');
+  if (midOn(id)) rec.mid = true;   /* 3~4단계 사이 DM 봤음 */
+  const msgs = [...(st >= 1 && L.dm1 ? L.dm1 : []), ...(midOn(id) && F ? [F.mid] : []), ...CH.cardsOf(S, id).filter(cd => cd.lv >= 10).flatMap(cd => cardDef(cd.id).lv10)].map(x => `<p>${esc(x)}</p>`).join('');
   const sh = $('#sheet');
   sh.innerHTML = `<div class="pan chs"><div class="body">
-    <div class="hd"><i style="background-image:url(${c.face})"></i><div><em>${esc(c.gen)} · 캐스트 채널</em><b>${esc(c.name)}<small>${st ? `${st}단계` : '합류'}</small></b><span>구독자 <b class="tnum">${subs.toLocaleString('en-US')}</b>${nxt ? ` · 다음 ${nxt.toLocaleString('en-US')}` : ''}</span></div></div>
-    <u class="pb big"><s style="width:${stagePct(subs)}%"></s></u>
+    <div class="hd"><i style="background-image:url(${c.face})"></i><div><em>${esc(c.gen)} · 캐스트 채널</em><b>${esc(c.name)}<small>${st ? `${st}단계` : '합류'}${awake(id) ? ' · 각성' : ''}</small></b>${fo ? `<span class="real">${esc(F.name)} · ${F.age} · ${esc(F.job)}</span>` : ''}<span>구독자 <b class="tnum">${subs.toLocaleString('en-US')}</b>${nxt ? ` · 다음 ${nxt.toLocaleString('en-US')}` : st >= 3 ? ' · 완료' : ''}</span></div></div>
+    <u class="pb big"><s style="width:${stagePct(subs, id)}%"></s></u>
     <div class="stat"><span>함께한 방송 <b>${lg.plays}</b> · 함께 수습 <b>${lg.guards}</b></span><span>오늘 함께한 방송 <b>${Math.min(t.cred || 0, CH.CAP)}/${CH.CAP}</b></span></div>
     <h4>단계 보상</h4><ul class="gifts">${gifts}</ul>
     ${pcs ? `<h4>조각</h4><div class="pcs">${pcs}</div>` : ''}
@@ -242,8 +256,15 @@ function openChannel(id) {
     ${msgs ? `<h4>채널 메시지</h4><div class="msg">${msgs}</div>` : ''}
     <div class="note">구독자는 함께한 방송(하루 ${CH.CAP}판까지) · 곡별 난이도 첫 달성 · 화 첫 방송으로 쌓여요 · 점수에는 영향 없어요</div>
   </div><button class="seat ${S.guest === id ? 'off' : ''}" data-k="seat" data-c="${id}">${S.guest === id ? '옆자리에서 내리기' : '옆자리 게스트로 앉히기'}</button></div>`;
-  sh.classList.add('on'); moreHint(sh);
+  sh.classList.add('on'); moreHint(sh); save();
   trk('channel_open', { cast: id });
+}
+/* 얼굴 크게 보기 (시트 안 · 닫기 1탭) */
+function openFace(id) {
+  const F = FACE[id]; if (!F || !faceOpen(id)) return;
+  const pan = $('#sheet .pan'); if (!pan) return;
+  pan.insertAdjacentHTML('beforeend', `<div class="fbig" data-k="faceclose"><i style="background-image:url(${F.img})"></i><b>${esc(F.name)}</b><span>${F.age} · ${esc(F.job)} · ${esc(CASTS[id].name)}의 진짜 그 사람</span><button data-k="faceclose">닫기</button></div>`);
+  trk('face_view', { cast: id });
 }
 
 function go() {
@@ -258,11 +279,17 @@ function go() {
     song, chart: charts[song.id], diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
     hitsnd: S.hitsnd, el: S.el, lite: S.lite, vib: S.vib !== false, theme: DEV && Q.get('theme') ? themeNow() : DEV && THEMES[S.theme] && S.theme !== 'base' ? S.theme : themeNow(),
     guides,   /* ?guide=0 이면 끔 · 시험 도구 */
-    guards: S.guard === false ? 0 : CH.guardsFor(CH.stageOfCast(S, gid || day.cast)), firstSc: !S.seen.scHit,   /* 사고 수습: 수습하는 캐스트(게스트 → 오늘 캐스트)의 구독자 단계로 1 · 1 · 2 · 2회 (v0.6) · 설정에서 끔 */
+    guards: S.guard === false ? 0 : (awake(gid || day.cast) ? 3 : CH.guardsFor(CH.stageOfCast(S, gid || day.cast))), firstSc: !S.seen.scHit,   /* v0.7: 각성하면 3회 */   /* 사고 수습: 수습하는 캐스트(게스트 → 오늘 캐스트)의 구독자 단계로 1 · 1 · 2 · 2회 (v0.6) · 설정에서 끔 */
     fan: [day.cast, gid].filter((x, i, a) => x && a.indexOf(x) === i && CH.stageOfCast(S, x) >= 1 && CHANNEL[x]).flatMap(x => CHANNEL[x].fan),   /* 단계 1: 그 캐스트 팬 채팅 (글만 · 채팅 4줄 안) */
     burst: CH.stageOfCast(S, gid || day.cast) >= 2,   /* 단계 2: 콤보 10마다 채팅 응원 + 하트 (50 · 100 이정표와 겹치지 않게) */
-    cover: day.hero, diva: { ...dv, name: singer(day), fix: gc.fix || dv.fix, face: gid ? gc.face : dv.face, en: gid ? gc.en : dv.en }, chapter: `${day.no}화 · ${day.chapter}`, cheer: CHEER, live: day.live, subs: day.subs,
-    helper: { name: gc.name, en: gc.en, face: gc.face, fix: gc.fix || dv.fix },   /* 수습하는 캐스트 = 게스트(없으면 오늘의 캐스트) */
+    cover: day.hero, diva: { ...dv, name: singer(day), fix: gc.fix || dv.fix, face: gid ? gc.face : dv.face, en: gid ? gc.en : dv.en }, chapter: `${day.no}화 · ${day.chapter}`, live: day.live, subs: day.subs,
+    /* 응원 컷인 얼굴(게스트 → 오늘 캐스트)의 말투로 (지난 검수 C-3) · 시점 · 횟수는 CHEER 그대로 */
+    cheer: { ...CHEER, ...Object.fromEntries(Object.entries(CAST_CHEER[gid || day.cast] || {}).filter(([k]) => k !== 'sc')) }, scThanks: (CAST_CHEER[gid || day.cast] || {}).sc || '',
+    /* 풀콤보 장면: 얼굴과 이름을 같은 사람으로 (지난 검수 C-1 · QA 3) · 각성했고 원화가 있으면 각성 원화 (길이 3.0초 그대로) */
+    fcWho: { name: gid ? gc.name : singer(day), face: (() => { const w = gid || day.cast; return awake(w) && AWK[w] && AWK[w].ready ? AWK[w].img : gid ? gc.face : dv.face; })() },
+    /* 3단계 이상 캐스트(오늘 · 게스트)가 있으면 피버 시작 때 위쪽 띠 한 번 「○○ 팬 일동」 (극 중 팬 · 누를 수 없음 · 점수 영향 0 · 사업 요청 4) */
+    fanBand: (() => { const w = [gid, day.cast].find(x => x && isJoinable(x) && CH.stageOfCast(S, x) >= 3); return w ? { name: CASTS[w].name } : null; })(),
+    helper: { name: gc.name, en: gc.en, face: gc.face, fix: (awake(gid || day.cast) && AWK[gid || day.cast] && AWK[gid || day.cast].fix) || gc.fix || dv.fix },   /* 수습하는 캐스트 = 게스트(없으면 오늘의 캐스트) */
     themeLine: gid && gid !== day.cast && THEMES[rosterOf(gid).theme] ? `연출 · ${THEMES[rosterOf(gid).theme].name}` : !gid && skinOn() ? `연출 · ${THEMES.owner.name}` : '',
     guestHello: gid && gid !== day.cast && rosterOf(gid).guest ? { name: gc.name, text: rosterOf(gid).guest } : null,
     /* 안내 '봤음'은 READY 를 지난 뒤 저장 (안내 중에 나가면 다음 판에 다시 · 검수 C-1) */
@@ -307,6 +334,9 @@ function onResult(r) {
   for (const u of chg.stageUps) trk('cast_stage', { cast: u.cast, stage: u.stage });
   for (const f of chg.firsts) trk('first_clear', { song: song.id, diff: S.diff, kind: f.kind, cast: f.cast });
   for (const l of chg.levelUps) trk('card_level', { cast: l.cast, card: l.card, lv: l.lv });
+  /* v0.7: 각성(그 화 끝까지 + 3단계 · 곡이 온 화만) · 얼굴 열림 기록 */
+  chg.awk = CH.awkCheck(S, { awk: AWK, days: DAYS, dayNo: dayRaw() }); for (const id of chg.awk) trk('awaken', { cast: id });
+  faceMark();
   last = { r, nb, firstClear, newPage: pageIn(day.no, r.rank), diff: S.diff, ch: chg, capNote };
   save(true);
   try { window.parent.postMessage({ type: 'oad:track', name: 'clear', p: { rank: r.rank, acc: Math.round(r.acc * 1000) / 10, diff: S.diff, song: song.id } }, '*'); } catch { /* */ }
@@ -315,7 +345,7 @@ function onResult(r) {
 function renderResult() {
   const { r, nb } = last, dv = CASTS[day.cast], b = (S.best[song.id] || {})[last.diff];
   /* 칭찬: 단계 3 · 카드 Lv20 이면 그 캐스트 전용 대사가 가끔 섞임 (v0.6 · 올 퍼펙트 · 풀콤보 · 신기록 칭찬이 먼저) */
-  const spc = [...(CH.stageOfCast(S, day.cast) >= 3 && CHANNEL[day.cast] ? [CHANNEL[day.cast].res3] : []), ...CH.cardsOf(S, day.cast).filter(c => c.lv >= 20).map(c => cardDef(c.id).lv20)];
+  const spc = [...(awake(day.cast) && AWK[day.cast] ? [AWK[day.cast].line] : []), ...(CH.stageOfCast(S, day.cast) >= 3 && CHANNEL[day.cast] ? [CHANNEL[day.cast].res3] : []), ...CH.cardsOf(S, day.cast).filter(c => c.lv >= 20).map(c => cardDef(c.id).lv20)];
   const praise = r.ap ? PRAISE.ap : r.fc ? PRAISE.fc : nb ? PRAISE.best : spc.length && Math.random() < 0.5 ? pick(spc) : pick(PRAISE[r.rank]);
   $('#result').innerHTML = `
     <div class="bgcov" style="background-image:url(${day.hero})"></div>
@@ -344,10 +374,12 @@ function renderResult() {
 /* 결과 칩 (v0.6 · 새 줄 없이 기존 칩 줄 안): 「♪ 미유 +110 · 벨라 +110」 · 첫 달성은 가장 높은 것 하나 「첫 풀콤보」 · 단계 오름이면 칩만 금빛 「미유 2단계」
    상한 남은 횟수는 결과에 내지 않음(사업 요청 6 — 채널 시트에만) · 상한 뒤 첫 판에만 안내 한 줄(칭찬 먼저 · 막는 말 없음) */
 const FIRST_NM = { clear: '첫 완주', s: '첫 S', fc: '첫 풀콤보' };
+/* 얼굴이 열린 캐스트에 연 날(faceAt) 기록 + face_open (설치 뒤 날 수) — 판 끝 · 처음 열 때(그림이 나중에 들어온 경우) */
+function faceMark() { for (const id of Object.keys(FACE)) { const rec = CH.ensure(S).casts[id]; if (rec && !rec.faceAt && faceOpen(id)) { rec.faceAt = dayKey(); trk('face_open', { cast: id, day: dayRaw() }); } } }
 function chChip(ch, capNote) {
   if (!ch) return '';
-  const g = Object.entries(ch.gain).filter(([, n]) => n > 0), up = ch.stageUps[ch.stageUps.length - 1];
-  const chip = g.length ? `<span class="chg${up ? ' up' : ''}"><i>♪</i>${g.map(([id, n]) => `${esc(CASTS[id].name)} <b>+${n.toLocaleString('en-US')}</b>`).join(' · ')}${ch.firsts.length ? `<em>${FIRST_NM[['fc', 's', 'clear'].find(k => ch.firsts.some(f => f.kind === k))]}</em>` : ''}${up ? `<em class="st">${esc(CASTS[up.cast].name)} ${up.stage}단계</em>` : ''}</span>` : '';
+  const g = Object.entries(ch.gain).filter(([, n]) => n > 0), up = ch.stageUps.filter(u => u.stage <= shown(u.cast)).pop();   /* 그림이 없는 4단계는 칩에도 안 냄 */
+  const chip = g.length ? `<span class="chg${up ? ' up' : ''}"><i>♪</i>${g.map(([id, n]) => `${esc(CASTS[id].name)} <b>+${n.toLocaleString('en-US')}</b>`).join(' · ')}${ch.firsts.length ? `<em>${FIRST_NM[['fc', 's', 'clear'].find(k => ch.firsts.some(f => f.kind === k))]}</em>` : ''}${up ? `<em class="st">${esc(CASTS[up.cast].name)} ${up.stage}단계${up.stage === 4 ? ' · 얼굴 조각' : ''}</em>` : ''}${ch.awk && ch.awk.length ? `<em class="st">${esc(CASTS[ch.awk[0]].name)} 각성</em>` : ''}</span>` : '';
   return chip + (capNote ? '<span class="capl">오늘 몫은 다 받았어요 · 아침 7시에 다시 쌓여요 · 연습은 계속 자유</span>' : '');
 }
 /* S 이상: 등급 주변으로 퍼지는 금빛 알갱이 (CSS 만) */
@@ -361,7 +393,7 @@ $('#result').addEventListener('click', e => { const b = e.target.closest('[data-
 let dm = null;
 function dmHead(D) {
   if (D.with === 'group') return `<div class="gav">${['miyu', 'bella', 'tina', 'moa', 'edel'].map(k => `<i style="background-image:url(${CASTS[k].face})"></i>`).join('')}</div><div class="nm"><b>${esc(D.title || '단톡방')}</b><small>캐스트 7명 · 대표</small></div>`;
-  const c = CASTS[D.with]; return `<div class="av" style="background-image:url(${c.face})"></div><div class="nm"><b>${esc(c.name)}</b><small>${D.with === 'media' ? '오르골 · 처음 온 메시지' : '진짜 이름 ○○○ · 조각 4장을 모으면 공개'}</small></div>`;
+  const c = CASTS[D.with]; return `<div class="av" style="background-image:url(${c.face})"></div><div class="nm"><b>${esc(c.name)}</b><small>${D.with === 'media' ? '오르골 · 처음 온 메시지' : faceOpen(D.with) ? `${esc(FACE[D.with].name)} · 진짜 그 사람` : FACE[D.with] && FACE[D.with].ready ? '진짜 이름 ○○○ · 조각 4장을 모으면 공개' : '진짜 이름 ○○○'}</small></div>`;
 }
 function bubble(l, D) {
   if (l.who === 'pd') return `<div class="mb me"><p>${esc(l.text)}</p></div>`;
@@ -494,7 +526,7 @@ function openStages() {
   const late = behind(home.no, S.book);
   $('#stages').innerHTML = `
     <div class="top"><button class="ic" data-g="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">방송 목록</div><span style="width:36px"></span></div>
-    <div class="ttl"><em>SEASON ${SEASON.no} · ${SEASON.title}</em><b>열린 방송은 몇 번이든</b><span>${DEV ? '시험 모드 · 10곡 모두 열림' : late ? `${home.no}화까지 열렸어요 · ${nextUp(home.no, S.book)}화부터 차례로 이어 봐요` : `${home.no}화까지 열렸어요 · 매일 아침 7시에 새 방송`}</span></div>
+    <div class="ttl"><em>SEASON ${SEASON.no} · ${SEASON.title}</em><b>열린 방송은 몇 번이든</b><span>난이도 칸을 누르면 바로 시작해요 · ${DEV ? '시험 모드 · 10곡 모두 열림' : late ? `${home.no}화까지 열렸어요 · ${nextUp(home.no, S.book)}화부터 차례로 이어 봐요` : `${home.no}화까지 열렸어요 · 매일 아침 7시에 새 방송`}</span></div>
     <div class="list">${rows}</div>`;
   show('stages');
   /* 난이도 칸 레벨 표시용 채보 미리 받기 (작음) */
@@ -552,6 +584,8 @@ $('#sheet').addEventListener('click', e => {
   const b = e.target.closest('[data-k]') || (e.target.closest('.tgr') && e.target.closest('.tgr').querySelector('.tg')); if (!b) return;
   const k = b.dataset.k, v = +b.dataset.v || 0;
   if (k === 'close') return closeSheet();
+  if (k === 'face') return openFace(b.dataset.c);   /* 얼굴 조각 크게 */
+  if (k === 'faceclose') { const f = $('#sheet .fbig'); if (f) f.remove(); return; }
   if (k === 'seat') { const id = b.dataset.c; seat(id); closeSheet(); if (cur() === 'casts') { stack.pop(); openCasts(); } return; }   /* 캐스트 채널 시트 */
   if (k === 'calib') { closeSheet(); return openCalib(); }
   if (k === 'offset') S.offset = Math.max(-300, Math.min(300, S.offset + v * 5));
@@ -662,6 +696,8 @@ document.addEventListener('pointerdown', async () => { await A.unlock(); A.setVo
   { const en = CH.encoreNo(dayRaw(), DAYS.length); encore = en && home.no === DAYS.length ? DAYS[en - 1] : null; }   /* 앵콜: 마지막 화 다음 날부터 */
   /* v0.6 소급: v0.5.1 부터 쌓인 기록(함께한 방송 · 슈퍼챗 · 곡별 최고 · 방송 기록)을 처음 열 때 한 번 (상한 × 지난 날 수까지) */
   if (CH.retro(S, { days: DAYS, cardDefs: CARDS, joinable: isJoinable, daysSince: dayRaw() })) save(true);
+  if (CH.awkCheck(S, { awk: AWK, days: DAYS, dayNo: dayRaw() }).length) save(true);   /* 곡이 들어와 각성 화가 생긴 뒤 처음 열 때 */
+  faceMark(); save();
   const want = DAYS[(+Q.get('song') || 0) - 1];   /* 시험용: ?dev=1&song=7 → 7화 곡을 바로 고른 상태로 */
   /* 열 때: 놓친 화가 있으면 그 가장 앞 화부터 (v0.5.4 따라잡기) · ?day=N 시험 스위치는 그 화로 바로 */
   await setDay(DEV && want ? want : EP ? tonight() : upNext(), false);

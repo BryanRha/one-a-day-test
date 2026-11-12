@@ -3,9 +3,9 @@
 //   그리기 수 관리: 움직이지 않는 것(바닥 · 벽 · 소품)은 층마다 색별로 하나로 합침(bake) · 화면 밖 층은 카메라가 알아서 뺌(frustum) · 조명은 지금 층만 켬
 //   바닥 대비 (마루미 0.3.1 원칙): 바닥은 채도 · 대비를 낮춤 · 물건엔 외곽선(models.js) — tools/floor_check.mjs
 import * as THREE from 'three';
-import { M, box, cyl, sph, mesh, C, gm, cvTex } from './models.js?v=0.99.34';
-import { CELL, FDX, gi } from './layout.js?v=0.99.34';
-import { BRAND } from './data.js?v=0.99.34';
+import { M, box, cyl, sph, mesh, C, gm, cvTex } from './models.js?v=0.99.35';
+import { CELL, FDX, gi } from './layout.js?v=0.99.35';
+import { BRAND } from './data.js?v=0.99.35';
 
 const TX = {};
 /* 가림막 표시: 키 큰 것(파라솔 · 펜던트 · 계단 · 난간 · 처마)은 테이블 · 설비 · 사장님 · 손님을 가리면 game.js 가 흐리게 */

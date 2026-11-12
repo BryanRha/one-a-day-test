@@ -3,8 +3,8 @@
 //   점수 영향 0: 이 모듈은 판(Play · engine)에 아무것도 넘기지 않음 — 넘어가는 건 수습 횟수(guardsFor) 하나뿐이고 수습은 점수에 영향 0 (engine rawMax)
 //   하루 상한: 그날 완주한 판 수(곡 · 캐스트 무관) 첫 CAP 판만 '함께한 방송' 구독자 · 슈퍼챗 3/3 · 카드 경험치 — 첫 달성 · 화 첫 완주 · 앵콜은 한 번뿐이라 상한 밖
 //   원어데이 골드 · 하트는 주지 않음 (v0.6 은 팔지 않음) · DOM 없음 → tools/test_logic.mjs · tools/growth_sim.mjs 가 그대로 씀
-export const STAGES = [0, 500, 3000, 10000];   /* 단계 1 · 2 · 3 문턱 (각성은 v0.7) */
-export const GUARDS = [1, 1, 2, 2];   /* 단계별 한 판 수습 횟수 (기획 6장 · 돌파 · 돈으로는 늘지 않음) */
+export const STAGES = [0, 500, 3000, 10000, 18000];   /* 단계 1 · 2 · 3 · 4 문턱 — 4단계 = 얼굴 조각 · 진짜 이름 (v0.7 · growth_sim 60일로 정함) */
+export const GUARDS = [1, 1, 2, 2, 2];   /* 단계별 한 판 수습 횟수 (기획 6장 · 돌파 · 돈으로는 늘지 않음) · 각성하면 3 (awkGuards) */
 /* 구독자 양 · 하루 상한 — tools/growth_sim.mjs 로 정함 (근거: docs/growth_sim.json) */
 export const GAIN = { play: 110, sc3: 20, lv: 20, first: { clear: 50, s: 75, fc: 100 }, ep: 400, encore: 150 };
 export const CAP = 4;
@@ -93,3 +93,24 @@ export function retro(st, { days, cardDefs, songs, joinable, daysSince }) {
 
 /* 앵콜 방송: 시즌 마지막 화 다음 날부터 열린 화를 1화부터 차례로 돌려 오늘 자리에 (raw = 달력상 몇 번째 날) */
 export const encoreNo = (raw, len) => (raw > len ? ((raw - len - 1) % len) + 1 : 0);
+
+/* ---------- v0.7 「진짜 그 사람」 ----------
+   4단계(얼굴 · 진짜 이름)는 그 캐스트 얼굴 그림이 들어왔을 때만 있음(face.ready) — 없으면 3단계가 끝(「완료」) · 사업 요청 2
+   표시 단계 = 실제 단계를 그림 여부로 자름 (저장된 구독자는 그대로 쌓임 → 그림이 오는 날 바로 4단계) */
+export const shownStage = (st, id, face) => Math.min(stageOfCast(st, id), face && face.ready ? 4 : 3);
+/* 3 → 4단계 사이 DM 한 줄을 띄우는 지점 (절반) */
+export const MID34 = (STAGES[3] + STAGES[4]) / 2;
+/* 각성: 그 캐스트 각성 화가 시즌에 들어와 있고(곡이 옴) · 그 화를 끝까지 송출했고 · 구독자 3단계 이상 (대표 11-12 가)
+   awk = { 캐스트: { ep } } · days = 들어 있는 화 · 돌려줌: 새로 각성한 캐스트 목록 (저장 casts[id].awk = { at: 달력 날, ep }) */
+export function awkCheck(st, { awk, days, dayNo = 0 }) {
+  ensure(st); const out = [];
+  for (const [id, a] of Object.entries(awk || {})) {
+    const rec = st.ch.casts[id]; if (!rec || rec.awk) continue;
+    if (!days.some(d => d.no === a.ep) || !(st.book || {})[a.ep] || stageOf(rec.subs) < 3) continue;
+    rec.awk = { at: dayNo, ep: a.ep }; out.push(id);
+  }
+  return out;
+}
+export const isAwake = (st, id) => !!(((ensure(st).casts[id]) || {}).awk);
+/* 수습 횟수: 각성하면 3 (기획 6장 · 점수 영향 0) */
+export const guardsOf = (st, id) => (isAwake(st, id) ? 3 : guardsFor(stageOfCast(st, id)));

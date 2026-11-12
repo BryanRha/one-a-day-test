@@ -3,9 +3,9 @@
 //  패턴 3 (모두 예고) + 호루라기: 닻 내던지기(줄) · 닻 내려찍기(원 → 닻이 박혀 2.2초 = 등 코어 약점 ×2) · 수류탄 셋(떨어질 자리 원) · 60% 아래 호루라기(소총수 2)
 //  쓰러뜨리면 이야기 조각 '두목의 물길 지도'(5장 복선) — 숫자 data/enemies.js M4_BOSS.chief
 import * as THREE from 'three';
-import { BOSS } from './data.js?v=0.99.34';
-import { RS } from './plan.js?v=0.99.34';
-import { sfx } from './audio.js?v=0.99.34';
+import { BOSS } from './data.js?v=0.99.35';
+import { RS } from './plan.js?v=0.99.35';
+import { sfx } from './audio.js?v=0.99.35';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);

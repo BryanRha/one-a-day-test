@@ -801,3 +801,35 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #sheet .chs .pc p{flex:1;min-width:0;font-size:11.5px;line-height:1.5;color:var(--sub);word-break:keep-all}
 #sheet .chs .pc p em{display:block;font-style:normal;font-size:10.5px;color:var(--gold)}
 #sheet .chs .pc.on p{color:#fff}
+
+/* ---------- v0.7 「진짜 그 사람」 · 남은 검수 C · QA ---------- */
+/* 팬 일동 후원 띠: 슈퍼챗 띠와 같은 자리 · 장미빛 (누를 수 없음) */
+#play .scb{pointer-events:none}
+#play .scb.fan{background:linear-gradient(90deg,#ffb3c8,#ffe1ea);color:#4a1028}
+#play .scb.fan i{background:#a8325a;color:#ffe1ea}
+/* 캐스트 채널: 진짜 이름 줄 · 얼굴 칸 · 크게 보기 */
+#sheet .chs .hd .real{display:block;font-size:12px;color:#ffe9c4;margin-top:2px}
+#sheet .chs .pc.face{cursor:pointer}
+#sheet .chs .pc.face>i{box-shadow:0 0 0 1.5px var(--gold),0 0 12px rgba(242,212,154,.35)}
+#sheet .pan{position:relative}
+#sheet .fbig{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px;border-radius:22px 22px 0 0;background:rgba(8,9,22,.96);text-align:center}
+#sheet .fbig i{width:300px;max-width:100%;aspect-ratio:1;border-radius:16px;background:center/cover;box-shadow:0 0 0 1px rgba(255,255,255,.2),0 12px 40px rgba(0,0,0,.5)}
+#sheet .fbig b{font:800 22px 'NMJ',serif;margin-top:8px}
+#sheet .fbig span{font-size:12px;color:var(--sub);word-break:keep-all}
+#sheet .fbig button{margin-top:10px;height:48px;padding:0 32px;border-radius:14px;font-weight:700;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2)}
+/* C-4 방송 목록 난이도 칸: 논리 48px → 360 폭에서도 44px */
+#stages .dfs button{height:48px}
+/* C-5 안내 카드: 장마다 높이를 맞춰 「확인」이 같은 자리 */
+#play .guide .card{min-height:262px;display:flex;flex-direction:column}
+#play .guide .gok{margin-top:auto}
+/* 지난 C-4 수습 · 응원 말풍선: 채팅 상자(왼쪽 끝 x 267) 앞에서 줄바꿈 */
+#play .cutin{width:auto}
+#play .cutin .say{max-width:170px;white-space:normal;word-break:keep-all;line-height:1.35}
+/* QA 7 방송 기록: 5째 열 오른쪽 테두리가 잘리지 않게 (테두리 1px 몫) */
+#book .pages{padding:1px 1px 10px}
+/* C-2 결과 난이도 세 칸 위 「한 번 더」 한 낱말 (탭 전환이 아니라 바로 시작) */
+.btns .again{position:relative}
+.btns .again::before{content:'한 번 더 · 바로 시작';position:absolute;left:0;right:0;top:-15px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--sub);pointer-events:none}
+/* QA 6 결과 등급 빛 쓸기가 끝난 뒤 끝 조각이 남던 것: 끝에서 사라지게 (이름도 따로 — 'shine' 은 시작 단추와 겹쳐 있었음) */
+#result .rank .shine::before{animation:rkShine .7s 1s ease-in-out both}
+@keyframes rkShine{from{left:-60%;opacity:1}85%{opacity:1}to{left:130%;opacity:0}}
