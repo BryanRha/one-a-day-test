@@ -2,7 +2,7 @@
 //   왼쪽 위 「● LIVE · 시청 N」 · 오른쪽 채팅 4줄(글자 12px — 재검수 v0.4 C-4)(레인 바깥 여백, 위로 흘러 사라짐) · 오른쪽 가장자리에서 솟는 하트
 //   채팅은 미리 쓴 문장만(data.js CHAT + 그날 방송 live.chat) · DOM 요소는 시작할 때 만들어 두고 다시 씀(풀)
 //   한 판에 DOM 쓰기는 채팅 1.2~2초에 한 번 · 시청자 수 1초에 한 번 · 하트는 CSS 애니메이션만
-import { CHAT } from './data.js?v=0.99.37';
+import { CHAT } from './data.js?v=0.99.38';
 
 const $ = s => document.querySelector(s);
 const pick = a => a[Math.floor(Math.random() * a.length)];

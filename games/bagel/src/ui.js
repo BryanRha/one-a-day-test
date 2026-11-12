@@ -1,11 +1,11 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.37';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.37';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.37';
-import { sfx, setAudio } from './audio.js?v=0.99.37';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.37';
-import { bm } from './oad_bm.js?v=0.99.37';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.38';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.38';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.38';
+import { sfx, setAudio } from './audio.js?v=0.99.38';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.38';
+import { bm } from './oad_bm.js?v=0.99.38';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -51,7 +51,6 @@ export class UI {
   bubble() { const d = document.createElement('div'); d.className = 'bub'; this.tags.append(d); return d; }
   tag() { const d = document.createElement('div'); d.className = 'tag lock'; this.tags.append(d); return d; }
   nameTag(t, o) { const d = document.createElement('div'); d.className = 'nt'; d.textContent = t; d._o = o; this.tags.prepend(d); return d; }   /* 설비 이름표 (말풍선보다 아래 층) */
-  evTag(t) { const d = document.createElement('div'); d.className = 'evp'; d.textContent = t; this.tags.append(d); return d; }
   evBar(E) { const b = $('#evb'); if (!b) return; this._ev = E; b.hidden = !E; if (!E) return; const T = { complain: ['😤', '컴플레인 · 다가가서 사과해요'], group: ['👥', `단체 주문 · ${E.cust ? `${MENU[E.cust.order[0].k].short} ${E.cust.order[0].n}개 · 값 ×1.6` : ''}`], influencer: ['📸', '인플루언서 · 손님 두 배 · 팁 듬뿍'] }[E.type];
     b.innerHTML = `<b>${T[0]}</b><span>${T[1]}</span>${E.T ? '<em id="evt"></em>' : ''}`; b.className = 'evb ' + E.type; }
   /* 화면 좌표 → 바닥(y=0) 좌표 */
@@ -83,12 +82,8 @@ export class UI {
     /* 설비 이름표 (테스터 #9): 설비 앞 바닥 · 외형 단계가 오르면 별 */
     for (const d of this.tags.querySelectorAll('.nt')) { const o = d._o; if (!o || !g.st[o.s.id]) { d.remove(); continue; } const t = Math.max(0, o.tier || 0), h = `${stName(o.s.id)}${t ? ` <i>${'★'.repeat(t)}</i>` : ''}`; if (d._h !== h) { d.innerHTML = h; d._h = h; }
       v.set(o.x, 4, o.z + (NT_DZ[o.s.id] ?? 80)).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; }
-    /* 쉬는 직원 💤 (테스터 #10) */
-    for (const w of g.staff) { if (w.rest) { if (!w.zz || !w.zz.isConnected) { w.zz = document.createElement('div'); w.zz.className = 'zz'; w.zz.innerHTML = `💤 <span>${STAFF[w.k].name} 쉬는 중</span>`; this.tags.append(w.zz); } v.set(w.pos.x, 215, w.pos.z).project(cam); w.zz.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; }
-      else if (w.zz) { w.zz.remove(); w.zz = null; } }
-    /* 돌발 이벤트 (테스터 #12) */
-    const E = g.ev; if (E && E.tag) { v.set(E.pos.x, 215, E.pos.z).project(cam); E.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; }
-    const et = $('#evt'); if (et && E) et.textContent = Math.max(0, Math.ceil(E.t));
+    this.heads(g, cam, W, H);
+    const E = g.ev, et = $('#evt'); if (et && E) et.textContent = Math.max(0, Math.ceil(E.t));
     /* 켜진 시간 효과 (상점 물품 · 광고 보상) */
     if ((this._bf = (this._bf || 0) + 1) % 10 === 0) { const now = Date.now(), on = Object.keys(FX).filter(k => k !== 'boost' && (+S.fx[k] || 0) > now), html = on.map(k => `<span>${FX[k].icon} ${mmss(Math.min(FX_MS, S.fx[k] - now))}</span>`).join(''); const bf = $('#buffs'); if (bf._h !== html) { bf.innerHTML = html; bf._h = html; } }
   }
@@ -98,6 +93,19 @@ export class UI {
     const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '오늘 쿠폰 받았어요 · 눌러서 보기' : couponReady() ? '쿠폰 받기!' : `베이글 ${S.sold} / ${COUPON.goal}개 팔기`;
     $('#cp').classList.toggle('ready', couponReady()); $('#shopDot') && ($('#shopDot').style.display = this.giftReady() ? 'block' : 'none'); this.adUi(); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() || this.regNew() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() || this.cheapDeco() || this.giftReady() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
   }
+  /* 머리 위 아이콘 (0.6.2 대표 「손님 클레임 · 자는 직원 등은 전부 머리 위 아이콘으로」): 그 사람에게 가서 풀어야 하는 일 = 컴플레인 손님 😤(빨강 · 남은 시간 고리) · 쉬는 직원 💤(남색)
+     예전 글 꼬리표(.evp · .zz)는 CSS 박동(transform: scale)이 자리 translate 를 덮어써 1~1.6초마다 화면 구석으로 튀었음 → 아이콘은 움직이는 애니메이션 없음 · 자리는 translate 하나
+     화면 밖이면 가장자리에 붙고 화살표가 그 사람 쪽을 가리킴 · 둘이 겹치면 위로 비켜 쌓음 · 주문 말풍선(188)보다 위(230) */
+  heads(g, cam, W, H) { const L = [], v = new THREE.Vector3(), E = g.ev;   /* 아이콘 목록은 매 프레임 실제 상태에서 (풀리면 바로 사라짐) */
+    if (E && E.type === 'complain' && E.P && (E.state === 'in' || E.state === 'wait')) L.push({ k: 'cmp', kind: 'complain', ic: '😤', p: E.pos, f: E.T ? Math.max(0, E.t / E.T) : 1 });
+    g.staff.forEach((w, i) => { if (w.rest) L.push({ k: 'zz' + w.k + i, kind: 'sleep', ic: '💤', p: w.pos }); });
+    const els = (this._heads ||= new Map()), live = new Set(), z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--z')) || 1, M0 = { l: 14, r: 96 * z, t: 118 * z, b: 150 * z }, put = [];
+    for (const h of L) { live.add(h.k); let d = els.get(h.k); if (!d || !d.isConnected) { d = document.createElement('div'); d.className = 'hi ' + h.kind; d.innerHTML = `<b>${h.ic}</b><i></i>`; this.tags.append(d); els.set(h.k, d); }
+      v.set(h.p.x, 230, h.p.z).project(cam); let x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * H; const cx = Math.max(M0.l + 22, Math.min(W - M0.r - 22, x)), cy = Math.max(M0.t + 44, Math.min(H - M0.b, y)), edge = cx !== x || cy !== y;
+      let fy = cy; while (put.some(q => Math.abs(q[0] - cx) < 40 && Math.abs(q[1] - fy) < 42)) fy -= 44; put.push([cx, fy]);   /* 겹치면 위로 비켜 쌓음 */
+      d.style.transform = `translate(${cx}px,${fy}px) translate(-50%,-100%)`; d.classList.toggle('edge', edge); if (edge) d.style.setProperty('--a', Math.atan2(y - cy, x - cx) + 'rad');
+      if (h.f != null) d.style.setProperty('--f', (h.f * 360).toFixed(0) + 'deg'); }
+    for (const [k, d] of els) if (!live.has(k)) { d.remove(); els.delete(k); } }
   /* 기준판 재정비 ①-8 (단추 6개 · 대표 캡처 화면): 왼쪽 단추 4개를 창 안 탭으로 — 업그레이드 창 = 설비 · 직원 · 꾸미기 · 상점 / 미션 창 = 미션 · 단골 · 메뉴 */
   upTabs(on) { const T = [['fac', '설비'], ['staff', `직원 ${this.app.game.staff.length}`], ['deco', '꾸미기'], ['store', `상점${this.giftReady() ? ' •' : ''}`]]; return `<div class="tabs hd">${T.map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-ut="${k}">${n}</button>`).join('')}</div>`; }
   msTabs(on) { const T = [['ms', '오늘의 미션'], ['reg', `단골${this.regNew() ? ' •' : ''}`], ['menu', '메뉴 숙련']]; return `<div class="tabs hd">${T.map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-mt="${k}">${n}</button>`).join('')}</div>`; }

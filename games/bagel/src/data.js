@@ -5,7 +5,7 @@ export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO B
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.6.1' };   /* 0.6.1 (2026-11-12): 새 지점은 시설 Lv 0 · 0.6.0 기준판 재정비 2단계 — 시설 단계 모습 · 매장별 인테리어 (0.5.0 = 1단계 · 794e8449 출발 · 0.3~0.4 는 꼬리표 marumi-0.4.5-last) */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.6.2' };   /* 0.6.2 (2026-11-12): 테라스 = 실제 손님 자리 · 머리 위 아이콘 · 길을 끊는 꾸미기 막기 (0.6.1 새 지점 Lv 0 · 0.6.0 기준판 재정비 2단계) */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)
@@ -145,16 +145,19 @@ export const MOOD = { happy: 10, ok: 25, tip: 0.15 };
 export const DECO = [
   { id: 'monstera', name: '큰 몬스테라 화분', icon: '🪴', cost: 220, score: 10, pos: [-690, 690], r: 45, desc: '가게 구석이 싱그러워져요' },
   { id: 'rug', name: '라탄 러그', icon: '🟫', cost: 320, score: 12, pos: [-240, 490], r: 0, desc: '테이블 사이 따뜻한 바닥' },
-  { id: 'bench', name: '창가 쿠션 벤치', icon: '🛋', cost: 470, score: 16, pos: [-700, 500], r: 0, wall: 'left', desc: '벽을 따라 놓인 긴 의자' },
+  { id: 'bench', name: '창가 화분 벤치', icon: '🪴', cost: 470, score: 16, pos: [-700, 500], r: 0, wall: 'left', desc: '벽을 따라 화분과 책을 올린 벤치' },
   { id: 'lamp', name: '스탠드 조명', icon: '💡', cost: 540, score: 15, pos: [-700, -460], r: 30, desc: '반죽기 옆을 밝혀요' },
   { id: 'shelf', name: '베이글 벽 선반', icon: '🥯', cost: 650, score: 18, pos: [300, -735], r: 0, wall: 'back', desc: '갓 구운 베이글을 벽에 진열' },
   { id: 'board', name: '오늘의 메뉴 칠판', icon: '📋', cost: 760, score: 18, pos: [600, 640], r: 30, desc: '문 앞 손글씨 칠판' },
   { id: 'gallery', name: '도쿄 사진 액자', icon: '🖼', cost: 860, score: 20, pos: [-733, -480], r: 0, wall: 'left', desc: '요요기 본점의 아침 풍경' },
   { id: 'vase', name: '테이블 꽃병', icon: '💐', cost: 970, score: 22, pos: null, r: 0, desc: '열린 테이블마다 꽃 한 송이' },
   { id: 'plants2', name: '화분 3단 선반', icon: '🌿', cost: 1150, score: 24, pos: [690, 690], r: 45, desc: '입구가 숲처럼' },
-  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 1620, score: 30, pos: [-300, 930], r: 0, desc: '가게 앞 바깥 자리' },
+  { id: 'terrace', name: '테라스 파라솔', icon: '⛱', cost: 1620, score: 30, pos: [-300, 930], r: 0, desc: '가게 앞 바깥 자리 · 손님 4명이 앉아요' },
   { id: 'photo', name: '단골 사진 벽', icon: '📸', cost: 0, score: 25, pos: [-733, 250], r: 0, wall: 'left', desc: '단골 여섯 명의 하트를 다 채우면 받아요', gift: true },
 ];
+/* 테라스 (0.6.2 대표 「B 실제 손님 자리」): 꾸미기 테라스를 사면 가게 앞 테라스 칸이 열리고 파라솔 테이블 2개 = 손님 자리 4개 (game.js terraceSync)
+   xMin · xMax: 테라스 가운데 x 범위 — 오른쪽 끝(+280)이 손님 줄(x 260) · 문(380)에 닿지 않게 · tip: 테라스 손님 팁 (대표 결정 전 0 = 아무것도 안 함 · 켜면 앉을 때 계산대 돈 더미에 tip × 지점 배수 × 산 개수) */
+export const TERRACE = { xMin: -470, xMax: -100, tip: 0 };
 // 단골: 하루 한 번 찾아오는 동네 사람 · fav = 좋아하는 메뉴 칸(bagel 플레인 · cream 특별 · coffee 크림치즈 · drink 커피)
 //   하트 단계 = 호감 [1, 3, 6, 10, 15] · 단계마다 사연 한 줄 · 2·4단계는 꾸미기 선물
 export const FAVOR = [1, 3, 6, 10, 15];
