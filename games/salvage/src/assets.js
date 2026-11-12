@@ -1,11 +1,11 @@
 // 모델 불러오기 · 복제 · 전리품 아이콘(3D 모델을 찍어 만듦)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.33';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.33';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.33';
-import { ITEMS } from './data.js?v=0.99.33';
-import { initHero } from './hero.js?v=0.99.33';
-import { loadEnemyPack, enemyReady } from './enemy3d.js?v=0.99.33';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.34';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.34';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.34';
+import { ITEMS } from './data.js?v=0.99.34';
+import { initHero } from './hero.js?v=0.99.34';
+import { loadEnemyPack, enemyReady } from './enemy3d.js?v=0.99.34';
 
 export const A = { props: {}, hero: null, skel: null, icons: {}, bytes: 0, chars: {}, packs: {}, packBytes: 0 };
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);

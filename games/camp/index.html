@@ -41,6 +41,6 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <!-- 로딩 화면: 세계 카메라 · 판 배율과 상관없이 화면 기준(fixed · 가운데) · 화면 크기가 자리 잡을 때까지 글자는 숨겼다가 페이드인 (대표 제보 10-30: 처음에 오른쪽으로 치우쳐 잘림) -->
 <div id="boot"><div class="logo">숲속 힐링 캠프</div><div class="sub">고원 숲에서 하루 쉬어 가요</div><div class="ld"><i></i></div></div>
 <script>(function(){var b=document.getElementById('boot'),w=innerWidth,h=innerHeight,n=0;function ok(){if(b)b.classList.add('show')}function chk(){n++;if(innerWidth===w&&innerHeight===h&&n>2)return ok();w=innerWidth;h=innerHeight;if(n>20)return ok();requestAnimationFrame(chk)}requestAnimationFrame(chk)})();</script>
-<script type="module" src="src/main.js?v=0.99.33"></script>
+<script type="module" src="src/main.js?v=0.99.34"></script>
 </body>
 </html>

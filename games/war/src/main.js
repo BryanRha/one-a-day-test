@@ -1,14 +1,14 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.33';
-import { audio } from './audio.js?v=0.99.33';
-import { BootScene } from './scenes/Boot.js?v=0.99.33';
-import { HomeScene } from './scenes/Home.js?v=0.99.33';
-import { BriefScene } from './scenes/Brief.js?v=0.99.33';
-import { PlayScene } from './scenes/Play.js?v=0.99.33';
-import { ResultScene } from './scenes/Result.js?v=0.99.33';
-import { StoryScene } from './scenes/Story.js?v=0.99.33';
-import { EditorScene } from './scenes/Editor.js?v=0.99.33';
-import { installBack } from './oad.js?v=0.99.33';
-import { bm } from './oad_bm.js?v=0.99.33';
+import { W, BASE_H, setH } from './config.js?v=0.99.34';
+import { audio } from './audio.js?v=0.99.34';
+import { BootScene } from './scenes/Boot.js?v=0.99.34';
+import { HomeScene } from './scenes/Home.js?v=0.99.34';
+import { BriefScene } from './scenes/Brief.js?v=0.99.34';
+import { PlayScene } from './scenes/Play.js?v=0.99.34';
+import { ResultScene } from './scenes/Result.js?v=0.99.34';
+import { StoryScene } from './scenes/Story.js?v=0.99.34';
+import { EditorScene } from './scenes/Editor.js?v=0.99.34';
+import { installBack } from './oad.js?v=0.99.34';
+import { bm } from './oad_bm.js?v=0.99.34';
 
 async function start() {
   try { await Promise.all(['700', '800', '900'].map(w => document.fonts.load(`${w} 48px Pretendard`))); } catch { /* 기본 폰트 */ }

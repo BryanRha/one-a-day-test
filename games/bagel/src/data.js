@@ -5,7 +5,7 @@ export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO B
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.5.0' };   /* 0.5.0 (2026-11-12): 기준판 재정비 1단계 — 794e8449(0.2.0)에서 출발 · 0.3~0.4 는 꼬리표 marumi-0.4.5-last */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.6.0' };   /* 0.6.0 (2026-11-12): 기준판 재정비 2단계 — 시설 단계 모습 · 매장별 인테리어 (0.5.0 = 1단계 · 794e8449 출발 · 0.3~0.4 는 꼬리표 marumi-0.4.5-last) */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)
@@ -22,7 +22,9 @@ export function setBranchMenu(i) { const m = BRANCH_MENU[i] || BRANCH_MENU[0]; O
 //   type: oven·counter·ccbar·coffee·table·bin·drive·hire(staff)·up(upgrade)·plant·next
 const B1 = {
   W: 1500, D: 1500, mult: 1,
-  theme: { floorA: '#FBF1E3', floorB: '#F0DCC2', wallA: 0xF7E6CF, wallB: 0xEFD9BC, trim: 0x9A643A, outside: 0xE8D2B4 },
+  /* 매장별 인테리어 (기준판 재정비 ③ · plan.md 4장): 틀 · 시설 자리 · 동선은 4지점 모두 같고, 바닥 · 벽 · 테이블 · 빛 · 간판 · 바깥만 다름 (models.js shopShell · STATION.table)
+     floor plank|check|tile|terra · wall plain|wainscot|vtile|louver · table round|square|white|picnic · lamp 벽등 · sign 간판 · awn 창 위 차양 · out 바깥 · light [하늘, 땅, 세기, 해, 세기] */
+  theme: { floor: 'plank', floorA: '#F7EAD6', floorB: '#EFDDC4', wall: 'plain', wallA: 0xF7ECDD, wallB: 0xF3E5D2, trim: 0xB07A48, outside: 0xE6DCCB, table: 'round', lamp: 'globe', sign: 'round', awn: 'white', out: 'walk', light: [0xFFF4E2, 0xC9A882, 1.6, 0xFFEFD8, 2.2] },
   door: [380, 920], queue: [[260, 250], 110],
   slots: [
     { id: 'mixer', type: 'mixer', x: -620, z: -600, free: true },
@@ -55,9 +57,9 @@ const B1 = {
 const scale = (b, k, theme, name) => ({ ...b, name, mult: k, theme: { ...b.theme, ...theme }, slots: b.slots.map(s => ({ ...s, cost: s.cost && Math.round(s.cost * k * 1.6 / 10) * 10, label: s.id === 'next' ? s.labelNext || s.label : s.label })) });
 export const BRANCHES = [
   { ...B1, name: '1호점 · 잠실리센츠점', photo: 'store1' },
-  { ...scale(B1, 4, { floorA: '#F4F1EC', floorB: '#DCD3C8', wallA: 0xEDE6DC, wallB: 0xE2D8CA, trim: 0x5A4A3A, outside: 0xD9CDBC }, '2호점 · 석촌본점'), photo: 'store2' },
-  { ...scale(B1, 14, { floorA: '#FFF4E8', floorB: '#F7D9C4', wallA: 0xFBE3D3, wallB: 0xF1D2BE, trim: 0xB0603A, outside: 0xEBCDB6 }, '3호점 · 헬리오시티점'), photo: 'store3' },
-  { ...scale(B1, 45, { floorA: '#F0EEE8', floorB: '#D2CCC0', wallA: 0xE8E2D8, wallB: 0xDAD2C4, trim: 0x3A3A3A, outside: 0xCFC6B6 }, '4호점 · 파크포레온점'), photo: 'store4' },
+  { ...scale(B1, 4, { floor: 'check', floorA: '#F7EEE2', floorB: '#E9D9C4', wall: 'wainscot', wallA: 0xEBE6E0, wallB: 0xE6E0D9, wain: 0x6E4C33, trim: 0x5A3A22, outside: 0xDCD3C6, table: 'square', lamp: 'brass', sign: 'brass', awn: 'stripe', out: 'lake', light: [0xFFF0DC, 0xC4A582, 1.6, 0xFFEBD0, 2.2] }, '2호점 · 석촌본점'), photo: 'store2' },
+  { ...scale(B1, 14, { floor: 'tile', floorA: '#F8F7F4', floorB: '#ECEAE5', wall: 'vtile', wallA: 0xFBFBF9, wallB: 0xF6F7F5, grout: '#BFE0D4', trim: 0x9AA4AC, outside: 0xCBC8C2, table: 'white', lamp: 'line', sign: 'box', awn: null, neon: true, out: 'under', light: [0xF4F7FF, 0xB8B4AC, 1.65, 0xF6F8FF, 2.1] }, '3호점 · 헬리오시티점'), photo: 'store3' },
+  { ...scale(B1, 45, { floor: 'terra', floorA: '#F5E4D6', floorB: '#ECD7C5', wall: 'louver', wallA: 0xDDE5D4, wallB: 0xD6DFCC, slat: 0xB8875A, trim: 0x8A6A44, outside: 0xC9DDAE, table: 'picnic', lamp: 'string', sign: 'wood', awn: null, out: 'park', light: [0xFFF6E6, 0xB4BE96, 1.6, 0xFFF2DA, 2.2] }, '4호점 · 파크포레온점'), photo: 'store4' },
 ];
 BRANCHES.forEach((b, i) => { const n = b.slots.find(s => s.id === 'next'); if (n) n.label = `${i + 2}호점 열기`; }); BRANCHES[3].slots = BRANCHES[3].slots.filter(s => s.id !== 'next');
 export const BRANCH_INFO = ['서울 송파구 올림픽로 145 리센츠상가 1층', '서울 송파구 삼학사로 42-1 1~2층', '서울 송파구 송파대로 345 헬리오시티 B1', '서울 강동구 양재대로 1360 포레온스테이션5 B1'];

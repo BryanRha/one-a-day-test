@@ -105,3 +105,8 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 /* 기준판 재정비 0.5.0: 창 위 탭 줄(업그레이드 · 미션) 아래의 작은 탭 줄 */
 .tabs.sub button { height: 32px; font-size: 12px; box-shadow: none; background: #FFF6EC; }
 .tabs.sub button.on { background: #FFE9D2; }
+.tierban { position: absolute; left: 50%; top: 24%; transform: translate(-50%, -10px) scale(0.9); opacity: 0; transition: opacity .25s, transform .3s cubic-bezier(.2,1.4,.4,1); background: rgba(43,42,46,.92); color: #fff; border-radius: 18px; padding: 10px 22px 12px; text-align: center; pointer-events: none; z-index: 30; box-shadow: 0 6px 18px rgba(0,0,0,.25); zoom: var(--z, 1); white-space: nowrap; }
+.tierban.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.tierban i { display: block; font-style: normal; color: #FFD24A; font-size: 15px; letter-spacing: 2px; }
+.tierban b { display: block; font-size: 21px; margin: 2px 0; }
+.tierban span { font-size: 12px; color: #F3E7D6; }

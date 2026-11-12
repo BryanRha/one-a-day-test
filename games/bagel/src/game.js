@@ -1,10 +1,11 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS } from './data.js?v=0.99.33';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS } from './data.js?v=0.99.34';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, tierDeco, ghostify } from './models.js?v=0.99.33';
-import { S, save, addSold, mission, today } from './state.js?v=0.99.33';
-import { sfx } from './audio.js?v=0.99.33';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.34';
+import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.34';
+import { S, save, addSold, mission, today } from './state.js?v=0.99.34';
+import { sfx } from './audio.js?v=0.99.34';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -28,12 +29,13 @@ export class Game {
     /* 새 지점은 앞 지점의 설비 업그레이드 단계를 이어받음 (테스터 #11) · 이미 올린 건 높은 쪽 */
     if (bi > 0) { const br = (S.branch[bi] ||= { unl: [], staff: [], paid: {} }); if (!br.lvFrom) { const pv = S.branch[bi - 1]?.lv || {}, lv = (br.lv ||= {}); for (const [k, v] of Object.entries(pv)) lv[k] = Math.max(lv[k] || 0, v); br.lvFrom = bi; } }
     sc.background = new THREE.Color(BRAND.cream);
-    sc.add(new THREE.HemisphereLight(0xFFF6EA, 0xC9A882, 1.6)); const sun = new THREE.DirectionalLight(0xFFF1DC, 2.2); sun.position.set(-500, 1200, 700); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+    const LT = B.theme.light || [0xFFF6EA, 0xC9A882, 1.6, 0xFFF1DC, 2.2];   /* 지점 빛 색 (기준판 재정비 ③) */
+    sc.add(new THREE.HemisphereLight(LT[0], LT[1], LT[2])); const sun = new THREE.DirectionalLight(LT[3], LT[4]); sun.position.set(-500, 1200, 700); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
     Object.assign(sun.shadow.camera, { left: -1100, right: 1100, top: 1100, bottom: -1100, near: 10, far: 3200 }); sun.shadow.radius = 4; sun.shadow.bias = -0.0005; sc.add(sun, sun.target); this.sun = sun;
     shopShell(sc, B.W, B.D, B.theme);
     for (const p of this.pads || []) p.tag.remove(); for (const c of [...(this.cust || []), ...(this.cars || [])]) c.tag && c.tag.remove(); this.ui && this.ui.floats && (this.ui.floats.innerHTML = '');   /* 지점 바꿀 때 화면 글자 정리 */
     this.ui && this.ui.tags && this.ui.tags.querySelectorAll('.nt, .zz, .evp').forEach(e => e.remove()); this.endEvent(true); this.placing = null; this.spin = [];   /* 설비 이름표 · 쉬는 직원 · 이벤트 */
-    this.nexting = false; this.st = {}; this.zones = []; this.pads = []; this.cust = []; this.cars = []; this.staff = []; this.piles = [];
+    this.nexting = false; this.focus = null; this.st = {}; this.zones = []; this.pads = []; this.cust = []; this.cars = []; this.staff = []; this.piles = [];
     this.unl = new Set(S.branch[bi]?.unl || []); B.slots.forEach(s => { if (s.free) this.unl.add(s.id); });
     for (const s of B.slots) if (this.unl.has(s.id)) this.place(s, false);
     this.refreshPads();
@@ -52,7 +54,7 @@ export class Game {
   // ── 설비 놓기
   place(s, anim) {
     if (s.type === 'hire' || s.type === 'up' || s.type === 'next') return;
-    const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.sc.add(g); STATION[s.type](g);
+    const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.sc.add(g); if (!TIER_SZ[s.id]) STATION[s.type](g, this.B.theme);   /* 단계가 있는 설비 7종은 restyle 이 몸체(looks.js)를 만듦 · 테이블은 지점 모양 */
     const o = { s, g, type: s.type, x: s.x, z: s.z, stack: [], in: 0, inStack: [], t: 0, feed: [], ft: 0 };   /* 상태는 놓을 때 전부 만들어 둠 (늦게 만들면 순서에 따라 오류) */
     if (s.type === 'table') { o.seats = [-95, 95].map(dx => ({ x: s.x + dx, z: s.z, who: null })); o.trash = []; if ((S.deco[this.bi] || []).includes('vase')) this.tableVase(o); }
     if (s.type === 'counter') { o.shelf = { bagel: [], cream: [], coffee: [], drink: [] }; o.cash = this.pile(s.x + 230, s.z + 10); }
@@ -113,10 +115,20 @@ export class Game {
     else if (DECO.find(x => x.id === id)?.pos && !this.decoOk(id, ...this.decoAt(id))) { const f = this.freeSpot(id, ...this.decoAt(id)); if (f) ((S.decoPos[this.bi] ||= {}))[id] = f.map(Math.round); }   /* 선물로 받은 소품: 기본 자리가 막혔으면 가까운 빈 곳 */
     this.placeDeco(id, true); save(); return true; }
   // ── 설비 외형 단계 (테스터 #6): 업그레이드 Lv 3 · 6 · 9 에서 바뀜
-  restyle(sid, anim = true) { const o = this.st[sid]; if (!o || !TIER_SZ[sid]) return; const t = tierOf(stLv(sid)); if (t === o.tier) return; const up = o.tier >= 0 && t > o.tier; o.tier = t;
-    if (o.tierG) { o.g.remove(o.tierG); this.spin = this.spin.filter(m => !o.tierG.children.includes(m)); } o.tierG = tierDeco(sid === 'cc' ? 'ccbar' : sid, t, TIER_SZ[sid]); o.g.add(o.tierG); for (const m of o.tierG.children) if (m.userData.spin) this.spin.push(m);
-    if (up && anim) { this.confetti(o.x, 200, o.z); sfx('levelup', { vol: 0.5 }); this.ui.toast(`${stName(sid)} 외형이 「${TIER_NAME[t]}」 단계로 바뀌었어요!`); this.fx.push({ t: 0, d: 0.45, f: u => o.g.scale.setScalar(1 + Math.sin(u * Math.PI) * 0.12) }); }
-    if (o.nt) o.nt._h = null; }
+  restyle(sid, anim = true) { const o = this.st[sid]; if (!o || !TIER_SZ[sid]) return false; const lv = stLv(sid), t = tierOf(lv), up = o.tier >= 0 && t > o.tier;
+    /* 기준판 재정비 ② (plan.md 3-1): 단계(Lv 3 · 6 · 9)마다 몸체를 통째로 바꾸고, 매 단계 작은 변화(looks.js stationDetail)를 다시 그림 — 충돌 · 물건 자리는 그대로 */
+    if (t !== o.tier) { if (o.body) { const old = o.body; this.spin = this.spin.filter(m => { for (let q = m; q; q = q.parent) if (q === old) return false; return true; }); o.g.remove(old); }
+      o.body = stationBody(o.type, t); o.g.add(o.body); o.tier = t; o.body.traverse(m => { if (m.userData.spin) this.spin.push(m); }); }
+    if (o.det) o.g.remove(o.det); o.det = stationDetail(o.type, t, lv, sid === 'oven' ? L('ovenCap') : 0); o.g.add(o.det);
+    if (sid === 'oven') ovenGlow(o.body, L('oven')); if (sid === 'mixer') o.body.traverse(m => { if (m.userData.spin) m.userData.k = 1 + L('mixer') * 0.15; });   /* 오븐 성능 = 불빛 · 반죽기 속도 = 도는 빠르기 */
+    if (anim) { if (up) this.reveal(o, sid, t); else { const b = o.body; this.fx.push({ t: 0, d: 0.35, f: u => b.scale.setScalar(1 + Math.sin(u * Math.PI) * 0.06) }); this.sparkle(new V(o.x, 160, o.z)); } }
+    if (o.nt) o.nt._h = null; return !!(up && anim); }
+  /* 단계가 오른 순간 (기준판 재정비 ②): 창을 닫고 · 카메라가 잠깐 그 설비로 갔다 돌아옴(폰 · 누르면 건너뜀) · 새 몸체가 튀어나오고 금빛 고리 · 이름표 「프로 오븐」 */
+  reveal(o, sid, t) { if (document.querySelector('#modal')?.firstChild) this.ui.close();
+    const b = o.body; b.scale.setScalar(0.2); this.fx.push({ t: 0, d: 0.6, f: u => b.scale.setScalar(u < 0.6 ? 0.2 + u / 0.6 * 0.95 : 1.15 - (u - 0.6) / 0.4 * 0.15) });
+    for (let i = 0; i < 20; i++) { const a = i / 20 * 6.283, m = box(10, 10, 10, i % 2 ? 0xFFD24A : 0xFF6720, o.x, 20, o.z, this.sc); this.fx.push({ t: 0, d: 0.8, f: u => { const r = 60 + u * 170; m.position.set(o.x + Math.cos(a) * r, 20 + Math.sin(u * Math.PI) * 90, o.z + Math.sin(a) * r); m.scale.setScalar(1 - u * 0.8); if (u >= 1) this.sc.remove(m); } }); }
+    this.confetti(o.x, 230, o.z); sfx('levelup', { vol: 0.5 }); this.ui.tierBanner && this.ui.tierBanner(stName(sid), t);
+    if (!this.fitT) this.focus = { x: o.x, z: o.z + 80, t: 0 }; }
   // ── 지점 재고 (테스터 #11): 지점을 떠나도 진열대 · 오븐 · 재료 · 드라이브스루 줄이 그대로 남음 · 손에 든 것은 제자리로 돌아간 것으로 셈
   stockOf() { const st = this.st, c = st.counter, ov = st.oven, cnt = a => [a.length, a.filter(x => x.m.userData.prem).length]; if (!c || !ov) return null;
     const o = { shelf: {}, oven: cnt(ov.stack), feed: (ov.feed || []).slice(0, 12), cc: st.cc ? [st.cc.stack.length, st.cc.inStack.length] : null, cf: st.coffee ? st.coffee.stack.length : 0, es: st.espresso ? st.espresso.stack.length : 0, mx: st.mixer ? st.mixer.stack.length : 0, lane: null };
@@ -196,7 +208,7 @@ export class Game {
     this.interact(pl, dt);
     // 직원
     for (const w of this.staff) { this.restAI(w); if (w.rest) { w.P.anim(dt, false); continue; } this.staffAI(w, dt); }
-    for (const m of this.spin) m.rotation.y += dt * 1.6;
+    for (const m of this.spin) m.rotation.y += dt * 1.6 * (m.userData.k || 1);
     this.eventUpdate(dt);
     // 오븐 · 크림치즈 · 커피 생산
     const ov = this.st.oven; ov.t += dt; ov.feed ||= []; const ovCap = 10 + L('ovenCap') * 2; ov.ft = (ov.ft || 0) + dt; const ovPos = () => [ov.x - 60 + (ov.stack.length % 5) * 30, 12 + Math.floor(ov.stack.length / 5) * 16, ov.z + 100];
@@ -204,7 +216,7 @@ export class Game {
     /* 오븐은 넣은 반죽만 구움 (스스로 굽지 않음) */
     const es = this.st.espresso; if (es) { es.t += dt; if (es.t > 1.5 / (1 + L('espresso') * 0.15) && es.stack.length < 8) { es.t = 0; this.put(es.stack, item('drink'), es.x - 40 + (es.stack.length % 3) * 30, 107 + Math.floor(es.stack.length / 3) * 30, es.z + 25, 'drink'); } }
     const mx = this.st.mixer; if (mx) { mx.t += dt; if (mx.t > 1.2 / (1 + L('mixer') * 0.15) && mx.stack.length < 8) { mx.t = 0; this.put(mx.stack, item('dough'), mx.x - 40 + (mx.stack.length % 3) * 30, 6 + Math.floor(mx.stack.length / 3) * 14, mx.z + 80, 'dough'); } }
-    if (this.st.kettle) { this.st.kettle.t += dt; if (this.st.kettle.t > 0.4) { this.st.kettle.t = 0; this.steam(this.st.kettle.x, 135, this.st.kettle.z); } }
+    if (this.st.kettle) { this.st.kettle.t += dt; if (this.st.kettle.t > 0.4 / (1 + L('kettle') * 0.12)) {   /* 솥 강화 = 김이 더 자주 */ this.st.kettle.t = 0; this.steam(this.st.kettle.x, 135, this.st.kettle.z); } }
     const cc = this.st.cc; if (cc) { cc.t += dt; if (cc.inStack.length && cc.t > 0.9 / (1 + L('bar') * 0.15) && cc.stack.length < 8) { cc.t = 0; const m = cc.inStack.pop(); this.sc.remove(m.m); this.put(cc.stack, item('cream'), cc.x + 40 + (cc.stack.length % 2) * 36, 107 + Math.floor(cc.stack.length / 2) * 18, cc.z + 30, 'cream'); } }
     const cf = this.st.coffee; if (cf) { cf.t += dt; if (cf.t > 1.6 / (1 + L('fridge') * 0.15) && cf.stack.length < 8) { cf.t = 0; this.put(cf.stack, item('coffee'), cf.x - 30 + (cf.stack.length % 3) * 30, 164 + Math.floor(cf.stack.length / 3) * 30, cf.z + 10, 'coffee'); } }
     // 손님
@@ -223,7 +235,8 @@ export class Game {
     // 안내: 다음에 할 일 (설비 3개 열 때까지)
     const gd = this.guide(dt); this.arrow.visible = !!gd; if (gd) { this.arrow.position.set(gd[0], 150 + Math.sin(this.t * 6) * 14, gd[1]); this.arrow.rotation.y += dt * 2; } this.ui.hint(gd && gd[2]);
     // 카메라 · 그림자 따라감
-    if (this.fitT) this.camT.copy(this.fitT); else this.camT.lerp(this.placing ? this.placing.g.position : pl.pos, Math.min(1, dt * 5));   /* 꾸미기 자리 고를 땐 그림자를 따라감 */   /* 넓은 화면: 매장 전체 고정 · 폰: 주인공 따라감 */ this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
+    const fo = this.focus; if (fo) { fo.t += dt; if (fo.t > 2.3) this.focus = null; }   /* 단계가 오른 설비를 잠깐 보여 줌 (1.7초 뒤 돌아옴) */
+    if (this.fitT) this.camT.copy(this.fitT); else this.camT.lerp(fo && fo.t < 1.7 ? new V(fo.x, 0, fo.z) : this.placing ? this.placing.g.position : pl.pos, Math.min(1, dt * 5));   /* 꾸미기 자리 고를 땐 그림자를 따라감 */   /* 넓은 화면: 매장 전체 고정 · 폰: 주인공 따라감 */ this.cam.position.set(this.camT.x + 900, 1150, this.camT.z + 900); this.cam.lookAt(this.camT.x, 0, this.camT.z);
     this.sun.position.set(this.camT.x - 500, 1200, this.camT.z + 700); this.sun.target.position.copy(this.camT);
     this.ui.frame(this);
   }

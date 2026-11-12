@@ -1,8 +1,8 @@
 // 은신처 가구 규칙 (M5-D · three 없음 · node 시험 가능) — 사기(조개만) · 놓기 · 치우기 · 조건 · 놓인 자리 목록
 //  저장 S.furn = { own: [가구 키], at: { 자리: 가구 키 } } — 없으면 처음 쓸 때 만듦 · 모르는 키는 지움(furnOf)
 //  능력치 0 (꾸미기와 같은 규칙) · 골드 판매 X (ROADMAP 'M5 설계 메모 ②' — 후반 조개 쓰는 곳)
-import { FURN, FURN_KEYS, FURN_SPOTS, FURN_SPOT_KEYS, FURN_TOTAL } from './data/furniture.js?v=0.99.33';
-import { mapOpen } from './econ.js?v=0.99.33';
+import { FURN, FURN_KEYS, FURN_SPOTS, FURN_SPOT_KEYS, FURN_TOTAL } from './data/furniture.js?v=0.99.34';
+import { mapOpen } from './econ.js?v=0.99.34';
 export { FURN, FURN_KEYS, FURN_SPOTS, FURN_SPOT_KEYS, FURN_TOTAL };
 
 export function furnOf(S) {
