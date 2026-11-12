@@ -2,13 +2,13 @@
 //   멈춤 판정: 칸 안에서 실제 이동 속도 < 0.2m/s 가 0.3초 → 붓기 시작 · 금액과 상관없이 0.5초 · 부분 납부는 칸이 기억 · 돈 0 = 조용히 멈춤 · 걸어 나가면 즉시 멈춤(날아간 지폐는 칸에 남음)
 //   되돌리기 없음 — 칸이 일하는 길 밖이라 지나가다 밟을 일이 없어요 (시험 Q3 · P1 · P4)
 import * as THREE from 'three';
-import { padSpot, openingFund } from './space.js?v=0.99.31';
-import { STATION, bill, M } from './models.js?v=0.99.31';
-import { S, save, mission } from './state.js?v=0.99.31';
-import { UP_K, UP_MAX, PROD, DESK_UP } from './data.js?v=0.99.31';
-import { FEATURES } from './space.js?v=0.99.31';
-import { sfx } from './audio.js?v=0.99.31';
-import { track } from './oad.js?v=0.99.31';
+import { padSpot, openingFund, INCOME_NEED } from './space.js?v=0.99.32';
+import { STATION, bill, M } from './models.js?v=0.99.32';
+import { S, save, mission } from './state.js?v=0.99.32';
+import { UP_K, UP_MAX, PROD, DESK_UP } from './data.js?v=0.99.32';
+import { FEATURES } from './space.js?v=0.99.32';
+import { sfx } from './audio.js?v=0.99.32';
+import { track } from './oad.js?v=0.99.32';
 
 /* 붓기 규칙 (DESIGN 6-2): 칸 밖에서 들어와 멈춤 → 멈춤 0.3초(작은 칸) · 0.6초(큰 칸 = 남은 값이 가진 돈의 25% 넘음) → 준비 0.35초(링이 차오름 · 돈 안 나감 · 움직이면 취소) → 0.5초 붓기
    → 돈이 실제로 나가는 때 = 멈추고 0.65초(작은 칸) · 0.95초(큰 칸): 손가락을 고쳐 쥐는 0.3~0.6초 멈칫으로는 안 나감 */
@@ -24,6 +24,27 @@ export const PAD_COLOR = { new: '#FF6720', up: '#2C4A6B', get: '#2FA36B' };   /*
 export class Pads {
   constructor(g) { this.g = g; this.list = []; this.pour = null; this.deskOpen = null; this.deskT = 0; this.ver = -1; this.refresh(); }
   get order() { return this.g.sp.order; }
+  // ── 가게 열 돈 (2026-11-12 테스터 제보: 마지막 25 로 문을 안 열고 테이블에 부으면 손님 · 수입 0 인 채 영원히 막힘)
+  /* 불변식: 이 지점 수입이 열리기 전(INCOME_NEED 를 다 사기 전)에는 돈이 「그 칸들의 남은 값 합」 밑으로 내려가는 지출이 없음
+     모든 지출(바닥 칸 붓기 · 책상 카드 · 상점 물품 · 꾸미기 · 유니폼)이 spendable() 하나를 봄 — 수입 칸에 붓는 돈은 늘 그대로, 다른 데는 남는 만큼만 */
+  incomeOpen() { return INCOME_NEED.every(id => this.g.bought(id)); }
+  needLeft() { const g = this.g; if (this.incomeOpen()) return 0; let s = 0;
+    for (const id of INCOME_NEED) { if (g.bought(id)) continue; const o = this.order.find(x => x.id === id); if (!o) continue; const p = this.list.find(q => q.o.id === id); s += o.cost - (+(g.br.paid[id] || 0)) - (p?.flight || 0); }
+    return Math.max(0, s); }
+  spendable(id) { const c = Math.max(0, Math.floor(S.coins)); return INCOME_NEED.includes(id) ? c : Math.max(0, c - this.needLeft()); }
+  /* 막을 때: 벌처럼 느껴지지 않게 한 줄만 · 다음 수입 칸 이름을 말하고 화살표(안내 tut)도 그 칸을 가리킴 */
+  needName() { const o = this.order.find(x => INCOME_NEED.includes(x.id) && !this.g.bought(x.id)); return o ? this.label(o) : ''; }
+  reserveText() { return `${this.needName()} 먼저 · 가게 열 돈은 남겨 둘게요`; }
+  reserveNote() { this.g.ui?.toast?.(`🔑 ${this.reserveText()}`, { key: 'reserve' }); }   /* 서 있는 칸에 대한 대답이라 바로 (줄 서지 않음) · 칸 밖에 나갔다 와야 다시 뜸 (p.silent) */
+  /* 이미 막힌 저장 구제 (지점에 들어갈 때 한 번): 수입 칸을 다 사지 못했는데 돈이 모자라면 ① 수입 칸 밖에 부어 둔 돈을 돌려주고 ② 그래도 모자라면 모자란 만큼 채움 · 산 것 · 진행률은 그대로 */
+  rescue() { const g = this.g, br = g.br; let back = 0;
+    const other = Object.keys(S.branch).some(k => +k !== g.bi && S.branch[k] && (+k < (S.maxBi || 0) || S.branch[k].done));   /* 다 연 다른 지점이 있으면 그 지점 수익(지도)이 출구 — 안내가 지도를 가리킴 (gate_branch) */
+    if (this.incomeOpen() || other) return 0;
+    if (Math.floor(S.coins) >= this.needLeft()) return 0;
+    for (const [id, v] of Object.entries(br.paid)) if (!INCOME_NEED.includes(id) && +v > 0) { back += +v; delete br.paid[id]; }
+    S.coins += back; const short = Math.max(0, this.needLeft() - Math.floor(S.coins)); S.coins += short;
+    br.rescued = (br.rescued || 0) + back + short; save(true); track('bg_rescue', { b: g.bi, back, short });
+    return back + short; }
   // ── 진행률 · 다음 값
   progress() { const O = this.order.filter(o => o.kind !== 'next'); return O.filter(o => this.g.bought(o.id)).length / O.length; }
   nextCost() { const p = this.list.find(p => !p.done); return p ? p.cost - p.paid : 1000 * this.g.B.mult; }
@@ -74,12 +95,12 @@ export class Pads {
       p.still = pl.spd < STILL_V && !pl.input ? p.still + dt : 0;
       if (this.pour?.p === p && p.still === 0) this.pour = null;   /* 다시 움직임 = 즉시 멈춤 (준비 중이면 돈 0) */
       const left = p.cost - p.paid - (p.flight || 0), need = left > S.coins * BIG_K || p.cost >= BIG_ABS ? STILL_BIG : STILL_T;
-      if (!this.pour && p.still >= need && !p.silent) { const amt = Math.min(Math.floor(S.coins), left);
-        if (left <= 0) continue; if (amt <= 0) { p.silent = true; continue; }
+      if (!this.pour && p.still >= need && !p.silent) { const amt = Math.min(this.spendable(p.o.id), left);   /* 가게를 열기 전에는 가게 열 돈을 남기고 붓음 (부분 붓기도 거기까지) */
+        if (left <= 0) continue; if (amt <= 0) { p.silent = true; if (Math.floor(S.coins) > 0) this.reserveNote(); continue; }
         const n = Math.max(6, Math.min(8, Math.ceil(amt / Math.max(1, p.cost / 8)))); this.pour = { p, amt, n, sent: 0, t: -HOLD_T, left: amt }; }
       // 칸 테두리: 살 돈이 충분하면 초록으로 숨쉼 · 모자라면 주황
     }
-    for (const p of this.list) if (p.mesh.userData.dash) { const ok = S.coins >= p.cost - p.paid; const m = p.mesh.userData.dash.material; const want = ok ? tex('ok') : tex('new'); if (m.map !== want) { m.map = want; m.needsUpdate = true; } m.opacity = ok ? 0.75 + 0.25 * Math.sin(g.time * 4) : 1; }
+    for (const p of this.list) if (p.mesh.userData.dash) { const ok = this.spendable(p.o.id) >= p.cost - p.paid; const m = p.mesh.userData.dash.material; const want = ok ? tex('ok') : tex('new'); if (m.map !== want) { m.map = want; m.needsUpdate = true; } m.opacity = ok ? 0.75 + 0.25 * Math.sin(g.time * 4) : 1; }
     // 붓기: 0.5초 동안 n 장 (0.065초 간격 · 반음씩) · 지폐 = 사장 머리 위 → 칸 포물선 · 칸 숫자는 도착한 만큼 줄어듦
     const P = this.pour; if (P) { P.t += dt; P.p.hold = Math.min(1, 1 + P.t / HOLD_T); if (P.t >= 0) while (P.sent < P.n && P.t >= (P.sent + 1) * (POUR_T / P.n) - 1e-6) { const part = P.sent === P.n - 1 ? P.left : Math.floor(P.amt / P.n); P.left -= part; P.sent++; S.coins -= part; this.flyBill(P.p, part); sfx('bill'); }
       if (P.sent >= P.n) this.pour = null; }
@@ -105,7 +126,7 @@ export class Pads {
     this.key = null; g.opened(o, at); g.ui?.unlocked(o, this.label(o));
     if (this.progress() >= 1 && !br.done) { br.done = true; save(true); } }
   /* 책상 카드에서 산 것 (돈 · 광고 무료) */
-  buyDesk(o, free) { const g = this.g; if (g.bought(o.id)) return false; if (!free) { if (S.coins < o.cost) return false; S.coins -= o.cost; } this.complete(o, null); if (o.kind === 'hire') { g.staffSys.sync(); sfx('hello'); } return true; }
+  buyDesk(o, free) { const g = this.g; if (g.bought(o.id)) return false; if (!free) { if (this.spendable(o.id) < o.cost) { if (S.coins >= o.cost) this.reserveNote(); return false; } S.coins -= o.cost; } this.complete(o, null); if (o.kind === 'hire') { g.staffSys.sync(); sfx('hello'); } return true; }
   /* 책상 카드 목록 (방마다 · 지금 살 수 있는 것 먼저) */
   deskCards(room) { const g = this.g, out = [];
     for (const o of this.order) { if (g.bought(o.id) || !isDesk(o) || !this.req(o)) continue; const k = o.id.split('+')[0], R0 = o.kind === 'hire' || k === 'swalk' || k === 'scarry' ? 'crew' : 'boss'; if (R0 !== room) continue; if (out.some(x => x.o.kind === o.kind && x.o.id.split('+')[0] === k)) continue; out.push({ o }); }

@@ -1,9 +1,9 @@
 // 매장 그리기 (고정된 것): 바닥 한 톤 · 벽(뒤 · 동 = 높게, 서 · 남 = 0.4m 턱) · 문 매트 · 화분 띠 · 반쪽 문 · 별채 · 거리 · 창구 · 2층 · 테라스 · 지점 인테리어
 //   명도 3층(DESIGN 7장): 바닥(가장 밝고 한 톤) → 설비(중간) → 물건(가장 선명) · 매장 안 벽 0
 import * as THREE from 'three';
-import { box, cyl, sph, M, mesh, logoPanel, STATION, DECO_MODEL } from './models.js?v=0.99.31';
-import { BRAND, THEME_SETS, DECO } from './data.js?v=0.99.31';
-import { ANNEX_WALLS } from './space.js?v=0.99.31';
+import { box, cyl, sph, M, mesh, logoPanel, STATION, DECO_MODEL } from './models.js?v=0.99.32';
+import { BRAND, THEME_SETS, DECO } from './data.js?v=0.99.32';
+import { ANNEX_WALLS } from './space.js?v=0.99.32';
 
 const flat = c => new THREE.MeshToonMaterial({ color: c });
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }

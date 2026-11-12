@@ -116,7 +116,10 @@ function obstacles(sp) {
 }
 export const SPACES = [0, 1, 2, 3].map(branch);
 /* 지점 전환 경제 (DESIGN 5-4): 계약하면 다음 지점 「개업 자금」= 그 지점 처음 세 칸 값 합 — 들어가자마자 2분 안에 첫 판매 */
-export const openingFund = i => SPACES[i] ? SPACES[i].order.slice(0, 4).reduce((a, o) => a + o.cost, 0) : 0;
+/* 수입을 여는 칸 (2026-11-12 테스터 제보 막힘): 손님은 문 · 계산대 · 오븐이 있어야 오고(cust.js) 오븐에 넣을 반죽은 반죽기 — 이 넷을 다 사기 전엔 그 지점 수입이 0
+   개업 자금 = 이 넷의 값 합 · 다 사기 전에는 이 넷의 남은 값만큼은 다른 데 못 씀(pads.js spendable) · 이미 막힌 저장은 불러올 때 채움(pads.js rescue) */
+export const INCOME_NEED = ['mixer', 'oven', 'counter', 'door'];
+export const openingFund = i => SPACES[i] ? SPACES[i].order.filter(o => INCOME_NEED.includes(o.id)).reduce((a, o) => a + o.cost, 0) : 0;
 
 /* 손님 길 (정해진 고리 위 · 길 찾기 없음): 줄 칸 · 자리까지 · 나가기 */
 export function queueSlot(sp, k) { return [sp.queue.x, sp.queue.z0 + k * sp.queue.gap]; }

@@ -4,16 +4,16 @@
 //  규칙: ① 먼저 알리고(글 + 자리) 그 뒤 일어남 ② 사건이 주는 피해 0 (수송대 호위의 공격은 보통 적 공격 = 늘 예고) ③ seed 로 정해짐
 //  시험: ?hap=drop|rescue|convoy|safe|beacon (그 사건을 판 시작 4초 뒤로 당김) · ?nohap (끔) · window.__salvage.raid.happen 에 상태
 import * as THREE from 'three';
-import { HAPPEN, rollHappen } from './data/happen.js?v=0.99.31';
-import { RS, rollLoot, LOOT_MODEL, LOOT_SCALE } from './map.js?v=0.99.31';
-import { prop } from './assets.js?v=0.99.31';
-import { ITEMS } from './data.js?v=0.99.31';
-import { sfx } from './audio.js?v=0.99.31';
-import { S } from './save.js?v=0.99.31';
-import { vib, raidA11y } from './a11y.js?v=0.99.31';
-import { facOf } from './ai.js?v=0.99.31';
-import { makeHero, ready, HERO_SCALE } from './hero.js?v=0.99.31';
-import { resolve } from './look.js?v=0.99.31';
+import { HAPPEN, rollHappen } from './data/happen.js?v=0.99.32';
+import { RS, rollLoot, LOOT_MODEL, LOOT_SCALE } from './map.js?v=0.99.32';
+import { prop } from './assets.js?v=0.99.32';
+import { ITEMS } from './data.js?v=0.99.32';
+import { sfx } from './audio.js?v=0.99.32';
+import { S } from './save.js?v=0.99.32';
+import { vib, raidA11y } from './a11y.js?v=0.99.32';
+import { facOf } from './ai.js?v=0.99.32';
+import { makeHero, ready, HERO_SCALE } from './hero.js?v=0.99.32';
+import { resolve } from './look.js?v=0.99.32';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };

@@ -1,12 +1,12 @@
 // 별채 책상 카드 창 (DESIGN 3장 · analysis 13-1 · 13-7 원리): 책상 앞에 0.3초 서면 아래에서 카드 3장 — 걸어 나가면 닫힘 · 지나가다 실수로 살 수 없음
 //   크루룸 = 직원 뽑기 · 직원 걷기 · 들기 · 옷장 / 사장실 = 사장 걷기 · 들기 · 홍보 · 가격 · 금고 · 다음 지점 계약 / 창고 = 오늘의 선물 · VIP 상자 · 시즌 패스
 //   카드마다 「📺 무료」(하루 상한 · 광고 바구니) · 「돈」 두 단추
-import { UI } from './ui.js?v=0.99.31';
-import { S, save, vipOn, today } from './state.js?v=0.99.31';
-import { STAFF, DESK_UP, VIP, BRANCHES } from './data.js?v=0.99.31';
-import { FEATURES } from './space.js?v=0.99.31';
-import { sfx } from './audio.js?v=0.99.31';
-import { pushBack } from './oad.js?v=0.99.31';
+import { UI } from './ui.js?v=0.99.32';
+import { S, save, vipOn, today } from './state.js?v=0.99.32';
+import { STAFF, DESK_UP, VIP, BRANCHES } from './data.js?v=0.99.32';
+import { FEATURES } from './space.js?v=0.99.32';
+import { sfx } from './audio.js?v=0.99.32';
+import { pushBack } from './oad.js?v=0.99.32';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US'), P = UI.prototype;
 P.desk = function (room) { const el = $('#sheet'); if (!el) return; this._desk = room; if (!room) { el.hidden = true; el.innerHTML = ''; this._dbk && this._dbk(); this._dbk = null; return; }
@@ -17,7 +17,7 @@ P.deskRefresh = function () { const room = this._desk, el = $('#sheet'); if (!ro
   if (room === 'crew' || room === 'boss') for (const { o } of pads.deskCards(room).slice(0, 3)) { const k = o.id.split('+')[0], lv = o.id.split('+')[1];
     const name = o.kind === 'hire' ? `${STAFF[o.id].name} 뽑기` : o.kind === 'next' ? `${BRANCHES[g.bi + 1]?.name || '다음 지점'} 계약` : `${DESK_UP[k].name} ${lv}단계`;
     const desc = o.kind === 'hire' ? STAFF[o.id].job : o.kind === 'next' ? '이 지점은 직원들이 계속 장사해요' : DESK_UP[k].desc, icon = o.kind === 'hire' ? '🧑‍🍳' : o.kind === 'next' ? '✍' : DESK_UP[k].icon;
-    const can = S.coins >= o.cost, free = o.cost > 0 && o.kind !== 'next' && this.slotOk(freeKey), gp = !free && o.cost > 0 && o.kind !== 'next' && this.goldOf('free_lv');   /* 광고를 다 보면 같은 효과를 🪙 로 (AD_PLACES gold) */
+    const can = pads.spendable(o.id) >= o.cost, free = o.cost > 0 && o.kind !== 'next' && this.slotOk(freeKey), gp = !free && o.cost > 0 && o.kind !== 'next' && this.goldOf('free_lv');   /* 광고를 다 보면 같은 효과를 🪙 로 (AD_PLACES gold) */
     cards.push(card(icon, name, desc, `${free ? `<button class="btn sm ad" data-free="${o.id}">${vipOn() ? '👑' : '📺'} 무료</button>` : gp ? `<button class="btn sm gold" data-gfree="${o.id}">🪙${gp}</button>` : ''}<button class="btn sm ${can ? '' : 'off'}" data-buy="${o.id}">${o.cost ? `<i class="c"></i>${fmt(o.cost)}` : '무료'}</button>`, can ? 'can' : '')); }
   if (room === 'boss' && S.safe.v > 0) cards.unshift(card('🔐', '금고', `쉬는 동안 번 돈 +${fmt(S.safe.v)}`, '<button class="btn sm" data-safe>받기</button>', 'can'));
   if (room === 'store') { if (S.gift !== today()) cards.push(card('🎁', '오늘의 선물', `+${fmt(this.giftCoins())}`, `<button class="btn sm" data-gift>받기</button>${this.slotOk('gift2x') ? '<button class="btn sm ad" data-gift2>📺 ×2</button>' : ''}`, 'can'));
@@ -32,7 +32,7 @@ P.deskRefresh = function () { const room = this._desk, el = $('#sheet'); if (!ro
   if (done) { el.querySelectorAll('.dbtn button').forEach(b => { b.disabled = true; b.classList.add('off'); }); clearTimeout(this._deskT); this._deskT = setTimeout(() => this.deskRefresh(), done.until - Date.now() + 20); return; }
   const find = id => pads.deskCards(room).map(x => x.o).find(o => o.id === id);
   const slot = o => Math.max(0, pads.deskCards(room).slice(0, 3).findIndex(x => x.o.id === o.id)), bought = (o, idx) => { this._deskDone = { idx, id: o.id, kind: o.kind, name: o.kind === 'hire' ? `${STAFF[o.id].name}` : o.kind === 'next' ? '계약' : `${DESK_UP[o.id.split('+')[0]]?.name || ''} ${o.id.split('+')[1] || ''}단계`, until: Date.now() + 2000 }; };
-  el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const o = find(b.dataset.buy); if (!o || S.coins < o.cost) { sfx('card', { v: 2 }); return; } const ix = slot(o); if (pads.buyDesk(o, false)) bought(o, ix); this.deskRefresh(); this.progress(); });
+  el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const o = find(b.dataset.buy); if (!o || pads.spendable(o.id) < o.cost) { sfx('card', { v: 2 }); if (o && S.coins >= o.cost) pads.reserveNote(); return; } const ix = slot(o); if (pads.buyDesk(o, false)) bought(o, ix); this.deskRefresh(); this.progress(); });
   el.querySelectorAll('[data-free]').forEach(b => b.onclick = () => { const o = find(b.dataset.free); if (!o) return; const ix = slot(o); this.ad('free', () => { if (pads.buyDesk(o, true)) bought(o, ix); this.deskRefresh(); this.progress(); }, freeKey, `${o.kind === 'hire' ? STAFF[o.id].name + ' 뽑기' : DESK_UP[o.id.split('+')[0]]?.name || ''} 무료`); });
   el.querySelectorAll('[data-gfree]').forEach(b => b.onclick = () => { const o = find(b.dataset.gfree); if (!o) return; const ix = slot(o); this.gold('free_lv', () => { if (pads.buyDesk(o, true)) bought(o, ix); this.deskRefresh(); this.progress(); }); });
   el.querySelectorAll('[data-safe]').forEach(b => b.onclick = () => this.safe());

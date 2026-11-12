@@ -6,7 +6,7 @@ export const pad = n => String(n).padStart(2, '0');
 /* 시험용: ?day=2026-11-10 처럼 날짜를 바꿔 볼 수 있음 · 하루는 아침 7시에 바뀜 (새 곡 시각)
    ?day=7 처럼 숫자만 쓰면 '오늘'을 7화로 (저장의 첫날은 그대로) · ?dev=1 은 방송 목록 전부 열림 (테스트 서버 · localhost 는 기본으로 켜짐, ?dev=0 으로 끔) */
 export const EP = /^\d{1,2}$/.test(Q.get('day') || '') ? +Q.get('day') : 0;
-/* 실서버(OAD_ENV === 'prod')에서는 ?dev=1 도 무시 (재검수 v0.4 B-1: 안 열린 화 스포일러 · 광고 · 골드 우회 막기) */
+/* 실서버(OAD_ENV === 'prod')에서는 ?dev=1 도 무시 (재검수 v0.4 B-1: 안 열린 화 미리 열기 막기 — 새 화는 하루 하나) */
 export const PROD = typeof window !== 'undefined' && window.OAD_ENV === 'prod';
 export const DEV = !PROD && (Q.get('dev') === '1' || (Q.get('dev') !== '0' && (!!(typeof window !== 'undefined' && window.OAD_ENV) || /^(localhost|127\.)/.test(location.hostname))));   /* 원어데이 테스트 빌드(OAD_ENV=test · dev, 주소와 무관) · 로컬은 늘 시험 모드 · ?dev=0 으로 끔 (2026-11-11 대표: 테스트는 모든 곡 플레이) */
 export function now() { const q = Q.get('day'); if (q && !EP) { const [y, m, d] = q.split('-').map(Number); return new Date(y, m - 1, d, 12); } return new Date(); }
@@ -19,6 +19,9 @@ export function fresh() {
 export let S = fresh();
 export function load() {
   try { const raw = NOSAVE ? null : localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); if (o && o.v === 1) S = Object.assign(fresh(), o); } } catch { S = fresh(); }
+  /* v0.5.4: 열린 화는 모두 그냥 시작 → 옛 저장의 하루 기록에 남은 광고 횟수(ads) · retries 는 읽지 않고 지움 */
+  if (!S.days || typeof S.days !== 'object') S.days = {};
+  for (const d of Object.values(S.days)) if (d && typeof d === 'object') { delete d.ads; delete d.retries; }
   return S;
 }
 let tm = 0;
@@ -28,7 +31,8 @@ export function save(nowNow = false) {
   clearTimeout(tm); if (nowNow) w(); else tm = setTimeout(w, 150);
 }
 export function reset() { S = fresh(); save(true); }
-export function today() { const k = dayKey(); return S.days[k] || (S.days[k] = { plays: 0, done: false, retries: 0 }); }
+/* 하루 기록: plays = 그날 오늘 화를 끝까지 한 판 수 · done = 오늘 화를 한 번이라도 끝냄 · n = 그날 시작한 모든 판 수(곡 · 난이도 무관 — oad:track 으로 v0.6 하루 상한 자료) */
+export function today() { const k = dayKey(); const t = S.days[k] || (S.days[k] = { plays: 0, done: false, n: 0 }); t.n ||= 0; return t; }
 /* 오늘이 시즌 몇 화인지: 처음 연 날 = 1화 (들어 있는 화까지만 · 마지막 화 다음 날도 마지막 화) */
 export function dayNo(max) { if (EP) return Math.max(1, Math.min(max, EP)); const a = new Date(S.first + 'T12:00:00'), b = new Date(dayKey() + 'T12:00:00'); return Math.max(1, Math.min(max, Math.round((b - a) / 864e5) + 1)); }
 /* 기록: 곡 · 난이도별 최고 */

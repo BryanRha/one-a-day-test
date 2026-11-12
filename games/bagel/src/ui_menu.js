@@ -1,12 +1,12 @@
 // 메뉴 창들 (0.3 에서 옮겨 온 BM · 단골 · 꾸미기 · 미션 · 설정 · 쿠폰 · 광고 · 골드 · 시즌 패스) — ≡ 메뉴 한 곳에서 열어요
 //   광고 바구니(하루 10) · 골드 · VIP 규칙은 그대로 · 전면 광고 · 배너는 없음(DESIGN 1장)
-import { UI } from './ui.js?v=0.99.31';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, BRANCH_INFO, STAFF, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, PASS_DAY_MIN, PASS_TIER_CAP, STORE_MAP, hms, instGold } from './data.js?v=0.99.31';
-import { starOf, favLv, fxOn } from './game.js?v=0.99.31';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY, resetAll } from './state.js?v=0.99.31';
-import { sfx, setAudio } from './audio.js?v=0.99.31';
-import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.31';
-import { bm } from './oad_bm.js?v=0.99.31';
+import { UI } from './ui.js?v=0.99.32';
+import { BRAND, GAME, BRANCHES, COUPON, MENU, BRANCH_INFO, STAFF, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, OUTFITS, OUTFITS_PRO, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, AD_PLACES, GOLD, VIP, IDLE, THEME_SETS, SEASON, PASS_DAY_MIN, PASS_TIER_CAP, STORE_MAP, hms, instGold } from './data.js?v=0.99.32';
+import { starOf, favLv, fxOn } from './game.js?v=0.99.32';
+import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, vipOn, has, KEY, resetAll } from './state.js?v=0.99.32';
+import { sfx, setAudio } from './audio.js?v=0.99.32';
+import { pushBack, inOAD, exitToOAD, track } from './oad.js?v=0.99.32';
+import { bm } from './oad_bm.js?v=0.99.32';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 const SLOT = 'marumi_slot_', REPEAT_MS = 180000, PLACE = { boost: 'boost2x', offline: 'offline2x', speed: 'speed', coins: 'coins' }, BOOST_MS = 180000, FX_MS = 180000;
@@ -116,7 +116,7 @@ class Menu {
     const g = this.app.game, gold = bm.info.ok && bm.info.group !== 'A', tabs = [['item', '가게 물품'], ['money', '돈 받기' + (this.giftReady() ? ' •' : '')], ...(gold ? [['gold', '🪙 골드']] : []), ['pass', '시즌 패스']]; let tab = this._stab || 'item'; if (!tabs.some(t => t[0] === tab)) tab = 'item';
     const now = Date.now(); let body = '', note = '';
     if (tab === 'item') { body = SHOP_ITEMS.map(it => { const c = this.itemCost(it), left = it.fx ? (+S.fx[it.fx] || 0) - now : 0, room = it.id === 'batch' ? g.ovenRoom() : 1, noStaff = it.staff && !g.staff.length;
-      const why = left > 0 ? `켜짐 ${mmss(Math.min(FX_MS, left))}` : noStaff ? '직원이 없어요' : !room ? '오븐이 가득' : '';
+      const why = left > 0 ? `켜짐 ${mmss(Math.min(FX_MS, left))}` : noStaff ? '직원이 없어요' : !room ? '오븐이 가득' : S.coins >= c && g.pads.spendable() < c ? '가게 연 뒤' : '';   /* 가게 열 돈은 남김 (2026-11-12 · pads.spendable) */
       return `<div class="upr"><i>${it.icon}</i><div><b>${it.name}</b><span>${it.desc}</span></div><button class="btn sm ${why || S.coins < c ? 'off' : ''}" data-it="${it.id}">${why || `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join(''); note = '물품은 이 지점에서 바로 써요 · 시간 효과는 화면 위에 남은 시간이 보여요'; }
     if (tab === 'money') { const ad = this.slotOk('hud'); body = `${g.own('store') ? '<div class="upr"><i>📦</i><div><b>오늘의 선물</b><span>창고에 배송 상자로 와요 · 창고에 들어가 보세요</span></div></div>' : `<div class="upr gift"><i>🎁</i><div><b>오늘의 선물</b><span>하루 한 번 · 사장님 힘내세요!</span></div><button class="btn sm ${this.giftReady() ? '' : 'off'}" id="shGift">${this.giftReady() ? `<i class="c"></i>${fmt(this.giftCoins())}` : '내일 또'}</button></div>`}
       <div class="upr"><i>📺</i><div><b>광고 보고 돈 받기</b><span>${ad ? `오늘 광고 ${this.adLeft()}/${AD_DAY}` : bm.info.ok && bm.info.group === 'A' ? '지금은 광고 보상이 없어요' : '오늘 이 자리 광고를 다 봤어요'}</span></div><button class="btn sm ${ad ? '' : 'off'}" id="shAd"><i class="c"></i>${fmt(this.adCoins())}</button></div>`; note = `선물은 날마다 새로 · 광고는 하루 ${AD_DAY}번까지 (모든 광고 자리 합쳐서)`; }
@@ -124,7 +124,7 @@ class Menu {
     if (tab === 'pass') { body = this.passRows(); note = `${SEASON.name} · ${SEASON.from.slice(5).replace('-', '/')} ~ ${SEASON.to.slice(5).replace('-', '/')} · 베이글을 팔면 별이 쌓여요`; }
     const md = this.modal(`<h3>🛍 마루미 상점</h3><div class="tabs">${tabs.map(([k, n]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${n}</button>`).join('')}</div><div class="uplist">${body}</div><p class="sm">${note}</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
     md.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._stab = b.dataset.t; this.shop(); });
-    md.querySelectorAll('[data-it]').forEach(b => b.onclick = () => { const it = SHOP_ITEMS.find(x => x.id === b.dataset.it), c = this.itemCost(it); if (b.classList.contains('off') || S.coins < c) return; S.coins -= c;
+    md.querySelectorAll('[data-it]').forEach(b => b.onclick = () => { const it = SHOP_ITEMS.find(x => x.id === b.dataset.it), c = this.itemCost(it); if (g.pads.spendable() < c) { if (S.coins >= c) this.toast(`🔑 ${g.pads.reserveText()}`); return; } if (b.classList.contains('off')) return; S.coins -= c;
       if (it.fx) S.fx[it.fx] = Date.now() + it.sec * 1000; if (it.id === 'batch') g.ovenBatch(10); save(); sfx('upgrade'); this.toast(`${it.icon} ${it.name}!`); this.progress(); this.shop(); });
     const gb = $('#shGift'); if (gb) gb.onclick = () => { if (!this.giftReady()) return; const v = this.giftCoins(); S.gift = today(); S.coins += v; S.earned += v; save(true); sfx('levelup'); this.toast(`오늘의 선물 +${fmt(v)}`); this.progress(); this.shop(); };
     const ab = $('#shAd'); if (ab) ab.onclick = async () => { if (ab.classList.contains('off')) return; const ok = await this.ad('coins'); if (ok) { this.progress(); } };
@@ -137,17 +137,17 @@ class Menu {
   }
   // ── 업그레이드 (이 지점): 설비 · 직원(크루룸이 열리기 전) · 사장님(사장실이 열리기 전) — 방이 열리면 그 방에 가서 올림
   decoCost(d) { return Math.round(d.cost * BRANCHES[S.bi].mult / 10) * 10; }
-  cheapDeco() { const own = S.deco[S.bi] || []; return DECO.some(d => !d.gift && !own.includes(d.id) && S.coins >= this.decoCost(d)); }
+  cheapDeco() { const own = S.deco[S.bi] || [], room = this.app.game.pads.spendable(); return DECO.some(d => !d.gift && !own.includes(d.id) && room >= this.decoCost(d)); }
   decoShop() {
     const own = S.deco[S.bi] || [], g = this.app.game, sc = g.scent(), tab = this._dtab || 'deco';
     /* 소품: 안 산 것 = 누르면 놓일 자리를 반투명으로 미리 보고(#13) 그 자리에서 사기 · 산 것 = 옮기기(#14) · 꽃병은 테이블마다라 바로 사기 */
     const list = DECO.filter(d => !d.gift || own.includes(d.id)).map(d => { const has = own.includes(d.id), c = this.decoCost(d), mv = !!d.pos;
-      const btn = has ? '<button class="btn sm off">놓음</button>' : `<button class="btn sm ${S.coins < c ? 'off' : ''}" data-d="${d.id}"><i class="c"></i>${fmt(c)}</button>`;
+      const btn = has ? '<button class="btn sm off">놓음</button>' : `<button class="btn sm ${this.app.game.pads.spendable() < c ? 'off' : ''}" data-d="${d.id}"><i class="c"></i>${fmt(c)}</button>`;
       return `<div class="upr ${has ? 'own' : ''}"><i>${d.icon}</i><div><b>${d.name} <em>향 +${d.score}</em></b><span>${d.desc}</span></div>${btn}</div>`; }).join('');
     /* 직원: 유니폼 · 모든 지점 공통 · 한 번 사면 언제든 바꿔 입힘 · 프리미엄 3종 = 🪙 또는 광고 3편 (날 넘겨도 쌓임) */
     const sw = o => o.id === 'basic' ? 'conic-gradient(#5A8AE0 0 25%, #7A4A2A 0 50%, #E2A020 0 75%, #6AB07A 0)' : `linear-gradient(135deg, ${hex(o.body)} 0 55%, ${hex(o.apronC)} 55%)`;
     const outfits = OUTFITS.map(o => { const hv = S.outfits.includes(o.id), on = S.outfit === o.id;
-      return `<div class="upr ${on ? 'cur' : ''}"><i class="sw2" style="background:${sw(o)}"></i><div><b>${o.name}</b><span>${o.desc}</span></div><button class="btn sm ${on ? 'off' : !hv && S.coins < o.cost ? 'off' : ''}" data-of="${o.id}">${on ? '입는 중' : hv ? '입히기' : `<i class="c"></i>${fmt(o.cost)}`}</button></div>`; }).join('')
+      return `<div class="upr ${on ? 'cur' : ''}"><i class="sw2" style="background:${sw(o)}"></i><div><b>${o.name}</b><span>${o.desc}</span></div><button class="btn sm ${on ? 'off' : !hv && this.app.game.pads.spendable() < o.cost ? 'off' : ''}" data-of="${o.id}">${on ? '입는 중' : hv ? '입히기' : `<i class="c"></i>${fmt(o.cost)}`}</button></div>`; }).join('')
       + OUTFITS_PRO.map(o => { const hv = S.outfits.includes(o.id) || has(o.id), on = S.outfit === o.id, ad = S.outfitAd.id === o.id ? S.outfitAd.n : 0, g = this.goldOf(o.id), adOk = this.slotOk('outfit_ad');
         return `<div class="upr pro ${on ? 'cur' : ''}"><i class="sw2" style="background:${sw(o)}"></i><div><b>${o.icon} ${o.name}</b><span>${o.desc} · 프리미엄${hv ? '' : ` · 📺 ${ad}/3`}</span></div>${hv ? `<button class="btn sm ${on ? 'off' : ''}" data-of="${o.id}">${on ? '입는 중' : '입히기'}</button>` : `<div class="bcol">${adOk ? `<button class="btn sm ad" data-oa="${o.id}">📺 ${3 - ad}번 더</button>` : ''}${g ? `<button class="btn sm gold" data-og="${o.id}">🪙${g}</button>` : ''}</div>`}</div>`; }).join('');
     /* 테마 세트 (지점 바닥 · 벽 · 조명 · 능력치 0) — 단골 ♥5 마다 하나 무료 · 시즌 패스 · 🪙300 */
@@ -157,9 +157,9 @@ class Menu {
     const md = this.modal(`<h3>🪴 ${BRANCHES[S.bi].name} 꾸미기</h3><div class="tabs"><button class="${tab === 'deco' ? 'on' : ''}" data-t="deco">가게 소품</button><button class="${tab === 'staff' ? 'on' : ''}" data-t="staff">직원 꾸미기</button><button class="${tab === 'theme' ? 'on' : ''}" data-t="theme">테마</button></div>
       ${tab === 'deco' ? `<div class="scentbar">🌿 베이글 향 <b>${sc}</b><span>손님 +${Math.round(sc / 3)}% · 팁 확률 +${(sc / 20).toFixed(1)}%</span></div><div class="uplist">${list}</div><p class="sm">소품은 손님 길 · 일하는 길 밖 정해진 자리에 놓여요 · 단골이 선물로 주기도 해요</p>` : tab === 'staff' ? `<div class="uplist">${outfits}</div><p class="sm">유니폼은 모든 지점 직원이 같이 입어요 · 사장님은 늘 셰프 모자 · 능력치는 같아요</p>` : `<div class="uplist">${themes}</div><p class="sm">테마는 이 지점에만 · 겉모습만 바뀌어요</p>`}<button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
     md.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { this._dtab = b.dataset.t; this.decoShop(); });
-    md.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const d = DECO.find(x => x.id === b.dataset.d), c = this.decoCost(d); if ((S.deco[S.bi] || []).includes(d.id) || S.coins < c) return; S.coins -= c; this.app.game.addDeco(d.id); sfx('upgrade'); this.toast(`${d.name} 놓았어요 · 향 +${d.score}`); this.progress(); this.decoShop(); });
+    md.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const d = DECO.find(x => x.id === b.dataset.d), c = this.decoCost(d); if ((S.deco[S.bi] || []).includes(d.id)) return; if (this.app.game.pads.spendable() < c) { if (S.coins >= c) this.toast(`🔑 ${this.app.game.pads.reserveText()}`); return; } S.coins -= c; this.app.game.addDeco(d.id); sfx('upgrade'); this.toast(`${d.name} 놓았어요 · 향 +${d.score}`); this.progress(); this.decoShop(); });
     const wear = o => { if (!S.outfits.includes(o.id)) S.outfits.push(o.id); S.outfit = o.id; save(); this.app.game.restaff(); this.toast(`직원들이 「${o.name}」을 입었어요`); this.progress(); this.decoShop(); };
-    md.querySelectorAll('[data-of]').forEach(b => b.onclick = () => { const o = OUTFITS.find(x => x.id === b.dataset.of) || OUTFITS_PRO.find(x => x.id === b.dataset.of); if (S.outfit === o.id) return; if (!S.outfits.includes(o.id) && !has(o.id)) { if (!(o.cost >= 0) || S.coins < o.cost) return; S.coins -= o.cost; sfx('upgrade'); } wear(o); });
+    md.querySelectorAll('[data-of]').forEach(b => b.onclick = () => { const o = OUTFITS.find(x => x.id === b.dataset.of) || OUTFITS_PRO.find(x => x.id === b.dataset.of); if (S.outfit === o.id) return; if (!S.outfits.includes(o.id) && !has(o.id)) { if (!(o.cost >= 0)) return; if (this.app.game.pads.spendable() < o.cost) { if (S.coins >= o.cost) this.toast(`🔑 ${this.app.game.pads.reserveText()}`); return; } S.coins -= o.cost; sfx('upgrade'); } wear(o); });
     md.querySelectorAll('[data-oa]').forEach(b => b.onclick = () => { const o = OUTFITS_PRO.find(x => x.id === b.dataset.oa); this.ad('outfit', () => { if (S.outfitAd.id !== o.id) S.outfitAd = { id: o.id, n: 0 }; S.outfitAd.n++; if (S.outfitAd.n >= 3) { S.outfitAd = { id: '', n: 0 }; this.toast(`🎉 ${o.name} 열림!`); wear(o); } else { this.toast(`📺 ${S.outfitAd.n}/3 · 내일도 이어서 쌓여요`); this.decoShop(); } }, 'outfit_ad', `${o.name} (광고 3편이면 열려요)`); });
     md.querySelectorAll('[data-og]').forEach(b => b.onclick = () => { const o = OUTFITS_PRO.find(x => x.id === b.dataset.og); this.gold(o.id, () => wear(o), o.id); });
     md.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { const id = b.dataset.th; if ((S.theme[S.bi] || '') === id) return; S.theme[S.bi] = id || null; save(true); this.app.game.redraw(); this.toast(id ? `${THEME_SETS.find(t => t.id === id).name} 테마로 바꿨어요` : '기본 인테리어로 되돌렸어요'); this.decoShop(); });

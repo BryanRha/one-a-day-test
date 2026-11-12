@@ -1,11 +1,11 @@
 // 은신처 화면 M5-C (v0.8) — 무기 19 고르기를 계열 줄로 접기 · 무기 단련 ★ · 반려 2(몽이 5단 · 반디 3단)
 //  ui_grow.js(무기 탭 · 장비 탭)가 부름. 글자 목록 대신 짧은 줄 + 단계 점 + 재료 칩 '가진 / 필요'(chips.js)
-import { WEAPONS, WEAPON_KEYS, FAMILY, FAMILY_KEYS, STAR, PETS, PET_MAX, FACILITIES } from './data.js?v=0.99.31';
-import { S, save } from './save.js?v=0.99.31';
-import * as E from './econ.js?v=0.99.31';
-import { sfx, unlock } from './audio.js?v=0.99.31';
-import { costChips } from './chips.js?v=0.99.31';
-import { wIco, pIco, hasIco } from './icons_m6c.js?v=0.99.31'; /* M6-C 렌더 아이콘 */
+import { WEAPONS, WEAPON_KEYS, FAMILY, FAMILY_KEYS, STAR, PETS, PET_MAX, FACILITIES } from './data.js?v=0.99.32';
+import { S, save } from './save.js?v=0.99.32';
+import * as E from './econ.js?v=0.99.32';
+import { sfx, unlock } from './audio.js?v=0.99.32';
+import { costChips } from './chips.js?v=0.99.32';
+import { wIco, pIco, hasIco } from './icons_m6c.js?v=0.99.32'; /* M6-C 렌더 아이콘 */
 
 const $ = (s, r = document) => r.querySelector(s);
 const stars = n => `<span class="stars">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}">★</i>`).join('')}</span>`;

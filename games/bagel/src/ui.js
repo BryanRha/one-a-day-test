@@ -1,12 +1,12 @@
 // 화면 (DESIGN 9장): 상시 버튼 4개(돈 · 진행 막대 + 지점 이름 · ≡ 메뉴 · 📺 부스트) · 빨간 점 ≤ 1 · 글자 띄우기 분당 ≤ 20 · 칸 이름표는 칸 위 · 줄 맨 앞 1명만 말풍선 · 안내 한 줄 + 화살표 하나
 //   창(메뉴 · 상점 · 단골 · 꾸미기 · 미션 · 설정 · 쿠폰 · 광고 · 골드)은 ui_menu.js · 별채 책상 카드는 desk.js · 지도는 map.js
 import * as THREE from 'three';
-import { BRANCHES, COUPON, AD_DAY, AD_PLACES, STAFF, MENU } from './data.js?v=0.99.31';
-import { S, save, couponReady, vipOn, today, missionNew, PASS_HOOK } from './state.js?v=0.99.31';
-import { sfx } from './audio.js?v=0.99.31';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.31';
-import { bm } from './oad_bm.js?v=0.99.31';
-import { PAD_COLOR } from './pads.js?v=0.99.31';
+import { BRANCHES, COUPON, AD_DAY, AD_PLACES, STAFF, MENU } from './data.js?v=0.99.32';
+import { S, save, couponReady, vipOn, today, missionNew, PASS_HOOK } from './state.js?v=0.99.32';
+import { sfx } from './audio.js?v=0.99.32';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.32';
+import { bm } from './oad_bm.js?v=0.99.32';
+import { PAD_COLOR } from './pads.js?v=0.99.32';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -46,7 +46,7 @@ export class UI {
     // 칸 이름표: 칸 바로 위 (값 · 진행 원 · 짧은 이름) — 다음 칸 1~3개
     this._padTags ||= new Map(); const seen = new Set(), boxes = [];
     for (const p of g.pads.list) { if (p.done) continue; seen.add(p); let t = this._padTags.get(p); if (!t) { t = this.el('ptag ' + p.kind); this._padTags.set(p, t); p.tag = t; }
-      const left = Math.max(0, p.cost - p.paid), fill = p.cost ? p.paid / p.cost : 0, ok = S.coins >= left, html = `<i style="--p:${Math.round(fill * 100)}%;--c:${PAD_COLOR[p.kind]}"></i><b>${fmt(left)}</b><small>${p.name}</small>`;
+      const left = Math.max(0, p.cost - p.paid), fill = p.cost ? p.paid / p.cost : 0, ok = g.pads.spendable(p.o.id) >= left, html = `<i style="--p:${Math.round(fill * 100)}%;--c:${PAD_COLOR[p.kind]}"></i><b>${fmt(left)}</b><small>${p.name}</small>`;
       if (t._h !== html) { t.innerHTML = html; t._h = html; } t.classList.toggle('ok', ok); t.classList.toggle('poor', !ok && !fill); t.classList.toggle('arm', p.hold > 0); t.style.setProperty('--h', (p.hold || 0).toFixed(2));
       const [sx, sy] = this.scr(p.at[0], 60, p.at[1] - Math.min(60, p.size[1] / 2)); if (t._h2 !== t._h) { t._w = t.offsetWidth; t._hh = t.offsetHeight; t._h2 = t._h; } boxes.push({ t, x: sx, y: sy, w: t._w, h: t._hh }); }
     /* 이름표끼리 안 겹치게: 화면 아래쪽 칸부터 자리 잡고, 겹치면 위로 올림 (칸 바로 위 원칙은 그대로) */
