@@ -3,10 +3,10 @@
 //  그리기 최소: 보이는 시설을 전부 한 지오메트리로 합침 → 재질 2개(빛 받음 · 빛남) = 그리기 2 (+ 그림자 1). 단계가 바뀔 때만 다시 합침
 //  완성 연출(app.hideCam): 1.0초 다가감 → 1.6초 머묾(빛 웅덩이 번쩍 · 불티 · 반짝 소리) → 0.9초 제자리. 누르면 바로 끝. 빛은 미리 만든 점광 하나(개수 안 바뀜 = 셰이더 다시 안 만듦)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.41';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.41';
-import { FACILITIES } from './data.js?v=0.99.41';
-import { sfx } from './audio.js?v=0.99.41';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.42';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.42';
+import { FACILITIES } from './data.js?v=0.99.42';
+import { sfx } from './audio.js?v=0.99.42';
 
 /* 자리 [x, z, 바라보는 방향, 크기] — 은신처 좌표(main.js buildHideout · 인물 SPOT 과 안 겹치게). 뒷벽 z −6 · 바닥 원 반지름 9 */
 export const SLOT = {

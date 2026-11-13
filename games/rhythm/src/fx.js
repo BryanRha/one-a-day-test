@@ -7,8 +7,8 @@
 //     판정 색(금 · 장미 · 세이지)은 레인 · 노트 색(얼음 · 라벤더)과 겹치지 않게 · 빛 예산(밝기 상한)으로 판정선이 하얗게 타지 않게
 //   · 색 · 파티클 모양 · 롱노트 불꽃은 테마(themes.js)에서 읽음 → setTheme 로 바꿔 끼움
 //   · 파티클 모양은 판정 색의 진한 쪽(c1)을 주로 칠함 — 모양이 바뀌어도 판정 색 위계가 그대로 (feel_check 가 테마 10개 모두 잼)
-import { GEO, P } from './render.js?v=0.99.41';
-import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.41';
+import { GEO, P } from './render.js?v=0.99.42';
+import { THEMES, DEFAULT_THEME } from './themes.js?v=0.99.42';
 
 const { L, LW, YJ } = GEO;
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;

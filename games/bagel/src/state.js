@@ -1,7 +1,7 @@
 // 저장 (localStorage 'marumi_v4' · 기준판 재정비 0.5.0 — 모양은 기준판 v1 과 같음): 돈 · 지점별 열린 것/직원/칸에 부은 돈 · 강화 · 오늘 판 개수(쿠폰) · 미션 · 출석
 //   처음 열 때 한 번 옮김(옛 키는 지우지 않음 · 되돌리기용): v3(0.4.x 테스터) → v2(0.3.x) → v1(0.2 · 지인 주소 판 — 모양이 같아 그대로)
 //   옮기는 원칙: 돈 손해 0(없어진 칸 · 방에 낸 값 · 부어 둔 돈 · 금고는 돈으로) · 진행률은 줄지 않게(모자라면 여는 순서대로 다음 칸을 열어 줌)
-import { COUPON, BRANCHES } from './data.js?v=0.99.41';
+import { COUPON, BRANCHES } from './data.js?v=0.99.42';
 export const KEY = 'marumi_v4', OLD = ['marumi_v3', 'marumi_v2', 'marumi_v1'];
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fresh = () => ({ v: 4, coins: 0, earned: 0, bi: 0, branch: {}, up: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), seen: {}, mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'], decoPos: {} });
@@ -94,6 +94,10 @@ export const MISSIONS = [
   { id: 'unlock', name: '새로운 것 2개 열기', goal: 2, coins: 400 }, { id: 'dough', name: '반죽 10개 오븐에 넣기', goal: 10, coins: 350 }, { id: 'coins', name: '돈 3,000 모으기', goal: 3000, coins: 500 },
 ];
 export function mission(id, n = 1) { dayTick(); S.miss[id] = (S.miss[id] || 0) + n; }
-export const missionReady = () => MISSIONS.some(m => (S.miss[m.id] || 0) >= m.goal && !S.missDone[m.id]);
-export function claimMission(id) { const m = MISSIONS.find(x => x.id === id); if (!m || S.missDone[id] || (S.miss[id] || 0) < m.goal) return 0; S.missDone[id] = 1; const v = m.coins * mult(); S.coins += v; save(); return v; }
+/* 4지점을 다 열면 「새로운 것 2개 열기」를 깰 수 없음 → 「시설 업그레이드 2번」으로 (0.7.0 · 대표 승인 추천안) — 구역 칸 · 다음 지점 칸은 셈하지 않음 */
+const UP2 = { id: 'up2', name: '시설 업그레이드 2번', goal: 2, coins: 400 };
+export const allOpen = () => BRANCHES.every((B, i) => B.slots.filter(s => !s.free && s.type !== 'next' && s.type !== 'zone').every(s => (S.branch[i]?.unl || []).includes(s.id)));
+export const missionsNow = () => allOpen() ? MISSIONS.map(m => m.id === 'unlock' ? UP2 : m) : MISSIONS;
+export const missionReady = () => missionsNow().some(m => (S.miss[m.id] || 0) >= m.goal && !S.missDone[m.id]);
+export function claimMission(id) { const m = missionsNow().find(x => x.id === id); if (!m || S.missDone[id] || (S.miss[id] || 0) < m.goal) return 0; S.missDone[id] = 1; const v = m.coins * mult(); S.coins += v; save(); return v; }
 export const mult = () => BRANCHES[S.bi]?.mult || 1;   /* 미션 보상 배수 = 지점 배수 (0.6.0: 기준판은 [1, 4, 14] 라 4호점이 1배였음) */

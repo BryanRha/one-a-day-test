@@ -3,10 +3,10 @@
 //   엔딩 장면이 끝나는 곳에서 markEnding(S, 엔딩키) 를 부르면 바로 열림. 부르지 않아도 아래 중 하나가 참이면 열린 것으로 봄:
 //     S.story.ending(엔딩 키) · S.story.ended · S.story.beatsDone.b_ending · S.story.flags.ending
 //   ※ 시험: ?abyss (실서버 oneaday.kr 밖에서만) 이면 열림 — main.js
-import { ABYSS as K } from './data/m5b.js?v=0.99.41';
-import { kstDay } from './econ.js?v=0.99.41';
-import { DIFF } from './data.js?v=0.99.41';
-import { rng } from './plan.js?v=0.99.41';
+import { ABYSS as K } from './data/m5b.js?v=0.99.42';
+import { kstDay } from './econ.js?v=0.99.42';
+import { DIFF } from './data.js?v=0.99.42';
+import { rng } from './plan.js?v=0.99.42';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const endingSeen = S => !!(S?.abyss?.open || S?.story?.ending || S?.story?.ended || S?.story?.beatsDone?.b_ending || S?.story?.flags?.ending);

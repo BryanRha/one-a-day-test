@@ -1,13 +1,13 @@
 // 컬렉션: 블록 스킨(별 조각으로 해금 · 원어데이 안에서는 소장자 전용 1 · 골드 1 추가) · 지난 주 그림 갤러리 · 기록
-import { W, H } from '../config.js?v=0.99.41';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.41';
-import { audio } from '../audio.js?v=0.99.41';
-import { sky } from '../sky.js?v=0.99.41';
-import { load, save } from '../save.js?v=0.99.41';
-import { SKINS } from '../meta.js?v=0.99.41';
-import { makeSkinPreview, makeBlockTextures } from './Boot.js?v=0.99.41';
-import { special, skinShown, skinOpen, effSkin, buySkin } from '../bmflow.js?v=0.99.41';
-import { bm } from '../oad_bm.js?v=0.99.41';
+import { W, H } from '../config.js?v=0.99.42';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.42';
+import { audio } from '../audio.js?v=0.99.42';
+import { sky } from '../sky.js?v=0.99.42';
+import { load, save } from '../save.js?v=0.99.42';
+import { SKINS } from '../meta.js?v=0.99.42';
+import { makeSkinPreview, makeBlockTextures } from './Boot.js?v=0.99.42';
+import { special, skinShown, skinOpen, effSkin, buySkin } from '../bmflow.js?v=0.99.42';
+import { bm } from '../oad_bm.js?v=0.99.42';
 
 export class CollectionScene extends Phaser.Scene {
   constructor() { super('Collection'); }

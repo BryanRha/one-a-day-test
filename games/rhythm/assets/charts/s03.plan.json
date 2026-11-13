@@ -1,361 +1,147 @@
 {
+ "v": 2,
+ "concept": "행진 — 정박은 왼발 · 오른발(양 끝), 엇박은 그 발 안쪽 · 브라스 후렴과 'Hey!' 는 강세 동시",
  "tempo": {
   "bpm": 135.75
  },
- "dens": {
-  "easy": 0.731,
-  "normal": 0.696,
-  "hard": 0.734
+ "lastBeat": 308,
+ "lane": "voice",
+ "voices": {
+  "lo": [
+   0,
+   3
+  ],
+  "mi": [
+   1,
+   2
+  ],
+  "hi": [
+   2,
+   1
+  ]
  },
- "mel": 0.2,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
- "sections": [
+ "parts": [
   {
    "from": 0,
    "to": 4,
    "lvl": 1,
-   "hard": {
-    "grid": 2
-   },
-   "normal": {
-    "perBar": [
-     3,
-     5,
-     7
-    ]
-   },
-   "_": "행진 스네어"
+   "name": "행진 스네어",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 4,
    "to": 12,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ]
-   },
-   "_": "팡파르"
+   "name": "팡파르",
+   "lane": "stamp",
+   "first": true,
+   "mark": "행진: 정박마다 왼발 · 오른발"
   },
   {
    "from": 12,
    "to": 20,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ]
-   },
-   "_": "브레이크비트 드롭"
+   "name": "브레이크비트 드롭",
+   "lane": "stamp"
   },
   {
    "from": 20,
    "to": 28,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "행진 1"
+   "name": "행진 1",
+   "lane": "voice"
   },
   {
    "from": 28,
    "to": 29,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "Hey!"
+   "name": "Hey!",
+   "lane": "voice"
   },
   {
    "from": 29,
    "to": 38,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ]
-   },
-   "_": "행진 2"
+   "name": "행진 2",
+   "lane": "stamp"
   },
   {
    "from": 38,
    "to": 39,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "스네어 롤"
+   "name": "스네어 롤",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 39,
    "to": 46,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ]
-   },
-   "_": "드롭 2"
+   "name": "드롭 2",
+   "lane": "stamp"
   },
   {
    "from": 46,
    "to": 47,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "Hey!"
+   "name": "Hey!",
+   "lane": "voice"
   },
   {
    "from": 47,
    "to": 53,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "브라스"
+   "name": "브라스",
+   "lane": "voice"
   },
   {
    "from": 53,
    "to": 55,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ]
-   },
-   "_": "스네어 롤 빌드"
+   "name": "스네어 롤 빌드",
+   "lane": "stamp"
   },
   {
    "from": 55,
    "to": 63,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ]
-   },
-   "_": "행진 3"
+   "name": "행진 3",
+   "lane": "stamp"
   },
   {
    "from": 63,
    "to": 75,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "풀 브라스 마지막"
+   "name": "풀 브라스 마지막",
+   "lane": "voice"
   },
   {
    "from": 75,
    "to": 77,
    "lvl": 2,
-   "_": "마무리"
+   "name": "마무리",
+   "lane": "stamp"
   },
   {
    "from": 77,
    "to": 78,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "끝"
+   "name": "끝",
+   "lane": "voice"
   }
  ],
- "edit": {
-  "easy": {
-   "add": []
-  },
-  "normal": {
-   "add": []
-  },
-  "hard": {
-   "add": []
-  }
- },
- "lastBeat": 308,
+ "sc": [
+  21,
+  63,
+  74
+ ],
  "special": {
   "sc": 3,
   "fader": {
@@ -364,5 +150,17 @@
    "hard": 7
   }
  },
- "_special": "3화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)"
+ "lv": {
+  "easy": 3,
+  "normal": 7,
+  "hard": 11
+ },
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
+ "firstSound": 0.0021,
+ "mustFader": true,
+ "dens": {
+  "easy": 0.963,
+  "normal": 0.798,
+  "hard": 0.856
+ }
 }

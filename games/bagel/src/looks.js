@@ -4,8 +4,8 @@
 //            모습의 바닥 크기는 기본 모습 안쪽 (tools/gate_look.mjs L1) — 모습이 커져도 막히는 길이 생기지 않음
 //   작은 변화(매 단계): 효과와 같은 것이 보임 — 오븐 판 · 불빛 / 반죽기 속도 눈금 · 도는 빠르기 / 솥 안 베이글 · 김 / 토핑 병 / 냉장고 컵 / 커피 잔 / 계산대 메뉴 카드
 import * as THREE from 'three';
-import { M, box, cyl, sph, mesh, logoPanel, STATION } from './models.js?v=0.99.41';
-import { BRAND } from './data.js?v=0.99.41';
+import { M, box, cyl, sph, mesh, logoPanel, STATION } from './models.js?v=0.99.42';
+import { BRAND } from './data.js?v=0.99.42';
 
 const OR = BRAND.accentHex, OR2 = 0xE2581C, BR = 0x5A3A22, CR = 0xF6EDE2, TILE = 0xFFF8F0, ST = 0xD8DEE3, ST2 = 0xB4BEC6, BK = 0x2B2A2E, BK2 = 0x3C3A40, BRASS = 0xC9A24A, WOOD = 0x9A643A, MARBLE = 0xF4F1EC;
 const glow = c => new THREE.MeshBasicMaterial({ color: c });

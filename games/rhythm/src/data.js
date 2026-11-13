@@ -47,7 +47,8 @@ export const ROSTER = [
 
 /* 곡: preview = [시작 초, 길이] (후렴 8마디) · tier = 곡 성격 */
 const SUNO = { artist: '하루 스튜디오', badge: 'AI 작곡 · Suno', license: 'Suno 유료 구독 · 상업 이용' };
-const song = (id, title, en, preview, tier) => ({ id, title, en, ko: en, ...SUNO, audio: `assets/audio/${id}`, chart: `assets/charts/${id}.json`, preview, tier });
+/* rev = 채보 판 번호 (v0.7.4 곡 컨셉 채보 = 2) · 전 판으로 친 기록이 있는 곡은 방송 목록에 「새 채보」 딱지를 한 번 */
+const song = (id, title, en, preview, tier, rev = 2) => ({ id, title, en, ko: en, ...SUNO, audio: `assets/audio/${id}`, chart: `assets/charts/${id}.json`, preview, tier, rev });
 export const SONGS = {
   s01: song('s01', '빛의 첫 소절', 'First Verse of Light', [92.07, 13.56], '보통'),
   s02: song('s02', '째깍째깍 디스코', 'Tick-Tock Disco', [23.88, 15.0], '쉬운 곡'),

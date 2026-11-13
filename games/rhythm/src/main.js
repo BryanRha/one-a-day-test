@@ -2,19 +2,19 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.41';
-import { Play } from './play.js?v=0.99.41';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.41';
-import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.41';
-import * as CH from './channel.js?v=0.99.41';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.41';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.41';
-import { bm } from './oad_bm.js?v=0.99.41';
-import { THEMES } from './themes.js?v=0.99.41';
+import { A } from './audio.js?v=0.99.42';
+import { Play } from './play.js?v=0.99.42';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.42';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.42';
+import * as CH from './channel.js?v=0.99.42';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.42';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.42';
+import { bm } from './oad_bm.js?v=0.99.42';
+import { THEMES } from './themes.js?v=0.99.42';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.7.3';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.7.4';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -75,14 +75,14 @@ function renderToday() {
   /* 안내 한 줄: 놓친 화가 있으면 '쌓여 있는 이어 볼 거리'로 (벌이 아니라) · 이어 보기 화면엔 오늘 화로 가는 길, 오늘 화면엔 이어 보기로 가는 길 (검수 v0.5.4 B-2) */
   const tn = tonight(), hb = (late && (k === 'catchup' || day === tn)) ? (k === 'catchup' ? `<button class="go" data-go="today">오늘 ${tn.no}화 먼저</button>` : `<button class="go" data-go="next">이어 보기</button>`) : '';
   const encTo = k === 'encore' ? CASTS[CH.targetOf(day, guestId(), isJoinable)].name : '';
-  $('#t_hint span').textContent = k === 'catchup' ? `쉬는 동안 ${late}편이 열렸어요 · ${day.no}화부터 차례로` : day === tn && late ? `${nextUp(home.no, S.book)}화부터 놓친 방송 ${late}편이 쌓여 있어요` : k === 'encore' ? (t.enc ? '오늘 앵콜 보너스는 받았어요 · 몇 번이든 다시' : `앵콜 방송 · 오늘 처음 끝까지 하면 ${josa(encTo, '이/가')} 기뻐해요`) : S.book[day.no] ? (['S', 'SS'].includes(S.book[day.no].rank) ? `${day.no}화 방송은 금박으로 방송 기록에 있어요` : `${day.no}화 방송은 방송 기록에 있어요 · S 이상이면 금박 테두리`) : `끝까지 송출하면 ${dv.name}의 개인 채널과 오늘의 조각이 열려요`;
+  $('#t_hint span').textContent = k === 'catchup' ? `쉬는 동안 ${late}편이 열렸어요 · ${day.no}화부터 차례로` : day === tn && late ? `${nextUp(home.no, S.book)}화부터 놓친 방송 ${late}편이 쌓여 있어요` : k === 'encore' ? (t.enc ? '오늘 앵콜 보너스는 받았어요 · 몇 번이든 다시' : `앵콜 방송 · 오늘 처음 끝까지 하면 ${josa(encTo, '이/가')} 기뻐해요`) : S.book[day.no] ? doneHint(dv) : `끝까지 방송하면 ${dv.name}의 개인 채널과 오늘의 사진 조각이 열려요`;
   { const h = $('#t_hint'), o = h.querySelector('.go'); if (o) o.remove(); if (hb) h.insertAdjacentHTML('beforeend', hb); }
   const st = $('#t_start'); st.className = 'start onair';
   if (k === 'catchup') st.innerHTML = `<b><i class="lamp"></i>${day.no}화 첫 방송</b><span>차례로 이어 보기</span>`;
   else if (k === 'encore') st.innerHTML = `<b><i class="lamp"></i>${t.plays ? '한 번 더 앵콜' : '앵콜 방송 시작'}</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
   else if (k !== 'tonight') st.innerHTML = `<b>다시 방송하기</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
   else if (!t.plays) st.innerHTML = `<b><i class="lamp"></i>생방송 시작</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
-  else st.innerHTML = `<b><i class="lamp"></i>한 번 더 송출</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
+  else st.innerHTML = `<b><i class="lamp"></i>한 번 더 방송</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
   $('#t_list').classList.toggle('dot', (k === 'tonight' || k === 'encore') && (!t.plays || late > 0));
   $('#t_cast').classList.toggle('dot', castDot());
   if (entry && A.ac && A.ac.state === 'running' && !A.pv && !Play.on) A.preview(entry, ...song.preview);
@@ -174,7 +174,7 @@ const awkTest = DEV ? (Q.get('awk') || '') : '';
 const awake = id => (awkTest && awkTest === id) || CH.isAwake(S, id);
 /* 단계 진행 막대 0~100 (3단계면 100 — 각성은 v0.7) */
 function stagePct(subs, id) { const top = id ? shown(id) : 3, st = Math.min(CH.stageOf(subs), top), a = CH.STAGES[st], b = st < top ? CH.STAGES[st + 1] : 0; return b ? Math.max(0, Math.min(100, Math.round((subs - a) / (b - a) * 100))) : 100; }   /* 마지막 단계 뒤엔 숫자만 오름 (다음 잠금 칸 없음) */
-const STAGE_GIFT = { 1: '전용 DM · 생방송에 팬 채팅', 2: '사고 수습 한 판 2번 · 콤보 10마다 채팅 응원', 3: '전용 결과 대사 · 피버 때 팬 일동 후원 띠', 4: '얼굴 조각 · 진짜 이름' };
+const STAGE_GIFT = { 1: '전용 DM · 생방송에 팬 채팅', 2: '사고 수습 한 판 2번 · 콤보 10마다 채팅 응원', 3: '전용 결과 대사 · 무대가 빛나는 피버 때 팬 일동 후원 띠', 4: '얼굴 조각 · 진짜 이름' };
 /* 단계 조각 (방 · 뒷모습): 그림이 들어온 것(ready)만 — 없으면 어디에도 안 보임 (얻을 길 없는 빈 칸 금지) */
 const readyPieces = id => ((CHANNEL[id] || {}).pieces || []).filter(q => q.ready);
 const cardDef = id => CARDS.find(c => c.id === id);
@@ -191,7 +191,7 @@ function joinWhen(r) {
   const st = joinStage(r.join, home.no, DAYS.length), nm = CASTS[r.id].name;
   if (st === 'season2') return { tag: esc(r.note || ''), cls: '', say: `${josa(nm, '은/는')} ${esc(r.note || '다음 시즌')}에 합류해요` };
   if (st === 'soon') return { tag: '시즌 1 · 곧 합류', cls: '', say: `${josa(nm, '은/는')} 시즌 1 뒤쪽 방송에서 곧 합류해요` };
-  if (st === 'today') return { tag: '오늘 합류', cls: 'today', say: `오늘 방송을 끝까지 송출하면 ${josa(nm, '이/가')} 합류해요`, face: true };
+  if (st === 'today') return { tag: '오늘 합류', cls: 'today', say: `오늘 방송을 끝까지 하면 ${josa(nm, '이/가')} 합류해요`, face: true };
   if (st === 'next') return { tag: '내일 합류', cls: 'next', say: `${josa(nm, '은/는')} 내일 ${r.join}화 방송에서 합류해요` };
   if (st === 'past') return { tag: `지난 ${r.join}화에서 합류`, cls: 'past', say: `방송 목록에서 지난 ${r.join}화를 끝까지 하면 ${josa(nm, '이/가')} 합류해요` };
   return { tag: `${r.join}화에 합류`, cls: '', say: `${josa(nm, '은/는')} ${r.join}화 방송에서 합류해요` };
@@ -236,7 +236,7 @@ function openChannel(id) {
   const c = CASTS[id], rec = CH.castRec(S, id), subs = rec.subs, top = shown(id) >= 4 || (FACE[id] && FACE[id].ready) ? 4 : 3, st = shown(id), nxt = st < top ? CH.STAGES[st + 1] : 0, L = CHANNEL[id] || {}, t = today(), lg = (S.cast || {})[id] || { plays: 0, guards: 0 }, F = FACE[id], fo = faceOpen(id);
   /* 단계 보상: 1~3단계 + (얼굴 그림이 있을 때만) 4단계 · 각성 줄은 그 각성 화가 시즌에 들어온 날부터만 (v0.7 · 곡이 없으면 '각성' 글자 0 — 사업 요청 2) */
   const gifts = Array.from({ length: top }, (_, i) => i + 1).map(k => { const pcs = readyPieces(id).filter(q => q.stage === k).map(q => `조각 「${q.kind}」`); return `<li class="${st >= k ? 'on' : ''}"><b>${k}단계</b><em class="tnum">${CH.STAGES[k].toLocaleString('en-US')}</em><p>${[...pcs, STAGE_GIFT[k]].join(' · ')}</p></li>`; }).join('')
-    + (awkIn(id) ? `<li class="${awake(id) ? 'on' : ''}"><b>각성</b><em class="tnum">${AWK[id].ep}화</em><p>신형 엔진 데뷔 · ${AWK[id].ep}화를 끝까지 송출 · 구독자 ${CH.STAGES[3].toLocaleString('en-US')} 필요</p></li>` : '');
+    + (awkIn(id) ? `<li class="${awake(id) ? 'on' : ''}"><b>각성</b><em class="tnum">${AWK[id].ep}화</em><p>신형 엔진 데뷔 · ${AWK[id].ep}화를 끝까지 방송 · 구독자 ${CH.STAGES[3].toLocaleString('en-US')} 필요</p></li>` : '');
   const cards = CH.cardsOf(S, id).map(cd => { const df = cardDef(cd.id), d = DAYS[df.day - 1], a = CH.expFor(cd.lv), b = cd.lv < CH.CARD.maxLv ? CH.expFor(cd.lv + 1) : a, pc = b > a ? Math.round((cd.exp - a) / (b - a) * 100) : 100;
     return `<div class="cd"><i style="background-image:url(${d.dm.piece.img})"></i><div><em>★1 일상 스냅 · ${df.day}화</em><b>Lv.${cd.lv}<small> / ${CH.CARD.maxLv}</small></b><u class="pb"><s style="width:${pc}%"></s></u><p>${cd.lv >= 10 ? '짧은 DM 열림' : 'Lv10 짧은 DM'} · ${cd.lv >= 20 ? '전용 결과 대사 열림' : 'Lv20 전용 결과 대사'}</p></div></div>`; }).join('');
   /* 단계 조각: 그림이 들어온 것만 칸으로 — 열렸으면 사진 + 설명, 아직이면 「○단계에서 열려요」 */
@@ -253,7 +253,7 @@ function openChannel(id) {
     <ul class="how"><li><b>함께한 방송</b><span>그 캐스트와 끝까지 · 하루 ${CH.CAP}판까지</span><em>+${CH.GAIN.play}</em></li><li><b>화 첫 방송</b><span>그 캐스트의 화를 처음 끝까지</span><em>+${CH.GAIN.ep}</em></li><li><b>첫 달성</b><span>곡 · 난이도마다 첫 완주 · 첫 S · 첫 풀콤보</span><em>+${CH.GAIN.first.clear}~${CH.GAIN.first.fc}</em></li></ul>
     <h4>단계 보상</h4><ul class="gifts">${gifts}</ul>
     ${pcs ? `<h4>조각</h4><div class="pcs">${pcs}</div>` : ''}
-    <h4>카드</h4>${cards || '<div class="none">그 캐스트 화를 끝까지 송출하면 카드를 받아요</div>'}
+    <h4>카드</h4>${cards || '<div class="none">그 캐스트 화를 끝까지 방송하면 카드를 받아요</div>'}
     ${msgs ? `<h4>채널 메시지</h4><div class="msg">${msgs}</div>` : ''}
   </div><button class="seat ${S.guest === id ? 'off' : ''}" data-k="seat" data-c="${id}">${S.guest === id ? '옆자리에서 내리기' : '옆자리 게스트로 앉히기'}</button></div>`;
   sh.classList.add('on'); moreHint(sh); save();
@@ -276,6 +276,7 @@ function go() {
   const gAll = Q.get('guide') === '0' ? [] : guidesFor(here), drillSc = here.has('sc') && !(S.seen || {}).sc;
   const drill = Q.get('guide') !== '0' && !S.guide && !S.drill && gAll.every(k => k === 'lane' || (k === 'sc' && drillSc));   /* 리허설은 다른 새 노트 카드가 없는 판에서만(새 유저 1화) */
   const guides = drill ? [] : gAll;   /* 한 판에 최대 두 가지 (검수 C-2) */
+  if (song.rev && (S.chartRev || {})[song.id] !== song.rev) { (S.chartRev ||= {})[song.id] = song.rev; save(); }   /* 새 채보 딱지는 그 곡을 한 번 치면 사라짐 */
   show('play');
   Play.auto = Q.get('auto') && Q.get('auto') !== '0' ? { jitter: +(Q.get('jitter') || 18), miss: +(Q.get('miss') || 0), dom: Q.get('auto') === 'dom', wait: Q.get('gwait') === '1' } : null;   /* gwait=1: 자동 연주라도 안내 「확인」은 직접 (시험용) */
   Play.start({
@@ -493,7 +494,7 @@ $('#story').addEventListener('click', e => {
   if (dm && dm.phase !== 'choice' && dm.phase !== 'end') dmStep();   /* 탭하면 다음 말풍선 바로 */
 });
 async function share() {
-  const r = last && last.r, txt = `${GAME.name} ${day.no}화 · ${song.title}${r ? ` · ${r.rank} · 콤보 ${r.maxCombo}` : ''} — 오늘 밤도 한 곡, 끝까지 송출`;
+  const r = last && last.r, txt = `${GAME.name} ${day.no}화 · ${song.title}${r ? ` · ${r.rank} · 콤보 ${r.maxCombo}` : ''} — 오늘 밤도 한 곡, 끝까지 방송`;
   try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch { return; }
   try { await navigator.clipboard.writeText(txt); toast('공유 문구를 복사했어요'); } catch { toast(txt, 3000); }
 }
@@ -505,7 +506,7 @@ function openBook() {
   const pages = []; for (let k = 1; k <= SEASON.pages; k++) { const pg = S.book[k], d = DAYS[k - 1]; if (pg && d) pages.push(`<button class="pg has f-${foil(pg.rank)}" data-p="${k}" style="background-image:url(${d.cut})"><b>${k}</b><i>${pg.rank}</i></button>`); else if (k === home.no + 1) pages.push(`<div class="pg next"><span>내일</span><b>${k}</b></div>`); else pages.push(`<div class="pg"><b>${k}</b></div>`); }
   $('#book').innerHTML = `
     <div class="top"><button class="ic" data-b="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">방송 기록</div><span style="width:36px"></span></div>
-    <div class="ttl"><em>SEASON ${SEASON.no}</em><b>${SEASON.title}</b><span>${GAME.studio} 생방송 ${n} / ${SEASON.pages}회 · S 이상은 금박, A는 은박</span><div class="bar"><i style="width:${n / SEASON.pages * 100}%"></i></div></div>
+    <div class="ttl"><em>SEASON ${SEASON.no}</em><b>${SEASON.title}</b><span>${GAME.studio} 생방송 ${n} / ${SEASON.pages}회 · S 이상 금색 · A 은색 테두리</span><div class="bar"><i style="width:${n / SEASON.pages * 100}%"></i></div></div>
     <div class="tmr"><div class="im" style="background-image:url(${tm.img})"></div><div class="fc" style="background-image:url(${dv.face})"></div><div class="in"><em>내일 예고 · ${home.no + 1}화</em><b>${esc(tm.title)}</b><q>${esc(tm.text)}</q><div class="cd"><small>다음 방송까지</small><span id="b_cd"></span></div></div></div>
     <div class="pages">${pages.join('')}</div>
     <div class="btns"><button class="sec" data-b="share">공유</button><button class="ice" data-b="home">${upNext() !== tonight() ? `이어서 ${upNext().no}화` : '오늘의 방송으로'}</button></div>`;
@@ -548,14 +549,25 @@ function stageRow(d) {
   const sg = SONGS[d.song], dv = CASTS[d.cast];
   if (!openNo(d)) return `<div class="st lock"><div class="cv"><span>${d.no}</span></div><div class="tx"><em>NO.${String(d.no).padStart(3, '0')} · ${d.no - home.no}일 뒤</em><b>???</b><span>${dv.name}의 방송 · 아직 열리지 않았어요</span></div></div>`;
   const k = epKind(d.no, home.no, S.book), nx = d === upNext() && d !== tonight(), tn = d === tonight();
-  return `<div class="st ${tn ? 'today' : ''} ${d === day ? 'cur' : ''} ${k === 'catchup' ? 'new' : ''}" data-s="${d.no}"><button class="main"><div class="cv" style="background-image:url(${d.cut})"></div><div class="tx"><em>${tn ? (encore ? 'ENCORE' : 'TODAY') : 'NO.' + String(d.no).padStart(3, '0')} ${charts[d.song] && charts[d.song].len ? ` · ${fmtT(charts[d.song].len)}` : ''}${sg.tier === '보스' ? '<i class="boss">BOSS</i>' : ''}${k === 'catchup' ? `<i class="nw">${nx ? '다음 차례' : '첫 방송 전'}</i>` : ''}</em><b>${esc(sg.title)}</b><span>${esc(singer(d))} · ${d.chapter}</span></div></button><div class="dfs">${diffCells(d)}</div></div>`;
+  return `<div class="st ${tn ? 'today' : ''} ${d === day ? 'cur' : ''} ${k === 'catchup' ? 'new' : ''}" data-s="${d.no}"><button class="main"><div class="cv" style="background-image:url(${d.cut})"></div><div class="tx"><em>${tn ? (encore ? 'ENCORE' : 'TODAY') : 'NO.' + String(d.no).padStart(3, '0')} ${charts[d.song] && charts[d.song].len ? ` · ${fmtT(charts[d.song].len)}` : ''}${sg.tier === '보스' ? '<i class="boss">BOSS</i>' : ''}${k === 'catchup' ? `<i class="nw">${nx ? '다음 차례' : '첫 방송 전'}</i>` : newChart(sg) ? '<i class="nw">새 채보</i>' : ''}</em><b>${esc(sg.title)}</b><span>${esc(singer(d))} · ${d.chapter}</span></div></button><div class="dfs">${diffCells(d)}</div></div>`;
 }
+/* 끝낸 화의 안내 줄 (v0.7.4 · 대표 11-13 「금박이라는 말을 잘 안 써」): 이미 기록에 남은 걸 다시 알리는 대신, 아직 안 해 본 첫 달성 하나를 알려 줌
+   (난이도마다 첫 완주 · 첫 S · 첫 풀콤보 → 그 곡 캐스트 구독자 보너스 · channel.js GAIN.first) — 다 했으면 기록이 어디에 어떻게 남았는지 */
+function doneHint(dv) {
+  const b = S.best[song.id] || {}, ok = r => r && ['S', 'SS'].includes(r.rank);
+  for (const [d, nm] of DIFFS) if (!b[d]) return `${nm}도 처음 끝까지 가면 ${dv.name} 구독자가 더 늘어요`;
+  for (const [d, nm] of DIFFS) if (!ok(b[d])) return `${nm}에서 처음 S 를 받으면 구독자가 더 늘어요`;
+  for (const [d, nm] of DIFFS) if (!b[d].fc) return `${nm} 풀콤보가 남았어요 · 처음이면 구독자가 더 늘어요`;
+  return '세 난이도 모두 풀콤보 · 기록은 책 단추에 금색 테두리로';
+}
+/* 「새 채보」: 전 판(rev 1)으로 친 기록이 있고 새 판으로는 아직 안 친 곡 (v0.7.4 · 기록 · 등급은 그대로) */
+const newChart = sg => !!(sg.rev && S.best[sg.id] && (S.chartRev || {})[sg.id] !== sg.rev);
 function openStages() {
   const rows = DAYS.slice().sort((a, b) => (b === tonight()) - (a === tonight()) || a.no - b.no).map(stageRow).join('');
   const late = behind(home.no, S.book);
   $('#stages').innerHTML = `
     <div class="top"><button class="ic" data-g="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">방송 목록</div><span style="width:36px"></span></div>
-    <div class="ttl"><em>SEASON ${SEASON.no} · ${SEASON.title}</em><b>열린 방송은 몇 번이든</b><span>난이도 칸을 누르면 바로 시작해요 · ${DEV ? '시험 모드 · 10곡 모두 열림' : late ? `${home.no}화까지 열렸어요 · ${nextUp(home.no, S.book)}화부터 차례로 이어 봐요` : `${home.no}화까지 열렸어요 · 매일 아침 7시에 새 방송`}</span></div>
+    <div class="ttl"><em>SEASON ${SEASON.no} · ${SEASON.title}</em><b>열린 방송은 몇 번이든</b><span>난이도 칸을 누르면 바로 시작해요 · ${DEV ? `시험 모드 · ${DAYS.length}곡 모두 열림` : late ? `${home.no}화까지 열렸어요 · ${nextUp(home.no, S.book)}화부터 차례로 이어 봐요` : `${home.no}화까지 열렸어요 · 매일 아침 7시에 새 방송`}</span></div>
     <div class="list">${rows}</div>`;
   show('stages');
   /* 난이도 칸 레벨 표시용 채보 미리 받기 (작음) */

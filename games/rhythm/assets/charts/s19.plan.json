@@ -1,341 +1,173 @@
 {
+ "v": 2,
+ "concept": "데모 테이프 — 차오름은 오른쪽 → 왼쪽 되감기 계단, 후렴은 왼쪽 → 오른쪽 재생 계단",
  "tempo": {
   "bpm": 152.48
  },
- "mel": 0.3,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통 (add_song 자동 초안)",
- "sections": [
+ "lastBeat": 380,
+ "lane": "voice",
+ "voices": {
+  "lo": [
+   0,
+   1
+  ],
+  "mi": [
+   2,
+   3
+  ],
+  "hi": [
+   1,
+   2
+  ]
+ },
+ "parts": [
   {
    "from": 0,
    "to": 12,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "name": "잔잔",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 12,
    "to": 16,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "보통",
+   "lane": "voice"
   },
   {
    "from": 16,
    "to": 20,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "name": "잔잔",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 20,
    "to": 40,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "보통",
+   "lane": "voice"
   },
   {
    "from": 40,
    "to": 44,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "name": "잔잔",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 44,
    "to": 48,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "보통",
+   "lane": "voice"
   },
   {
    "from": 48,
    "to": 52,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "name": "잔잔",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 52,
    "to": 54,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "보통",
+   "lane": "voice"
   },
   {
    "from": 54,
    "to": 56,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "절정"
+   "name": "절정",
+   "lane": "page",
+   "first": true,
+   "mark": "되감기 → 재생",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 56,
    "to": 60,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "보통",
+   "lane": "voice"
   },
   {
    "from": 60,
    "to": 62,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "절정"
+   "name": "절정",
+   "lane": "page",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 62,
    "to": 66,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "보통",
+   "lane": "voice"
   },
   {
    "from": 66,
    "to": 74,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "차오름(Riser)"
+   "name": "차오름(Riser)",
+   "lane": "rewind",
+   "first": true,
+   "mark": "되감기 → 재생"
   },
   {
    "from": 74,
    "to": 94,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "절정"
+   "name": "절정",
+   "lane": "page",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 94,
    "to": 96,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "name": "잔잔",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   }
  ],
- "lastBeat": 380,
+ "sc": [
+  55,
+  74,
+  93
+ ],
  "special": {
   "sc": 3,
   "fader": {
@@ -345,10 +177,16 @@
   },
   "cue": true
  },
- "_special": "19화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)",
+ "lv": {
+  "easy": 3,
+  "normal": 7,
+  "hard": 11
+ },
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
+ "firstSound": 0.0136,
  "dens": {
-  "easy": 0.94,
-  "normal": 0.71,
-  "hard": 0.59
+  "easy": 0.874,
+  "normal": 1.045,
+  "hard": 0.878
  }
 }

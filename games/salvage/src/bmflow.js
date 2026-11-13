@@ -4,13 +4,13 @@
 //   광고만: 출격 충전(하루 2번) · 공사 즉시 완성(하루 5번) · 첫 이어하기 · 가방 보험 — 소장자는 광고 없이 바로(횟수 같음, 앱이 처리)
 //   안 파는 것: 무기 · 장비 · 개조(능력치) · 열쇠 · 시설 단계 그 자체 · 출격 횟수를 골드로 (출격 충전은 광고로만)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 버튼 전부 숨김, 게임은 그대로 (1분 이하 공사 '바로 끝내기 · 무료'만 남음)
-import { bm } from './oad_bm.js?v=0.99.41';
-import { S, save } from './save.js?v=0.99.41';
-import { COS, COS_KEYS, RT } from './look.js?v=0.99.41';
-import * as E from './econ.js?v=0.99.41';
-import { FACILITIES, DAILY_SORTIES, ITEMS } from './data.js?v=0.99.41';
-import { suspendAudio, resumeAudio, sfx } from './audio.js?v=0.99.41';
-import { INST_MIN, INST_FREE, GOLD_MAX, instGold, AD, CONT, contWorth } from './bm_rules.js?v=0.99.41';
+import { bm } from './oad_bm.js?v=0.99.42';
+import { S, save } from './save.js?v=0.99.42';
+import { COS, COS_KEYS, RT } from './look.js?v=0.99.42';
+import * as E from './econ.js?v=0.99.42';
+import { FACILITIES, DAILY_SORTIES, ITEMS } from './data.js?v=0.99.42';
+import { suspendAudio, resumeAudio, sfx } from './audio.js?v=0.99.42';
+import { INST_MIN, INST_FREE, GOLD_MAX, instGold, AD, CONT, contWorth } from './bm_rules.js?v=0.99.42';
 
 export { bm };
 let APP = null, hp = null;

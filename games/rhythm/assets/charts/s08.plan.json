@@ -1,450 +1,245 @@
 {
+ "v": 2,
+ "concept": "목소리 없는 노래 — 피아노 가락 높낮이 = 레인 높낮이, 노트 적고 긴 숨 · 킥이 들어오는 순간만 동시",
  "tempo": {
   "bpm": 134.9
  },
- "dens": {
-  "easy": 0.794,
-  "normal": 0.76,
-  "hard": 0.776
+ "lastBeat": 432,
+ "lane": "voice",
+ "voices": {
+  "lo": [
+   0,
+   1
+  ],
+  "mi": [
+   2,
+   3
+  ],
+  "hi": [
+   1,
+   2
+  ]
  },
- "mel": 0.45,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
- "sections": [
+ "parts": [
   {
    "from": 0,
    "to": 10,
    "lvl": 1,
-   "mel": 0.9,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
+   "name": "피아노 도입",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "longs": 4,
-    "longGap": 8
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     3,
-     3
-    ],
-    "follow": 0.3
-   },
-   "_": "피아노 도입"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 10,
    "to": 14,
    "lvl": 1,
-   "hard": {
-    "grid": 2
+   "name": "첫 킥",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "perBar": [
-     3,
-     5,
-     7
-    ]
-   },
-   "_": "첫 킥"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 14,
    "to": 22,
    "lvl": 1,
-   "mel": 0.9,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
+   "name": "피아노",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "longs": 4,
-    "longGap": 8
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     3,
-     3
-    ],
-    "follow": 0.3
-   },
-   "_": "피아노"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 22,
    "to": 24,
    "lvl": 1,
-   "hard": {
-    "grid": 2
+   "name": "다시 킥",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "perBar": [
-     3,
-     5,
-     7
-    ]
-   },
-   "_": "다시 킥"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 24,
    "to": 30,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ]
-   },
-   "_": "빌드"
+   "name": "빌드",
+   "lane": "voice"
   },
   {
    "from": 30,
    "to": 38,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ]
-   },
-   "_": "트랜스 1"
+   "name": "트랜스 1",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 38,
    "to": 46,
    "lvl": 3,
-   "mel": 0.9,
-   "normal": {
-    "chordCols": [
-     0
-    ],
-    "pick": [
-     [
-      "mel",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ],
-     [
-      "hi",
-      0.3
-     ]
-    ]
+   "name": "피아노 테마",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "피아노 테마"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 46,
    "to": 54,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ]
-   },
-   "_": "트랜스 2"
+   "name": "트랜스 2",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 54,
    "to": 62,
    "lvl": 3,
-   "mel": 0.9,
-   "normal": {
-    "chordCols": [
-     0
-    ],
-    "pick": [
-     [
-      "mel",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ],
-     [
-      "hi",
-      0.3
-     ]
-    ]
+   "name": "피아노 테마 2",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "피아노 테마 2"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 62,
    "to": 67,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
+   "name": "브레이크",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "브레이크"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 67,
    "to": 74,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ]
-   },
-   "_": "스네어 롤"
+   "name": "스네어 롤",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 74,
    "to": 77,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ]
-   },
-   "_": "다시"
+   "name": "다시",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 77,
    "to": 86,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ]
-   },
-   "_": "트랜스 3"
+   "name": "트랜스 3",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 86,
    "to": 98,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
+   "name": "마지막 테마",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "마지막 테마"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 98,
    "to": 100,
    "lvl": 2,
-   "_": "내려옴"
+   "name": "내려옴",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 100,
    "to": 108,
    "lvl": 1,
-   "mel": 0.9,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
+   "name": "피아노 끝",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "longs": 4,
-    "longGap": 8
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     3,
-     3
-    ],
-    "follow": 0.3
-   },
-   "_": "피아노 끝"
+   "hold": {
+    "rate": 1.5
+   }
   },
   {
    "from": 108,
    "to": 109,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
+   "name": "끝",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "_": "끝"
+   "hold": {
+    "rate": 1.5
+   }
   }
  ],
- "edit": {
-  "easy": {
-   "add": []
-  },
-  "normal": {
-   "add": []
-  },
-  "hard": {
-   "add": []
-  }
- },
- "lastBeat": 432,
+ "sc": [
+  39,
+  86,
+  97
+ ],
  "special": {
   "sc": 3,
   "fader": {
@@ -454,5 +249,16 @@
   },
   "cue": true
  },
- "_special": "6화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)"
+ "lv": {
+  "easy": 2,
+  "normal": 6,
+  "hard": 10
+ },
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
+ "firstSound": 0.11,
+ "dens": {
+  "easy": 0.65,
+  "normal": 0.679,
+  "hard": 0.696
+ }
 }

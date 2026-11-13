@@ -15,7 +15,7 @@ export function nextOpen(d = now()) { const n = new Date(d); n.setHours(7, 0, 0,
 
 /* v0.7.1 (대표 11-12): 새 유저 첫 판은 쉬움 — 기존 저장은 마지막으로 고른 난이도 그대로(저장에 diff 가 있음) */
 export function fresh() {
-  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'easy', days: {}, best: {}, book: {}, pre: {}, dm: {}, seen: {}, guest: null, vib: true, guard: true, cast: {}, plays: 0, calibrated: false };
+  return { v: 1, first: dayKey(), offset: 0, speed: 6, sfx: 0.55, music: 0.9, shake: true, hitsnd: true, el: true, lite: false, theme: 'base', diff: 'easy', days: {}, best: {}, book: {}, pre: {}, dm: {}, seen: {}, guest: null, vib: true, guard: true, cast: {}, plays: 0, calibrated: false, chartRev: {} };
 }
 export let S = fresh();
 export function load() {
@@ -59,7 +59,7 @@ export function castLog(ids, r) {
   if (!S.cast || typeof S.cast !== 'object') S.cast = {};
   for (const id of new Set(ids.filter(Boolean))) { const c = (S.cast[id] ||= { plays: 0, sc: 0, guards: 0 }); c.plays++; c.sc += (r.sc && r.sc[0]) || 0; c.guards += r.guard || 0; }
 }
-/* 방송 기록: 화 → { rank(가장 좋은 것), date } · 테두리 = 기본 · 은박(A↑) · 금박(S↑) */
+/* 방송 기록: 화 → { rank(가장 좋은 것), date } · 테두리 = 기본 · 은색(A↑) · 금색(S↑) */
 const RO = ['C', 'B', 'A', 'S', 'SS'];
 export function pageIn(no, rank) {
   const p = S.book[no], fresh = !p;

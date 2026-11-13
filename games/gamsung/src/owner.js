@@ -4,13 +4,13 @@
 //   일 10가지(data.js OWNER_JOBS) · 돌발 일 8가지(EVENTS) · 동료(은재 · 보람 · 태민 · 무진 · 도윤)는 같은 일을 대신 함 · 동료는 가끔 쉬고 사장님이 깨우면 응원 +30%
 //   Game.prototype 에 섞어 씀 (game.js 끝)
 import * as THREE from 'three';
-import { MENU, OWNER, OWNER_JOBS, EVENTS, EVENT_GAP, STAFF, BEAN_MAX, BRAND, APRONS, STORES, FURN } from './data.js?v=0.99.41';
-import { S, ST, save, today, now } from './state.js?v=0.99.41';
-import { person, tray, box, cyl, sph, FURN_MODEL } from './models.js?v=0.99.41';
-import { sfx } from './audio.js?v=0.99.41';
-import { FDX, floorOfX, SPOT, gi } from './layout.js?v=0.99.41';
-import { ownerAdd, track } from './oad.js?v=0.99.41';
-import { cx, cz, ci, cj, BAR_PICK, BAR_EXIT, LANE, LANE_X, BIN, DOOR, K, storeMult, fmt, isJeong } from './game.js?v=0.99.41';
+import { MENU, OWNER, OWNER_JOBS, EVENTS, EVENT_GAP, STAFF, BEAN_MAX, BRAND, APRONS, STORES, FURN } from './data.js?v=0.99.42';
+import { S, ST, save, today, now } from './state.js?v=0.99.42';
+import { person, tray, box, cyl, sph, FURN_MODEL } from './models.js?v=0.99.42';
+import { sfx } from './audio.js?v=0.99.42';
+import { FDX, floorOfX, SPOT, gi } from './layout.js?v=0.99.42';
+import { ownerAdd, track } from './oad.js?v=0.99.42';
+import { cx, cz, ci, cj, BAR_PICK, BAR_EXIT, LANE, LANE_X, BIN, DOOR, K, storeMult, fmt, isJeong } from './game.js?v=0.99.42';
 
 const V = THREE.Vector3, rnd = (a, b) => a + Math.random() * (b - a);
 const BAR_DOOR = { x: 640, z: -543 };   /* 바 안 오른쪽 끝 (나가는 곳 · game.js LANE) */

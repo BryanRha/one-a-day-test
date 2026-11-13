@@ -1,6 +1,6 @@
 // 시험용 자동 플레이 (?bot=1): 굽기 → 진열 → 계산 → 돈 줍기 → 열기 칸 · 크림치즈 · 커피 · 쓰레기
-import { IN } from './ui.js?v=0.99.41';
-import { S } from './state.js?v=0.99.41';
+import { IN } from './ui.js?v=0.99.42';
+import { S } from './state.js?v=0.99.42';
 export function startBot(app) {
   let goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
   const go = (x, z, settle) => { const g = app.game, p = g.pl.pos, c = g.st.counter;   /* settle: 바닥 칸 — 0.5.0 부터 칸에 멈춰 서야 붓기라, 가까워지면 천천히 다가가 멈춤 (배속에서 칸을 지나쳐 왔다 갔다 하지 않게) */
@@ -25,7 +25,7 @@ export function startBot(app) {
     else if (pl.stack.length) t = pl.kind === 'bagel' && g.st.cc && c.shelf.cream.length < 2 && g.st.cc.inStack.length < 4 ? [g.st.cc.x, g.st.cc.z + 135] : pl.kind === 'bagel' && g.st.drive && g.st.drive.lane.bagel.length < 4 && c.shelf.bagel.length > 6 ? [g.st.drive.Z.all.x, g.st.drive.Z.all.z] : [c.Z[pl.kind].x, c.Z[pl.kind].z];
     else if (pile && pile.v > 60 * (g.B.mult)) t = [pile.x, pile.z + 20];
     else if (pad && S.coins > 0) t = [pad.s.px ?? pad.s.x, pad.s.pz ?? pad.s.z, 1];
-    else { const tt = Object.values(g.st).find(o => o.type === 'table' && o.trash.length >= 3); const need = g.cust.find(x => x.state === 'queue' && x.qi === 0)?.order.find(o => o.got < o.n);
+    else { const tt = Object.values(g.st).find(o => o.type === 'table' && !o.zone && o.trash.length >= 3); const need = g.cust.find(x => x.state === 'queue' && x.qi === 0)?.order.find(o => o.got < o.n);
       if (tt && !g.staff.some(w => w.k === 'cleaner')) t = [tt.x, tt.z + (pl.pos.z < tt.z ? -125 : 125)];
       else if (need && c.shelf[need.k].length) t = g.staff.some(w => w.k === 'cashier') ? (pile ? [pile.x, pile.z + 20] : [ov.x, ov.z + 130]) : [c.Z.cash.x, c.Z.cash.z];
       else if (need && need.k === 'cream' && g.st.cc) t = g.st.cc.stack.length ? [g.st.cc.x, g.st.cc.z + 135] : [ov.x, ov.z + 130];

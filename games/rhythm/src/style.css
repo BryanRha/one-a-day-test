@@ -576,6 +576,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #play .guide .g-fader::before{content:'';position:absolute;left:4px;top:20px;width:16px;height:9px;border-radius:3px;background:#EFFFF8;box-shadow:0 0 8px rgba(120,240,200,.9)}
 #play .guide .g-fader::after{content:'';position:absolute;left:8px;top:2px;width:30px;height:18px;border-radius:3px;background:linear-gradient(60deg,rgba(120,240,200,.15),rgba(120,240,200,.7));transform:skewX(-35deg)}
 #play .guide .g-fader u{position:absolute;left:4px;top:20px;width:16px;height:9px;border-radius:3px;background:#fff;animation:gslide 1.4s ease-in-out infinite}
+#play .guide .g-fader.l{transform:scaleX(-1)}   /* 그 곡 첫 페이더가 왼쪽이면 그림도 왼쪽으로 */
 @keyframes gslide{0%{transform:none;opacity:1}70%{transform:translate(22px,-16px);opacity:1}100%{transform:translate(22px,-16px);opacity:0}}
 #play .guide .g-cue{background:#FF5F73;box-shadow:0 0 12px rgba(255,95,115,.7)}
 #play .guide .g-cue s{position:absolute;inset:0;text-decoration:none;font:800 18px/30px 'Rajdhani';color:#fff;text-align:center;opacity:0;animation:gcount 2.4s linear infinite}

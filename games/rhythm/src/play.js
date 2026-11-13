@@ -1,11 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.41';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.41';
-import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.41';
-import { makeFx } from './fx.js?v=0.99.41';
-import { Live } from './live.js?v=0.99.41';
+import { A } from './audio.js?v=0.99.42';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.42';
+import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.42';
+import { makeFx } from './fx.js?v=0.99.42';
+import { Live } from './live.js?v=0.99.42';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -26,7 +26,7 @@ const SC_MSG = ['응원해요!', 'PD님 커피값', '오늘 방송 최고', '끝
 /* 새 노트 안내 한 줄씩 (ONAIR_PLAN 10장 · 첫 등장 화) */
 const GUIDE_ROW = {
   sc: '<div class="row"><i class="g-sc">₩</i><p><b>슈퍼챗</b>금빛 노트도 톡 · 후원이 들어와요</p></div>',
-  fader: '<div class="row"><i class="g-fader"><u></u></i><p><b>페이더</b>누른 채 화살표 쪽으로 밀어요 · 곧 연습 한 번</p></div>',
+  fader: '<div class="row"><i class="g-fader"><u></u></i><p><b>페이더</b>누른 채 화살표 쪽 끝까지 밀어요 · 곧 연습 한 번</p></div>',
   cue: '<div class="row"><i class="g-cue"><s>3</s><s>2</s><s>1</s></i><p><b>큐</b>판정선 위 3 · 2 · 1 다음 박에 톡</p></div>',
 };
 /* 판정 글자 애니메이션 (등장 · 튐 · 머묾 · 사라짐) — Web Animations: 강제 레이아웃 없음 */
@@ -55,7 +55,8 @@ export const Play = {
     this.lead = drill ? drill.lead : prac ? GUIDE_AT + POST + fall + PRACTICE_LEN + PRACTICE_GAP - READY_AT : guided ? GUIDE_AT + POST + 0.3 - READY_AT : LEAD;
     this.pHold = -this.lead + GUIDE_AT; this.guideEnd = this.pHold;   /* 확인 전엔 곡 위치가 여기서 멈춤 */
     this.waiting = guided; this.frozen = false;
-    const notes = parseChart(opt.chart, opt.diff, opt.entry.shift, prac ? { fader: { at: READY_AT - PRACTICE_GAP - PRACTICE_LEN, len: PRACTICE_LEN, calm: 15 } } : drill ? { drill: drill.notes } : null);
+    const f0 = prac && opt.chart.diffs[opt.diff].notes.find(n => n[3] === 'fader'), fdir = f0 && f0[4] < f0[1] ? -1 : 1; this.fdir = fdir;   /* 연습 페이더는 그 곡 첫 페이더와 같은 쪽으로 (v0.7.4 · 왼쪽 · 오른쪽 모두 나옴) */
+    const notes = parseChart(opt.chart, opt.diff, opt.entry.shift, prac ? { fader: { at: READY_AT - PRACTICE_GAP - PRACTICE_LEN, len: PRACTICE_LEN, calm: 15, l: fdir > 0 ? 1 : 2, to: fdir > 0 ? 2 : 1 } } : drill ? { drill: drill.notes } : null);
     this.drill = drill ? { notes: notes.filter(n => n.drill), say: '', done: false, end: drill.end } : null;
     this.prac = prac ? notes.find(n => n.practice) : null; this.pracState = '';
     this.sess = new Session(notes); this.notes = notes;
@@ -82,7 +83,7 @@ export const Play = {
     $('#p_title').textContent = opt.song.title; $('#p_sub').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
     $('#p_len').textContent = fmt(opt.entry.dur); $('#p_t').textContent = '0:00'; $('#p_bar').style.width = '0';
     $('#p_score').textContent = '0'; $('#p_acc').textContent = '100.00%'; $('#p_fc').className = 'fcm'; $('#p_shake').classList.remove('fcing');
-    $('#p_chap').innerHTML = `<b>${opt.chapter}</b> · 끝까지 송출하면 개인 채널이 열려요`; $('#p_chap').style.opacity = 1;
+    $('#p_chap').innerHTML = `<b>${opt.chapter}</b> · 끝까지 방송하면 개인 채널이 열려요`; $('#p_chap').style.opacity = 1;
     const cb = $('#p_combo'); cb.classList.remove('on', 'gold'); cb.querySelector('b').textContent = '0'; cb.style.transform = '';
     $('#p_judge').className = 'judge'; $('#p_judge b').textContent = ''; $('#p_judge small').textContent = ''; $('#p_ready').className = 'ready'; $('#p_mile').className = 'mile'; $('#p_cut').classList.remove('on'); $('#p_banner').className = 'banner';
     const it = $('#p_intro'); it.querySelector('em').textContent = `${opt.diff === 'easy' ? 'EASY' : opt.diff === 'hard' ? 'HARD' : 'NORMAL'} · LV.${opt.chart.diffs[opt.diff].lv}`;
@@ -284,7 +285,7 @@ export const Play = {
   buildGuide(keys) {
     const g = $('#p_guide'); this.gPages = []; this.gPage = 0; if (!keys.length) { g.innerHTML = ''; return; }
     if (keys.includes('lane')) this.gPages.push(`<div class="card"><em>FIRST ON AIR</em><b>노트가 판정선에 닿는 순간,<br>그 레인을 톡</b><div class="tips"><span><i class="t-tap"></i>톡</span><span><i class="t-long"></i>끝까지 누르기</span><span><i class="t-chord"></i>둘 다 함께</span></div><small>틀려도 괜찮아요 · 판정은 넉넉해요 · PC는 D F J K</small>@OK</div><div class="pads"><i></i><i></i><i></i><i></i></div>`);
-    for (const k of keys.filter(x => x !== 'lane')) this.gPages.push(`<div class="card"><em>NEW · 오늘 처음 나오는 노트</em><div class="new only">${GUIDE_ROW[k]}</div><small>판정은 다른 노트와 똑같이 넉넉해요</small>@OK</div>`);
+    for (const k of keys.filter(x => x !== 'lane')) this.gPages.push(`<div class="card"><em>NEW · 오늘 처음 나오는 노트</em><div class="new only">${k === 'fader' && this.fdir < 0 ? GUIDE_ROW[k].replace('g-fader', 'g-fader l') : GUIDE_ROW[k]}</div><small>판정은 다른 노트와 똑같이 넉넉해요</small>@OK</div>`);
     this.showPage();
   },
   showPage() {

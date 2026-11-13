@@ -1,11 +1,11 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.41';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.41';
-import { S, save, couponReady, claimCoupon, MISSIONS, missionReady, claimMission, mult, today, KEY, resetAll } from './state.js?v=0.99.41';
-import { sfx, setAudio } from './audio.js?v=0.99.41';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.41';
-import { bm } from './oad_bm.js?v=0.99.41';
+import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.42';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.42';
+import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.42';
+import { sfx, setAudio } from './audio.js?v=0.99.42';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.42';
+import { bm } from './oad_bm.js?v=0.99.42';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -115,6 +115,8 @@ export class UI {
     md.querySelectorAll('[data-mt]').forEach(b => b.onclick = () => { const k = b.dataset.mt; if (k === 'ms') this.missions(); else if (k === 'reg') this.regulars(); else this.menuBook(); }); }
   regNew() { return Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)); }
   /* 설비 단계가 오른 순간의 이름표 (기준판 재정비 ②) — 「★★ 프로 오븐」 1.8초 */
+  /* 바깥 구역 열림 이름표 (0.7.0) — 단계 이름표와 같은 모양 */
+  banner(icon, title, sub) { document.getElementById('toast')?.classList.remove('on'); const d = document.createElement('div'); d.className = 'tierban'; d.innerHTML = `<i>${icon}</i><b>${title}</b><span>${sub}</span>`; document.getElementById('app').append(d); requestAnimationFrame(() => d.classList.add('on')); setTimeout(() => { d.classList.remove('on'); setTimeout(() => d.remove(), 400); }, 2200); }
   tierBanner(name, t) { document.getElementById('toast')?.classList.remove('on'); clearTimeout(this._tt); const d = document.createElement('div'); d.className = 'tierban'; d.innerHTML = `<i>${'★'.repeat(t)}</i><b>${TIER_NAME[t]} ${name}</b><span>업그레이드로 모습이 바뀌었어요</span>`; document.getElementById('app').append(d);
     requestAnimationFrame(() => d.classList.add('on')); setTimeout(() => { d.classList.remove('on'); setTimeout(() => d.remove(), 400); }, 1800); }
   toast(t) { let el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => el.classList.remove('on'), 1800); }
@@ -199,7 +201,7 @@ export class UI {
     const gb = $('#shGift'); if (gb) gb.onclick = () => { if (!this.giftReady()) return; const v = this.giftCoins(); S.gift = today(); S.coins += v; S.earned += v; save(true); sfx('reward'); this.toast(`오늘의 선물 +${fmt(v)}`); this.progress(); this.shop(); };
     const ab = $('#shAd'); if (ab) ab.onclick = async () => { if (ab.classList.contains('off')) return; const ok = await this.ad('coins'); if (ok) { this.progress(); } }; }
   missions() {
-    const html = MISSIONS.map(m => { const v = Math.min(m.goal, S.miss[m.id] || 0), d = S.missDone[m.id], ok = v >= m.goal; return `<div class="ms ${d ? 'done' : ''}"><div><b>${m.name}</b><div class="pb"><s style="width:${v / m.goal * 100}%"></s></div><em>${fmt(v)} / ${fmt(m.goal)}</em></div><button class="btn sm ${ok && !d ? '' : 'off'}" data-m="${m.id}">${d ? '완료' : `<i class="c"></i>${fmt(m.coins * mult())}`}</button></div>`; }).join('');
+    const html = missionsNow().map(m => { const v = Math.min(m.goal, S.miss[m.id] || 0), d = S.missDone[m.id], ok = v >= m.goal; return `<div class="ms ${d ? 'done' : ''}"><div><b>${m.name}</b><div class="pb"><s style="width:${v / m.goal * 100}%"></s></div><em>${fmt(v)} / ${fmt(m.goal)}</em></div><button class="btn sm ${ok && !d ? '' : 'off'}" data-m="${m.id}">${d ? '완료' : `<i class="c"></i>${fmt(m.coins * mult())}`}</button></div>`; }).join('');
     const m = this.modal(`<h3>📋 오늘의 미션</h3>${this.msTabs('ms')}${html}<button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close(); this.wireTabs(m);
     m.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const v = claimMission(b.dataset.m); if (v) { sfx('reward'); this.toast(`+${fmt(v)}`); this.progress(); this.missions(); } });
   }
@@ -219,7 +221,7 @@ export class UI {
       <button class="btn sm ${max || S.coins < c ? 'off' : ''}" data-s="${w.k}">${max ? 'MAX' : `<i class="c"></i>${fmt(c)}`}</button></div>`; }).join('') || '<p class="sm">바닥의 「직원 뽑기」 칸을 열면 직원이 생겨요</p>';
     const md = this.modal(`<h3>⬆ ${BRANCHES[S.bi].name} 업그레이드</h3>${this.upTabs(tab === 'shop' ? 'fac' : 'staff')}<div class="uplist">${tab === 'shop' ? html : sh}</div><p class="sm">설비를 더 열면 업그레이드도 늘어나요</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close();
     md.querySelectorAll('[data-u]').forEach(b => b.onclick = () => { const u = UPGRADES.find(x => x.id === b.dataset.u), lv = this.lv(u.id), c = upCost(u, lv, m); if (lv >= UP_MAX || S.coins < c) return; S.coins -= c;
-      const br = (S.branch[S.bi] ||= { unl: [], staff: [], paid: {} }); (br.lv ||= {})[u.id] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${u.st ? stName(u.st) + ' · ' : ''}${u.name} Lv.${lv + 1}!`); const up = u.st ? this.app.game.restyle(u.st) : false; this.progress(); if (!up) this.upgrades(); });   /* 단계가 오르면 창을 다시 열지 않음 (새 모습 연출을 보여 줌) */
+      const br = (S.branch[S.bi] ||= { unl: [], staff: [], paid: {} }); (br.lv ||= {})[u.id] = lv + 1; mission('up2'); save(); sfx('unlock', { vol: 0.6 }); this.toast(`${u.st ? stName(u.st) + ' · ' : ''}${u.name} Lv.${lv + 1}!`); const up = u.st ? this.app.game.restyle(u.st) : false; this.progress(); if (!up) this.upgrades(); });   /* 단계가 오르면 창을 다시 열지 않음 (새 모습 연출을 보여 줌) */
     this.wireTabs(md);
     md.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s, lv = this.slv(k), c = this.sCost(k); if (lv >= STAFF_UP.max || S.coins < c) return; S.coins -= c; const br = S.branch[S.bi]; (br.slv ||= {})[k] = lv + 1; save(); sfx('unlock', { vol: 0.6 }); this.toast(`${STAFF[k].name} Lv.${lv + 1}!`); this.progress(); this.upgrades(); }); }
   // ── 꾸미기: 지점마다 정해진 자리에 소품 · 「베이글 향」 = 손님 더 자주 + 팁
@@ -228,7 +230,7 @@ export class UI {
   decoShop() {
     const own = S.deco[S.bi] || [], g = this.app.game, sc = g.scent(), tab = this._dtab || 'deco';
     /* 소품: 안 산 것 = 누르면 놓일 자리를 반투명으로 미리 보고(#13) 그 자리에서 사기 · 산 것 = 옮기기(#14) · 꽃병은 테이블마다라 바로 사기 */
-    const list = DECO.filter(d => !d.gift || own.includes(d.id)).map(d => { const has = own.includes(d.id), c = this.decoCost(d), mv = !!d.pos;
+    const list = DECO.filter(d => (!d.gift || own.includes(d.id)) && !(d.id === 'terrace' && OUT_ZONE[S.bi]?.on)).map(d => {   /* 0.7.0: 바깥 구역이 있는 지점은 테라스가 구역 칸 */ const has = own.includes(d.id), c = this.decoCost(d), mv = !!d.pos;
       const lock = !has && !this.app.game.decoReady(d.id); const btn = lock ? '<button class="btn sm off">청소 직원 뒤</button>' : has ? (mv ? `<button class="btn sm ghost2" data-mv="${d.id}">↔ 옮기기</button>` : '<button class="btn sm off">놓음</button>') : mv ? `<button class="btn sm ${S.coins < c ? 'look' : ''}" data-pv="${d.id}">${S.coins < c ? '👁 미리 보기' : `<i class="c"></i>${fmt(c)}`}</button>` : `<button class="btn sm ${S.coins < c ? 'off' : ''}" data-d="${d.id}"><i class="c"></i>${fmt(c)}</button>`;
       return `<div class="upr ${has ? 'own' : ''}"><i>${d.icon}</i><div><b>${d.name} <em>향 +${d.score}</em></b><span>${d.desc}</span></div>${btn}</div>`; }).join('');
     /* 직원 (테스터 #7): 유니폼 · 모든 지점 공통 · 한 번 사면 언제든 바꿔 입힘 */
@@ -279,7 +281,7 @@ export class UI {
     const m = this.modal(`<h3>📖 메뉴 숙련</h3>${this.msTabs('menu')}<div class="uplist">${html}</div><p class="sm">많이 팔수록 별이 오르고 값도 올라요 · 지점이 바뀌면 그 지점 메뉴</p><button class="btn ghost" id="mOk">닫기</button>`); $('#mOk').onclick = () => this.close(); this.wireTabs(m);
   }
   // ── 다 연 지점: 직원들이 계속 장사 → 지점 지도에서 받기
-  finished(i) { const b = BRANCHES[i], br = S.branch[i]; return !!br && i !== S.bi && b.slots.filter(s => !s.free && s.id !== 'next').every(s => br.unl.includes(s.id)); }
+  finished(i) { const b = BRANCHES[i], br = S.branch[i]; return !!br && i !== S.bi && b.slots.filter(s => !s.free && s.id !== 'next' && s.type !== 'zone').every(s => br.unl.includes(s.id)); }
   idleOf(i) { if (!this.finished(i)) return 0; const br = S.branch[i], t = Math.min(4 * 3600, (Date.now() - (br.idleAt || Date.now())) / 1000); return Math.floor(t * FINISHED_RATE * BRANCHES[i].mult * (1 + (br.lv?.price || 0) / 10)); }
   idleTotal() { let t = 0; for (let i = 0; i < BRANCHES.length; i++) t += this.idleOf(i); return t; }
   map() {

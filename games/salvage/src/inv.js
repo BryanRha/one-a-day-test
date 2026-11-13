@@ -1,5 +1,5 @@
 // 가방 칸 계산 (화면과 분리 — 봇 · 시험에서도 씀)
-import { ITEMS } from './data.js?v=0.99.41';
+import { ITEMS } from './data.js?v=0.99.42';
 
 let uid = 1;
 export const mkItem = (key, rot = false) => ({ id: uid++, key, rot });

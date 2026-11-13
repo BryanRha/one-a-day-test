@@ -1,743 +1,231 @@
 {
+ "v": 2,
+ "concept": "아멘 브레이크 — 킥 왼쪽 · 스네어 오른쪽 · 하이햇 가운데로 드럼이 손에 나뉘고, 글리치 · 드롭은 가운데 트릴",
  "tempo": {
   "bpm": 175.5
  },
- "dens": {
-  "easy": 0.761,
-  "normal": 0.748,
-  "hard": 0.948
+ "lastBeat": 608,
+ "lane": "voice",
+ "voices": {
+  "lo": [
+   0
+  ],
+  "mi": [
+   3
+  ],
+  "hi": [
+   1,
+   2
+  ]
  },
- "mel": 0.2,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
- "sections": [
+ "parts": [
   {
    "from": 0,
    "to": 6,
    "lvl": 1,
-   "mel": 0.9,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 4,
-    "longGap": 8
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     3,
-     3
-    ],
-    "follow": 0.3
-   },
-   "_": "잡음 도입"
+   "name": "잡음 도입",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 6,
    "to": 8,
    "lvl": 1,
-   "hard": {
-    "grid": 2
-   },
-   "normal": {
-    "perBar": [
-     3,
-     5,
-     7
-    ]
-   },
-   "_": "브레이크 들어옴"
+   "name": "브레이크 들어옴",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 8,
    "to": 15,
    "lvl": 1,
-   "hard": {
-    "grid": 2
-   },
-   "normal": {
-    "perBar": [
-     3,
-     5,
-     7
-    ]
-   },
-   "_": "아멘 브레이크"
+   "name": "아멘 브레이크",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 15,
    "to": 23,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "베이스"
+   "name": "베이스",
+   "lane": "voice"
   },
   {
    "from": 23,
    "to": 31,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "레이브 찌르기"
+   "name": "레이브 찌르기",
+   "lane": "voice"
   },
   {
    "from": 31,
    "to": 44,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "정글 1"
+   "name": "정글 1",
+   "lane": "voice"
   },
   {
    "from": 44,
    "to": 52,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "정글 1 하이햇"
+   "name": "정글 1 하이햇",
+   "lane": "voice"
   },
   {
    "from": 52,
    "to": 60,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "정글 2"
+   "name": "정글 2",
+   "lane": "voice"
   },
   {
    "from": 60,
    "to": 62,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "숨"
+   "name": "숨",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 62,
    "to": 72,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "정글 3"
+   "name": "정글 3",
+   "lane": "voice"
   },
   {
    "from": 72,
    "to": 80,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "정글 3 킥"
+   "name": "정글 3 킥",
+   "lane": "voice"
   },
   {
    "from": 80,
    "to": 88,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "레이브"
+   "name": "레이브",
+   "lane": "voice"
   },
   {
    "from": 88,
    "to": 96,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "글리치"
+   "name": "글리치",
+   "lane": "voice"
   },
   {
    "from": 96,
    "to": 104,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "빌드 전"
+   "name": "빌드 전",
+   "lane": "trill",
+   "first": true,
+   "mark": "글리치: 가운데 두 칸 트릴"
   },
   {
    "from": 104,
    "to": 110,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "드롭 1"
+   "name": "드롭 1",
+   "lane": "trill"
   },
   {
    "from": 110,
    "to": 112,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "숨"
+   "name": "숨",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 112,
    "to": 116,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "드롭 2"
+   "name": "드롭 2",
+   "lane": "trill"
   },
   {
    "from": 116,
    "to": 119,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "사이"
+   "name": "사이",
+   "lane": "voice"
   },
   {
    "from": 119,
    "to": 132,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "드롭 3"
+   "name": "드롭 3",
+   "lane": "trill"
   },
   {
    "from": 132,
    "to": 136,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "브레이크"
+   "name": "브레이크",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 136,
    "to": 144,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "마지막 드롭"
+   "name": "마지막 드롭",
+   "lane": "trill"
   },
   {
    "from": 144,
    "to": 148,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "내려옴"
+   "name": "내려옴",
+   "lane": "voice"
   },
   {
    "from": 148,
    "to": 149,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "타격",
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   }
+   "name": "타격",
+   "lane": "trill"
   },
   {
    "from": 149,
    "to": 152,
    "lvl": 2,
-   "_": "마무리",
-   "hard": {
-    "chord": 0.25
-   }
+   "name": "마무리",
+   "lane": "voice"
   },
   {
    "from": 152,
    "to": 153,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "끝",
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   }
+   "name": "끝",
+   "lane": "trill"
   }
  ],
- "edit": {
-  "easy": {
-   "add": []
-  },
-  "normal": {
-   "add": []
-  },
-  "hard": {
-   "add": []
-  }
- },
- "lastBeat": 608,
- "cap": {
-  "hard": {
-   "grid": 2,
-   "minGap": 2
-  }
- },
+ "sc": [
+  76,
+  105,
+  131
+ ],
  "special": {
   "sc": 3,
   "fader": {
@@ -747,5 +235,28 @@
   },
   "cue": true
  },
- "_special": "9화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)"
+ "lv": {
+  "easy": 3,
+  "normal": 8,
+  "hard": 12
+ },
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
+ "cap": {
+  "hard": {
+   "grid": 2,
+   "minGap": 2
+  }
+ },
+ "firstSound": 0.0929,
+ "dens": {
+  "easy": 0.73,
+  "normal": 0.88,
+  "hard": 0.791
+ },
+ "accent": {
+  "hard": 0.3
+ },
+ "chordMax": {
+  "hard": 4
+ }
 }

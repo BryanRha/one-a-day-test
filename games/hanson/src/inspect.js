@@ -1,9 +1,9 @@
 // ② 물건 감정 — 돋보기를 끌어 반짝이는 곳을 찾고, 눌러 짚으면 단서 카드가 날아와 꽂힘 · 장부와 대조하면 함정이 '정상'으로 뒤집힘
-import { D, cur, itemImg } from './state.js?v=0.99.41';
-import { S, save } from './save.js?v=0.99.41';
-import * as A from './audio.js?v=0.99.41';
-import { $, $$, esc, I, sparks, praise, buzz, toast, modal, closeModal, sp, center } from './ui.js?v=0.99.41';
-import { won, toolOn, LEVELS } from './engine.js?v=0.99.41';
+import { D, cur, itemImg } from './state.js?v=0.99.42';
+import { S, save } from './save.js?v=0.99.42';
+import * as A from './audio.js?v=0.99.42';
+import { $, $$, esc, I, sparks, praise, buzz, toast, modal, closeModal, sp, center } from './ui.js?v=0.99.42';
+import { won, toolOn, LEVELS } from './engine.js?v=0.99.42';
 
 const KN = { auth: ['진위', ''], cond: ['상태', 'y'], origin: ['출처', ''], fact: ['사실', 'n'], plus: ['가치', 'g'], trap: ['확인 필요', 'n'] };
 const PRAISE = ['눈이 좋아요!', '찾았어요!', '예리해요!', '바로 그거예요!', '좋은 눈썰미예요!'];

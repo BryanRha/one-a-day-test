@@ -1,6 +1,6 @@
 // 모드 안내 한 장 (QA 5): 무엇 · 보상 · 팁 — 처음 들어갈 때 한 번 (Play) · 설정 › 도움말에서 다시 보기 (Home)
-import { T, C, btn, popup } from './pui.js?v=0.99.41';
-import { GUIDE, markGuide } from './meta.js?v=0.99.41';
+import { T, C, btn, popup } from './pui.js?v=0.99.42';
+import { GUIDE, markGuide } from './meta.js?v=0.99.42';
 
 // o.extra: 덧붙일 한 줄(예: 메인 원정 아이템 안내) · o.cta: 버튼 글자 · o.onClose: 닫힌 뒤
 export function guidePop(scene, mode, o = {}) {

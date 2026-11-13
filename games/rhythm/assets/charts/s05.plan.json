@@ -1,597 +1,207 @@
 {
+ "v": 2,
+ "concept": "1등 말고 너 — 후렴 정박은 늘 같은 칸('너')으로 돌아오고, 엇박에 반대편 바깥으로 튀었다 돌아옴",
  "tempo": {
   "bpm": 177.1
  },
- "dens": {
-  "easy": 0.755,
-  "normal": 0.883,
-  "hard": 1.211
+ "lastBeat": 520,
+ "lane": "voice",
+ "voices": {
+  "lo": [
+   1,
+   2
+  ],
+  "mi": [
+   3,
+   0
+  ],
+  "hi": [
+   2,
+   1
+  ]
  },
- "mel": 0.3,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
- "sections": [
+ "parts": [
   {
    "from": 0,
    "to": 4,
    "lvl": 1,
-   "mel": 0.9,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 4,
-    "longGap": 8
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     3,
-     3
-    ],
-    "follow": 0.3
-   },
-   "_": "도입"
+   "name": "도입",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 4,
    "to": 8,
    "lvl": 1,
-   "hard": {
-    "grid": 2
-   },
-   "normal": {
-    "perBar": [
-     3,
-     5,
-     7
-    ]
-   },
-   "_": "킥 시작"
+   "name": "킥 시작",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 8,
    "to": 18,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "faster! faster!"
+   "name": "faster! faster!",
+   "lane": "voice"
   },
   {
    "from": 18,
    "to": 28,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "피아노 찌르기"
+   "name": "피아노 찌르기",
+   "lane": "voice"
   },
   {
    "from": 28,
    "to": 30,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "짧은 숨"
+   "name": "짧은 숨",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 30,
    "to": 38,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "드롭 준비"
+   "name": "드롭 준비",
+   "lane": "voice"
   },
   {
    "from": 38,
    "to": 46,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "빌드"
+   "name": "빌드",
+   "lane": "zig",
+   "first": true,
+   "mark": "너: 정박은 늘 같은 칸으로 돌아옴"
   },
   {
    "from": 46,
    "to": 54,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "드롭 1"
+   "name": "드롭 1",
+   "lane": "home",
+   "first": true,
+   "mark": "너: 정박은 늘 같은 칸으로 돌아옴"
   },
   {
    "from": 54,
    "to": 60,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "드롭 1 후반"
+   "name": "드롭 1 후반",
+   "lane": "home"
   },
   {
    "from": 60,
    "to": 62,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "숨"
+   "name": "숨",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 62,
    "to": 68,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "피아노"
+   "name": "피아노",
+   "lane": "voice"
   },
   {
    "from": 68,
    "to": 72,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "브레이크"
+   "name": "브레이크",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 72,
    "to": 78,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "드롭 2"
+   "name": "드롭 2",
+   "lane": "home"
   },
   {
    "from": 78,
    "to": 88,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "그루브"
+   "name": "그루브",
+   "lane": "voice"
   },
   {
    "from": 88,
    "to": 92,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ],
-    "chord": 0.25
-   },
-   "_": "빌드 전"
+   "name": "빌드 전",
+   "lane": "zig"
   },
   {
    "from": 92,
    "to": 98,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "빌드"
+   "name": "빌드",
+   "lane": "zig"
   },
   {
    "from": 98,
    "to": 106,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "두 배 느낌 드롭"
+   "name": "두 배 느낌 드롭",
+   "lane": "home"
   },
   {
    "from": 106,
    "to": 112,
    "lvl": 1,
-   "mel": 0.9,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 4,
-    "longGap": 8
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     3,
-     3
-    ],
-    "follow": 0.3
-   },
-   "_": "멈춤"
+   "name": "멈춤",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
   },
   {
    "from": 112,
    "to": 118,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "마지막 빌드"
+   "name": "마지막 빌드",
+   "lane": "zig"
   },
   {
    "from": 118,
    "to": 130,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "마지막 드롭"
+   "name": "마지막 드롭",
+   "lane": "home"
   },
   {
    "from": 130,
    "to": 131,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "끝",
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   }
+   "name": "끝",
+   "lane": "home"
   }
  ],
- "edit": {
-  "easy": {
-   "add": []
-  },
-  "normal": {
-   "add": []
-  },
-  "hard": {
-   "add": []
-  }
- },
- "lastBeat": 520,
- "cap": {
-  "hard": {
-   "grid": 2,
-   "minGap": 2
-  }
- },
+ "sc": [
+  47,
+  118,
+  129
+ ],
  "special": {
   "sc": 3,
   "fader": {
@@ -600,5 +210,28 @@
    "hard": 7
   }
  },
- "_special": "5화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)"
+ "lv": {
+  "easy": 3,
+  "normal": 8,
+  "hard": 12
+ },
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
+ "cap": {
+  "hard": {
+   "grid": 2,
+   "minGap": 2
+  }
+ },
+ "firstSound": 0,
+ "dens": {
+  "easy": 0.709,
+  "normal": 0.924,
+  "hard": 0.774
+ },
+ "accent": {
+  "hard": 0.3
+ },
+ "chordMax": {
+  "hard": 4
+ }
 }
