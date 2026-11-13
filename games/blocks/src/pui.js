@@ -1,9 +1,9 @@
 // 프리미엄 UI 키트: 깔끔한 글자 · 유리 패널 · 그라데이션 버튼 · 선 아이콘 (모두 코드로 그림 — 선명하고 가벼움)
 //   2026-11-09 QA 시트 #1: 룬 다이스(남색 + 금빛)와 같은 색이라 구분이 안 됨 → 블록 블리스만의 '노을 하늘' 색 —
 //   자두빛 유리 패널 · 복숭아→산호 주 버튼 · 하늘빛 보조 버튼 · 민트 시작 버튼 (보석 블록이 가장 돋보이게 바탕은 차분하게)
-import { W, H, FONT } from './config.js?v=0.99.39';
-import { audio } from './audio.js?v=0.99.39';
-import { pushBack } from './oad.js?v=0.99.39';
+import { W, H, FONT } from './config.js?v=0.99.40';
+import { audio } from './audio.js?v=0.99.40';
+import { pushBack } from './oad.js?v=0.99.40';
 
 export const C = {
   ink: '#1A0F33', text: '#FFF8FC', sub: '#D6C4EC', dim: '#9C88BC', gold: '#FFD36A', cyan: '#7FE7FF', pink: '#FF8FBF', green: '#6FF0B0', coral: '#FF9A7A',

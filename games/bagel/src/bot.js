@@ -1,6 +1,6 @@
 // 시험용 자동 플레이 (?bot=1): 굽기 → 진열 → 계산 → 돈 줍기 → 열기 칸 · 크림치즈 · 커피 · 쓰레기
-import { IN } from './ui.js?v=0.99.39';
-import { S } from './state.js?v=0.99.39';
+import { IN } from './ui.js?v=0.99.40';
+import { S } from './state.js?v=0.99.40';
 export function startBot(app) {
   let goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
   const go = (x, z, settle) => { const g = app.game, p = g.pl.pos, c = g.st.counter;   /* settle: 바닥 칸 — 0.5.0 부터 칸에 멈춰 서야 붓기라, 가까워지면 천천히 다가가 멈춤 (배속에서 칸을 지나쳐 왔다 갔다 하지 않게) */

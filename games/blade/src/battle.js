@@ -1,17 +1,17 @@
 // 전투: 주인공(조작·자동) · 몬스터 AI · 타격 판정 · 웨이브 · 보스 · 보상 줍기 · 카메라
 import * as THREE from 'three';
-import { E, shake, hitstop, slowmo, pulse, setVignette } from './engine.js?v=0.99.39';
-import { RIM } from './assets.js?v=0.99.39';
-import { load } from './assets.js?v=0.99.39';
-import { loadProp } from './props.js?v=0.99.39';
-import { Actor } from './actor.js?v=0.99.39';
-import { FX, initFX, clearFX, updateFX, burst, slashMark, dust, ring, flashLight, decal, Trail } from './fx.js?v=0.99.39';
-import { buildWorld, ambient, HALF } from './world.js?v=0.99.39';
-import { COMBO, SKILLS, SKILL_SLOTS, EVADE, MOBS, stageScale } from './data.js?v=0.99.39';
-import { IN, keyAxis, resetInput } from './input.js?v=0.99.39';
-import { buildHud, hideHud, hudPlayer, hudInfo, hudBoss, hudCombo, hudMsg, hudGo, hudAuto, dmgNum, updateNums } from './hud.js?v=0.99.39';
-import { sfx, music } from './audio.js?v=0.99.39';
-import { applySkin } from './bmx.js?v=0.99.39';
+import { E, shake, hitstop, slowmo, pulse, setVignette } from './engine.js?v=0.99.40';
+import { RIM } from './assets.js?v=0.99.40';
+import { load } from './assets.js?v=0.99.40';
+import { loadProp } from './props.js?v=0.99.40';
+import { Actor } from './actor.js?v=0.99.40';
+import { FX, initFX, clearFX, updateFX, burst, slashMark, dust, ring, flashLight, decal, Trail } from './fx.js?v=0.99.40';
+import { buildWorld, ambient, HALF } from './world.js?v=0.99.40';
+import { COMBO, SKILLS, SKILL_SLOTS, EVADE, MOBS, stageScale } from './data.js?v=0.99.40';
+import { IN, keyAxis, resetInput } from './input.js?v=0.99.40';
+import { buildHud, hideHud, hudPlayer, hudInfo, hudBoss, hudCombo, hudMsg, hudGo, hudAuto, dmgNum, updateNums } from './hud.js?v=0.99.40';
+import { sfx, music } from './audio.js?v=0.99.40';
+import { applySkin } from './bmx.js?v=0.99.40';
 
 /* 달리기: 발 속도(317/초) × 재생 1.5배 = 이동 480 → 발이 미끄러지지 않음 */
 const RUN = 480, RUN_ANIM = RUN / 317;

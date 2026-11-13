@@ -2,19 +2,19 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.39';
-import { Play } from './play.js?v=0.99.39';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.39';
-import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.39';
-import * as CH from './channel.js?v=0.99.39';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.39';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.39';
-import { bm } from './oad_bm.js?v=0.99.39';
-import { THEMES } from './themes.js?v=0.99.39';
+import { A } from './audio.js?v=0.99.40';
+import { Play } from './play.js?v=0.99.40';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.40';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.40';
+import * as CH from './channel.js?v=0.99.40';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.40';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.40';
+import { bm } from './oad_bm.js?v=0.99.40';
+import { THEMES } from './themes.js?v=0.99.40';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.7.1';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.7.2';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -168,7 +168,7 @@ function castDot() { const c = CH.ensure(S).casts; return ROSTER.some(r => joine
 const shown = id => CH.shownStage(S, id, FACE[id]);
 const midOn = id => !!(FACE[id] && FACE[id].ready && (CH.ensure(S).casts[id] || {}).subs >= CH.MID34);
 const faceOpen = id => shown(id) >= 4;
-const awkIn = id => !!(AWK[id] && DAYS.some(d => d.no === AWK[id].ep));
+const awkIn = id => !!(AWK[id] && DAYS.some(d => d.no === AWK[id].ep) && isOpen(AWK[id].ep, home.no, DEV));   /* 곡이 들어왔고 그 화가 이 사람에게 열린 날부터 (사업 요청 2 · v0.7.2) */
 /* 시험 모드 ?awk=miyu : 그 캐스트를 각성한 것으로 (연출 확인용 · 저장 안 함 · 실서버 무시) */
 const awkTest = DEV ? (Q.get('awk') || '') : '';
 const awake = id => (awkTest && awkTest === id) || CH.isAwake(S, id);
@@ -470,7 +470,7 @@ function dmPick(i) {
 }
 function pieceHTML() {
   const pc = day.dm.piece, c = CASTS[day.cast];
-  return `<div class="piece"><div class="ph" style="background-image:url(${pc.img})"></div><div class="tx"><em>오늘의 조각${pc.step ? ` ${pc.step}/4 · ${esc(c.name)}` : ' · 하루 스튜디오'}</em><p>${esc(pc.caption)}</p></div></div>
+  return `<div class="piece"><div class="ph" style="background-image:url(${pc.img})"></div><div class="tx"><em>오늘의 조각${pc.step ? ` ${pc.step}/4 · ${esc(c.name)}` : ` · ${esc(day.singer || c.name)}`}</em><p>${esc(pc.caption)}</p></div></div>
     <div class="tmr2"><div class="fc" style="background-image:url(${CASTS[day.tomorrow.who].face})"></div><div><em>${day.no < home.no ? '다음 화 예고' : '내일 예고'} · ${day.no + 1}화</em><b>${esc(day.tomorrow.title)}</b><q>${esc(day.tomorrow.text)}</q></div></div>`;
 }
 function dmEnd() {

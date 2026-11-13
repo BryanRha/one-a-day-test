@@ -1,6 +1,6 @@
 // 가게 장면 — 배경 · 손님(계산대 뒤) · 계산대 · 먼지 · 꾸미기 겹을 한 상자에 그림 (가게 · 결과 반응 · 꾸미기 미리보기 공용)
-import { S } from './save.js?v=0.99.39';
-import { face, sil, FUR } from './state.js?v=0.99.39';
+import { S } from './save.js?v=0.99.40';
+import { face, sil, FUR } from './state.js?v=0.99.40';
 const IW = 1024, IH = 1536, CY = 1040;   /* 배경 그림 크기 · 계산대 윗선(그림 좌표) */
 export function sceneHTML({ cast = null, f = 0, silhouette = false, mini = false } = {}) {
   const on = S.deco.on, own = S.deco.own;

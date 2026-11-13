@@ -1,0 +1,472 @@
+{
+ "tempo": {
+  "bpm": 150.17
+ },
+ "mel": 0.3,
+ "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통 (add_song 자동 초안)",
+ "sections": [
+  {
+   "from": 0,
+   "to": 8,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "잔잔"
+  },
+  {
+   "from": 8,
+   "to": 12,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 12,
+   "to": 16,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 16,
+   "to": 20,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 20,
+   "to": 22,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 22,
+   "to": 30,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "차오름(Riser)"
+  },
+  {
+   "from": 30,
+   "to": 32,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 32,
+   "to": 36,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 36,
+   "to": 40,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "잔잔"
+  },
+  {
+   "from": 40,
+   "to": 48,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 48,
+   "to": 52,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 52,
+   "to": 54,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 54,
+   "to": 56,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 56,
+   "to": 58,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 58,
+   "to": 60,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 60,
+   "to": 68,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  },
+  {
+   "from": 68,
+   "to": 70,
+   "lvl": 1,
+   "easy": {
+    "longs": 4,
+    "longGap": 12
+   },
+   "normal": {
+    "longs": 2,
+    "longGap": 6,
+    "fill": true,
+    "perBar": [
+     3,
+     4,
+     5
+    ]
+   },
+   "hard": {
+    "longs": 2,
+    "longGap": 2,
+    "fill": true,
+    "perBar": [
+     5,
+     6,
+     8
+    ]
+   },
+   "_": "잔잔"
+  },
+  {
+   "from": 70,
+   "to": 78,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "차오름(Riser)"
+  },
+  {
+   "from": 78,
+   "to": 80,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 80,
+   "to": 82,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "grid": 1,
+    "minGap": 1,
+    "perBar": [
+     6,
+     10,
+     12
+    ],
+    "chord": 0.25
+   },
+   "_": "차오름(Riser)"
+  },
+  {
+   "from": 82,
+   "to": 88,
+   "lvl": 3,
+   "normal": {
+    "chordCols": [
+     0
+    ]
+   },
+   "hard": {
+    "chordCols": [
+     0,
+     4,
+     8,
+     12
+    ],
+    "chord": 0.3
+   },
+   "_": "절정"
+  },
+  {
+   "from": 88,
+   "to": 92,
+   "lvl": 2,
+   "normal": {
+    "perBar": [
+     4,
+     6,
+     7
+    ]
+   },
+   "hard": {
+    "chord": 0.25
+   },
+   "_": "보통"
+  }
+ ],
+ "lastBeat": 366,
+ "special": {
+  "sc": 3,
+  "fader": {
+   "easy": 1,
+   "normal": 5,
+   "hard": 7
+  },
+  "cue": true
+ },
+ "_special": "13화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)",
+ "dens": {
+  "easy": 0.85,
+  "normal": 0.78,
+  "hard": 0.61
+ }
+}
