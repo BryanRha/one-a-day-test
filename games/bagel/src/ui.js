@@ -1,11 +1,11 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.42';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.42';
-import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.42';
-import { sfx, setAudio } from './audio.js?v=0.99.42';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.42';
-import { bm } from './oad_bm.js?v=0.99.42';
+import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.43';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.43';
+import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.43';
+import { sfx, setAudio } from './audio.js?v=0.99.43';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.43';
+import { bm } from './oad_bm.js?v=0.99.43';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -68,7 +68,7 @@ export class UI {
   frame(g) {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
     for (const p of g.padList()) { v.set(p.s.x, 30, p.s.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
-    for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.6; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; d.style.opacity = Math.max(0, 1 - d._t / 1.1); if (d._t > 1.1) d.remove(); }
+    for (const d of [...this.floats.children]) { d._t += 1 / 60; d._p.y += 1.6; v.copy(d._p).project(cam); d.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; const zn = d._zn ??= d.classList.contains('zone'), life = zn ? 1.6 : 1.1; d.style.opacity = zn ? Math.max(0, Math.min(1, (life - d._t) / 0.6)) : Math.max(0, 1 - d._t / 1.1); if (d._t > life) d.remove(); }   /* 구역 「+금액」은 1초 또렷이 → 0.6초 흐려짐 (폰에서 더미가 작게 보여도 읽히게 · 0.7.1) */
     for (const c of g.cust) { if (!c.tag) continue; const o = c.order[0], left = o.n - o.got, show = (c.state === 'queue' || c.state === 'walkQ') && c.qi < 4; c.tag.style.display = show ? '' : 'none'; if (!show) continue;
       v.set(c.pos.x, 188, c.pos.z).project(cam); c.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-100%)`; const mood = c.w > 25 ? '😐 ' : c.w > 10 ? '' : ''; const html = `${c.reg ? `<i class="rn">💌 ${c.reg.name}</i>` : ''}${c.group ? '<i class="rn gp">👥 단체</i>' : ''}${mood}<b>${ICON[o.k]}</b><span>${SHORT[o.k]}</span><em>×${left}</em>`; if (c.tag._h !== html) { c.tag.innerHTML = html; c.tag._h = html; } c.tag.classList.toggle('front', c.qi === 0); c.tag.classList.toggle('reg', !!c.reg); }
     for (const cr of g.cars || []) { if (!cr.tag) continue; const show = cr.state === 'wait' || cr.state === 'in'; cr.tag.style.display = show ? '' : 'none'; if (!show) continue; v.set(cr.g.position.x, 190, cr.g.position.z).project(cam);

@@ -1,6 +1,6 @@
 // 시험용 자동 플레이 (?bot=1): 굽기 → 진열 → 계산 → 돈 줍기 → 열기 칸 · 크림치즈 · 커피 · 쓰레기
-import { IN } from './ui.js?v=0.99.42';
-import { S } from './state.js?v=0.99.42';
+import { IN } from './ui.js?v=0.99.43';
+import { S } from './state.js?v=0.99.43';
 export function startBot(app) {
   let goal = null, wait = 0, log = [], lastP = null, stuck = 0, side = 0;
   const go = (x, z, settle) => { const g = app.game, p = g.pl.pos, c = g.st.counter;   /* settle: 바닥 칸 — 0.5.0 부터 칸에 멈춰 서야 붓기라, 가까워지면 천천히 다가가 멈춤 (배속에서 칸을 지나쳐 왔다 갔다 하지 않게) */
@@ -12,7 +12,7 @@ export function startBot(app) {
     if (lastP && Math.hypot(p.x - lastP[0], p.z - lastP[1]) < 3 && Math.hypot(x - p.x, z - p.z) > 40) { if ((stuck += 0.1) > 0.8) { stuck = 0; side = 0.7; } } else stuck = 0; lastP = [p.x, p.z];
     const dx = x - p.x, dz = z - p.z, l = Math.hypot(dx, dz); if (l < 30) { IN.x = IN.y = 0; return true; }
     /* 세계 방향 → 화면 방향 (RIGHT=(1,-1)/√2, DOWN=(1,1)/√2) */ const sx = (dx - dz) / Math.SQRT2, sy = (dx + dz) / Math.SQRT2, m = Math.hypot(sx, sy), k = settle ? Math.min(1, Math.max(0.12, l / (110 * (+(new URLSearchParams(location.search).get('speed')) || 1)))) : 1; IN.x = sx / m * k; IN.y = sy / m * k; return false; };
-  setInterval(() => {
+  const think = () => {
     const g = app.game; if (!g || !g.st) return; const pl = g.pl, c = g.st.counter, ov = g.st.oven; wait -= 0.1;
     if (document.querySelector('#modal').firstChild) { const b = document.querySelector('#modal .btn'); b && b.click(); return; }
     const pad = g.pads.find(p => S.coins >= Math.min(p.s.cost - p.paid, 30)); const pile = g.piles.find(p => p.v > 0);
@@ -34,6 +34,13 @@ export function startBot(app) {
       else if (pile) t = [pile.x, pile.z + 20];
       else t = [ov.x, ov.z + 130]; }
     window.botT = t; go(t[0], t[1], t[2]);
-  }, 100);
+  };
+  /* 0.7.1: 판단은 0.1초마다(setInterval) + 게임 시계 지킴이 — 기계가 바쁠 때 타이머가 1초씩 밀리면(타이머 묶음) 봇이 칸을 지나치며 헤맸고,
+     시험 묶음 안에서만 첫 판매 21초 · 첫 줍기 30초로 잡혔음(혼자 돌리면 13 · 15초) → 게임 시간으로 0.15초 × 배속이 지나도록 판단이 없으면 화면 한 장마다 대신 판단 */
+  const SP = +(new URLSearchParams(location.search).get('speed')) || 1; let lastT = null;
+  const think2 = () => { lastT = app.game ? app.game.t : null; think(); };
+  setInterval(think2, 100);
+  const loop = () => { requestAnimationFrame(loop); const g = app.game; if (!g) return; if (lastT == null || g.t < lastT) lastT = g.t; if (g.t - lastT >= 0.15 * SP) think2(); };
+  requestAnimationFrame(loop);
   setInterval(() => { const g = app.game; log.push({ t: Math.round(performance.now() / 1000), coins: S.coins, earned: S.earned, unl: g.unl.size, sold: S.totalSold, bi: S.bi }); window.botLog = log; console.log('#bot', JSON.stringify(log[log.length - 1])); }, 10000);
 }

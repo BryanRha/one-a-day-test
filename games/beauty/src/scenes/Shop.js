@@ -1,15 +1,15 @@
 // 상점: 하루 무료 선물(원어데이 안에선 광고로 2배) + 상품
 //   원어데이 안: 원화 상품 대신 원어데이 골드 상품(서버 SHOP.beauty 가격) · 원어데이 밖: 원화 상품 '곧 열려요' 그대로
-import { W, H } from '../config.js?v=0.99.42';
-import { T, R, C, TS, btn, toast, rbox } from '../ui.js?v=0.99.42';
-import { audio } from '../audio.js?v=0.99.42';
-import { load, save } from '../save.js?v=0.99.42';
-import { goPrev } from '../nav.js?v=0.99.42';
-import { screen } from '../hud.js?v=0.99.42';
-import { PRODUCTS, won, storeOpen, purchase, oadOn, goldPrice, spendGold, goldMsg, GOLD_GEMS, canAd, adLabel, rewardAd, ownerDeco, OWNER_DECO, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.99.42';
-import { ENERGY } from '../data.js?v=0.99.42';
-import { today } from '../state.js?v=0.99.42';
-import { PIGGY } from '../album.js?v=0.99.42';
+import { W, H } from '../config.js?v=0.99.43';
+import { T, R, C, TS, btn, toast, rbox } from '../ui.js?v=0.99.43';
+import { audio } from '../audio.js?v=0.99.43';
+import { load, save } from '../save.js?v=0.99.43';
+import { goPrev } from '../nav.js?v=0.99.43';
+import { screen } from '../hud.js?v=0.99.43';
+import { PRODUCTS, won, storeOpen, purchase, oadOn, goldPrice, spendGold, goldMsg, GOLD_GEMS, canAd, adLabel, rewardAd, ownerDeco, OWNER_DECO, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.99.43';
+import { ENERGY } from '../data.js?v=0.99.43';
+import { today } from '../state.js?v=0.99.43';
+import { PIGGY } from '../album.js?v=0.99.43';
 
 const GIFT = { gems: 5, energy: 10 };   /* 오늘의 무료 선물 (광고 보면 2배) */
 

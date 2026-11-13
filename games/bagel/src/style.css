@@ -56,6 +56,7 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .upr > i { font-style: normal; font-size: 24px; width: 34px; text-align: center; } .upr > div { flex: 1; min-width: 0; } .upr b { font-size: 13px; } .upr b em { font-style: normal; color: #E2702A; font-size: 11px; } .upr span { display: block; font-size: 10.5px; color: #9A7A5C; }
 .pips { display: flex; gap: 2px; margin-top: 3px; } .pips s { flex: 1; height: 5px; border-radius: 3px; background: #F1E2CF; } .pips s.on { background: linear-gradient(90deg, #FF8A3C, #FFC96A); }
 .float.tip { color: #D04AA0; font-size: 16px; }
+.float.pay.zone { color: #fff; background: #D9921A; border-radius: 12px; padding: 2px 9px 3px; font-size: 16px; text-shadow: 0 1px 0 rgba(90,50,0,.35); box-shadow: 0 2px 0 rgba(90,50,0,.25); }   /* 0.7.1 구역 「+금액」: 금색 다발과 같은 색 알약 — 밝은 바닥 · 지폐 위에서도 읽힘 */
 #boot img.logo { width: 220px; filter: drop-shadow(0 3px 6px #0004); } #boot .bimg { position: absolute; inset: 0; background: center/cover; opacity: .35; } #boot > * { position: relative; } #boot em { font-style: normal; font-size: 13px; color: #fff; max-width: 280px; text-align: center; line-height: 1.6; text-shadow: 0 1px 4px #000; }
 #boot { background: #2A1A10; }
 .tabs { display: flex; gap: 6px; margin-bottom: 8px; } .tabs button { flex: 1; height: 38px; border-radius: 12px; background: #fff; color: #B09070; box-shadow: 0 3px 0 var(--sh); font-size: 13px; } .tabs button.on { background: #FFE2C8; color: var(--br); }

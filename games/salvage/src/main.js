@@ -1,26 +1,26 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
-import { forecast, setWxTest } from './data/weather.js?v=0.99.42'; /* M4-B 판 상태 5 */
+import { forecast, setWxTest } from './data/weather.js?v=0.99.43'; /* M4-B 판 상태 5 */
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.42';
-import { FX, shakeMul } from './fx.js?v=0.99.42';
-import { Raid } from './raid.js?v=0.99.42';
-import { UI } from './ui.js?v=0.99.42';
-import { S, load, save, stashCap } from './save.js?v=0.99.42';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.42';
-import * as E from './econ.js?v=0.99.42';
-import { installBack } from './oad.js?v=0.99.42';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.42';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.42';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.42';
-import { Story, artUrl } from './story_ui.js?v=0.99.42';
-import { HomeFac } from './home_fac.js?v=0.99.42';
-import { FurnUI } from './furn_ui.js?v=0.99.42'; /* M5-D 은신처 가구 30 */
-import { petSpec, petScale, makeBandi } from './pet_raid.js?v=0.99.42'; /* M5-C 몽이 5단 겉모습 · 반디 */
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.42';
-import * as TH from './threat.js?v=0.99.42'; /* M4-A 위협 곡선 · 주간 변주 */
-import * as CHL from './challenge.js?v=0.99.42'; import * as AB from './abyss.js?v=0.99.42'; import * as AC from './ach.js?v=0.99.42'; import * as M5 from './ui_m5b.js?v=0.99.42'; /* M5-B 주간 도전 · 깊은 물 · 업적 50 */
-import { DUCK, duckFov, duckCam, duckRaidTick, VEIL_STATS } from './look_duck.js?v=0.99.42'; /* 시안용 ?look=duck */
-import { m6cRaid } from './happen.js?v=0.99.42'; /* M6-C 판 중 사건 5 · 떠돌이 두목 예고 · 색약 보조 판 장치 */
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.43';
+import { FX, shakeMul } from './fx.js?v=0.99.43';
+import { Raid } from './raid.js?v=0.99.43';
+import { UI } from './ui.js?v=0.99.43';
+import { S, load, save, stashCap } from './save.js?v=0.99.43';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.43';
+import * as E from './econ.js?v=0.99.43';
+import { installBack } from './oad.js?v=0.99.43';
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.43';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.43';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.43';
+import { Story, artUrl } from './story_ui.js?v=0.99.43';
+import { HomeFac } from './home_fac.js?v=0.99.43';
+import { FurnUI } from './furn_ui.js?v=0.99.43'; /* M5-D 은신처 가구 30 */
+import { petSpec, petScale, makeBandi } from './pet_raid.js?v=0.99.43'; /* M5-C 몽이 5단 겉모습 · 반디 */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.43';
+import * as TH from './threat.js?v=0.99.43'; /* M4-A 위협 곡선 · 주간 변주 */
+import * as CHL from './challenge.js?v=0.99.43'; import * as AB from './abyss.js?v=0.99.43'; import * as AC from './ach.js?v=0.99.43'; import * as M5 from './ui_m5b.js?v=0.99.43'; /* M5-B 주간 도전 · 깊은 물 · 업적 50 */
+import { DUCK, duckFov, duckCam, duckRaidTick, VEIL_STATS } from './look_duck.js?v=0.99.43'; /* 시안용 ?look=duck */
+import { m6cRaid } from './happen.js?v=0.99.43'; /* M6-C 판 중 사건 5 · 떠돌이 두목 예고 · 색약 보조 판 장치 */
 
 const Q = new URLSearchParams(location.search);
 setWxTest({ wx: Q.get('wx'), week: Q.has('week') ? Q.get('week') : undefined }); /* ?wx= · ?week= 시험값 → 출격 준비 예보 카드와 실제 판이 같은 값 (M4 마무리) */
@@ -289,7 +289,7 @@ async function boot() {
   installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.42'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.43'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

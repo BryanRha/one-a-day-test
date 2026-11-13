@@ -5,7 +5,7 @@ export const BRAND = { name: '마루미베이글', sign: 'marumi', sub: 'TOKYO B
 // 조사: 마지막 글자 받침으로 고름 · josa('크림치즈', '을/를') → '크림치즈를' · '으로/로' 는 ㄹ 받침도 '로'
 export function josa(w, pair) { const [a, b] = pair.split('/'), c = String(w).trim().slice(-1).charCodeAt(0) - 0xAC00; if (c < 0 || c > 11171) return `${w}${a}(${b})`;
   const jong = c % 28; return w + (pair === '으로/로' ? (jong && jong !== 8 ? a : b) : jong ? a : b); }
-export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.7.0' };   /* 0.7.0 (2026-11-13): 1호점 바깥 구역(테라스 → 구역 · 판매대 · 구역 직원 · 바깥 손님) · 미션 업그레이드 2번 / 0.6.3: 계속 움직이는 HUD 빼기(안내 글 박동 · 화살표 출렁임) · 쉬는 직원 아이콘은 화면 안에서만 · 테라스는 청소 직원 뒤 (0.6.2 테라스 손님 자리 · 머리 위 아이콘) */
+export const GAME = { title: '마루미 베이글 하우스', en: 'Marumi Bagel House', ver: '0.7.1' };   /* 0.7.1 (2026-11-13): 2~4호점 바깥 구역(호숫가 창가 바 · 통로 스탠딩 바 · 잔디 피크닉) · 시험 서버 안정화 · 구역 「+금액」 알약 / 0.7.0: 1호점 바깥 구역(테라스 → 구역 · 판매대 · 구역 직원 · 바깥 손님) · 미션 업그레이드 2번 / 0.6.3: 계속 움직이는 HUD 빼기(안내 글 박동 · 화살표 출렁임) · 쉬는 직원 아이콘은 화면 안에서만 · 테라스는 청소 직원 뒤 (0.6.2 테라스 손님 자리 · 머리 위 아이콘) */
 // 물건 → 메뉴 (가격은 지점 배수 곱함)
 //   실제 메뉴 (잠실리센츠점 · 2026-10-26 사용자 제공): 플레인 1,900 · 솔트버터 3,500 · 올리브치즈 2,900 · 치즈시금치 3,500 · 크랜베리호두 3,500 · 크림치즈 컵 각 2,000
 //   게임 가격 = 실제 가격 비율 (플레인 1,900원 → 5)
@@ -60,10 +60,17 @@ const scale = (b, k, theme, name) => ({ ...b, name, mult: k, theme: { ...b.theme
 /* 바깥 구역 (0.7.0 · 대표 「바깥 구역으로」 · team/dev/tasks/261112-marumi-expand/intent.md): 지점마다 가게 앞 왼쪽 띠에 손님 자리 + 구역 직원 + 바깥 판매대 — 가게 안 23자리 · 한 바퀴 · 돈 더미 · 줄 · 문은 그대로
    on 1단계는 1호점만(2~4호점은 대표 폰 확인 뒤 2단계) · band 걷는 띠 [x0, x1, z0, z1] · way 구역 직원 길(원료 설비 쪽 → 판매대 뒤 · 76cm 틈을 안 지남) · stand 판매대 · tables 구역 테이블(자리 ±95) · bin 구역 쓰레기통
    menu 판매대 메뉴 · every 바깥 손님 간격(초) · n 주문 개수 · sit 앉아 먹는 비율 · eat 먹는 시간 · k 값 배수(드라이브스루와 같음) · cost 칸 값(1호점 기준 · 지점은 × 배수 × 1.6) · from 손님이 오는 곳 */
+const ZONE_AT = { band: [-710, 190, 730, 1030], way: [[-60, -260], [-60, 200], [130, 220], [130, 470], [160, 760]], stand: [40, 930], tables: [[-520, 900], [-230, 900]], bin: [-660, 790], k: 1.3, cost: 5000 };   /* 4지점 같은 자리 (가게 틀이 같음) */
+/* 0.7.1 (2단계 · 대표 「진행해」): 2~4호점도 켬 — 모습(style) · 손님 결(order) · 간격만 다름
+   판매대 메뉴: 4지점 실측(다 연 판 · 봇 · Lv 0 · Lv 5) 모두 커피 머신 · 크림치즈 냉장고는 평균 7.4~7.9개로 늘 꽉 차 놀고, 토핑 바(지점 특별 베이글)는 평균 0.1~0.4개 · 플레인 진열대는 늘 모자람
+     → 4지점 모두 아메리카노 + 그 지점 크림치즈 컵(블루베리 · 대파베이컨 · 무화과 = 지점 특별 크림치즈) · 특별 베이글은 남는 몫이 없어 뺌
+   order: mix 섞어서 n개 · set 묶음(아메리카노 + 크림치즈 한 쌍씩 · 산책 세트) · quick 출근길 1~2개(아메리카노 위주) · basket 큰 바구니(섞어서 많이)
+   rush [주기, 몰리는 초, 몰릴 때 간격] 출근길처럼 짧게 몰림 · stand 서서 먹는 자리(스탠딩 바 · 높은 테이블) */
 export const OUT_ZONE = [
-  { on: true, name: '테라스', icon: '⛱', staffName: '테라스 직원', band: [-710, 190, 730, 1030], way: [[-60, -260], [-60, 200], [130, 220], [130, 470], [160, 760]], stand: [40, 930], tables: [[-520, 900], [-230, 900]], bin: [-660, 790],
-    menu: ['drink', 'coffee'], every: [7, 10], n: [2, 3], sit: 0.5, eat: [11, 16], k: 1.3, cost: 5000, from: [-1150, 1180] },
-  { on: false, name: '호숫가 창가 바', icon: '🌸', staffName: '창가 바 직원' }, { on: false, name: '통로 스탠딩 바', icon: '🚇', staffName: '스탠딩 바 직원' }, { on: false, name: '잔디 피크닉 자리', icon: '🧺', staffName: '피크닉 직원' },
+  { on: true, ...ZONE_AT, name: '테라스', icon: '⛱', style: 'terrace', menu: ['drink', 'coffee'], order: 'mix', every: [7, 10], n: [2, 3], sit: 0.5, eat: [11, 16], from: [-1150, 1180] },
+  { on: true, ...ZONE_AT, name: '호숫가 창가 바', icon: '🌸', style: 'lake', menu: ['drink', 'coffee'], order: 'set', every: [8, 11], n: [1, 2], sit: 0.55, eat: [12, 17], standEat: true, from: [-260, 1520] },
+  { on: true, ...ZONE_AT, name: '통로 스탠딩 바', icon: '🚇', style: 'under', menu: ['drink', 'coffee'], order: 'quick', every: [9, 13], rush: [45, 16, [2.5, 3.5]], n: [1, 2], sit: 0.6, eat: [10, 14], standEat: true, from: [-1150, 1120] },
+  { on: true, ...ZONE_AT, name: '잔디 피크닉 자리', icon: '🧺', style: 'park', menu: ['drink', 'coffee'], order: 'basket', every: [13, 18], n: [4, 6], sit: 0.85, eat: [20, 28], from: [-1150, 1180] },
 ];
 export const BRANCHES = [
   { ...B1, name: '1호점 · 잠실리센츠점', photo: 'store1' },
@@ -71,7 +78,10 @@ export const BRANCHES = [
   { ...scale(B1, 14, { floor: 'tile', floorA: '#F8F7F4', floorB: '#ECEAE5', wall: 'vtile', wallA: 0xFBFBF9, wallB: 0xF6F7F5, grout: '#BFE0D4', trim: 0x9AA4AC, outside: 0xCBC8C2, table: 'white', lamp: 'line', sign: 'box', awn: null, neon: true, out: 'under', light: [0xF4F7FF, 0xB8B4AC, 1.65, 0xF6F8FF, 2.1] }, '3호점 · 헬리오시티점'), photo: 'store3' },
   { ...scale(B1, 45, { floor: 'terra', floorA: '#F5E4D6', floorB: '#ECD7C5', wall: 'louver', wallA: 0xDDE5D4, wallB: 0xD6DFCC, slat: 0xB8875A, trim: 0x8A6A44, outside: 0xC9DDAE, table: 'picnic', lamp: 'string', sign: 'wood', awn: null, out: 'park', light: [0xFFF6E6, 0xB4BE96, 1.6, 0xFFF2DA, 2.2] }, '4호점 · 파크포레온점'), photo: 'store4' },
 ];
-BRANCHES.forEach((b, i) => { const n = b.slots.find(s => s.id === 'next'); if (n) n.label = `${i + 2}호점 열기`; const z = OUT_ZONE[i]; if (!z.on) b.slots = b.slots.filter(s => s.type !== 'zone'); else { const s = b.slots.find(q => q.type === 'zone'); s.label = `${z.icon} ${z.name} 열기`; s.cost = Math.round(z.cost * (i ? b.mult * 1.6 : 1) / 10) * 10; } }); BRANCHES[3].slots = BRANCHES[3].slots.filter(s => s.id !== 'next');
+BRANCHES.forEach((b, i) => { const n = b.slots.find(s => s.id === 'next'); if (n) n.label = `${i + 2}호점 열기`; const z = OUT_ZONE[i]; if (!z.on) { b.slots = b.slots.filter(s => s.type !== 'zone'); return; }
+  const s = b.slots.find(q => q.type === 'zone'); s.label = `${z.icon} ${z.name} 열기`; s.cost = Math.round(z.cost * (i ? b.mult * 1.6 : 1) / 10) * 10;
+  /* 2~4호점: 「더 많이 들기 · 빨리 걷기」는 1호점에서 이미 켜져 효과 없이 돈만 받던 칸 → 빼고, 구역 칸이 빨리 걷기 칸 자리를 빌림 (여는 순서는 그대로 청소 직원 뒤 · 값은 칸에 직접 · 대표 결정 ③-가) */
+  if (i) { const sp = b.slots.find(q => q.id === 'speed'); if (sp) { s.x = sp.x; s.z = sp.z; s.from = 'speed'; } b.slots = b.slots.filter(q => q.type !== 'up'); } }); BRANCHES[3].slots = BRANCHES[3].slots.filter(s => s.id !== 'next');
 export const BRANCH_INFO = ['서울 송파구 올림픽로 145 리센츠상가 1층', '서울 송파구 삼학사로 42-1 1~2층', '서울 송파구 송파대로 345 헬리오시티 B1', '서울 강동구 양재대로 1360 포레온스테이션5 B1'];
 // 업그레이드 (지점마다 · 1~10단계): 효과는 game.js 에서 L(이름)으로 읽음
 export const UPGRADES = [
