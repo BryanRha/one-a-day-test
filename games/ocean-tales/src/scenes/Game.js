@@ -1,17 +1,17 @@
 // 인게임: 엔진(core/engine.js)이 만든 steps 를 순서대로 애니메이션으로 재생한다.
-import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.99.40';
-import { Engine } from '../core/engine.js?v=0.99.40';
-import { LEVELS } from '../core/levels.js?v=0.99.40';
-import { t } from '../i18n.js?v=0.99.40';
-import { audio, WORLD_BGM } from '../audio.js?v=0.99.40';
-import { pickTip } from '../tips.js?v=0.99.40';
-import { track, flush, onMissionDone } from '../missions.js?v=0.99.40';
-import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.99.40';
-import { button, iconButton, popup, toast, starsRow, enableGlow } from '../ui/widgets.js?v=0.99.40';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.40';
-import { bm } from '../oad_bm.js?v=0.99.40';
-import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.99.40';
-import { goldify, bt, failMsg, adLeft, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.99.40';
+import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.99.41';
+import { Engine } from '../core/engine.js?v=0.99.41';
+import { LEVELS } from '../core/levels.js?v=0.99.41';
+import { t } from '../i18n.js?v=0.99.41';
+import { audio, WORLD_BGM } from '../audio.js?v=0.99.41';
+import { pickTip } from '../tips.js?v=0.99.41';
+import { track, flush, onMissionDone } from '../missions.js?v=0.99.41';
+import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.99.41';
+import { button, iconButton, popup, toast, starsRow, enableGlow } from '../ui/widgets.js?v=0.99.41';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.41';
+import { bm } from '../oad_bm.js?v=0.99.41';
+import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.99.41';
+import { goldify, bt, failMsg, adLeft, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.99.41';
 
 const BOARD_TOP = 436;
 // 별 게이지: 별 3개를 같은 간격에 두고, 점수는 별 사이 구간별로 선형 보간 (기준 점수 간격이 달라도 보기 좋게)

@@ -6,8 +6,8 @@
 //  · 소리 크기 셋(배경음 · 효과음 · 무전 목소리 = audio.js setBusVol) · 진동 켬/끔(navigator.vibrate) · 화면 흔들림 보통/약하게/끔(fx.js)
 //  · 저장: localStorage 'salvage_a11y'(글자 · 색약 · 진동) · 'salvage_audio'(소리) · 'salvage_fx'(흔들림) — 바꾸는 즉시 반영
 import * as THREE from 'three';
-import { busVol, setBusVol, sfx, unlock } from './audio.js?v=0.99.40';
-import { shakeLevel, setShakeLevel, SHAKE_STEPS } from './fx.js?v=0.99.40';
+import { busVol, setBusVol, sfx, unlock } from './audio.js?v=0.99.41';
+import { shakeLevel, setShakeLevel, SHAKE_STEPS } from './fx.js?v=0.99.41';
 
 const KEY = 'salvage_a11y';
 export const FS = [1, 1.15, 1.3]; export const FS_NAME = ['기본', '크게', '더 크게'];

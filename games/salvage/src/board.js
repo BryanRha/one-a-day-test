@@ -2,10 +2,10 @@
 //  데이터 = data/quests.js BOARD · 대사 = talk/common.js QTALK · 화면 = story_ui.js (의뢰 탭 '인물 의뢰' · 결과 화면 금빛 카드)
 //  three · DOM 없음 → node 시험(tools/test_logic.mjs)에서도 씀
 //  저장: S.quests.board = { prog: { 의뢰: 누적 }, rep: { 반복 의뢰: 끝낸 주 } } (salvage_v4 그대로 · 없으면 여기서 만듦) · 끝낸 판 의뢰 id 는 S.quests.done 에 같이 들어감
-import { ITEMS, MAPS, ENEMIES, MATS, CONDS } from './data.js?v=0.99.40';
-import * as D from './data.js?v=0.99.40'; /* D.MAP_GEAR (M4-B 맵 장비 — 없으면 그 의뢰는 안 보임) */
-import { BOARD, QBY } from './data/quests.js?v=0.99.40';
-import * as ST from './story.js?v=0.99.40';
+import { ITEMS, MAPS, ENEMIES, MATS, CONDS } from './data.js?v=0.99.41';
+import * as D from './data.js?v=0.99.41'; /* D.MAP_GEAR (M4-B 맵 장비 — 없으면 그 의뢰는 안 보임) */
+import { BOARD, QBY } from './data/quests.js?v=0.99.41';
+import * as ST from './story.js?v=0.99.41';
 
 export { BOARD, QBY };
 /* v0.7 공통 판 상태 5 (M4-B data/weather.js WX_KEYS 와 같은 키 — ROADMAP M4 고정) · 판 결과 res.wx 로 옴 */

@@ -1,18 +1,18 @@
 // 홈: 계급 · 캠페인 · 오늘의 작전 · 자유 대전 · 지휘관 · 오늘의 미션 · 연속 출석
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.40';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.40';
-import { audio } from '../audio.js?v=0.99.40';
-import { load } from '../save.js?v=0.99.40';
-import * as M from '../meta.js?v=0.99.40';
-import { COS } from '../core/data.js?v=0.99.40';
-import { rankOn } from '../rank.js?v=0.99.40';
-import { rankPopup } from '../rankui.js?v=0.99.40';
-import { bm } from '../oad_bm.js?v=0.99.40';
-import { shopOn } from '../bmwar.js?v=0.99.40';
-import { COLORS, COLOR_ORDER, colorOpen, teamColor, setColor, buyColor, paintKey } from '../color.js?v=0.99.40';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.40';
-import { KITS, KIT_ORDER, SHOPW, kitCount, adLeft, adOn, buyKit, coGold, recruit, restoreCos, failMsg, owned } from '../shop.js?v=0.99.40';
-import { modeGuide } from '../guide.js?v=0.99.40';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.41';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.41';
+import { audio } from '../audio.js?v=0.99.41';
+import { load } from '../save.js?v=0.99.41';
+import * as M from '../meta.js?v=0.99.41';
+import { COS } from '../core/data.js?v=0.99.41';
+import { rankOn } from '../rank.js?v=0.99.41';
+import { rankPopup } from '../rankui.js?v=0.99.41';
+import { bm } from '../oad_bm.js?v=0.99.41';
+import { shopOn } from '../bmwar.js?v=0.99.41';
+import { COLORS, COLOR_ORDER, colorOpen, teamColor, setColor, buyColor, paintKey } from '../color.js?v=0.99.41';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.41';
+import { KITS, KIT_ORDER, SHOPW, kitCount, adLeft, adOn, buyKit, coGold, recruit, restoreCos, failMsg, owned } from '../shop.js?v=0.99.41';
+import { modeGuide } from '../guide.js?v=0.99.41';
 
 // 계급장: 이병~병장 갈매기 · 부사관 · 장교 다이아 · 장성 별
 export function insignia(scene, x, y, k, s = 1) {
@@ -139,7 +139,7 @@ export class HomeScene extends Phaser.Scene {
       const b1 = btn(this, xs[0], 320, 360, 110, `훈장 ${SHOPW.coMedal}`, async () => { b1.setEnabled(false); if (!done(await recruit(k, 'medal'))) b1.setEnabled(true); }, { style: d.medals >= SHOPW.coMedal ? 'gold' : 'ghost', size: 32 }); p.content.add(b1);
       if (gold) { const b2 = btn(this, xs[1], 320, 360, 110, `🪙${gold}`, async () => { b2.setEnabled(false); if (!done(await recruit(k, 'gold'))) b2.setEnabled(true); }, { style: 'olive', size: 32, ls: 0 }); p.content.add(b2); }
     }
-    else p.content.add(btn(this, 0, 320, 440, 110, d.co === k ? '출전 중' : '이 지휘관으로 출전', () => { d.co = k; import('../save.js?v=0.99.40').then(m => m.save()); p.close(); this.scene.restart(); }, { style: d.co === k ? 'ghost' : 'gold', size: 32 }));
+    else p.content.add(btn(this, 0, 320, 440, 110, d.co === k ? '출전 중' : '이 지휘관으로 출전', () => { d.co = k; import('../save.js?v=0.99.41').then(m => m.save()); p.close(); this.scene.restart(); }, { style: d.co === k ? 'ghost' : 'gold', size: 32 }));
   }
   /* 원어데이로: 원어데이 안이면 SDK 나가기(oad.js exitToOAD = oad:exit) · 단독 링크면 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
   toOAD() {
@@ -241,7 +241,7 @@ export class HomeScene extends Phaser.Scene {
   settings() {
     const d = load(), pop = popup(this, '설정', 760, 900);
     const row = (y, label, on, fn) => { pop.content.add(T(this, -260, y, label, 40, C.text, { ox: 0 })); const b = btn(this, 200, y, 220, 96, on ? '켜짐' : '꺼짐', () => { fn(); b.setLabel(b.label.text === '켜짐' ? '꺼짐' : '켜짐'); }, { style: on ? 'green' : 'ghost', size: 34 }); pop.content.add(b); };
-    row(-90, '효과음', d.sfx, () => audio.toggleSfx()); row(30, '배경음악', d.music, () => audio.toggleMusic()); row(150, '전투 장면', d.cutscene !== false, () => { d.cutscene = d.cutscene === false; import('../save.js?v=0.99.40').then(m => m.save()); }); row(270, '지휘관 테마곡', d.coTheme !== false, () => { d.coTheme = d.coTheme === false; import('../save.js?v=0.99.40').then(m => m.save()); }); row(390, '전투 대사', d.talk !== false, () => { d.talk = d.talk === false; import('../save.js?v=0.99.40').then(m => m.save()); });
+    row(-90, '효과음', d.sfx, () => audio.toggleSfx()); row(30, '배경음악', d.music, () => audio.toggleMusic()); row(150, '전투 장면', d.cutscene !== false, () => { d.cutscene = d.cutscene === false; import('../save.js?v=0.99.41').then(m => m.save()); }); row(270, '지휘관 테마곡', d.coTheme !== false, () => { d.coTheme = d.coTheme === false; import('../save.js?v=0.99.41').then(m => m.save()); }); row(390, '전투 대사', d.talk !== false, () => { d.talk = d.talk === false; import('../save.js?v=0.99.41').then(m => m.save()); });
   }
   go(k, data) { audio.stopMusic(); this.cameras.main.fadeOut(220, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

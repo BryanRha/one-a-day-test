@@ -5,10 +5,10 @@
 //  · 재질: pal(빛 받음 · 맞으면 번쩍) · glow(빛남) · eye(게임이 색을 바꾸는 빛 = 약점 · 눈빛 · 코어). 모두 정점 색 → 적 하나 = 그리기 2~3번
 //  · 받기 전이면 null → raid.js 가 예전 모델로 그림(안전망)
 import * as THREE from 'three';
-import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.40';
-import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.40';
-import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.40';
-import { A } from './assets.js?v=0.99.40';
+import { GLTFLoader } from '../lib/GLTFLoader.js?v=0.99.41';
+import { MeshoptDecoder } from '../lib/meshopt_decoder.module.js?v=0.99.41';
+import * as SkeletonUtils from '../lib/SkeletonUtils.js?v=0.99.41';
+import { A } from './assets.js?v=0.99.41';
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 export const EN = { tpl: {}, packs: {}, bytes: 0 };

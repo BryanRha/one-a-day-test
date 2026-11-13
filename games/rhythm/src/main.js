@@ -2,19 +2,19 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.40';
-import { Play } from './play.js?v=0.99.40';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.40';
-import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.40';
-import * as CH from './channel.js?v=0.99.40';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.40';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.40';
-import { bm } from './oad_bm.js?v=0.99.40';
-import { THEMES } from './themes.js?v=0.99.40';
+import { A } from './audio.js?v=0.99.41';
+import { Play } from './play.js?v=0.99.41';
+import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.41';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.41';
+import * as CH from './channel.js?v=0.99.41';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.41';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.41';
+import { bm } from './oad_bm.js?v=0.99.41';
+import { THEMES } from './themes.js?v=0.99.41';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.7.2';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.7.3';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

@@ -1,318 +1,135 @@
 {
+ "v": 2,
+ "concept": "장구 장단 — 손이 장구 두 편이 된다: 덩은 양 끝 동시, 쿵은 왼손(궁편) 왼쪽, 덕 · 기덕은 오른손 채(채편) 오른쪽. 가야금 · 피리 구간만 가락을 따라감",
  "tempo": {
   "bpm": 138.1
  },
- "mel": 0.3,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통 (add_song 자동 초안)",
- "sections": [
+ "lastBeat": 340,
+ "lane": "janggu",
+ "firstSound": 0.3236,
+ "parts": [
   {
    "from": 0,
-   "to": 8,
-   "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
-  },
-  {
-   "from": 8,
-   "to": 12,
+   "to": 1,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "도입 · 장구",
+   "lane": "janggu",
+   "hold": false,
+   "first": true,
+   "mark": "장구: 덩 = 양 끝 · 쿵 = 왼쪽(궁편) · 덕 · 기덕 = 오른쪽(채편)",
+   "crack": true,
+   "deng": {
+    "normal": 8,
+    "hard": 4
+   }
   },
   {
-   "from": 12,
-   "to": 16,
+   "from": 1,
+   "to": 5,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "name": "구호",
+   "lane": "pitch",
+   "hold": false
   },
   {
-   "from": 16,
+   "from": 5,
    "to": 20,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "name": "절",
+   "lane": "janggu"
   },
   {
    "from": 20,
-   "to": 24,
-   "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "to": 28,
+   "lvl": 3,
+   "name": "후렴",
+   "lane": "janggu"
   },
   {
-   "from": 24,
+   "from": 28,
    "to": 36,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
+   "name": "가야금 가락",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
    },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "hold": false,
+   "mark": "가야금: 뜯는 가락 높낮이 = 레인"
   },
   {
    "from": 36,
    "to": 44,
-   "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
-   },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "잔잔"
+   "lvl": 2,
+   "name": "2절",
+   "lane": "janggu"
   },
   {
    "from": 44,
-   "to": 60,
-   "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
-  },
-  {
-   "from": 60,
-   "to": 66,
+   "to": 53,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "절정"
+   "name": "후렴 2",
+   "lane": "janggu"
   },
   {
-   "from": 66,
-   "to": 70,
-   "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "차오름(Riser)"
-  },
-  {
-   "from": 70,
-   "to": 74,
+   "from": 53,
+   "to": 56,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
+   "name": "장구 독주",
+   "lane": "janggu",
+   "hold": false,
+   "dens": 1.15,
+   "mark": "장구 독주: 장단 그대로",
+   "deng": {
+    "normal": 8,
+    "hard": 8
    },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "절정"
+   "chord": "motif",
+   "crack": true
   },
   {
-   "from": 74,
+   "from": 56,
+   "to": 64,
+   "lvl": 2,
+   "name": "피리 다리",
+   "lane": "pitch",
+   "follow": {
+    "normal": "mel",
+    "hard": "mel"
+   }
+  },
+  {
+   "from": 64,
    "to": 76,
    "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "grid": 1,
-    "minGap": 1,
-    "perBar": [
-     6,
-     10,
-     12
-    ],
-    "chord": 0.25
-   },
-   "_": "차오름(Riser)"
+   "name": "차오름",
+   "lane": "janggu"
   },
   {
    "from": 76,
-   "to": 84,
-   "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     4,
-     8,
-     12
-    ],
-    "chord": 0.3
-   },
-   "_": "절정"
-  },
-  {
-   "from": 84,
    "to": 86,
-   "lvl": 2,
-   "normal": {
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "chord": 0.25
-   },
-   "_": "보통"
+   "lvl": 3,
+   "name": "마지막 후렴",
+   "lane": "janggu"
   }
  ],
- "lastBeat": 340,
+ "sc": [
+  55,
+  66,
+  83
+ ],
+ "fader": [
+  {
+   "bar": 74,
+   "beat": 0,
+   "len": 2,
+   "from": 1,
+   "to": 3,
+   "mark": "피리 긴 음이 마지막 후렴으로 미끄러짐"
+  }
+ ],
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
  "special": {
   "sc": 3,
   "fader": {
@@ -322,10 +139,14 @@
   },
   "cue": true
  },
- "_special": "16화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)",
+ "lv": {
+  "easy": 3,
+  "normal": 6,
+  "hard": 10
+ },
  "dens": {
-  "easy": 1.22,
-  "normal": 0.65,
-  "hard": 0.64
+  "easy": 0.811,
+  "normal": 0.616,
+  "hard": 0.581
  }
 }

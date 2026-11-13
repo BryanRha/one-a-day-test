@@ -1,245 +1,108 @@
 {
+ "v": 2,
+ "concept": "초침 디스코 — 정박은 가운데 두 칸이 똑 · 딱 번갈아 가고, 뒷박은 그 바깥 칸, 후렴 마디 첫 박은 양 끝을 함께 치는 '땡'",
  "tempo": {
   "bpm": 128
  },
- "dens": {
-  "easy": 0.607,
-  "normal": 0.546,
-  "hard": 0.622
+ "lastBeat": 112,
+ "lane": "voice",
+ "voices": {
+  "lo": [
+   1,
+   2
+  ],
+  "mi": [
+   0,
+   3
+  ],
+  "hi": [
+   2,
+   1
+  ]
  },
- "mel": 0.45,
- "_구간": "마디 번호 = 박 지도(tmap) 박0부터 4박씩 · lvl 1 잔잔 · 2 보통 · 3 절정 · 난이도별로 perBar/dens/longs/chord/grid/pick 덮어쓰기 · all 은 셋 공통",
- "sections": [
+ "parts": [
   {
    "from": 0,
    "to": 4,
    "lvl": 2,
-   "_": "드럼 인트로"
+   "name": "드럼 인트로",
+   "hold": false
   },
   {
    "from": 4,
    "to": 8,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "hi",
-      0.25
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     4,
-     6,
-     7
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "hi",
-      0.2
-     ],
-     [
-      "mi",
-      0.2
-     ]
-    ]
-   },
-   "_": "벌스 · 똑딱똑딱"
+   "name": "벌스 · 똑딱똑딱",
+   "lane": "tick",
+   "first": true,
+   "hold": false,
+   "mark": "초침: 가운데 두 칸 똑 · 딱"
   },
   {
    "from": 8,
    "to": 12,
    "lvl": 2,
-   "normal": {
-    "pick": [
-     [
-      "lo",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "pick": [
-     [
-      "lo",
-      0.2
-     ],
-     [
-      "mi",
-      0.25
-     ]
-    ],
-    "perBar": [
-     6,
-     9,
-     12
-    ]
-   },
-   "_": "벌스 2"
+   "name": "벌스 2",
+   "lane": "tick"
   },
   {
    "from": 12,
-   "to": 16,
-   "lvl": 3,
-   "mel": 0.9,
-   "normal": {
-    "chordCols": [
-     0
-    ],
-    "pick": [
-     [
-      "mel",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ],
-     [
-      "hi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "훅 Tick tock"
-  },
-  {
-   "from": 16,
    "to": 20,
    "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "훅 반복"
+   "name": "훅",
+   "lane": "tick",
+   "ring": true,
+   "hold": false,
+   "mark": "후렴: 마디마다 양 끝 '땡'"
   },
   {
    "from": 20,
    "to": 22,
    "lvl": 1,
-   "easy": {
-    "longs": 4,
-    "longGap": 12
+   "name": "슬랩 베이스",
+   "lane": "pitch",
+   "follow": {
+    "easy": "beat",
+    "normal": "mel",
+    "hard": "mel"
    },
-   "normal": {
-    "longs": 2,
-    "longGap": 6,
-    "fill": true,
-    "perBar": [
-     3,
-     4,
-     5
-    ]
-   },
-   "hard": {
-    "longs": 2,
-    "longGap": 2,
-    "fill": true,
-    "perBar": [
-     5,
-     6,
-     8
-    ]
-   },
-   "_": "슬랩 베이스"
+   "hold": false,
+   "mark": "베이스 높낮이 = 레인 높낮이"
   },
   {
    "from": 22,
    "to": 26,
    "lvl": 3,
-   "mel": 0.9,
-   "normal": {
-    "chordCols": [
-     0
-    ],
-    "pick": [
-     [
-      "mel",
-      0.25
-     ],
-     [
-      "mi",
-      0.3
-     ],
-     [
-      "hi",
-      0.3
-     ]
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "훅 Tick tock"
+   "name": "훅",
+   "lane": "tick",
+   "ring": true,
+   "hold": false
   },
   {
    "from": 26,
-   "to": 28,
-   "lvl": 3,
-   "normal": {
-    "chordCols": [
-     0
-    ]
-   },
-   "hard": {
-    "chordCols": [
-     0,
-     8
-    ]
-   },
-   "_": "빅 피니시"
-  },
-  {
-   "from": 28,
    "to": 29,
    "lvl": 3,
-   "all": {
-    "chordCols": [
-     0
-    ]
-   },
-   "_": "끝"
+   "name": "빅 피니시",
+   "hold": false
   }
  ],
- "edit": {
-  "easy": {
-   "add": []
-  },
-  "normal": {
-   "add": []
-  },
-  "hard": {
-   "add": []
-  }
- },
- "lastBeat": 112,
+ "sc": [
+  6,
+  21,
+  27
+ ],
+ "_v1": "v0.7.2 까지의 plan 은 git(3d2bb980) 에 있음",
  "special": {
   "sc": 3
  },
- "_special": "2화 · 슈퍼챗 1화부터 · 페이더 3화부터 · 큐 6화부터 (ONAIR_PLAN 10-7)"
+ "lv": {
+  "easy": 2,
+  "normal": 6,
+  "hard": 10
+ },
+ "dens": {
+  "easy": 0.516,
+  "normal": 0.704,
+  "hard": 0.717
+ }
 }

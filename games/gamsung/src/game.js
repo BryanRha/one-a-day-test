@@ -2,14 +2,14 @@
 //   0.2.0 개편 (EXPANSION_PLAN.md): 지점 = 구역 여러 개 · 8단계로 넓어짐(공사) · 층(1F · 2F · 3F · 루프탑) · 사장님이 매장을 걸어 다님(owner.js) · 지점 7곳
 //   바닥은 100 단위 칸 — 가구가 놓인 칸 · 벽은 못 지나감 · 길(문 → 모든 자리 · 바 · 일하는 곳)이 막히는 배치는 안 됨
 import * as THREE from 'three';
-import { THEME_SETS, MENU, FURN, MACHINES, STAFF, STAFF_UP, OFFLINE, HAND_ROAST, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND, PULL, POEMS, POEM_PER, LETTERS, CHEER, STORY_WAIT, OWNER, IDLE, VIP, APRONS } from './data.js?v=0.99.40';
-import { S, ST, save, levelOf, dayTick, today, now, newStore } from './state.js?v=0.99.40';
-import { M, box, cyl, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, todayFrame, coinPile, letter, ROOM } from './models.js?v=0.99.40';
-import { sfx } from './audio.js?v=0.99.40';
-import { BRANCHES, SPOT, FDX, gi, furnAt, floorOfX, FINISHED, hms } from './layout.js?v=0.99.40';
-import { drawFloor, props, bake, areaAt, linked, areaBox, occ, orange } from './world.js?v=0.99.40';
-import { track, salesAdd } from './oad.js?v=0.99.40';
-import { OwnerMixin } from './owner.js?v=0.99.40';
+import { THEME_SETS, MENU, FURN, MACHINES, STAFF, STAFF_UP, OFFLINE, HAND_ROAST, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND, PULL, POEMS, POEM_PER, LETTERS, CHEER, STORY_WAIT, OWNER, IDLE, VIP, APRONS } from './data.js?v=0.99.41';
+import { S, ST, save, levelOf, dayTick, today, now, newStore } from './state.js?v=0.99.41';
+import { M, box, cyl, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, todayFrame, coinPile, letter, ROOM } from './models.js?v=0.99.41';
+import { sfx } from './audio.js?v=0.99.41';
+import { BRANCHES, SPOT, FDX, gi, furnAt, floorOfX, FINISHED, hms } from './layout.js?v=0.99.41';
+import { drawFloor, props, bake, areaAt, linked, areaBox, occ, orange } from './world.js?v=0.99.41';
+import { track, salesAdd } from './oad.js?v=0.99.41';
+import { OwnerMixin } from './owner.js?v=0.99.41';
 
 const V = THREE.Vector3, CELL = 100, rnd = (a, b) => a + Math.random() * (b - a);
 export const fmt = n => Math.round(n).toLocaleString('en-US');
