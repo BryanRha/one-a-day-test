@@ -1,12 +1,12 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.45';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.46';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
 export const PROD = ENV === 'prod';
-// 실서버에서 '모든 게임 무료(테스트 기간)'를 켤지 — 2026-10-28 대표 결정: 끔(하루 한 게임 무료) · 바꿀 때는 이 값 하나만
+// 실서버에서 '모든 게임 무료'를 켤지 — 2026-10-28 대표: 끔(하루 한 게임) → 2026-11-16 켬: 대표 "실서버에서 광고 꺼" + 골드 충전 닫음(총괄)이라 다른 게임을 열 길이 없음 → 첫 공개는 실서버 게임 전부 무료 · 광고나 골드 판매가 열리면 다시 정함
 //   테스트 · 개발에서는 설정의 '테스트: 하루 한 게임 규칙' 버튼으로 바꿔 볼 수 있음 (실서버에서는 버튼이 없음)
-export const PROD_OPEN_ALL = false;   /* 2026-10-28 대표: 하루 한 게임 무료로 서비스 */
+export const PROD_OPEN_ALL = true;   /* 2026-11-16 실서버 첫 공개: 광고 끔 · 골드 충전 닫음 → 모든 게임 무료 (위 설명) */
 // 실서버 노출: 테스트를 통과해 대표가 지정한 게임(catalog.js PROD_LIVE)만 · 테스트 · 개발은 전부 (2026-11-16)
 export const shown = id => !PROD || PROD_LIVE.includes(id);
 export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND = BRAND0.filter(shown);
@@ -88,7 +88,7 @@ export function checkIn() {
   s.streak.last = today; save(); return s.streak;
 }
 /* 오늘 보충할 수 있는 놓친 날 (없으면 null) */
-export const fillable = () => { const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
+export const fillable = () => { if (PROD) return null; /* 실서버: 광고 꺼짐(2026-11-16) → 놓친 날 도장 광고 보충 없음 */ const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
 export function fillByAd() {
   const s = state(); if (!fillable()) return false;
   s.streak.count = (s.streak.prev || 0) + 1 + s.streak.count; s.streak.filled = [...(s.streak.filled || []).slice(-30), s.streak.fill];

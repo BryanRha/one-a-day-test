@@ -27,6 +27,9 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <p class="meta">입문 운세(3,900원)는 보너스 골드도 쓸 수 있고, 그보다 비싼 운세는 충전 골드로만 열 수 있어요. 이번 달 운세 · 합격운은 결제한 달 기준이며 매월 21일부터는 다음 달 운세로 판매합니다.</p>
 
 <h2>2. 골드 (원어데이 공용 재화)</h2>
+<!-- 실서버 첫 공개(2026-11-16): 골드 충전 판매 전 — server/api/_lib/gold.js GOLD_SALE_PROD 를 켜면 이 안내(goldoff)와 refund/ 의 같은 안내를 지움 -->
+<p class="box goldoff" hidden><b>지금은 골드 충전(원화로 골드 구매)을 판매하지 않습니다.</b> 아래 묶음 표는 판매를 시작할 때의 가격이며, 시작하면 이 페이지와 앱에서 먼저 알립니다. 선물 · 출석 등으로 받은 보너스 골드는 그대로 쓸 수 있고, 유료 운세는 카드로 건별 결제합니다.</p>
+<script>if (window.OAD_ENV === 'prod') document.querySelectorAll('.goldoff').forEach(e => { e.hidden = false; });</script>
 <ul>
 <li><b>1골드 = 10원.</b> 로그인한 계정에 저장되어 기기를 바꿔도 이어집니다.</li>
 <li>유효기간: 충전 골드(유상) 5년 · 보너스 골드(무상) 받은 날부터 1년.</li>

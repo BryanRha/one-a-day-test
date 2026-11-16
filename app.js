@@ -1,20 +1,20 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.45';
-import * as R from './rules.js?v=0.99.45';
-import * as I from './install.js?v=0.99.45';
-import * as T from './track.js?v=0.99.45';
-import * as P from './pay.js?v=0.99.45';
-import * as A from './account.js?v=0.99.45';
-import * as C from './cloud.js?v=0.99.45';
-import * as BM from './bm.js?v=0.99.45';
-import * as HUB from './hub.js?v=0.99.45';
-import * as O from './operator.js?v=0.99.45';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.46';
+import * as R from './rules.js?v=0.99.46';
+import * as I from './install.js?v=0.99.46';
+import * as T from './track.js?v=0.99.46';
+import * as P from './pay.js?v=0.99.46';
+import * as A from './account.js?v=0.99.46';
+import * as C from './cloud.js?v=0.99.46';
+import * as BM from './bm.js?v=0.99.46';
+import * as HUB from './hub.js?v=0.99.46';
+import * as O from './operator.js?v=0.99.46';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.45').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.46').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.45'), import('./fortune/types.js?v=0.99.45'), import('./fortune/chat.js?v=0.99.45'), import('./fortune/oneword-ui.js?v=0.99.45')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.46'), import('./fortune/types.js?v=0.99.46'), import('./fortune/chat.js?v=0.99.46'), import('./fortune/oneword-ui.js?v=0.99.46')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -24,7 +24,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.45';
+const VERSION = '0.99.46';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(오늘 허브 + 게임) · 'fortune'(점방) · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -220,7 +220,7 @@ function shelf() {
     const badge = { today: '<span class="st today">오늘 무료</span>', owned: '<span class="st open">소장 ✓</span>', unlocked: '<span class="st open">오늘 열림</span>', free: '<span class="st open">자유 플레이</span>' }[a] || '<span class="st ad">📺 광고로 열기</span>';
     return `<div class="gt${a === 'locked' ? ' lock' : ''}" data-open="${gid}" ${KB} aria-label="${g.title}"><div class="im">${img(g.icon, 0, 'loading="lazy"')}${badge}${a === 'locked' ? `<span class="dd">D-${k} 무료</span>` : ''}${R.isBrand(gid) ? '<span class="collab">콜라보</span>' : ''}</div><div class="t">${g.title}</div><div class="s">${s.library[gid] ? '✓ 만난 게임' : g.genre}</div></div>`;
   });
-  return `<div class="section"><h3>게임 진열장</h3><span class="more">${n}개 · 돌아오는 날엔 무료</span></div><div class="shelf" data-blk="shelf">${tiles.join('')}</div>`;
+  return `<div class="section"><h3>게임 진열장</h3><span class="more">${n}개 · ${R.RULES.openAll ? '모두 무료' : '돌아오는 날엔 무료'}</span></div><div class="shelf" data-blk="shelf">${tiles.join('')}</div>`;
 }
 /* 만난 게임 도장: 공개된 게임은 아이콘 · 만난 것만 색 · 오늘 것은 점선 */
 function collLine() {
@@ -290,6 +290,13 @@ const agreeNote = (kind = 'fortune') => `<p class="paynote agree">${kind === 'go
 function shop(note) {
   const m = A.current(); if (!m) return needLogin('골드를 사려면 로그인해 주세요');
   T.track('shop_view', { first: m.first ? 1 : 0 });
+  if (R.PROD && payCfg.goldSale !== true) {   /* 실서버 첫 공개: 골드 충전 판매 전(server gold.js GOLD_SALE_PROD) — 지갑 · 내역만 · 유료 운세는 카드로 */
+    T.track('shop_closed');
+    return openSheet(`<div class="intro shop"><h2>내 골드</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
+    <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
+    <p class="fsub">골드 충전은 아직 열지 않았어요. 선물 · 출석으로 받은 골드는 그대로 쓸 수 있고, 점방의 유료 운세는 카드로 바로 결제할 수 있어요.</p>
+    <div class="stack"><button class="btn" data-tab-go="fortune">점방 가기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
+  }
   const card = ([id, price, paid, free]) => `<button class="pack" data-pack="${id}"><span class="pc">🪙</span><b>${gnum(paid + free)}</b>${free ? `<em>+${Math.round(free / paid * 100)}% 보너스</em>` : '<em>&nbsp;</em>'}<span class="pp">${won(price)}</span></button>`;
   openSheet(`<div class="intro shop"><h2>골드 상점</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
     <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
@@ -300,6 +307,7 @@ function shop(note) {
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
 }
 async function buyPack(id) {
+  if (R.PROD && payCfg.goldSale !== true) return toast('골드 충전은 아직 열지 않았어요');
   const c = await P.config(); if (c.mode === 'off') return toast('결제는 곧 열려요');
   const tk = await A.token(); if (!tk) return needLogin();
   T.track('pay_click', { product: id });
@@ -354,6 +362,7 @@ async function cloudPick(id, side, b) {
 }
 // 소장 권유 (성장형 게임 · 3판 이상 · 게임당 주 1회 · 앱 하루 1회 · 다시 보지 않기)
 function nudgeOwn(id) {
+  if (R.PROD) return false;   /* 실서버 첫 공개: 골드 충전 닫음 → 300골드 소장 권유 안 띄움 (2026-11-16) */
   if (!A.ON || !SAVES_OK(id) || R.state().owned[id] || (R.state().library[id] || {}).plays < 3) return false;
   let n = {}; try { n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); } catch { /* */ }
   const today = R.keyOf(R.now());
@@ -587,7 +596,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.45')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.46')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -1057,11 +1066,11 @@ function settingsHTML() {
       <div><span>모든 기록 지우기</span><button class="warn" data-reset>초기화</button></div>
     </div>
     <div class="box"><div class="jua" style="font-size:18px;margin-bottom:6px">이용 규칙 (현재)</div><ul class="rules" style="margin:0;padding-left:18px">
-      ${R.RULES.openAll ? '<li><b>지금은 테스트 기간이라 모든 게임을 자유롭게 할 수 있어요</b></li>' : ''}
+      ${R.RULES.openAll ? `<li><b>${R.PROD ? '지금은 모든 게임을 무료로 자유롭게 할 수 있어요' : '지금은 테스트 기간이라 모든 게임을 자유롭게 할 수 있어요'}</b></li>` : ''}
       <li>오늘의 게임은 하루 종일 무료</li>
-      <li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요${R.PROD ? '' : ' (지금은 테스트 광고)'}</li>
-      <li>골드로 하루 열기 10골드 · 소장 300골드 · 전체 소장 2,500골드 (로그인 필요)</li></ul>
-      ${A.current() && setCount() ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button></div>` : ''}</div>
+      ${R.PROD ? '' : `<li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요 (지금은 테스트 광고)</li>
+      <li>골드로 하루 열기 10골드 · 소장 300골드 · 전체 소장 2,500골드 (로그인 필요)</li>`}</ul>
+      ${A.current() && setCount() && !R.PROD ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button></div>` : ''}</div>
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div>
     <div class="bizfoot">${O.footerHTML()}</div>`;
 }
@@ -1144,7 +1153,7 @@ function detail(id) {
     ? `<div class="saveat"><span>☁ 저장 위치 · <b>내 계정</b></span><small>${last ? `마지막 저장 ${when(last)}` : '게임을 닫으면 저장돼요'}${C.canUndo(id) ? ` · <button class="lnk" data-cundo="${id}">직전 저장으로 되돌리기</button>` : ''}</small></div>`
     : `<div class="saveat"><span>📱 저장 위치 · <b>이 기기</b></span><small>${progressLine(id)}</small></div>`;
   const actions = a !== 'locked'
-    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`   /* 브랜드 게임도 소장 가능 (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 규칙) */
+    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own && !R.PROD ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`   /* 브랜드 게임도 소장 가능 (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 규칙) */
     : `<button class="btn alt" data-ad="${id}">📺 광고 보고 ${R.RULES.adUnlock === 'day' ? '오늘 하루' : '한 판'} 플레이</button>
        ${R.isBrand(id) ? '' : `<button class="btn gold" data-gbuy="day" data-gid="${id}">🪙 10골드로 오늘 하루 열기</button>`}
        <button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 언제든 + 기록을 계정에</button>
@@ -1158,6 +1167,7 @@ function detail(id) {
 }
 
 function watchAd(id) {
+  if (R.PROD) return toast('지금은 모든 게임을 무료로 할 수 있어요');   /* 실서버: 광고 끔 · 모든 게임 무료(rules.js PROD_OPEN_ALL) — 잠긴 게임이 없어 원래 오지 않음 */
   let left = R.RULES.adSeconds;
   T.track('ad_view', { game: id, from: 'detail_locked' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
@@ -1383,6 +1393,7 @@ async function gameReq(gid, d) {
 }
 // 테스트 광고 (진짜 광고망은 승인 후): 보상형은 5초 뒤 '보상 받기', 전면은 5초 뒤 '닫기'
 function fakeAd(label, reward) {
+  if (R.PROD) return Promise.resolve(!reward);   /* 실서버: 광고 끔(2026-11-16 대표) — 보상형은 '못 봄', 전면은 '건너뜀' (BM 그룹 A 고정이라 원래 여기까지 오지 않음 · 이중 안전) */
   return new Promise(res => {
     let left = R.RULES.adSeconds, fin = false; const end = ok => { if (fin) return; fin = true; clearInterval(iv); onSheetClose = null; closeSheet(); res(ok); };
     openSheet(`<div class="ad"><div class="screen">${label}</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>

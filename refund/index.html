@@ -32,6 +32,9 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 </ol>
 
 <h2>3. 충전 골드</h2>
+<!-- 실서버 첫 공개(2026-11-16): 골드 충전 판매 전 — gold.js GOLD_SALE_PROD 를 켜면 지움 -->
+<p class="box goldoff" hidden><b>지금은 골드 충전을 판매하지 않습니다.</b> 아래 기준은 판매를 시작한 뒤 산 충전 골드에 적용됩니다. 선물 · 출석 등으로 받은 보너스 골드는 환불 대상이 아닙니다.</p>
+<script>if (window.OAD_ENV === 'prod') document.querySelectorAll('.goldoff').forEach(e => { e.hidden = false; });</script>
 <ol>
 <li>1골드는 10원입니다. 결제로 산 골드는 '충전 골드(유상)', 첫 구매 · 묶음 보너스 · 선물 · 출석 등으로 받은 골드는 '보너스 골드(무상)'로 따로 기록합니다.</li>
 <li><b>결제 후 7일 안</b>: 그 결제로 받은 충전 골드를 하나도 쓰지 않았다면 결제를 전액 취소합니다. 일부를 썼다면 쓰지 않은 충전 골드만큼(1골드 = 10원) 환불하고, 그 결제와 함께 받은 보너스 골드는 회수합니다.</li>
