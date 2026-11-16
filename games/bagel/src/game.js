@@ -1,12 +1,12 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS, TERRACE } from './data.js?v=0.99.44';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS, TERRACE } from './data.js?v=0.99.45';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.44';
-import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.44';
-import { installZone } from './zone.js?v=0.99.44';
-import { S, save, addSold, mission, today } from './state.js?v=0.99.44';
-import { sfx } from './audio.js?v=0.99.44';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.45';
+import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.45';
+import { installZone } from './zone.js?v=0.99.45';
+import { S, save, addSold, mission, today } from './state.js?v=0.99.45';
+import { sfx } from './audio.js?v=0.99.45';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -111,7 +111,7 @@ export class Game {
     const ok = this.layoutOK(); ob.x = sx; ob.z = sz; if (!o) this.decoObjs.splice(this.decoObjs.indexOf(ob), 1); return ok; }
   /* 길이 이어져 있나: 20cm 칸마다 사장이 설 수 있나(blocked) → 시작 자리(반죽기 · 오븐 앞)와 이어진 덩어리가 모든 일하는 칸(시설 · 테이블 · 테라스)에 닿아야 함
      아무도 들어갈 수 없는 빈 구석은 괜찮음 — 단 사장이 그 안에 있으면 이어진 곳으로 옮김(playerFree) · gate_reach W1 과 같은 뜻 */
-  layoutInfo() { const B = this.B, G = 20, r = 34, z1 = this.terrace ? this.terrace.z1 : B.D / 2, free = new Set(), q = { x: 0, z: 0 }, K = (x, z) => Math.round(x / G) * 1000 + Math.round(z / G);
+  layoutInfo() { const B = this.B, G = 20, r = 34, z1 = Math.max(B.D / 2, this.terrace ? this.terrace.z1 : 0, this.oz ? this.oz.band[3] : 0),   /* 0.7.2: 바깥 구역 띠까지 봄 — 가게 안(z ≤ 750)만 보던 때는 구역 테이블 쓰레기 칸(z 745~1055)에 늘 못 닿아 모든 자리가 「길을 끊음」이 되어 꾸미기를 어디에도 못 놓았음 */ free = new Set(), q = { x: 0, z: 0 }, K = (x, z) => Math.round(x / G) * 1000 + Math.round(z / G);
     for (let i = Math.ceil(-B.W / 2 / G); i <= Math.floor(B.W / 2 / G); i++) for (let j = Math.ceil(-B.D / 2 / G); j <= Math.floor(z1 / G); j++) { q.x = i * G; q.z = j * G; if (!this.blocked(q, r)) free.add(i * 1000 + j); }
     let s0 = null, bd = 1e9; for (const k of free) { const x = Math.round(k / 1000) * G, z = (k - Math.round(k / 1000) * 1000) * G, d = Math.hypot(x + 380, z + 330); if (d < bd) { bd = d; s0 = k; } }
     const main = new Set(s0 == null ? [] : [s0]), st = s0 == null ? [] : [s0]; while (st.length) { const k = st.pop(); for (const d of [1000, -1000, 1, -1]) { const k2 = k + d; if (free.has(k2) && !main.has(k2)) { main.add(k2); st.push(k2); } } }
@@ -176,7 +176,7 @@ export class Game {
   // 동작 칸: 바닥에 그린 칸 = 실제로 동작하는 범위 (들어서면 밝아짐)
   zone(x, z, w, d, col, ring) { if (ring === 2) return { x, z, w, d, hidden: true, g: { visible: true } };   /* 직원 목표 지점만 */
     const g = new THREE.Group(); g.position.set(x, 0, z); this.sc.add(g);
-    if (ring) { /* 테이블 둘레 테두리: 어느 쪽에서 다가가도 됨 */ const mt = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 }); for (const [sx, sz, sw, sd] of [[0, -d / 2, w, 16], [0, d / 2, w, 16], [-w / 2, 0, 16, d], [w / 2, 0, 16, d]]) { const e = new THREE.Mesh(new THREE.BoxGeometry(sw, 3, sd), mt); e.position.set(sx, 1.5, sz); g.add(e); }
+    if (ring) { /* 테이블 둘레 테두리: 어느 쪽에서 다가가도 됨 */ const mt = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, depthWrite: false });   /* 0.7.2: 이웃 테이블 테두리끼리 겹치는 곳(같은 높이)이 깜빡이지 않게 깊이를 안 씀 */ for (const [sx, sz, sw, sd] of [[0, -d / 2, w, 16], [0, d / 2, w, 16], [-w / 2, 0, 16, d], [w / 2, 0, 16, d]]) { const e = new THREE.Mesh(new THREE.BoxGeometry(sw, 7, sd), mt); e.position.set(sx, 3.5, sz); g.add(e); }   /* 0.7.2: 윗면 높이 7 — 3 이던 때 구역 바닥(3) · 러그(3)와 같은 높이라 폰에서 깜빡였음 (바닥 층 높이: models.js FLOOR_Y) */
       const Z = { x, z, w, d, g, inner: { material: mt }, col: new THREE.Color(col), ring: true }; this.zones.push(Z); return Z; }
     const edge = new THREE.Mesh(new THREE.BoxGeometry(w, 3, d), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9 })); edge.position.y = 1.5; g.add(edge);
     const inner = new THREE.Mesh(new THREE.BoxGeometry(w - 14, 4, d - 14), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.6 })); inner.position.y = 2; g.add(inner);

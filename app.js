@@ -1,20 +1,20 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.44';
-import * as R from './rules.js?v=0.99.44';
-import * as I from './install.js?v=0.99.44';
-import * as T from './track.js?v=0.99.44';
-import * as P from './pay.js?v=0.99.44';
-import * as A from './account.js?v=0.99.44';
-import * as C from './cloud.js?v=0.99.44';
-import * as BM from './bm.js?v=0.99.44';
-import * as HUB from './hub.js?v=0.99.44';
-import * as O from './operator.js?v=0.99.44';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.45';
+import * as R from './rules.js?v=0.99.45';
+import * as I from './install.js?v=0.99.45';
+import * as T from './track.js?v=0.99.45';
+import * as P from './pay.js?v=0.99.45';
+import * as A from './account.js?v=0.99.45';
+import * as C from './cloud.js?v=0.99.45';
+import * as BM from './bm.js?v=0.99.45';
+import * as HUB from './hub.js?v=0.99.45';
+import * as O from './operator.js?v=0.99.45';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.44').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.45').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.44'), import('./fortune/types.js?v=0.99.44'), import('./fortune/chat.js?v=0.99.44'), import('./fortune/oneword-ui.js?v=0.99.44')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.45'), import('./fortune/types.js?v=0.99.45'), import('./fortune/chat.js?v=0.99.45'), import('./fortune/oneword-ui.js?v=0.99.45')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -24,7 +24,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.44';
+const VERSION = '0.99.45';
 window.OAD_VERSION = VERSION;
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(오늘 허브 + 게임) · 'fortune'(점방) · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -261,7 +261,7 @@ function hubTap(el, t) {
   const svc = el.dataset.hub, st = el.dataset.hst || '';
   T.track('hub_card', { svc, state: st });
   if (svc === 'game' || svc === 'tmr_game') { if (el.dataset.hgo) return toGames(true); if (!el.dataset.play) toGames(true); return 'play'; }
-  if (svc === 'fort') { if (t.closest('[data-paid]')) return 'paid'; FFROM = 'hub'; return go('fortune', 'tab'); }
+  if (svc === 'fort' || svc === 'tmr_fort') { if (t.closest('[data-paid]')) return 'paid'; FFROM = 'hub'; return go('fortune', 'tab'); }   /* tmr_fort: 게임이 아직 없는 실서버의 '내일 0시 · 점방' 칸 */
   if (svc === 'nr' || svc === 'lunch' || svc === 'tmr_nr') { if (!R.PROD && el.dataset.nr) nrDeep = el.dataset.nr; nrVia = 'hub'; return go('neorang', 'tab'); }
 }
 document.addEventListener('click', e => { const el = e.target.closest('[data-hub]'); if (el && view.contains(el) && player.hidden) hubTap(el, e.target); });
@@ -587,7 +587,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.44')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.45')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -868,7 +868,7 @@ function boxGames() {
   const general = ids.length
     ? `<div class="sumrow"><div><b>${ids.filter(id => lib[id]).length}</b><small>만난 게임</small></div><div><b>${own.length}</b><small>소장</small></div><div><b>${days}</b><small>플레이한 날</small></div></div>
       <div class="bgrid">${[...own, ...rest].map(boxTile).join('')}</div>`
-    : `<div class="empty"><div class="big">🎮</div><p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button></div>`;
+    : `<div class="empty"><div class="big">🎮</div>${R.DAILY.length ? '<p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button>' : '<p>게임은 곧 하나씩 열려요.<br>열리면 플레이한 게임이 여기에 모여요.</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="fortune">오늘의 운세 무료로 보기</button>'}</div>`;   /* 실서버에 보이는 게임이 아직 없으면 점방으로 안내 */
   return `${general}
     ${R.BRAND.length ? `<div class="bsub"><b>🤝 브랜드관</b><span>브랜드와 함께 만든 게임</span></div><div class="bgrid">${R.BRAND.map(boxTile).join('')}</div>` : ''}
     <p class="bfoot">한 번 만난 게임은 여기 모여요 · 소장하면 광고 없이 언제든</p>`;
@@ -1059,7 +1059,7 @@ function settingsHTML() {
     <div class="box"><div class="jua" style="font-size:18px;margin-bottom:6px">이용 규칙 (현재)</div><ul class="rules" style="margin:0;padding-left:18px">
       ${R.RULES.openAll ? '<li><b>지금은 테스트 기간이라 모든 게임을 자유롭게 할 수 있어요</b></li>' : ''}
       <li>오늘의 게임은 하루 종일 무료</li>
-      <li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요 (지금은 테스트 광고)</li>
+      <li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요${R.PROD ? '' : ' (지금은 테스트 광고)'}</li>
       <li>골드로 하루 열기 10골드 · 소장 300골드 · 전체 소장 2,500골드 (로그인 필요)</li></ul>
       ${A.current() && setCount() ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button></div>` : ''}</div>
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div>
@@ -1180,6 +1180,15 @@ function stampAd() {
   }, 1000);
 }
 function intro() {
+  /* 실서버에 아직 보이는 게임이 없으면(catalog.js RATING 비어 있음) 게임 안내 대신 점방 중심 안내 — 테스트 · 개발은 게임이 늘 있어 그대로 */
+  if (R.PROD && !R.DAILY.length) {
+    openSheet(`<div class="intro"><h2 data-home role="link" style="cursor:pointer">🌙 One a Day</h2><p style="color:var(--sub);margin:4px 0 6px">하루에 하나, 오늘을 챙기는 곳</p>
+    <div class="step"><div class="num">1</div><div><b>오늘의 신점 · 매일 무료</b><p>생년월일만 넣으면 그날의 점쟁이가 오늘을 읽어 줘요. 생년월일 원본은 내 폰에만 저장돼요.</p></div></div>
+    <div class="step"><div class="num">2</div><div><b>더 깊은 풀이는 점방에서</b><p>무료 미리보기를 먼저 읽고, 마음에 들면 전체 풀이를 열어요.</p></div></div>
+    <div class="step"><div class="num">3</div><div><b>게임은 곧 하나씩</b><p>준비가 끝난 게임부터 매일 하나씩 공개할게요.</p></div></div>
+    <div class="stack"><button class="btn" data-close>시작하기</button></div></div>`);
+    R.state().intro = true; R.save(); return;
+  }
   openSheet(`<div class="intro"><h2 data-home role="link" style="cursor:pointer">🌙 One a Day</h2><p style="color:var(--sub);margin:4px 0 6px">하루에 하나, 새로운 게임을 만나요</p>
     <div class="step"><div class="num">1</div><div><b>매일 자정, 새 게임 공개</b><p>모든 플레이어에게 같은 게임이 열려요. 친구와 오늘 기록을 겨뤄 보세요.</p></div></div>
     <div class="step"><div class="num">2</div><div><b>플레이하면 보관함에</b><p>한 번 만난 게임은 내 보관함에 차곡차곡 모여요.</p></div></div>

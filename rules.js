@@ -1,14 +1,14 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD } from './catalog.js?v=0.99.44';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.45';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
 export const PROD = ENV === 'prod';
-// 실서버에서 '모든 게임 무료(테스트 기간)'를 켤지 — 대표 결정 전이라 지금 그대로(true) · 결정되면 이 값 하나만 바꿈
+// 실서버에서 '모든 게임 무료(테스트 기간)'를 켤지 — 2026-10-28 대표 결정: 끔(하루 한 게임 무료) · 바꿀 때는 이 값 하나만
 //   테스트 · 개발에서는 설정의 '테스트: 하루 한 게임 규칙' 버튼으로 바꿔 볼 수 있음 (실서버에서는 버튼이 없음)
 export const PROD_OPEN_ALL = false;   /* 2026-10-28 대표: 하루 한 게임 무료로 서비스 */
-// 실서버 노출: 등급분류 받은 게임(catalog.js RATING)만 · 테스트 · 개발은 전부
-export const shown = id => !PROD || !!RATING[id];
+// 실서버 노출: 테스트를 통과해 대표가 지정한 게임(catalog.js PROD_LIVE)만 · 테스트 · 개발은 전부 (2026-11-16)
+export const shown = id => !PROD || PROD_LIVE.includes(id);
 export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND = BRAND0.filter(shown);
 // 게임에 알려 주는 스위치 (hello() 응답) — coupon: 브랜드 매장 쿠폰 발급 (실서버는 계약 · 게임위 자문 전까지 끔)
 export const FLAGS = { env: ENV, coupon: !PROD || BRAND_COUPON_PROD };

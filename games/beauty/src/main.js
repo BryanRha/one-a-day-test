@@ -1,17 +1,17 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.44';
-import { audio } from './audio.js?v=0.99.44';
-import { BootScene } from './scenes/Boot.js?v=0.99.44';
-import { HomeScene } from './scenes/Home.js?v=0.99.44';
-import { BoardScene } from './scenes/Board.js?v=0.99.44';
-import { StoryScene } from './scenes/Story.js?v=0.99.44';
-import { SeasonScene } from './scenes/Season.js?v=0.99.44';
-import { ShopScene } from './scenes/Shop.js?v=0.99.44';
-import { AlbumScene } from './scenes/Album.js?v=0.99.44';
-import { MiniScene } from './scenes/Mini.js?v=0.99.44';
-import { installBack } from './oad.js?v=0.99.44';
-import { installNav } from './nav.js?v=0.99.44';
-import { initBM, syncReceipts } from './store.js?v=0.99.44';
-import { bm } from './oad_bm.js?v=0.99.44';
+import { W, BASE_H, setH } from './config.js?v=0.99.45';
+import { audio } from './audio.js?v=0.99.45';
+import { BootScene } from './scenes/Boot.js?v=0.99.45';
+import { HomeScene } from './scenes/Home.js?v=0.99.45';
+import { BoardScene } from './scenes/Board.js?v=0.99.45';
+import { StoryScene } from './scenes/Story.js?v=0.99.45';
+import { SeasonScene } from './scenes/Season.js?v=0.99.45';
+import { ShopScene } from './scenes/Shop.js?v=0.99.45';
+import { AlbumScene } from './scenes/Album.js?v=0.99.45';
+import { MiniScene } from './scenes/Mini.js?v=0.99.45';
+import { installBack } from './oad.js?v=0.99.45';
+import { installNav } from './nav.js?v=0.99.45';
+import { initBM, syncReceipts } from './store.js?v=0.99.45';
+import { bm } from './oad_bm.js?v=0.99.45';
 
 async function start() {
   installNav(); syncReceipts(); initBM();   /* 원어데이 연결 확인(최대 0.8초, 기다리지 않음) — 결과는 화면이 그려질 때 캐시로 봄 */

@@ -4,10 +4,10 @@
 //   구역 직원: 원료 설비(오븐 · 토핑 바)에서 바로 받아 정해진 길(way · 76cm 틈을 안 지남)로 판매대 · 구역 테이블을 치움 · 쉬지 않음 · 청소 직원 · 실내 손님은 구역을 안 봄
 //   지점 공통 구조(OUT_ZONE[지점]) — 1단계는 1호점만 켬
 import * as THREE from 'three';
-import { OUT_ZONE, MENU, BRAND, DECO } from './data.js?v=0.99.44';
-import { box, cyl, sph, mesh, M, item, person, ITEM_H } from './models.js?v=0.99.44';
-import { S, save, addSold } from './state.js?v=0.99.44';
-import { sfx } from './audio.js?v=0.99.44';
+import { OUT_ZONE, MENU, BRAND, DECO } from './data.js?v=0.99.45';
+import { box, cyl, sph, mesh, M, item, person, ITEM_H } from './models.js?v=0.99.45';
+import { S, save, addSold } from './state.js?v=0.99.45';
+import { sfx } from './audio.js?v=0.99.45';
 
 const V = THREE.Vector3, rnd = (a, b) => a + Math.random() * (b - a), fmt = n => Math.round(n).toLocaleString('en-US');
 const LANE_DX = [-45, 45];   /* 판매대 두 줄 (구역 메뉴 순서대로) */
@@ -16,24 +16,27 @@ const SRC = { bagel: ['oven', 'out'], cream: ['cc', 'io'], coffee: ['coffee', 'o
 /* 지점마다 구역 모습 (0.7.1): 1 테라스(흰 파라솔 · 산책로) · 2 호숫가 창가 바(판자 데크 · 남색 줄무늬 차양 · 벚꽃 · 스탠딩 바) · 3 통로 스탠딩 바(흰 타일 · 민트 줄눈 · 라인 조명 · 높은 테이블) · 4 잔디 피크닉(잔디 · 체크 매트 · 나무 수레)
    floor 바닥 · top 테이블 위 높이(쓰레기 놓는 곳) · seatDz 자리를 테이블 앞(+z)으로 · sitY 먹을 때 몸 높이 · bin 쓰레기통 색 — 자리 좌표 · 길 · 판매대 자리는 4지점 같음 */
 const STY = {
-  terrace: { floor: 0xE6D2B4, top: 80, seatDz: 0, sitY: 12, bin: 0x5A8A5A },
+  terrace: { floor: 0xE6D2B4, top: 80, seatDz: 0, sitY: 13, bin: 0x5A8A5A },
   lake: { floor: 0xC9A27A, top: 116, seatDz: 46, sitY: 0, bin: 0x2F5D8A },
   under: { floor: 0xF1F0EC, top: 108, seatDz: 0, sitY: 0, bin: 0x9AA4AC },
-  park: { floor: 0xA9CF8E, top: 12, seatDz: 0, sitY: 4, bin: 0x7A5A3A },
+  park: { floor: 0xA9CF8E, top: 14, seatDz: 0, sitY: 8, bin: 0x7A5A3A },
 };
-const LINE = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });   /* 라인 조명 (빛나는 띠) */
+const LINE = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+/* 바닥 층 높이 (0.7.2 · 대표 「테라스 영역이 깜빡」): 같은 높이의 면이 겹치면 폰에서 카메라가 따라갈 때 깜빡임(z-fighting) → 층마다 1 이상 띄움
+   바깥 땅 −11 · 가게 바닥 0 · 바깥 길 2 · 구역 바닥 4 · 구역 바닥 무늬 5 · 흙길 · 서는 자리 · 매트 6 · 칸 테두리 6 / 7(쓰레기 칸) — gate_flicker 가 지킴 */
+const ZF = 4;   /* 라인 조명 (빛나는 띠) */
 function zFloor(sty, g, x0, x1, z0, z1) { const cz = (z0 + z1) / 2 + 10, dz = z1 - z0;
-  if (sty === 'terrace') for (let x = x0 + 20; x < x1; x += 60) box(2, 1, dz, 0xD8C2A0, x, 3, cz, g);
-  if (sty === 'lake') for (let z = z0 + 10; z < z1 + 10; z += 42) box(x1 - x0, 1, 2, 0xA97F57, (x0 + x1) / 2, 3, z, g);
-  if (sty === 'under') { for (let x = x0 + 60; x < x1; x += 60) box(2, 1, dz, 0xBFE0D4, x, 3, cz, g); for (let z = z0 + 50; z < z1 + 10; z += 60) box(x1 - x0, 1, 2, 0xBFE0D4, (x0 + x1) / 2, 3, z, g); }
-  if (sty === 'park') { for (let x = x0 + 45; x < x1; x += 90) box(44, 1, dz, 0xB6D99C, x, 3, cz, g); box(150, 1, dz, 0xD9C7A2, 40, 4, cz, g); }   /* 잔디 줄무늬 · 판매대 앞 흙길 */
+  if (sty === 'terrace') for (let x = x0 + 20; x < x1; x += 60) box(2, 1, dz, 0xD8C2A0, x, ZF, cz, g);
+  if (sty === 'lake') for (let z = z0 + 10; z < z1 + 10; z += 42) box(x1 - x0, 1, 2, 0xA97F57, (x0 + x1) / 2, ZF, z, g);
+  if (sty === 'under') { for (let x = x0 + 60; x < x1; x += 60) box(2, 1, dz, 0xBFE0D4, x, ZF, cz, g); for (let z = z0 + 50; z < z1 + 10; z += 60) box(x1 - x0, 1.2, 2, 0xBFE0D4, (x0 + x1) / 2, ZF, z, g); }
+  if (sty === 'park') { for (let x = x0 + 45; x < x1; x += 90) box(44, 1, dz, 0xB6D99C, x, ZF, cz, g); box(150, 2, dz, 0xD9C7A2, 40, ZF, cz, g); }   /* 잔디 줄무늬 · 판매대 앞 흙길 */
 }
 function zEdge(sty, g, x0, x1, z0, z1) {   /* 띠 앞 낮은 장식 (가게 안을 가리지 않음 · 띠 밖) */
   const pots = [[x0 - 30, z1 + 30], [x0 + 200, z1 + 40], [x1 - 300, z1 + 40]];
   if (sty === 'terrace') for (const [ex, ez] of pots) { cyl(26, 20, 34, 0xE7B98A, ex, 0, ez, g, 10); sph(28, 0x7FBF6A, ex, 56, ez, g, 10, 8).scale.set(1, 0.8, 1); }
   if (sty === 'lake') { for (let x = x0 + 10; x <= x1 - 10; x += 110) box(8, 46, 8, 0x8A5E3A, x, 0, z1 + 24, g); box(x1 - x0 - 10, 6, 8, 0x8A5E3A, (x0 + x1) / 2, 44, z1 + 24, g);   /* 호수 쪽 낮은 난간 */
     for (const [ex, ez] of [[x0 - 70, z0 + 40], [x0 - 60, z1 + 60]]) { cyl(9, 12, 120, 0x7A5A3A, ex, 0, ez, g, 8); sph(62, 0xF6C8D4, ex, 150, ez, g, 12, 10); sph(40, 0xF9DCE4, ex + 30, 175, ez - 10, g, 10, 8); } }
-  if (sty === 'under') { box(x1 - x0, 4, 6, 0xFFFFFF, (x0 + x1) / 2, 3, z1 + 18, g).material = LINE; box(6, 4, z1 - z0, 0xFFFFFF, x0 - 8, 3, (z0 + z1) / 2 + 10, g).material = LINE;   /* 바닥 라인 조명 */
+  if (sty === 'under') { box(x1 - x0, 4, 6, 0xFFFFFF, (x0 + x1) / 2, ZF, z1 + 18, g).material = LINE; box(6, 4, z1 - z0, 0xFFFFFF, x0 - 8, ZF, (z0 + z1) / 2 + 10, g).material = LINE;   /* 바닥 라인 조명 */
     for (const [ex, ez] of pots) { box(46, 40, 46, 0xFBFBF9, ex, 0, ez, g); box(48, 4, 48, 0xBFE0D4, ex, 40, ez, g); sph(24, 0x6FAF7A, ex, 60, ez, g, 10, 8); } }
   if (sty === 'park') { for (const [ex, ez] of pots) sph(30, 0x7FB06A, ex, 16, ez, g, 10, 8).scale.set(1.3, 0.6, 1); cyl(8, 8, 120, 0x8A6A44, x0 + 40, 0, z1 + 40, g, 8); box(110, 50, 8, 0xB8875A, x0 + 40, 100, z1 + 44, g); box(96, 6, 9, 0xFFF2DA, x0 + 40, 122, z1 + 45, g); }   /* 덤불 · 나무 간판 */
 }
@@ -51,11 +54,11 @@ function zTable(sty, tg, i) { const seat = m => { m.userData.seat = 1; return m;
   if (sty === 'terrace') { cyl(70, 70, 8, 0xFFFFFF, 0, 70, 0, tg, 20); cyl(8, 12, 70, 0x9A643A, 0, 0, 0, tg, 8); cyl(4, 4, 200, 0xE8E0D0, 0, 70, 0, tg, 6); mesh(new THREE.ConeGeometry(130, 50, 12), M(i % 2 ? 0xFFFFFF : BRAND.accentHex), 0, 285, 0, tg);
     for (const s of [-1, 1]) { seat(cyl(24, 24, 10, 0xC08A5A, s * 95, 40, 0, tg)); cyl(5, 5, 40, 0x9A643A, s * 95, 0, 0, tg, 6); } return; }
   if (sty === 'lake') { box(300, 8, 50, 0x8A5E3A, 0, 108, 0, tg); for (const ox of [-130, 130]) box(10, 108, 10, 0x6E4C33, ox, 0, 0, tg); box(280, 4, 4, 0xB8A070, 0, 22, 22, tg);   /* 호수를 보는 긴 바 · 발 받침 */
-    for (const s of [-1, 1]) seat(cyl(22, 22, 3, 0xE8D5B5, s * 95, 0, 46, tg, 14)); return; }   /* 서는 자리 표시 */
-  if (sty === 'under') { cyl(50, 50, 6, 0xFBFBF9, 0, 102, 0, tg, 20); cyl(5, 5, 102, 0x9AA4AC, 0, 0, 0, tg, 8); cyl(26, 26, 3, 0x9AA4AC, 0, 0, 0, tg, 14); box(80, 2, 3, 0xBFE0D4, 0, 108, 0, tg);
-    for (const s of [-1, 1]) seat(cyl(22, 22, 3, 0xBFE0D4, s * 95, 0, 0, tg, 14)); return; }   /* 높은 테이블 · 서는 자리 표시 */
-  if (sty === 'park') { const N = 6; for (let a = 0; a < N; a++) for (let b = 0; b < 3; b++) box(260 / N, 2, 50, (a + b) % 2 ? 0xFFFFFF : 0xE0584A, -130 + 130 / N + a * 260 / N, 3, -50 + b * 50, tg);   /* 체크 피크닉 매트 */
-    cyl(26, 20, 24, 0xC89A5A, 0, 5, 0, tg, 12); box(40, 4, 6, 0x8A6A44, 0, 34, 0, tg); for (const s of [-1, 1]) seat(cyl(24, 24, 8, 0xF2C14E, s * 95, 4, 0, tg, 14)); }   /* 바구니 · 방석 */
+    for (const s of [-1, 1]) seat(cyl(22, 22, 2, 0xE8D5B5, s * 95, ZF, 46, tg, 14)); return; }   /* 서는 자리 표시 */
+  if (sty === 'under') { cyl(50, 50, 6, 0xFBFBF9, 0, 102, 0, tg, 20); cyl(5, 5, 102 - ZF - 2, 0x9AA4AC, 0, ZF + 2, 0, tg, 8); cyl(26, 26, 2, 0x9AA4AC, 0, ZF, 0, tg, 14); box(80, 2, 3, 0xBFE0D4, 0, 108, 0, tg);
+    for (const s of [-1, 1]) seat(cyl(22, 22, 2, 0xBFE0D4, s * 95, ZF, 0, tg, 14)); return; }   /* 높은 테이블 · 서는 자리 표시 */
+  if (sty === 'park') { const N = 6; for (let a = 0; a < N; a++) for (let b = 0; b < 3; b++) box(260 / N, 2, 50, (a + b) % 2 ? 0xFFFFFF : 0xE0584A, -130 + 130 / N + a * 260 / N, ZF, -50 + b * 50, tg);   /* 체크 피크닉 매트 */
+    cyl(26, 20, 24, 0xC89A5A, 0, ZF + 2, 0, tg, 12); box(40, 4, 6, 0x8A6A44, 0, ZF + 31, 0, tg); for (const s of [-1, 1]) seat(cyl(24, 24, 8, 0xF2C14E, s * 95, ZF + 2, 0, tg, 14)); }   /* 바구니 · 방석 */
 }
 
 export function installZone(Game, { starK }) {
@@ -71,7 +74,7 @@ export function installZone(Game, { starK }) {
     const cf = this.zoneCfg(); if (!cf) return;
     const g = new THREE.Group(); g.name = 'zone'; this.sc.add(g); const [x0, x1, z0, z1] = cf.band;
     const sty = cf.style || 'terrace', TS = STY[sty], [sx, sz] = cf.stand;
-    const fl = box(x1 - x0, 3, z1 - z0 + 20, TS.floor, (x0 + x1) / 2, 0, (z0 + z1) / 2 + 10, g); fl.userData.walk = 1; fl.receiveShadow = true; fl.castShadow = false;   /* 걸을 수 있는 바닥 (gate_reach W5) */
+    const fl = box(x1 - x0, ZF, z1 - z0 + 20, TS.floor, (x0 + x1) / 2, 0, (z0 + z1) / 2 + 10, g); fl.userData.walk = 1; fl.receiveShadow = true; fl.castShadow = false;   /* 걸을 수 있는 바닥 (gate_reach W5) */
     zFloor(sty, g, x0, x1, z0, z1); zEdge(sty, g, x0, x1, z0, z1);
     // 판매대 (손님 쪽이 앞 · 직원은 뒤) — 지점마다 모습만 다름
     const st = new THREE.Group(); st.position.set(sx, 0, sz); g.add(st); zStand(sty, st);

@@ -1,5 +1,5 @@
 // 운영자(사업자) 정보 한 곳 — 전자상거래법 표시 · PG 심사 (2026-11-04 · team/biz/pg/research.md · checklist.md)
-//   도메인(호스트)마다 다른 회사가 열 수 있게: oneaday.kr · test.oneaday.kr = 알앤지웍스(개인사업자) · sd.oneaday.* = SD인터랙티브(법인, 나중에 별도 인스턴스)
+//   2026-11-16 대표: oneaday.kr · test.oneaday.kr 운영 주체 = 주식회사 에스디인터랙티브(법인 · 기본 id 'sd') · 알앤지웍스(rng)는 예전 계획으로 남겨 둠(OP_ID=rng 일 때만) · 옛 설계: 도메인(호스트)마다 다른 회사가 열 수 있게 sd.oneaday.* = SD인터랙티브(법인, 나중에 별도 인스턴스)
 //   실제 번호 · 주소 · 전화는 저장소에 넣지 않음 → 서버 환경변수(OP_*)로 주입 · 여기 기본값은 자리표시('등록 예정' · '대표 확인 필요')
 //     서버 /api/admin/config 의 op 가 환경변수 값을 돌려줌 (server/api/_lib/operator.js · 이름표 OP_FIELDS 와 아래 키가 같아야 함)
 //   쓰는 곳: 정책 페이지(terms · privacy · refund · paid · ai · help — mount) · 앱 설정 시트 맨 아래 푸터(footerHTML) · 결제 화면 동의 문구(PAGES 경로)
@@ -11,11 +11,11 @@ const base = {
 };
 export const OPERATORS = {
   rng: { ...base, id: 'rng', name: '알앤지웍스', kind: '개인사업자' },
-  sd: { ...base, id: 'sd', name: 'SD인터랙티브', kind: '법인', ceo: TBD, addr: TBD, email: TBD, tel: TBD, privName: TBD, privContact: TBD },
+  sd: { ...base, id: 'sd', name: '주식회사 에스디인터랙티브', kind: '법인사업자' },   /* 실제 값은 서버 환경변수 OP_* (대표가 Vercel 에 넣음) */
 };
-/* 호스트 → 운영자 (위에서부터 먼저 맞는 것 · 없으면 rng) — 서버 _lib/operator.js opId 와 같은 규칙 · 서버가 id 를 주면 그걸 따름 */
+/* 호스트 → 운영자 (위에서부터 먼저 맞는 것 · 없으면 sd) — 서버 _lib/operator.js opId 와 같은 규칙 · 서버가 id 를 주면 그걸 따름 */
 export const HOST_OP = [[/^sd[.-]/, 'sd']];
-export const pickId = (host = location.hostname) => (HOST_OP.find(([re]) => re.test(host)) || [, 'rng'])[1];
+export const pickId = (host = location.hostname) => (HOST_OP.find(([re]) => re.test(host)) || [, 'sd'])[1];
 /* 정책 페이지 (정적 주소 · 심사자가 링크로 바로 엶) — 앱 · 페이지 모두 뒤에 / 를 붙여 링크 */
 export const PAGES = [['terms', '이용약관'], ['privacy', '개인정보처리방침'], ['refund', '환불 · 청약철회'], ['paid', '유료 서비스 안내'], ['ai', 'AI 생성 콘텐츠 안내'], ['help', '고객센터']];
 

@@ -118,22 +118,24 @@ export const nrDot = X => { const N = nrSt(X); return N.st === 'open' || N.lunch
 
 /* ── 허브 한 덩어리 (#hub — 늦게 온 값으로 이 덩어리만 다시 그림) ── */
 export function html(X) {
-  const { g: G0, f: F, n: N } = states(X), d = [G0, F, N].filter(x => x.done).length;
-  const C = 2 * Math.PI * 10, ring = `<svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3.5"/><circle cx="13" cy="13" r="10" fill="none" stroke="#FFC93C" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="${C * d / 3} ${C}" transform="rotate(-90 13 13)"/></svg>`;
+  const { g: G0, f: F, n: N } = states(X);
+  /* 진행 링: 오늘 할 수 있는 것만 셈 — 실서버에서 게임이 아직 없거나(none) 너랑이 곧 공개(soon)면 분모에서 뺌 (테스트 · 개발은 늘 3) */
+  const can = [G0.st === 'none' ? null : G0, F, N.st === 'soon' ? null : N].filter(Boolean), tot = can.length, d = can.filter(x => x.done).length;
+  const C = 2 * Math.PI * 10, ring = `<svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3.5"/><circle cx="13" cy="13" r="10" fill="none" stroke="#FFC93C" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="${C * d / tot} ${C}" transform="rotate(-90 13 13)"/></svg>`;
   const name = (F.me && F.me.name) || nrS().name || '';
-  const hello = X.isNew && !d ? '오늘은 하나만 골라도 좋아요' : d === 3 ? `${name ? name + ', ' : ''}오늘 다 챙겼어요` : d ? `${name ? name + ', ' : ''}잘하고 있어요` : name ? `${esc(name)}의 오늘` : '오늘의 세 가지';
+  const hello = X.isNew && !d ? '오늘은 하나만 골라도 좋아요' : d === tot ? `${name ? name + ', ' : ''}오늘 다 챙겼어요` : d ? `${name ? name + ', ' : ''}잘하고 있어요` : name ? `${esc(name)}의 오늘` : '오늘의 세 가지';
   const n = X.R.now(), clock = `${X.fmtDate(n)} · <span data-hclock>${n.getHours()}시 ${n.getMinutes()}분</span>`;
   const st = X.R.state().streak.count || 0, tg = X.R.gameOn(X.R.dayIndex() + 1), fresh = tg && !X.R.state().library[tg];
   const w = N.w, nx = N.open + 1;
   const tmrN = N.st === 'soon' ? ['매일 밤 9시 · 너랑', '곧 공개돼요'] : N.st === 'first' || !w ? ['매일 밤 9시 · 너랑', `새 화 + 대화 ${DAY_FREE}번`] : [`밤 9시 · ${w.short}`, `${nx}화 「${epTitle(w, nx)}」`];
   return `<div class="hub" id="hub" data-done="${d}">
-    <div class="hello"><div><small>${clock}</small><h1>${esc(hello)}</h1></div><span class="ring" aria-label="오늘 ${d}개 챙김">${ring}<span><b>${d}</b> / 3</span></span></div>
+    <div class="hello"><div><small>${clock}</small><h1>${esc(hello)}</h1></div><span class="ring" aria-label="오늘 ${d}개 챙김">${ring}<span><b>${d}</b> / ${tot}</span></span></div>
     ${gameCard(X, G0)}
     ${fortCard(X, F)}
     ${nrCard(X, N)}
     ${N.st === 'soon' || N.st === 'first' ? '' : lunchStrip(N)}
     <div class="hsec"><h3>내일도 여기서</h3><span>${st >= 7 ? `🔥 ${st}일 연속` : st ? `🔥 ${st}일 연속 · 7일째 선물` : '오늘 하나 하면 🔥 1일째'}</span></div>
-    <div class="tmr"><div data-hub="tmr_game" data-hst="${fresh ? 'new' : 'ret'}" data-hgo="games" role="button" tabindex="0"><small>내일 0시 · 원어데이</small><b>${fresh ? '🆕 처음 만나는 게임' : '↺ 다시 만나는 게임'}</b><span data-cd>--:--:--</span></div><div data-hub="tmr_nr" data-hst="${N.st}" data-nr="" role="button" tabindex="0"><small>${esc(tmrN[0])}</small><b>${esc(tmrN[1])}</b><span data-cd9>${toNine()}</span></div></div>
+    <div class="tmr">${tg ? `<div data-hub="tmr_game" data-hst="${fresh ? 'new' : 'ret'}" data-hgo="games" role="button" tabindex="0"><small>내일 0시 · 원어데이</small><b>${fresh ? '🆕 처음 만나는 게임' : '↺ 다시 만나는 게임'}</b><span data-cd>--:--:--</span></div>` : `<div data-hub="tmr_fort" data-hst="tmr" role="button" tabindex="0"><small>내일 0시 · 점방</small><b>내일의 신점</b><span data-cd>--:--:--</span></div>`}<div data-hub="tmr_nr" data-hst="${N.st}" data-nr="" role="button" tabindex="0"><small>${esc(tmrN[0])}</small><b>${esc(tmrN[1])}</b><span data-cd9>${toNine()}</span></div></div>
   </div>`;
 }
 
@@ -147,7 +149,7 @@ async function post(body) {
 export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
   if (X.PROD) return;
-  if (!NR.works) import('./neorang/works.js?v=0.99.44').then(m => { NR.works = m.WORKS; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) import('./neorang/works.js?v=0.99.45').then(m => { NR.works = m.WORKS; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || now() >= NR.home.next9)) {
