@@ -2,19 +2,19 @@
 //   곡 이용(v0.5.4 · 대표 11-12): 열린 화(오늘까지)의 곡은 누구나 · 모든 난이도 · 몇 번이든 바로 시작 · 새 화는 하루 하나 · 놓친 화는 차례대로 따라잡기 (access.js)
 //   방송 목록: 열린 화마다 난이도 세 칸(기록 · 누르면 바로 시작) · ?dev=1 이면 10곡 전부 · ?day=7 이면 오늘 = 7화 (따라잡기 없이 그 화로 바로)
 //   뒤로가기 = 바로 전 단계 (원어데이 oad:back · CloseWatcher · PC Esc)
-import { A } from './audio.js?v=0.99.43';
-import { Play } from './play.js?v=0.99.43';
-import { SONGS, DAYS, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.43';
-import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.43';
-import * as CH from './channel.js?v=0.99.43';
-import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.43';
-import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.43';
-import { bm } from './oad_bm.js?v=0.99.43';
-import { THEMES } from './themes.js?v=0.99.43';
+import { A } from './audio.js?v=0.99.44';
+import { Play } from './play.js?v=0.99.44';
+import { SONGS, DAYS, PRACTICE, CASTS, PRAISE, CHEER, SEASON, GAME, ROSTER, CARDS, CHANNEL, FACE, AWK, CAST_CHEER, josa, joinStage } from './data.js?v=0.99.44';
+import { S, load, save, today, dayNo, dayRaw, record, pageIn, foil, nextOpen, dayKey, castLog, guidesFor, DEV, EP } from './save.js?v=0.99.44';
+import * as CH from './channel.js?v=0.99.44';
+import { isOpen, nextUp, behind, epKind } from './access.js?v=0.99.44';
+import { installBack, exitToOAD, inOAD, runBack } from './oad.js?v=0.99.44';
+import { bm } from './oad_bm.js?v=0.99.44';
+import { THEMES } from './themes.js?v=0.99.44';
 
 const $ = s => document.querySelector(s);
 const Q = new URLSearchParams(location.search);
-const VER = 'v0.7.4';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
+const VER = 'v0.7.5';   /* 게임 안 버전 표시 (설정 시트 맨 아래) */
 const DIFFS = [['easy', '쉬움'], ['normal', '보통'], ['hard', '어려움']];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -23,7 +23,7 @@ let charts = {}, entry = null, day = null, song = null, last = null, home = null
 /* 앵콜 방송 (v0.6 · 대표 11-12): 시즌 마지막 화 다음 날부터 열린 화를 1화부터 차례로 '오늘' 자리에 (home 은 마지막 화 그대로 — 열림 규칙은 home 기준) */
 const tonight = () => encore || home;
 const past = () => day !== tonight();   /* 지금 보는 곡이 오늘 방송이 아닌가 (뒤로 = 오늘 방송으로) */
-const kind = () => (encore && day === encore ? 'encore' : epKind(day.no, home.no, S.book));   /* tonight · encore · catchup(놓친 화 첫 방송) · replay · ahead(시험 모드) */
+const kind = () => (day.practice ? 'practice' : encore && day === encore ? 'encore' : epKind(day.no, home.no, S.book));   /* tonight · encore · catchup(놓친 화 첫 방송) · replay · ahead(시험 모드) */
 const upNext = () => { const n = nextUp(home.no, S.book); return n === home.no ? tonight() : DAYS[n - 1]; };   /* 다음 차례: 놓친 화가 있으면 가장 앞 화 · 없으면 오늘 방송 */
 const DNAME = Object.fromEntries(DIFFS);
 const singer = d => d.singer || CASTS[d.cast].name;
@@ -49,9 +49,35 @@ function modal(html, on) { const m = $('#modal'); m.innerHTML = `<div class="box
 const closeModal = () => { $('#modal').classList.remove('on'); $('#modal').innerHTML = ''; };
 
 /* ---------- ① 오늘의 방송 ---------- */
+/* 연습곡 화면 (v0.7.5): 오늘 화면 틀을 그대로 쓰고 캐스트 · 게스트 · 진행 점 · 이야기 줄만 '연습' 내용으로 */
+const PRAC_HOST = { name: '연습실', en: 'PRACTICE ROOM', face: PRACTICE.hero, gen: '하루 스튜디오', role: '연습곡' };
+function renderPractice(ch) {
+  $('#today').classList.add('prac');
+  $('#today .hero').style.backgroundImage = `url(${day.hero})`;
+  $('#t_no').textContent = 'PRACTICE · 연습곡';
+  $('#t_ch').textContent = '누구나 · 언제든 · 기록만 남아요';
+  $('#t_title').innerHTML = `${esc(song.title)}<small>${esc(song.en)}</small>`;
+  $('#t_title').classList.toggle('long', song.title.length > 7);
+  $('#t_comp').innerHTML = `${esc(song.credit)}<span class="badge">${esc(song.badge)}</span>`;
+  $('#t_bpm').textContent = Math.round(ch.bpm); $('#t_len').textContent = fmtT(entry ? entry.dur : song.len);
+  $('#t_off').textContent = (S.offset > 0 ? '+' : S.offset < 0 ? '' : '±') + S.offset;
+  $('#t_av').style.backgroundImage = `url(${PRAC_HOST.face})`;
+  $('#t_dn').textContent = PRAC_HOST.name; $('#t_dr').textContent = '방송 · 구독자와 상관없는 곡';
+  $('#t_guest').innerHTML = ''; $('#t_hello').textContent = day.hello; $('#t_steps').innerHTML = '';
+  $('#t_diff').innerHTML = DIFFS.map(([d, n]) => { const b = (S.best[song.id] || {})[d]; return `<button data-d="${d}" class="${S.diff === d ? 'on' : ''}"><span>${n}</span><b>LV.${ch.diffs[d].lv}</b>${b ? `<small>${b.rank}${b.ap ? ' · AP' : b.fc ? ' · FC' : ''}</small>` : ''}</button>`; }).join('');
+  $('#t_hint span').textContent = '톡 → 길게 → 둘 함께 → 페이더 → 큐 순서로 만나요 (쉬움)';
+  { const o = $('#t_hint .go'); if (o) o.remove(); }
+  const st = $('#t_start'); st.className = 'start onair';
+  st.innerHTML = `<b><i class="lamp"></i>연습 시작</b><span>${DNAME[S.diff]} · 몇 번이든</span>`;
+  $('#t_list').classList.remove('dot');
+  if (entry && A.ac && A.ac.state === 'running' && !A.pv && !Play.on) A.preview(entry, ...song.preview);
+}
 function renderToday() {
-  const t = today(), dv = CASTS[day.cast], ch = charts[song.id];
+  const t = today(), ch = charts[song.id];
   if (!ch) return;
+  if (day.practice) return renderPractice(ch);
+  $('#today').classList.remove('prac');
+  const dv = CASTS[day.cast];
   $('#today .hero').style.backgroundImage = `url(${day.hero})`;
   const k = kind(), late = behind(home.no, S.book);
   $('#t_no').textContent = `${{ tonight: 'TONIGHT', encore: 'ENCORE', catchup: '이어 보기', replay: 'REPLAY', ahead: 'PREVIEW' }[k]} · NO.${String(day.no).padStart(3, '0')}`;
@@ -182,7 +208,7 @@ const cardDef = id => CARDS.find(c => c.id === id);
 const skinOK = () => !!bm.info.owned || DEV;
 const skinOn = () => skinOK() && (S.skin ?? !!bm.info.owned);
 /* 오늘 방송의 연출 테마: 게스트 → 백금 무대(소장) → 오늘의 캐스트 → 기본 (시험 모드 ?theme= 이 먼저) */
-function themeNow() { if (DEV && Q.get('theme') && THEMES[Q.get('theme')]) return Q.get('theme'); const g = guestId(); if (!g && skinOn()) return 'owner'; const t = g ? rosterOf(g).theme : (rosterOf(day.cast) || {}).theme; if (g && t && THEMES[t] && awake(g)) return awkTheme(t); return t && THEMES[t] ? t : 'base'; }
+function themeNow() { if (DEV && Q.get('theme') && THEMES[Q.get('theme')]) return Q.get('theme'); if (day.practice) return skinOn() ? 'owner' : 'base'; const g = guestId(); if (!g && skinOn()) return 'owner'; const t = g ? rosterOf(g).theme : (rosterOf(day.cast) || {}).theme; if (g && t && THEMES[t] && awake(g)) return awkTheme(t); return t && THEMES[t] ? t : 'base'; }
 /* 각성한 게스트: 그 캐스트 테마의 피버 테두리만 캐스트 색 + 금빛으로 (판정선 · 판정 색 그대로 · 판정선 띠 밖 — 플레이 감 표 11) */
 function awkTheme(t) { const k = t + '_awk'; if (!THEMES[k]) { const b = THEMES[t]; THEMES[k] = { ...b, id: k, name: b.name + ' · 각성', edgeFever: [b.accent || b.edgeFever[0], '255,214,140'] }; } return k; }
 /* 잠긴 캐스트가 언제 · 어떻게 합류하나 (v0.5.1 · 검수 B-3 · 사업 B-1): 지킬 수 없는 약속 금지
@@ -269,6 +295,7 @@ function openFace(id) {
 
 function go() {
   A.stopPreview();
+  if (day.practice) return goPractice();
   const dv = CASTS[day.cast], gid = guestId(), gc = gid ? CASTS[gid] : dv;
   /* 처음 보는 노트 · 첫 판 안내 (한 장) */
   const ch = charts[song.id], here = new Set(ch.diffs[S.diff].notes.map(n => n[3]).filter(Boolean));
@@ -304,6 +331,25 @@ function go() {
   const td = today(); td.n++; save();
   try { window.parent.postMessage({ type: 'oad:track', name: 'play', p: { diff: S.diff, day: day.no, song: song.id, past: past(), kind: kind(), n: td.n, guest: gid || null } }, '*'); } catch { /* */ }
 }
+/* 연습곡 판: 캐스트 없음 → 응원 컷인 · 사고 수습 · 팬 채팅 · 팬 일동 띠 없음 · 안내 카드(처음 보는 노트)와 첫 실행 리허설은 다른 판과 같음 */
+function goPractice() {
+  const ch = charts[song.id], here = new Set(ch.diffs[S.diff].notes.map(n => n[3]).filter(Boolean));
+  const gAll = Q.get('guide') === '0' ? [] : guidesFor(here);
+  const drill = Q.get('guide') !== '0' && !S.guide && !S.drill && gAll.every(k => k === 'lane');
+  const guides = drill ? [] : gAll;
+  show('play');
+  Play.auto = Q.get('auto') && Q.get('auto') !== '0' ? { jitter: +(Q.get('jitter') || 18), miss: +(Q.get('miss') || 0), dom: Q.get('auto') === 'dom', wait: Q.get('gwait') === '1' } : null;
+  Play.start({
+    song, chart: ch, diff: S.diff, entry, offset: S.offset, speed: S.speed, shake: S.shake, sfx: S.sfx,
+    hitsnd: S.hitsnd, el: S.el, lite: S.lite, vib: S.vib !== false, theme: themeNow(), guides, drill, drillSc: false,
+    guards: 0, firstSc: false, fan: [], burst: false, cover: day.hero, diva: { name: day.singer, en: PRAC_HOST.en, face: PRAC_HOST.face }, chapter: '연습곡', chapNote: ' · 기록만 남는 연습이에요', subLine: song.credit,
+    live: day.live, subs: day.subs, cheer: {}, scThanks: '', fcWho: { name: day.singer, face: PRAC_HOST.face }, fanBand: null, helper: PRAC_HOST, themeLine: '', guestHello: null,
+    onReady: () => { if (Play.drill) { S.drill = true; S.guide = true; save(); trk('tutorial', { step: Play.drill.skipped ? 'skip' : 'done' }); } if (!guides.length) return; if (guides.includes('lane')) S.guide = true; for (const k of guides) S.seen[k] = true; save(); },
+    onPause: () => pauseMenu(), onEnd: r => onResult(r),
+  });
+  const td = today(); td.n++; save();
+  trk('play', { diff: S.diff, day: 0, song: song.id, past: false, kind: 'practice', n: td.n, guest: null });
+}
 function pauseMenu() {
   if (!Play.on || Play.ended) return;
   Play.pause();
@@ -322,6 +368,13 @@ function countdown() {
 /* ---------- ③ 결과 ---------- */
 function onResult(r) {
   r.sc = [Play.scGot, Play.scTotal]; r.scSum = Play.scSum; if (Play.scGot) S.seen.scHit = true;
+  /* 연습곡: 최고 기록만 (구독자 · 하루 4판 · 방송 기록 · 첫 달성 보상 · 명예의 전당 없음 — 연습은 부담 없이) */
+  if (day.practice) {
+    S.plays++; const nb = record(song.id, S.diff, r);
+    last = { r, nb, firstClear: false, newPage: false, diff: S.diff, ch: null, full: false, tip: null, dtip: pickDiffTip(r, S.diff), practice: true };
+    save(true); trk('clear', { rank: r.rank, acc: Math.round(r.acc * 1000) / 10, diff: S.diff, song: song.id, practice: true });
+    renderResult(); show('result', 'root'); stack = ['today', 'result']; return;
+  }
   const gid = guestId(); r.helper = gid ? CASTS[gid].name : CASTS[day.cast].name;
   castLog([day.cast, gid], r);   /* 캐스트별 함께한 방송 (사업 B-2 · 화면 노출 없음 · v0.6 구독자 소급) */
   /* 명예의 전당(원어데이 공용): 수습한 판은 assisted → 순위에 안 올라감 (ONAIR_PLAN 6장 순위 공정성) */
@@ -350,13 +403,13 @@ function onResult(r) {
   renderResult(); show('result', 'root'); stack = ['today', 'result'];
 }
 function renderResult() {
-  const { r, nb } = last, dv = CASTS[day.cast], b = (S.best[song.id] || {})[last.diff];
+  const { r, nb } = last, dv = day.practice ? PRAC_HOST : CASTS[day.cast], b = (S.best[song.id] || {})[last.diff];
   /* 칭찬: 단계 3 · 카드 Lv20 이면 그 캐스트 전용 대사가 가끔 섞임 (v0.6 · 올 퍼펙트 · 풀콤보 · 신기록 칭찬이 먼저) */
-  const spc = [...(awake(day.cast) && AWK[day.cast] ? [AWK[day.cast].line] : []), ...(CH.stageOfCast(S, day.cast) >= 3 && CHANNEL[day.cast] ? [CHANNEL[day.cast].res3] : []), ...CH.cardsOf(S, day.cast).filter(c => c.lv >= 20).map(c => cardDef(c.id).lv20)];
+  const spc = day.practice ? [] : [...(awake(day.cast) && AWK[day.cast] ? [AWK[day.cast].line] : []), ...(CH.stageOfCast(S, day.cast) >= 3 && CHANNEL[day.cast] ? [CHANNEL[day.cast].res3] : []), ...CH.cardsOf(S, day.cast).filter(c => c.lv >= 20).map(c => cardDef(c.id).lv20)];
   const praise = r.ap ? PRAISE.ap : r.fc ? PRAISE.fc : nb ? PRAISE.best : spc.length && Math.random() < 0.5 ? pick(spc) : pick(PRAISE[r.rank]);
   $('#result').innerHTML = `
     <div class="bgcov" style="background-image:url(${day.hero})"></div>
-    <div class="head"><em>${last.diff.toUpperCase()} · LV.${charts[song.id].diffs[last.diff].lv}</em><b>${esc(song.title)}</b><span>${esc(song.artist)} · 노래 ${esc(singer(day))}</span></div>
+    <div class="head"><em>${last.diff.toUpperCase()} · LV.${charts[song.id].diffs[last.diff].lv}</em><b>${esc(song.title)}</b><span>${esc(day.practice ? song.credit : `${song.artist} · 노래 ${singer(day)}`)}</span></div>
     <div class="rank r-${r.rank}"><span class="rk"><i class="ring"></i><b>${r.rank}</b><span class="shine"></span>${r.rank === 'S' || r.rank === 'SS' ? sparks() : ''}</span><div class="tags">${r.ap ? '<span>ALL PERFECT</span>' : r.fc ? '<span>FULL COMBO</span>' : ''}${nb ? '<span class="nb">NEW RECORD</span>' : ''}</div></div>
     <div class="score"><b class="tnum" id="r_sc">0</b><span>정확도 ${(r.acc * 100).toFixed(2)}%</span></div>
     <div class="grid"><div class="p"><em>PERFECT</em><b>${r.count.perfect}</b></div><div class="g"><em>GREAT</em><b>${r.count.great}</b></div><div class="d"><em>GOOD</em><b>${r.count.good}</b></div><div class="m"><em>MISS</em><b>${r.count.miss}</b></div></div>
@@ -365,15 +418,16 @@ function renderResult() {
     <div class="say"><div class="av" style="background-image:url(${dv.face})"></div><div class="bub${last.tip ? ' tip' : ''}"><i>${dv.en}${last.tip ? ' · TIP' : ''}</i>${esc(last.tip ? last.tip.text : praise)}</div></div>
     ${b ? `<div class="best">이 난이도 최고 <b>${b.score.toLocaleString('en-US')}</b> · ${b.rank}</div>` : ''}${syncHint(r)}
     <div class="extra">${r.sc && r.sc[1] ? `<span class="scg${r.sc[0] === r.sc[1] ? ' full' : ''}"><i>₩</i>받은 슈퍼챗 <b>${r.sc[0]}/${r.sc[1]}</b>${r.scSum ? ` · ₩${r.scSum.toLocaleString('en-US')}` : ''}</span>` : ''}${r.guard ? `<span class="gdl">${esc(josa(r.helper, '이/가'))} ${r.guard > 1 ? `${r.guard}번` : '한 번'} 수습해 줬어요 · 점수는 그대로</span>` : ''}${chChip(last.ch, last.full, last.tip)}</div>
-    <div class="subs"><span>${GAME.studio} 채널</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>
+    ${day.practice ? '<div class="subs prac"><span>연습곡 · 기록만 남아요</span></div>' : `<div class="subs"><span>${GAME.studio} 채널</span><b class="tnum" id="r_subs">${day.subs[0].toLocaleString('en-US')}</b><i>▲ ${(day.subs[1] - day.subs[0]).toLocaleString('en-US')}</i></div>`}
     </div>
-    <div class="btns"><div class="again${last.dtip ? ' tip' : ''}" role="group" aria-label="한 번 더"${last.dtip ? ` data-tip="${esc(last.dtip.text)}"` : ''}>${DIFFS.map(([d, n]) => `<button class="${d === last.diff ? 'on' : ''}${last.dtip && d === 'normal' ? ' nudge' : ''}" data-n="again" data-d="${d}" aria-label="${n}으로 한 번 더"><b>${n}</b><small>${d === last.diff ? '한 번 더' : `LV.${charts[song.id].diffs[d].lv}`}</small></button>`).join('')}</div><button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button></div>`;
+    <div class="btns"><div class="again${last.dtip ? ' tip' : ''}" role="group" aria-label="한 번 더"${last.dtip ? ` data-tip="${esc(last.dtip.text)}"` : ''}>${DIFFS.map(([d, n]) => `<button class="${d === last.diff ? 'on' : ''}${last.dtip && d === 'normal' ? ' nudge' : ''}" data-n="again" data-d="${d}" aria-label="${n}으로 한 번 더"><b>${n}</b><small>${d === last.diff ? '한 번 더' : `LV.${charts[song.id].diffs[d].lv}`}</small></button>`).join('')}</div>${day.practice ? `<button class="pri" data-n="tonight">오늘 방송으로</button>` : `<button class="pri" data-n="story">${last.firstClear ? '개인 채널 열기' : '개인 채널 다시 보기'}</button>`}</div>`;
   /* 점수 올라가는 연출 */
   const el = $('#r_sc'), t0 = performance.now();
   const up = () => { const k = Math.min(1, (performance.now() - t0) / 1100), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(r.score * e).toLocaleString('en-US'); if (k < 1) requestAnimationFrame(up); };
   setTimeout(up, 350);
   /* 구독자 숫자 올라감 (이야기상 숫자 · 실력과 무관) */
   const se = $('#r_subs'), [s0, s1] = day.subs, t1 = performance.now() + 1300;
+  if (!se) { A.fxPlay('chime', S.sfx * 0.6); return; }
   const su = () => { const k = Math.min(1, Math.max(0, (performance.now() - t1) / 1200)), e = 1 - Math.pow(1 - k, 3); se.textContent = Math.round(s0 + (s1 - s0) * e).toLocaleString('en-US'); if (k < 1) requestAnimationFrame(su); };
   requestAnimationFrame(su);
   A.fxPlay('chime', S.sfx * 0.6);
@@ -417,7 +471,7 @@ function sparks() { let h = ''; for (let i = 0; i < 14; i++) { const a = i / 14 
 /* 판정이 한쪽으로 쏠리면 싱크 맞추기 권함 (부드럽게) */
 function syncHint(r) { const n = r.fast + r.slow; if (n < 12) return ''; const k = (r.slow - r.fast) / n; return Math.abs(k) > 0.55 ? `<div class="synch">${k > 0 ? '조금 늦게' : '조금 빠르게'} 누르는 편이에요 · 싱크 맞추기를 해 보세요</div>` : ''; }
 /* 결과 「한 번 더」: 난이도 세 칸 — 같은 난이도도 다른 난이도도 한 번에 시작 (v0.5.4 · 의도서 4: 탭 2번 안) */
-$('#result').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (!b) return; if (b.dataset.n === 'chan') { A.fxPlay('tick', S.sfx * 0.5); return openChannel(b.dataset.c); } if (b.dataset.n === 'story') openStory(); if (b.dataset.n === 'again') { if (b.dataset.d) { S.diff = b.dataset.d; save(); } show('today', 'root'); $('#t_start').click(); } });
+$('#result').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (!b) return; if (b.dataset.n === 'chan') { A.fxPlay('tick', S.sfx * 0.5); return openChannel(b.dataset.c); } if (b.dataset.n === 'story') openStory(); if (b.dataset.n === 'tonight') { A.fxPlay('tick', S.sfx * 0.5); last = null; show('today', 'root'); setDay(upNext()); } if (b.dataset.n === 'again') { if (b.dataset.d) { S.diff = b.dataset.d; save(); } show('today', 'root'); $('#t_start').click(); } });
 
 /* ---------- ④ 개인 채널 (방송 후 DM · 오늘의 조각) — id 는 v0.3 그대로 #story ---------- */
 let dm = null;
@@ -562,8 +616,14 @@ function doneHint(dv) {
 }
 /* 「새 채보」: 전 판(rev 1)으로 친 기록이 있고 새 판으로는 아직 안 친 곡 (v0.7.4 · 기록 · 등급은 그대로) */
 const newChart = sg => !!(sg.rev && S.best[sg.id] && (S.chartRev || {})[sg.id] !== sg.rev);
+/* 연습곡 줄 (v0.7.5): 방송 목록 맨 위 · 늘 열림 · 난이도 칸을 누르면 바로 시작 */
+function practiceRow() {
+  const best = S.best.s00 || {}, ch = charts.s00;
+  const cells = DIFFS.map(([x, n]) => { const r = best[x]; return `<button data-d="${x}" class="${r ? 'has' : ''} ${r && (r.rank === 'S' || r.rank === 'SS') ? 'gold' : ''}" aria-label="${n}으로 바로 시작"><span>${n}<i>${ch ? `LV.${ch.diffs[x].lv}` : ''}</i></span><b>${r ? r.rank : '—'}${r && (r.ap || r.fc) ? `<em>${r.ap ? 'AP' : 'FC'}</em>` : ''}</b></button>`; }).join('');
+  return `<div class="st prac" data-s="0"><button class="main"><div class="cv" style="background-image:url(${PRACTICE.cut})"></div><div class="tx"><em>PRACTICE · 연습곡${ch && ch.len ? ` · ${fmtT(ch.len)}` : ''}</em><b>${esc(SONGS.s00.title)}</b><span>누구나 · 언제든 · 기록만 남아요</span></div></button><div class="dfs">${cells}</div></div>`;
+}
 function openStages() {
-  const rows = DAYS.slice().sort((a, b) => (b === tonight()) - (a === tonight()) || a.no - b.no).map(stageRow).join('');
+  const rows = practiceRow() + DAYS.slice().sort((a, b) => (b === tonight()) - (a === tonight()) || a.no - b.no).map(stageRow).join('');
   const late = behind(home.no, S.book);
   $('#stages').innerHTML = `
     <div class="top"><button class="ic" data-g="back" aria-label="뒤로"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo">방송 목록</div><span style="width:36px"></span></div>
@@ -571,13 +631,14 @@ function openStages() {
     <div class="list">${rows}</div>`;
   show('stages');
   /* 난이도 칸 레벨 표시용 채보 미리 받기 (작음) */
+  if (!charts.s00) fetch(SONGS.s00.chart).then(r => r.json()).then(j => { charts.s00 = j; if (cur() === 'stages') { const e = $('#stages [data-s="0"]'); if (e) e.outerHTML = practiceRow(); } }).catch(() => { /* */ });
   DAYS.filter(d => openNo(d) && !charts[d.song]).forEach(d => fetch(SONGS[d.song].chart).then(r => r.json()).then(j => { charts[d.song] = j; if (cur() === 'stages') { const e = $(`#stages [data-s="${d.no}"]`); if (e) e.outerHTML = stageRow(d); } }).catch(() => { /* */ }));
 }
 $('#t_list').addEventListener('click', () => openStages());
 $('#stages').addEventListener('click', async e => {
   const b = e.target.closest('[data-g],[data-s]'); if (!b) return;
   if (b.dataset.g === 'back') return runBack();
-  const d = DAYS[+b.dataset.s - 1]; if (!d || !openNo(d)) return;
+  const d = b.dataset.s === '0' ? PRACTICE : DAYS[+b.dataset.s - 1]; if (!d || (!d.practice && !openNo(d))) return;
   const cell = e.target.closest('[data-d]');
   A.fxPlay('tick', S.sfx * 0.5);
   if (cell) { await A.unlock(); S.diff = cell.dataset.d; save(); }
@@ -610,7 +671,7 @@ function openSheet() {
     ${tg('lite', '연출 줄이기', '오래된 폰 · 배터리 아끼기 (파티클 · 빛기둥 끔)', S.lite)}
     <div class="row"><span>안내 다시 보기<small>첫 리허설과 구독자 · 단계 · 난이도 안내를 다음 방송부터 한 번씩 다시</small></span><button class="pill3" data-k="tips">다시 보기</button></div>
     ${DEV ? `<div class="row"><span>연출 테마 <small>시험 모드 · 캐스트 테마 미리보기</small></span><button class="pill3" data-k="theme">${esc((THEMES[S.theme] || THEMES.base).name)}</button></div>` : ''}
-    <div class="cred"><b>${GAME.name}</b> · ${GAME.studio} · ${VER}<br><b>음악</b> Suno 로 만든 오리지널 곡 10곡 (회사 유료 구독 · 상업 이용)<br><b>캐릭터 원화</b> 그라나사 (권리자 허락) · <b>채보 · 화면</b> 원어데이<br>키보드: D F J K</div>
+    <div class="cred"><b>${GAME.name}</b> · ${GAME.studio} · ${VER}<br><b>음악</b> Suno 로 만든 오리지널 곡 ${DAYS.length}곡 (회사 유료 구독 · 상업 이용) · 연습곡은 파헬벨 「캐논」(퍼블릭 도메인) 편곡<br><b>캐릭터 원화</b> 그라나사 (권리자 허락) · <b>채보 · 화면</b> 원어데이<br>키보드: D F J K</div>
     </div><button class="close" data-k="close">닫기</button></div>`;
   sh.classList.add('on'); moreHint(sh);
 }

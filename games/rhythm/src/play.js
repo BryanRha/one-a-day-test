@@ -1,11 +1,11 @@
 // 한 판 진행: 오디오 시계 → 엔진(판정) → 그리기 · 손맛(빛 · 소리 · 한마디) — 연출 기준서 docs/FEEL.md
 //   곡 위치 p = A.heard() − t0 − 싱크(초) · 입력은 이벤트가 일어난 순간의 시각으로 판정 (프레임 지연 없음)
 //   순서: 판정(engine) → 타격음(오디오 시계로 바로) → 캔버스 이펙트 등록(fx.js 풀) → 판정 글자 · 콤보 DOM 은 다음 프레임에 한 번에
-import { A } from './audio.js?v=0.99.43';
-import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.43';
-import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.43';
-import { makeFx } from './fx.js?v=0.99.43';
-import { Live } from './live.js?v=0.99.43';
+import { A } from './audio.js?v=0.99.44';
+import { Session, parseChart, clock, WIN } from './engine.js?v=0.99.44';
+import { makeRenderer, laneAt, laneU, wrongWay } from './render.js?v=0.99.44';
+import { makeFx } from './fx.js?v=0.99.44';
+import { Live } from './live.js?v=0.99.44';
 
 const $ = s => document.querySelector(s);
 const fmt = t => { t = Math.max(0, t); return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`; };
@@ -80,14 +80,14 @@ export const Play = {
     this.buildGuide(opt.guides || []);
     /* 화면 채우기 */
     $('#p_cov').style.backgroundImage = `url(${opt.cover})`; $('#p_thumb').style.backgroundImage = `url(${opt.cover})`;
-    $('#p_title').textContent = opt.song.title; $('#p_sub').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
+    $('#p_title').textContent = opt.song.title; $('#p_sub').textContent = opt.subLine || `${opt.song.artist} · 노래 ${opt.diva.name}`;
     $('#p_len').textContent = fmt(opt.entry.dur); $('#p_t').textContent = '0:00'; $('#p_bar').style.width = '0';
     $('#p_score').textContent = '0'; $('#p_acc').textContent = '100.00%'; $('#p_fc').className = 'fcm'; $('#p_shake').classList.remove('fcing');
-    $('#p_chap').innerHTML = `<b>${opt.chapter}</b> · 끝까지 방송하면 개인 채널이 열려요`; $('#p_chap').style.opacity = 1;
+    $('#p_chap').innerHTML = `<b>${opt.chapter}</b>${opt.chapNote ?? ' · 끝까지 방송하면 개인 채널이 열려요'}`; $('#p_chap').style.opacity = 1;
     const cb = $('#p_combo'); cb.classList.remove('on', 'gold'); cb.querySelector('b').textContent = '0'; cb.style.transform = '';
     $('#p_judge').className = 'judge'; $('#p_judge b').textContent = ''; $('#p_judge small').textContent = ''; $('#p_ready').className = 'ready'; $('#p_mile').className = 'mile'; $('#p_cut').classList.remove('on'); $('#p_banner').className = 'banner';
     const it = $('#p_intro'); it.querySelector('em').textContent = `${opt.diff === 'easy' ? 'EASY' : opt.diff === 'hard' ? 'HARD' : 'NORMAL'} · LV.${opt.chart.diffs[opt.diff].lv}`;
-    it.querySelector('b').textContent = opt.song.title; it.querySelector('span').textContent = `${opt.song.artist} · 노래 ${opt.diva.name}`;
+    it.querySelector('b').textContent = opt.song.title; it.querySelector('span').textContent = opt.subLine || `${opt.song.artist} · 노래 ${opt.diva.name}`;
     it.querySelector('i').textContent = opt.themeLine || '';   /* 게스트를 앉힌 판: 「연출 · 벨라 태엽 톱니」 (검수 B-5) */
     it.classList.remove('on'); void it.offsetWidth; it.classList.add('on');
     $('#p_cut .face').style.backgroundImage = `url(${opt.diva.face})`; $('#p_cut small').textContent = opt.diva.en;

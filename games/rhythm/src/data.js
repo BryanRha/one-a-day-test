@@ -71,6 +71,8 @@ export const SONGS = {
   s18: song('s18', '그날 밤의 시청자', 'The Viewer That Night', [123.29, 13.4], '보통'),
   s19: song('s19', '6년 전 데모 테이프', 'The Demo Tape Six Years Ago', [136.21, 12.45], '보통'),
   s20: song('s20', '한 사람을 위한 무대', 'A Stage for Just One', [122.66, 13.07], '어려운 곡'),
+  /* v0.7.5 연습곡 (대표 11-16 「연습곡으로 누구나 플레이 할 수 있게」) · 원곡은 파헬벨 「캐논」(17세기 · 저작권 만료) — 편곡 · 녹음은 Suno */
+  s00: { ...song('s00', '캐논, 비트를 만나다', 'Canon Meets the Beat', [126.24, 12.8], '연습곡'), credit: '원곡 파헬벨 「캐논」 · 편곡 하루 스튜디오' },
 };
 
 const P = (who, text, o) => ({ who, text, ...o });
@@ -79,6 +81,15 @@ const OFF = { roof: 'assets/img/off_rooftop.jpg', store: 'assets/img/off_store.j
 /* 하루 = 오늘의 생방송 한 회:
    pre(방송 전 · 화면 밖) → 생방송(리듬 플레이 · live 채팅) → 결과 → dm(방송 후 개인 채널 + 오늘의 조각) → 방송 기록
    subs = [방송 전, 방송 후] 사무소 구독자 (이야기상 숫자 · 실력과 무관) */
+/* 연습곡 (v0.7.5): 화가 아님 — 화 진행 · 소장 · 하루 순서와 상관없이 누구나 언제든 (방송 목록 맨 위)
+   붙는 것: 곡 · 난이도별 최고 기록(S.best.s00)만 · 안 붙는 것: 이야기 · 개인 채널 · 조각 · 카드 · 구독자 · 하루 4판 상한 · 방송 기록 · 첫 달성 보상 · 명예의 전당
+   배경은 옥상 방송실(새 그림 없음) · 노래 = 하루 스튜디오(캐스트 없음) */
+export const PRACTICE = {
+  no: 0, practice: true, song: 's00', cast: null, hero: OFF.roof, cut: OFF.roof, chapter: '연습곡', singer: '하루 스튜디오',
+  hello: '방송 없이 손만 풀어 보는 곡이에요. 몇 번이든, 어느 난이도로든.',
+  live: { open: '연습실 불 켰어요. 오늘은 기록만 남기고 부담 없이.', chat: ['연습 중', '손 푸는 중', '캐논이다', '이거 아는 노래', '박자 좋다', '한 번 더'], end: ['연습 끝!', '손 풀렸다'] },
+  subs: [0, 0],
+};
 export const DAYS = [
   {
     no: 1, song: 's01', cast: 'miyu', hero: 'assets/img/d2_hero.jpg', cut: 'assets/img/d2_cut.jpg',
