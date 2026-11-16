@@ -1,13 +1,13 @@
 // 탭 화면 — 장부(주간 이야기 · 정산 · 지난 주) · 단골 도감 · 꾸미기 · 설정 · 공유 카드
-import { D, H, DECO, FUR, face, tagOf } from './state.js?v=0.99.46';
-import { S, save, today, week, reset } from './save.js?v=0.99.46';
-import * as A from './audio.js?v=0.99.46';
-import { $, $$, esc, I, toast, modal, closeModal, sp, praise, fmt, setHaptic, coinFly, center, sparks } from './ui.js?v=0.99.46';
-import { mainGuest, slot, addDays, WD, GRADE, CHN, won, topAxis, AXN, weekTitle, COIN, nextTease, dayNo, EPOCH, levelOf, LEVELS, TOOLS, toolOn } from './engine.js?v=0.99.46';
-import { show, openShop, hud, refreshCoins, replayDay, findGuest, track } from './main.js?v=0.99.46';
-import { sceneHTML, layout } from './scene.js?v=0.99.46';
-import { bm } from './oad_bm.js?v=0.99.46';
-import { inOAD, exitToOAD } from './oad.js?v=0.99.46';
+import { D, H, can, DECO, FUR, face, tagOf } from './state.js?v=0.99.47';
+import { S, save, today, week, reset } from './save.js?v=0.99.47';
+import * as A from './audio.js?v=0.99.47';
+import { $, $$, esc, I, toast, modal, closeModal, sp, praise, fmt, setHaptic, coinFly, center, sparks } from './ui.js?v=0.99.47';
+import { mainGuest, slot, addDays, WD, GRADE, CHN, won, topAxis, AXN, weekTitle, COIN, nextTease, dayNo, EPOCH, levelOf, LEVELS, TOOLS, toolOn } from './engine.js?v=0.99.47';
+import { show, openShop, hud, refreshCoins, replayDay, findGuest, track } from './main.js?v=0.99.47';
+import { sceneHTML, layout } from './scene.js?v=0.99.47';
+import { bm } from './oad_bm.js?v=0.99.47';
+import { inOAD, exitToOAD } from './oad.js?v=0.99.47';
 
 export function refreshTabs(id) {
   const t = $('#tabs'), on = id === 'shop' ? 'shop' : id;
@@ -28,7 +28,7 @@ export function openLedger({ write = null } = {}) {
       mid = `<div class="hand${write === d ? ' write' : ''}">${esc(g.diary || g.itemName)}<small>${esc(how)}${r.replay ? ' · 다시 감정' : ''}</small></div>`;
       right = `<div class="mini ${r.grade}">${r.grade === 'best' ? '명<br>감정' : r.grade === 'good' ? '좋은<br>감정' : '따뜻한<br>감정'}</div>`;
     } else if (isToday) { mid = `<div class="lock"><b>${esc(tagOf(g))}</b>오늘 손님이 기다려요</div>`; right = '<button class="minibtn" data-k="today">맞이하기</button>'; }
-    else if (past) { mid = `<div class="lock"><b>${esc(tagOf(g))} · ${esc(g.itemName)}</b>그날 손님은 이런 분이었어요</div>`; right = H.ok ? `<button class="minibtn" data-k="replay" data-d="${d}">다시 감정</button>` : ''; }
+    else if (past) { mid = `<div class="lock"><b>${esc(tagOf(g))} · ${esc(g.itemName)}</b>그날 손님은 이런 분이었어요</div>`; right = can.replay() ? `<button class="minibtn" data-k="replay" data-d="${d}">다시 감정</button>` : ''; }
     else if (tom) { mid = `<div class="lock"><b>${esc(nextTease(D, k))}</b>내일 문을 열어요</div>`; right = `<div class="silh" style="width:38px;height:38px;border-radius:10px;overflow:hidden;position:relative;background:linear-gradient(180deg,#8f8476,#5d554b)"><img src="assets/g/${g.cast}_s.webp" style="position:absolute;left:50%;top:3px;width:120%;transform:translateX(-50%)" alt=""></div>`; }
     else mid = '<div class="lock">· · ·</div>';
     if (i === 6 && !r) right = right || '<span class="gift">정산</span>';
@@ -42,7 +42,7 @@ export function openLedger({ write = null } = {}) {
     <div class="ledgerbook"><h3>「${esc(w.title)}」</h3><div class="sub">${esc(w.blurb)}<br>7일 중 5일 감정하면 완결 · 결말은 내 평판이 정해요</div>
       <div class="prog">${dates.map(d => `<i class="${S.days[d] ? (S.days[d].replay ? 'rp' : 'on') : ''}"></i>`).join('')}</div>
       ${rows}
-      <div class="reward"><img src="assets/cat_1.webp" alt=""><div><b>완결 보상</b> · 동전 ${COIN.week} + 이번 주 칭호<span>7일 중 ${played}일 · 놓친 날은 '다시 감정'으로 채울 수 있어요</span></div></div>
+      <div class="reward"><img src="assets/cat_1.webp" alt=""><div><b>완결 보상</b> · 동전 ${COIN.week} + 이번 주 칭호<span>7일 중 ${played}일${can.replay() ? " · 놓친 날은 '다시 감정'으로 채울 수 있어요" : ''}</span></div></div>
       ${recap}
       <div class="branch">지금은 <b>${AXN[top]}</b> 평판이 앞서요 → ${esc(w.branch[top])}</div>
     </div></div>`;
@@ -59,7 +59,7 @@ export function pastWeeks() {
   const k = today(), cw = slot(k, 1).wk, fw = Math.max(0, slot(S.first, 1).wk);
   const list = []; for (let wk = cw - 1; wk >= Math.min(fw, cw - 1) && wk >= 0; wk--) list.push(wk);
   const item = wk => { const w = D.weeks[((wk % D.weeks.length) + D.weeks.length) % D.weeks.length], dates = weekDates(wk), played = dates.filter(d => S.days[d]).length, open = isOwnerOrPlayed(wk, played);
-    return `<div class="dc"><div class="pv"><b style="font:700 13px var(--hf)">${wk + 1}주</b></div><div><b>「${esc(w.title)}」</b><small>7일 중 ${played}일 감정 · ${open ? '전부 읽을 수 있어요' : '5일 이상 감정하면 저절로 열려요'}</small></div><div class="act">${open ? `<button class="minibtn" data-a="read" data-w="${wk}">읽기</button>` : H.ok ? `<button class="minibtn" data-a="buy" data-w="${wk}"><i class="goldi">G</i>${bm.price('week') || 30}</button>` : ''}</div></div>`; };
+    return `<div class="dc"><div class="pv"><b style="font:700 13px var(--hf)">${wk + 1}주</b></div><div><b>「${esc(w.title)}」</b><small>7일 중 ${played}일 감정 · ${open ? '전부 읽을 수 있어요' : '5일 이상 감정하면 저절로 열려요'}</small></div><div class="act">${open ? `<button class="minibtn" data-a="read" data-w="${wk}">읽기</button>` : can.gold('week') ? `<button class="minibtn" data-a="buy" data-bm="gold" data-w="${wk}"><i class="goldi">G</i>${can.gold('week')}</button>` : ''}</div></div>`; };
   modal(`<h3>지난 주 이야기</h3><p>그 주의 손님 일곱 명, 그날의 진실을 다시 읽어요.${H.owned ? ' 소장 중이라 전부 열려 있어요.' : ''}</p><div class="decolist" style="margin-top:12px">${list.length ? list.map(item).join('') : '<p>아직 지난 주가 없어요. 이번 주를 마치면 여기에 쌓여요.</p>'}</div><button class="btn sec" data-a="close">닫기</button>`, async (a, b) => {
     if (a === 'close') return closeModal();
     const wk = Number(b.dataset.w);
@@ -89,15 +89,15 @@ export function settleIfDue() {
     <h3 style="text-align:center">「${esc(w.title)}」 완결</h3><p style="text-align:center">7일 중 ${played}일 · 명감정 ${nBest}번 · 칭호 <b>${esc(title)}</b></p>
     <div class="truth"><span class="k">${AXN[top]} 평판이 이끈 결말</span>${esc(ending)}</div>
     <div class="branch"><b>다음 주 예고</b> · ${esc(w.branch[top])}</div>
-    ${done ? `<div class="reward"><img src="assets/cat_1.webp" alt=""><div><b>완결 보상 · 동전 +${coins}</b><span>${week(wk).doubled ? '두 배로 받았어요' : '5일 넘게 들러 주셔서 고마워요'}</span></div></div>` : `<div class="recap">이번 주는 ${played}일 들렀어요. 5일을 채우면 완결 보상을 받아요 — 놓친 날은 '다시 감정'으로 채울 수 있어요.</div>`}
-    <div class="row2"><button class="btn sec" data-a="share">공유 카드</button>${done && !week(wk).doubled && H.ok ? `<button class="btn sec" data-a="dbl">${H.owned ? '' : '<i class="adic"></i> '}동전 두 배</button>` : '<span></span>'}</div>
+    ${done ? `<div class="reward"><img src="assets/cat_1.webp" alt=""><div><b>완결 보상 · 동전 +${coins}</b><span>${week(wk).doubled ? '두 배로 받았어요' : '5일 넘게 들러 주셔서 고마워요'}</span></div></div>` : `<div class="recap">이번 주는 ${played}일 들렀어요. 5일을 채우면 완결 보상을 받아요${can.replay() ? " — 놓친 날은 '다시 감정'으로 채울 수 있어요" : ''}.</div>`}
+    <div class="row2"><button class="btn sec" data-a="share">공유 카드</button>${done && !week(wk).doubled && can.ad() ? `<button class="btn sec" data-a="dbl" data-bm="ad">${H.owned ? '' : '<i class="adic"></i> '}동전 두 배</button>` : '<span></span>'}</div>
     <button class="btn pri" data-a="close">다음 주도 기대할게요</button>`;
   setTimeout(() => {
     A.fanfare(2);
     modal(html(), async (a, b) => {
       if (a === 'close') { closeModal(); refreshCoins(); return; }
       if (a === 'share') return shareWeek(w, title, played, nBest);
-      if (a === 'dbl') { b.disabled = true; const r = await bm.rewardedAd('hanson_week2x'); if (!r.ok) { b.disabled = false; return toast('광고를 불러오지 못했어요'); } week(wk).doubled = true; S.coins += coins; save(true); A.coin(5); coinFly(center(b), { x: center(b).x, y: 30 }, 8); praise(`동전 +${coins} 더!`, 90); refreshCoins(); b.remove(); }
+      if (a === 'dbl') { b.disabled = true; const r = await bm.rewardedAd('hanson_week2x'); if (!r.ok) { b.disabled = false; return r.reason === 'cancel' ? null : toast(r.reason === 'limit' ? '오늘 광고는 다 봤어요' : '광고를 불러오지 못했어요'); } week(wk).doubled = true; S.coins += coins; save(true); A.coin(5); coinFly(center(b), { x: center(b).x, y: 30 }, 8); praise(`동전 +${coins} 더!`, 90); refreshCoins(); b.remove(); }
     }, { center: true });
   }, sp(400));
   return true;
@@ -136,7 +136,7 @@ export function openDeco() {
   const isOn = d => on[d.slot] === d.id;
   const row = d => {
     const owned = !!own[d.id], pv = d.img ? `<img src="${d.img}" alt="">` : d.slot === 'sign' ? `<div class="sign ${d.id}" style="position:static;transform:scale(.36);transform-origin:center"><div><b>오랜상회</b></div></div>` : d.slot === 'fur' ? `<img src="assets/cat_0.webp" style="filter:${FUR[d.id]}" alt="">` : d.id === 'lamp' ? '<div style="width:100%;height:100%;background:radial-gradient(circle at 50% 40%, #ffd58a, #c98a2a 45%, transparent 70%)"></div>' : `<div style="width:100%;height:100%;background:${d.id === 'winter' ? 'linear-gradient(#c9d6e6,#fff)' : 'linear-gradient(#f7d4dc,#fff4f6)'}"></div>`;
-    const price = d.owner ? '<small>소장 전용</small>' : `<button class="minibtn" data-k="coin" data-id="${d.id}"><i class="coin" style="width:14px;height:14px"></i>${fmt(d.coins)}</button>${H.ok && bm.price(d.sku) ? `<button class="minibtn" data-k="gold" data-id="${d.id}"><i class="goldi" style="width:14px;height:14px;font-size:8px">G</i>${bm.price(d.sku)}</button>` : ''}`;
+    const price = d.owner ? '<small>소장 전용</small>' : `<button class="minibtn" data-k="coin" data-id="${d.id}"><i class="coin" style="width:14px;height:14px"></i>${fmt(d.coins)}</button>${can.gold(d.sku) ? `<button class="minibtn" data-k="gold" data-bm="gold" data-id="${d.id}"><i class="goldi" style="width:14px;height:14px;font-size:8px">G</i>${bm.price(d.sku)}</button>` : ''}`;
     return `<div class="dc${owned ? ' own' : ''}"><div class="pv">${pv}</div><div><b>${esc(d.name)}</b><small>${esc(d.size)} · ${esc(d.desc)}</small></div><div class="act">${owned ? `<button class="minibtn${isOn(d) ? ' on' : ''}" data-k="toggle" data-id="${d.id}">${isOn(d) ? '놓는 중' : '놓기'}</button>` : price}</div></div>`;
   };
   const vis = DECO.filter(d => !d.owner || H.owned);

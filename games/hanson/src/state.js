@@ -1,7 +1,19 @@
 // 공용 상태 — 데이터(D) · 원어데이 연결 정보(H) · 지금 손님 판(cur)
+import { bm } from './oad_bm.js?v=0.99.47';
 export const D = { items: {}, cast: {}, weeks: [], reserve: [], extras: [], specials: [] };
 export const H = { ok: false, owned: false, gold: 0, prices: {}, ads: {} };
 export const cur = { v: null };
+/* 광고 · 골드 자리 여닫이 — 광고 · 골드 단추는 반드시 이걸로 물어보고 그림 (2026-11-16 실서버: 광고 끔 · 골드 닫음인데 '원어데이 안인가(H.ok)'만 보고 그려서 막다른 단추가 남았음)
+   · can.ad(): 지금 보상형 광고를 볼 수 있나 (대조군 A · 광고 끔 · 오늘 한도 끝 = false)
+   · can.gold(sku): 그 상품의 골드 값 (가격표에 없으면 0 = 팔지 않음 — 기본값으로 메우지 않음)
+   · can.anyGold(): 이 게임에 골드 상품이 하나라도 열려 있나 (골드 잔액 칸)
+   단추에는 data-bm="ad" | "gold" 를 붙임 — tools/bm_closed.mjs 가 닫힌 상태에서 0개인지 셈 */
+export const can = {
+  ad: () => !!(H.ok && bm.info.ok && bm.info.ads && bm.info.ads.reward),
+  gold: sku => (H.ok ? bm.price(sku) : 0),
+  anyGold: () => !!(H.ok && bm.info.ok && Object.keys(bm.info.prices || {}).length),
+  replay: () => can.ad() || can.gold('replay') > 0,
+};
 export const face = (cast, f) => `assets/g/${cast}_${f}.webp`;
 export const sil = cast => `assets/g/${cast}_s.webp`;
 export const itemImg = id => `assets/i/${id}.webp`;

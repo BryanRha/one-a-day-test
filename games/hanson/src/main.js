@@ -2,18 +2,18 @@
 //   아침 · 낮 · 오후 = 골목 손님(짧은 퍼즐 · 동전 · 도감 · 경험치) → 저녁 = 오늘의 주인공(모두 같은 손님 · 주간 이야기 · 평판 · 통계)
 //   → 하루 결산(등급 도장 · 동전 · 평판 · 경험치) → 영업 연장(광고 3 · 골드 6) · 장부 · 도감 · 꾸미기
 //   데이터: data/*.json (사람이 쓴 8주 뼈대 + 예비 손님 + 골목 손님 풀 — content/*.mjs 에서 tools/build_data.mjs 로 만듦)
-import { D, H, cur, loadData, tagOf, prefetch, face, sil, itemImg } from './state.js?v=0.99.46';
-import { S, load, save, today, setDay, week } from './save.js?v=0.99.46';
-import * as A from './audio.js?v=0.99.46';
-import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.99.46';
-import { sceneHTML, layout, setFace } from './scene.js?v=0.99.46';
-import { openInspect, resizeInspect } from './inspect.js?v=0.99.46';
-import { openTalk } from './talk.js?v=0.99.46';
-import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.99.46';
-import { WHY } from './check.js?v=0.99.46';
-import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.99.46';
-import { bm } from './oad_bm.js?v=0.99.46';
-import { installBack, inOAD, exitToOAD } from './oad.js?v=0.99.46';
+import { D, H, can, cur, loadData, tagOf, prefetch, face, sil, itemImg } from './state.js?v=0.99.47';
+import { S, load, save, today, setDay, week } from './save.js?v=0.99.47';
+import * as A from './audio.js?v=0.99.47';
+import { $, $$, esc, I, toast, modal, closeModal, typeText, wait, sp, coinFly, center, fmt, setHaptic, buzz, sparks } from './ui.js?v=0.99.47';
+import { sceneHTML, layout, setFace } from './scene.js?v=0.99.47';
+import { openInspect, resizeInspect } from './inspect.js?v=0.99.47';
+import { openTalk } from './talk.js?v=0.99.47';
+import { mainGuest, slot, judge, coinsFor, applyRep, AX, AXN, GRADE, CHN, won, buyPrice, nextTease, addDays, COIN, SLOTS, FREE_ALLEY, EXT, pickAlley, levelOf, xpFor, LEVELS, TOOLS } from './engine.js?v=0.99.47';
+import { WHY } from './check.js?v=0.99.47';
+import { openLedger, openBook, openDeco, openSettings, settleIfDue, shareCard, refreshTabs, pastWeeks } from './pages.js?v=0.99.47';
+import { bm } from './oad_bm.js?v=0.99.47';
+import { installBack, inOAD, exitToOAD } from './oad.js?v=0.99.47';
 
 window.__errs = [];
 addEventListener('error', e => window.__errs.push(String(e.message)));
@@ -33,7 +33,8 @@ const visiting = () => !!(cur.v && cur.v.stage && cur.v.stage !== 'done');
 /* ---------- HUD ---------- */
 export function hud(sub) {
   const k = today(), s = slot(k, D.weeks.length), w = D.weeks[s.wi], lv = levelOf(S.xp);
-  const gold = H.ok ? `<div class="chipc" id="goldc"><i class="goldi">G</i>${fmt(H.gold || 0)}</div>` : '';
+  /* 골드 잔액 칸은 이 게임에 골드 상품이 열려 있을 때만 (쓸 곳이 없으면 안 보임) */
+  const gold = can.anyGold() ? `<div class="chipc" id="goldc"><i class="goldi">G</i>${fmt(H.gold || 0)}</div>` : '';
   return `<div class="hud"><div class="brand"><div class="seal${S.deco.on.sign === 'gilt' ? ' gold' : ''}">오</div><div><b>오랜상회</b><small>${esc(sub || `${s.wk + 1}주차 · ${w.title} · ${lv.name}`)}</small></div></div><div class="sp"></div>
     <div class="chipc" id="coinc"><i class="coin"></i><span>${fmt(S.coins)}</span></div>${gold}<button class="icb" data-k="set" aria-label="설정">${I.gear}</button></div>
     <div class="reps"><div class="rep" data-ax="dan" style="color:#b2452e">${I.heart}<span style="color:var(--ink)">단골 <em>${S.rep.dan}</em></span></div><div class="rep" data-ax="gol" style="color:var(--gold)">${I.talk}<span style="color:var(--ink)">골목 <em>${S.rep.gol}</em></span></div><div class="rep" data-ax="pa" style="color:var(--accent2)">${I.shield}<span style="color:var(--ink)">파출소 <em>${S.rep.pa}</em></span></div></div>`;
@@ -187,12 +188,19 @@ export function renderIdle() {
 function extendBtns(d) {
   const adLeft = EXT.ad - d.ad, goldLeft = EXT.gold - d.gold;
   if (!H.ok) return '<p style="margin-top:10px;font-size:12px">영업 연장(골목 손님 더 받기)은 원어데이 앱에서 할 수 있어요.</p>';
-  const p1 = bm.price('extra1') || 20, p3 = bm.price('extra3') || 50;
+  /* 되는 단추만 그림 · 광고도 골드도 닫혀 있으면 칸 전체(설명 + 단추)가 없음 → 부르는 쪽은 '' 이면 제목도 안 그림 (2026-11-16 실서버 막다른 단추) */
+  const ad = can.ad(), p1 = can.gold('extra1'), p3 = can.gold('extra3');
+  if (!ad && !p1 && !p3) return '';
+  const row = [];
+  if (ad) row.push(`<button class="btn sec" data-k="xad" data-bm="ad" ${adLeft > 0 ? '' : 'disabled'}><span>${H.owned ? '바로 한 분 더' : '<i class="adic"></i> 광고 · 한 분 더'}</span><small>오늘 ${adLeft}/${EXT.ad}</small></button>`);
+  if (p1) row.push(`<button class="btn sec" data-k="x1" data-bm="gold" ${goldLeft > 0 ? '' : 'disabled'}><span class="pr"><i class="goldi">G</i>${p1} · 1명</span><small>골드 ${goldLeft}/${EXT.gold}</small></button>`);
+  if (row.length === 1) row[0] = row[0].replace('<button class="btn sec"', '<button class="btn sec" style="grid-column:1/-1"');
+  if (p3 && goldLeft >= 3) row.push(`<button class="btn sec" data-k="x3" data-bm="gold" style="grid-column:1/-1"><span class="pr"><i class="goldi">G</i>${p3} · 3명</span><small>한 명에 ${Math.round(p3 / 3)}골드꼴</small></button>`);
   return `<p style="margin-top:10px;font-size:12.5px">영업 연장 · 골목 손님을 더 받아요 (동전 · 도감 · 경험치)</p><div class="xrow">
-    <button class="btn sec" data-k="xad" ${adLeft > 0 ? '' : 'disabled'}><span>${H.owned ? '바로 한 분 더' : '<i class="adic"></i> 광고 · 한 분 더'}</span><small>오늘 ${adLeft}/${EXT.ad}</small></button>
-    <button class="btn sec" data-k="x1" ${goldLeft > 0 ? '' : 'disabled'}><span class="pr"><i class="goldi">G</i>${p1} · 1명</span><small>골드 ${goldLeft}/${EXT.gold}</small></button>
-    ${goldLeft >= 3 ? `<button class="btn sec" data-k="x3" style="grid-column:1/-1"><span class="pr"><i class="goldi">G</i>${p3} · 3명</span><small>한 명에 17골드꼴</small></button>` : ''}</div>`;
+    ${row.join('\n    ')}</div>`;
 }
+/* 광고가 안 됐을 때 한마디 (그만둔 건 조용히) */
+const adFail = r => (r.reason === 'cancel' ? null : toast(r.reason === 'limit' ? '오늘 광고는 다 봤어요' : '광고를 불러오지 못했어요'));
 function bindShop() {
   const el = $('#shop');
   el.onclick = async e => {
@@ -209,7 +217,7 @@ export async function extend(k) {
   const day = today(), d = dayOf(day);
   if (k === 'xad') {
     if (d.ad >= EXT.ad) return toast(`광고 영업 연장은 하루 ${EXT.ad}번이에요`);
-    const r = await bm.rewardedAd('hanson_extra'); if (!r.ok) return toast(r.reason === 'limit' ? '오늘 광고는 다 봤어요' : '광고를 불러오지 못했어요');
+    const r = await bm.rewardedAd('hanson_extra'); if (!r.ok) return adFail(r);
     d.ad++; addAlley(1);
   } else {
     const n = k === 'x3' ? 3 : 1; if (d.gold + n > EXT.gold) return toast(`골드 영업 연장은 하루 ${EXT.gold}명까지예요`);
@@ -224,8 +232,11 @@ function addAlley(n) { const day = today(), d = dayOf(day); const ids = pickAlle
 export async function replayDay(key) {
   const { g } = mainGuest(D, key);
   if (!H.ok) return toast('다시 감정은 원어데이 앱에서 할 수 있어요');
-  const pick = await new Promise(res => modal(`<h3>그날 손님 다시 감정</h3><p class="hfp">${esc(dateLine(key))} · ${esc(tagOf(g))}<br>${esc(g.itemName)}</p><p>평판 · 이야기는 그대로 두고, 동전과 이번 주 완결 칸만 채워요.</p><div class="row2"><button class="btn sec" data-a="ad">${H.owned ? '바로 열기' : '<i class="adic"></i> 광고 보고'}</button><button class="btn pri" data-a="gold"><span class="pr"><i class="goldi">G</i>${bm.price('replay') || 20}</span></button></div><button class="btn ghost" data-a="close">다음에</button>`, a => { closeModal(); res(a); }));
-  if (pick === 'ad') { const r = await bm.rewardedAd('hanson_replay'); if (!r.ok) return toast('광고를 불러오지 못했어요'); }
+  /* 되는 길만 단추로 · 둘 다 닫혀 있으면 장부의 '다시 감정' 단추부터 없음(pages.js) */
+  const ad = can.ad(), gp = can.gold('replay'); if (!ad && !gp) return;
+  const adB = ad ? `<button class="btn sec" data-a="ad" data-bm="ad">${H.owned ? '바로 열기' : '<i class="adic"></i> 광고 보고'}</button>` : '', goldB = gp ? `<button class="btn pri" data-a="gold" data-bm="gold"><span class="pr"><i class="goldi">G</i>${gp}</span></button>` : '';
+  const pick = await new Promise(res => modal(`<h3>그날 손님 다시 감정</h3><p class="hfp">${esc(dateLine(key))} · ${esc(tagOf(g))}<br>${esc(g.itemName)}</p><p>평판 · 이야기는 그대로 두고, 동전과 이번 주 완결 칸만 채워요.</p>${ad && gp ? `<div class="row2">${adB}${goldB}</div>` : adB + goldB}<button class="btn ghost" data-a="close">다음에</button>`, a => { closeModal(); res(a); }));
+  if (pick === 'ad') { const r = await bm.rewardedAd('hanson_replay'); if (!r.ok) return adFail(r); }
   else if (pick === 'gold') { const r = await bm.spend('replay'); if (!r.ok) return r.reason === 'cancel' ? null : toast(r.reason === 'short' ? '골드가 모자라요' : '지금은 살 수 없어요'); H.gold = r.gold ?? H.gold; }
   else return;
   newVisit('replay', key, g); renderVisit(true);
@@ -339,7 +350,7 @@ export function daySettle() {
   const bonus = d.bonus || 0, coins = got.reduce((a, x) => a + (x.rec.coins || 0), 0) + bonus, xp = got.reduce((a, x) => a + (x.rec.xp || 0), 0), lv = levelOf(S.xp);
   const main = S.days[k], mg = main && !main.replay && findGuest(main.id), rep = mg ? mg.choices[main.choice].rep : null;
   const pct = lv.to > lv.from ? Math.round((lv.xp - lv.from) / (lv.to - lv.from) * 100) : 100;
-  const ng = mainGuest(D, addDays(k, 1)).g;
+  const ng = mainGuest(D, addDays(k, 1)).g, ext = H.ok ? extendBtns(d) : '';
   if (first) { A.fanfare(1); track('day_settle', { n: got.length, coins }); }
   const close = () => { closeModal(); openShop(); setTimeout(() => settleIfDue(), sp(500)); };
   modal(`<h3>오늘의 가게 · 결산</h3><p>${dateLine(k)} · 손님 ${got.length}명</p>
@@ -348,7 +359,7 @@ export function daySettle() {
     <div class="xpbar"><div><b>${esc(lv.name)}</b>${lv.next ? `<small>다음 ${esc(lv.next)}까지 ${lv.to - lv.xp}</small>` : ''}</div><i><u style="width:${pct}%"></u></i></div>
     ${rep ? `<div class="branch">평판 · ${AX.map((a, i) => `${AXN[a]} ${rep[i] > 0 ? '+' + rep[i] : rep[i]}`).join(' · ')} — ${esc(moodLine(rep))}</div>` : ''}
     <div class="tmr"><div class="silh"><img src="assets/g/${ng.cast}_s.webp" alt=""></div><div><b>내일 저녁 손님</b>${esc(nextTease(D, k))}</div></div>
-    ${H.ok ? `<div class="sect" style="margin-top:14px">영업 연장<small>골목 손님을 더 받아요</small></div>${extendBtns(d)}` : ''}
+    ${ext ? `<div class="sect" style="margin-top:14px">영업 연장<small>골목 손님을 더 받아요</small></div>${ext}` : ''}
     <button class="btn pri" data-a="close">가게로</button>`, a => { if (a === 'close') close(); });
   $('#modal').onclick = e => { const b = e.target.closest('[data-k],[data-a]'); if (!b) return; A.tap(); if (b.dataset.k) return extend(b.dataset.k); if (b.dataset.a === 'close') close(); };
 }
