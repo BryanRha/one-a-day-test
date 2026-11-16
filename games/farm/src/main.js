@@ -1,13 +1,13 @@
-import { W, BASE_H, setH, VERSION } from './config.js?v=0.99.47';
-import { audio } from './audio.js?v=0.99.47';
-import { BootScene } from './scenes/Boot.js?v=0.99.47';
-import { TownScene } from './scenes/Town.js?v=0.99.47';
-import { HudScene } from './scenes/Hud.js?v=0.99.47';
-import { MineScene, MiniScene, PeopleScene, EventsScene, IslandScene, CoopScene } from './scenes/Extra.js?v=0.99.47';
-import { installBack } from './oad.js?v=0.99.47';
-import { installNav } from './nav.js?v=0.99.47';
-import { initBM } from './store.js?v=0.99.47';
-import { bm } from './oad_bm.js?v=0.99.47';
+import { W, BASE_H, setH, VERSION } from './config.js?v=0.99.48';
+import { audio } from './audio.js?v=0.99.48';
+import { BootScene } from './scenes/Boot.js?v=0.99.48';
+import { TownScene } from './scenes/Town.js?v=0.99.48';
+import { HudScene } from './scenes/Hud.js?v=0.99.48';
+import { MineScene, MiniScene, PeopleScene, EventsScene, IslandScene, CoopScene } from './scenes/Extra.js?v=0.99.48';
+import { installBack } from './oad.js?v=0.99.48';
+import { installNav } from './nav.js?v=0.99.48';
+import { initBM } from './store.js?v=0.99.48';
+import { bm } from './oad_bm.js?v=0.99.48';
 
 // 오류 알림: 같은 오류는 한 번만 · 최근 5개는 저장 (thefarm_err)
 const seen = new Set();

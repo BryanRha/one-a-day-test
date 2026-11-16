@@ -1,17 +1,17 @@
 // 작전 결과: 승패 · 별 · 전과 · 경험치 · 계급 · 새 지휘관
-import { W, H } from '../config.js?v=0.99.47';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.47';
-import { audio } from '../audio.js?v=0.99.47';
-import { load } from '../save.js?v=0.99.47';
-import * as M from '../meta.js?v=0.99.47';
-import { COS } from '../core/data.js?v=0.99.47';
-import { MAPS } from '../core/maps.js?v=0.99.47';
-import { insignia } from './Home.js?v=0.99.47';
-import { rankOn } from '../rank.js?v=0.99.47';
-import { rankPopup, postScore } from '../rankui.js?v=0.99.47';
-import { bm } from '../oad_bm.js?v=0.99.47';
-import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.47';
-import { SUPPORT } from '../core/support.js?v=0.99.47';
+import { W, H } from '../config.js?v=0.99.48';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.48';
+import { audio } from '../audio.js?v=0.99.48';
+import { load } from '../save.js?v=0.99.48';
+import * as M from '../meta.js?v=0.99.48';
+import { COS } from '../core/data.js?v=0.99.48';
+import { MAPS } from '../core/maps.js?v=0.99.48';
+import { insignia } from './Home.js?v=0.99.48';
+import { rankOn } from '../rank.js?v=0.99.48';
+import { rankPopup, postScore } from '../rankui.js?v=0.99.48';
+import { bm } from '../oad_bm.js?v=0.99.48';
+import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.48';
+import { SUPPORT } from '../core/support.js?v=0.99.48';
 
 const PRAISE = ['완벽한 작전!', '훌륭한 지휘였어요!', '전선이 무너졌어요, 대승!', '역시 명지휘관!'];
 export class ResultScene extends Phaser.Scene {
