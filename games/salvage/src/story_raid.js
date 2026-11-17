@@ -1,19 +1,20 @@
 // 판 안 이야기 — 무전(짧은 자막 + 몽이 반응) · 튜토리얼 무전 · 이야기 물건(금빛 고리 상자) · 녹음기 · 벽 낙서
 //  raid.js 는 건드리지 않고 판 상태를 매 프레임 지켜봄 (main.js 가 attach · tick · detach)
 import * as THREE from 'three';
-import { S, save } from './save.js?v=0.99.49';
-import * as ST from './story.js?v=0.99.49';
-import { boardWants } from './board.js?v=0.99.49';
-import { ITEMS } from './data.js?v=0.99.49';
-import { RS } from './plan.js?v=0.99.49';
-import { sfx } from './audio.js?v=0.99.49';
-import { T, talk, portrait } from './story_ui.js?v=0.99.49';
+import { S, save } from './save.js?v=0.99.50';
+import * as ST from './story.js?v=0.99.50';
+import { boardWants } from './board.js?v=0.99.50';
+import { ITEMS } from './data.js?v=0.99.50';
+import { RS } from './plan.js?v=0.99.50';
+import { sfx } from './audio.js?v=0.99.50';
+import { T, talk, portrait } from './story_ui.js?v=0.99.50';
 
 const snd = (n, ...a) => { try { sfx[n]?.(...a); } catch { /* */ } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const LOOTY = new Set(['crate', 'barrel', 'locker', 'toolbox', 'chest', 'net', 'cargo', 'kiosk', 'cart', 'bench', 'stash', 'corebox']); /* 공장(M3-B) 상자 포함 */
 /* 지도 상자 = 알려진 종류 + 새 지도(연구소 M4-B)의 상자도: 지도에 놓인(obj) · 금고 · 시체 · 내려놓은 것 · 적 잔해(obj 없음)는 빼고 */
 const looty = c => LOOTY.has(c.kind) || (!!c.obj && !c.corpse && c.kind !== 'vault' && c.kind !== 'drop' && c.zone >= 1);
+const NOCARD = new URLSearchParams(location.search).has('nocard'); /* 시험: 첫 판 조작표 카드 끔 */
 const LIMIT = 3; /* 튜토리얼 밖 무전은 판당 3줄 (판 시작 · 사건 · 탈출 직전) */
 
 export class StoryRaid {
@@ -63,6 +64,35 @@ export class StoryRaid {
     sp.rotation.x = -Math.PI / 2; sp.position.set(x + 1.9, 0.12, z - 0.4); sp.userData.own = true; sp.userData.ownMat = true; R.root.add(sp);
     this.grafs.push({ id, x, z, m, sp, read: false, txt });
   }
+  /* ── 첫 판 길잡이 (v0.9.1 · QA 시트 6 · 8번): 튜토리얼 첫 판에서 '다음에 뒤질 상자' 하나를 빛 고리 · 빛기둥 · 화살표로 알려 줌 ──
+   *  상자 3개를 뒤질 때까지만 (그 뒤로는 원래 있던 출구 화살표) · 고른 상자는 뒤질 때까지 그대로 (가까운 상자가 바뀌어도 화살표가 오락가락하지 않게) */
+  guideBox() {
+    const R = this.R; if (this.tut !== 1 || !R || R.over || this.gDone) return null;
+    const L = R.containers.filter(looty); this.gN = L.filter(c => c.searched).length; if (this.gN >= 3) { this.gDone = true; return null; }
+    if (this.gBox && !this.gBox.searched) return this.gBox;
+    const pl = R.pl.pos; let best = null, bd = 1e9; const D = R.P.dist || {}; const here = D[R.roomOf(pl)?.id] ?? 0;
+    /* 가까운 상자 — 같은 방 · 이어진 방 먼저(방 걸음 수 차이 × 25m: 벽 너머 상자를 가리키지 않게) · 입구 구역 먼저 */
+    for (const c of L) { if (c.searched) continue; const d = Math.hypot(c.pos.x - pl.x, c.pos.z - pl.z) + Math.abs((D[R.roomOf(c.pos)?.id] ?? here) - here) * 25 + (c.zone > 1 ? 60 : 0); if (d < bd) { bd = d; best = c; } }
+    return this.gBox = best;
+  }
+  beacon(c) {
+    if (!this.gm) {
+      const mat = () => new THREE.MeshBasicMaterial({ color: 0x7dffb2, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.3, 1.6, 36), mat()); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.26;
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.34, 5.5, 10, 1, true), mat()); beam.position.y = 2.9; beam.material.opacity = 0.3;
+      const g = this.gm = new THREE.Group(); g.add(ring, beam); g.userData.ring = ring; g.userData.beam = beam;
+      for (const m of [ring, beam]) { m.userData.own = true; m.userData.ownMat = true; } /* 판이 끝나면 raid.dispose 가 버림 (누수 X) */
+      this.R.root.add(g);
+    }
+    const g = this.gm; g.visible = !!c; if (!c) return; g.position.set(c.pos.x, 0, c.pos.z);
+    const k = 0.5 + Math.sin(this.t * 4.5) * 0.5; g.userData.ring.scale.setScalar(1 + k * 0.22); g.userData.ring.material.opacity = 0.55 + k * 0.4; g.userData.beam.material.opacity = 0.18 + k * 0.2;
+  }
+  /* 화면 밖 방향 화살표 (ui.drawArrows 가 부름): 길잡이 상자 · 첫 상자를 뒤지기 전엔 출구 화살표를 잠깐 감춤 (어디로 갈지 하나만) */
+  marks(targets) {
+    const c = this.guideBox(); if (!c) return;
+    if (!this.gN) for (let i = targets.length - 1; i >= 0; i--) if (/^(ex|exoff)\b/.test(targets[i].c)) targets.splice(i, 1);
+    targets.push({ p: c.pos, t: '상자', c: 'box' });
+  }
   /* 상자 열 때 (ui.openLoot) — 튜토리얼 첫 상자엔 이름표 붙은 상자 */
   onLoot(c) {
     const st = S.story; if (this.tut === 1 && !st.flags.tagGiven && c && LOOTY.has(c.kind)) { c.items.unshift('tagbox'); st.flags.tagGiven = 1; this.R?.want.add('tagbox'); save(); this.say('tag', T.t0?.RADIO_TUT.tag, true, null, null, 2.5);
@@ -106,9 +136,16 @@ export class StoryRaid {
     const C = T.common; const RT = T.t0?.RADIO_TUT; const near = (p, d) => Math.hypot(p.x - pl.pos.x, p.z - pl.pos.z) < d;
     const openExit = () => R.exits.find(x => x.open && near(x.pos, 7));
     /* 튜토리얼 첫 판 */
+    if (this.tut === 1) {
+      /* 조작표 한 장 (QA 시트 4번): 판을 멈춘 채 손가락 · 키보드 조작을 먼저 보여 줌 — 기기에서 한 번만 · 봇(?bot) · 시험(?nocard)은 건너뜀 */
+      if (!this.card) { this.card = true; if (!st.flags.ctlCard && !this.app.bot && !NOCARD) { st.flags.ctlCard = 1; save(); this.app.ui.firstCard(R); } }
+      if (document.getElementById('firstcard')) { this.t -= dt; return; }
+      this.beacon(this.guideBox());
+    }
     if (this.tut === 1 && RT) {
       /* 장면 1: 빈 화면 대신 걸어가는 동안 (장면 글 → 곰방 3줄) — 그 자리 안내(상자 · 적 · 구르기)가 오면 그쪽이 먼저 */
-      const T0 = T.t0; if (!this.intro && this.t > 0.5 && T0?.INTRO) { this.intro = true; this.push({ key: 'cap', cap: T0.DOCK_CAP, prio: 2 }); T0.INTRO.forEach((l, k) => this.say('intro' + k, l, true)); }
+      const T0 = T.t0; if (!this.intro && this.t > 0.5 && T0?.INTRO) { this.intro = true; this.push({ key: 'cap', cap: T0.DOCK_CAP, prio: 2 }); T0.INTRO.forEach((l, k) => this.say('intro' + k, l, true)); this.say('go', RT.go, true); }
+      if (this.gDone) this.say('out', RT.out, true); /* 상자 3개 뒤 — 이제 나가는 길 */
       const P = 2.5;
       if (R.near?.type === 'loot' && !R.near.c.searched) this.say('box', RT.box, true, null, null, P);
       const sp = R.enemies.find(e => !e.dead && !e.sleep && e.state === 'chase' && near(e.pos, 16)); if (sp) this.say('spot', sp.kind === 'drone' ? RT.spot : RT.spotSkel, true, null, null, P);
@@ -146,7 +183,7 @@ export class StoryRaid {
     if (R.L.pet) for (const c of R.containers) if ((c.tape || c.story) && !c.searched && near(c.pos, 9)) { this.say('sniff' + (c.tape ? 't' : 's'), ['y', C.RADIO.sniff], true); break; }
   }
   detach() {
-    for (const t of this.texs || []) t.dispose(); this.texs = []; this.rings = []; this.grafs = []; this.app.ui?.top?.clear();
+    for (const t of this.texs || []) t.dispose(); this.texs = []; this.rings = []; this.grafs = []; this.gm = null; this.gBox = null; this.gDone = false; this.gN = 0; this.card = false; this.app.ui?.top?.clear();
     this.el?.remove(); this.el = null; this.R = null;
   }
 }

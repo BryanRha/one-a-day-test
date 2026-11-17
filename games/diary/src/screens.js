@@ -1,11 +1,11 @@
 // 화면들 — 홈 · 진행 맵 · 테마 노트(책장 · 꾸미기) · 스티커 서랍 · 상점 · 다이어리(달력)
-import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.99.49';
-import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.99.49';
-import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.99.49';
-import { inOAD, exitToOAD } from './oad.js?v=0.99.49';
-import * as A from './audio.js?v=0.99.49';
-import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.99.49';
-import { bm } from './oad_bm.js?v=0.99.49';
+import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.99.50';
+import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.99.50';
+import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.99.50';
+import { inOAD, exitToOAD } from './oad.js?v=0.99.50';
+import * as A from './audio.js?v=0.99.50';
+import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.99.50';
+import { bm } from './oad_bm.js?v=0.99.50';
 
 let go = null; /* main.js 가 넣어 줌: go.daily() · go.map(n) · go.free() */
 export const bind = g => { go = g; };
@@ -22,7 +22,7 @@ export function show(name) {
 }
 /* 뒤로가기용: 꾸미기의 열린 시트 · 선택을 먼저 닫음 */
 export function closeSheets() {
-  const sh = $('#esheet.on'); if (sh) { sh.classList.remove('on'); return true; }
+  if (closeSheet()) return true;
   if (cur === 'editor' && ED && ED.sel != null) { select(null); return true; }
   return false;
 }
@@ -32,6 +32,12 @@ const stickersOf = list => list.filter(s => !s.k);
 const pagesDone = nt => nt.pages.filter(p => stickersOf(p).length >= PAGE_DONE).length;
 const drawerTotal = () => Object.values(S.drawer).reduce((a, b) => a + b, 0);
 /* 말없이 거절하지 않기: 누를 수 없는 날은 짧은 이유 */
+/* 원어데이로 (QA 공통 의견 · 룬다이스와 같은 동작): 원어데이 앱 안 = 앱에 나가기(oad:exit) · 단독 링크 = 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+function toOAD() {
+  if (inOAD) return exitToOAD();
+  const h = location.hostname, site = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/';
+  location.href = site;
+}
 function dayTap(k, missedSet) {
   if (S.days[k]?.done || missedSet.has(k)) return openDay(k);
   if (k === dayKey()) return go.daily();
@@ -49,7 +55,7 @@ function home() {
   const recent = Object.keys(S.days).filter(k => S.days[k].done).sort().reverse().slice(0, 7);
   const { set, lucky } = dailySet(dayKey());
   let i = 0; const R = () => `class="rise" style="--i:${i++}"`;
-  $('#home').innerHTML = `<div class="hero"><div class="ht"><h1>오늘의 다꾸</h1><p>${t.getMonth() + 1}월 ${t.getDate()}일 ${DAYS[t.getDay()]}요일 · 하루 한 판, 다이어리 한 장</p></div><div class="hr">${inOAD ? `<button class="pbtn oadexit" id="h_exit" aria-label="원어데이로">↩ 원어데이</button>` : ''}<button class="pbtn" id="h_set" aria-label="설정">${ICON.gear}</button><div class="gold off"></div></div></div>
+  $('#home').innerHTML = `<div class="hero"><div class="ht"><h1>오늘의 다꾸</h1><p>${t.getMonth() + 1}월 ${t.getDate()}일 ${DAYS[t.getDay()]}요일 · 하루 한 판, 다이어리 한 장</p></div><div class="hr"><button class="pbtn oadexit" id="h_exit" aria-label="원어데이로">↩ 원어데이</button><button class="pbtn" id="h_set" aria-label="설정">${ICON.gear}</button><div class="gold off"></div></div></div>
   <div ${R()}><div class="today paper">
     <div class="tp"><b>메인 다꾸</b><span class="dots">${dots}</span><em>${dd.done ? '완성!' : `${w}/3판`}</em></div>
     <p>${dd.done ? '오늘 페이지에 도장을 찍었어요. 이제 자유 다꾸 · 스피드 다꾸로 마음껏 즐겨요.' : w ? `${3 - w}판만 더 깨면 오늘 페이지가 완성돼요.` : '메인 다꾸 세 판을 깨면 날짜 도장이 찍힌 페이지 한 장이 남아요.'}</p>
@@ -66,7 +72,7 @@ function home() {
   <div class="paper mini" ${R()}><div class="mh" id="h_notes"><b>꾸미는 중인 노트</b><span class="lnk">책장 ›</span></div><div class="mrow">${working.map(({ n, nt }) => `<button class="mn" data-id="${n.id}" style="--c:${n.color}"><span><img src="${img(n.sig)}"></span><small>${n.name}<br>${nt ? pagesDone(nt) : 0}/${PAGES}쪽</small></button>`).join('')}</div></div>
   <button class="btn rise" style="--i:${i++}" id="h_diary">내 다이어리 보기 · ${Object.values(S.days).filter(d => d.done).length}장</button>`;
   $('#h_today').onclick = () => dd.done ? openDay(dayKey()) : go.daily();
-  $('#h_set').onclick = () => window.__settings(); if ($('#h_exit')) $('#h_exit').onclick = () => exitToOAD();
+  $('#h_set').onclick = () => window.__settings(); $('#h_exit').onclick = toOAD;
   if ($('#h_pages')) $('#h_pages').onclick = () => show('diary');
   document.querySelectorAll('#home .homepages [data-day]').forEach(b => b.onclick = () => openDay(b.dataset.day)); fillMinis($('#home'));
   $('#h_notes').onclick = e => { if (!e.target.closest('.mn')) show('notes'); }; document.querySelectorAll('#home .mn').forEach(b => b.onclick = () => openEditor(b.dataset.id));
@@ -141,13 +147,13 @@ function drawEditor() {
   const { n, nt } = ED, p = nt.cur, list = nt.pages[p], st = stickersOf(list).length;
   nt.papers = nt.papers || [];
   $('#editor').style.setProperty('--paper', n.paper); $('#editor').style.setProperty('--c', n.color);
-  $('#editor').innerHTML = `<div class="etop"><button class="pbtn" id="e_back">‹</button><div><b>${n.name}</b><small>${p + 1}/${PAGES}쪽 · ${st >= PAGE_DONE ? '이 쪽 완성 ✓' : `스티커 ${st}/${PAGE_DONE}`}</small>${st < PAGE_DONE && !(nt.rew || {})[p] ? `<small class="ehint">채우면 스티커 2장 + 도구 1개</small>` : ''}</div><span class="gold off"></span></div>
+  $('#editor').innerHTML = `<div class="etop"><button class="pbtn" id="e_back">‹</button><div><b>${n.name}</b><small>${p + 1}/${PAGES}쪽 · ${st >= PAGE_DONE ? '이 쪽 완성 ✓' : `스티커 ${st}/${PAGE_DONE}`}</small>${st < PAGE_DONE && !(nt.rew || {})[p] ? `<small class="ehint">${ICON.gift}<span class="pdots">${Array.from({ length: PAGE_DONE }, (_, k) => `<i class="${k < st ? 'on' : ''}"></i>`).join('')}</span>스티커 ${PAGE_DONE}장을 채우면 보상: 스티커 2장 + 도구 1개</small>` : (nt.rew || {})[p] ? `<small class="ehint got">이 쪽 꾸미기 보상을 받았어요 ✓</small>` : ''}</div><span class="gold off"></span></div>
   <div class="epage" id="epage" data-paper="${nt.papers[p] || 'dot'}"><div class="edeco"></div></div>
   <div class="ebar" id="ebar"></div>
   <div class="esheet" id="esheet"></div>`;
   const pg = $('#epage'); list.forEach((s, i) => addPlaced(pg, s, i));
   $('#e_back').onclick = () => { ED = null; show('notes'); };
-  pg.onpointerdown = e => { if (e.target === pg || e.target.classList.contains('edeco')) select(null); };
+  pg.onpointerdown = e => { if (e.target === pg || e.target.classList.contains('edeco')) { closeSheet(); select(null); } };
   twoFinger(pg); bar(); goldChip();
 }
 /* 아래 띠: 아무것도 안 고르면 [‹ 스티커 테이프 글씨 속지 ›] · 고르면 [돌리기 크게 작게 떼기 완료] (화면 아래 고정 → 스티커를 가리지 않음) */
@@ -157,7 +163,7 @@ function bar() {
     b.innerHTML = `<button class="pbtn" id="e_prev" ${p ? '' : 'disabled'}>‹</button><div class="etools"><button data-e="st"><i class="ic drawer"></i>스티커<small>${drawerTotal()}</small></button><button data-e="tape"><i class="tp"></i>테이프</button><button data-e="text"><i class="tx">가</i>글씨</button><button data-e="paper"><i class="pp"></i>속지</button></div><button class="pbtn" id="e_next" ${p < PAGES - 1 ? '' : 'disabled'}>›</button>`;
     $('#e_prev').onclick = () => { nt.cur = Math.max(0, p - 1); save(); turn(-1); };
     $('#e_next').onclick = () => { nt.cur = Math.min(PAGES - 1, p + 1); save(); turn(1); };
-    b.querySelectorAll('[data-e]').forEach(x => x.onclick = () => ({ st: sheet, tape: tapeSheet, text: addText, paper: paperSheet })[x.dataset.e]());
+    b.querySelectorAll('[data-e]').forEach(x => x.onclick = () => { const k = x.dataset.e; if (k !== 'text' && sheetOn(k)) return closeSheet(); ({ st: () => sheet(), tape: tapeSheet, text: addText, paper: paperSheet })[k](); });
   } else {
     b.innerHTML = `<div class="etools sel"><button data-t="rot">↻ 돌리기</button><button data-t="big">크게</button><button data-t="small">작게</button><button data-t="off">떼기</button><button data-t="ok" class="ok">완료</button></div>`;
     b.querySelectorAll('[data-t]').forEach(x => x.onclick = () => selTool(x.dataset.t));
@@ -215,27 +221,35 @@ function placeNew(s) {
   setTimeout(() => { A.stick(list.length); buzz(6); }, sp(300));
   if (!s.k && was < PAGE_DONE && stickersOf(list).length >= PAGE_DONE) { setTimeout(() => { A.clear(); const r = $('#epage')?.getBoundingClientRect(); if (r) praise(r.left + r.width / 2, r.top + 40, '이 쪽 완성! 예뻐요'); }, sp(420)); const rw = pageReward(); if (!checkNoteDone(rw)) showPageReward(rw); }
 }
-function sheet() {
-  const sh = $('#esheet'); if (sh.classList.contains('on') && sh.dataset.k === 'st') { sh.classList.remove('on'); return; }
+/* 아래 시트 (v0.2.1 · QA 시트 1번): 시트는 아래 띠 '바로 위'에 떠서 띠를 가리지 않음 → 같은 단추를 다시 누르거나 · ✕ · 페이지 빈 곳 · 뒤로가기로 언제든 내림
+   (전에는 시트가 화면 맨 아래에 붙어 띠를 덮었고, 속지를 고르면 시트를 다시 열어 내릴 길이 뒤로가기뿐이었음) */
+const sheetOn = k => { const sh = $('#esheet'); return !!sh && sh.classList.contains('on') && (!k || sh.dataset.k === k); };
+function closeSheet() { const sh = $('#esheet'); if (!sh || !sh.classList.contains('on')) return false; sh.classList.remove('on'); $('#ebar')?.querySelectorAll('[data-e]').forEach(x => x.classList.remove('cur')); return true; }
+function openSheet(k, html) {
+  const sh = $('#esheet'), ed = $('#editor'), b = $('#ebar'); if (!sh) return null;
+  sh.dataset.k = k; sh.innerHTML = `<button class="sx" data-x aria-label="닫기">✕</button>${html}`;
+  sh.style.bottom = Math.max(0, ed.clientHeight - b.offsetTop + 8) + 'px';
+  sh.querySelector('[data-x]').onclick = () => { A.click(); closeSheet(); };
+  b.querySelectorAll('[data-e]').forEach(x => x.classList.toggle('cur', x.dataset.e === k));
+  sh.classList.add('on'); return sh;
+}
+function sheet(keep) {
+  if (!keep && sheetOn('st')) return closeSheet();
   const theme = new Set(ED.n.stickers);
   const ids = Object.keys(S.drawer).filter(id => S.drawer[id] > 0).sort((a, b) => (theme.has(+b) - theme.has(+a)) || (isFoil(b) - isFoil(a)) || S.drawer[b] - S.drawer[a]);
-  sh.dataset.k = 'st';
-  sh.innerHTML = ids.length ? `<div class="srow">${ids.map(id => `<button data-id="${id}" class="${isFoil(id) ? 'foil' : ''} ${theme.has(+id) ? 'th' : ''}"><img src="${img(id)}"><b>${S.drawer[id]}</b></button>`).join('')}</div><small>${ED.n.name}에 어울리는 스티커가 앞에 있어요 · 눌러서 붙이기</small>` : `<p>서랍이 비었어요. 한 판 깨면 스티커가 생겨요!</p><button class="btn main" id="s_play">자유 다꾸 한 판</button>`;
-  sh.classList.add('on');
+  const sh = openSheet('st', ids.length ? `<div class="srow">${ids.map(id => `<button data-id="${id}" class="${isFoil(id) ? 'foil' : ''} ${theme.has(+id) ? 'th' : ''}"><img src="${img(id)}"><b>${S.drawer[id]}</b></button>`).join('')}</div><small>${ED.n.name}에 어울리는 스티커가 앞에 있어요 · 눌러서 붙이기</small>` : `<p>서랍이 비었어요. 한 판 깨면 스티커가 생겨요!</p><button class="btn main" id="s_play">자유 다꾸 한 판</button>`);
   $('#s_play') && ($('#s_play').onclick = () => go.free());
   sh.querySelectorAll('[data-id]').forEach(b => b.onclick = () => {
     const id = b.dataset.id; if (!take(id)) return; const w = 0.26, sp_ = freeSpot(w);
     placeNew({ ty: isFoil(id) ? id : +id, x: sp_.x, y: sp_.y, w, r: Math.round((Math.random() - 0.5) * 24) });
-    sheet(); sheet();
   });
 }
 function tapeSheet() {
-  const sh = $('#esheet'); sh.dataset.k = 'tape';
-  sh.innerHTML = `<div class="srow tapes">${TAPES.map(c => `<button data-c="${c}"><i style="background:${c}"></i></button>`).join('')}</div><small>붙인 뒤 끝을 끌거나 두 손가락으로 길이 · 각도를 바꿔요</small>`; sh.classList.add('on');
-  sh.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const p = freeSpot(0.4); placeNew({ k: 'tape', c: b.dataset.c, x: p.x, y: p.y, w: 0.42, r: Math.round((Math.random() - 0.5) * 30) }); sh.classList.remove('on'); });
+  const sh = openSheet('tape', `<div class="srow tapes">${TAPES.map(c => `<button data-c="${c}"><i style="background:${c}"></i></button>`).join('')}</div><small>붙인 뒤 끝을 끌거나 두 손가락으로 길이 · 각도를 바꿔요</small>`);
+  sh.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const p = freeSpot(0.4); placeNew({ k: 'tape', c: b.dataset.c, x: p.x, y: p.y, w: 0.42, r: Math.round((Math.random() - 0.5) * 30) }); });
 }
 function addText() {
-  $('#esheet').classList.remove('on');
+  closeSheet();
   modal(`<h3>손글씨 한 줄</h3><input id="etext" maxlength="24" placeholder="오늘의 한 마디 (24자까지)"><button class="btn main" data-a="ok">붙이기</button><button class="btn ghost" data-a="close">그만두기</button>`, a => {
     if (a === 'close') return closeModal(); if (a !== 'ok') return; const t = ($('#etext').value || '').trim(); if (!t) { toast('한 글자라도 써 주세요'); return; } closeModal();
     const p = freeSpot(0.5); placeNew({ k: 'text', t, x: p.x, y: p.y, w: 0.5, r: Math.round((Math.random() - 0.5) * 8) });
@@ -243,9 +257,14 @@ function addText() {
   setTimeout(() => $('#etext')?.focus(), 50);
 }
 function paperSheet() {
-  const sh = $('#esheet'); sh.dataset.k = 'paper'; const curP = ED.nt.papers[ED.nt.cur] || 'dot';
-  sh.innerHTML = `<div class="srow papers">${PAPERS.map(p => `<button data-p="${p.id}" class="${p.id === curP ? 'on' : ''}"><i data-paper="${p.id}"></i>${p.name}</button>`).join('')}</div><small>이 쪽의 속지를 바꿔요</small>`; sh.classList.add('on');
-  sh.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { ED.nt.papers[ED.nt.cur] = b.dataset.p; save(); A.shuffle(); drawEditor(); paperSheet(); });
+  const curP = ED.nt.papers[ED.nt.cur] || 'dot';
+  const sh = openSheet('paper', `<div class="srow papers">${PAPERS.map(p => `<button data-p="${p.id}" class="${p.id === curP ? 'on' : ''}"><i data-paper="${p.id}"></i>${p.name}</button>`).join('')}</div><small>이 쪽의 속지를 바꿔요 · 고르면 바로 내려가요</small>`);
+  sh.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+    ED.nt.papers[ED.nt.cur] = b.dataset.p; save(); A.shuffle();
+    const pg = $('#epage'); pg.dataset.paper = b.dataset.p; pg.animate([{ filter: 'brightness(1.08)' }, { filter: 'none' }], { duration: sp(260) });
+    sh.querySelectorAll('[data-p]').forEach(x => x.classList.toggle('on', x === b));
+    setTimeout(() => { if (sheetOn('paper')) closeSheet(); }, sp(320));
+  });
 }
 function checkNoteDone(rw) {
   const { n, nt } = ED; if (nt.done || pagesDone(nt) < PAGES) return false;

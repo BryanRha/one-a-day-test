@@ -2,7 +2,7 @@
 // 근거: team/dev/tasks/261028-catsoup-spec/spec.md + evidence/*.csv (분석팀 명세서 — 곡선 '모양 · 범위'만 따름, 수치는 우리 것)
 // 브라우저 없이도 읽힘 (sim.js · tools/bot.mjs 가 같이 씀)
 
-export const GAME = { id: 'camp', save: 'camp_v1', version: '0.3.2' };
+export const GAME = { id: 'camp', save: 'camp_v1', version: '0.3.3' };
 
 /* ── 판 좌표: 배경 그림(864×1536) → 판(720×1560) ── */
 export const BG_S = 1560 / 1536, BG_X = (864 * BG_S - 720) / 2;   /* 배경은 판 높이에 꽉 차게 · 좌우를 조금 잘라 냄 */
@@ -135,7 +135,9 @@ export const OVEN_AT = P(712, 922);   /* 단계 그림 바닥 가운데 (배경 
 /* 편의 설비 그림 자리 (배경 좌표 → 판) · w = 폭(판 px) — 키친 조리대 위 · 끝, 웰컴센터 데크 옆 · 길(걷는 선) 밖 */
 /* 크기 규칙 (원근): 문 앞 어른 키 ADULT_H = 1.65m → 1m = PX_M 판 px · 그 자리의 PERSP 를 곱함 (편의 설비 · 소품은 실제 크기(m)로 정함 · 대표 10-30 "조리대 위에서 커 보임") */
 export const PX_M = ADULT_H / 1.65;
-export const AMEN_AT = { sink: [P(548, 886), 1.05], fridge: [P(526, 914), 0.72], micro: [P(756, 906), 0.6], toaster: [P(642, 874), 0.42], shower: [P(472, 876), 0.95], laundry: [P(176, 886), 1.2] };   /* [자리(배경 좌표), 폭 m] — 토스터만 조리대 위, 나머지는 바닥 */
+/* v0.3.3 (QA 시트 2 '냉장고를 설치했지만 보이지 않음' · 대표 10-30 '공용 냉장고는 어디에?' 에 이어 두 번째): 그림이 거의 정사각형이라 폭 0.72m 면 키도 0.7m(무릎 높이) · 폰에서 15px 이라 못 찾았음
+   → 폭이 아니라 '키'를 실제 크기에 맞춤(냉장고 키 1.1m · 샤워장 1.3m …) · 폰 화면에서 가장 작은 것도 20px 이상 (검사: tools/qacheck.mjs) */
+export const AMEN_AT = { sink: [P(548, 886), 1.25], fridge: [P(522, 916), 1.15], micro: [P(756, 906), 0.85], toaster: [P(642, 874), 0.55], shower: [P(472, 876), 1.3], laundry: [P(176, 886), 1.5] };   /* [자리(배경 좌표), 폭 m] — 토스터만 조리대 위, 나머지는 바닥 */
 export const OCCLUDE_OF = s => OCCLUDE;   /* 가림판: 배치가 같아 다각형은 같고, 잘라 쓰는 그림이 그 계절 배경(#bg)이라 색이 따라감 */
 export const OCCLUDE = [
   { id: 'welcome', poly: PP([[146, 758], [186, 712], [502, 712], [508, 800], [476, 806], [472, 870], [146, 870]]), base: P(0, 868)[1] },
@@ -249,7 +251,7 @@ export const STAFF = [
   { id: 'haru', name: '하루', role: 'serve', look: 'helper', cost: 0, skill: { line: 'bread', k: 0.1 }, line: '오늘도 반짝이는 캠프로!' },
   { id: 'sol', name: '솔', role: 'cook', look: 'cook1', cost: 300, skill: { line: 'soup', k: 0.15 }, line: '수프는 천천히 끓여야 맛있어요.' },
   { id: 'bada', name: '바다', role: 'cook', look: 'cook2', cost: 4e3, skill: { line: 'drink', k: 0.15 }, line: '오늘의 음료는 뭐로 할까요?' },
-  { id: 'byeol', name: '별', role: 'serve', look: 'helper2', cost: 3e5, skill: { line: 'all', k: 0.05 }, line: '손님 자리까지 쏜살같이!' },
+  { id: 'byeol', name: '별', role: 'serve', look: 'helper2', cost: 5e4, skill: { line: 'all', k: 0.05 }, line: '손님 자리까지 쏜살같이!' },
 ];
 export const FAV_EXP = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];             /* 다음 레벨까지 (명세서 1·2·5×10^k · 10 → 5000) */
 export const FAV_BONUS = [0, 0.1, 0.3, 0.6, 1.0, 1.6, 2.5, 4.0, 6.0, 10.0];       /* 판매가 +배 (명세서 재료 계열 10·30·60·100·160·250·400·600·1000%) */

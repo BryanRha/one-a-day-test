@@ -5,9 +5,9 @@
 //   응원 선물(6장 · 단계형): 같은 캠페인 작전 3연속 패배 → 다음 도전 시작 때 지원 부대 · 6번째부터 조금 더
 //     3번째 패배부터는 응원 선물이 광고 보급 보너스 자리를 대신 (선물을 줄 수 없을 때만 — 꺼짐 그룹 · 하루 한도 — 광고가 다시 보임)
 //   전면 광고: 작전 사이(결과 → 다음 작전)에서만 bm.interstitial('round_end')
-import { bm } from './oad_bm.js?v=0.99.49';
-import { inOAD } from './oad.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { inOAD } from './oad.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
 
 export const BMW = { ownerUndo: 3, supplyPerDay: 2, helpPerDay: 2, streak: 3, streak2: 6, minDay: 3, firstBattles: 3, autoFails: 2, autoPerDay: 2 };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -24,6 +24,11 @@ function day() {
 }
 export const shopOn = () => !!bm.info.ok;                                   /* 원어데이 안 (밖이면 골드 · 광고 · 전용 꾸미기 숨김) */
 export const owned = () => !!(bm.info.ok && bm.info.owned);
+/* 테스트 서버에서 '광고 버튼이 안 보여요'(시트 #2 가 '수정 안됨'으로 남은 까닭 · v0.13):
+   원어데이 앱은 기기마다 BM 실험 그룹 A/B/C 를 정하고(oneaday/shell/bm.js group — 테스트 서버도 기기 번호로 1/3 이 A),
+   A(대조군)에겐 광고 · 가격표를 꺼서 줌 → 상점에 훈장 버튼만 남고 아무 말이 없어 그 기기의 테스터 눈엔 '반영 안 됨'.
+   실서버(env 'prod')는 그대로 조용히 두고, 테스트 · 개발 앱에서만 '왜 안 보이는지 · 어디서 켜는지'를 알려 줌 (룬 다이스 bmflow.testOff 와 같은 규칙) */
+export const testOff = () => inOAD && !bm.info.test && !!bm.info.ok && bm.info.group === 'A' && !!bm.info.env && bm.info.env !== 'prod';
 export const rankMode = mode => mode === 'daily' || mode === 'war';
 
 // ── 한 턴 되돌리기 ──

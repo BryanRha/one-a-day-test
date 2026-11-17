@@ -3,9 +3,9 @@
 //   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로는 열쇠만 하루 1개(QA 23 · 2026-11-09) — 골드로는 여전히 뽑기 X
 //   광고 보상: 판 보상 2배(하루 3) · 무료 상자(하루 1, 수정 + 등급업 카드) — 소장자는 광고 없이 바로(횟수 같음)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 전장 전부 숨김, 게임은 그대로
-import { bm } from './oad_bm.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { HELP, roll, note, eligible, used } from './core/help.js?v=0.99.49';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { HELP, roll, note, eligible, used } from './core/help.js?v=0.99.50';
 
 export { bm };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -129,6 +129,11 @@ export async function buyAbyss() {
 // 판 안 아이템 (메인 원정 · core/items.js): 가격은 서버 표만 — 값이 없으면(원어데이 밖 · 표에 없음) 0 → 화면에서 숨김
 //   한 번 쓸 때마다 앱 확인 창 → 골드 차감 → 성공이면 게임이 효과를 줌 (효과 · 판 상한은 게임 쪽)
 export const itemPrice = sku => (oadOn() ? price(sku) : 0);
+/* 테스트 서버에서 '아이템이 안 보여요'(QA 7 · 10 · 11 · 16 · 22 가 '확인 X'로 남은 까닭 · 2026-11-16):
+   원어데이 앱은 기기마다 BM 실험 그룹 A/B/C 를 정하고(oneaday/shell/bm.js group — 테스트 서버도 기기 번호로 1/3 이 A),
+   A(대조군)에겐 가격표를 비워서 줌 → 게임은 규칙대로 아이템 줄 · 골드 상품을 숨김 → 그 기기의 테스터 눈엔 '수정 안 됨'.
+   실서버(env 'prod')는 그대로 조용히 숨기고, 테스트 · 개발 앱에서만 '왜 안 보이는지 · 어디서 켜는지'를 한 번 알려 줌 (Play.testNote) */
+export const testOff = () => frameOn() && !bm.info.test && !!bm.info.ok && bm.info.group === 'A' && !!bm.info.env && bm.info.env !== 'prod';
 export async function buyUse(sku) {
   const r = await spend(sku);
   if (r && r.ok) track('item_use', { sku });

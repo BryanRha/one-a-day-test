@@ -2,14 +2,14 @@
 //   0.2.0 개편 (EXPANSION_PLAN.md): 지점 = 구역 여러 개 · 8단계로 넓어짐(공사) · 층(1F · 2F · 3F · 루프탑) · 사장님이 매장을 걸어 다님(owner.js) · 지점 7곳
 //   바닥은 100 단위 칸 — 가구가 놓인 칸 · 벽은 못 지나감 · 길(문 → 모든 자리 · 바 · 일하는 곳)이 막히는 배치는 안 됨
 import * as THREE from 'three';
-import { THEME_SETS, MENU, FURN, MACHINES, STAFF, STAFF_UP, OFFLINE, HAND_ROAST, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND, PULL, POEMS, POEM_PER, LETTERS, CHEER, STORY_WAIT, OWNER, IDLE, VIP, APRONS } from './data.js?v=0.99.49';
-import { S, ST, save, levelOf, dayTick, today, now, newStore } from './state.js?v=0.99.49';
-import { M, box, cyl, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, todayFrame, coinPile, letter, ROOM } from './models.js?v=0.99.49';
-import { sfx } from './audio.js?v=0.99.49';
-import { BRANCHES, SPOT, FDX, gi, furnAt, floorOfX, FINISHED, hms } from './layout.js?v=0.99.49';
-import { drawFloor, props, bake, areaAt, linked, areaBox, occ, orange } from './world.js?v=0.99.49';
-import { track, salesAdd } from './oad.js?v=0.99.49';
-import { OwnerMixin } from './owner.js?v=0.99.49';
+import { THEME_SETS, MENU, FURN, MACHINES, STAFF, STAFF_UP, OFFLINE, HAND_ROAST, STORES, MOOD, REGULARS, ROAST, BEAN_MAX, BRAND, PULL, POEMS, POEM_PER, LETTERS, CHEER, STORY_WAIT, OWNER, IDLE, VIP, APRONS } from './data.js?v=0.99.50';
+import { S, ST, save, levelOf, dayTick, today, now, newStore } from './state.js?v=0.99.50';
+import { M, box, cyl, person, cup, tray, spill, room, STATION, FURN_MODEL, poemFrame, todayFrame, coinPile, letter, ROOM } from './models.js?v=0.99.50';
+import { sfx } from './audio.js?v=0.99.50';
+import { BRANCHES, SPOT, FDX, gi, furnAt, floorOfX, FINISHED, hms } from './layout.js?v=0.99.50';
+import { drawFloor, props, bake, areaAt, linked, areaBox, occ, orange } from './world.js?v=0.99.50';
+import { track, salesAdd } from './oad.js?v=0.99.50';
+import { OwnerMixin } from './owner.js?v=0.99.50';
 
 const V = THREE.Vector3, CELL = 100, rnd = (a, b) => a + Math.random() * (b - a);
 export const fmt = n => Math.round(n).toLocaleString('en-US');
@@ -24,7 +24,7 @@ const ESP_POS = [[-170, -630], [-40, -630], [90, -630], [-295, -630], [-420, -63
 const PICK = { x0: 80, x1: 310, z: -455, y: 117 }, LANE = -543, LANE_X = [-480, 640];
 const STACK = { x: -4, z: -462, y: 117 };   /* 다 내린 잔이 탑으로 쌓이는 곳 (픽업대 왼쪽 끝) → 쟁반을 누르면(끌어도) 픽업대로 */
 const BIN = { x: 640, z: -560 };   /* 바 원두통 (바 오른쪽 끝 · 사장님이 원두 자루를 붓는 곳) */
-const ROAST_BOY = [-505, -455];
+const ROAST_BOY = [-505, -455], ROAST_BOY2 = [-432, -462];   /* 로스터 앞 · 원두 선반 쪽 (무진이 오가는 두 자리) */
 const TODAY = [-683, -450, Math.PI / 2];   /* 오늘의 시 액자 (왼쪽 벽 안쪽 · 꾸미기 벽 자리와 따로) */
 export const poemLen = line => [...line.replace(/ /g, '')].length;
 const KQ = [[12, 7], [11, 7], [10, 7], [10, 8]];   /* 키오스크 줄 (입구 옆) */
@@ -160,7 +160,7 @@ export class Game {
     const block = new Set(this.fixed); for (const o of this.furn) if (o.f.uid !== ignoreUid) for (const [i, j] of this.footprint(o.f)) block.add(K(i, j));
     for (const [i, j] of cells) if (block.has(K(i, j))) return '다른 가구와 겹쳐요'; for (const [i, j] of cells) block.add(K(i, j));
     const seen = new Set([K(...DOOR)]), q = [DOOR]; while (q.length) { const [i, j] = q.shift(); for (const [ni, nj] of this.nbrs(i, j, block)) { const k = K(ni, nj); if (seen.has(k)) continue; seen.add(k); q.push([ni, nj]); } }
-    if (!seen.has(K(...BAR_PICK)) || !seen.has(K(...BAR_EXIT))) return '바로 가는 길이 막혀요';
+    if (!seen.has(K(...BAR_PICK)) || !seen.has(K(...BAR_EXIT))) return '카운터(바)로 가는 길이 막혀요';
     for (const c of this.service) if (!block.has(K(...c)) && !seen.has(K(...c))) return '일하는 곳으로 가는 길이 막혀요';
     const d = FURN[f.id]; const tmp = { f, seats: [] }; const all = [...this.furn.filter(o => o.f.uid !== ignoreUid), tmp];
     for (const o of all) { const seats = o === tmp ? (d.seats || []).map(([x, z]) => { const v = new V(x, 0, z).applyAxisAngle(new V(0, 1, 0), -f.r * Math.PI / 2); return { x: f.x + v.x, z: f.z + v.z }; }) : o.seats;
@@ -331,7 +331,7 @@ export class Game {
   idleRate(si = S.si) { const st = S.stores[si]; if (!st) return 0; const extra = Object.keys(STAFF).reduce((a, k) => a + Math.max(0, this.lvOf(k) - 1), 0);
     return OFFLINE.perMin / 60 * STORES[si].mult * (1 + this.progressFrac(si) * 4) * (1 + extra * OFFLINE.step) * (1 + (st.idle?.up || 0) * IDLE.upK) * vipK(); }
   offlineEarn(away, si = S.si) { if (!(away > OFFLINE.min) || this.staffCount() < OFFLINE.need) return 0; return Math.round(Math.min(away, this.idleCapS()) * this.idleRate(si)); }
-  hireStaff(k, silent) { const d = STAFF[k], look = { body: d.body, apron: { barista: BRAND.redHex, hall: 0x6B4A30, roaster: 0x4A3A2E, server: 0x8A5A3A, baker: 0xE8D8C0, takeout: 0x3B3B42 }[k], hair: d.hair, pants: 0x3B2A20, bun: d.bun }, P = person(look); this.sc.add(P.g);
+  hireStaff(k, silent) { const d = STAFF[k], look = { body: d.body, apron: { barista: 0x55684A /* 올리브 — 붉은 앞치마는 사장님만 (QA 1116-7) */, hall: 0x6B4A30, roaster: 0x4A3A2E, server: 0x8A5A3A, baker: 0xE8D8C0, takeout: 0x3B3B42 }[k], hair: d.hair, pants: 0x3B2A20, bun: d.bun }, P = person(look); this.sc.add(P.g);
     if (k === 'barista') { P.g.position.set(-100, 0, LANE); this.barista = { P, pos: P.g.position, t: 0, tx: -100, role: k }; if (!silent) this.ui.toast('하린: 2번 머신은 제가 맡을게요 · 1번은 사장님의 정성 머신!'); return; }
     const home = { hall: [9, 4], roaster: this.roaster?.room ? this.accessNear([ci(this.roaster.x), cj(this.roaster.z)]) || [9, 4] : null, server: [7, 4], baker: this.caseAt ? this.accessNear([ci(this.caseAt[0]), cj(this.caseAt[1])]) || [5, 4] : [5, 4], takeout: this.windowAt ? [ci(this.spot(SPOT.hand)[0]), cj(this.spot(SPOT.hand)[1])] : [11, 4] }[k];
     if (k === 'roaster' && !home) { P.g.position.set(ROAST_BOY[0], 0, ROAST_BOY[1]); P.g.rotation.y = Math.atan2(ROASTER[0] - ROAST_BOY[0], ROASTER[1] - ROAST_BOY[1]); this.roastBoy = { P, pos: P.g.position, t: 0, role: k, fixed: true }; }
@@ -344,11 +344,15 @@ export class Game {
     if (this.stack.length) { this.deliverStack('barista'); b.tx = STACK.x + 40; return; }
     for (const m of this.machines) { if (m.bak) continue; const p = this.progress(m); if (p && p.u >= 1) { if (this.collect(m, 'barista')) { b.tx = m.x; return; } } else if (!p && !isJeong(m)) { const k = Object.keys(MENU).find(q => this.need(q) > 0 && MENU[q].cat !== 'sig' && !!MENU[q].oven === (m.kind === 'oven') && S.lv >= MENU[q].lv); if (k && !this.brew(m, k, 0, MENU[k].oven ? 0 : x.hand)) { b.tx = m.x; return; } } } }
   /* 로스터 견습생 무진: 다 볶이면 담고 · 원두가 low 아래면 하우스/싱글 · 로스팅실이 열리면 자루를 바 원두통까지 나름(owner.js workerAI) */
-  roasterAI(dt) { const r = this.roastBoy; if (!r) return; if (!r.fixed && r.task) return; if (this.restTick && this.restTick(r, dt)) return; if (r.fixed) r.P.anim(dt, false); r.t -= dt; if (r.t > 0) return; r.t = 1.5 / this.cheerK(r); const x = STAFF.roaster.lvx(this.lvOf('roaster')), st = this.roastState(), beans = S.beans + (ST().bags || 0);
+  roasterAI(dt) { const r = this.roastBoy; if (!r) return; if (!r.fixed && r.task) return; if (this.restTick && this.restTick(r, dt)) return; if (r.fixed) this.roastBoyMove(r, dt); r.t -= dt; if (r.t > 0) return; r.t = 1.5 / this.cheerK(r); const x = STAFF.roaster.lvx(this.lvOf('roaster')), st = this.roastState(), beans = S.beans + (ST().bags || 0);
     if (!r.fixed && this.cellOf(r).join() !== (r.home || []).join()) return;   /* 로스팅실 밖이면 (자루 나르는 중) */
     if (st) { if (st.u >= 1 && (this.roaster.room ? ST().bags < BEAN_MAX * 2 : S.beans < BEAN_MAX)) this.collectBeans('roaster'); else if (st.u < 1) this.handRoast(r, 1.5); return; }
     if (beans >= x.low) return; const pick = ['single', 'house'].map(id => ROAST.find(R => R.id === id)).find(R => S.lv >= R.lv && S.coins >= R.cost * STORES[S.si].mult * (R.id === 'house' ? 1 : 2));
     if (pick && !this.roast(pick.id)) this.steam(this.roaster.x, 330, this.roaster.z); }
+  /* 로스터 앞 무진 (로스팅실이 열리기 전): 한자리에 서 있기만 해서 멈춘 것처럼 보였음(QA 1116-1) → 볶는 동안은 로스터 앞에서 저어 주고, 틈틈이 원두 선반 쪽을 오감 (능력은 그대로 · 모습만) */
+  roastBoyMove(r, dt) { const st = this.roastState(), busy = !!st && st.u < 1; r.mt = (r.mt ?? 2.5) - dt; if (r.mt <= 0) { r.spot = r.spot ? 0 : 1; r.mt = r.spot ? rnd(2.5, 4) : busy ? rnd(6, 9) : rnd(4, 7); }
+    const p = r.spot ? ROAST_BOY2 : ROAST_BOY; if (!this.stepTo(r, p[0], p[1], dt, 110)) return; r.P.g.rotation.y = r.spot ? Math.PI : Math.atan2(ROASTER[0] - r.pos.x, ROASTER[1] - r.pos.z); r.P.anim(dt, false);
+    if (busy && !r.spot) for (let i = 0; i < 2; i++) r.P.arms[i].rotation.x = -0.95 + Math.sin(this.t * 5 + i * 1.6) * 0.3; }
   handRoast(r, dt) { const c = ROAST[0].cost * STORES[S.si].mult;
     if (r.hr != null) { r.hr -= dt; this.steam(r.pos.x, 150, r.pos.z); if (r.hr > 0) return; r.hr = null; S.coins -= Math.min(S.coins, c); S.beans = Math.min(BEAN_MAX, S.beans + HAND_ROAST.beans); this.sparkle(new V(r.pos.x, 140, r.pos.z)); sfx('coin', { vol: 0.25 }); save(); this.ui.progress(); return; }
     if (S.beans < HAND_ROAST.low && S.coins >= c) r.hr = HAND_ROAST.t; }
@@ -435,6 +439,10 @@ export class Game {
     for (const O of this.occ) { if (Math.abs(O.a - O.want) < 0.01) continue; O.a += (O.want - O.a) * Math.min(1, dt * 8); for (const m of O.mats) { m.opacity = O.a; m.depthWrite = O.a > 0.9; } } }
   // ── 꾸미기 모드
   decoStart() { this.deco = { ghost: null }; this.ui.progress(); }
+  /* 빈 벽 자리 표시 (꾸미기 「벽」 · 「보관함」 탭 · QA 1116-15): 어디에 걸리는지 미리 보임 — 다음에 걸릴 자리는 진하게 + 십자 */
+  wallMarks(on) { if (this.wallMk) { this.sc.remove(this.wallMk); this.wallMk = null; } if (!on || !this.deco) return; const G = new THREE.Group(); let first = true;
+    WALL_SLOTS.forEach(([x, z, ry], k) => { if (ST().wall[k]) return; const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; G.add(g); const mat = new THREE.MeshBasicMaterial({ color: BRAND.redHex, transparent: true, opacity: first ? 0.95 : 0.4 }), bar = (w, h, px, py) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 3), mat); m.position.set(px, py, 7); g.add(m); };
+      bar(116, 6, 0, 318); bar(116, 6, 0, 142); bar(6, 176, -58, 230); bar(6, 176, 58, 230); if (first) { bar(34, 6, 0, 230); bar(6, 34, 0, 230); } first = false; }); this.sc.add(G); this.wallMk = G; }
   decoEnd() { if (this.deco?.ghost) this.ghostCancel(); this.deco = null; this.rebuildGrid(); this.ui.decoBar && this.ui.decoBar(null); this.ui.progress(); this.collectOcc(); }
   ghostNew(id, f) {
     if (this.deco.ghost) this.ghostCancel(); const center = this.view; const g = new THREE.Group(); FURN_MODEL[id](g); this.sc.add(g);

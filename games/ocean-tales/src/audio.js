@@ -1,5 +1,5 @@
 // 효과음 / 배경음 관리. 설정(save.sfx / save.music)을 따른다.
-import { load, save } from './save.js?v=0.99.49';
+import { load, save } from './save.js?v=0.99.50';
 
 export const SFX = [
   'sfx_swap', 'sfx_swap_invalid', 'sfx_select', 'sfx_match_1', 'sfx_match_2', 'sfx_match_3', 'sfx_match_4', 'sfx_match_5',
@@ -41,8 +41,11 @@ class AudioManager {
   }
   // 진동 (안드로이드 크롬 등 지원 기기만, 효과음이 꺼져 있으면 함께 끔)
   buzz(pattern) {
-    if (!load().sfx) return;
-    try { navigator.vibrate && navigator.vibrate(pattern); } catch { /* */ }
+    const d = load();
+    if (!d.sfx || d.shake === false) return;
+    /* QA 6 '진동 · 흔들림이 강함': 길이를 0.6배로 (쉬는 구간은 그대로) */
+    const soft = Array.isArray(pattern) ? pattern.map((v, i) => (i % 2 ? v : Math.round(v * 0.6))) : Math.round(pattern * 0.6);
+    try { navigator.vibrate && navigator.vibrate(soft); } catch { /* */ }
   }
   // scene: 곡을 받을 때 쓸 장면(지금 시작하는 장면). 없으면 활성 장면 중 하나
   music(key, scene = null) {

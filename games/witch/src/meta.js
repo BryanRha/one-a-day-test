@@ -1,6 +1,6 @@
 // 게임 밖 성장: 마녀 강화 · 고양이 입양/성장 · 미션 · 출석 · 업적 · 산책 · 상점 · 주간 랭킹
 // 확률형 뽑기 없음 — 고양이는 비행 중 모은 발바닥 도장으로 "정해 둔 고양이"를 입양한다.
-import { load, save, todayKey, weekKey } from './save.js?v=0.99.49';
+import { load, save, todayKey, weekKey } from './save.js?v=0.99.50';
 
 export const WITCH_INFO = {
   luna: { name: '루나', title: '별빛 마녀', desc: '별빛 마법탄 · 코인 +10%', unlock: null, color: 0xB89AFF },
@@ -52,7 +52,9 @@ export function reviveMood({ dist, best, runs, t, bossHp }) {
   return 'none';
 }
 // 원어데이 보상형 광고: 게임 쪽 하루 횟수 (앱의 게임당 한도와 별개로 자리별로 아끼기)
-export const AD_DAY = { coins2x: 3, walk: 2 };
+export const AD_DAY = { coins2x: 3, walk: 2, shop: 2 };
+/* 상점 '광고 보고 별가루': 광고 1회 = 🪙20 값 = 별가루 20 (별가루 100 = 🪙100 과 같은 교환비 · bm-policy 3장) */
+export const AD_GEMS = 20;
 export function adLeft(place) { const d = load(); if (!d.ads || d.ads.day !== todayKey()) return AD_DAY[place]; return Math.max(0, AD_DAY[place] - (d.ads[place] || 0)); }
 export function adUse(place) { const d = load(); if (!d.ads || d.ads.day !== todayKey()) d.ads = { day: todayKey() }; d.ads[place] = (d.ads[place] || 0) + 1; save(); }
 

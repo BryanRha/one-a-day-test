@@ -1,16 +1,17 @@
 // 매장 (원작의 식당 꾸미기): 낡은 가게 → 할 일(코인)로 이야기 · 수리 · 디자인 3종 선택(언제든 무료 변경)
-import { W, H } from '../config.js?v=0.99.49';
-import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip } from '../ui.js?v=0.99.49';
-import { load as loadSave } from '../save.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { hud } from '../hud.js?v=0.99.49';
-import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.99.49';
-import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.99.49';
-import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.99.49';
-import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.99.49';
-import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.99.49';
-import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip, coach } from '../ui.js?v=0.99.50';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.50';
+import { load as loadSave } from '../save.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { hud } from '../hud.js?v=0.99.50';
+import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.99.50';
+import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.99.50';
+import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.99.50';
+import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.99.50';
+import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.99.50';
+import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.99.50';
 
 const OWNER_POS = [444, 1470, 150];
 // 받침 그림 (한 번만 만듦): 금 받침 · 크림 대리석 기둥(세로 홈) · 금 머리 · 진홍 벨벳
@@ -25,6 +26,16 @@ function ownerPedestal(sc) {
   rr(34, 2, Wd - 68, 20, 10); const vv = g.createLinearGradient(0, 2, 0, 22); vv.addColorStop(0, '#E0405E'); vv.addColorStop(1, '#8E1730'); g.fillStyle = vv; g.fill();
   c.refresh(); return key;
 }   /* 소장 장식 자리 (방 그림 좌표: x · 바닥 y · 폭) — 맨 앞 바닥, 가구보다 앞에 그림 */
+
+/* 원어데이로 가는 문 그림 (한 번만 만듦): 열린 문 + 나가는 화살표 */
+function oadIcon(sc) {
+  const key = 'i_oad'; if (sc.textures.exists(key)) return key; const c = sc.textures.createCanvas(key, 96, 96), g = c.getContext();
+  g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#E86A8E'; g.lineWidth = 8;
+  g.beginPath(); g.moveTo(52, 16); g.lineTo(20, 16); g.lineTo(20, 80); g.lineTo(52, 80); g.stroke();
+  g.fillStyle = '#FFD6E4'; g.beginPath(); g.moveTo(20, 16); g.lineTo(44, 24); g.lineTo(44, 88); g.lineTo(20, 80); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(48, 48); g.lineTo(84, 48); g.moveTo(70, 34); g.lineTo(84, 48); g.lineTo(70, 62); g.stroke();
+  c.refresh(); return key;
+}
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
@@ -48,6 +59,8 @@ export class HomeScene extends Phaser.Scene {
     this.side(80, top + 390, 'img:calendar', '출석', () => this.attend(), login.claimed ? 0 : 1);
     this.side(80, top + 530, '🛍', '상점', () => this.scene.start('Shop'), 0);
     this.side(80, top + 670, '⚙', '설정', () => this.settings(), 0);
+    /* 원어데이로 (QA 공통 · 룬다이스와 같은 동작): 원어데이 안 = 앱에 나가기(oad:exit) · 단독 링크 = 원어데이 사이트 */
+    this.side(80, top + 810, `img:${oadIcon(this)}`, '원어데이', () => this.toOAD(), 0);
     // 오른쪽: 동시에 열리는 이벤트 (레이스 · 꾸미기 사다리 · VIP)
     const rs = raceState(), vp = vip();
     this.evRace = this.side(W - 80, top + 110, 'img:ev_race', rs.joined && !rs.ended ? `${rs.rank}등` : '레이스', () => this.raceView(), rs.joined ? (rs.ended && !rs.claimed ? 1 : 0) : rs.left > 0 ? '!' : 0);
@@ -72,9 +85,10 @@ export class HomeScene extends Phaser.Scene {
     } else if (canNextChapter()) { const nx = CHAPTERS[(d.ch || 0) + 1]; T(this, 70, by + 60, `${(d.ch || 0) + 1}장 완성!`, 26, C.dim, { ox: 0, w: 800 }).setDepth(21); T(this, 70, by + 115, `다음: ${(d.ch || 0) + 2}장 「${nx.n}」`, 36, C.ink, { ox: 0, w: 800 }).setDepth(21);
       const nb = btn(this, 830, by + 95, 300, 110, '열기!', () => this.goNext(), { size: 36, style: 'rose' }).setDepth(21); this.tweens.add({ targets: nb, scale: 1.07, duration: 600, yoyo: true, repeat: -1 }); }
     else { T(this, W / 2, by + 90, `${CHAPTERS.length}장까지 모두 완성!`, 36, C.ink, { w: 900 }).setDepth(21); T(this, W / 2, by + 145, '다음 이야기를 준비하고 있어요', 26, C.dim, { w: 900 }).setDepth(21); }
-    btn(this, W / 2, by + 260, W - 140, 120, '작업대로 가기 · 주문 받기', () => this.scene.start('Board'), { size: 36, style: 'gold' }).setDepth(21);
+    this.boardY = by + 260; btn(this, W / 2, by + 260, W - 140, 120, '작업대로 가기 · 주문 받기', () => this.scene.start('Board'), { size: 36, style: 'gold' }).setDepth(21);
     this.cameras.main.fadeIn(250, 255, 244, 236); window.__home = this; audio.music(this.C.bgm);
     if (d.task === 0 && this.view === (d.ch || 0) && curTask()) this.time.delayedCall(500, () => this.doTask());
+    else if (this.coachHome()) { /* 처음 안내 중에는 출석 창을 미룸 (다음 방문 때) */ }
     else if (!login.claimed && d.tut >= 3) this.time.delayedCall(600, () => this.attend());   // 하루 첫 방문: 출석 보상
   }
   arrow(x, y, dir) { const c = this.add.container(x, y).setDepth(30), g = this.add.graphics(); g.fillStyle(0xFFFFFF, 0.92).fillCircle(0, 0, 32).lineStyle(3, 0xF1C6CF, 1).strokeCircle(0, 0, 32); c.add([g, T(this, dir * 2, -2, dir < 0 ? '◀' : '▶', 24, C.rose, { w: 900 })]);
@@ -126,6 +140,26 @@ export class HomeScene extends Phaser.Scene {
     this.odT = this.time.addEvent({ delay: 1300, loop: true, callback: tw });
     im.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 40 }).on('pointerup', () => { if (!this.busy) toast(this, `「${OWNER_DECO.n}」 · 소장해 줘서 고마워요!`, 260); });
   }
+  // 처음 안내 이어받기 (작업대에서 첫 판매를 마친 사람 · tutB): ⑤ 코인으로 할 일 → 디자인 고르기 → ⑥ 꾸미기 완성 안내로 끝
+  //   tut 0(아직 작업대에 안 가 봄)이면 작업대 단추부터 가리킴 · 안내를 띄웠으면 true
+  coachHome() {
+    const d = this.d; if (this.view !== (d.ch || 0)) return false;
+    if (d.tutB === 8) { d.tutB = 9; save(); this.time.delayedCall(1400, () => { if (this.sys.isActive()) firstTip(this, 'loop', '가게 꾸미기 완성, 멋져요!', ['주문을 받아 코인을 벌고 → 매장 할 일을 하면 가게가 고쳐지고 이야기가 이어져요', '고친 가구를 누르면 언제든 무료로 디자인을 바꿀 수 있어요', '양옆 아이콘은 목표 · 앨범 · 놀이 · 축제 같은 즐길 거리예요', '처음 들어가면 하는 법이 나오고, 제목 옆 ? 단추로 언제든 다시 볼 수 있어요'], null, true); }); return true; }
+    const task = curTask(); if (!task) return false;
+    const boardRing = { x: W / 2, y: this.boardY, w: W - 120, h: 140 };
+    if (d.tut === 0) { this.time.delayedCall(500, () => { if (!this.busy) this.tipC = coach(this, { y: this.boardY - 330, t: '손님이 기다려요!\n작업대에서 주문을 받아 물건을 만들어요', ring: boardRing, depth: 25 }); }); return true; }
+    if (d.tutB !== 1) return false;
+    this.time.delayedCall(500, () => { if (this.busy) return;
+      if (d.coins >= task.cost) this.tipC = coach(this, { y: this.boardY - 380, t: `코인으로 「${task.n}」!\n버튼을 누르면 ${task.story ? '이야기가 이어져요' : '가게를 고치고 디자인을 골라요'}`, ring: { x: 830, y: this.boardY - 155, w: 320, h: 130 }, depth: 25 });
+      else this.tipC = coach(this, { y: this.boardY - 330, t: `코인 ●${task.cost - d.coins} 더 모으면 「${task.n}」!\n작업대에서 주문을 더 받아요`, ring: boardRing, depth: 25 }); });
+    return true;
+  }
+  /* 원어데이로: 원어데이 안이면 앱에 나가기 · 단독 링크면 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+  toOAD() {
+    if (inOAD) return exitToOAD();
+    const h = location.hostname, site = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/';
+    this.sound.stopAll(); location.href = site;
+  }
   doTask() {
     const t = curTask(); if (!t || this.busy || this.view !== (this.d.ch || 0)) return;
     if (this.d.coins < t.cost) return toast(this, `코인이 ${t.cost - this.d.coins} 부족해요 · 작업대에서 주문을 받아요`, H - 470);
@@ -151,7 +185,7 @@ export class HomeScene extends Phaser.Scene {
     const draw = () => cards.forEach(c => c.cg.clear().fillStyle(0xFFFFFF, 1).fillRoundedRect(-150, -140, 300, 280, 26).lineStyle(c.k === sel ? 6 : 3, c.k === sel ? 0xE86A8E : 0xF1D2C8, 1).strokeRoundedRect(-150, -140, 300, 280, 26)); draw();
     root.add(btn(this, W / 2, y0 + 450, 480, 100, fresh ? '이걸로 완성!' : '이걸로 할게요', () => {
       root.destroy(); this.busy = false; this.picker = null; save();
-      if (fresh) { this.d.task++; save(); this.busy = true; audio.play('sfx_repair', { volume: 0.7 }); audio.duck(2000); audio.buzz([20, 40, 30]); this.celebrate(sp); this.time.delayedCall(1300, () => this.scene.restart({ view: this.view })); } else this.scene.restart({ view: this.view });
+      if (fresh) { this.d.task++; if (this.d.tutB === 1) this.d.tutB = 8; save(); this.busy = true; audio.play('sfx_repair', { volume: 0.7 }); audio.duck(2000); audio.buzz([20, 40, 30]); this.celebrate(sp); this.time.delayedCall(1300, () => this.scene.restart({ view: this.view })); } else this.scene.restart({ view: this.view });
     }, { size: 32 }));
     // 취소 (뒤로가기도 같음): 새로 고치던 중이면 코인 돌려줌
     const cancel = () => { if (fresh) { delete this.d.spots[sp.id]; this.d.coins += curTask().cost; } else this.d.spots[sp.id] = prev; save(); root.destroy(); this.busy = false; this.picker = null; this.drawRoom(); this.hud.update(); };

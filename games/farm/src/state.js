@@ -1,7 +1,7 @@
 // 저장 · 규칙: 헛간 · 경험치 · 밭 · 동물 · 공장 줄 · 주문 게시판 · 기차 · 퀘스트 · 월세 · 강아지
-import { speedCost } from './inst.js?v=0.99.49';
-import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.99.49';
-import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.99.49';
+import { speedCost } from './inst.js?v=0.99.50';
+import { FUP, TRAINS, ZOO_CAP_H, ISLE, MATS, ALL_MATS, BMATS, siteNeed, RELICS, RESEARCH, RES_MAX, resCost, resTime } from './data.js?v=0.99.50';
+import { ITEMS, CROPS, RECIPES, BUILDS, BASE_CAP, XP_NEED, LV_REWARD, BARN, MAP, ZONE, START_ZONES, ZONE_COST, QUESTS, RENT, MAX_LV, SUITORS, HEARTS, HEART_PTS, MINE } from './data.js?v=0.99.50';
 
 const KEY = 'thefarm_v1';
 let d = null;
@@ -68,6 +68,20 @@ export const popCap = () => BASE_CAP + (load().capBonus || 0) + load().objs.redu
 export const pop = () => popNow();   // 타운십처럼: 상한은 '집을 더 짓는 것'만 막고, 이미 사는 주민은 모두 인구로 셈
 export const countOf = b => load().objs.filter(o => o.b === b && !o.site).length;   // 공사 중인 건물은 빼고
 export function canBuild(b) { const B = BUILDS[b], s = load(); if (B.lim) return s.lim && s.lim[b] > 0 ? null : '계절 한정 · 이벤트의 계절 상점에서 받아요'; if (s.lv < B.lv) return `레벨 ${B.lv}에 열려요`; if (B.k === 'deco') return s.coins < costOf(b) ? `코인 ${costOf(b)} 필요` : null; if (B.pop && pop() < B.pop) return `인구 ${B.pop}명 필요 (지금 ${pop()}명) · 집을 더 지어요`; if (B.k === 'house' && popNow() + B.give > popCap()) return `인구 상한 ${popCap()}명 · 우물·성당 같은 공공건물로 상한을 늘려요`; if (B.k === 'field' && countOf('field') >= B.max(s.lv)) return `밭은 레벨 ${s.lv}에서 ${B.max(s.lv)}칸까지`; if (B.k !== 'field' && B.k !== 'house' && B.k !== 'public' && B.k !== 'deco' && load().objs.some(o => o.b === b)) return '이미 있어요'; if (s.coins < costOf(b)) return `코인 ${costOf(b)} 필요`; return null; }
+/* 짓기 길잡이 (v0.20): 그 건물을 지으려면 '지금' 지어야 하는 것 — 인구가 모자라면 집, 집이 인구 상한에 걸리면 공공건물로 거슬러 올라감
+   돌려주는 값 { k 지금 지을 건물, why 막힌 이유(없으면 바로 지을 수 있음), stop 'level' | 'coins' | 'etc', chain 거쳐 온 건물들 } */
+export function buildStep(target) { const s = load(), chain = []; let k = target; if (!BUILDS[k]) return null;
+  const open = kind => Object.entries(BUILDS).filter(([b, B]) => B.k === kind && !B.lim && B.lv <= s.lv).sort((a, b) => a[1].cost - b[1].cost);
+  for (let n = 0; n < 4; n++) { const B = BUILDS[k], why = canBuild(k); if (!why) return { k, why: null, chain };
+    if (s.lv < B.lv) return { k, why, stop: 'level', chain };
+    /* 집 고르기: 모자란 인구를 한 채로 채우는 가장 싼 집 → 없으면 주민이 가장 많은 집 (상한 안 · 살 수 있는 것 먼저) */
+    if (B.pop && pop() < B.pop) { const lack = B.pop - pop(), hs = open('house'), fit = hs.filter(([b, H]) => popNow() + H.give <= popCap()), can = fit.filter(([b]) => s.coins >= costOf(b)), big = L => L.slice().sort((x, y) => y[1].give - x[1].give)[0];
+      const h = can.find(([b, H]) => H.give >= lack) || big(can) || fit.find(([b, H]) => H.give >= lack) || fit[0] || hs.find(([b, H]) => H.give >= lack && s.coins >= costOf(b)) || big(hs.filter(([b]) => s.coins >= costOf(b))) || hs[0]; if (!h) return { k, why, stop: 'etc', chain }; chain.push(k); k = h[0]; continue; }
+    /* 공공건물 고르기: 그 집이 들어갈 만큼 상한을 늘려 주는 가장 싼 것 → 없으면 상한이 가장 큰 것 */
+    if (B.k === 'house' && popNow() + B.give > popCap()) { const room = popNow() + B.give - popCap(), ps = open('public'), can = ps.filter(([b]) => s.coins >= costOf(b)), big = L => L.slice().sort((x, y) => y[1].cap - x[1].cap)[0];
+      const h = can.find(([b, P]) => P.cap >= room) || big(can) || ps.find(([b, P]) => P.cap >= room) || ps[0]; if (!h) return { k, why, stop: 'etc', chain }; chain.push(k); k = h[0]; continue; }
+    return { k, why, stop: s.coins < costOf(k) ? 'coins' : 'etc', chain }; }
+  return { k, why: canBuild(k), stop: 'etc', chain }; }
 // 한스와 결혼하면 건설비 10% 할인
 export const costOf = b => BUILDS[b].lim ? 0 : Math.round(BUILDS[b].cost * (load().spouse === 'hans' ? 0.9 : 1));
 
@@ -84,13 +98,16 @@ export const cropReady = o => o.crop && now() >= o.at;
 export const cropTime = k => CROPS[k].t * (load().spouse === 'sam' ? 0.9 : 1) * (1 - 0.05 * rl('crop'));
 // ── 공장 줄: 차례로 · 끝난 것은 done 에 (헛간에 넣을 때까지 대기)
 export function tickFactory(o) { o.q = o.q || []; o.done = o.done || []; let ch = false; while (o.q.length && o.q[0].end <= now()) { o.done.push(o.q.shift().it); ch = true; } return ch; }
-export function queueJob(o, it) { const R = RECIPES[it], B = BUILDS[o.b]; tickFactory(o); if (o.q.length + o.done.length >= (B.slots + (o.extra || 0))) return o.done.length ? '다 된 물건을 먼저 거둬요 (초록 칸을 눌러요)' : '생산 칸이 꽉 찼어요'; if (!take(R.in)) return '재료가 모자라요'; const last = o.q.length ? o.q[o.q.length - 1].end : now(); const d = R.t * 1000 * FUP.k(o.up || 0) * (1 - 0.04 * rl('fac')); o.q.push({ it, d, end: Math.max(last, now()) + d }); return null; }   /* d = 이 칸이 걸리는 시간(ms) — 즉시 완성 값 계산 */
+export function queueJob(o, it) { const R = RECIPES[it], B = BUILDS[o.b]; tickFactory(o); if (o.q.length + o.done.length >= (B.slots + (o.extra || 0))) return o.done.length ? '다 된 물건을 먼저 거둬요 (초록 칸을 눌러요)' : '생산 칸이 꽉 찼어요'; if (!take(R.in)) return '재료가 모자라요'; const last = o.q.length ? o.q[o.q.length - 1].end : now(); const d = facTime(o, it) * 1000; o.q.push({ it, d, end: Math.max(last, now()) + d }); return null; }   /* d = 이 칸이 걸리는 시간(ms) — 즉시 완성 값 계산 */
+/* 실제로 걸리는 시간(초): 줄에 넣는 값과 창에 보여 주는 값을 한 곳에서 (v0.20 — 업그레이드 뒤에도 창에는 기본 시간이 보이던 문제) */
+export const facTime = (o, it) => RECIPES[it].t * FUP.k(o && o.up || 0) * (1 - 0.04 * rl('fac'));
+export const animTime = it => RECIPES[it].t * (1 - 0.05 * rl('anim'));
 // ── 동물 우리: 3칸 동시
 export function tickAnimal(o) { o.s = o.s || [0, 0, 0]; o.ready = o.ready || 0; let ch = false; o.s.forEach((e, i) => { if (e && e <= now()) { o.s[i] = 0; o.ready++; ch = true; } }); return ch; }
 export const productOf = b => Object.keys(RECIPES).find(k => RECIPES[k].b === b);
 // 한 마리씩 먹이 주기 (타운십처럼)
-export function feedOne(o, i) { tickAnimal(o); const it = productOf(o.b), R = RECIPES[it]; if (o.s[i]) return '아직 먹는 중이에요'; if (o.ready + o.s.filter(Boolean).length >= 3) return '다 된 것부터 거둬요'; if (!take(R.in)) return `${iga(ITEMS[Object.keys(R.in)[0]].n)} 없어요 · 사료 공장에서 만들어요`; o.s[i] = now() + R.t * 1000 * (1 - 0.05 * rl('anim')); return null; }
-export function feedAll(o) { tickAnimal(o); const it = productOf(o.b), R = RECIPES[it]; let n = 0; o.s.forEach((e, i) => { if (!e && o.ready + o.s.filter(Boolean).length < 3 && take(R.in)) { o.s[i] = now() + R.t * 1000 * (1 - 0.05 * rl('anim')); n++; } }); return n; }
+export function feedOne(o, i) { tickAnimal(o); const it = productOf(o.b), R = RECIPES[it]; if (o.s[i]) return '아직 먹는 중이에요'; if (o.ready + o.s.filter(Boolean).length >= 3) return '다 된 것부터 거둬요'; if (!take(R.in)) return `${iga(ITEMS[Object.keys(R.in)[0]].n)} 없어요 · 사료 공장에서 만들어요`; o.s[i] = now() + animTime(it) * 1000; return null; }
+export function feedAll(o) { tickAnimal(o); const it = productOf(o.b), R = RECIPES[it]; let n = 0; o.s.forEach((e, i) => { if (!e && o.ready + o.s.filter(Boolean).length < 3 && take(R.in)) { o.s[i] = now() + animTime(it) * 1000; n++; } }); return n; }
 
 // ── 주문 게시판 (타운십의 헬리콥터 주문): 6장 · 완료 후 60초 뒤 새 주문
 // 광산에서 캐야 하는 것(광석·점토)이나 도구가 들어가는 물건은 주문·기차·비행기에 내지 않음 (계획해서 만들 수 없음)
@@ -133,9 +150,11 @@ export const quest = () => QUESTS[load().quest] || null;
 export function progress(kind, v) { const s = load(), q = quest(); if (kind === 'make') { s.stats.mk = s.stats.mk || {}; s.stats.mk[v.it] = (s.stats.mk[v.it] || 0) + v.n; } if (kind === 'isle') s.stats.isle = (s.stats.isle || 0) + 1; if (!q) return; const g = q.goal; if (kind in g || kind === 'make' && g.make) { if (kind === 'make') { s.qp.make = s.qp.make || {}; s.qp.make[v.it] = (s.qp.make[v.it] || 0) + v.n; } else s.qp[kind] = (s.qp[kind] || 0) + (typeof v === 'number' ? v : 1); } }
 export function questDone() { const s = load(), q = quest(); if (!q) return false; const g = q.goal, p = s.qp;
   if (g.site) return (p.site || 0) >= g.site; if (g.road) return s.objs.filter(o => o.b === 'road').length >= g.road; if (g.relic) return relic().done.length >= g.relic;
-  if (g.harvest) return (p.harvest || 0) >= g.harvest; if (g.build) return countOf(g.build) > 0; if (g.order) return (p.order || 0) >= g.order; if (g.train) return (p.train || 0) >= g.train;
+  if (g.harvest) return (p.harvest || 0) >= g.harvest; if (g.build) return countOf(g.build) >= (g.n || 1); if (g.order) return (p.order || 0) >= g.order; if (g.train) return (p.train || 0) >= g.train;
   if (g.make) return Object.entries(g.make).every(([k, n]) => (p.make && p.make[k] || 0) >= n); if (g.zone) return s.zones.length - 4 >= g.zone; if (g.rent) return s.rent.paid || (p.rent || 0) >= 1; if (g.level) return s.lv >= g.level; if (g.deco) return s.objs.filter(o => BUILDS[o.b].k === 'deco').length >= g.deco; if (g.mini) return (p.mini || 0) >= g.mini; if (g.gift) return (p.gift || 0) >= g.gift; if (g.hearts) return Math.max(...Object.values(s.love)) >= HEARTS * HEART_PTS; if (g.married) return !!s.spouse; if (g.plane) return (p.plane || 0) >= g.plane; if (g.isle) return (p.isle || 0) >= g.isle; if (g.boss) return (p.boss || 0) >= g.boss; return false; }
-export const questProg = () => { const s = load(), q = quest(); if (!q) return ''; const g = q.goal, p = s.qp; if (g.harvest) return `${Math.min(p.harvest || 0, g.harvest)}/${g.harvest}`; if (g.order) return `${Math.min(p.order || 0, g.order)}/${g.order}`; if (g.make) { const [k, n] = Object.entries(g.make)[0]; return `${Math.min(p.make && p.make[k] || 0, n)}/${n}`; } if (g.level) return `${s.lv}/${g.level}`; return questDone() ? '완료' : ''; };
+export const questProg = () => { const s = load(), q = quest(); if (!q) return ''; const g = q.goal, p = s.qp; if (g.harvest) return `${Math.min(p.harvest || 0, g.harvest)}/${g.harvest}`; if (g.order) return `${Math.min(p.order || 0, g.order)}/${g.order}`; if (g.make) { const [k, n] = Object.entries(g.make)[0]; return `${Math.min(p.make && p.make[k] || 0, n)}/${n}`; } if (g.level) return `${s.lv}/${g.level}`; if (g.build && g.n > 1) return `${Math.min(countOf(g.build), g.n)}/${g.n}`;
+  for (const c of ['train', 'mini', 'gift', 'plane', 'isle', 'boss']) if (g[c]) return `${Math.min(p[c] || 0, g[c])}/${g[c]}`;   /* v0.20: 세는 목표는 모두 숫자로 */
+  if (g.deco) return `${Math.min(s.objs.filter(o => BUILDS[o.b].k === 'deco').length, g.deco)}/${g.deco}`; return questDone() ? '완료' : ''; };
 export function claimQuest() { const s = load(), q = quest(); if (!q || !questDone()) return null; s.quest++; s.qp = {}; return { q, ups: give(q.reward) }; }
 
 // ── 월세 (원작: 매달 30일 월세 → 여기선 이번 주 목표 · 못 내도 게임 오버 없음)

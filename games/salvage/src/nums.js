@@ -7,6 +7,7 @@
 //  · 보스 약점 숫자는 떠다니지 않고 보스 체력 줄 바로 아래 고정 자리에 '약점 ×2 · 108' 한 줄로 더해 보여 줌
 //  · 전류 연쇄는 raid 가 첫 적(chainTo)으로 합쳐 넘김 → 첫 적에 합계 하나만
 import * as THREE from 'three';
+import { V } from './view.js?v=0.99.50';
 
 const MERGE = 0.25, LIFE = 0.85;
 const RANK = { block: 0, '': 1, crit: 2, weak: 3 };
@@ -41,7 +42,7 @@ export class HitNums {
   }
   drop(i) { this.list[i].el.remove(); this.list.splice(i, 1); }
   tick(dt, camera) {
-    this.t += dt; const W = innerWidth, H = innerHeight;
+    this.t += dt; const W = V.w, H = V.h;
     if (this.wk && this.t - this.wk.t > 1.4 && this.wk.el) { this.wk.el.classList.remove('on'); this.wk.el = null; }
     for (let i = this.list.length - 1; i >= 0; i--) { const o = this.list[i]; o.age += dt; if (o.age > LIFE) this.drop(i); }
     const placed = []; /* 먼저 뜬 숫자부터 자리 잡기 → 나중 숫자가 겹치면 위로 밀림 */

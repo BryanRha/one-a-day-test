@@ -389,3 +389,11 @@ html[data-look="autumn"] #frame { background: #C9B26A; }
 html[data-look="autumn"] #backdrop { background-image: url(../assets/bg_autumn.webp); }   /* 보이는 계절 = 가을 (시즌 또는 가을 외형 켬) */
 .newtag.inl { position: relative; display: inline-block; transform: none; vertical-align: 2px; margin-right: 6px; animation: none; font-size: 13px; width: 42px; height: 20px; line-height: 16px; }   /* 목록 안 NEW (같은 모양 · 글자 앞) */
 @keyframes lvBump { 0% { transform: scale(1); } 30% { transform: scale(1.18); color: #C9861E; } 100% { transform: scale(1); } } .dlg h3.lvbump { animation: lvBump .6s cubic-bezier(.34,1.56,.64,1); }   /* 강화 뒤 레벨 숫자 통통 (11-03) */
+/* ── v0.3.3 (QA 시트 11-16) ── */
+/* 재화 설명 카드 안 단추가 눌리게: '#ui > *' 의 누름 통과가 카드까지 먹어 [선물 상자 보러 가기]가 뒤쪽 지도로 새던 것 (QA 시트 1) · #ui 바로 아래에 붙는 누르는 것은 여기에 */
+#ui > .curcard { pointer-events: auto; }
+/* 가운데 창 닫기 ✕ (QA 시트 5) */
+.dlg .x.dx { position: absolute; right: 14px; top: 14px; width: 54px; height: 54px; border-radius: 50%; border: 3px solid var(--line); background: var(--cream); font: 800 26px/48px var(--ff); text-align: center; color: var(--ink2); cursor: pointer; z-index: 3; transition: transform .25s var(--pop); }
+.dlg .x.dx:active, .dlg .x.dx.press { transform: scale(.85) rotate(-20deg); }
+/* 원어데이로 (QA 시트 7): 설정 단추 아래 작은 글자 단추 */
+.sbtn.mini { height: 40px; border-radius: 16px; } .sbtn.mini b { font: 800 15px/1 var(--ff); color: var(--ink2); }

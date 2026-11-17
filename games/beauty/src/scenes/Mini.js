@@ -1,14 +1,14 @@
 // 놀이: 설화 빙고 · 행운 룰렛 · 공방 보물 찾기
 //   화면마다 같은 틀 — 위: 하는 법 + 내 재료(몇 개 · 어디서 얻나) / 가운데: 판(보상이 그림으로 보임) / 아래: 큰 버튼
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, TS, btn, iconBtn, sheet, toast, firstTip, rewardIcons, chips } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { goPrev } from '../nav.js?v=0.99.49';
-import { hud } from '../hud.js?v=0.99.49';
-import { giveReward } from '../state.js?v=0.99.49';
-import { PACKS } from '../album.js?v=0.99.49';
-import { SPECIAL } from '../data.js?v=0.99.49';
-import { LINE_R, BINGO, bingo, bingoDraw, bingoLines, WHEEL, spin, spinRoll, DIG, dig, digOpen, digNext, ORDERS_PER_SHOVEL } from '../minigames.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, TS, btn, iconBtn, sheet, toast, firstTip, rewardIcons, chips, helpBtn } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { goPrev } from '../nav.js?v=0.99.50';
+import { hud } from '../hud.js?v=0.99.50';
+import { giveReward } from '../state.js?v=0.99.50';
+import { PACKS } from '../album.js?v=0.99.50';
+import { SPECIAL } from '../data.js?v=0.99.50';
+import { LINE_R, BINGO, bingo, bingoDraw, bingoLines, WHEEL, spin, spinRoll, DIG, dig, digOpen, digNext, ORDERS_PER_SHOVEL } from '../minigames.js?v=0.99.50';
 
 const chip = (sc, x, y, r, o = {}) => chips(sc, x, y, r, o);
 // 받은 보상 창 (그림으로 크게)
@@ -33,15 +33,19 @@ export class MiniScene extends Phaser.Scene {
       this.add.zone(x, 208, 320, 96).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy && k !== this.tab) { audio.play('sfx_tap', { volume: 0.6 }); this.scene.restart({ tab: k }); } }); });
     this[this.tab]();
     this.cameras.main.fadeIn(200, 255, 244, 236); window.__mini = this;
-    const TIP = { bingo: ['설화 빙고', ['주문을 1개 끝낼 때마다 빙고 공 1개', '공을 뽑으면 그 숫자 칸에 도장이 찍혀요', '줄이 완성되면 옆에 그려진 보상을 받아요'], 'bingo_ball'],
-      wheel: ['행운 룰렛', ['5단계 이상 물건을 만들거나 레벨업하면 토큰', '돌리면 멈춘 칸의 보상을 받아요', '칸마다 나올 확률이 아래에 적혀 있어요'], 'roulette'],
-      dig: ['공방 보물 찾기', ['주문 3번마다 삽 1개 · 레벨업하면 삽 2개', '흙을 하나씩 파서 열쇠 조각 3개를 찾아요', '다 모으면 보물 상자! 다음 마당이 열려요'], 'shovel'] }[this.tab];
-    firstTip(this, `mini2_${this.tab}`, TIP[0], TIP[1], TIP[2]);
+    this.tip(false);
+  }
+  // 하는 법 안내: 처음 한 번 자동 · 제목 옆 '?' 로 언제든 다시
+  tip(force) {
+    const TIP = { bingo: ['설화 빙고', ['주문을 1개 끝낼 때마다 빙고 공 1개를 받아요', '「공 뽑기」를 누르면 숫자 하나가 나오고 그 칸에 도장이 찍혀요 · 가운데는 처음부터 FREE', '가로 · 세로 · 대각선 한 줄이 다 차면 줄 끝에 그려진 보상을 받아요', '25칸을 모두 채우면 큰 보상! 판은 매주 새로 바뀌어요'], 'bingo_ball'],
+      wheel: ['행운 룰렛', ['5단계 이상 물건을 만들거나 레벨업하면 토큰을 받아요', '토큰 1개로 한 번 · 멈춘 칸의 보상을 바로 받아요', '칸마다 나올 확률이 아래 표에 적혀 있어요'], 'roulette'],
+      dig: ['공방 보물 찾기', ['주문 3번마다 삽 1개 · 레벨업하면 삽 2개를 받아요', '흙 한 칸을 누르면 삽 1개로 파요 · 무엇이 나올지 몰라요', '열쇠 조각 3개를 모두 찾으면 보물 상자를 열고 다음 마당으로!'], 'shovel'] }[this.tab];
+    firstTip(this, `mini2_${this.tab}`, TIP[0], TIP[1], TIP[2], force);
   }
   // 위 안내 카드: 하는 법 두 줄 + 내 재료
   header(img, title, how, res, n, where) {
     const y = 290, g = this.add.graphics(); g.fillStyle(0xFFFFFF, 1).fillRoundedRect(30, y, W - 60, 230, 30).lineStyle(3, 0xF1D2C8, 1).strokeRoundedRect(30, y, W - 60, 230, 30);
-    T(this, 70, y + 48, title, TS.h2, C.ink, { ox: 0, w: 900 }); how.forEach((h, i) => { const t = T(this, 70, y + 108 + i * 48, `· ${h}`, TS.min + 2, C.brown, { ox: 0, w: 800 }); if (t.width > 640) t.setScale(640 / t.width); });
+    const tt = T(this, 70, y + 48, title, TS.h2, C.ink, { ox: 0, w: 900 }); this.helpB = helpBtn(this, Math.min(70 + tt.width + 52, W - 380), y + 48, () => { if (!this.busy) this.tip(true); }); how.forEach((h, i) => { const t = T(this, 70, y + 108 + i * 48, `· ${h}`, TS.min + 2, C.brown, { ox: 0, w: 800 }); if (t.width > 640) t.setScale(640 / t.width); });
     g.fillStyle(0xFFF1F5, 1).fillRoundedRect(W - 330, y + 22, 270, 186, 26);
     const im = this.add.image(W - 255, y + 95, img); im.setScale(90 / im.height); T(this, W - 190, y + 95, `× ${n}`, 46, n ? C.rose : C.dim, { ox: 0, w: 900 });
     T(this, W - 195, y + 162, `${res} · ${where}`, TS.min, C.dim, { w: 800, wrap: 256 });

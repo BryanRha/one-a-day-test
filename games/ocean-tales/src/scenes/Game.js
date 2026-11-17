@@ -1,17 +1,17 @@
 // 인게임: 엔진(core/engine.js)이 만든 steps 를 순서대로 애니메이션으로 재생한다.
-import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.99.49';
-import { Engine } from '../core/engine.js?v=0.99.49';
-import { LEVELS } from '../core/levels.js?v=0.99.49';
-import { t } from '../i18n.js?v=0.99.49';
-import { audio, WORLD_BGM } from '../audio.js?v=0.99.49';
-import { pickTip } from '../tips.js?v=0.99.49';
-import { track, flush, onMissionDone } from '../missions.js?v=0.99.49';
-import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.99.49';
-import { button, iconButton, popup, toast, starsRow, enableGlow } from '../ui/widgets.js?v=0.99.49';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
-import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.99.49';
-import { goldify, bt, failMsg, adLeft, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.99.49';
+import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.99.50';
+import { Engine } from '../core/engine.js?v=0.99.50';
+import { LEVELS } from '../core/levels.js?v=0.99.50';
+import { t } from '../i18n.js?v=0.99.50';
+import { audio, WORLD_BGM } from '../audio.js?v=0.99.50';
+import { pickTip } from '../tips.js?v=0.99.50';
+import { track, flush, onMissionDone } from '../missions.js?v=0.99.50';
+import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.99.50';
+import { button, iconButton, popup, toast, starsRow, enableGlow, quake, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.50';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
+import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.99.50';
+import { goldify, bt, failMsg, adLeft, adShown, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.99.50';
 
 const BOARD_TOP = 436;
 // 별 게이지: 별 3개를 같은 간격에 두고, 점수는 별 사이 구간별로 선형 보간 (기준 점수 간격이 달라도 보기 좋게)
@@ -359,15 +359,18 @@ export class GameScene extends Phaser.Scene {
       const badge = this.add.image(x + 56, y - 52, 'hud_booster_count').setDepth(23);
       const n = this.add.text(badge.x, badge.y - 2, '', { ...TXT.small, fontSize: '32px', strokeThickness: 6 }).setOrigin(0.5).setDepth(24);
       const plus = this.add.image(badge.x, badge.y, 'hud_booster_add').setDepth(23);
+      /* 다 쓴 칸: 광고로 1개 받을 수 있으면 꼬리표 (QA 4 · 원어데이 안에서만) */
+      const ad = this.add.text(x, y + 74, '', { ...TXT.small, fontSize: '26px', color: '#FFF3B0', stroke: '#0B3E8A', strokeThickness: 7 }).setOrigin(0.5).setDepth(24).setVisible(false);
       slot.on('pointerup', () => { audio.play('sfx_click'); this.onBooster(k); });
-      this.boosterViews[k] = { slot, ic, badge, n, plus };
+      this.boosterViews[k] = { slot, ic, badge, n, plus, ad };
     });
     this.refreshBoosters();
   }
   refreshBoosters() {
-    const b = load().boosters;
+    const b = load().boosters, o = boosterOffer(bm.info, adLeft('booster'));
     for (const [k, v] of Object.entries(this.boosterViews)) {
       const n = b[k] || 0;
+      v.ad.setText(o && o.ad ? bt(o.owner ? 'slotFree' : 'slotAd') : '').setVisible(n <= 0 && !!(o && o.ad));
       v.n.setText(`${n}`); v.badge.setVisible(n > 0); v.n.setVisible(n > 0); v.plus.setVisible(n <= 0);
       v.slot.setTint(this.armed === k ? 0xFFF1A8 : 0xffffff);
       v.ic.setScale(this.armed === k ? 0.95 : 0.82);
@@ -398,24 +401,38 @@ export class GameScene extends Phaser.Scene {
   buyPopup(k, onBought) {
     const price = BOOSTER_PRICE[k];
     const name = t({ hammer: 'boosterHammer', shuffle: 'boosterShuffle', swap: 'boosterSwap', moves: 'boosterMoves' }[k]);
-    const gold = oadOn() ? bm.price('boosters') : 0;
-    const p = popup(this, { title: name, width: 820, height: gold ? 900 : 760 });
-    p.box.add(this.add.image(0, -120, `boost_${k}`).setScale(1.1));
-    p.box.add(this.add.text(0, 40, t('buyBooster', name, price), TXT.body).setOrigin(0.5));
-    p.box.add(this.add.image(-60, 140, 'ico_coin').setScale(0.4));
-    p.box.add(this.add.text(-20, 140, `${load().coins}`, TXT.dark).setOrigin(0, 0.5));
-    p.box.add(button(this, 0, 270, `${t('buy')}  ${price}`, () => {
+    /* 원어데이: [광고 보고 이 부스터 1](하루 3 · 시작 창 광고와 같은 바구니 · 소장자는 광고 없이) 옆에 [🪙 부스터 3종] — QA 4 '다 쓰면 광고로 받기' */
+    const o = boosterOffer(bm.info, adLeft('booster')), row = !!o;
+    const p = popup(this, { title: name, width: row ? 900 : 820, height: row ? 960 : 760 });
+    window.__buyPop = p; p.once('destroy', () => { if (window.__buyPop === p) window.__buyPop = null; });
+    p.box.add(this.add.image(0, row ? -180 : -120, `boost_${k}`).setScale(1.1));
+    p.box.add(this.add.text(0, row ? -20 : 40, t('buyBooster', name, price), TXT.body).setOrigin(0.5));
+    p.box.add(this.add.image(-60, row ? 80 : 140, 'ico_coin').setScale(0.4));
+    p.box.add(this.add.text(-20, row ? 80 : 140, `${load().coins}`, TXT.dark).setOrigin(0, 0.5));
+    p.box.add(button(this, 0, row ? 200 : 270, `${t('buy')}  ${price}`, () => {
       if (!spendCoins(price)) { toast(this, t('notEnough')); return; }
       audio.play('sfx_coin');
       const d = load(); d.boosters[k] = (d.boosters[k] || 0) + 1; save();
       this.refreshBoosters(); p.close(); onBought && onBought();
     }, { width: 440, height: 140, size: 50 }));
-    /* 원어데이: 🪙 부스터 3종 묶음 */
-    if (gold) p.box.add(goldify(this, button(this, 0, 400, bt('goldBtn', gold, bt('boosterGold')), async () => {
-      const r = await bm.spend('boosters');
+    if (!row) return;
+    let busy = false;
+    const both = o.ad && o.gold, w = both ? 380 : 520, opt = { kind: 'secondary', width: w, height: 110, size: 32 }, one = bt(`boosterAdOne.${k}`);
+    if (o.ad) {
+      p.box.add(button(this, both ? -200 : 0, 345, bt(o.owner ? 'freeBtn' : 'adBtn', one), async () => {
+        if (busy) return; busy = true;
+        const r = await bm.rewardedAd('booster'); busy = false;
+        if (r && r.ok) { noteAd('booster'); addBooster(k, 1); audio.play('sfx_coin'); this.refreshBoosters(); p.close(); toast(this, bt('gotOne', `${name} 1`)); onBought && onBought(); }
+        else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
+      }, opt));
+      p.box.add(this.add.text(both ? -200 : 0, 422, bt(o.owner ? 'freeLeftToday' : 'adLeftToday', adShown('booster')), { ...TXT.dark, fontSize: '26px' }).setOrigin(0.5).setAlpha(0.8));
+    }
+    if (o.gold) p.box.add(goldify(this, button(this, both ? 200 : 0, 345, bt('goldBtn', o.gold, bt('boosterGold')), async () => {
+      if (busy) return; busy = true;
+      const r = await bm.spend('boosters'); busy = false;
       if (r && r.ok) { ['hammer', 'shuffle', 'swap'].forEach(b => addBooster(b, 1)); audio.play('sfx_coin'); this.refreshBoosters(); p.close(); toast(this, bt('boostersGot')); onBought && onBought(); }
       else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
-    }, { kind: 'secondary', width: 440, height: 110, size: 34 })));
+    }, opt)));
   }
 
   // ═══ 입력 ══════════════════════════════════════════════════
@@ -593,7 +610,7 @@ export class GameScene extends Phaser.Scene {
       }
       case 'timerBoom': {
         for (const it of st.items) { const { x, y } = this.xy(...it.at); this.fx('fx_bomb', x, y, { scale: 2.2 }); }
-        audio.play('sfx_bomb'); this.cameras.main.shake(400, 0.015);
+        audio.play('sfx_bomb'); quake(this, 400, 0.015);
         return wait(this, 600);
       }
       case 'booster': {
@@ -602,7 +619,7 @@ export class GameScene extends Phaser.Scene {
         this.fxLayer.add(h);
         audio.play('sfx_booster');
         await tweenP(this, { targets: h, x: x + 30, y: y - 40, angle: -30, duration: 220, ease: 'Back.In' });
-        this.cameras.main.shake(120, 0.008);
+        quake(this, 120, 0.008);
         this.tweens.add({ targets: h, alpha: 0, duration: 200, onComplete: () => h.destroy() });
         return;
       }
@@ -627,7 +644,7 @@ export class GameScene extends Phaser.Scene {
     const avgC = cells.length ? cells.reduce((a, [, c]) => a + c, 0) / cells.length : this.engine.s.w / 2;
     audio.play(`sfx_match_${Math.min(5, st.level)}`, { pan: this.panOf(avgC) });
     // 연쇄가 이어질수록 화면 흔들림·번쩍임·진동이 커짐
-    if (st.level >= 3) { this.cameras.main.shake(140 + st.level * 30, 0.002 * Math.min(st.level, 6)); audio.buzz(12 + st.level * 4); }
+    if (st.level >= 3) { quake(this, 140 + st.level * 30, 0.002 * Math.min(st.level, 6)); audio.buzz(12 + st.level * 4); }
     if (st.level >= 5) this.cameras.main.flash(120, 255, 255, 255, false);
     if (st.level >= 4) track('combo');
     track('comboLevel', st.level);
@@ -713,7 +730,7 @@ export class GameScene extends Phaser.Scene {
         default: break;
       }
     }
-    if (big) this.cameras.main.shake(ripple ? 520 : 260, ripple ? 0.014 : 0.011);
+    if (big) quake(this, ripple ? 520 : 260, ripple ? 0.014 : 0.011);
     await wait(this, 90 / this.speed);
     if (centers.length) {
       // 폭발 중심에서 가까운 칸부터 한 고리씩 터뜨린다 (폭탄·진주 대폭발)
@@ -754,7 +771,9 @@ export class GameScene extends Phaser.Scene {
     audio.buzz(rad === 1 ? 45 : 80);
     // ② 카메라 펀치 (아주 짧게 확대됐다 돌아옴)
     const cam = this.cameras.main;
-    this.tweens.add({ targets: cam, zoom: rad === 1 ? 1.025 : 1.045, yoyo: true, duration: 90, ease: 'Quad.Out', onComplete: () => cam.setZoom(1) });
+    if (load().shake !== false) this.tweens.add({ targets: cam, zoom: rad === 1 ? 1.018 : 1.03, yoyo: true, duration: 90, ease: 'Quad.Out', onComplete: () => cam.setZoom(1) });
+    /* 충격파에 밀리는 이웃 (QA 5 '타격감'): 폭발 범위 바로 바깥 한 겹이 바깥으로 살짝 밀렸다 돌아옴 — 보이기만 하고 터지지는 않음(판정 = 엔진 그대로) */
+    this.shove(f.at, rad, hits);
     // ③ 따뜻한 방사형 빛줄기 + 불꽃
     const rays = this.add.image(at.x, at.y, 'ptc_rays').setScale(0.2).setTint(0xFFC46A).setAlpha(0.95);
     this.fxLayer.add(rays);
@@ -785,6 +804,22 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => this.tweens.add({ targets: dp, y: ty + 70, alpha: 0, scale: dp.scale * 0.6, duration: 320, ease: 'Quad.In', onComplete: () => dp.destroy() }) });
     }
     this.sparkles(at.x, at.y, 0xFFD23F, 8);
+  }
+
+  shove(at, rad, hits) {
+    /* 연출 시점의 판은 화면 조각 위치로 읽음 (엔진은 이미 끝 상태) · 제자리에 가만히 있는 보통 조각만 */
+    const hit = new Set(hits.filter(h => h.pid).map(h => h.pid)), d = 150 / this.speed, k = 16;
+    for (const [id, s] of this.sprites) {
+      if (hit.has(id) || !s.piece || s.piece.k !== 'tile' || s.cover || this.tweens.isTweening(s)) continue;
+      const cell = [Math.floor(s.y / CELL), Math.floor(s.x / CELL)];
+      const home = this.xy(...cell);
+      if (Math.abs(home.x - s.x) > 1 || Math.abs(home.y - s.y) > 1) continue;
+      const dr = cell[0] - at[0], dc = cell[1] - at[1];
+      if (Math.max(Math.abs(dr), Math.abs(dc)) !== rad + 1) continue;
+      const len = Math.hypot(dr, dc);
+      this.tweens.add({ targets: s, x: home.x + (dc / len) * k, y: home.y + (dr / len) * k, duration: d * 0.4, ease: 'Quad.Out',
+        onComplete: () => { if (s.active) this.tweens.add({ targets: s, x: home.x, y: home.y, duration: d * 0.6, ease: 'Quad.InOut' }); } });
+    }
   }
 
   // 미션 완료 · 도감 등급 업 · 업적 달성 알림 (화면 위쪽에서 내려왔다 올라감, 여러 개면 차례로)
@@ -1113,7 +1148,7 @@ export class GameScene extends Phaser.Scene {
       // 하늘에서 쾅 박히는 별: 박히는 순간 흔들림·충격파·진동
       this.tweens.add({ targets: st, scale: target, alpha: 1, angle: 0, duration: 240, ease: 'Quad.In', onComplete: () => {
         audio.play('sfx_star_slam'); audio.buzz(30 + i * 15);
-        this.cameras.main.shake(140 + i * 40, 0.005 + i * 0.003);
+        quake(this, 140 + i * 40, 0.005 + i * 0.003);
         const ring = this.add.image(w.x, w.y, 'ptc_ring').setScale(0.3).setTint(0xFFE14D).setDepth(1001);
         this.tweens.add({ targets: ring, scale: 1.6 + i * 0.3, alpha: 0, duration: 450, onComplete: () => ring.destroy() });
         this.tweens.add({ targets: st, scale: target * 1.12, yoyo: true, duration: 90 });
@@ -1356,18 +1391,20 @@ export class GameScene extends Phaser.Scene {
     this.resetHint();
     const wasBusy = this.busy; this.busy = true;
     const d = load();
-    const p = popup(this, { title: t('paused'), width: 860, height: 1000, onClose: () => { this.busy = wasBusy; if (!wasBusy) this.scheduleHint(); } });
+    const p = popup(this, { title: t('paused'), width: 860, height: 1060, onClose: () => { this.busy = wasBusy; if (!wasBusy) this.scheduleHint(); } });
     const row = (y, label, getOn, toggle, on, off) => {
       p.box.add(this.add.text(-280, y, label, TXT.dark).setOrigin(0, 0.5));
       const b = iconButton(this, 220, y, getOn() ? on : off, () => { const v = toggle(); b.icon.setTexture(v ? on : off); });
       p.box.add(b);
     };
-    row(-250, t('sound'), () => d.sfx, () => audio.toggleSfx(), 'ico_sound_on', 'ico_sound_off');
-    row(-90, t('music'), () => d.music, () => audio.toggleMusic(), 'ico_music_on', 'ico_music_off');
-    p.box.add(button(this, 0, 90, t('resume'), () => p.close(), { width: 520, height: 150, size: 56 }));
+    row(-330, t('sound'), () => d.sfx, () => audio.toggleSfx(), 'ico_sound_on', 'ico_sound_off');
+    row(-180, t('music'), () => d.music, () => audio.toggleMusic(), 'ico_music_on', 'ico_music_off');
+    /* 화면 흔들림 · 진동 켜고 끄기 (QA 6) */
+    p.box.add([this.add.text(-280, -30, t('shakeFx'), TXT.dark).setOrigin(0, 0.5), toggleButton(this, 220, -30, () => d.shake !== false, toggleShake, t('on'), t('off'))]);
+    p.box.add(button(this, 0, 150, t('resume'), () => p.close(), { width: 520, height: 150, size: 56 }));
     const abandon = () => { if (this.engine.s.turn > 0) breakStreak(); this.endRound(false, true); };
-    p.box.add(button(this, -150, 260, t('retry'), () => { abandon(); this.restart(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
-    p.box.add(button(this, 150, 260, t('quit'), () => { abandon(); this.toMap(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
+    p.box.add(button(this, -150, 330, t('retry'), () => { abandon(); this.restart(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
+    p.box.add(button(this, 150, 330, t('quit'), () => { abandon(); this.toMap(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
   }
   // 뒤로가기 (One a Day): 퍼즐 중이면 일시정지 창
   onBack() { if (this.engine.s.status === 'play') { this.pausePopup(); return true; } }
@@ -1387,7 +1424,7 @@ export class GameScene extends Phaser.Scene {
       B.add(badge);
       this.tweens.add({ targets: badge, scale: 1.15, angle: 8, yoyo: true, repeat: -1, duration: 420, ease: 'Sine.InOut' });
       B.add(this.add.text(0, -350, t('bossWarn'), { ...TXT.small, fontSize: '30px', color: '#FF5A3A', stroke: '#FFFFFF', strokeThickness: 6 }).setOrigin(0.5));
-      this.cameras.main.shake(200, 0.004);
+      quake(this, 200, 0.004);
     }
     B.add(this.add.text(0, -285, t('goal'), TXT.dark).setOrigin(0.5));
     // 목표 카드가 하나씩 튀어나옴

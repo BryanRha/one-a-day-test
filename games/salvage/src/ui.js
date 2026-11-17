@@ -1,23 +1,27 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { DUCK, duckVeil, initVeil2, pickTargets } from './look_duck.js?v=0.99.49'; /* 시안용 ?look=duck */
-import * as WXUI from './ui_wx.js?v=0.99.49'; /* M4-B 판 상태 5 · 맵 장비 */
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS, ACHIEVEMENTS } from './data.js?v=0.99.49';
-import { S, save, rollDay } from './save.js?v=0.99.49';
-import * as E from './econ.js?v=0.99.49';
-import { A } from './assets.js?v=0.99.49';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.49';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.49';
-import { Wardrobe } from './wardrobe.js?v=0.99.49';
-import { grantEarned, COS } from './look.js?v=0.99.49';
-import * as BM from './bmflow.js?v=0.99.49';
-import { frac } from './chips.js?v=0.99.49'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import * as GL from './goal.js?v=0.99.49'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
-import * as TU from './threat_ui.js?v=0.99.49'; /* M4-A 오늘 위협 · 주간 변주 */
-import * as M5 from './ui_m5b.js?v=0.99.49'; /* M5-B 도전 탭(주간 도전 · 깊은 물 · 업적) · 알림 · 칭호 */
-import * as G from './ui_grow.js?v=0.99.49'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
-import * as M5C from './ui_m5c.js?v=0.99.49'; /* M5-C 반려 · 단련 */
+import { DUCK, duckVeil, initVeil2, pickTargets } from './look_duck.js?v=0.99.50'; /* 시안용 ?look=duck */
+import * as WXUI from './ui_wx.js?v=0.99.50'; /* M4-B 판 상태 5 · 맵 장비 */
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS, ACHIEVEMENTS } from './data.js?v=0.99.50';
+import { S, save, rollDay } from './save.js?v=0.99.50';
+import * as E from './econ.js?v=0.99.50';
+import { A } from './assets.js?v=0.99.50';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.50';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.50';
+import { Wardrobe } from './wardrobe.js?v=0.99.50';
+import { grantEarned, COS } from './look.js?v=0.99.50';
+import * as BM from './bmflow.js?v=0.99.50';
+import { frac } from './chips.js?v=0.99.50'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import * as GL from './goal.js?v=0.99.50'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
+import * as TU from './threat_ui.js?v=0.99.50'; /* M4-A 오늘 위협 · 주간 변주 */
+import * as M5 from './ui_m5b.js?v=0.99.50'; /* M5-B 도전 탭(주간 도전 · 깊은 물 · 업적) · 알림 · 칭호 */
+import * as G from './ui_grow.js?v=0.99.50'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
+import * as M5C from './ui_m5c.js?v=0.99.50'; /* M5-C 반려 · 단련 */
+import { V } from './view.js?v=0.99.50'; /* 판 크기 (PC 가운데 판 · QA 시트 1 · 5번) */
+import { inOAD, exitToOAD, pushBack } from './oad.js?v=0.99.50';
 
 const $ = (s, r = document) => r.querySelector(s);
+/* 조작표 (v0.9.1 · QA 시트 4번): [하는 일, 화면(손가락 · 마우스), 키보드] — bindStick 의 키와 같아야 함 (tools/qa1116_check.mjs 가 맞춰 봄) */
+export const CONTROLS = [['이동', '왼쪽 아래 끌기', 'W A S D'], ['쏘기', '쏘기 (자동 조준)', 'J'], ['구르기', '구르기', 'Space'], ['뒤지기', '상자 앞 흰 버튼', 'E'], ['가방', '가방', 'Tab'], ['회복', '회복 (약이 있을 때)', 'Q'], ['무기 바꾸기', '탄 수 누르기', 'R'], ['멈춤 · 나가기', '오른쪽 위 Ⅱ', 'Esc']];
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const dur = s => s >= 3600 ? `${Math.round(s / 360) / 10}시간` : s >= 60 ? `${Math.round(s / 60)}분` : `${Math.max(0, Math.round(s))}초`;
@@ -63,7 +67,7 @@ export class UI {
     this.app = app; this.root = $('#ui'); this.hud = $('#hud'); this.invOpen = false; this.tab = 'fac'; this.wsel = null;
     this.veil = $('#veil'); this.vx = this.veil.getContext('2d'); this.carry = {}; this.safePick = [];
     setInterval(() => this.tickHideout(), 1000);
-    this.wardrobe = new Wardrobe(app, this); this.top = new TopLine();
+    this.wardrobe = new Wardrobe(app, this); this.top = new TopLine(); this.kbHint();
   }
   clear() { this.root.innerHTML = ''; this.invOpen = false; this.loot = null; this.el = null; this.top?.clear(); }
   toastWhy(r) { if (!r.ok) { this.toast(WHY[r.why] || '지금은 안 돼요', 'soft'); sfx.empty(); } }
@@ -80,7 +84,7 @@ export class UI {
     if (this.root.className !== 'scr-hideout') this.fold = false; /* 다른 화면에서 들어오면 펼친 채 */
     const el = h('div', 'hideout' + (this.fold ? ' fold' : ''), `
       <button class="foldbar" id="foldbar" aria-label="자원 · 인물 줄 펼치기"><span class="money">${shell(S.shells)}</span><span class="fmats">${MAT_KEYS.map(k => `<span>${mat(k, S.mats[k] || 0)}</span>`).join('')}</span><span class="fsort">출격 <b>${S.sorties}/${DAILY_SORTIES}</b></span><i>▾</i></button>
-      <header class="topbar"><div class="brand"><b>수달 인양단</b><small>은신처 · 물 위 창고${M5.titleHtml()}</small></div>
+      <header class="topbar"><button class="oadbtn" id="toOad" aria-label="원어데이로 가기">‹ 원어데이</button><div class="brand"><b>수달 인양단</b><small>은신처 · 물 위 창고${M5.titleHtml()}</small></div>
         <div class="money">${shell(S.shells)}</div></header>
       <div class="matbar">${MAT_KEYS.map(k => `<span>${mat(k, S.mats[k] || 0)}</span>`).join('')}</div>
       <div class="sortie"><span>오늘 출격</span><span class="pips">${pips}</span><b>${S.sorties}/${DAILY_SORTIES}</b>
@@ -99,6 +103,7 @@ export class UI {
     BM.bindSortie(el, () => this.hideout()); BM.refreshHello().then(ch => { if (ch) this.refresh(); });
     $('#snd', el).onclick = () => { cycleSound(); this.hideout(); };
     $('#how', el).onclick = () => this.howto();
+    $('#toOad', el).onclick = () => { sfx.ui(); this.toOAD(); };
     $('#diffBtn', el).onclick = () => { sfx.ui(); G.diffSheet(this); }; $('#achBtn', el).onclick = () => { sfx.ui(); this.tab = 'chal'; this.m5seg = 'ach'; this.hideout(); };
     app.story?.decorate(el);
     $('#ward', el).onclick = () => { unlock(); sfx.ui(); this.wardrobe.open(this.tab === 'gun' ? 'weapon' : null); };
@@ -191,8 +196,41 @@ export class UI {
     $('#qDel', body) && ($('#qDel', body).onclick = () => { const r = E.questDeliver(S); if (!r.ok) return this.toast('아직 모자라요', 'soft'); save(); this.questDone([r.q]); this.hideout(); });
   }
   questDone(list) { for (const q of list) { sfx.rare(); this.toast(`의뢰 완료: ${q.name}${q.unlock ? ` — ${FACILITIES[q.unlock].name} 해금!` : ''}${q.map ? ` — 새 지도 ${MAPS[q.map].name}!` : ''}${q.reward.cos ? ` — 꾸미기 ${COS[q.reward.cos]?.name || ''}` : ''}`, 'good'); } if (list.some(q => q.map)) this.app.preloadMaps?.(); }
+  /* PC(마우스 · 키보드)면 판 버튼에 키 이름을 보여 줌 — 폰은 그대로 (키를 한 번이라도 누르면 켜짐) */
+  kbHint(on) { if (on || this._kb || matchMedia('(hover: hover) and (pointer: fine)').matches) { this._kb = true; $('#frame').classList.add('kb'); } }
+  /* 원어데이로 (QA 시트 9번 · 룬다이스 홈 버튼과 같은 동작): 원어데이 안 = 앱에 나가기 요청(oad:exit) · 단독 링크 = 원어데이 사이트(테스트 서버에서 열었으면 그 서버 첫 화면) */
+  toOAD() { save(); if (inOAD) return exitToOAD(); const hn = location.hostname, site = /(^|\.)oneaday\.kr$/.test(hn) ? `${location.protocol}//${hn}/` : 'https://oneaday.kr/'; location.href = site; }
+  /* 조작표 (QA 시트 4번): 손가락 · 키보드 나란히 — 조작법 창 · 첫 판 시작 카드 · 멈춤 창이 같이 씀 */
+  keysHtml() { return `<div class="keys"><i></i><em>화면</em><em>키보드</em>${CONTROLS.map(([n, t, k]) => `<b>${n}</b><span>${t}</span><kbd>${k}</kbd>`).join('')}</div>`; }
+  /* 첫 판 시작 카드: 판을 멈춘 채 조작표 한 장 → '출발' (튜토리얼 첫 판에서 한 번 · story_raid.js) */
+  firstCard(R) {
+    if (!R?.alive || $('#firstcard')) return; R.paused = true;
+    const m = h('div', 'modal firstcard', `<div class="sheet"><small class="kick">첫 인양</small><h3>이것만 알면 돼요</h3>${this.keysHtml()}
+      <p class="note">상자는 <b>빛기둥</b>이 알려 줘요. 화살표를 따라가 <b>뒤지기</b>, 그다음 초록 화살표 <b>출구</b>로 나오면 내 것!</p>
+      <button class="btn cta" id="fcGo">출발</button></div>`); m.id = 'firstcard';
+    const go = () => { if (!m.isConnected) return true; sfx.ui(); m.remove(); off(); if (this.R === R && !$('#pause')) R.paused = false; return true; };
+    const off = pushBack(go); this.root.appendChild(m); $('#fcGo', m).onclick = e => { e.stopPropagation(); go(); };
+  }
+  /* 멈춤 창 (QA 시트 3번): 판 안 오른쪽 위 Ⅱ · PC Esc · 폰 뒤로가기 — 계속하기 · 조작법 · 은신처로 돌아가기(쓰러짐과 같은 규칙이라 한 번 더 물음) */
+  pauseMenu(force) {
+    const R = this.R; if (!R?.alive || R.over) return false;
+    const cur = $('#pause'); if (cur) { if (force !== true) cur._close(); return true; }
+    if (force === false || R.paused || $('#firstcard')) return !!$('#firstcard');
+    this.toggleBag(false); R.paused = true; R.input.fire = false; R.input.mx = R.input.mz = 0;
+    const m = h('div', 'modal pause', ''); m.id = 'pause';
+    const close = () => { if (!m.isConnected) return; m.remove(); off(); if (this.R === R) R.paused = false; };
+    const off = pushBack(() => { close(); return true; }); m._close = close;
+    const main = () => { m.innerHTML = `<div class="sheet"><small class="kick">잠깐 멈춤</small><h3>${R.Z[R.zone].name}</h3>
+      <div class="sbtns"><button class="btn cta" id="pzGo">계속하기</button><button class="btn" id="pzHow">조작법 보기</button><button class="btn" id="pzOut">은신처로 돌아가기</button></div></div>`;
+      $('#pzGo', m).onclick = () => { sfx.ui(); close(); };
+      $('#pzHow', m).onclick = () => { sfx.ui(); m.innerHTML = `<div class="sheet"><h3>조작법</h3>${this.keysHtml()}<button class="btn cta" id="pzBack">알겠어요</button></div>`; $('#pzBack', m).onclick = () => { sfx.ui(); main(); }; };
+      $('#pzOut', m).onclick = () => { sfx.ui(); m.innerHTML = `<div class="sheet"><h3>지금 돌아갈까요?</h3><p class="note">지금 돌아가면 <b>가방은 이 자리에 남아요.</b> 다음 출격에 한 번 찾아올 수 있어요. (안전 칸에 넣은 것은 가져가요)</p>
+        <div class="sbtns"><button class="btn cta" id="pzStay">계속 인양하기</button><button class="btn" id="pzQuit">가방을 두고 돌아가기</button></div></div>`;
+        $('#pzStay', m).onclick = () => { sfx.ui(); close(); }; $('#pzQuit', m).onclick = () => { sfx.ui(); m.remove(); off(); R.giveUp(); }; }; };
+    main(); this.root.appendChild(m); return true;
+  }
   howto() {
-    const m = h('div', 'modal', `<div class="sheet"><h3>인양 대원 수칙</h3><ol>
+    const m = h('div', 'modal', `<div class="sheet howto"><h3>조작법</h3>${this.keysHtml()}<h3>인양 대원 수칙</h3><ol>
       <li><b>왼쪽 아래를 끌면</b> 이동 · 가까운 적은 <b>저절로 조준</b>해 쏴요</li>
       <li><b>구르기</b>로 빛 탄 · 경고 원을 피해요 (기력 소모 · 짐이 무거우면 더 듦)</li>
       <li>창고는 3단: <b>입구 → 깊은 창고 → 기관실</b>. 깊을수록 값진 것 · 강한 적</li>
@@ -270,7 +308,7 @@ export class UI {
     M5.holdPops(); $('#toasts')?.replaceChildren(); /* M6-A 알림 한 줄: 은신처에서 뜬 업적 · 꾸미기 카드 · 아래 알림은 판으로 안 가져감 (결과 · 은신처에서 이어서) */
     const el = h('div', 'raidui', `
       <div class="top"><div class="hpbox"><div class="hp"><i id="hpf"></i><span id="hpt"></span></div><div class="st"><i id="stf"></i></div><div class="wt" id="wt"><i></i><span></span></div></div>
-        <div class="tcol"><div class="timer" id="timer">7:00</div><div class="zone" id="zone"></div></div><div class="val" id="val"></div></div>
+        <div class="tcol"><div class="timer" id="timer">7:00</div><div class="zone" id="zone"></div></div><div class="val" id="val"></div><button class="pz" id="bPause" aria-label="멈춤 · 나가기" data-k="Esc"><i></i></button></div>
       <div class="evt" id="evt"></div>
       <div class="bossbar" id="bossbar"><span>${ENEMIES[R.M.bossKind].name}</span><div><i></i></div></div>
       ${R.o2 != null ? '<div class="o2" id="o2"><i></i><span>산소</span></div>' : ''}
@@ -280,13 +318,13 @@ export class UI {
       <div class="arrows" id="arrows"></div>
       <div id="stickzone"><div class="stick" id="stick"><i></i></div><small class="stickhint">끌어서 이동</small></div>
       <div class="btns">
-        <button class="b act" id="bAct"><span id="actTxt">뒤지기</span></button>
-        <button class="b fire" id="bFire"><span>쏘기</span><small id="autoTag">자동</small></button>
-        <button class="b roll" id="bRoll"><span>구르기</span></button>
-        <button class="b bag" id="bBag"><span>가방</span></button>
-        <button class="b med" id="bMed"><span>회복</span></button>
-        <button class="b nade" id="bNade"><span>수류탄</span><small id="nadeN"></small></button>
-        <button class="b smoke" id="bSmoke"><span>연막</span><small id="smokeN"></small></button>
+        <button class="b act" id="bAct" data-k="E"><span id="actTxt">뒤지기</span></button>
+        <button class="b fire" id="bFire" data-k="J"><span>쏘기</span><small id="autoTag">자동</small></button>
+        <button class="b roll" id="bRoll" data-k="Space"><span>구르기</span></button>
+        <button class="b bag" id="bBag" data-k="Tab"><span>가방</span></button>
+        <button class="b med" id="bMed" data-k="Q"><span>회복</span></button>
+        <button class="b nade" id="bNade" data-k="G"><span>수류탄</span><small id="nadeN"></small></button>
+        <button class="b smoke" id="bSmoke" data-k="F"><span>연막</span><small id="smokeN"></small></button>
       </div>`);
     this.root.appendChild(el); this.el = el;
     this.bindStick(); const inp = R.input;
@@ -300,6 +338,8 @@ export class UI {
     hold($('#bNade'), () => R.throwItem('nade'));
     hold($('#bSmoke'), () => R.throwItem('smoke'));
     $('#ammo').onclick = () => R.switchWeapon();
+    $('#bPause').addEventListener('pointerdown', e => { e.preventDefault(); unlock(); sfx.ui(); this.pauseMenu(); });
+    this.kbHint(); /* PC(마우스 · 키보드)면 버튼에 키 이름 */
     this.app.showHideout(false); TU.raidBand(this, R);
   }
   event(t, kind = '') {
@@ -313,7 +353,7 @@ export class UI {
   praise(t) { const R = this.R; if (!R || !this.el) return; let e = $('#praise'); if (!e) { e = h('div', 'praise'); e.id = 'praise'; this.el.appendChild(e); } e.textContent = t; e.classList.remove('on'); void e.offsetWidth; e.classList.add('on'); this._praiseT = 1.1; }
   topTick(dt) {
     this.top.tick(dt);
-    if (this._praiseT > 0 && this.R) { this._praiseT -= dt; const e = $('#praise'); if (e) { const v = this._pv || (this._pv = this.R.pl.pos.clone()); v.copy(this.R.pl.pos); v.y = 2.6; v.project(this.app.camera); e.style.transform = `translate(${((v.x * 0.5 + 0.5) * innerWidth) | 0}px,${((-v.y * 0.5 + 0.5) * innerHeight) | 0}px) translate(-50%,-100%)`; if (this._praiseT <= 0) e.classList.remove('on'); } }
+    if (this._praiseT > 0 && this.R) { this._praiseT -= dt; const e = $('#praise'); if (e) { const v = this._pv || (this._pv = this.R.pl.pos.clone()); v.copy(this.R.pl.pos); v.y = 2.6; v.project(this.app.camera); e.style.transform = `translate(${((v.x * 0.5 + 0.5) * V.w) | 0}px,${((-v.y * 0.5 + 0.5) * V.h) | 0}px) translate(-50%,-100%)`; if (this._praiseT <= 0) e.classList.remove('on'); } }
   }
   bindStick() {
     const z = $('#stickzone'), st = $('#stick'), knob = st.firstChild; let id = null, ox = 0, oy = 0; const RAD = 52;
@@ -324,7 +364,11 @@ export class UI {
     /* PC: WASD · 스페이스 구르기 · J 쏘기 · E 상호작용 · Tab 가방 · Q 회복 · G 수류탄 · F 연막 · R 무기 바꾸기 */
     if (!this.keyBound) { this.keyBound = true; const keys = {};
       const upd = () => { const R = this.R; if (!R?.alive) return; const x = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), y = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0); if (x || y || this.kbMove) { const l = Math.hypot(x, y) || 1; R.input.mx = x / l; R.input.mz = y / l; this.kbMove = !!(x || y); } R.input.fire = !!keys.KeyJ; };
-      addEventListener('keydown', e => { const R = this.R; if (!R?.alive) return; keys[e.code] = true; if (e.code === 'Space') { R.input.roll = true; e.preventDefault(); } if (e.code === 'KeyE') R.act(); if (e.code === 'Tab') { e.preventDefault(); this.toggleBag(); } if (e.code === 'KeyQ') R.useMed(); if (e.code === 'KeyG') R.throwItem('nade'); if (e.code === 'KeyF') R.throwItem('smoke'); if (e.code === 'KeyR') R.switchWeapon(); upd(); });
+      addEventListener('keydown', e => { const R = this.R; if (!R?.alive) return; this.kbHint(true);
+        if (e.code === 'Escape' && !inOAD) { e.preventDefault(); if ($('#firstcard')) return $('#fcGo')?.click(); if (this.invOpen) return this.toggleBag(false); return void this.pauseMenu(); } /* 원어데이 안에서는 앱이 Esc 를 뒤로가기로 보내 줌 (oad.js CloseWatcher → main.js back) */
+        if ($('#firstcard') && (e.code === 'Enter' || e.code === 'Space')) { e.preventDefault(); return $('#fcGo')?.click(); }
+        if (R.paused) return; /* 멈춤 창 · 첫 판 카드 · 광고 중엔 조작 키를 받지 않음 */
+        keys[e.code] = true; if (e.code === 'Space') { R.input.roll = true; e.preventDefault(); } if (e.code === 'KeyE') R.act(); if (e.code === 'Tab') { e.preventDefault(); this.toggleBag(); } if (e.code === 'KeyQ') R.useMed(); if (e.code === 'KeyG') R.throwItem('nade'); if (e.code === 'KeyF') R.throwItem('smoke'); if (e.code === 'KeyR') R.switchWeapon(); upd(); });
       addEventListener('keyup', e => { keys[e.code] = false; upd(); }); }
   }
   raidHud(R) {
@@ -340,6 +384,7 @@ export class UI {
     /* 상황 버튼 */
     const act = $('#bAct'); const n = R.near; act.classList.toggle('show', !!n && !pl.searching && !pl.dead);
     if (n) { const c = n.c; $('#actTxt').textContent = n.type === 'mod' ? n.label /* M4-B 장치 */ : n.type === 'gen' ? '전원 켜기' : n.type === 'lamp' ? (n.L.lit ? '등불 끄기' : '등불 켜기') : n.type === 'flare' ? (n.label || '신호탄 쏘기') : n.type === 'gate' ? (n.g.door.lock === 'vault' ? (R.hasItem('vkey') ? '금고 열기' : '금고 · 열쇠 필요') : '전원 문') : c.searched ? (c.items?.length ? '다시 보기' : '빈 곳') : (c.corpse ? '내 가방 찾기' : '뒤지기'); }
+    act.classList.toggle('fresh', !!(n && n.c && !n.c.searched)); /* QA 시트 7번: 아직 안 뒤진 곳이면 버튼이 번쩍임 */
     act.classList.toggle('gold', !!(n?.c?.corpse || n?.type === 'gen' || n?.type === 'flare' || (n?.type === 'gate' && R.hasItem('vkey'))));
     $('#bMed').classList.toggle('show', R.hasItem('med') || R.hasItem('bandage'));
     for (const k of ['nade', 'smoke']) { const c = R.carried().reduce((s, b) => s + b.items.filter(p => p.it.key === k).length, 0); const b = $(k === 'nade' ? '#bNade' : '#bSmoke'); b.classList.toggle('show', c > 0); $(k === 'nade' ? '#nadeN' : '#smokeN').textContent = c; }
@@ -351,7 +396,7 @@ export class UI {
     const B = R.chief && !R.chief.dead && R.chief.state === 'chase' ? R.chief : R.boss; const bb = $('#bossbar'); const showB = B && !B.dead && B.state === 'chase'; if (showB && bb.firstChild.textContent !== B.D.name) bb.firstChild.textContent = B.D.name; /* M4-A 두목도 */ bb.classList.toggle('show', !!showB); if (showB) bb.querySelector('div > i').style.width = (B.hp / B.maxHp * 100) + '%'; /* v0.7.1: 약점 줄(.weakln)이 뒤에 붙음 */
     this.drawArrows(R);
     if (R.over && !this.el.querySelector('.banner')) {
-      const t = R.over === 'extract' ? ['탈출!', '들고 나온 건 이제 내 것'] : R.over === 'tide' ? ['물이 다 찼어요', '가방은 이 자리에 남아요'] : ['쓰러졌어요', '가방은 이 자리에 — 다음 출격에 한 번 찾을 수 있어요'];
+      const t = R.over === 'extract' ? ['탈출!', '들고 나온 건 이제 내 것'] : R.over === 'tide' ? ['물이 다 찼어요', '가방은 이 자리에 남아요'] : R.quit ? ['은신처로 돌아가요', '가방은 이 자리에 — 다음 출격에 한 번 찾을 수 있어요'] : ['쓰러졌어요', '가방은 이 자리에 — 다음 출격에 한 번 찾을 수 있어요'];
       this.el.appendChild(h('div', 'banner ' + (R.over === 'extract' ? 'ok' : 'ko'), `<b>${t[0]}</b><small>${t[1]}</small>`));
     }
   }
@@ -359,7 +404,7 @@ export class UI {
   labW(t) { const c = this._lw ||= { m: new Map(), x: document.createElement('canvas').getContext('2d') }; let w = c.m.get(t); if (w == null) { c.x.font = `700 12px ${getComputedStyle(document.body).fontFamily}`; w = Math.ceil(c.x.measureText(t).width) + 2; if (c.m.size > 200) c.m.clear(); c.m.set(t, w); } return w; }
   /* 화면 밖 목표 방향: 출구(조건) · 내 가방 · 발전기 · 금고실 · 몽이가 찾은 상자 */
   drawArrows(R) {
-    const box = $('#arrows'); const cam = this.app.camera; const W = innerWidth, H = innerHeight; const out = [];
+    const box = $('#arrows'); const cam = this.app.camera; const W = V.w, H = V.h; const out = [];
     const targets = R.exits.filter(x => x.open || x.call === 'idle' || x.call === 'wait' || (x.kind === 'power' && !R.power && R.zone === 2 && x.pos.distanceTo(R.pl.pos) < 30)).map(x => ({ p: x.pos, t: x.open ? x.name : `${x.name} · ${R.exitWhy(x)}`, c: x.open ? 'ex' : x.call ? 'gen' : 'exoff' }));
     if (R.o2 != null && R.o2 < R.o2Max * 0.45) { let best = null, bd = 40; for (const a of R.airs) { const d = Math.hypot(a.x - R.pl.pos.x, a.z - R.pl.pos.z); if (d < bd) { bd = d; best = a; } } if (best) targets.push({ raw: best, t: '공기 방울', c: 'pet' }); }
     for (const c of R.containers) if (c.corpse && !c.searched) targets.push({ p: c.pos, t: '내 가방', c: 'co' });
@@ -367,6 +412,7 @@ export class UI {
     if (!R.power && (R.L.hints || lost || R.zone >= 2)) targets.push({ raw: gp, t: '발전기', c: lost ? 'gen hot' : 'gen' });
     if (R.L.hints && !R.vaultOpened) { const v = R.P.rooms.find(r => r.id === R.P.vault); targets.push({ raw: { x: v.x0 + RS2, z: v.z0 + RS2 }, t: '금고실', c: 'co' }); }
     for (const m of R.mods || []) m.marks?.(targets); /* M6-C 판 중 사건 자리 (happen.js) */
+    this.app.story?.raid?.marks?.(targets); /* v0.9.1 첫 판 길잡이: 다음에 뒤질 상자 (story_raid.js) */
     if (R.L.pet?.sniff) { let best = null, bd = 30; for (const c of R.containers) { if (c.searched || (c.best || 0) < 70) continue; const d = c.pos.distanceTo(R.pl.pos); if (d < bd) { bd = d; best = c; } } if (best) targets.push({ p: best.pos, t: '몽이: 여기 좋은 냄새!', c: 'pet' }); }
     if (DUCK.on) { const pk = pickTargets(R, targets, R.duck?.guide); targets.length = 0; targets.push(...pk); } /* 시안용: 급할 때 하나 · 평소 2개까지 */
     const v = this._v || (this._v = R.pl.pos.clone());
@@ -393,7 +439,7 @@ export class UI {
     if (DUCK.on) { initVeil2(this); return duckVeil(this, R, cam); } /* 시안용 ?look=duck */
     const c = this.veil, x = this.vx; const W = c.width, H = c.height; x.clearRect(0, 0, W, H);
     if (!R || !R.alive) return;
-    const sc = W / innerWidth; const pl = R.pl; const p = pl.pos.clone(); p.y = 0.5; p.project(cam);
+    const sc = W / V.w; const pl = R.pl; const p = pl.pos.clone(); p.y = 0.5; p.project(cam);
     const px = (p.x * 0.5 + 0.5) * W, py = (-p.y * 0.5 + 0.5) * H;
     const f = pl.pos.clone().add({ x: Math.sin(pl.face) * 5, y: 0.5, z: Math.cos(pl.face) * 5 }); f.project(cam);
     const fx = (f.x * 0.5 + 0.5) * W, fy = (-f.y * 0.5 + 0.5) * H; const ang = Math.atan2(fy - py, fx - px);
@@ -423,7 +469,7 @@ export class UI {
   toggleBag(force) { this.invOpen = force ?? !this.invOpen; if (this.invOpen) this.renderInv(); else { $('#inv')?.remove(); this.loot = null; } sfx.ui(); }
   openLoot(c) { this.app.story?.onLoot(c); this.loot = c; this.invOpen = true; this.renderInv(); }
   renderInv() {
-    const R = this.R; $('#inv')?.remove(); const gw = R.bag.w + Math.max(R.safe.w, R.pet?.w || 0); const CELL = Math.min(64, Math.floor((innerWidth - 64) / (gw + 0.6)));
+    const R = this.R; $('#inv')?.remove(); const gw = R.bag.w + Math.max(R.safe.w, R.pet?.w || 0); const CELL = Math.min(64, Math.floor((V.w - 64) / (gw + 0.6)));
     const el = h('div', 'inv'); el.id = 'inv'; el.style.setProperty('--cell', CELL + 'px');
     const loot = this.loot; const wv = R.weight(), cf = R.L.bag.comfy;
     el.innerHTML = `<div class="invsheet">
@@ -490,7 +536,7 @@ export class UI {
   result(res, gained) {
     this.clear(); this.root.className = 'scr-result'; const ok = res.outcome === 'extract';
     const list = ok ? [...res.items, ...res.safe, ...res.pet] : [...res.safe, ...(res.petSafe ? res.pet : [])];
-    const praise = ok ? (res.value >= 350 ? '전설의 인양! 은신처가 들썩여요' : res.value >= 150 ? '대박 인양!' : res.value >= 60 ? '알찬 인양이었어요' : '무사 귀환이 제일이에요') : res.outcome === 'tide' ? '물이 너무 빨리 찼어요' : '아깝다! 거의 다 왔는데';
+    const praise = ok ? (res.value >= 350 ? '전설의 인양! 은신처가 들썩여요' : res.value >= 150 ? '대박 인양!' : res.value >= 60 ? '알찬 인양이었어요' : '무사 귀환이 제일이에요') : res.outcome === 'tide' ? '물이 너무 빨리 찼어요' : res.quit ? '무사히 돌아왔어요. 가방은 다음에 찾으러 가요' : '아깝다! 거의 다 왔는데';
     const MP = MAPS[res.map || 'ware']; const zn = MP.zones[res.zoneMax].name; const exitName = res.exit ? MP.exits[res.exit] : '';
     /* v0.5.1 (검수 Top 10): 위 = 머리 · 숫자(가치는 0 → 값으로 0.6초) · 이야기/의뢰 금빛 카드 · 새 기억 조각(카드 뒤집기) · 들어온 것 / 아래 = 버튼 고정 */
     const story = this.app.story; const sh = story?.resultHtml(res) || '';

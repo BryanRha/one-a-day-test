@@ -4,11 +4,11 @@
 //   지휘관 영입: 일반 작전으로도 합류하는 지휘관을 먼저 데려옴 (막힌 길을 여는 게 아님 · 능력치는 원래 그대로)
 //   사는 길 세 가지: 훈장(플레이로 모이는 게임 재화) · 원어데이 골드(서버 가격표에 있을 때만) · 광고(보급품만, 하루 SHOPW.adPerDay 번)
 //   원어데이 밖이면 훈장 길만 (골드 · 광고 버튼 숨김)
-import { bm } from './oad_bm.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { COS } from './core/data.js?v=0.99.49';
-import { shopOn, owned, track } from './bmwar.js?v=0.99.49';
-import { STAGES } from './meta.js?v=0.99.49';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { COS } from './core/data.js?v=0.99.50';
+import { shopOn, owned, track, testOff } from './bmwar.js?v=0.99.50';
+import { STAGES } from './meta.js?v=0.99.50';
 
 export const SHOPW = { adPerDay: 3, coMedal: 30 };
 export const KITS = {
@@ -29,6 +29,15 @@ export const kitCount = k => st().kits[k] || 0;
 export const kitTotal = () => KIT_ORDER.reduce((a, k) => a + kitCount(k), 0);
 export const adLeft = () => Math.max(0, SHOPW.adPerDay - st().shop.ad);
 export const adOn = () => shopOn() && adLeft() > 0 && bm.info.ads && bm.info.ads.reward !== false;
+/* 상점 광고 줄에 적을 한 줄 (v0.13 · 시트 #2): 광고 버튼이 없을 때 까닭을 꼭 말해 줌 — 예전엔 앱 하루 한도 · 그룹 A 일 때 빈 줄이라 '없는 기능'처럼 보였음
+   → { text, kind: 'on' | 'test' | 'done' } · 원어데이 밖 · 실서버 그룹 A 는 null (조용히) */
+export function adNote() {
+  if (!shopOn()) return null;
+  if (adOn()) return { kind: 'on', text: `광고 보상 오늘 ${adLeft()}번 남음` };
+  if (testOff()) return { kind: 'test', text: '테스트 안내 · 이 기기는 BM 그룹 A 라 광고 · 골드 버튼이 꺼져 있어요\n원어데이 설정 › 테스트: 게임 안 BM 그룹 › B' };
+  if (bm.info.group === 'A') return null;
+  return { kind: 'done', text: '오늘 광고 보상은 다 받았어요 · 내일 다시' };
+}
 const give = (k, n = 1) => { const d = st(); d.kits[k] = (d.kits[k] || 0) + n; save(); };
 
 // 보급품 사기: via 'medal' | 'gold' | 'ad' → { ok, reason }

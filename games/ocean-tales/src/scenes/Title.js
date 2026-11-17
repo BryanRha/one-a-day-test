@@ -1,9 +1,10 @@
-import { W, H, TXT, VERSION } from '../config.js?v=0.99.49';
-import { t } from '../i18n.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load } from '../save.js?v=0.99.49';
-import { button, iconButton, popup, toast, enableGlow } from '../ui/widgets.js?v=0.99.49';
-import { settingsPopup } from './Map.js?v=0.99.49';
+import { W, H, TXT, VERSION } from '../config.js?v=0.99.50';
+import { t } from '../i18n.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load } from '../save.js?v=0.99.50';
+import { button, iconButton, popup, toast, enableGlow } from '../ui/widgets.js?v=0.99.50';
+import { settingsPopup } from './Map.js?v=0.99.50';
+import { inOAD, toOAD } from '../oad.js?v=0.99.50';
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
@@ -28,10 +29,15 @@ export class TitleScene extends Phaser.Scene {
     iconButton(this, W - 100, 110, 'ico_settings', () => settingsPopup(this), { size: 130 });
     // 홈 화면에 추가 (이미 앱으로 실행 중이면 숨김)
     const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
-    if (!standalone && !window.__installed) {
+    /* 원어데이 안(앱 속 화면)에서는 게임만 따로 홈 화면에 추가할 수 없으므로 숨김 */
+    if (!standalone && !window.__installed && !inOAD) {
       iconButton(this, 100, 110, 'ico_install', () => this.install(), { size: 130 });
       this.add.text(100, 205, t('install'), { ...TXT.small, fontSize: '28px', strokeThickness: 7 }).setOrigin(0.5);
     }
+    /* 원어데이로 (QA 공통 '로비 이동 버튼' · 룬다이스 홈과 같은 동작): 앱 안 = 왼쪽 위 · 단독 링크 = 버전 줄 위 */
+    this.oadBtn = inOAD
+      ? button(this, 170, 110, `‹ ${t('toOad')}`, () => this.toOad(), { kind: 'secondary', width: 290, height: 112, size: 38 })
+      : button(this, W / 2, H - 150, t('toOadLong'), () => this.toOad(), { kind: 'secondary', width: 420, height: 104, size: 34 });
     this.add.text(W / 2, H - 50, `v${VERSION}`, { ...TXT.small, fontSize: '28px', strokeThickness: 6 }).setOrigin(0.5).setAlpha(0.7);
 
     // 브라우저 자동재생 정책: 첫 터치 이후에 음악 시작
@@ -57,6 +63,8 @@ export class TitleScene extends Phaser.Scene {
     p.box.add(this.add.text(0, 40, msg, { ...TXT.body, fontSize: '38px', lineSpacing: 12 }).setOrigin(0.5));
     p.box.add(button(this, 0, 220, t('ok'), () => p.close(), { width: 360, height: 130, size: 46 }));
   }
+
+  toOad() { if (!inOAD) audio.stopMusic(); toOAD(); }
 
   go() {
     this.cameras.main.fadeOut(250, 189, 235, 255);

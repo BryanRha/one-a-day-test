@@ -4,7 +4,7 @@ export const BRAND = {
   name: '감성커피', en: 'GAMSUNG COFFEE', red: '#A92E2B', redHex: 0xA92E2B, ink: '#3B2A20', paper: '#F6EFE4',
   slogan: '마음이 쉬어가는 곳', keywords: ['진심', '정갈함', '여백', '따뜻함', '단아함'], site: 'https://xn--439as41bv4jv9f.com/',
 };
-export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short: '감성커피', ver: '0.2.1' };
+export const GAME = { title: '감성커피 · 마음이 쉬어가는 곳', short: '감성커피', ver: '0.2.2' };
 
 // 메뉴: t = 내리는 시간(초) · n = 한 번에 나오는 잔 수 · bean = 잔당 원두 · lv = 열리는 레벨 · photo = 공식 사진
 //   price = 한 잔 값 · xp = 경험치 · look = 3D 잔 모양 (models.js)
@@ -63,7 +63,7 @@ export const FURN = {
   catphoto: { name: '돌담 고양이 사진', cat: 'wall', size: [1, 1], cost: 0, score: 9, lv: 1, wall: true, gift: true, desc: '강정점 돌담 위 귤이' },
   photo: { name: '흑백 사진 액자', cat: 'wall', size: [1, 1], cost: 0, heart: 60, score: 12, lv: 4, wall: true, desc: '동네의 오래된 풍경' },
 };
-export const FURN_CATS = [['table', '자리'], ['green', '초록'], ['stone', '돌'], ['light', '빛'], ['deco', '소품'], ['wall', '벽']];
+export const FURN_CATS = [['table', '자리'], ['green', '화분'], ['stone', '돌'], ['light', '빛'], ['deco', '소품'], ['wall', '벽']];
 
 // 레벨: 필요한 경험치 · 레벨이 오르면 메뉴 · 원두 · 가구 · 머신 · 동료가 열림
 /* 0.2.0 개편: 레벨 60 · 1~11은 예전 표 그대로(첫날 느낌) · 12부터는 지점 문턱(2호점 Lv12 · 3호점 20 · … · 7호점 52)이 무과금 · 하루 20분 플레이의 돈 흐름과 맞게
@@ -78,7 +78,7 @@ export const STAFF = {
     lvx: l => ({ hand: 4 - (l - 1) * 0.5, tick: 1.2 - (l - 1) * 0.1, wash: Math.max(2, 5 - l) }), up: l => { const x = STAFF.barista.lvx(l); return `한 잔 ${x.hand}초 · 반납 ${x.wash}개면 설거지`; } },
   roaster: { name: '로스터 견습생 · 무진', lv: 5, cost: 1200, body: 0xC9B79C, hair: 0x1E1A16, desc: '원두가 줄면 하우스 · 싱글 오리진을 알아서 볶고 담아요 · 스페셜티 · 밤샘 로스팅은 사장님이 골라요',
     lvx: l => ({ low: 30 + (l - 1) * 15, bonus: (l - 1) * 0.05 }), up: l => { const x = STAFF.roaster.lvx(l); return `원두 ${x.low}잔분 아래면 볶기${x.bonus ? ` · 원두 +${Math.round(x.bonus * 100)}%` : ''}`; } },
-  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '테이블을 닦고 찻값을 모아 와요',
+  hall: { name: '홀 동료 · 도윤', lv: 6, cost: 2200, body: 0xD9CBB5, hair: 0x5A3A22, desc: '테이블을 닦고 찻값을 모아 와요 · 먼 자리에 가져다 드리는 일은 서빙 동료 은재(Lv.10)가 맡아요',   /* 도윤이 서빙도 하는 줄 알았다는 의견 (QA 1116-12) → 맡은 일을 적어 둠 */
     lvx: l => ({ sp: 280 * (1 + (l - 1) * 0.15), bonus: (l - 1) * 0.05 }), up: l => { const x = STAFF.hall.lvx(l); return x.bonus ? `걸음 +${Math.round((x.sp / 280 - 1) * 100)}% · 찻값 +${Math.round(x.bonus * 100)}%` : '테이블 닦고 찻값 모으기'; } },
   /* 0.2.0 개편 (EXPANSION_PLAN 3-5): 구역이 열려야(kind) 함께할 수 있음 · 사장님이 직접 하면 보상이 더 큼 */
   server: { name: '서빙 동료 · 은재', lv: 10, cost: 3600, kind: 'far', body: 0xE3D3C0, hair: 0x3A2418, bun: true, desc: '테라스 · 2층 · 루프탑 손님에게 쟁반을 가져다 드려요 · 사장님이 가져가면 팁이 더 커요',
@@ -198,7 +198,7 @@ export const LETTERS = ['오늘 커피 덕분에 하루가 따뜻했어요', '�
 export const OWNER = { hand: 3, sp: 330, fit: 0.15, grace: 4, chainK: 0.2, chainMax: 5, far: 0.2, farWait: 40, greetR: 330, dwell: 0.4, bag: 30, wake: 0.3, wakeT: 180, restAfter: [70, 130], restLen: 30 };
 /* 사장님이 하는 일 10가지 (계획안 3-3) — 레일 · 지표 gs_owner 의 이름 */
 export const OWNER_JOBS = {
-  bean: { name: '원두 나르기', icon: '🫘', sub: '로스팅실 → 바' }, serve: { name: '가져다 드리기', icon: '🧺', sub: '먼 자리 팁 +20%' }, clean: { name: '치우기 · 찻값', icon: '🧽', sub: '찻값 · 손편지' },
+  bean: { name: '원두 나르기', icon: '<u class="bni"></u>', sub: '로스팅실 → 바' }, serve: { name: '가져다 드리기', icon: '🧺', sub: '먼 자리 팁 +20%' }, clean: { name: '치우기 · 찻값', icon: '🧽', sub: '찻값 · 손편지' },
   greet: { name: '첫인사', icon: '👋', sub: '손님 마음 +1' }, seat: { name: '자리 안내', icon: '👥', sub: '단체 주문 ×1.5' }, takeout: { name: '포장 건네기', icon: '🚗', sub: '포장 값 + 별점' },
   wake: { name: '동료 깨우기', icon: '💤', sub: '응원 +30%' }, event: { name: '돌발 일', icon: '⚡', sub: '큰 보너스' }, story: { name: '단골 사연', icon: '💌', sub: '사연 · 시 액자' },
   plant: { name: '화분 돌보기', icon: '🪴', sub: '감성 지수 보너스' }, dessert: { name: '디저트 나르기', icon: '🧁', sub: '공방 → 작업대' },

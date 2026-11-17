@@ -1,11 +1,11 @@
 // K뷰티 레시피 UI: 크림 패널 · 장미색 버튼 · 금빛 포인트 (모두 코드로 그림)
-import { W, H } from './config.js?v=0.99.49';
-import { audio } from './audio.js?v=0.99.49';
-import { pushBack } from './oad.js?v=0.99.49';
-import { load as loadSave, save as saveSave } from './save.js?v=0.99.49';
-import { PACKS } from './album.js?v=0.99.49';
-import { SPECIAL } from './data.js?v=0.99.49';
-import { decoInfo, theme } from './events.js?v=0.99.49';
+import { W, H } from './config.js?v=0.99.50';
+import { audio } from './audio.js?v=0.99.50';
+import { pushBack } from './oad.js?v=0.99.50';
+import { load as loadSave, save as saveSave } from './save.js?v=0.99.50';
+import { PACKS } from './album.js?v=0.99.50';
+import { SPECIAL } from './data.js?v=0.99.50';
+import { decoInfo, theme } from './events.js?v=0.99.50';
 
 export const C = { ink: '#4A2C2A', text: '#FFFFFF', cream: '#FFF4EC', paper: '#FFFBF6', brown: '#8A5A44', sub: '#C99A86', dim: '#A08878', gold: '#E8A93A', rose: '#E86A8E', plum: '#5A3A34', red: '#D9573B', green: '#5FA65A', blue: '#4E86C6', mint: '#7CC6A8' };
 export const FONT = 'Pretendard, sans-serif';
@@ -185,6 +185,21 @@ export function firstTip(sc, key, title, lines, img, force) {
   const d = loadSave(); d.tips = d.tips || {}; if (d.tips[key] && !force) return false; d.tips[key] = 1; saveSave();
   const p = sheet(sc, { size: 'M', title, depth: 1500 }); let y = 0;
   if (img) { const im = sc.add.image(0, 90, img); im.setScale(180 / Math.max(im.width, im.height)); p.content.add(im); y = 220; }
-  lines.forEach((l, i) => p.content.add(R(sc, 0, y + i * 66, l, TS.body - 2, C.ink, { w: 800, wrap: 780 })));
+  /* 줄마다 실제 높이만큼 내려 씀 (긴 줄이 두 줄로 접혀도 겹치지 않게) */
+  lines.forEach(l => { const t = R(sc, 0, 0, l, TS.body - 2, C.ink, { w: 800, wrap: 780 }), h = t.type === 'Text' ? t.height : t.getBounds().height; t.y = y + h / 2; y += Math.max(54, h) + 18; p.content.add(t); });
   p.foot([{ t: '알겠어요' }]); return true;
+}
+// 다시 보는 안내 '?' (창 밖 화면용 — 제목 옆에 둠)
+export function helpBtn(sc, x, y, fn) { const q = closeX(sc, x, y, false, '?'); q.on('pointerup', () => fn()); return q; }
+// 처음 안내: 말풍선 + 눌러야 할 곳을 감싸는 고리 (작업대 · 매장 공통)
+//   o = { y, t, ring: { x, y, w, h } } — 말풍선 꼬리는 고리 쪽을 향함 · 고리는 입력을 막지 않음
+export function coach(sc, o) {
+  const c = sc.add.container(0, 0).setDepth(o.depth ?? 70);
+  if (o.ring) { const { x, y, w, h } = o.ring, rr2 = Math.min(w, h) * 0.3, g = sc.add.graphics({ x, y }); g.lineStyle(12, 0xFFE27A, 0.95).strokeRoundedRect(-w / 2, -h / 2, w, h, rr2).lineStyle(5, 0xE86A8E, 1).strokeRoundedRect(-w / 2 - 9, -h / 2 - 9, w + 18, h + 18, rr2 + 9);
+    c.add(g); sc.tweens.add({ targets: g, scale: 1.07, alpha: 0.55, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); }
+  const bx = o.x ?? W / 2, b = sc.add.container(bx, o.y), tt = T(sc, 0, 0, o.t, 32, '#FFFFFF', { w: 900, lh: 12 }), bw = tt.width + 70, bh = tt.height + 44, bg = sc.add.graphics();
+  bg.fillStyle(0xE86A8E, 0.96).fillRoundedRect(-bw / 2, -bh / 2, bw, bh, Math.min(36, bh / 2)).lineStyle(4, 0xFFFFFF, 0.9).strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, Math.min(36, bh / 2));
+  if (o.ring) { const dn = o.ring.y > o.y, s = dn ? 1 : -1, ey = s * bh / 2, tx = Math.max(-bw / 2 + 50, Math.min(bw / 2 - 50, o.ring.x - bx)); bg.fillStyle(0xE86A8E, 0.96).fillTriangle(tx - 24, ey - s * 3, tx + 24, ey - s * 3, tx, ey + s * 30); }
+  b.add([bg, tt]); c.add(b); sc.tweens.add({ targets: b, y: o.y - 10, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  return c;
 }

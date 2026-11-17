@@ -2,12 +2,12 @@
 //  1 고래 떼 유영 · 2 바다거북 대이동 · 3 해파리 빛 축제 · 4 흰동가리 소용돌이 · 5 보물상자 폭발
 //  6 복어 풍선과 눈꽃 · 7 진주 비 · 8 문어 먹물 불꽃놀이 · 9 불가사리 별자리 · 10 모든 친구 그랜드 피날레
 // 보스(10번째) 레벨을 처음 깼을 때 Game → WorldClear → Map(새 월드로 카메라 이동) 순서로 나온다.
-import { W, H, TXT, MAP_THEME, WORLD_COUNT, themeOf } from '../config.js?v=0.99.49';
-import { t } from '../i18n.js?v=0.99.49';
-import { enableGlow } from '../ui/widgets.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { addCoins } from '../save.js?v=0.99.49';
-import { asset } from '../config.js?v=0.99.49';
+import { W, H, TXT, MAP_THEME, WORLD_COUNT, themeOf } from '../config.js?v=0.99.50';
+import { t } from '../i18n.js?v=0.99.50';
+import { enableGlow } from '../ui/widgets.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { addCoins } from '../save.js?v=0.99.50';
+import { asset } from '../config.js?v=0.99.50';
 
 const BONUS = 100;
 const hex = c => Phaser.Display.Color.HexStringToColor(c).color;
@@ -185,7 +185,7 @@ export class WorldClearScene extends Phaser.Scene {
     const chest = this.add.image(cx, cy, 'map_deco_chest').setScale(1.3).setDepth(7);
     this.tweens.add({ targets: chest, angle: { from: -6, to: 6 }, yoyo: true, repeat: 5, duration: 90, delay: 600,
       onComplete: () => {
-        audio.play('sfx_bomb'); this.cameras.main.shake(250, 0.01);
+        audio.play('sfx_bomb'); quake(this, 250, 0.01);
         this.tweens.add({ targets: chest, scale: 1.5, yoyo: true, duration: 120 });
         for (let i = 0; i < 40; i++) {
           const key = i % 4 === 0 ? 'tile_rainbow' : 'ico_coin';

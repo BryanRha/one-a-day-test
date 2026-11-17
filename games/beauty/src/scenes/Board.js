@@ -1,16 +1,16 @@
 // 작업대 (원작의 주방 보드): 7×9 머지-2 · 생산기 · 잠긴 상자 · 비눗방울 · 창고 · 주문 3장 · 팔기
-import { W, H } from '../config.js?v=0.99.49';
-import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { goPrev } from '../nav.js?v=0.99.49';
-import { hud } from '../hud.js?v=0.99.49';
-import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.99.49';
-import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today } from '../state.js?v=0.99.49';
-import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.99.49';
-import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.99.49';
-import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.99.49';
-import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast, coach } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { goPrev } from '../nav.js?v=0.99.50';
+import { hud } from '../hud.js?v=0.99.50';
+import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.99.50';
+import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today, curTask } from '../state.js?v=0.99.50';
+import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.99.50';
+import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.99.50';
+import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.99.50';
+import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.99.50';
 const E_GIFT = 15;   /* 하루 첫 에너지 바닥 응원 선물 */
 
 const COLS = 7, ROWS = 9, CS = 142, X0 = (1080 - COLS * CS) / 2, Y0 = 440;
@@ -61,7 +61,7 @@ export class BoardScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.tick() });
     audio.music('bgm_board'); this.idleAt = Date.now(); this.hintTw = null;
     this.cameras.main.fadeIn(250, 255, 244, 236); window.__board = this;
-    if (d.tut < 3) this.time.delayedCall(400, () => this.tutorial());
+    this.tipC = null; if (d.tut < 3 || d.tutB === 1) this.time.delayedCall(400, () => this.tutorial());
   }
   // ── 그리기
   redraw() {
@@ -141,7 +141,7 @@ export class BoardScene extends Phaser.Scene {
     const sp = this.sprites[to]; if (sp) { sp.setScale(0.55); this.tweens.add({ targets: sp, scale: 1, duration: 320, ease: 'Back.easeOut', easeParams: [3] }); }
     if (nb.t === 'i' && nb.l === MAX_LV) this.floatText(to, '최고 단계 완성!', C.gold); else if (nb.t === 'g') this.floatText(to, '생산기 업그레이드!', C.rose);
     if (opened.length) { this.time.delayedCall(140, () => audio.play('sfx_box', { volume: 0.55 })); opened.forEach(n => { this.fx(n, 0xFFE9A0); const s2 = this.sprites[n]; if (s2) { s2.setScale(0.4); this.tweens.add({ targets: s2, scale: 1, duration: 360, delay: 120, ease: 'Back.easeOut' }); } }); }
-    this.found(to); opened.forEach(n => this.found(n)); this.info(to); if (this.d.tut === 1) this.tutorial();
+    this.found(to); opened.forEach(n => this.found(n)); this.info(to); if (this.d.tut === 1 || this.d.tut === 2) this.tutorial();
   }
   // 생산기에서 빈 칸으로 포물선을 그리며 날아감 (위치를 한 트윈에서만 바꿔 끝 위치가 항상 정확함)
   arcTo(sp, x0, y0, x1, y1, ms) { sp.setPosition(x0, y0).setScale(0.3); const o = { t: 0 }, h = 60 + Math.hypot(x1 - x0, y1 - y0) * 0.15;
@@ -357,7 +357,8 @@ export class BoardScene extends Phaser.Scene {
     const ups = addXp(o.xp); if (ups.length) { spinAdd(ups.length); digAdd(ups.length * 2); } this.time.delayedCall(300, () => this.flyCoins(ox, 400, o.coins));
     this.redraw(); this.hud.update();
     if (ups.length) this.time.delayedCall(600, () => this.levelUp(ups.reduce((a, u) => ({ ...u, gems: a.gems + u.gems, coins: a.coins + u.coins, gift: a.gift || u.gift, items: [...a.items, ...u.items], pack: u.pack === 'diamond' || a.pack === 'diamond' ? 'diamond' : u.pack === 'gold' || a.pack === 'gold' ? 'gold' : u.pack || a.pack }), { gems: 0, coins: 0, gift: false, items: [], pack: null })));
-    if (this.d.tut === 2) { this.d.tut = 3; save(); this.tutorial(); }
+    if (this.d.tut === 2) { this.d.tut = 3; this.d.tutB = 1; save(); this.tipC?.destroy(); this.tipC = null; this.tutGoHome(true); }
+    else if (this.d.tutB === 1 && !this.tipC) this.tutGoHome();
   }
   // 코인이 흩어졌다가 위 막대로 날아가고, 닿을 때마다 짤랑 (원작의 보상 연출)
   flyCoins(x, y, n, small) { const t = this.hud.coinAt, m = small ? 2 : Math.min(9, 3 + Math.floor(n / 8));
@@ -381,17 +382,24 @@ export class BoardScene extends Phaser.Scene {
     const gens = (u.items || []).filter(it => it.t === 'g'); gens.forEach((it, k) => { const x = (k - (gens.length - 1) / 2) * 190, im = this.add.image(x, 190, genImg(unlockedChains()[0], it.gl)); im.setScale(96 / Math.max(im.width, im.height)); p.content.add([im, T(this, x, 266, `생산기 ${it.gl}단계`, TS.min, C.brown, { w: 900 })]); });
     p.foot([{ t: '좋아요!', fn: () => { p.close(); this.placeGifts(); this.redraw(); } }]);
   }
-  // ── 처음 안내 (손가락 대신 말풍선)
+  // ── 처음 안내 (말풍선 + 눌러야 할 곳에 고리): ① 주문 보고 재료 꺼내기 → ② 합치기 → ③ 완료로 손님에게 팔기 → (코인이 모이면) ④ 매장으로
+  //   tut 0~2 = 작업대 3단계 · 3 = 끝 · tutB(이번에 새로 시작한 사람만) 1 = 매장으로 돌아가 꾸미기까지 안내 중 → Home 이 이어받음
   tutorial() {
-    this.tipC?.destroy(); const d = this.d; if (d.tut >= 3) return;
-    const steps = [
-      { i: this.d.board.findIndex(c => c && c.t === 'g' && c.g === 'camellia'), t: '동백 바구니를 눌러 재료를 꺼내요 (2번)' },
-      { i: -1, t: '같은 동백 잎 두 개를 끌어다 겹쳐요!' },
-      { i: -1, t: '주문 카드의 물건이 모이면 완료를 눌러요', top: true },
-    ], s = steps[d.tut]; const y = s.top ? 470 : s.i >= 0 ? cy(s.i) - 140 : Y0 + 30;
-    this.tipC = this.add.container(W / 2, y).setDepth(70); const tt = T(this, 0, 0, s.t, 32, '#FFFFFF', { w: 900 }), bg = this.add.graphics(); bg.fillStyle(0xE86A8E, 0.95).fillRoundedRect(-tt.width / 2 - 30, -36, tt.width + 60, 72, 36); this.tipC.add([bg, tt]);
-    this.tweens.add({ targets: this.tipC, y: y - 10, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    if (d.tut === 1) { const n = this.d.board.filter(c => c && c.t === 'i' && c.c === 'camellia' && c.l === 2).length; if (n >= 1 && this.d.stats.merges > 0) { d.tut = 2; save(); return this.tutorial(); } }
+    this.tipC?.destroy(); this.tipC = null; const d = this.d;
+    if (d.tut >= 3) return this.tutGoHome();
+    if (d.tut === 1) { const n = d.board.filter(c => c && c.t === 'i' && c.c === 'camellia' && c.l === 2).length; if (n >= 1 && d.stats.merges > 0) { d.tut = 2; save(); return this.tutorial(); } }
+    let ring = null, y, t;
+    if (d.tut === 0) { const i = d.board.findIndex(c => c && c.t === 'g' && c.g === 'camellia'); t = '위 주문 카드가 손님이 원하는 물건이에요\n동백 바구니를 눌러 재료를 꺼내요 (2번)'; y = i >= 0 ? cy(i) - 170 : Y0 + 40; if (i >= 0) ring = { x: cx(i), y: cy(i), w: CS - 6, h: CS - 6 }; }
+    else if (d.tut === 1) { const ls = d.board.map((c, i) => c && c.t === 'i' && !c.b && c.c === 'camellia' && c.l === 1 ? i : -1).filter(i => i >= 0).slice(0, 2); t = '잘했어요! 같은 동백 잎 두 개를\n끌어다 겹치면 한 단계 위 물건이 돼요'; y = ls.length ? Math.min(...ls.map(cy)) - 170 : Y0 + 40;
+      if (ls.length === 2) { const x1 = Math.min(cx(ls[0]), cx(ls[1])), x2 = Math.max(cx(ls[0]), cx(ls[1])), y1 = Math.min(cy(ls[0]), cy(ls[1])), y2 = Math.max(cy(ls[0]), cy(ls[1])); ring = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: x2 - x1 + CS - 6, h: y2 - y1 + CS - 6 }; } }
+    else { const r = d.orders.findIndex(o => o.at <= Date.now() && o.items.every(it => this.has(it))), k = Math.max(0, r); t = r >= 0 ? '물건이 모였어요! 초록 완료를 눌러\n손님에게 팔고 코인을 받아요' : '주문 카드의 물건을 다 만들면\n완료를 눌러 손님에게 팔아요'; y = 560; ring = { x: 30 + k * 345 + 165, y: 146 + 250, w: 280, h: 84 }; }
+    this.tipC = coach(this, { y, t, ring });
+  }
+  // ④ 매장으로: 지금 할 일 코인이 모였으면 🏠 매장 단추를 가리킴 (아직이면 몇 개 더 모으면 되는지만 알려 줌)
+  tutGoHome(sold) {
+    const d = this.d, task = curTask(); if (d.tutB !== 1 || !task) return;
+    if (d.coins >= task.cost) { this.tipC = coach(this, { y: this.storeY - 150, t: '코인이 모였어요! 🏠 매장으로 가서\n가게를 고치고 꾸며요', ring: { x: 980, y: this.storeY, w: 150, h: 130 } }); return; }
+    if (sold) toast(this, `첫 판매 성공, 잘했어요! 코인 ●${task.cost - d.coins} 더 모으면 가게를 고칠 수 있어요`, 620);
   }
   onBack() { return goPrev(this); }
 }

@@ -4,12 +4,12 @@
 //   · 광고 · 확인 창 동안 소리 멈춤 + 이어하기 카운트다운 멈춤 (paused())
 //   · 상품: SHOP.ocean — continue(+5수 🪙20) · continue2(+5수 한 번 더 🪙40) · boosters(부스터 3종 🪙60) · deco(바다 장식 🪙100, item)
 //   · 소장자: 보상형 혜택은 광고 없이 바로 · 전용 장식 '달빛 고래' (겉모습만, 무료)
-import { bm } from './oad_bm.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { today } from './missions.js?v=0.99.49';
-import { AD_PER_DAY } from './core/cont.js?v=0.99.49';
-import { roll, noteEnd, eligible, giftMoves, consume } from './core/help.js?v=0.99.49';
-import { LANG } from './i18n.js?v=0.99.49';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { today } from './missions.js?v=0.99.50';
+import { AD_PER_DAY } from './core/cont.js?v=0.99.50';
+import { roll, noteEnd, eligible, giftMoves, consume } from './core/help.js?v=0.99.50';
+import { LANG } from './i18n.js?v=0.99.50';
 
 let hp = null, pausedNow = false;
 export function helloOnce() {
@@ -35,6 +35,8 @@ export function hasItem(sku) {
 function adState() { const d = load(); if (!d.bmAds || d.bmAds.day !== today()) d.bmAds = { day: today(), booster: 0, moves5: 0 }; return d.bmAds; }
 export const adLeft = k => Math.max(0, (AD_PER_DAY[k] || 0) - (adState()[k] || 0));
 export function noteAd(k) { const a = adState(); a[k] = (a[k] || 0) + 1; save(); }
+/* 화면에 보여 줄 '오늘 남은 횟수' = 게임 쪽 한도와 앱 쪽 한도 중 작은 값 (보이는 숫자 = 실제) */
+export const adShown = k => { const a = bm.info.ads || {}; return Math.min(adLeft(k), a.rewardLeft == null ? adLeft(k) : Math.max(0, a.rewardLeft)); };
 
 // ── 판 수 (처음 3판은 이어하기 권유 없음) ──
 export const plays = () => load().bmPlays || 0;
@@ -94,7 +96,7 @@ const TX = {
     contHope2: '정말 조금 남았어요 · 한 번 더 가 볼까요?', seeResult: '결과 보기', inGame: '보유 +5 이동 쓰기 ({0})', inGameCoins: '코인 {0}으로 +5 이동',
     short: '골드가 조금 모자라요 · 원어데이에서 충전할 수 있어요', login: '원어데이에 로그인하면 쓸 수 있어요', limit: '오늘은 여기까지 쓸 수 있어요',
     cancel: '다음에 해도 괜찮아요', adFail: '광고를 불러오지 못했어요', comeback: '역전 성공!',
-    boosterAd: '삼지창 1', boosterGold: '부스터 3종', boosterGot: '삼지창 1개를 받았어요!', boostersGot: '삼지창 · 섞기 · 교환 1개씩 받았어요!',
+    boosterAd: '삼지창 1', boosterAdOne: { hammer: '삼지창 1', shuffle: '섞기 1', swap: '교환 1' }, gotOne: '{0}개를 받았어요!', adLeftToday: '광고 보상 · 오늘 {0}번 남음', freeLeftToday: '소장자 무료 · 오늘 {0}번 남음', slotAd: '▶ 광고', slotFree: '무료', boosterGold: '부스터 3종', boosterGot: '삼지창 1개를 받았어요!', boostersGot: '삼지창 · 섞기 · 교환 1개씩 받았어요!',
     giftTitle: '응원 선물', giftLead: '{0}레벨에 {1}번째 도전이에요\n포기하지 않는 모습, 정말 멋져요!', giftWhat: '이번 도전은 이동 +{0}으로 시작',
     giftTake: '챙겨 받기', giftDecline: '혼자 해 볼게요', giftNote: '응원 선물 · 챙겨 드릴게요', giftOn: '응원 선물 이동 +{0}',
     decoBtn: '꾸미기', decoTitle: '바다 꾸미기', moonName: '달빛 고래', moonDesc: '소장자 전용 · 바다를 천천히 헤엄치는 달빛 몽이',
@@ -107,7 +109,7 @@ const TX = {
     contHope2: 'So close — one more go?', seeResult: 'See result', inGame: 'Use +5 Moves ({0})', inGameCoins: '+5 Moves for {0} coins',
     short: 'Not enough gold · top up in One a Day', login: 'Log in to One a Day to use this', limit: 'That is all for today',
     cancel: 'Maybe next time', adFail: 'Could not load the ad', comeback: 'Comeback!',
-    boosterAd: 'Trident 1', boosterGold: '3 Boosters', boosterGot: 'Got 1 Trident!', boostersGot: 'Got Trident, Shuffle and Swap!',
+    boosterAd: 'Trident 1', boosterAdOne: { hammer: 'Trident 1', shuffle: 'Shuffle 1', swap: 'Swap 1' }, gotOne: 'Got {0}!', adLeftToday: 'Ad rewards · {0} left today', freeLeftToday: 'Owner free · {0} left today', slotAd: '▶ Ad', slotFree: 'Free', boosterGold: '3 Boosters', boosterGot: 'Got 1 Trident!', boostersGot: 'Got Trident, Shuffle and Swap!',
     giftTitle: 'Cheer Gift', giftLead: 'Try #{1} on level {0}\nLove the persistence!', giftWhat: 'Start this try with +{0} moves',
     giftTake: 'Take it', giftDecline: 'I got this', giftNote: 'A little cheer gift for you', giftOn: 'Cheer gift +{0} moves',
     decoBtn: 'Decor', decoTitle: 'Sea Decor', moonName: 'Moonlight Whale', moonDesc: 'Owners only · Mongi glowing in moonlight',
@@ -116,8 +118,9 @@ const TX = {
   },
 };
 export function bt(key, ...args) {
-  const v = (TX[LANG()] || TX.en)[key] ?? TX.ko[key] ?? key;
-  return v.replace(/\{(\d)\}/g, (_, i) => args[i]);
+  const pick = o => key.split('.').reduce((a, k) => (a ? a[k] : undefined), o);
+  const v = pick(TX[LANG()] || TX.en) ?? pick(TX.ko) ?? key;
+  return typeof v !== 'string' ? key : v.replace(/\{(\d)\}/g, (_, i) => args[i]);
 }
 // 결제 · 광고 실패 사유 → 부드러운 안내
 export const failMsg = r => (r && { short: bt('short'), login: bt('login'), limit: bt('limit'), cancel: bt('cancel') }[r.reason]) || bt('adFail');

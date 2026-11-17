@@ -9,10 +9,10 @@
 //   peek    그림 미리 보기 🪙20 (use, 하루 10) : 숨은 물건 — 아래 칸 물건 전부의 자리를 3초 반짝 (QA 시트 #3, 2026-11-09) · 무료 길 = 코인 힌트 · 광고 단서 · 서버 표에 없으면 버튼 숨김
 //   clue    광고 보고 단서 자리 (하루 3) : 숨은 물건 돋보기 옆 — 아래 칸의 주요 단서(분홍) 자리를 짚어 줌 (QA 시트 #5)
 //   skip    광고 보고 다음 화 바로 (하루 2) : 4화부터 3시간 기다림 창 — 골드 instN 버튼 옆 같은 크기 (QA 시트 #7)
-import { bm } from './oad_bm.js?v=0.99.49';
-import { inOAD } from './oad.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { EPISODES } from './episodes.js?v=0.99.49';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { inOAD } from './oad.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { EPISODES } from './episodes.js?v=0.99.50';
 
 export { bm };
 export const HINT_COST = 10;                   // 힌트 = 게임 코인 10 (골드 상품 아님)
@@ -26,6 +26,12 @@ export const oadOn = () => !!bm.info.ok;
 export const owner = () => !!(bm.info.ok && bm.info.owned);
 export const price = sku => bm.price(sku);
 export const gold = () => (bm.info.ok ? bm.info.gold ?? 0 : 0);
+/* 광고 자리를 보여 줄지: 원어데이 안 + BM 그룹이 A(대조군)가 아닐 때 — 오늘 횟수를 다 쓴 자리는 숨기지 않고 '오늘 다 씀'으로 보여 줌 (QA 시트 11-16 #5 · #7: 버튼이 말없이 사라져 '수정 안 됨'으로 보였음) */
+export const adOn = () => oadOn() && bm.info.group !== 'A';
+/* 테스트 · 개발 앱에서 이 기기가 BM 그룹 A(대조군)일 때 — 광고 · 골드 단추가 통째로 꺼져 반영한 것이 안 보임 (앱 oneaday/shell/bm.js group: 테스트 서버도 기기 번호로 1/3 이 A)
+   실서버(env 'prod')는 그대로 조용히 두고, 테스트 앱에서만 '왜 안 보이는지 · 어디서 켜는지'를 알려 줌 */
+export const testOff = () => inOAD && !bm.info.test && oadOn() && bm.info.group === 'A' && !!bm.info.env && bm.info.env !== 'prod';
+export const TEST_NOTE = '테스트 안내 · 이 기기는 BM 그룹 A(대조군)라\n광고 · 골드 버튼이 꺼져 있어요\n원어데이 설정 › 테스트: 게임 안 BM 그룹 › B';
 
 // 앱 기록 (oad:track) — 원어데이 밖이면 아무것도 안 함
 export function track(name, p = {}) { if (!inOAD) return; try { window.parent.postMessage({ type: 'oad:track', name, p: { game: 'seek', ...p } }, '*'); } catch { /* */ } }
@@ -71,6 +77,8 @@ export async function buyNext(ep) {
 
 // 광고 보고 다음 화 바로 (4화부터 · 하루 2) — 골드 버튼과 같은 조건(10초 미만 남으면 숨김)
 export const skipShow = ep => { const ms = waitLeft(ep); return ms !== Infinity && ms >= INST_MIN && adLeft('skip') > 0; };
+/* 광고 자리는 있는데 오늘 횟수(이 자리 2번 · 앱 게임당 5번)를 다 쓴 상태 — 버튼을 숨기지 않고 '오늘 다 씀'으로 */
+export const skipSpent = ep => { const ms = waitLeft(ep); return ms !== Infinity && ms >= INST_MIN && adOn() && adLeft('skip') <= 0; };
 export async function skipByAd(ep) {
   if (!skipShow(ep)) return { ok: false, reason: waitLeft(ep) ? 'limit' : 'open' };
   const r = await watchAd('skip');

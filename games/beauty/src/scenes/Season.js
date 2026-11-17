@@ -1,13 +1,13 @@
 // 하루 목표 3개 → 시즌 점수 → 월간 시즌 보상 (무료 줄 · 프리미엄 줄은 결제가 열리면)
-import { W, H } from '../config.js?v=0.99.49';
-import { T, R, C, TS, btn, toast, sheet, rbox, chips, stamp } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { goPrev } from '../nav.js?v=0.99.49';
-import { screen } from '../hud.js?v=0.99.49';
-import { daily, season, claimGoal, giveReward, SEASON } from '../state.js?v=0.99.49';
-import { storeOpen } from '../store.js?v=0.99.49';
-import { ACHIEVE, REWARD, tierOf, achClaim, achReady, title } from '../achieve.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, R, C, TS, btn, toast, sheet, rbox, chips, stamp, firstTip, helpBtn } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { goPrev } from '../nav.js?v=0.99.50';
+import { screen } from '../hud.js?v=0.99.50';
+import { daily, season, claimGoal, giveReward, SEASON } from '../state.js?v=0.99.50';
+import { storeOpen } from '../store.js?v=0.99.50';
+import { ACHIEVE, REWARD, tierOf, achClaim, achReady, title } from '../achieve.js?v=0.99.50';
 
 export class SeasonScene extends Phaser.Scene {
   constructor() { super('Season'); }
@@ -15,6 +15,9 @@ export class SeasonScene extends Phaser.Scene {
     audio.music('bgm_shop');
     const d = load(), dl = daily(), se = season();
     let y = screen(this, '오늘의 목표');
+    /* 하는 법: 처음 한 번 자동 · 제목 옆 '?' 로 다시 */
+    const tip = f => firstTip(this, 'season', '오늘의 목표 · 시즌', ['매일 새 목표 3개가 나와요 · 다 채우면 ★ 버튼을 눌러 시즌 점수를 받아요', '시즌 점수가 쌓이면 아래 시즌 길의 무료 보상이 하나씩 열려요', '🏅 업적은 오래 모으는 기록 · 단계를 넘을 때마다 보상과 칭호!', '목표는 자정에, 시즌은 매달 새로 시작해요'], null, f);
+    helpBtn(this, 50 + 270, 190, () => tip(true)); tip(false);
     btn(this, W - 170, 190, 250, 84, `🏅 업적${achReady() ? ` ${achReady()}` : ''}`, () => this.achView(), { size: 30, style: achReady() ? 'rose' : 'cream' });
     dl.goals.forEach((g, i) => {
       const ok = g.have >= g.need, done = dl.done.includes(i);

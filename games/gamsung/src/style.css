@@ -293,3 +293,20 @@ body.ov #hud > *:not(#modal) { visibility: hidden; } body.ov #tags { display: no
 /* 0.2.1 화면 정리: 손님 머리 위 = 아이콘 하나 · 구름은 작게 */
 .bub.one { padding: 2px; gap: 0; border-radius: 50%; } .bub.one img { width: 30px; height: 30px; } .bub u { position: absolute; right: -4px; top: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--ink); color: #fff; font-size: 10px; font-weight: 900; text-decoration: none; display: grid; place-items: center; }
 .bub.story.one { padding: 5px 7px; border-radius: 14px; } .cloud.one { padding: 1px 5px; } .cloud.one i { font-size: 14px; }
+/* 0.2.2 QA 시트(2026-11-16) 반영 */
+/* 원두 그림: 🫘 이모지가 옛 폰에서 네모로 나와서 직접 그린 것으로 (18번) · 볶음마다 색 */
+.bni { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; text-decoration: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg transform='rotate(-35 9 14.5)'%3E%3Cellipse cx='9' cy='14.5' rx='5.3' ry='7.3' fill='%236B4226'/%3E%3Cpath d='M9 8c-2.1 2.5 2.1 4.4 0 6.5s2.1 4 0 6.5' fill='none' stroke='%23F3E3C8' stroke-width='1.3' stroke-linecap='round'/%3E%3C/g%3E%3Cg transform='rotate(32 16.5 8.5)'%3E%3Cellipse cx='16.5' cy='8.5' rx='4.4' ry='6.1' fill='%238A5A32'/%3E%3Cpath d='M16.5 3.2c-1.7 2 1.7 3.6 0 5.3s1.7 3.3 0 5.3' fill='none' stroke='%23F3E3C8' stroke-width='1.2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; }
+.bni.big { width: 30px; height: 30px; vertical-align: middle; } .bni.r-house { filter: brightness(1.45) saturate(.85); } .bni.r-single { filter: brightness(1.2); } .bni.r-night { filter: brightness(.62); }
+.pill.bean i .bni { width: 17px; height: 17px; vertical-align: 0; } .cheer > i .bni { width: 40px; height: 40px; } .chip.jobc i .bni { width: 16px; height: 16px; vertical-align: 0; } .jc i .bni { width: 21px; height: 21px; }
+/* 주문 · 일감 판: 접기 단추 · 비었으면 한 줄 (11번 · 6번) */
+.dfold { margin-left: 6px; width: 30px; height: 26px; border-radius: 9px; background: #F1E8DA; position: relative; flex: none; } .dfold::after { content: ''; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; border-right: 2.5px solid var(--sub); border-bottom: 2.5px solid var(--sub); transform: translate(-50%, -70%) rotate(45deg); } .dock.fold .dfold::after { transform: translate(-50%, -30%) rotate(-135deg); }
+.dock.slim { padding-bottom: 8px; } .dock.slim .dtabs { margin-bottom: 0; } .dock.slim .rail, .dock.slim .jobs, .dock.slim.jobm .jobs { display: none; }
+body.dslim .poemp, body.dslim .hint { bottom: calc(var(--sb) + 132px); } body.wide.dslim .poemp { bottom: calc(var(--sb) + 132px); } body.wide.dslim .hint { bottom: calc(var(--sb) + 14px); }
+/* 아래 단추 여섯 (동료 추가 · 8번) · 위 작은 단추에 원어데이가 늘 있음 (공통 의견) */
+.bottom { grid-template-columns: repeat(6, 1fr); gap: 5px; } .bb { font-size: 10.5px; } .bb .dot { right: 5px; }
+.minis { gap: 4px; } .minis .sb { width: 41px; } .minis .cp { padding: 3px 7px; } .minis .cp .pb { width: 56px; }
+.rtabs { display: flex; gap: 6px; margin: 8px 0 2px; } .rtabs button { flex: 1; background: #F1E8DA; color: var(--sub); border-radius: 12px; padding: 8px; font-size: 12.5px; font-weight: 900; } .rtabs button.on { background: var(--ink); color: #fff; }
+/* 쉬는 동료 표시 (1 · 2 · 3번) */
+.chip.jobc.zz { background: #3B2A20F0; color: #fff; padding: 3px 10px 3px 3px; font-size: 11px; } .chip.jobc.zz i { background: #ffffff26; width: 22px; height: 22px; font-size: 12px; } .chip.jobc.zz::after { border-top-color: #3B2A20F0; }
+/* 꾸미기: 가구 그림 = 실제 모델 (17번) · 옷 탭 (10번) */
+.fi i .fth { width: 62px; height: 62px; display: block; margin: -6px auto -4px; object-fit: contain; } .fi.wear i .sw { display: block; width: 34px; height: 40px; margin: 3px auto 5px; border-radius: 9px 9px 14px 14px; box-shadow: inset 0 -8px 0 #0000001f, 0 2px 0 var(--line); text-decoration: none; } .fi.wear.cur { outline: 2px solid var(--red); }

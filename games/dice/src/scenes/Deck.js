@@ -1,11 +1,12 @@
 // 룬 컬렉션: 덱 3개(프리셋) · 칸 골라 룬 넣기 · 덱 조합 보너스 · 24룬 (희귀도) · 카드+수정으로 등급업
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load } from '../save.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR, SYNERGY, synergiesOf } from '../core/sim.js?v=0.99.49';
-import * as P from '../core/predict.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.50';
+import { pushBack } from '../oad.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load } from '../save.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { RUNES, RUNE_ORDER, RARITY, RARITY_NAME, RARITY_COLOR, SYNERGY, synergiesOf } from '../core/sim.js?v=0.99.50';
+import * as P from '../core/predict.js?v=0.99.50';
 
 export const DESC = {
   flame: '맞은 적 주변까지 불태워요', frost: '맞은 적을 느리게 해요', storm: '근처 적 둘에게 번개가 이어져요', venom: '독이 쌓여 계속 피해를 줘요',
@@ -35,6 +36,7 @@ export class DeckScene extends Phaser.Scene {
   constructor() { super('Deck'); }
   create(data = {}) {
     const d = load(); M.decks();
+    this.rankFx = null;   /* 씬 재사용: 지난번 등급업 연출 참조 지움 */
     this.slot = data.slot ?? this.slot ?? 0;
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(W / 2, H / 2, W, H, 0x05061A, 0.62);
@@ -165,12 +167,12 @@ export class DeckScene extends Phaser.Scene {
       if (lk && !d.newRunes[r]) T(this, x + cw / 2 - 14, y - ch / 2 + 30, `✦${lk}`, 20, C.gold, { ox: 1, w: 900 });
       // 등급업 가능(카드 · 수정 모두 충분): 글자 배지로 분명하게 (QA 12) · 카드만 모였으면 ▲
       if (M.canUpgrade(r)) {
-        const bg = this.add.graphics(); bg.fillStyle(0x36C77B, 1).fillRoundedRect(x - cw / 2 + 14, by - 17, cw - 28, 34, 17); bg.lineStyle(2, 0xBFFFD8, 0.8).strokeRoundedRect(x - cw / 2 + 14, by - 17, cw - 28, 34, 17);
-        const bt = T(this, x, by, t < M.MAX_TIER ? '▲ 등급업 가능' : '✦ 돌파 가능', 19, '#06301B', { w: 900, shadow: false });
+        const bg = this.add.graphics(); bg.fillStyle(0x36C77B, 1).fillRoundedRect(x - cw / 2 + 10, by - 20, cw - 20, 40, 20); bg.lineStyle(2, 0xBFFFD8, 0.8).strokeRoundedRect(x - cw / 2 + 10, by - 20, cw - 20, 40, 20);
+        const bt = T(this, x, by, t < M.MAX_TIER ? '▲ 등급업 가능' : '✦ 돌파 가능', 26, '#06301B', { w: 900, shadow: false, fit: cw - 36 });
         this.tweens.add({ targets: [bg, bt], alpha: 0.7, duration: 650, yoyo: true, repeat: -1 });
       } else if (ready) { const up = T(this, x + cw / 2 - 16, y + ch * 0.38, '▲', 22, C.green, { ox: 1, w: 900 }); this.tweens.add({ targets: up, y: up.y - 6, duration: 500, yoyo: true, repeat: -1 }); }
     } else T(this, x, y + ch * 0.38, RARITY_NAME[rar], 20, hex(col), { w: 800 });
-    if (d.newRunes[r]) { const tg = this.add.graphics(); tg.fillStyle(0xFF5A9A, 1).fillRoundedRect(x + cw / 2 - 76, y - ch / 2 + 16, 64, 30, 15); const nt = T(this, x + cw / 2 - 44, y - ch / 2 + 31, 'NEW', 18, '#FFFFFF', { w: 900, shadow: false }); this.tweens.add({ targets: [tg, nt], alpha: 0.55, duration: 600, yoyo: true, repeat: -1 }); }
+    if (d.newRunes[r]) { const tg = this.add.graphics(); tg.fillStyle(0xFF5A9A, 1).fillRoundedRect(x + cw / 2 - 86, y - ch / 2 + 12, 78, 38, 19); const nt = T(this, x + cw / 2 - 47, y - ch / 2 + 31, 'NEW', 26, '#FFFFFF', { w: 900, shadow: false }); this.tweens.add({ targets: [tg, nt], alpha: 0.55, duration: 600, yoyo: true, repeat: -1 }); }
     const z = this.add.zone(x, y, cw, ch).setInteractive({ useHandCursor: true });
     z.on('pointerup', () => { if (this.dragMoved) return; audio.play('sfx_click', { volume: 0.5 }); this.detail(r); });
   }
@@ -208,8 +210,7 @@ export class DeckScene extends Phaser.Scene {
       c.add(btn(this, 200, by, 360, 120, lk >= M.LIMIT_MAX ? '완료' : '한계 돌파', () => {
         if (lk >= M.LIMIT_MAX) return;
         if (!M.limitBreak(r)) return toast(this, have < lc.cards ? '카드가 부족해요' : '수정이 부족해요', C.sub);
-        audio.play('sfx_awaken', { volume: 0.8 }); this.cameras.main.flash(300, 255, 210, 120); p.close(); toast(this, `${R.name} 한계 돌파 ✦${lk + 1}!`, C.gold);
-        this.time.delayedCall(160, () => this.scene.restart({ slot: this.slot, filter: this.filter, y: this.grid ? this.grid.y : 0 }));
+        p.close(); this.rankUp(r, { limit: true, from: lk, to: lk + 1, cards: lc.cards, cost: lc.crystals });
       }, { style: okL ? 'gold' : 'ghost', size: 32 }));
       return;
     }
@@ -218,9 +219,73 @@ export class DeckScene extends Phaser.Scene {
     if (have < need) { c.add(btn(this, 200, by, 360, 120, '카드 사러 가기', () => { p.close(); this.go('Altar', { shop: true }); }, { style: 'indigo', size: 30 })); return; }
     const ub = btn(this, 200, by, 360, 120, '등급업', () => {
       if (!M.upgrade(r)) return toast(this, have < need ? '카드가 부족해요 · 오늘의 상점 · 제단에서 모아요' : '수정이 부족해요', C.sub);
-      audio.play('sfx_awaken', { volume: 0.6 }); this.cameras.main.flash(200, 255, 230, 160); p.close(); this.scene.restart({ slot: this.slot, filter: this.filter, y: this.grid ? this.grid.y : 0 }); toast(this, `${R.name} ★${t + 1}!`, C.gold);
+      p.close(); this.rankUp(r, { from: t, to: t + 1, cards: need, cost });
     }, { style: ok ? 'indigo' : 'ghost', size: 34 }); c.add(ub);
 
+  }
+  /* 등급업 전용 연출 (QA 29 · 2026-11-16 '등급업 체감 강화 · 과정을 직관적으로'): 예전엔 화면 번쩍 + 알림 한 줄 뒤 바로 목록으로 돌아가 무엇이 달라졌는지 안 보였음
+     → 화면을 덮고 ① 쓴 카드 · 수정이 룬으로 빨려 들어감 ② 룬이 떨리며 빛이 모임 ③ 터지며 ★ 가 한 칸 오름(옛 ★ 는 밀려 올라가고 새 ★ 가 금빛으로)
+       ④ 달라진 능력치(피해 전 → 후 · 몇 % ) ⑤ [확인] — 한계 돌파도 같은 연출(✦). 저장은 이미 끝난 뒤라 연출 중 나가도 잃는 것 없음
+     this.rankFx = { r, from, to, shown(터진 뒤 true), close } (시험: tools/qa1116_e2e.mjs C) */
+  rankUp(r, o) {
+    const R = RUNES[r], col = R.color, cx = W / 2, cy = Math.round(H * 0.4), mark = o.limit ? '✦' : '★';
+    const root = this.add.container(0, 0).setDepth(2500), add = x => { root.add(x); return x; };
+    const dim = add(this.add.rectangle(W / 2, H / 2, W, H, 0x04060F, 0.9).setInteractive().setAlpha(0));
+    this.tweens.add({ targets: dim, alpha: 1, duration: 180 });
+    const rays = add(this.add.image(cx, cy, 'rays').setTint(col).setBlendMode('ADD').setScale(0.2).setAlpha(0));
+    const halo = add(this.add.image(cx, cy, 'glow').setTint(col).setBlendMode('ADD').setScale(2).setAlpha(0.25));
+    const die = add(this.add.container(cx, cy)); die.add([this.add.image(0, 0, `die_${r}`).setDisplaySize(300, 300), this.add.image(0, 0, `rune_${r}`).setDisplaySize(172, 172)]);
+    die.setScale(0.7); this.tweens.add({ targets: die, scale: 1, duration: 260, ease: 'Back.easeOut' });
+    add(T(this, cx, cy - 372, o.limit ? 'LIMIT BREAK' : 'RANK UP', 30, C.gold, { w: 900, ls: 10 }));
+    add(T(this, cx, cy - 300, R.name, 64, C.text, { w: 900 }));
+    const old = add(T(this, cx, cy + 250, `${mark}${o.from}`, 84, C.sub, { w: 900 }));
+    const fx = this.rankFx = { r, from: o.from, to: o.to, shown: false, closed: false };
+    /* ① 재료가 빨려 들어감: 카드(룬 색 조각) 는 아래에서 · 수정(하늘빛)은 위 오른쪽에서 */
+    const n = Math.min(8, Math.max(3, o.cards)), bits = [];
+    for (let i = 0; i < n + 4; i++) {
+      const card = i < n, a = card ? Math.PI * (0.15 + 0.7 * i / (n - 1)) : 0;
+      const b = add(card ? this.add.image(cx + Math.cos(a) * 420, cy + 520 + Math.sin(a) * 90, `die_${r}`).setDisplaySize(76, 76).setAngle((i - n / 2) * 9)
+        : T(this, W - 150 - (i - n) * 46, 150 + (i - n) * 30, '◆', 44, '#8FE3FF', { w: 900 }));
+      b.setAlpha(0); bits.push(b);
+      this.tweens.add({ targets: b, alpha: 1, duration: 120, delay: 200 + i * 55 });
+      this.tweens.add({ targets: b, x: cx, y: cy, scale: b.scale * 0.3, angle: 0, duration: 330, delay: 320 + i * 55, ease: 'Cubic.easeIn', onComplete: () => {
+        b.destroy(); if (fx.closed) return; audio.play('sfx_click', { volume: 0.35, gap: 40, rate: 1 + i * 0.05 });
+        halo.setAlpha(Math.min(0.9, halo.alpha + 0.06)); halo.setScale(halo.scale + 0.12); this.tweens.add({ targets: die, scale: 1.06, duration: 60, yoyo: true });
+      } });
+    }
+    const t1 = 320 + (n + 4) * 55 + 340;
+    /* ② 떨리며 빛이 모임 */
+    this.time.delayedCall(t1, () => { if (fx.closed) return; this.tweens.add({ targets: die, x: cx + 7, duration: 36, yoyo: true, repeat: 7 }); this.tweens.add({ targets: halo, scale: halo.scale * 0.5, alpha: 1, duration: 300, ease: 'Cubic.easeIn' }); });
+    /* ③ 터짐 + ★ 한 칸 오름 ④ 능력치 ⑤ 확인 */
+    this.time.delayedCall(t1 + 330, () => {
+      if (fx.closed) return;
+      audio.play('sfx_awaken', { volume: o.limit ? 0.85 : 0.7 }); this.cameras.main.flash(240, 255, 230, 170);
+      rays.setAlpha(o.limit ? 0.9 : 0.7); this.tweens.add({ targets: rays, scale: 2.3, duration: 420, ease: 'Cubic.easeOut' }); this.tweens.add({ targets: rays, angle: 360, duration: 9000, repeat: -1 });
+      for (let k = 0; k < 2; k++) { const rg = add(this.add.image(cx, cy, 'ring').setTint(k ? 0xFFFFFF : col).setBlendMode('ADD').setScale(0.4).setAlpha(0.9)); this.tweens.add({ targets: rg, scale: 4 + k * 1.5, alpha: 0, duration: 520 + k * 160, ease: 'Cubic.easeOut', onComplete: () => rg.destroy() }); }
+      halo.setScale(4.2).setAlpha(0.55); this.tweens.add({ targets: halo, alpha: 0.3, scale: 3.6, duration: 900, yoyo: true, repeat: -1 });
+      die.setScale(1.3); this.tweens.add({ targets: die, scale: 1, duration: 420, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: old, x: cx - 150, scale: 0.62, alpha: 0.7, duration: 260, ease: 'Cubic.easeOut' });
+      const arrow = add(T(this, cx - 30, cy + 250, '→', 52, C.sub, { w: 900 }).setAlpha(0)); this.tweens.add({ targets: arrow, alpha: 1, duration: 200, delay: 120 });
+      const now = add(T(this, cx + 120, cy + 250, `${mark}${o.to}`, 112, C.gold, { w: 900 }).setScale(2.4).setAlpha(0));
+      this.tweens.add({ targets: now, scale: 1, alpha: 1, duration: 300, delay: 140, ease: 'Back.easeOut' });
+      const per = o.limit ? 0.3 : 0.15, lvl = t => 1 + 0.15 * (t - 1), d1 = r1 => Math.round(r1 * 10) / 10;
+      const tb = o.limit ? M.MAX_TIER + 2 * o.from : o.from, ta = o.limit ? M.MAX_TIER + 2 * o.to : o.to;
+      const l1 = add(T(this, cx, cy + 372, R.dmg ? `피해  ${d1(R.dmg * lvl(tb))}  →  ${d1(R.dmg * lvl(ta))}` : '룬의 힘이 한 단계 강해졌어요', 44, C.text, { w: 900 }).setAlpha(0));
+      const l2 = add(T(this, cx, cy + 434, R.dmg ? `기본 피해의 +${Math.round(per * 100)}% 만큼 더 세졌어요` : `등급마다 효과 +${Math.round(per * 100)}%`, 30, C.green, { w: 800 }).setAlpha(0));
+      const l3 = add(T(this, cx, cy + 486, `카드 ${o.cards}장 · ◆${fmt(o.cost)} 사용`, 26, C.sub, { w: 800 }).setAlpha(0));
+      [l1, l2, l3].forEach((l, i) => this.tweens.add({ targets: l, alpha: 1, y: l.y - 10, duration: 240, delay: 420 + i * 120 }));
+      const okB = add(btn(this, cx, Math.min(H - 170, cy + 640), 460, 124, '확인', () => fx.close(), { style: 'gold', size: 40 }).setAlpha(0));
+      this.tweens.add({ targets: okB, alpha: 1, duration: 200, delay: 800 });
+      this.time.delayedCall(1000, () => { fx.shown = true; });
+    });
+    /* 닫기: 터진 뒤에만 (바탕 · 확인 · 뒤로가기) — 닫히면 컬렉션을 다시 그림 */
+    const unback = pushBack(() => { if (fx.shown) fx.close(); return true; });
+    fx.close = () => {
+      if (fx.closed || !fx.shown) return; fx.closed = true; unback();
+      this.tweens.add({ targets: root, alpha: 0, duration: 160, onComplete: () => { root.destroy(); this.rankFx = null; this.scene.restart({ slot: this.slot, filter: this.filter, y: this.grid ? this.grid.y : 0 }); } });
+    };
+    root.once('destroy', unback);
+    dim.on('pointerup', () => fx.close());
   }
   // 덱에 넣기: 바꿀 룬을 직접 고름 (덱 5칸 중 하나)
   swapPick(r) {

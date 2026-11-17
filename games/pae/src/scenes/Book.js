@@ -1,17 +1,17 @@
 // 도감: 족보 · 계절신 12 · 부적(장터 등장 확률 공개) · 패 48장 — 판마다 조금씩 채워짐
-import { W, H, C } from '../config.js?v=0.99.49';
-import { load } from '../save.js?v=0.99.49';
-import { txt, button, roundButton, boxTex } from '../ui.js?v=0.99.49';
-import { DECK, yakuOrder } from '../meta.js?v=0.99.49';
-import { yakuRow } from '../yakuview.js?v=0.99.49';
-import { GODS } from '../core/gods.js?v=0.99.49';
-import { CHARMS, RARITY_P, RARITY_NAME, COST } from '../core/charms.js?v=0.99.49';
+import { W, H, C } from '../config.js?v=0.99.50';
+import { load } from '../save.js?v=0.99.50';
+import { txt, button, roundButton, boxTex } from '../ui.js?v=0.99.50';
+import { DECK, yakuOrder } from '../meta.js?v=0.99.50';
+import { yakuRow } from '../yakuview.js?v=0.99.50';
+import { GODS } from '../core/gods.js?v=0.99.50';
+import { CHARMS, RARITY_P, RARITY_NAME, COST } from '../core/charms.js?v=0.99.50';
 
 const TABS = [['yaku', '족보'], ['gods', '계절신'], ['charms', '부적'], ['cards', '패']];
 
 export class BookScene extends Phaser.Scene {
   constructor() { super('Book'); }
-  init(data) { this.tab = (data && data.tab) || 'yaku'; }
+  init(data) { this.tab = (data && data.tab) || 'yaku'; this.sys.settings.data = null; /* 넘겨받은 값은 한 번만 (Home 과 같은 이유) */ }
   create() {
     this.add.rectangle(W / 2, H / 2, W, H, 0x0a0809, 1);
     const bg = this.add.image(W / 2, H / 2, 'bg_winter'); bg.setScale(Math.max(W / bg.width, H / bg.height)).setAlpha(0.45);

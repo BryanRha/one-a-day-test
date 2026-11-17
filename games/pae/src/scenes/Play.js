@@ -1,17 +1,18 @@
 // 판 화면: 관문 소개 → 손패 고르기(점수 미리보기) → 내기(점수 연출) / 바람 → 통과 · 장터 → 다음 달 … → 판 끝
 //   규칙은 전부 core/run.js(엔진) — 이 파일은 보여 주기와 입력만
-import { W, H, C, N } from '../config.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.99.49';
-import { CardView, CW, CH } from '../cards.js?v=0.99.49';
-import { ambient, burst } from '../fx.js?v=0.99.49';
-import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.99.49';
-import { yakuRow } from '../yakuview.js?v=0.99.49';
-import { Run, TOOL, TUNE } from '../core/run.js?v=0.99.49';
-import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.99.49';
-import { GOD } from '../core/gods.js?v=0.99.49';
-import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.99.49';
+import { W, H, C, N } from '../config.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.99.50';
+import { CardView, CW, CH } from '../cards.js?v=0.99.50';
+import { ambient, burst } from '../fx.js?v=0.99.50';
+import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.99.50';
+import { yakuRow } from '../yakuview.js?v=0.99.50';
+import { Run, TOOL, TUNE } from '../core/run.js?v=0.99.50';
+import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.99.50';
+import { GOD } from '../core/gods.js?v=0.99.50';
+import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.99.50';
+import { toOAD } from '../exit.js?v=0.99.50';
 
 const S_HAND = 0.52, S_STAGE = 0.42;
 const wait = (sc, ms) => new Promise(r => sc.time.delayedCall(Math.max(0, ms / (sc.speed || 1)), r));
@@ -612,13 +613,17 @@ export class PlayScene extends Phaser.Scene {
 
   // ── 메뉴 · 족보 표 · 덱 보기 ──
   menu() {
-    const m = modal(this, 820, 900, { title: '잠깐 쉬기' });
-    m.add(button(this, 0, -200, 560, 120, '계속하기', () => m.close(), { style: 'red' }));
-    m.add(button(this, 0, -50, 560, 110, '족보 표', () => { m.close(); this.yakuTable(); }, { style: 'dark' }));
+    const m = modal(this, 820, 1040, { title: '잠깐 쉬기' });
+    m.add(button(this, 0, -270, 560, 120, '계속하기', () => m.close(), { style: 'red' }));
+    m.add(button(this, 0, -120, 560, 110, '족보 표', () => { m.close(); this.yakuTable(); }, { style: 'dark' }));
     const sLabel = () => audio.isOn() ? '소리 끄기' : '소리 켜기';
-    const sb = button(this, 0, 90, 560, 110, sLabel(), () => { const on = !audio.isOn(); audio.setAll(on); sb.setLabel(sLabel()); }, { style: 'dark' }); m.add(sb);
-    m.add(button(this, 0, 230, 560, 110, '처음 화면으로', () => { m.close(); this.saveRun(); track('run_quit', { gate: this.run.gate, phase: this.run.phase, sec: this.sec(), first: this.first ? 1 : 0, how: 'menu' }); const d = load(); d.runOpen = false; save(); this.scene.start('Home'); }, { style: 'dark' }));
-    m.add(txt(this, 0, 340, '판은 저장돼요 · 처음 화면에서 「이어서 하기」', 26, C.dim, { thick: 2, weight: '700' }));
+    const sb = button(this, 0, 20, 560, 110, sLabel(), () => { const on = !audio.isOn(); audio.setAll(on); sb.setLabel(sLabel()); }, { style: 'dark' }); m.add(sb);
+    /* 판을 저장하고 나감 — 처음 화면 · 원어데이 어느 쪽이든 다음에 「이어서 하기」로 그대로 */
+    const park = how => { m.close(); this.saveRun(); track('run_quit', { gate: this.run.gate, phase: this.run.phase, sec: this.sec(), first: this.first ? 1 : 0, how }); const d = load(); d.runOpen = false; save(); };
+    m.add(button(this, 0, 160, 560, 110, '처음 화면으로', () => { park('menu'); this.scene.start('Home', {}); }, { style: 'dark' }));
+    /* 원어데이로 (QA 2): 판 도중에도 원어데이로 돌아갈 길 — 앱 안 = 나가기 · 단독 링크 = 원어데이 사이트 */
+    m.add(button(this, 0, 300, 560, 110, '원어데이로', () => { park('oad'); toOAD(); }, { style: 'dark' }));
+    m.add(txt(this, 0, 410, '판은 저장돼요 · 처음 화면에서 「이어서 하기」', 26, C.dim, { thick: 2, weight: '700' }));
   }
   yakuTable() {
     track('yaku_open', { from: 'play', first: this.first ? 1 : 0 });

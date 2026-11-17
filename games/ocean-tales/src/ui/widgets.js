@@ -1,7 +1,8 @@
 // 공용 UI 위젯: 버튼 · 아이콘 버튼 · 팝업 · 토스트
-import { W, H, TXT, FONT, INK } from '../config.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { pushBack } from '../oad.js?v=0.99.49';
+import { W, H, TXT, FONT, INK } from '../config.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { pushBack } from '../oad.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
 
 // 9-slice 버튼 (btn_primary / btn_secondary) + 글자
 export function button(scene, x, y, label, onClick, { kind = 'primary', width = 480, height = 150, size = 56 } = {}) {
@@ -86,6 +87,24 @@ export function popup(scene, { title, width = 900, height = 1100, onClose, close
   layer.pin = () => pin(layer);
   return layer;
 }
+
+/* 화면 흔들림은 여기 한 곳에서 (QA 6 '흔들림이 강함'):
+   · 예전: 세기 0.008~0.015 를 그대로 → 가로 1080 기준 ±9~16px, 세로는 화면 길이에 비례해 그 두 배(긴 폰일수록 더 큼)
+   · 지금: 세기 0.5배 · 길이 0.7배 · 상한 ±8px(가로 · 세로 같은 픽셀 — 가장 센 연출 기준 가로 절반 · 세로 1/4) · 설정에서 끌 수 있음(save.shake) */
+export const SHAKE = { amp: 0.5, time: 0.7, maxPx: 8 };
+export function quake(scene, ms, amt) {
+  if (load().shake === false) return 0;
+  const px = Math.min(SHAKE.maxPx, amt * W * SHAKE.amp), cam = scene.cameras.main;
+  cam.shake(Math.round(ms * SHAKE.time), new Phaser.Math.Vector2(px / cam.width, px / cam.height));
+  return px;
+}
+/* 켜짐/꺼짐 글자 단추 (설정 줄) */
+export function toggleButton(scene, x, y, getOn, toggle, onText, offText) {
+  const b = button(scene, x, y, getOn() ? onText : offText, () => { const on = toggle(); b.label.setText(on ? onText : offText); b.setAlpha(on ? 1 : 0.75); }, { kind: 'secondary', width: 200, height: 104, size: 38 });
+  b.setAlpha(getOn() ? 1 : 0.75);
+  return b;
+}
+export function toggleShake() { const d = load(); d.shake = d.shake === false; save(); return d.shake; }
 
 export function pin(o) {
   if (o.setScrollFactor) o.setScrollFactor(0);

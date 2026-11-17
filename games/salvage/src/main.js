@@ -1,26 +1,27 @@
 // 수달 인양단 — 시작 · 렌더 · 장면 전환 · 시험 훅
-import { forecast, setWxTest } from './data/weather.js?v=0.99.49'; /* M4-B 판 상태 5 */
+import { forecast, setWxTest } from './data/weather.js?v=0.99.50'; /* M4-B 판 상태 5 */
 import * as THREE from 'three';
-import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.49';
-import { FX, shakeMul } from './fx.js?v=0.99.49';
-import { Raid } from './raid.js?v=0.99.49';
-import { UI } from './ui.js?v=0.99.49';
-import { S, load, save, stashCap } from './save.js?v=0.99.49';
-import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.49';
-import * as E from './econ.js?v=0.99.49';
-import { installBack } from './oad.js?v=0.99.49';
-import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.49';
-import { resolve, lookOf, grantEarned } from './look.js?v=0.99.49';
-import { initBM, attachRaid } from './bmflow.js?v=0.99.49';
-import { Story, artUrl } from './story_ui.js?v=0.99.49';
-import { HomeFac } from './home_fac.js?v=0.99.49';
-import { FurnUI } from './furn_ui.js?v=0.99.49'; /* M5-D 은신처 가구 30 */
-import { petSpec, petScale, makeBandi } from './pet_raid.js?v=0.99.49'; /* M5-C 몽이 5단 겉모습 · 반디 */
-import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.49';
-import * as TH from './threat.js?v=0.99.49'; /* M4-A 위협 곡선 · 주간 변주 */
-import * as CHL from './challenge.js?v=0.99.49'; import * as AB from './abyss.js?v=0.99.49'; import * as AC from './ach.js?v=0.99.49'; import * as M5 from './ui_m5b.js?v=0.99.49'; /* M5-B 주간 도전 · 깊은 물 · 업적 50 */
-import { DUCK, duckFov, duckCam, duckRaidTick, VEIL_STATS } from './look_duck.js?v=0.99.49'; /* 시안용 ?look=duck */
-import { m6cRaid } from './happen.js?v=0.99.49'; /* M6-C 판 중 사건 5 · 떠돌이 두목 예고 · 색약 보조 판 장치 */
+import { loadAll, makeIcons, prop, charClone, A, loadPack, packReady } from './assets.js?v=0.99.50';
+import { FX, shakeMul } from './fx.js?v=0.99.50';
+import { Raid } from './raid.js?v=0.99.50';
+import { UI } from './ui.js?v=0.99.50';
+import { S, load, save, stashCap } from './save.js?v=0.99.50';
+import { ITEMS, FACILITIES, DAILY_SORTIES } from './data.js?v=0.99.50';
+import * as E from './econ.js?v=0.99.50';
+import { installBack } from './oad.js?v=0.99.50';
+import { V, measure } from './view.js?v=0.99.50'; /* 판 크기 (PC 가운데 판) */
+import { makeHero, ensure, ready, tailWag, HERO_SCALE } from './hero.js?v=0.99.50';
+import { resolve, lookOf, grantEarned } from './look.js?v=0.99.50';
+import { initBM, attachRaid } from './bmflow.js?v=0.99.50';
+import { Story, artUrl } from './story_ui.js?v=0.99.50';
+import { HomeFac } from './home_fac.js?v=0.99.50';
+import { FurnUI } from './furn_ui.js?v=0.99.50'; /* M5-D 은신처 가구 30 */
+import { petSpec, petScale, makeBandi } from './pet_raid.js?v=0.99.50'; /* M5-C 몽이 5단 겉모습 · 반디 */
+import { mergeGeometries } from '../lib/BufferGeometryUtils.js?v=0.99.50';
+import * as TH from './threat.js?v=0.99.50'; /* M4-A 위협 곡선 · 주간 변주 */
+import * as CHL from './challenge.js?v=0.99.50'; import * as AB from './abyss.js?v=0.99.50'; import * as AC from './ach.js?v=0.99.50'; import * as M5 from './ui_m5b.js?v=0.99.50'; /* M5-B 주간 도전 · 깊은 물 · 업적 50 */
+import { DUCK, duckFov, duckCam, duckRaidTick, VEIL_STATS } from './look_duck.js?v=0.99.50'; /* 시안용 ?look=duck */
+import { m6cRaid } from './happen.js?v=0.99.50'; /* M6-C 판 중 사건 5 · 떠돌이 두목 예고 · 색약 보조 판 장치 */
 
 const Q = new URLSearchParams(location.search);
 setWxTest({ wx: Q.get('wx'), week: Q.has('week') ? Q.get('week') : undefined }); /* ?wx= · ?week= 시험값 → 출격 준비 예보 카드와 실제 판이 같은 값 (M4 마무리) */
@@ -49,7 +50,7 @@ const story = app.story = new Story(app, ui);   /* v0.5 이야기 (튜토리얼 
 let raid = null, hide = null, last = performance.now(), camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
 
 function resize() {
-  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
+  const { w, h } = measure(); renderer.setSize(w, h, false); /* 판(#frame) 크기 — 창 크기가 아님 (view.js) */ camera.aspect = w / h;
   /* 세로 화면에서 가로 12m 쯤 보이게 */
   camera.fov = THREE.MathUtils.clamp(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(22.5)) * Math.max(1, 0.5 / camera.aspect)) * 180 / Math.PI, 38, 62);
   if (DUCK.on) duckFov(camera, app.camW); /* 시안용: 세로 시야 42° · 가로 폭 = camW */
@@ -257,7 +258,7 @@ function frame(now) {
     if (DUCK.on) duckCam(camera, camLook, raid.kick, 0.4 + 0.6 * sm, shakeV); /* 시안용 약 68° */
     if (app.camOverride) { const o = app.camOverride; camera.position.set(o.x, o.y, o.z + o.back); camera.lookAt(o.x, 0, o.z); } /* 시험용 전체 보기 */
     sun.position.set(p.x + 8, 22, p.z + 6); sun.target.position.set(p.x, 0, p.z);
-    fx.update(rdt, camera, innerWidth, innerHeight);
+    fx.update(rdt, camera, V.w, V.h);
     duckRaidTick(raid, rdt); ui.drawVeil(raid, camera); story.raidTick(rdt); ui.topTick(rdt);   /* 위쪽 한 줄 대기열 · 머리 위 칭찬 (v0.5.1) */
   } else {
     /* 은신처 카메라: 천천히 숨쉬기 */
@@ -286,10 +287,10 @@ async function boot() {
   grantEarned(S); E.syncPets(S); try { await ensure([...resolve(lookOf(S, { both: true })).files, ...petSpec(resolve({ pet: true, look: S.look }), S.pets?.mong || 1).files]); } catch (e) { console.warn('장착 파일', e); }
   app.loadMs = Math.round(performance.now() - t0); app.assetBytes = A.bytes;
   if (first) setTimeout(app.hideLoading, 6000); else app.hideLoading();   /* 첫 실행은 프롤로그가 걷음 (6초 안전) */
-  installBack({ back: () => { if (raid) { ui.toggleBag(false); return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
+  installBack({ back: () => { if (raid) { if (ui.invOpen) ui.toggleBag(false); else ui.pauseMenu(); /* v0.9.1: 판 안 뒤로가기 = 가방 닫기 → 멈춤 창 (QA 시트 3번) */ return true; } if (ui.root.className !== 'scr-hideout') { ui.hideout(); return true; } return false; } });
   initBM(app); ui.hideout();
   app.ready = true; setTimeout(() => app.preloadMaps(), 1500);
-  if (app.bot) { const m = await import('./bot.js?v=0.99.49'); m.installBot(app); }
+  if (app.bot) { const m = await import('./bot.js?v=0.99.50'); m.installBot(app); }
   requestAnimationFrame(frame);
 }
 /* 시험 훅 */

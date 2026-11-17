@@ -3,19 +3,19 @@
 //   · 세로: 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 띠는 원작 그림 그대로 · 카드 줄(HERO + 병사 6)은 아래 엄지 자리
 //   · 병사 · 영웅을 누르면 원작 메뉴: 전신 일러스트 · 이름 · lv · 능력치 4줄 · 판매 · 전직(다음 직업 미리보기) · 레벨 업 · 필살기 → 확인 창(예/아니오) → 전직 컷인(일러스트 바뀜)
 //   · 메뉴가 열려 있으면 판 시간이 멈춘다 (원작 update_GAME_PLAYING: 메뉴 상태에선 효과만 움직임)
-import { W, H, C, SCALE } from '../config.js?v=0.99.49';
-import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.49';
-import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.49';
-import * as M from '../core/meta.js?v=0.99.49';
-import { BUNDLE } from '../core/balance.js?v=0.99.49';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.49';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.99.49';
-import { audio, S } from '../audio.js?v=0.99.49';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.99.49';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.49';
-import { T0, img, num, label, inRect } from './orig.js?v=0.99.49';
-import { pushBack } from '../oad.js?v=0.99.49';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.49';
+import { W, H, C, SCALE } from '../config.js?v=0.99.50';
+import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.50';
+import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.50';
+import * as M from '../core/meta.js?v=0.99.50';
+import { BUNDLE } from '../core/balance.js?v=0.99.50';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.50';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.99.50';
+import { audio, S } from '../audio.js?v=0.99.50';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.99.50';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.50';
+import { T0, img, num, label, inRect } from './orig.js?v=0.99.50';
+import { pushBack } from '../oad.js?v=0.99.50';
+import { bm, can, owned, track } from '../bmflow.js?v=0.99.50';
 
 const US = 2.25;                 // 원작 UI 배율 (가로 화면 480 → 1080)
 const HUD_H = 196, TRAY_MIN = 250, CS = 2.4;   // 세로 화면: 위 띠 높이 · 아래 카드 칸 최소 높이 · 카드 배율
@@ -1148,12 +1148,14 @@ export class PlayScene extends Phaser.Scene {
     const best = this.mode === 1 ? (d.infBest[this.stageNo] || 0) : 0;
     const boss = s.pattern >= 2;
     const close = this.mode === 1 ? s.wave >= best - 2 && s.wave >= 10 : (s.progress() >= 0.6 || boss);
-    const can = s.life <= 0 && this.contUsed < 2 && d.plays >= 3 && close && oadOn();
-    if (!can) { this.showResult(false); return; }
+    /* 광고도 골드 값도 없으면(실서버 지금) 권유 창 없이 바로 결과로 */
+    const offer = s.life <= 0 && this.contUsed < 2 && d.plays >= 3 && close && can.cont(this.contUsed, this.contAd).any;
+    if (!offer) { this.showResult(false); return; }
     this.offerContinue();
   }
   offerContinue() {
-    const s = this.sim, sku = this.contUsed === 0 ? 'cont1' : 'cont2', price = (bm.price && bm.price(sku)) || (this.contUsed === 0 ? 20 : 40);
+    const s = this.sim, way = can.cont(this.contUsed, this.contAd), { sku, price } = way;
+    if (!way.any) { this.showResult(false); return; }
     this.closeConfirm(); this.closeMenu(true);
     const c = this.vbox(9900), CX = 540, CY = 960; this.offer = c;
     c.add(panel(this, 100, CY - 430, 880, 860, { r: 44, line: 0xFFC94A }));
@@ -1166,11 +1168,11 @@ export class PlayScene extends Phaser.Scene {
     const close = () => { tm.remove(); c.destroy(); this.offer = null; this.offerClose = null; };
     this.offerClose = close;
     let y = CY + 40;
-    if (!this.contAd && adReady()) {
-      c.add(button(this, CX, y, 640, 130, '▷ 광고 보고 이어하기', async () => { tm.paused = true; const r = await bm.rewardedAd('revive'); if (r && r.ok) { this.contAd = true; close(); this.doContinue(); } else { tm.paused = false; } }, { size: 42, fill: 0x2B3A1E, edge: 0x9BD56A, color: '#DFF5C6' }));
+    if (way.ad) {
+      c.add(button(this, CX, y, 640, 130, '▷ 광고 보고 이어하기', async () => { tm.paused = true; const r = await bm.rewardedAd('revive'); if (r && r.ok) { this.contAd = true; close(); this.doContinue(); } else { tm.paused = false; } }, { size: 42, fill: 0x2B3A1E, edge: 0x9BD56A, color: '#DFF5C6' }).setData('bm', 'ad'));
       y += 150;
     }
-    c.add(button(this, CX, y, 640, 130, `⚡ 이어하기 · 골드 ${price}`, async () => { tm.paused = true; const r = await bm.spend(sku); if (r && r.ok) { close(); this.doContinue(); } else { tm.paused = false; if (r && r.reason !== 'cancel') toast(this, r.reason === 'short' ? '골드가 조금 모자라요' : '지금은 쓸 수 없어요', this.scale.height / 2 + 330, C.life); } }, { size: 42, fill: 0x5A3B12, edge: C.accent, color: C.gold }));
+    if (price > 0) c.add(button(this, CX, y, 640, 130, `⚡ 이어하기 · 골드 ${price}`, async () => { tm.paused = true; const r = await bm.spend(sku); if (r && r.ok) { close(); this.doContinue(); } else { tm.paused = false; if (r && r.reason !== 'cancel') toast(this, r.reason === 'short' ? '골드가 조금 모자라요' : '지금은 쓸 수 없어요', this.scale.height / 2 + 330, C.life); } }, { size: 42, fill: 0x5A3B12, edge: C.accent, color: C.gold }).setData('bm', 'gold'));
     c.add(button(this, CX, CY + 340, 400, 100, '그만할게요', () => { close(); this.showResult(false); }, { size: 36 }));
     track('continue_offer', { stage: this.stageNo, mode: this.mode, n: this.contUsed + 1 });
   }
@@ -1242,10 +1244,10 @@ export class PlayScene extends Phaser.Scene {
       if (notes.length) step(7, [label(this, T, notes.join('  ·  '), 400, 352, 12, '#BFE59A', 9, { stroke: '#000000', st: 3 })]);
       // 광고 보고 명예 2배 (하루 3번 · 소장자는 광고 없이)
       const ads = (d.ads.date === day ? d.ads : (d.ads = { date: day, x2: 0 }));
-      if (hero > 0 && adReady() && ads.x2 < 3) {
-        const at = label(this, T, `▷ 광고 보고 명예 2배 (${3 - ads.x2})`, 640, 288, 12, '#DFF5C6', 9, { stroke: '#1A2A10', st: 4 });
+      if (hero > 0 && can.ad() && ads.x2 < 3) {
+        const at = label(this, T, `▷ 광고 보고 명예 2배 (${3 - ads.x2})`, 640, 288, 12, '#DFF5C6', 9, { stroke: '#1A2A10', st: 4 }).setData('bm', 'ad');
         const z = this.add.zone(at.x, at.y, at.width + 40, at.height + 30).setInteractive({ useHandCursor: true });
-        step(5, [at]); panelC.add(z);
+        step(5, [at]); panelC.add(z); at.setData('zone', z);
         z.on('pointerup', async () => { z.disableInteractive(); const rr = await bm.rewardedAd('reward2x'); if (rr && rr.ok) { ads.x2++; d.heroism += hero; save(); hn.set(hero * 2); at.setText('2배로 받았어요'); } else z.setInteractive(); });
       }
       // 아래 단추 (원작 y 382)
@@ -1264,7 +1266,7 @@ export class PlayScene extends Phaser.Scene {
     this.time.delayedCall(1300, showPanel);
     this.resultShow = showPanel;
   }
-  async leave(go) { try { if (oadOn()) await bm.interstitial('round_end'); } catch { /* 늘 넘어감 */ } go(); }
+  async leave(go) { try { if (can.inter()) await bm.interstitial('round_end'); } catch { /* 늘 넘어감 */ } go(); }
   stageBanner() {
     const nm = `${Math.floor(this.stageNo / 10) + 1}-${this.stageNo % 10 + 1}  ${STAGE_NAMES[Math.floor(this.stageNo / 10)][this.stageNo % 10]}`;
     const cx = this.bx + this.bw / 2, cy = this.by + this.bh * 0.45;

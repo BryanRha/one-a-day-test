@@ -1,12 +1,12 @@
 // 카드 앨범 화면 (원작의 카드 앨범): 팩 열기 · 세트 9개 · 세트 보기(조커로 채우기) · 별 금고 · 세트/앨범 완성 보상
-import { W, H } from '../config.js?v=0.99.49';
-import { T, R, C, TS, btn, sheet, rbox, chips, toast, firstTip } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { save } from '../save.js?v=0.99.49';
-import { goPrev } from '../nav.js?v=0.99.49';
-import { screen } from '../hud.js?v=0.99.49';
-import { giveReward } from '../state.js?v=0.99.49';
-import { SETS, PACKS, VAULT, ALBUM_DONE, album, seasonLeft, scaled, owned, setCount, totalCount, openPack, useJoker, vaultBuy, claimable, albumClaimable, cardOf } from '../album.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, R, C, TS, btn, sheet, rbox, chips, toast, firstTip, helpBtn } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { save } from '../save.js?v=0.99.50';
+import { goPrev } from '../nav.js?v=0.99.50';
+import { screen } from '../hud.js?v=0.99.50';
+import { giveReward } from '../state.js?v=0.99.50';
+import { SETS, PACKS, VAULT, ALBUM_DONE, album, seasonLeft, scaled, owned, setCount, totalCount, openPack, useJoker, vaultBuy, claimable, albumClaimable, cardOf } from '../album.js?v=0.99.50';
 
 const RCOL = [0, 0xC9B8B0, 0x7CC6A8, 0x6FA8E8, 0xB57BE0, 0xF0B65A];   // 별 수별 테두리 색
 
@@ -54,7 +54,7 @@ export class AlbumScene extends Phaser.Scene {
       this.add.zone(x, yy + chh / 2, cw, chh).setInteractive({ useHandCursor: true }).on('pointerup', () => this.showSet(s));
     });
     this.cameras.main.fadeIn(200, 255, 244, 236); window.__album = this;
-    firstTip(this, 'album', '카드 앨범', ['주문 5번 · 레벨업 · 출석 · 이벤트에서 카드 팩을 받아요', '9장을 모으면 세트 보상, 81장을 다 모으면 큰 보상!', '겹친 카드는 별이 되어 별 금고에서 팩·조커로 바꿔요', `${40}일마다 새 시즌 · 시즌마다 보상이 커져요`], 'album');
+    const tip = f => firstTip(this, 'album', '카드 앨범', ['주문 5번 · 레벨업 · 출석 · 이벤트에서 카드 팩을 받아요', '9장을 모으면 세트 보상, 81장을 다 모으면 큰 보상!', '겹친 카드는 별이 되어 별 금고에서 팩·조커로 바꿔요', `${40}일마다 새 시즌 · 시즌마다 보상이 커져요`], 'album', f); helpBtn(this, 50 + 250, 190, () => tip(true)); tip(false);
     if (albumClaimable()) this.time.delayedCall(400, () => this.albumDone());
     else if (data && data.set) this.time.delayedCall(250, () => this.showSet(SETS.find(s => s.id === data.set)));
   }

@@ -1,8 +1,8 @@
 // 모드 안내 (v0.12 · 테스터 시트 #8): 일반 작전 · 전쟁실 · 특수 작전 · 자유 대전이 무엇이 다른지
 //   홈 [모드 안내] 버튼 · 각 모드를 처음 열 때 한 번 (tips.mode_<키>)
-import { T, C, btn, popup } from './pui.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { WAR, MAPS } from './core/maps.js?v=0.99.49';
+import { T, C, btn, popup } from './pui.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { WAR, MAPS } from './core/maps.js?v=0.99.50';
 
 export const MODES = {
   campaign: { name: '일반 작전', en: 'OPERATIONS', col: C.gold, what: `이야기를 따라 ${MAPS.length}개 작전을 차례로`, pts: ['이기면 다음 작전 · 새 지휘관이 열려요', '별 3개: 승리 · 기한 안 · 적은 손실', '되돌리기 · 보급품 · 막히면 자동 작전'] },
@@ -13,7 +13,8 @@ export const MODES = {
 const ORDER = ['campaign', 'war', 'daily', 'free'];
 
 // 모드 안내 창: focus 가 있으면 그 모드를 강조 (처음 열 때)
-export function modeGuide(scene, focus = null, onClose) {
+//   o.demo: 주면 아래에 [첫 출전 시범 보기] (v0.13 · 시트 #4 — 시범을 언제든 다시)
+export function modeGuide(scene, focus = null, onClose, o = {}) {
   const p = popup(scene, focus ? `${MODES[focus].name} 안내` : '모드 안내', 960, 1420, { onClose });
   p.content.add(T(scene, 0, -578, '모두 같은 전투 규칙 · 목표와 기록이 달라요', 26, C.sub, { w: 800 }));
   ORDER.forEach((k, i) => {
@@ -25,7 +26,10 @@ export function modeGuide(scene, focus = null, onClose) {
     p.content.add(T(scene, -170, y - 34, m.what, 23, on ? m.col : C.dim, { ox: 0, w: 800, wrap: 580 }));
     m.pts.forEach((s, j) => p.content.add(T(scene, -396, y + 18 + j * 32, `· ${s}`, 22, on ? C.text : C.dim, { ox: 0, w: 700 })));
   });
-  p.content.add(btn(scene, 0, 600, 420, 104, '알겠어요', () => p.close(), { style: 'gold', size: 34 }));
+  if (o.demo) {
+    p.content.add(btn(scene, -210, 600, 400, 104, '첫 출전 시범 보기', () => { p.close(); o.demo(); }, { style: 'olive', size: 30 }));
+    p.content.add(btn(scene, 220, 600, 380, 104, '알겠어요', () => p.close(), { style: 'gold', size: 34 }));
+  } else p.content.add(btn(scene, 0, 600, 420, 104, '알겠어요', () => p.close(), { style: 'gold', size: 34 }));
   return p;
 }
 // 처음 여는 모드면 한 번 보여 줌 → 보여 줬으면 true

@@ -2,9 +2,9 @@
 //   · 시작 때 hello 한 번 (결과는 bm.info 로 바로 읽음 · 원어데이 밖이면 ok = false → 골드 · 광고 버튼 숨김)
 //   · 판 끝 전면 광고: 판이 끝나면 roundOver(), 다음 화면으로 넘어갈 때 afterRound() 를 기다림 → 판마다 한 번만 앱에 물어봄
 //   · 광고 · 확인 창 동안 소리 멈춤
-import { bm } from './oad_bm.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { dayKey, SKINS } from './meta.js?v=0.99.49';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { dayKey, SKINS } from './meta.js?v=0.99.50';
 
 let hp = null;
 // hello 는 한 번만 (Boot 가 스킨을 그리기 전에 기다림 · 원어데이 밖이면 바로 ok=false)
@@ -16,6 +16,35 @@ export function helloOnce() {
     return h;
   }));
 }
+/* 다시 묻기 (2026-11-16 v0.8.1 · QA 시트 #2 '도구 줄이 안 보임' 원인 — 룬 다이스 v0.10.1 과 같은 원인 · 같은 방식):
+   hello 는 iframe 이 뜨자마자 한 번만 묻고 그 답을 끝까지 씀 — 그때 앱이 아직 가격표(/api/pay/config · 로그인 정보)를 못 받았으면
+   prices 가 빈 채로(또는 800ms 넘어 ok=false 로) 굳어 그 세션 내내 폭탄 · 한 줄 · 이어하기 골드 · 광고 단추가 숨음.
+   → 홈 · 결과에 올 때와 판 시작 직전에 '필요한 가격이 비었으면' 앱에 hello 를 다시 물어 같은 캐시 객체(bm.info)를 새 답으로 채움
+     (공통 oad_bm.js 는 고치지 않음 · 원어데이 안(iframe)일 때만 · ?oadtest 가짜 지갑 제외 · 대조군 A(가격 없음이 정상)는 안 물음 · 동시에 한 번만 · 시간 제한) */
+const NEED = ['continue', 'bomb', 'line'];
+const frameOn = () => { try { return window.parent !== window; } catch { return true; } };
+let rq = null;
+export const pricesMissing = () => !bm.info.ok || (bm.info.group !== 'A' && NEED.some(k => !bm.price(k)));
+export async function refreshHello(ms = 3000) {
+  await helloOnce();
+  if (!frameOn() || bm.info.test || !pricesMissing()) return bm.info;
+  if (rq) return rq;
+  rq = new Promise(res => {
+    const id = 'bh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const fin = r => {
+      removeEventListener('message', on); clearTimeout(t); rq = null;
+      if (r && r.ok) { const c = bm.info; Object.assign(c, r); if (!c.prices) c.prices = {}; if (!c.items) c.items = []; if (!c.ads) c.ads = {}; }
+      res(bm.info);
+    };
+    const on = e => { if (e.source === window.parent && e.data && e.data.type === 'oad:res' && e.data.id === id) fin(e.data.result); };
+    const t = setTimeout(() => fin(null), ms);
+    addEventListener('message', on);
+    try { window.parent.postMessage({ type: 'oad:req', id, fn: 'hello', args: [] }, location.origin); } catch { fin(null); }
+  });
+  return rq;
+}
+/* 판 시작 직전: 비었을 때만 짧게 기다림(화면 어두워지는 동안) — 이미 있으면 바로 */
+export const beforePlay = () => (pricesMissing() ? refreshHello(1500) : Promise.resolve(bm.info));
 export function initBM(game) {
   bm.onPause = on => { try { if (on) game.sound.pauseAll(); else game.sound.resumeAll(); } catch { /* */ } };
   return helloOnce();
@@ -75,6 +104,10 @@ export async function buyUse(sku) {
 export function swapAdLeft(max) { const d = load(); if (!d.items || d.items.date !== dayKey()) d.items = { date: dayKey(), ad: 0 }; return Math.max(0, max - d.items.ad); }
 export function swapAdUsed() { const d = load(); if (!d.items || d.items.date !== dayKey()) d.items = { date: dayKey(), ad: 0 }; d.items.ad++; save(); }
 export const adShown = () => !!bm.info.ok;
+/* 테스트 서버에서 '도구 줄이 안 보여요'의 또 다른 까닭 (QA 시트 #2 · 룬 다이스 v0.12.0 과 같은 안내):
+   앱은 기기마다 BM 실험 그룹 A/B/C 를 정하고(oneaday/shell/bm.js group — 테스트 서버도 기기 번호로 1/3 이 A), A(대조군)에겐 가격표를 비워 줌
+   → 게임은 규칙대로 폭탄 · 한 줄을 숨김. 실서버(env 'prod')는 그대로 조용히, 테스트 · 개발 앱에서만 '왜 · 어디서 켜는지' 한 번 알려 줌 (Play.testNote) */
+export const testOff = () => frameOn() && !bm.info.test && !!bm.info.ok && bm.info.group === 'A' && !!bm.info.env && bm.info.env !== 'prod';
 export const adReady = () => !!(bm.info.ok && (bm.info.owned || (bm.info.ads && bm.info.ads.reward)));
 export function failMsg(r) {
   const why = r && r.reason;

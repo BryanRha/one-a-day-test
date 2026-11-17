@@ -1,7 +1,7 @@
 // 이안의 마을 순찰 — 시안 ③: 마을 그림 속 숨은 불량배 3명 + 잃어버린 물건 2개 찾기 (90초 · 힌트 · 틀리게 누르면 5초 깎임)
-import { W, H } from './config.js?v=0.99.49';
-import { T, C, btn } from './ui.js?v=0.99.49';
-import { audio } from './audio.js?v=0.99.49';
+import { W, H } from './config.js?v=0.99.50';
+import { T, C, btn } from './ui.js?v=0.99.50';
+import { audio } from './audio.js?v=0.99.50';
 
 // 숨을 자리 (배경 1024×1536 기준): [x, y, 크기, 아래를 가리는 정도(0~1)]
 const SPOTS = [[350, 300, 120, 0.45], [560, 330, 110, 0.4], [300, 520, 110, 0.5], [740, 460, 105, 0.35], [430, 800, 110, 0.45], [610, 570, 100, 0.5], [180, 420, 100, 0.4], [720, 1250, 110, 0.45], [520, 1100, 100, 0.4], [900, 1310, 110, 0.4], [130, 1020, 100, 0.3], [820, 240, 110, 0.4]];
@@ -12,7 +12,12 @@ export function ptOpen(sc, onEnd) {
   root.add(sc.add.rectangle(W / 2, H / 2, W, H, 0x76B843)); const bg = sc.add.image(W / 2, top, 'patrol_bg').setOrigin(0.5, 0); bg.setScale(k); root.add(bg);
   const tap = sc.add.zone(W / 2, H / 2, W, H).setInteractive(); root.add(tap);
   const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(v => v[1]);
-  const sp = shuffle(SPOTS).slice(0, 3), it = shuffle(ITEMS).slice(0, 2), lost = shuffle(LOST).slice(0, 2);
+  /* 화면 UI 가 덮는 곳(위 막대 · 닫기 · 이안 · 말풍선 · 힌트 단추 · 아래 목록)과 화면 밖에 걸치는 자리는 뽑지 않음
+     (v0.20 · 그림=판정: 긴 폰에선 그림이 화면보다 넓어 양옆 자리가 화면 밖으로 나가고, 아래쪽 자리는 말풍선 뒤에 숨어 힌트를 써도 찾을 수 없었음) */
+  const ui = [[0, 0, W, 160], [W - 122, 168, 104, 104], [0, H - 400, 250, 400], [220, H - 340, 500, 136], [W - 285, H - 342, 270, 124], [0, H - 200, W, 200]];
+  const clear = s => { const x = mx(s[0]), y = my(s[1]), r = s[2] * k / 2 + 12; return x - r >= 0 && x + r <= W && ui.every(([ux, uy, uw, uh]) => x + r < ux || x - r > ux + uw || y + r < uy || y - r > uy + uh); };
+  const pick = (L, n) => { const a = shuffle(L.filter(clear)); return a.length >= n ? a.slice(0, n) : [...a, ...shuffle(L.filter(s => !a.includes(s)))].slice(0, n); };
+  const sp = pick(SPOTS, 3), it = pick(ITEMS, 2), lost = shuffle(LOST).slice(0, 2);
   const targets = [...sp.map((s, i) => ({ key: 'bully' + (i + 1), x: mx(s[0]), y: my(s[1]), size: s[2] * k, cut: s[3] })), ...it.map((s, i) => ({ key: lost[i], x: mx(s[0]), y: my(s[1]), size: s[2] * k, cut: 0 }))];
   for (const t of targets) { const im = sc.add.image(t.x, t.y, t.key); im.setScale(t.size / Math.max(im.width, im.height)); if (t.cut) im.setCrop(0, 0, im.width, im.height * (1 - t.cut)); if (t.key.startsWith('bully')) { im.setAlpha(0.96); sc.tweens.add({ targets: im, y: t.y - 6, duration: 900 + Math.random() * 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); } else im.setAngle(Math.random() * 40 - 20); root.add(im); t.im = im; }
   // 위: 시간 · 제목 · 찾은 수
@@ -36,4 +41,4 @@ export function ptOpen(sc, onEnd) {
     st.end -= 5000; audio.play('sfx_error', { volume: 0.4 }); const x = T(sc, p.x, p.y, '✗ -5초', 34, '#E8352E', { w: 900 }).setStroke('#FFFFFF', 6); root.add(x); sc.tweens.add({ targets: x, y: p.y - 70, alpha: 0, duration: 700, onComplete: () => x.destroy() }); });
   const finish = win => { if (st.done) return; st.done = true; const left = Math.max(0, st.end - Date.now()), stars = !win ? 0 : left > 45000 ? 3 : left > 20000 ? 2 : 1; sc.time.delayedCall(win ? 900 : 200, () => { root.destroy(); onEnd({ win, stars, found: st.found, total: targets.length, lost: targets.filter(t => t.ok && !t.key.startsWith('bully')).map(t => t.key) }); }); };
   const tick = () => { if (st.done) return; const s = Math.max(0, Math.ceil((st.end - Date.now()) / 1000)); tT.setText(`${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`).setColor(s <= 15 ? '#FF8A7A' : '#FFFFFF'); fT.setText(`${st.found}/${targets.length}`); if (s <= 0) finish(false); };
-  sc.events.on('update', tick); root.once('destroy', () => sc.events.off('update', tick)); window.__pt = { targets, st }; return st; }
+  sc.events.on('update', tick); root.once('destroy', () => sc.events.off('update', tick)); window.__pt = { targets, st, ui, root }; return st; }

@@ -1,11 +1,11 @@
 // 화면 위 UI (상단 재화 · 레벨 · 옆 버튼 · 아래 탭 · 판 · 가운데 창 · 날아가는 재화 · 알림 · 처음 10분 안내)
 //   원칙: 움직이지 않는 UI 0 (누름 탄성 · 열림/닫힘 · 시차 등장 · 통통 빨간 점 · 숫자 올라감) · 실수는 부드럽게 · 칭찬은 넉넉히
 //   빨간 점 = '받을 것' 또는 '지금 할 수 있는 새 것'만 (늘 켜져 있는 점 X) · 창 우선순위: 쉬는 동안 정산 > 레벨업 > 단골 이야기 > 출석 > 안내
-import * as D from './data.js?v=0.99.49';
-import * as G from './sim.js?v=0.99.49';
-import { bm } from './oad_bm.js?v=0.99.49';
-import { sfx, setAudio, AUD } from './audio.js?v=0.99.49';
-import { pushBack } from './oad.js?v=0.99.49';
+import * as D from './data.js?v=0.99.50';
+import * as G from './sim.js?v=0.99.50';
+import { bm } from './oad_bm.js?v=0.99.50';
+import { sfx, setAudio, AUD } from './audio.js?v=0.99.50';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.50';
 
 const $ = (s, r = document) => r.querySelector(s);
 const S = G.S, fmt = D.fmt;
@@ -63,7 +63,14 @@ export function fly(k, x, y, n = 5) {
 }
 export function numPop(x, y, txt, crit) { const d = document.createElement('div'); d.className = 'num' + (crit ? ' crit' : '') + (/^[+대]/.test(String(txt)) ? '' : ' txt'); d.style.left = x + 'px'; d.style.top = y + 'px'; d.innerHTML = txt; flyEl.appendChild(d); setTimeout(() => d.remove(), 1250); }
 export function confetti(n = 40) { const cs = ['#F3A9BA', '#FFE38A', '#A8DCC4', '#9CC8EE', '#FFB46A']; for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.className = 'confetti'; c.style.left = 360 + (Math.random() - 0.5) * 300 + 'px'; c.style.top = 260 + Math.random() * 80 + 'px'; c.style.background = cs[i % cs.length]; c.style.setProperty('--dx', (Math.random() - 0.5) * 700 + 'px'); c.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg'); c.style.animationDelay = Math.random() * 0.25 + 's'; flyEl.appendChild(c); setTimeout(() => c.remove(), 2000); } }
-function banner(t, sub) { const b = document.createElement('div'); b.className = 'banner'; b.innerHTML = `<div>${t}${sub ? `<small>${sub}</small>` : ''}</div>`; flyEl.appendChild(b); setTimeout(() => b.remove(), 2500); }
+/* 큰 알림(축하 카드 · 목표 띠)은 한 번에 하나 · 창이 떠 있는 동안은 기다렸다가 · 밀리면 작은 알림으로 (QA 시트 4 '팝업이 겹쳐서 나옴': 예전엔 창 위에 축하 카드 · 띠 2개가 같은 자리에 겹쳤음) */
+const lane = []; let laneBusy = false;
+function notice(show, ms, alt) { if (lane.length >= 2) { toast(alt, true); return; } lane.push({ show, ms, alt, t: performance.now() }); laneRun(); }
+function laneRun() { if (laneBusy || !lane.length) return; if (curDlg) { while (lane.length && performance.now() - lane[0].t > 8000) toast(lane.shift().alt, true); return; }
+  const n = lane.shift(); laneBusy = true; n.show(); setTimeout(() => { laneBusy = false; laneRun(); }, n.ms + 200); }
+export const noticeBusy = () => laneBusy || lane.length > 0;
+const laneClear = () => flyEl.querySelectorAll('.celebrate,.banner').forEach(x => x.remove());   /* 창이 열리면 떠 있던 큰 알림은 바로 비킴 */
+function banner(t, sub) { notice(() => { const b = document.createElement('div'); b.className = 'banner'; b.innerHTML = `<div>${t}${sub ? `<small>${sub}</small>` : ''}</div>`; flyEl.appendChild(b); setTimeout(() => b.remove(), 2300); }, 2300, `${t} ${sub || ''}`); }
 
 /* ── 상단 · 옆 · 아래 ── */
 const shown = { coin: 0, gem: 0, rp: 0 };
@@ -80,7 +87,8 @@ export function hud() {
   <div class="sbtn" id="sHelp" style="position:absolute;right:18px;top:556px;height:64px">${ic('menu', 'ic2')}<b style="font-size:14px">하는 법</b></div>
   <div id="buffs" style="position:absolute;left:22px;top:372px;display:flex;flex-direction:column;gap:8px"></div>
   <div class="side">
-    <div class="sbtn" id="sMore">${ic('menu', 'ic2')}<b style="font-size:15px">메뉴</b></div>
+    <div class="sbtn" id="sMore">${ic('menu', 'ic2')}<b style="font-size:15px">설정</b></div>
+    <div class="sbtn mini" id="sOad"><b>원어데이</b></div>
     <div class="sbtn" id="sAtt">${ic('big', '')}출석</div>
     <div class="sbtn" id="sPlay">${ic('clock', 'ic2')}선물<span class="tm"></span></div>
     <div class="sbtn" id="sBuff">${ic('ribbon', 'ic2')}혜택</div>
@@ -97,6 +105,7 @@ export function hud() {
   $('#gAll').onclick = () => watch('gifts', null, n => { toast(`선물 ${n}개를 한꺼번에 받았어요!`, true); fly('coin', 160, 1300, 8); ctx.render(); });
   $('#sSnd').onclick = () => settingsPop();
   $('#sMore').onclick = () => morePop();
+  $('#sOad').onclick = () => toOAD();
   $('#goal').onclick = () => goalAct();
   $('#hudFold').onclick = ev => { ev.stopPropagation(); S.hudOpen = !hudEl.classList.contains('thin') ? false : true; hudEl.classList.toggle('thin', !S.hudOpen); sfx('tap'); ctx.save(); };   /* 위쪽 칸 접기 (대표 10-30: 왼쪽 위 비싼 자리를 가림) */
   $('#sHelp').onclick = () => loopPop(true);
@@ -106,8 +115,11 @@ const TABS = [{ id: 'fac', name: '시설', img: 'fac/tent' }, { id: 'menu', name
 function setDot(el, n) { if (!el) return; let d = el.querySelector(':scope > .dot'); if (!n) { if (d) d.remove(); return; } if (!d) { d = document.createElement('i'); d.className = 'dot'; el.appendChild(d); } if (typeof n === 'number' && n > 1) { d.classList.add('n'); d.textContent = n > 9 ? '9+' : n; } else { d.classList.remove('n'); d.textContent = ''; } }
 /* 빨간 점 규칙 (docs/ux_notes.md 4장) */
 /* 오른쪽 단추 덜어내기 (대표 11-02): 평소엔 [메뉴] 하나 · 출석 · 머문 시간 선물은 받을 수 있을 때만 잠깐 · 혜택 · 소리 · 하는 법은 메뉴 안 */
-function morePop() { const items = [['att', 'big', '출석', () => attendPop()], ['play', 'clock', '머문 시간 선물', () => openTab('mission', 'play')], ['buff', 'ribbon', '혜택 · 매점', () => openTab('shop', 'stall')], ['set', 'sound', '소리 · 설정', () => settingsPop()], ['help', 'menu', '하는 법', () => loopPop(true)]];
-  const me = dlg(`<h3>메뉴</h3><div class="morel">${items.map(([k, i, n]) => `<div class="btn sky" data-m="${k}">${ic(i, 'ic2')}${n}</div>`).join('')}</div><div class="row">${btn('ok', '닫기', 'go')}</div>`);
+/* 원어데이로 (QA 시트 7 · 룬다이스 홈 '원어데이' 단추와 같은 동작): 원어데이 안 = 앱에 나가기(oad:exit) · 단독 링크 = 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+export function toOAD() { ctx.save(); if (inOAD) return exitToOAD(); const h = location.hostname, site = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/'; setAudio({ sfx: false, bgm: false }); location.href = site; }
+/* 오른쪽 위 단추 이름은 '설정' (QA 시트 9: 아래 탭 '메뉴'(요리 메뉴)와 이름이 겹쳐 헷갈림) */
+function morePop() { const items = [['set', 'sound', '소리 · 진동', () => settingsPop()], ['help', 'menu', '하는 법', () => loopPop(true)], ['att', 'big', '출석', () => attendPop()], ['play', 'clock', '머문 시간 선물', () => openTab('mission', 'play')], ['buff', 'ribbon', '혜택 · 매점', () => openTab('shop', 'stall')], ['oad', 'gold', '원어데이로 나가기', () => toOAD()]];
+  const me = dlg(`<h3>설정 · 더 보기</h3><div class="morel">${items.map(([k, i, n]) => `<div class="btn sky" data-m="${k}">${ic(i, 'ic2')}${n}</div>`).join('')}</div><div class="row">${btn('ok', '닫기', 'go')}</div>`);
   me.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { me.close(); setTimeout(items.find(x => x[0] === b.dataset.m)[3], 200); }); me.el.querySelector('[data-a="ok"]').onclick = () => me.close(); }
 export function dots() {
   if (popEl && !popEl.querySelector('.dlg') && popEl.style.pointerEvents !== 'none') popEl.style.pointerEvents = 'none';   /* 창이 없는데 빈 창 층이 누름을 먹지 않게 (덮인 버튼 0 · 구조적) */
@@ -150,7 +162,7 @@ export function tick(dt) {
   $('#sSnd b').textContent = AUD.sfx || AUD.bgm ? '소리 켜짐' : '소리 꺼짐'; $('#sSnd').style.opacity = AUD.sfx || AUD.bgm ? 1 : 0.6;
   const bf = $('#buffs'); const on = ['speed', 'crit', 'rest'].filter(k => G.buffOn(k)); const html = on.map(k => `<div class="lvtag" style="position:static;transform:none;background:#FFF0B8">${{ speed: '요리 2배 빠르게', crit: '대박 요리 +30%', rest: '쉼 포인트 +30%' }[k]} · ${clock(S.buff[k] - S.t)}</div>`).join(''); if (bf.innerHTML !== html) bf.innerHTML = html;
   $('#sBuff').classList.toggle('glow', bm.info.ok && !on.length && ['speed', 'crit', 'rest'].some(k => G.adLeft(k) > 0));
-  dots(); tut();
+  dots(); tut(); laneRun();
   if (cur && !cur.body.querySelector('.press')) cur.refresh(true);
   if (curDlg && curDlg.live && !curDlg.el.querySelector('.press')) curDlg.live();
 }
@@ -158,12 +170,14 @@ export function tick(dt) {
 /* ── 가운데 창 (튀어나옴 · 줄어들며 닫힘 · 뒤로가기) ── */
 const queue = []; let curDlg = null; const dlgStack = [];   /* 창 위에 창(확인 창)이 떠도 닫히면 아래 창이 다시 '지금 창'이 됨 (대표 제보 11-03: 솔방울로 지금 하기 뒤 강화 창이 옛 값으로 멈춤) */
 export function dlg(html, o = {}) {
-  const shade = document.createElement('div'); shade.className = 'shade'; const d = document.createElement('div'); d.className = 'dlg'; d.innerHTML = (o.rays ? '<div class="rays"></div>' : '') + html; popEl.append(shade, d);
+  const shade = document.createElement('div'); shade.className = 'shade'; const d = document.createElement('div'); d.className = 'dlg'; d.innerHTML = (o.rays ? '<div class="rays"></div>' : '') + html; popEl.append(shade, d); laneClear(); if (curEl) { curEl.remove(); curEl = null; }   /* 재화 설명 카드도 비킴 */
+  /* 닫기 ✕ (QA 시트 5): 꼭 골라야 하는 창(lock: 쉬는 동안 정산)만 빼고 모든 창 오른쪽 위에 · 다시 그려도 지워지지 않게 창 바로 아래에 붙임 */
+  const xb = o.lock ? null : document.createElement('div'); if (xb) { xb.className = 'x dx'; xb.textContent = '✕'; xb.setAttribute('aria-label', '닫기'); d.appendChild(xb); }
   popEl.style.pointerEvents = 'auto'; requestAnimationFrame(() => { shade.classList.add('open'); d.classList.add('open'); }); sfx('open');
   let done = false; const unBack = pushBack(() => { if (o.lock) return true; close(); return true; });
   const close = () => { if (done) return; done = true; unBack(); d.classList.add('closing'); shade.classList.remove('open'); sfx('close'); const i = dlgStack.indexOf(me); if (i >= 0) dlgStack.splice(i, 1); curDlg = dlgStack[dlgStack.length - 1] || null; if (curDlg && curDlg.live) curDlg.live();   /* 아래 창을 바로 새 값으로 */
     setTimeout(() => { d.remove(); shade.remove(); if (!popEl.querySelector('.dlg')) popEl.style.pointerEvents = 'none'; o.onClose && o.onClose(); next(); }, 220); };
-  if (!o.lock) shade.onclick = close;
+  if (!o.lock) shade.onclick = close; if (xb) xb.onclick = ev => { ev.stopPropagation(); close(); };
   const me = { el: d, close, live: o.live ? () => o.live(d) : null }; dlgStack.push(me); curDlg = me; return me;
 }
 function next() { if (curDlg || !queue.length) return; queue.sort((a, b) => a.p - b.p); const q = queue.shift(); q.f(); }
@@ -317,7 +331,7 @@ const GOLD = {
   out_fire: { name: '셰프 의상 · 밤 캠프파이어', item: true, own: () => G.hasLook('out_fire'), give: () => { G.ownLook('out_fire'); S.wear = 'out_fire'; ctx.wearNow(); } },
   pet_bichon: { name: D.PET.name, item: true, own: () => !!S.pet, give: () => { S.pet = true; S.petOn = true; ctx.wearNow(); } },
   skin_autumn: { name: D.FAC_SKIN.name, item: true, own: () => !!S.fskin, give: () => { S.fskin = true; S.fskinOn = true; ctx.applyLook(); ctx.render(); } },
-  skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 모습만 바뀌어요`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; ctx.reskin(); } },
+  skin: { name: D.DECO_SHOP.skin.name, desc: `셰프가 연노랑 앞치마로 갈아입어요 · 모습만 바뀌어요`, art: () => ctx.fullBody('chef_skin'), item: true, own: () => S.skin, give: () => { S.skin = true; S.wear = 'skin';   /* 받은 옷은 바로 입음 (QA 시트 3: 다른 옷 · 기본 옷을 골라 둔 뒤에 사면 값만 나가고 옷이 안 바뀌었음) */ ctx.reskin(); } },
 };
 async function buyGold(sku) {
   const g = GOLD[sku]; if (g.item && g.own()) return toast('이미 가지고 있어요');
@@ -392,7 +406,7 @@ const PANELS = {
   } },
   staff: { title: '직원 · 단골', subs: [['staff', '직원'], ['regs', '단골 이야기']], render(sub) {
     let h = '';
-    if (sub === 'staff') { h += `<div class="sec">간식을 주면 친해지고, 친할수록 값 · 대박 확률이 올라요 · 간식 ${S.treat} · 도시락 ${S.big}</div>`;
+    if (sub === 'staff') { h += `<div class="sec">간식을 주면 친해지고, 친할수록 값 · 대박 확률이 올라요 · 간식 ${S.treat} · 도시락 ${S.big}</div><div class="odds">서빙 직원은 내가 누르지 않은 요리를 ${D.TAP.autoWait}초 뒤에 대신 날라요(반값) · 직접 팔면 나를 게 없어 손님 자리를 둘러보며 쉬어요</div>`;
       for (const st of D.STAFF) { const o = S.staff[st.id], role = st.role === 'cook' ? '요리사' : '서빙', sk = `${st.skill.line === 'all' ? '모든 메뉴' : D.LINES.find(l => l.id === st.skill.line).name} 값 +${Math.round(st.skill.k * 100)}%`;
         if (!o) { h += card(st.id, ctx.portrait(st.look), `${st.name} <small style="font-size:17px">${role}</small>`, `${sk} · "${st.line}"`, costBtn('hire:' + st.id, `고용<small>${cn(st.cost)}</small>`, st.cost, 'pk', 'style="flex-direction:column;min-width:140px"'), { bg: '#FCEFF2' }); continue; }
         const need = D.FAV_EXP[o.fav - 1]; h += card(st.id, ctx.portrait(st.look), `${st.name} <small style="font-size:17px">${role} · 친밀도 ${o.fav}</small>`, `${sk}${D.FAV_BONUS[o.fav - 1] ? ` · 친밀 보너스 값 +${Math.round(D.FAV_BONUS[o.fav - 1] * 25)}%` : ''}${D.FAV_CRIT[o.fav - 1] ? ` · 대박 +${Math.round(D.FAV_CRIT[o.fav - 1] * 25)}%p` : ''}${o.fav < 10 ? `<br>더 친해지면: 값 +${Math.round(D.FAV_BONUS[o.fav] * 25)}%${D.FAV_CRIT[o.fav] ? ` · 대박 +${Math.round(D.FAV_CRIT[o.fav] * 25)}%p` : ''}` : ''}`,
@@ -483,10 +497,13 @@ function stageArt(t, lv) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, v
   const sp = D.stepOf(vl), nsl = D.STAGE.steps[sp + 1], stepTxt = `<b>${sp + 1}/10단계</b>${nsl ? ` · Lv.${nsl}에 ${D.STAGE.look[sp + 1]}` : ' · 최고 단계'}`;   /* 10단계 (v0.3) */
   if (!nx) return `<div class="art">${cur}</div><div class="stnext">${stepTxt}</div>`;
   return `<div class="art stg">${cur}<span class="arr">▶</span><span class="nx"><img src="${IMG(`fac/${G.facDir()}/${kind}_${st + 1}`)}" style="animation:none;width:${nw}px;height:auto;max-height:none"><small>Lv.${nx} 새 단장</small></span></div><div class="stnext">${stepTxt}<br>${nx - vl}번 더 강화하면 새 모습</div>`; }
+/* 단계 공사 안내 (QA 시트 11): 공사 전에 미리 · 공사 중에도 무엇이 쉬고 무엇이 도는지 한 줄 (말없이 멈추지 않음) */
+function workNote(t, fac, before) { if (fac.kind !== 'cook') return before ? '공사 중에도 그대로 쓸 수 있어요' : '새 단장 공사 중 · 그대로 쓸 수 있어요'; const st = t === 'oven' ? 'oven' : S.pads[t].fac, others = D.LINES.some(l => l.st !== st && lineReady(l.id) && G.menuFor(l.st).length && !G.working(l.st === 'oven' ? 'oven' : (G.padOf(l.st) || {}).id));
+  return before ? (others ? '공사 중엔 이 요리를 쉬고 손님은 다른 요리를 주문해요' : '다른 조리대가 없어 공사 중에도 요리는 계속해요') : (others ? '새 단장 공사 중 · 이 요리는 잠시 쉬고 손님은 다른 요리를 주문해요' : '새 단장 공사 중 · 요리는 계속해요'); }
 export function facDialog(t) {
   const draw = d => { const { fac, lv, tier, nextT, eff } = facInfo(t), w = G.working(t), cost = G.upCostOf(t);
     const bump = d.dataset.lv && +d.dataset.lv < lv; d.dataset.lv = lv;
-    d.querySelector('.body2').mhtml = `${stageArt(t, lv)}<h3${bump ? ' class="lvbump"' : ''}>${fac.name} Lv.${lv} ${stars(tier)}</h3><p>${eff}${nextT ? `<br>Lv.${nextT}에 공사로 효율이 올라요` : ''}</p>
+    d.querySelector('.body2').mhtml = `${stageArt(t, lv)}<h3${bump ? ' class="lvbump"' : ''}>${fac.name} Lv.${lv} ${stars(tier)}</h3><p>${eff}${w ? `<br><b style="color:#C9642A">${workNote(t, fac)}</b>` : nextT ? `<br>${nextT === lv + 1 ? `<b style="color:#C9642A">이번 강화는 새 단장 공사 ${tm(D.UP.tierBuild[D.UP.tiers.indexOf(nextT)])}</b> · ${workNote(t, fac, true)}` : `Lv.${nextT}에 공사로 효율이 올라요`}` : ''}</p>
       <div class="row">${w ? `${instBtns('up:' + t)}` : lv >= D.UP.max ? '<b>최고 단계예요!</b>' : costBtn('up:' + t, `강화 · ${cn(cost)}`, cost, nextT === lv + 1 ? 'yl' : 'go')}${fac.kind === 'special' && G.chargeLeft(t) <= 0 ? btn('charge:' + t, '선물 받기', 'pk') : ''}</div>`;
     d.querySelectorAll('[data-a]').forEach(b => { const [a, v, x] = b.dataset.a.split(':'); if (a === 'up') { b.onclick = () => act('up', v, null, b, null); hold(b, () => act('up', v, null, b, null, true)); } else if (a === 'instad' || a === 'instgo') b.onclick = () => instAct(a, v + ':' + x, b); else b.onclick = () => act(a, v, x, b, null); }); };
   const me = dlg(`<div class="body2"></div>`, { live: d => draw(d) }); draw(me.el);
@@ -620,7 +637,7 @@ export const tutAt = () => tutOn() ? (TUT[S.tut] || {}).at || null : null;
 export const tutPad = () => tutOn() ? (TUT[S.tut] || {}).pad || null : null;   /* 처음 안내가 지금 가리키는 빈자리 하나 (그 이름표만 보임 · 대표 11-03 '안내는 지금 할 것 하나만') */
 function tut() {
   if (S.tut >= TUT.length) { if (ptr) { ptr.remove(); ptr = null; } if (hintEl) { hintEl.remove(); hintEl = null; } return; }
-  const s = TUT[S.tut]; if (s.at === 'dish' && !cur && !curDlg) G.tutDish();   /* 안내 1단계: 누를 베이글이 늘 손 밑에 (퀄리티 v2 Top 2) */
+  const s = TUT[S.tut]; if (s.at === 'dish' && !cur && (!curDlg || curDlg.intro)) G.tutDish();   /* 안내 1단계: 누를 베이글이 늘 손 밑에 (퀄리티 v2 Top 2) */
   if (s.done && s.done()) { S.tut++; sfx('reward'); if (S.tut < TUT.length) numPop(360, 900, praise()); ctx.save(); return tut(); }
   if (!s.done) { tutT += 0.5; if (tutT > s.wait) { S.tut++; tutT = 0; return tut(); } }   /* 시간으로 넘어가는 단계: 넘긴 뒤 새 단계 문구로 다시 그림 (이전 문구가 남던 버그 · 퀄리티 QA) */
   if (s.when && !s.when()) { if (hintEl) hintEl.style.display = 'none'; if (ptr) ptr.style.display = 'none'; return; }
@@ -640,7 +657,7 @@ export function curCard(k, anchor, extra) { if (curEl) curEl.remove(); const c =
   d.querySelectorAll('[data-a]').forEach(b => b.onclick = ev => { ev.stopPropagation(); d.remove(); openTab('shop', 'box'); });
   const off = ev => { if (!d.contains(ev.target)) { d.remove(); removeEventListener('pointerdown', off, true); } }; setTimeout(() => addEventListener('pointerdown', off, true), 50); setTimeout(() => { if (curEl === d) d.classList.add('out'); }, 6000); setTimeout(() => d.remove(), 6500); }
 /* 처음 솔방울을 받는 순간 한 번: 쓰는 곳 안내 + 매점 탭에 손가락 */
-export function gemTip() { if (S.gemTip || tutOn()) return; S.gemTip = 1; ctx.save(); curCard('gem', $('#pGem'), '솔방울로 기다림을 바로 끝내거나 선물 상자를 열 수 있어요');
+export function gemTip() { if (S.gemTip || tutOn()) return; if (curDlg || noticeBusy()) return void setTimeout(gemTip, 2500);   /* 창 · 큰 알림이 지나간 뒤에 (QA 시트 4) */ S.gemTip = 1; ctx.save(); curCard('gem', $('#pGem'), '솔방울로 기다림을 바로 끝내거나 선물 상자를 열 수 있어요');
   const t = barEl.querySelector('[data-t="shop"]'); if (t) { const p = document.createElement('div'); p.className = 'pointer'; const at = cardPos(t); p.style.left = at[0] + 'px'; p.style.top = at[1] + 'px'; uiCol.appendChild(p); setTimeout(() => p.remove(), 5000); } }
 /* 목표를 누르면: 할 수 있는 일로 바로 데려감 (한 번에) */
 /* 목표가 가리키는 곳 (목표 카드 누르기 · 빈자리 이름표 · 대표 11-03 '목표가 가리킬 때만 이름') */
@@ -651,13 +668,13 @@ function goalAct() { const a = goalTarget();
 /* 캠프가 돌아가는 법 (처음 1분 · '하는 법' 버튼) — 핵심 루프를 그림으로 */
 export function loopPop(force) { if (!force && S.loopShown) return; S.loopShown = 1; ctx.save();
   const st = [['guest', '손님이 와요', 'deco/heart'], ['cook', '셰프가 구워요', 'food/bagel'], ['sell', '눌러서 팔면 2배!', 'deco/coin'], ['coin', '코인이 모여요', 'deco/coin'], ['up', '시설 · 메뉴 강화', 'ui/hammer'], ['more', '손님이 더 많이, 더 비싸게', 'ui/sparkle']];
-  enqueue(force ? 1 : 4, () => { const me = dlg(`<h3>캠프가 돌아가는 법</h3><div class="loop">${st.map(([, t, im], i) => `<div style="animation-delay:${i * 0.12}s"><img src="${IMG(im)}" alt=""><span>${t}</span></div>`).join('<i>→</i>')}</div><p>목표 칸을 누르면 지금 할 일로 바로 가요</p><div class="row">${btn('ok', '알겠어요!', 'go')}</div>`); me.el.querySelector('[data-a]').onclick = () => me.close(); }); }
+  enqueue(force ? 1 : 4, () => { const me = dlg(`<h3>${force ? '캠프가 돌아가는 법' : '어서 오세요! 캠프는 이렇게 돌아가요'}</h3><div class="loop">${st.map(([, t, im], i) => `<div style="animation-delay:${i * 0.12}s"><img src="${IMG(im)}" alt=""><span>${t}</span></div>`).join('<i>→</i>')}</div><p>${force ? '' : '손님에게 요리를 팔아 캠프를 키우는 힐링 경영 게임이에요<br>'}목표 칸을 누르면 지금 할 일로 바로 가요</p><div class="row">${btn('ok', force ? '알겠어요!' : '시작할게요!', 'go')}</div>`); me.intro = !force;   /* 첫 소개 창 뒤에서도 캠프는 그대로 (첫 베이글이 늦지 않게) */ me.el.querySelector('[data-a]').onclick = () => me.close(); }); }
 /* 크게 축하 (레벨업 · 해금 · 목표) */
 /* 시즌 시작 안내 (시즌마다 한 번) */
 export function seasonIntro() { const q = S.sea; if (!q || !D.SEASON_EV[G.season()] || q.intro) return; if (tutOn() && S.tut < 3) return setTimeout(seasonIntro, 8000);   /* 처음 안내 2단계가 끝난 뒤 (퀄리티 v2 B5) */ q.intro = 1; lastCele = 0; celebrate(`${D.SEASONS[G.season()].name} 시작!`, '한정 메뉴 3가지 · 단풍 여행자 · 7일 미션', 'ui/leaf'); }
 /* 시설 단계 업 (Lv5 · 10 · 20) — 새 모습 그림으로 크게 축하 */
 export function stageUp(t, st) { const kind = t === 'oven' ? 'oven' : S.pads[t].fac, name = t === 'oven' ? '빵 오븐' : D.FAC[kind].name; lastCele = 0; celebrate(`${name} 새 단장!`, `${['', '조금 더 아늑해졌어요', '훨씬 근사해졌어요', '숲속 최고 명소가 됐어요'][st]} · 손님이 더 좋아해요`, `fac/${G.facDir()}/${kind}_${st}`); }
-let lastCele = 0; function celebrate(title, sub, img) { const now = performance.now(); if (now - lastCele < 1500) { toast(`${title} ${sub}`, true); return; } lastCele = now; flyEl.querySelectorAll('.celebrate').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'celebrate'; d.innerHTML = `<div class="rays"></div><div class="cc"><img src="${IMG(img)}" alt=""><b>${title}</b><span>${sub}</span></div>`; flyEl.appendChild(d); confetti(60); setTimeout(() => d.classList.add('out'), 2200); setTimeout(() => d.remove(), 2700); }
+let lastCele = 0; function celebrate(title, sub, img) { notice(() => { const d = document.createElement('div'); d.className = 'celebrate'; d.innerHTML = `<div class="rays"></div><div class="cc"><img src="${IMG(img)}" alt=""><b>${title}</b><span>${sub}</span></div>`; flyEl.appendChild(d); confetti(60); setTimeout(() => d.classList.add('out'), 1900); setTimeout(() => d.remove(), 2400); }, 2400, `${title} ${sub}`); }
 /* 설정: 효과음 · 배경음 · 진동 (출퇴근길 무음 · 사업 의견 7) */
 function settingsPop() {
   const draw = d => { d.querySelector('.body2').mhtml = `<h3>설정</h3>${[['sfx', '효과음', AUD.sfx], ['bgm', '배경음', AUD.bgm], ['vib', '진동', S.vib !== false]].map(([k, n, on]) => `<div class="tog">${n}${btn('set:' + k, on ? '켜짐' : '꺼짐', on ? 'go' : '', false, 'style="min-width:110px;padding:10px 14px"')}</div>`).join('')}${testBuild() ? `<div class="row" style="margin-top:10px">${btn('testreset', '처음부터 다시 (테스트)', 'sky')}</div>` : ''}<div class="row" style="margin-top:16px">${btn('ok', '닫기', 'yl')}</div>`;

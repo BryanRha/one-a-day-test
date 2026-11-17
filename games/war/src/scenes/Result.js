@@ -1,23 +1,23 @@
 // 작전 결과: 승패 · 별 · 전과 · 경험치 · 계급 · 새 지휘관
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load } from '../save.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { COS } from '../core/data.js?v=0.99.49';
-import { MAPS } from '../core/maps.js?v=0.99.49';
-import { insignia } from './Home.js?v=0.99.49';
-import { rankOn } from '../rank.js?v=0.99.49';
-import { rankPopup, postScore } from '../rankui.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
-import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.49';
-import { SUPPORT } from '../core/support.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load } from '../save.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { COS } from '../core/data.js?v=0.99.50';
+import { MAPS } from '../core/maps.js?v=0.99.50';
+import { insignia } from './Home.js?v=0.99.50';
+import { rankOn } from '../rank.js?v=0.99.50';
+import { rankPopup, postScore } from '../rankui.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
+import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.50';
+import { SUPPORT } from '../core/support.js?v=0.99.50';
 
 const PRAISE = ['완벽한 작전!', '훌륭한 지휘였어요!', '전선이 무너졌어요, 대승!', '역시 명지휘관!'];
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(r) {
-    this.leaving = false; this.supplyC = null;   // 화면 객체를 다시 쓰므로 판마다 초기화
+    this.leaving = false; this.supplyC = null; this.supplyNote = null;   // 화면 객체를 다시 쓰므로 판마다 초기화
     this.add.rectangle(W / 2, H / 2, W, H, 0x262A14);
     if (r.mode === 'versus') return this.versus(r);
     if (r.mode === 'war') return this.warRoom(r);
@@ -40,7 +40,7 @@ export class ResultScene extends Phaser.Scene {
     let y = cy + 260;
     if (r.rankUp) { const rk = M.rank(); insignia(this, W / 2 - 200, y, rk.k, 1.1); T(this, W / 2 - 140, y, `진급! ${r.rankUp}`, 44, C.gold, { ox: 0, w: 900 }); audio.play('sfx_power', { volume: 0.6 }); y += 110; }
     if (r.unlocked) { const im = this.add.image(W / 2 - 220, y + 20, `co_${r.unlocked}`); im.setScale(140 / im.height); T(this, W / 2 - 120, y + 20, `지휘관 ${COS[r.unlocked].name} 합류!`, 40, C.gold, { ox: 0, w: 900 }); y += 160; }
-    if (supplyShow(r)) { this.supplyCard(r, y + 140); y += 310; }
+    if (supplyShow(r)) { this.supplyCard(r, y + 170); y += 370; }
     const by = Math.min(H - 130, y + 90);
     const next = win && r.mode === 'campaign' ? M.STAGES[M.STAGES.findIndex(s => s.id === r.mapId) + 1] : null;
     if (rankOn() && r.mode === 'daily') { const board = `daily:${M.dayKey()}`; if (win) postScore(board, -(r.day * 100 + r.lost), { day: r.day, lost: r.lost, co: r.co }); btn(this, W / 2, Math.min(H - 70, by + 150), 420, 96, '특수 작전 순위', () => rankPopup(this, board, '특수 작전 순위', x => `${x.extra.day}일 · 손실 ${x.extra.lost}`), { style: 'blue', size: 30 }); }
@@ -52,28 +52,29 @@ export class ResultScene extends Phaser.Scene {
   // 작전 실패 후 '같은 배치로 다시' 보급 보너스 — 노력 먼저 인정 → 희망 한 줄 → [광고 보고 받기] (골드 가격이 서버에 있으면 같은 크기로 옆에)
   supplyCard(r, cy) {
     const sp = SUPPORT.supply, c = this.add.container(0, 0); this.supplyC = c;
-    c.add(this.add.existing(panel(this, W / 2, cy, 920, 280, { tone: 'gold' })));
-    c.add(T(this, W / 2, cy - 92, r.kills ? `${r.day}일 동안 버티며 적 ${r.kills}기 격파!` : `${r.day}일 동안 끝까지 버텼어요!`, 34, C.gold, { w: 900 }));
-    c.add(T(this, W / 2, cy - 42, `${sp.name}(${sp.desc})을 받고 같은 배치로 다시 출격할까요?`, 26, C.text, { w: 800, wrap: 840 }));
+    /* v0.13 시트 #10: 마지막 줄(20px)이 카드 아래 테두리에 걸쳐 잘려 보였음 → 카드를 키우고(280 → 340) 네 줄을 같은 간격 · 가운데 맞춤 · 마지막 줄 28px */
+    c.add(this.add.existing(panel(this, W / 2, cy, 920, 340, { tone: 'gold' })));
+    c.add(T(this, W / 2, cy - 118, r.kills ? `${r.day}일 동안 버티며 적 ${r.kills}기 격파!` : `${r.day}일 동안 끝까지 버텼어요!`, 36, C.gold, { w: 900 }));
+    c.add(T(this, W / 2, cy - 64, `${sp.name}(${sp.desc})을 받고 같은 배치로 다시 출격할까요?`, 28, C.text, { w: 800, wrap: 840 }));
     const left = supplyLeft(), adOk = left > 0 && bm.info.ads && bm.info.ads.reward !== false, gold = bm.price('supply');
     const again = () => { track('supply_take', { m: r.mapId, mode: r.mode }); this.go('Play', { mode: r.mode, mapId: r.mapId, custom: r.custom || null, level: r.level, co: r.co, enemyCo: r.mode === 'free' ? undefined : r.enemyCo, tag: r.tag || null, enemyTag: r.enemyTag, limit: r.limit, support: 'supply' }); };
     const bw = gold ? 420 : 600, xs = gold ? [W / 2 - 220, W / 2 + 220] : [W / 2];
     if (adOk) {
-      const b = btn(this, xs[0], cy + 60, bw, 110, owned() ? '소장 혜택 · 바로 받기' : '광고 보고 받기', async () => {
+      const b = btn(this, xs[0], cy + 30, bw, 110, owned() ? '소장 혜택 · 바로 받기' : '광고 보고 받기', async () => {
         b.setEnabled(false); const res = await takeSupply();
         if (res.ok) return again();
         b.setEnabled(true);
         if (res.reason === 'limit') { b.setEnabled(false); toast(this, '오늘 보급 보너스는 다 받았어요', C.sub); }
       }, { style: 'gold', icon: owned() ? null : 'i_film', size: 30 }); c.add(b);
-    } else c.add(T(this, xs[0], cy + 60, '오늘 보급 보너스는 다 받았어요', 28, C.sub, { w: 800 }));
+    } else c.add(T(this, xs[0], cy + 30, '오늘 보급 보너스는 다 받았어요', 28, C.sub, { w: 800 }));
     if (gold) {   /* 서버 가격표에 'supply' 가 생기면 같은 크기로 (지금은 광고만) */
-      const g = btn(this, xs[1], cy + 60, bw, 110, `🪙${gold} 받기`, async () => {
+      const g = btn(this, xs[1], cy + 30, bw, 110, `🪙${gold} 받기`, async () => {
         g.setEnabled(false); const res = await bm.spend('supply');
         if (res.ok) return again();
         g.setEnabled(true); const msg = { short: '골드가 조금 모자라요', login: '로그인하면 쓸 수 있어요', limit: '오늘은 더 받을 수 없어요' }[res.reason]; if (msg) toast(this, msg, C.sub);
       }, { style: 'olive', size: 30, ls: 0 }); c.add(g);
     }
-    c.add(T(this, W / 2, cy + 128, '지원 부대는 이번 한 판만 · 별 · 기록은 그대로', 20, C.sub, { w: 700 }));
+    c.add(this.supplyNote = T(this, W / 2, cy + 124, '지원 부대는 이번 한 판만 · 별 · 기록은 그대로', 28, C.text, { w: 800 }));
   }
   // 2인 대전 결과: 승자 지휘관 · 전과
   versus(r) {

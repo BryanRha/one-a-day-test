@@ -1,21 +1,27 @@
 // 프리미엄 UI 키트: 깔끔한 글자 · 유리 패널 · 그라데이션 버튼 · 선 아이콘 (모두 코드로 그림 — 선명하고 가벼움)
-import { W, H, FONT } from './config.js?v=0.99.49';
-import { audio } from './audio.js?v=0.99.49';
-import { pushBack } from './oad.js?v=0.99.49';
+import { W, H, FONT } from './config.js?v=0.99.50';
+import { audio } from './audio.js?v=0.99.50';
+import { pushBack } from './oad.js?v=0.99.50';
 
 export const C = {
   ink: '#0B1026', text: '#F4F6FF', sub: '#9AA3D6', dim: '#5E679A', gold: '#F5C451', cyan: '#5EE3FF', pink: '#FF6FAE', green: '#5BE39A',
 };
 export const fmt = n => Math.floor(n).toLocaleString('en-US');
 
-// 글자: 굵기(700/800/900) · 자간 · 은은한 그림자 (굵은 외곽선 없이)
+// 가장 작은 글씨 (QA 30 · 2026-11-16 '제일 작은 글씨가 폰에서 보기 매우 힘듦'): 화면 가로 1080 기준 26px = 폰 390 에서 9.4px
+//   예전엔 16~24px(폰 5.8~8.7px) 글씨가 화면마다 흩어져 있었음 → 글자를 만드는 한 곳(T)에서 바닥을 정해 어느 화면도 이보다 작게 못 씀
+//   (새 글자를 작게 넣어도 자동으로 올라감 · tools/qa1116_e2e.mjs D 가 모든 화면 · 창에서 26px 미만 · 겹침 · 화면 밖을 검사)
+export const MIN_FONT = 26;
+// 글자: 굵기(700/800/900) · 자간 · 은은한 그림자 (굵은 외곽선 없이) · o.fit = 이 너비를 넘으면 가로로만 좁힘(높이는 그대로 — 긴 이름용)
 export function T(scene, x, y, s, size = 44, color = C.text, o = {}) {
+  size = Math.max(MIN_FONT, size);
   const t = scene.add.text(x, y, s, {
     fontFamily: FONT, fontStyle: String(o.w || 800), fontSize: `${size}px`, color, align: o.align || 'center',
     wordWrap: o.wrap ? { width: o.wrap, useAdvancedWrap: true } : undefined, lineSpacing: o.lh ?? 6, resolution: 2,
     stroke: o.stroke || '#000000', strokeThickness: o.stroke ? (o.thick || 6) : 0,
   }).setOrigin(o.ox ?? 0.5, o.oy ?? 0.5);
   if (o.ls) t.setLetterSpacing(o.ls);
+  if (o.fit) { const fit = () => t.setScale(1).setScale(t.width > o.fit ? Math.max(0.7, o.fit / t.width) : 1, 1), st = t.setText; fit(); t.setText = v => { st.call(t, v); fit(); return t; }; }
   if (o.shadow !== false) t.setShadow(0, Math.max(2, size * 0.06), 'rgba(0,0,0,0.45)', Math.max(4, size * 0.12), false, true);
   return t;
 }
@@ -120,10 +126,11 @@ export function pillBtn(scene, x, y, w, h, icon, label, onClick) {
 /* 보상 묶음 (QA 20): 왼쪽에 '보상' 꼬리표 · 오른쪽에 한 줄에 한 항목. 모든 화면(홈 카드 · 아케이드 · 결과 이정표)이 같은 모양
    lines: 문자열 배열 · 첫 줄은 하늘색, 다음 줄은 연한 색 · 돌려줌 { objs, texts, h } */
 export function rewardBlock(scene, x, y, lines, o = {}) {
-  const size = o.size || 22, gap = o.gap || Math.round(size * 1.6), tag = o.tag || '보상', tw = Math.round(size * 2.9), th = Math.round(size * 1.45);
+  /* 글자 바닥(MIN_FONT)에 맞춰 꼬리표 · 줄 간격도 같이 큼 (작은 size 를 줘도 글자만 커져 받침을 넘지 않게) */
+  const size = Math.max(MIN_FONT, o.size || 26), gap = Math.max(o.gap || 0, Math.round(size * 1.38)), tag = o.tag || '보상', tw = Math.round(size * 2.9), th = Math.round(size * 1.45);
   const g = scene.add.graphics();
   g.fillStyle(0xF5C451, 0.14).fillRoundedRect(x, y - th / 2, tw, th, th / 2).lineStyle(2, 0xF5C451, 0.7).strokeRoundedRect(x, y - th / 2, tw, th, th / 2);
-  const tg = T(scene, x + tw / 2, y, tag, Math.round(size * 0.86), C.gold, { w: 900, shadow: false });
+  const tg = T(scene, x + tw / 2, y, tag, Math.round(size * 0.86), C.gold, { w: 900, shadow: false, fit: tw - 12 });
   const texts = lines.map((s, i) => T(scene, x + tw + 14, y + i * gap, s, size, i ? (o.sub || '#C3CAF0') : (o.color || '#8FE3FF'), { ox: 0, w: 800 }));
   return { objs: [g, tg, ...texts], texts, h: (lines.length - 1) * gap + th };
 }

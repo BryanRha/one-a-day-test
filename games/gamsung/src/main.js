@@ -1,13 +1,13 @@
 // 시작: 렌더러 · 쿼터뷰 카메라(끌어서 둘러보기 · 두 손가락/휠 확대) · 누르기 · 저장 · 루프
 import * as THREE from 'three';
-import { Game, STACK } from './game.js?v=0.99.49';
-import { UI } from './ui.js?v=0.99.49';
-import { S, ST, loadSave, save, addSkew, KEY, OLD_KEY } from './state.js?v=0.99.49';
-import { FDX } from './layout.js?v=0.99.49';
-import { areaBox } from './world.js?v=0.99.49';
-import { music, setAudio, preloadSfx } from './audio.js?v=0.99.49';
-import { installBack, runBack, inOAD, track } from './oad.js?v=0.99.49';
-import { bm } from './oad_bm.js?v=0.99.49';
+import { Game, STACK } from './game.js?v=0.99.50';
+import { UI } from './ui.js?v=0.99.50';
+import { S, ST, loadSave, save, addSkew, KEY, OLD_KEY } from './state.js?v=0.99.50';
+import { FDX } from './layout.js?v=0.99.50';
+import { areaBox } from './world.js?v=0.99.50';
+import { music, setAudio, preloadSfx } from './audio.js?v=0.99.50';
+import { installBack, runBack, inOAD, track } from './oad.js?v=0.99.50';
+import { bm } from './oad_bm.js?v=0.99.50';
 
 const app = {}; window.__app = app; window.__S = () => S;
 const canvas = document.getElementById('view');
@@ -70,12 +70,22 @@ app.overview = (on, mg) => { const g = app.game; if (!!on === !!app._ov) return;
   if (on) { const c = new THREE.OrthographicCamera(); c.position.set(1500, 1650, 1500); c.lookAt(0, 0, 0); c.updateMatrixWorld(); const v = new THREE.Vector3(); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; const ids = g.openIds(); for (const st of g.B.stages) if (!ST().build[st.i] && !ids.has(st.ids[0]) && g.nextStage() !== st) continue; else for (const id of st.ids) { const a = g.area(id), b = areaBox(a); for (const [x, z] of [[b.x0, b.z0], [b.x1, b.z0], [b.x0, b.z1], [b.x1, b.z1]]) for (const y of [0, 330]) { v.set(x - a.floor * FDX, y + a.floor * OVY, z).applyMatrix4(c.matrixWorldInverse); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); } }
     const w = innerWidth, h = innerHeight, k = window.__k || 1, top = mg ? mg.top : 230 * k, bot = mg ? mg.bot : 200 * k, s = Math.max((y1 - y0) / 2 * h / Math.max(160, h - top - bot), (x1 - x0) / 2 * h / Math.max(160, w - 30) * 0.72) * 1.04;   /* 옆은 조금 잘려도 층이 크게 (시안 02) */ cam.left = (x0 + x1) / 2 - s * w / h; cam.right = (x0 + x1) / 2 + s * w / h; cam.top = (y0 + y1) / 2 + s + (top - bot) * s / h; cam.bottom = (y0 + y1) / 2 - s + (top - bot) * s / h; cam.updateProjectionMatrix(); cam.position.set(1500, 1650, 1500); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
     g.sun.position.set(700, 2400, 900); g.sun.target.position.set(0, 0, 0); g.sun.target.updateMatrixWorld(); sc.traverse(o => { if (o.isPointLight) o.visible = false; }); }
-  else { fit(); place(); } };
+  else { fit(); place(); if (app._needRefit) { app._needRefit = false; app.refit(); } } };
 app.focus = (x, z) => { view.x = x; view.z = z; view.free = true; place(); };
 /* 층 바꾸기 (오른쪽 층 버튼 · 사장님이 계단을 오르내림): 카메라만 그 층으로 */
-app.floor = f => { if (view.f === f && view.set) return; view.f = f; view.set = true; if (!view.pinched) view.zoom = (S.stores[S.si]?.open.length || 1) >= 2 && !app.wide() ? 0.8 : 1;   /* 매장이 커지면 폰은 조금 멀리서 (손가락으로 확대 가능) */ const B = boxView(); view.x = f * FDX + (app.wide() ? 0 : B.cx - f * FDX); view.z = app.wide() ? -110 : Math.max(-400, Math.min(B.cz, 900)); view.free = !app.wide(); fit(); place(); };
+app.floor = f => { if (view.f === f && view.set) return; view.f = f; view.set = true; if (!view.pinched) view.zoom = (S.stores[S.si]?.open.length || 1) >= 2 && !app.wide() ? 0.8 : 1;   /* 매장이 커지면 폰은 조금 멀리서 (손가락으로 확대 가능) */ const B = boxView(); view.x = f * FDX + (app.wide() ? 0 : B.cx - f * FDX); view.z = app.wide() ? -110 : Math.max(-400, Math.min(B.cz, 900)); view.free = !app.wide(); fit();
+  if (!app.wide()) { const k = window.__k || 1, up = (dockTop() - 100 * k) / 2 + 100 * k - innerHeight / 2, v = -up * (cam.right - cam.left) / innerWidth / 0.614 / 1.414; view.x += v; view.z += v; }   /* 폰: 매장 가운데를 화면 가운데가 아니라 「위 HUD 와 아래 주문 · 일감 판 사이」 가운데에 (넓힌 구역이 판 밑에 깔리던 문제 · QA 1116-6) */
+  place(); };
+const dockTop = () => { const d = document.getElementById('dock'), r = d && d.getBoundingClientRect(); return r && r.height ? r.top : innerHeight - 190 * (window.__k || 1); };
+/* 구역이 새로 열리면 그 층을 다시 맞춤 (예전엔 다시 열기 전까지 옛 화면 그대로라 새 구역이 화면 밖 · 판 밑) */
+app.refit = () => { view.set = false; app.floor(view.f || 0); };
 /* 폰: 사장님이 화면 밖으로 나가면 살짝 따라감 */
-app.follow = (x, z, dt) => { if (app.wide() || down) return; const v = new THREE.Vector3(x, 100, z).project(cam); if (Math.abs(v.x) < 0.72 && v.y < 0.55 && v.y > -0.45) return; const k = Math.min(1, dt * 2.5); view.x += (x - view.x) * k; view.z += (z - view.z) * k; place(); };
+/* QA 1116-5 「테이블 위 아이콘이 심하게 흔들림」: 예전엔 사장님이 테두리를 넘은 프레임에만 조금씩 따라가서 화면이 몇 프레임마다 뚝뚝 끊겨 움직였고, 화면 위 표시(DOM)는 카메라보다 한 프레임 늦게 놓여 3D 와 어긋났음
+   → 한번 따라가기 시작하면 사장님이 화면 안쪽에 들어올 때까지 부드럽게 이어서 · 표시를 놓기 전에 카메라를 먼저 옮김 (ui.frame 맨 앞에서 부름 · tools/qa1116_check.mjs) */
+let fol = false;
+app.follow = (x, z, dt) => { if (app.wide() || down) { fol = false; app._barLook = false; return; } const v = new THREE.Vector3(x, 100, z).project(cam);
+  if (Math.abs(v.x) > 0.72 || v.y > 0.55 || v.y < -0.45) fol = true; else if (Math.abs(v.x) < 0.3 && v.y < 0.3 && v.y > -0.2) { fol = false; app._barLook = false; } if (!fol) return;
+  const k = Math.min(1, dt * 2.2), dx = (x - view.x) * k, dz = (z - view.z) * k; if (Math.abs(dx) + Math.abs(dz) < 0.05) { fol = false; return; } view.x += dx; view.z += dz; place(); };
 
 installBack({ back: () => { if (document.querySelector('#modal').firstChild) { app.ui.close(); return true; } if (app.game.deco) { app.ui.decoExit(); return true; } if ((view.f || 0) !== 0) { app.ui.setFloor(0); return true; } return false; } });   /* 위층을 보고 있으면 뒤로 = 1층 */
 if (!(inOAD && 'CloseWatcher' in window)) addEventListener('keydown', e => { if (e.key === 'Escape') { try { runBack(); } catch { /* */ } } });   /* PC: Esc = 뒤로 (원어데이 안에서 CloseWatcher 가 Esc 를 받으면 그쪽이 처리) */
@@ -90,7 +100,7 @@ setTimeout(() => { if (!window.__bot) app.ui.welcome(away0); }, 900);
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 실행 */ } };
 addEventListener('error', e => report(e.error || e.message)); addEventListener('unhandledrejection', e => report(e.reason));
-const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.99.49').then(m => m.startBot(app));
+const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.99.50').then(m => m.startBot(app));
 if (q.get('fresh')) { window.__noSave = true; localStorage.removeItem(KEY); localStorage.removeItem(OLD_KEY);   /* 떠날 때 저장이 지운 것을 되살리지 않게 */ q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
 let last = performance.now();
 const loop = now => { requestAnimationFrame(loop); const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;

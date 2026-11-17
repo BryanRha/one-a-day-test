@@ -1,22 +1,22 @@
 // 전투 화면: 지도 · 유닛 선택 → 이동(파란 칸) → 행동(공격 · 점령 · 하차 · 대기) · 기지 생산 · 지휘관 필살기 · 상대 AI 턴
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.99.49';
-import { Sim, dist, hpOf } from '../core/sim.js?v=0.99.49';
-import { AI, apply } from '../core/ai.js?v=0.99.49';
-import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.99.49';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.49';
-import { STORY } from '../story.js?v=0.99.49';
-import { TALK, RADIO } from '../talk.js?v=0.99.49';
-import { withSupport, SUPPORT } from '../core/support.js?v=0.99.49';
-import { COLORS, teamColor, paintKey } from '../color.js?v=0.99.49';
-import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.99.49';
-import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.49';
-import { runDemo, demoWanted } from '../demo.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.99.50';
+import { Sim, dist, hpOf } from '../core/sim.js?v=0.99.50';
+import { AI, apply } from '../core/ai.js?v=0.99.50';
+import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.99.50';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.50';
+import { STORY } from '../story.js?v=0.99.50';
+import { TALK, RADIO } from '../talk.js?v=0.99.50';
+import { withSupport, SUPPORT } from '../core/support.js?v=0.99.50';
+import { COLORS, teamColor, paintKey } from '../color.js?v=0.99.50';
+import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.99.50';
+import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.50';
+import { runDemo, demoWanted } from '../demo.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
 
 const TOP = 196, BOTTOM = 360;
 const TEAM = { 1: 0x3E7FD8, 2: 0xD9472E }, TEAMS = { 1: 'b', 2: 'r' };
@@ -27,12 +27,16 @@ const sleep = (sc, ms) => new Promise(r => sc.time.delayedCall(ms, r));
 const SND = { inf: 'sfx_rifle', bazooka: 'sfx_bazooka', recon: 'sfx_mg', ltank: 'sfx_cannon', htank: 'sfx_cannon', arty: 'sfx_cannon', rocket: 'sfx_rocket', aa: 'sfx_mg', heli: 'sfx_mg', truck: 'sfx_mg' };
 const MOVE_SND = { foot: 'sfx_move_foot', mech: 'sfx_move_foot', tire: 'sfx_move_car', tread: 'sfx_move_tank', air: 'sfx_move_heli' };
 
+/* 생산 안내(턴 종료 때)를 띄울 범위: 일반 작전 1~4 · 3승 전 */
+const BUILD_NUDGE = { stages: 4, wins: 3 };
+/* 강 건너는 법 창을 띄울지: 강이 있는 지도 · 아직 못 본 사람 · 내 첫 턴 · 자동 시험 판 아님 */
+const riverWanted = sc => !load().tips.river && !sc.auto && !sc.autoplay && sc.s.day === 1 && sc.s.turn === sc.me && mapAdvice(sc.simMap).river && !/[?&]auto(=|&|$)/.test(location.search);
 export class PlayScene extends Phaser.Scene {
   constructor() { super('Play'); }
   create(data = {}) {
     const d = load();
     // 판마다 새로 시작 (Phaser 는 같은 화면 객체를 다시 쓰므로 지난 판 값이 남으면 끝나지 않거나 멈춤)
-    Object.assign(this, { fogG: null, pendingEvs: null, unloadList: [], ended: false, ending: false, said: {}, talking: false, tileImg: null, seamT: null, wxLayer: null, wxKind: null, wxParts: null, paused: false, winWhy: null, enemySum: null, holdFast: false, dragFrom: null, dragged: false, nextIdx: -1, ghost: null, pending: null, tgts: [], spots: null, spotsCache: null, reach: null, autoAi: null, powers0: 0, captures: 0, hinted: false, powerHintObj: null, frozen: null, pw: null, danger: false, supportShown: false, undoPop: null, endAsk: null, demoOn: false, demoSkip: false, riverHint: false, autoBar: null });
+    Object.assign(this, { fogG: null, pendingEvs: null, unloadList: [], ended: false, ending: false, said: {}, talking: false, tileImg: null, seamT: null, wxLayer: null, wxKind: null, wxParts: null, paused: false, winWhy: null, enemySum: null, holdFast: false, dragFrom: null, dragged: false, nextIdx: -1, ghost: null, pending: null, tgts: [], spots: null, spotsCache: null, reach: null, autoAi: null, powers0: 0, captures: 0, hinted: false, powerHintObj: null, frozen: null, pw: null, danger: false, supportShown: false, undoPop: null, endAsk: null, demoOn: false, demoSkip: false, riverHint: false, autoBar: null, buildAsk: 0, riverPop: null });
     this.mode = data.mode || 'free';
     this.map = data.custom || MAPS.find(m => m.id === data.mapId) || WAR.find(m => m.id === data.mapId) || MAPS[0];
     this.simMap = ['campaign', 'daily', 'war'].includes(this.mode) ? campaignMap(this.map) : this.map;
@@ -510,6 +514,7 @@ export class PlayScene extends Phaser.Scene {
       if (this.autoplay) { this.autoBarShow(); this.speed = 2; [this.endBtn, this.nextBtn, this.dangerBtn, this.undoBtn].forEach(b => b && b.setVisible(false)); return this.enemyTurn(1); }
       if (demoWanted(this)) return runDemo(this);   /* 첫 출전: AI 가 첫 턴을 천천히 시범 (v0.12 · 시트 #4) */
       if (!load().tips.war) this.tutorial();
+      else if (riverWanted(this)) this.riverGuide();   /* 강이 있는 지도 첫 판(모든 모드) — v0.13 시트 #5 */
     }
   }
   // ── 전투 중 대화 (원작처럼 짧은 대사 장면) ──
@@ -580,8 +585,19 @@ export class PlayScene extends Phaser.Scene {
   askEnd() {
     if (this.busy || !this.human(this.s.turn)) return;
     const left = this.s.mine(this.me).filter(u => !u.done && !u.inside).length;
-    if (!left) return this.endTurn();
     if (this.endAsk && this.endAsk.active && !this.endAsk.closing) return;
+    /* v0.13 시트 #11: 초반 일반 작전에서 자금이 남았는데 빈 기지를 그냥 두고 턴을 넘기면 하루에 한 번 부드럽게 알려 줌 (생산을 몰라 작전 2에서 막히던 것) */
+    const spot = this.buildSpot();
+    if (spot && this.buildAsk !== this.s.day) {
+      this.buildAsk = this.s.day; track('build_nudge', { m: this.map.id, day: this.s.day });
+      const p = this.endAsk = popup(this, '자금이 남았어요', 820, 600);
+      p.content.add(T(this, 0, -110, `자금 ${fmt(this.s.funds[this.me])} · 기지가 비어 있어요`, 34, C.gold, { w: 900 }));
+      p.content.add(T(this, 0, -40, '기지를 누르면 새 유닛을 생산할 수 있어요\n부대가 많을수록 전선이 든든해져요', 28, C.text, { w: 800, lh: 10 }));
+      p.content.add(btn(this, -190, 150, 340, 110, '생산하러 가기', () => { p.close(); this.follow(spot[0], spot[1]); const r = this.mark(spot[0], spot[1], 0xFFE27A, 0, true); this.tweens.add({ targets: r, alpha: 0.3, duration: 350, yoyo: true, repeat: 5 }); this.time.delayedCall(350, () => { if (!this.busy && !this.paused && this.state === 'idle' && this.human(this.s.turn) && !this.s.unitAt(spot[0], spot[1])) this.buildMenu(spot[0], spot[1]); }); }, { style: 'gold', size: 32 }));
+      p.content.add(btn(this, 190, 150, 300, 110, '턴 종료', () => { p.close(); this.endTurn(); }, { style: 'red', size: 32 }));
+      return;
+    }
+    if (!left) return this.endTurn();
     const p = this.endAsk = popup(this, '턴 종료', 760, 520);
     p.content.add(T(this, 0, -60, `아직 움직이지 않은 유닛이 ${left}기 있어요`, 30, C.sub, { w: 800 }));
     p.content.add(btn(this, -170, 110, 300, 110, '계속 지휘', () => p.close(), { style: 'olive', size: 32 }));
@@ -761,6 +777,8 @@ export class PlayScene extends Phaser.Scene {
     if (this.state === 'move') {
       const v = this.reach.get(`${x},${y}`);
       if (v && v.stop) return this.moveTo(x, y);
+      /* v0.13 시트 #5: 전차 · 차량을 고른 채 강 칸을 누르면 그냥 선택이 풀려 '왜 못 가는지' 알 수 없었음 → 누를 때마다 까닭 + 다리 칸 반짝 (선택은 그대로) */
+      if (this.sel && ['tire', 'tread'].includes(UNITS[this.sel.type].mt) && s.tile(x, y).t === 'river' && !this.unitSeen(x, y)) { this.riverNo(); return; }
       this.cancelSel(); return this.tap(p);
     }
     if (this.state === 'silo') { if (this.siloAt && this.siloAt[0] === x && this.siloAt[1] === y) return this.doSilo(); return this.aimSilo(x, y); }
@@ -947,6 +965,41 @@ export class PlayScene extends Phaser.Scene {
     if (tg) { const t2 = COS[this.s.tag[me]]; opt(2, `합동 필살기 · ${co.superp} + ${t2.superp}`, `두 지휘관의 초필살기를 한꺼번에! (${co.name} · ${t2.name})`, 'gold', 3, C.gold); }
   }
   async firePower(lvl) { if (this.busy || !this.human(this.s.turn)) return; this.busy = true; this.s.usePower(lvl); await this.drain(); this.busy = false; this.updateHud(); }
+  /* 생산을 권할 자리: 일반 작전 앞쪽(작전 1~4) · 아직 3승 전 — 살 수 있는 유닛이 있는 빈 내 기지 [x, y] (없으면 null) */
+  buildSpot() {
+    if (this.mode !== 'campaign' || this.autoplay || this.demoOn || (load().wins || 0) >= BUILD_NUDGE.wins) return null;
+    const st = M.STAGES.find(x => x.id === this.map.id); if (!st || st.n > BUILD_NUDGE.stages) return null;
+    const s = this.s, me = this.me;
+    for (let i = 0; i < s.tiles.length; i++) {
+      const t = s.tiles[i], x = i % s.w, y = (i / s.w) | 0, kind = TERRAIN[t.t].builds;
+      if (t.owner !== me || !kind || s.unitAt(x, y)) continue;
+      if (UNIT_ORDER.some(u => UNITS[u].dom === kind && s.canBuild(x, y, u, me))) return [x, y];
+    }
+    return null;
+  }
+  /* 차량으로 강 칸을 눌렀을 때: 까닭 한 줄 + 지도에 있는 다리 칸을 잠깐 반짝 */
+  riverNo() {
+    const s = this.s, has = s.tiles.some(t => t.t === 'bridge');
+    toast(this, has ? '전차 · 차량은 강에 못 들어가요 · 반짝이는 다리(=)로 건너요' : '전차 · 차량은 강에 못 들어가요 · 이 지도엔 다리가 없어 보병 · 헬기로 건너요', C.cyan, TOP + 60);
+    s.tiles.forEach((t, i) => { if (t.t !== 'bridge') return; const [px, py] = this.xy(i % s.w, (i / s.w) | 0), r = this.add.rectangle(px, py, this.ts - 8, this.ts - 8).setStrokeStyle(6, 0x7FE0FF, 1).setDepth(30); this.tweens.add({ targets: r, alpha: 0.2, duration: 260, yoyo: true, repeat: 3, onComplete: () => r.destroy() }); });
+  }
+  /* 강 건너는 법 (v0.13 시트 #5): 그림 3칸(걸어서 · 다리로 · 날아서) — 강 있는 지도 첫 판에 한 번 + 일시정지 [작전 안내]에서 언제든 */
+  riverGuide(force) {
+    if (this.riverPop && this.riverPop.active && !this.riverPop.closing) return;
+    if (!force) { const d = load(); d.tips.river = 1; save(); track('river_guide', { m: this.map.id, mode: this.mode }); }
+    const has = this.s.tiles.some(t => t.t === 'bridge'), p = this.riverPop = popup(this, '강 건너는 법', 940, 1000);
+    p.content.add(T(this, 0, -372, '이 지도엔 강이 있어요 · 유닛마다 건너는 길이 달라요', 26, C.sub, { w: 800 }));
+    RIVER_HOW.forEach(([t, line], i) => {
+      const y = -250 + i * 190, g = this.add.graphics(), ok = i !== 1;
+      g.fillStyle(0x14160A, 0.6).fillRoundedRect(-420, y - 82, 840, 164, 24).lineStyle(2, ok ? 0x6E7A40 : 0x7FE0FF, 1).strokeRoundedRect(-420, y - 82, 840, 164, 24); p.content.add(g);
+      const bg = this.add.image(-330, y, i === 1 ? 't_bridge_h' : 't_river_h'); bg.setDisplaySize(128, 128); if (i === 1) bg.setAngle(90); p.content.add(bg);
+      const im = this.add.image(-330, y, this.tk(`u_${t}_b`)); im.setScale(104 / Math.max(im.width, im.height)); p.content.add(im);
+      p.content.add(T(this, -240, y - 34, ['걸어서 건너요', '다리(=)로만 건너요', '날아서 건너요'][i], 34, ok ? C.text : C.cyan, { ox: 0, w: 900 }));
+      p.content.add(T(this, -240, y + 26, line, 24, C.sub, { ox: 0, w: 800, wrap: 630, align: 'left' }));
+    });
+    p.content.add(T(this, 0, 300, has ? '일시정지 › 작전 안내 다시 보기에서 언제든 볼 수 있어요' : '이 지도엔 다리가 없어요 · 보병과 헬기로 건너요', 24, has ? C.sub : C.gold, { w: 800 }));
+    p.content.add(btn(this, 0, 400, 420, 110, '알겠어요', () => p.close(), { style: 'gold', size: 36 }));
+  }
   tutorial(head) {
     const d = load(); d.tips.war = 1; save();
     const p = popup(this, head ? '잘 보셨어요!' : '작전 안내', 940, 900);
@@ -974,12 +1027,15 @@ export class PlayScene extends Phaser.Scene {
   pause() {
     if (this.paused) return; this.paused = true;
     const resume = () => { p.close(); this.time.delayedCall(150, () => { this.paused = false; }); };
-    const p = popup(this, '작전 일시정지', 820, 980, { closable: false, onBack: () => resume() });
+    const p = popup(this, '작전 일시정지', 820, 1120, { closable: false, onBack: () => resume() });
+    p.content.setY(-70);
     p.content.add(btn(this, 0, -230, 520, 130, '계속하기', resume, { style: 'gold', icon: 'i_play', size: 40 }));
     p.content.add(btn(this, 0, -80, 520, 100, `속도 ${this.speed === 1 ? '보통' : '빠르게'}`, () => { this.speed = this.speed === 1 ? 2 : 1; resume(); toast(this, this.speed === 2 ? '적 턴을 빠르게 보여 줘요' : '보통 속도', C.sub); }, { style: 'olive', size: 32 }));
     const d = load(), cut = btn(this, 0, 50, 520, 100, `전투 장면 ${d.cutscene === false ? '끔' : '켬'}`, () => { d.cutscene = d.cutscene === false; save(); cut.setLabel(`전투 장면 ${d.cutscene === false ? '끔' : '켬'}`); }, { style: 'olive', size: 32 }); p.content.add(cut);
     const tk = btn(this, 0, 165, 520, 100, `전투 대사 ${d.talk === false ? '끔' : '켬'}`, () => { d.talk = d.talk === false; save(); tk.setLabel(`전투 대사 ${d.talk === false ? '끔' : '켬'}`); }, { style: 'olive', size: 32 }); p.content.add(tk);
-    p.content.add(btn(this, 0, 300, 420, 96, '항복하고 나가기', () => { p.close(); this.paused = false; this.s.over = true; this.s.winner = this.foe; this.finish(true); }, { style: 'red', size: 30 }));
+    /* v0.13 시트 #4 · #5: 안내를 놓쳤어도 전투 중 언제든 다시 — 조작법(+ 강이 있으면 건너는 법) */
+    p.content.add(btn(this, 0, 290, 520, 100, '작전 안내 다시 보기', () => { resume(); this.time.delayedCall(260, () => { if (mapAdvice(this.simMap).river) this.riverGuide(true); else this.tutorial(); }); }, { style: 'ghost', size: 32 }));
+    p.content.add(btn(this, 0, 440, 420, 96, '항복하고 나가기', () => { p.close(); this.paused = false; this.s.over = true; this.s.winner = this.foe; this.finish(true); }, { style: 'red', size: 30 }));
   }
 
   // ── 전투 장면 (원작처럼 양쪽 부대가 마주 보고 싸우는 컷신) ──

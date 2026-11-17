@@ -4,6 +4,9 @@
 // · 원어데이로 버튼: exitToOAD()
 export const inOAD = (() => { try { return window.parent !== window; } catch { return true; } })();
 export const exitToOAD = () => { try { window.parent.postMessage({ type: 'oad:exit' }, '*'); } catch { /* */ } };
+/* 원어데이로 가기 (QA 공통 · 룬다이스 홈 버튼과 같은 동작): 원어데이 안 = 앱에 나가기(oad:exit) · 단독 링크 = 원어데이 사이트(테스트 서버에서 열었으면 그 서버 첫 화면) */
+export const oadSite = () => { const h = location.hostname; return /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/'; };
+export const toOAD = () => { if (inOAD) return exitToOAD(); location.href = oadSite(); };
 
 const stack = [];   // 열린 팝업마다 { back } — 위에 있는 것부터 처리
 // 팝업을 열 때 등록, 닫힐 때 해제 (back: 처리했으면 true)

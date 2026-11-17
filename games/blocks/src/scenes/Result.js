@@ -1,19 +1,20 @@
 // 클래식 결과: 점수 · 최고 기록 · 지운 줄 · 최고 콤보 · 오늘의 미션 진행 → 다시 하기 / 홈
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { sky } from '../sky.js?v=0.99.49';
-import { load } from '../save.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
-import { canDouble } from '../core/cont.js?v=0.99.49';
-import { afterRound, doubleUsed, noteDouble } from '../bmflow.js?v=0.99.49';
-import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { sky } from '../sky.js?v=0.99.50';
+import { load } from '../save.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
+import { canDouble } from '../core/cont.js?v=0.99.50';
+import { afterRound, doubleUsed, noteDouble, refreshHello, beforePlay } from '../bmflow.js?v=0.99.50';
+import { hallShown, hallPopup, submitLine } from '../hall.js?v=0.99.50';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(r) {
     this.going = false; window.__dbl = null;
+    refreshHello();   /* 앱 가격표가 늦게 왔으면 다음 판 전에 다시 물어 둠 (QA 시트 #2 · bmflow.js) */
     const d = load();
     sky(this, d.theme);
     const top = 240 + Math.max(0, (H - 1920) / 3);
@@ -34,7 +35,7 @@ export class ResultScene extends Phaser.Scene {
     if (!r.bonus) T(this, W / 2, cy + 250, ready ? `🎁 받을 미션 보상 ${ready}개 — 홈 › 미션에서 받으세요` : `오늘의 미션 ${done}/3 완료`, 32, ready ? C.gold : C.sub, { w: 800 });
     // 신기록 보너스 (QA 시트 #5): 얼마나 넘었는지 + 그만큼 별 조각 — 칭찬 넉넉히
     if (r.bonus) {
-      const by2 = cy + 250, bt = T(this, W / 2, by2, `최고 기록 +${fmt(r.score - (r.prev || 0))}점 돌파!  ★ +${r.bonus} 보너스`, 34, C.gold, { w: 900 }).setScale(0);
+      const by2 = cy + 250, bt = T(this, W / 2, by2, `+${fmt(r.score - (r.prev || 0))}점 돌파!  기본 ★${Math.max(0, (r.stars || 0) - r.bonus)} + 신기록 보너스 ★${r.bonus}`, 34, C.gold, { w: 900 }).setScale(0);   /* 기본 별과 보너스를 따로 (QA 시트 #5 '기본 별 조각 외에') */
       this.time.delayedCall(700, () => { this.tweens.add({ targets: bt, scale: 1, duration: 380, ease: 'Back.easeOut' }); audio.play('sfx_praise_2', { volume: 0.5 }); });
       window.__bonus = r.bonus;
     }
@@ -69,6 +70,6 @@ export class ResultScene extends Phaser.Scene {
     }
     window.__result = r;
   }
-  go(k, data) { if (this.going) return; this.going = true; afterRound().then(() => this.fade(k, data)); }
+  go(k, data) { if (this.going) return; this.going = true; afterRound().then(() => (k === 'Play' ? beforePlay() : null)).then(() => this.fade(k, data)); }
   fade(k, data) { this.cameras.main.fadeOut(220, 20, 12, 40); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }
 }

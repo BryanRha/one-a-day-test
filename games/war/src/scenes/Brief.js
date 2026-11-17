@@ -1,23 +1,24 @@
 // 작전 준비: 세로로 넘기는 작전 카드 목록 (다음 작전은 펼쳐서 · 잠긴 작전은 어둡게) → [출격] → 아래에서 올라오는 출격 준비(지휘관·난이도)
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { pushBack } from '../oad.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { COS, WEATHER, UNITS } from '../core/data.js?v=0.99.49';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.49';
-import { STORY } from '../story.js?v=0.99.49';
-import { rankOn } from '../rank.js?v=0.99.49';
-import { rankPopup } from '../rankui.js?v=0.99.49';
-import { Sim } from '../core/sim.js?v=0.99.49';
-import { SUPPORT } from '../core/support.js?v=0.99.49';
-import { helpCheck, fails, track, autoShow, autoLeft, takeAuto, owned as ownedOAD } from '../bmwar.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
-import { KITS, KIT_ORDER, kitMode, kitCount, takeKits, failMsg } from '../shop.js?v=0.99.49';
-import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.49';
-import { firstGuide, modeGuide } from '../guide.js?v=0.99.49';
-import { paintKey } from '../color.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { pushBack } from '../oad.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { COS, WEATHER, UNITS } from '../core/data.js?v=0.99.50';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.50';
+import { STORY } from '../story.js?v=0.99.50';
+import { rankOn } from '../rank.js?v=0.99.50';
+import { rankPopup } from '../rankui.js?v=0.99.50';
+import { Sim } from '../core/sim.js?v=0.99.50';
+import { SUPPORT } from '../core/support.js?v=0.99.50';
+import { helpCheck, fails, track, autoShow, autoLeft, takeAuto, owned as ownedOAD } from '../bmwar.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
+import { KITS, KIT_ORDER, kitMode, kitCount, takeKits, failMsg } from '../shop.js?v=0.99.50';
+import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.50';
+import { firstGuide, modeGuide } from '../guide.js?v=0.99.50';
+import { demoPlay, demoOffer } from '../demo.js?v=0.99.50';
+import { paintKey } from '../color.js?v=0.99.50';
 
 const LV = { easy: '쉬움', normal: '보통', hard: '어려움' };
 const TCOL = { pipe: 0x8A8F96, seam: 0xC8A040, silo: 0x5A5048, silo_e: 0x6A6A5A, plain: 0x8DB05A, farm: 0x9BB45A, wheat: 0xD8B85A, forest: 0x3E7A34, mountain: 0x9A8C78, road: 0xC8A878, bridge: 0xB0A090, river: 0x4A9AD8, beach: 0xE8D8A0, sea: 0x2A6AB0, reef: 0x3A7A90, trench: 0x8A7A50 };
@@ -52,6 +53,7 @@ export class BriefScene extends Phaser.Scene {
     window.__brief = this;
     const shown = firstGuide(this, this.mode === 'campaign' ? null : this.mode, () => { if (this.mode === 'daily' && !this.sheet) this.openSheet(); });
     if ((this.mode === 'daily' && !shown) || data.sheet) this.time.delayedCall(250, () => this.openSheet());
+    else if (this.mode === 'campaign' && !shown) demoOffer(this, popup, () => this.go('Play', demoPlay()));   /* 예전부터 하던 사람에게 시범을 한 번 권함 (v0.13 · 시트 #4) */
   }
   // 화면 고정(위 머리 · 출격 준비 시트)은 묶음의 자식까지 scrollFactor 0 이어야 터치가 맞음
   update() {
@@ -73,7 +75,7 @@ export class BriefScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(100).setScrollFactor(0);
     g.fillStyle(0x262A14, 1).fillRect(0, 0, W, TOPH - 30); for (let k = 0; k < 15; k++) g.fillStyle(0x262A14, 1 - k / 15).fillRect(0, TOPH - 30 + k * 4, W, 4);
     iconBtn(this, 76, 80, 'i_home', () => this.go('Home'), 92).setDepth(101);
-    btn(this, W - 110, 80, 160, 70, '안내', () => modeGuide(this, this.mode), { style: 'ghost', size: 26 }).setDepth(101);
+    btn(this, W - 110, 80, 160, 70, '안내', () => modeGuide(this, this.mode, null, this.mode === 'campaign' ? { demo: () => this.go('Play', demoPlay()) } : {}), { style: 'ghost', size: 26 }).setDepth(101);
     T(this, W / 2, 66, { campaign: '일반 작전', daily: '특수 작전', free: '자유 대전', war: '전쟁실' }[this.mode], 46, C.text, { w: 900 }).setDepth(101).setScrollFactor(0);
     const sub = this.mode === 'campaign' ? `★ ${M.totalStars()} / ${M.STAGES.length * 3} · ${this.items.filter(i => i.stars).length}/${M.STAGES.length} 작전 완료`
       : this.mode === 'war' ? `S 등급 ${Object.values(d.war).filter(o => o.rank === 'S').length} / ${WAR.length} · 이기면 속도·전력·기술 점수`
@@ -158,7 +160,7 @@ export class BriefScene extends Phaser.Scene {
       c.add(T(this, ux + 74, ay + 60, UNITS[a.t].name, 24, '#2B2416', { ox: 0, w: 900, shadow: false }));
       c.add(T(this, ux + 74, ay + 92, a.why, 18, '#5A4A22', { ox: 0, w: 700, shadow: false, wrap: 215, align: 'left' }));
     });
-    if (adv.river) c.add(T(this, x0, ay + 136, '강 건너기 · 보병은 걸어서 · 전차·차량은 다리(=)로 · 헬기는 날아서', 21, '#1E5A8A', { ox: 0, w: 800, shadow: false }));
+    if (adv.river) c.add(T(this, x0, ay + 136, '강 건너기 · 보병은 걸어서 · 전차·차량은 다리(=)로 · 헬기는 날아서', 24, '#1E5A8A', { ox: 0, w: 800, shadow: false }));   /* v0.13: 21 → 24px */
     this.mini(c, it.custom || this.mode === 'free' ? map : campaignMap(map), CX + CW - 200, y + 340, 300, 250);
     const by = y + h - 70;
     if (this.mode === 'campaign' && STORY[map.id]) c.add(btn(this, x0 + 150, by, 300, 96, '이야기', () => { if (this.tapOk()) { this.mapId = map.id; this.story(STORY[map.id].pre, ['Brief', { ...this.data0, mapId: map.id, tag: this.tag ?? null }]); } }, { style: 'ghost', size: 28 }));

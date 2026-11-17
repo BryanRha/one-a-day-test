@@ -4,21 +4,21 @@
 //   일 10가지(data.js OWNER_JOBS) · 돌발 일 8가지(EVENTS) · 동료(은재 · 보람 · 태민 · 무진 · 도윤)는 같은 일을 대신 함 · 동료는 가끔 쉬고 사장님이 깨우면 응원 +30%
 //   Game.prototype 에 섞어 씀 (game.js 끝)
 import * as THREE from 'three';
-import { MENU, OWNER, OWNER_JOBS, EVENTS, EVENT_GAP, STAFF, BEAN_MAX, BRAND, APRONS, STORES, FURN } from './data.js?v=0.99.49';
-import { S, ST, save, today, now } from './state.js?v=0.99.49';
-import { person, tray, box, cyl, sph, FURN_MODEL } from './models.js?v=0.99.49';
-import { sfx } from './audio.js?v=0.99.49';
-import { FDX, floorOfX, SPOT, gi } from './layout.js?v=0.99.49';
-import { ownerAdd, track } from './oad.js?v=0.99.49';
-import { cx, cz, ci, cj, BAR_PICK, BAR_EXIT, LANE, LANE_X, BIN, DOOR, K, storeMult, fmt, isJeong } from './game.js?v=0.99.49';
+import { MENU, OWNER, OWNER_JOBS, EVENTS, EVENT_GAP, STAFF, BEAN_MAX, BRAND, APRONS, STORES, FURN } from './data.js?v=0.99.50';
+import { S, ST, save, today, now } from './state.js?v=0.99.50';
+import { person, tray, box, cyl, sph, FURN_MODEL } from './models.js?v=0.99.50';
+import { sfx } from './audio.js?v=0.99.50';
+import { FDX, floorOfX, SPOT, gi } from './layout.js?v=0.99.50';
+import { ownerAdd, track } from './oad.js?v=0.99.50';
+import { cx, cz, ci, cj, BAR_PICK, BAR_EXIT, LANE, LANE_X, BIN, DOOR, K, storeMult, fmt, isJeong } from './game.js?v=0.99.50';
 
 const V = THREE.Vector3, rnd = (a, b) => a + Math.random() * (b - a);
 const BAR_DOOR = { x: 640, z: -543 };   /* 바 안 오른쪽 끝 (나가는 곳 · game.js LANE) */
 export const OwnerMixin = {
   // ── 사장님
-  ownerInit() { const ap = APRONS.find(a => a.id === S.apron) || APRONS[0], P = person({ body: ap.body, apron: ap.apron, hair: 0x3A2A1E, pants: 0x3B2A20, bun: true }); P.g.position.set(100, 0, LANE); this.sc.add(P.g);
+  ownerInit() { const ap = APRONS.find(a => a.id === S.apron) || APRONS[0], P = person({ body: ap.body, apron: ap.apron, hair: 0x3A2A1E, pants: 0x3B2A20, bun: true, scarf: 0xE8C46A });   /* 금빛 스카프 = 사장님 표식 (동료와 구분 · QA 1116-7) */ P.g.position.set(100, 0, LANE); this.sc.add(P.g);
     const ring = new THREE.Mesh(new THREE.RingGeometry(34, 42, 24), new THREE.MeshBasicMaterial({ color: BRAND.redHex, transparent: true, opacity: 0.8 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 2; P.g.add(ring);   /* 발밑 붉은 고리 = 사장님 */
-    this.owner = { P, pos: P.g.position, tx: 100, mode: 'bar', route: null, steps: [], carry: [], idleT: 0, out: null, dwell: 0 }; this.events = this.events?.filter(e => false) || []; this.eventT = rnd(...EVENT_GAP) * 0.5; this._room = null;
+    this.owner = { P, pos: P.g.position, tx: 100, mode: 'bar', route: null, steps: [], carry: [], idleT: 0, out: null, dwell: 0, wakeW: null }; this.events = this.events?.filter(e => false) || []; this.eventT = rnd(...EVENT_GAP) * 0.5; this._room = null;
     for (const w of this.workers) w.restT = rnd(...OWNER.restAfter); this.pet = null; if (S.items.includes('pet')) this.petOn(); },
   /* 돌담 고양이 귤이 (골드 · 겉모습): 사장님을 졸졸 */
   petOn() { if (this.pet) return; const g = new THREE.Group(); box(40, 26, 24, 0xF09A30, 0, 10, 0, g); sph(15, 0xF09A30, 0, 40, 16, g, 8, 6); for (const s of [-1, 1]) box(6, 8, 4, 0xF09A30, s * 8, 54, 16, g); box(4, 30, 4, 0xF09A30, 0, 22, -16, g).rotation.x = -0.6; g.position.copy(this.owner.pos).add(new V(-60, 0, 40)); this.sc.add(g); this.pet = { g }; },
@@ -31,16 +31,20 @@ export const OwnerMixin = {
   /* 걷는 길 → 점 목록 (바 안이면 먼저 바 끝 → 바 나가는 칸) */
   routePts(cell) { const o = this.owner, pts = []; let from = this.ownerCell();
     if (o.mode === 'bar') { pts.push([BAR_DOOR.x, BAR_DOOR.z]); pts.push([cx(BAR_EXIT[0]), cz(BAR_EXIT[1])]); }
-    const p = this.path(from, cell); if (!p) return null; for (const [i, j] of p) pts.push([cx(i), cz(j)]); return pts; },
+    let p = this.path(from, cell);
+    /* 서 있는 칸이 가구로 둘러싸였을 때(사장님이 홀에 있는 동안 그 둘레에 가구를 놓음): 예전엔 길이 없다고 일을 말없이 버려서 눌러도 안 움직였음 → 가장 가까운 트인 칸으로 한 걸음 빠져나와서 감 (막힘 검출 abuse 「그 자리가 그대로 더러움」 · 0.2.2) */
+    if (!p && from && o.mode !== 'bar') { const near = []; for (let di = -3; di <= 3; di++) for (let dj = -3; dj <= 3; dj++) if ((di || dj) && this.walkable(from[0] + di, from[1] + dj)) near.push([from[0] + di, from[1] + dj]); near.sort((x, y) => Math.hypot(x[0] - from[0], x[1] - from[1]) - Math.hypot(y[0] - from[0], y[1] - from[1]));
+      for (const c of near) { if (floorOfX(cx(c[0])) !== floorOfX(cx(from[0]))) continue; p = this.path(c, cell); if (p) break; } }
+    if (!p) return null; for (const [i, j] of p) pts.push([cx(i), cz(j)]); return pts; },
   /* 일 맡기기: steps = [{ cell, act, name }] · 사람이 탭한 일은 지금 하던 것을 바꿈(들고 있는 것은 그대로) */
-  assign(steps, job) { const o = this.owner; if (!steps.length) return false; if (o.job && o.job !== job && o.job.cancel) o.job.cancel(); o.steps = steps; o.job = job || null; o.route = null; o.idleT = 0; if (o.mode === 'bar') this.leaveBar(); return true; },
+  assign(steps, job) { const o = this.owner; if (!steps.length) return false; if (o.job && o.job !== job && o.job.cancel) o.job.cancel(); o.wakeW = null; o.steps = steps; o.job = job || null; o.route = null; o.idleT = 0; if (o.mode === 'bar') this.leaveBar(); return true; },
   leaveBar() { const o = this.owner; o.mode = 'walk'; let dl = 0, val = 0; for (const m of this.machines) { const p = this.progress(m); if (p && p.u < 1 && !m.bak) { const left = p.left; if (!dl || left < dl) { dl = left; val = MENU[p.s.menu].price * p.s.n; } } }
     o.out = { n: 0, pot: 0, t0: this.t, deadline: dl ? this.t + dl : 0, val }; },
   goBar(then) { const o = this.owner; if (o.mode === 'bar') { then && then(); return; } if (o.job?.cancel) o.job.cancel(); const pts = this.routePts(BAR_EXIT) || []; pts.push([BAR_DOOR.x, BAR_DOOR.z]); o.steps = [{ pts, bar: true, then }]; o.job = null; o.route = null; },
   /* 바 일(주문표 · 머신 · 쟁반)은 바에서만: 밖에 있으면 먼저 돌아와서 */
-  atBarThen(fn) { if (this.atBar()) return fn(); this.goBar(fn); return null; },
+  atBarThen(fn) { this.ui.barLook && this.ui.barLook(); if (this.atBar()) return fn(); this.goBar(fn); return null; },
   /* 바에 돌아옴: 동선 보너스 · 딱 맞춤 */
-  backAtBar() { const o = this.owner, out = o.out; o.mode = 'bar'; o.tx = BAR_DOOR.x - 40; o.out = null; if (!out) return; const n = out.n;
+  backAtBar() { const o = this.owner, out = o.out; o.mode = 'bar'; this.ui.barLook && this.ui.barLook(); o.tx = BAR_DOOR.x - 40; o.out = null; if (!out) return; const n = out.n;
     if (n > 0) { const mult = Math.min(n, OWNER.chainMax), chain = out.pot * mult, fit = out.deadline && this.t <= out.deadline + OWNER.grace, fitV = fit ? out.val * storeMult() * OWNER.fit * (1 + this.bossK('tip')) : 0, v = this.earn(chain + fitV);
       if (v > 0) { this.ui.float(`${fit ? '딱 맞춤! ' : ''}${n > 1 ? `동선 ×${mult} ` : ''}+${fmt(v)}`, new V(o.pos.x, 260, o.pos.z), 'pay'); sfx('reward', { vol: 0.45 }); }
       this.ui.praiseOwner && this.ui.praiseOwner(fit, mult, v); ownerAdd(null, !!fit); S.ostat.out = (S.ostat.out || 0) + 1; if (fit) S.ostat.fit = (S.ostat.fit || 0) + 1; (window.__ownStat ||= { out: 0, fit: 0, jobs: 0 }).out++; if (fit) window.__ownStat.fit++; }
@@ -52,6 +56,8 @@ export const OwnerMixin = {
   handShow() { const o = this.owner; o.P.hand.clear(); o.carry.forEach((h, i) => { let m; if (h.kind === 'tray') { m = tray(MENU[h.c.menu].look, h.c.items); m.scale.setScalar(0.8); } else if (h.kind === 'bean') { m = new THREE.Group(); const s = cyl(14, 17, 30, 0xC8B08A, 0, 0, 0, m, 8); s.scale.set(1, 1, 0.8); } else if (h.kind === 'dessert') { m = tray(MENU[h.k].look); m.scale.setScalar(0.8); } else { m = new THREE.Group(); sph(10, h.c || 0xF09A30, 0, 6, 0, m, 8, 6); } m.position.set(0, -6 + i * 16, 0); o.P.hand.add(m); }); },
   // ── 매 프레임
   ownerAI(dt) { const o = this.owner; if (!o) return; if (this.pet) { const p = this.pet.g.position, tx = o.pos.x - 70, tz = o.pos.z + 50, d = Math.hypot(tx - p.x, tz - p.z); if (d > FDX / 2) p.set(tx, 0, tz); else if (d > 30) { p.x += (tx - p.x) * Math.min(1, dt * 3); p.z += (tz - p.z) * Math.min(1, dt * 3); this.pet.g.rotation.y = Math.atan2(tx - p.x, tz - p.z); } }
+    /* 바 안에서 쉬는 동료(하린 · 로스터 앞 무진) 깨우기: 바 밖으로 돌아 나가지 않고 그 옆으로 걸어가서 (QA 1116-2) */
+    if (o.mode === 'bar' && !o.steps.length && o.wakeW) { const w = o.wakeW; if (!(w.rest > 0)) o.wakeW = null; else { o.tx = Math.max(LANE_X[0], Math.min(BAR_DOOR.x - 40, w.pos.x + (o.pos.x >= w.pos.x ? 70 : -70))); if (Math.abs(o.tx - o.pos.x) <= 4 && Math.abs(o.pos.z - LANE) <= 4) { o.wakeW = null; o.P.g.rotation.y = Math.atan2(w.pos.x - o.pos.x, w.pos.z - o.pos.z); this.wake(w); o.P.anim(dt, false); return; } } }
     if (o.mode === 'bar' && !o.steps.length) { const d = o.tx - o.pos.x; if (Math.abs(o.pos.z - LANE) > 4) { this.stepTo(o, o.pos.x, LANE, dt, 300); return; } if (Math.abs(d) > 4) { o.pos.x += Math.sign(d) * Math.min(Math.abs(d), 260 * dt); o.P.g.rotation.y = d > 0 ? Math.PI / 2 : -Math.PI / 2; o.P.anim(dt, true); } else { o.P.g.rotation.y = 0; o.P.anim(dt, false); } return; }
     const st = o.steps[0]; if (!st) { o.P.anim(dt, false); o.idleT += dt; this.roomCheck(); if (o.idleT > 5 && !this._room && !this.deco && !o.hold) this.goBar(); return; }
     if (!o.route) { o.route = st.pts ? st.pts.slice() : this.routePts(st.cell); if (!o.route) { o.steps.shift(); if (o.job?.cancel) o.job.cancel(); if (!o.steps.length) o.job = null; return; } if (o.mode === 'bar') this.leaveBar(); o.dwell = 0; }
@@ -70,8 +76,19 @@ export const OwnerMixin = {
   /* 방문형 방 (동료 쉼터 · 사장실 · 원두 창고): 들어가면 창 */
   roomCheck() { const a = this.cells?.get(K(...this.ownerCell())), v = a && a.visit; if (v && this._room !== v) { this._room = v; this.ui.room && this.ui.room(v); } else if (!v) this._room = null; },
   // ── 동료 쉬기 · 깨우기 (마루미 REST 구조): 가끔 30초 쉼 → 스스로 일어나거나 사장님이 깨우면 3분 응원 +30%
-  restTick(w, dt) { if (w.rest > 0) { w.rest -= dt; w.P.anim(dt, false); if (w.rest <= 0) { w.rest = 0; w.restT = rnd(...OWNER.restAfter); } return true; }
-    w.restT = (w.restT ?? rnd(...OWNER.restAfter)) - dt; if (w.restT <= 0 && !(w.carry && w.carry.length) && !w.task && !(this.t < (w.cheerUntil || 0))) { w.rest = OWNER.restLen; w.restT = 0; } return false; },
+  /* QA 1116 근본 수정 세 가지
+     · 한 프레임에 한 번만: 로스팅실 무진은 workerAI 와 roasterAI 양쪽에서 불려 쉬는 시간이 절반(15초)으로 줄었음 → 「깨우기」가 하기도 전에 사라짐
+     · 사장님이 깨우러 오는 중이면 스스로 일어나지 않고 기다림 (걸어간 보람이 사라지지 않게)
+     · 막힘 0: 그 동료가 아니면 장사가 멈추는 때(mustWork · 빈자리가 없는데 치울 자리가 남음 · 원두 바닥)에는 쉬지 않고, 쉬던 중이면 스스로 일어남 */
+  restTick(w, dt) { if (w._rt === this.t) return w.rest > 0; w._rt = this.t;
+    if (w.rest > 0) { if (this.mustWork(w)) { w.rest = 0; w.restT = rnd(...OWNER.restAfter); this.ui.float('제가 얼른 할게요!', w.pos.clone().setY(240), 'say'); return false; }
+      w.rest -= dt; w.P.anim(dt, false); if (w.rest <= 0) { if (this.wakeComing(w)) { w.rest = 0.05; return true; } w.rest = 0; w.restT = rnd(...OWNER.restAfter); this.ui.float('잘 쉬었어요 · 다시 일할게요', w.pos.clone().setY(240), 'say'); } return true; }
+    w.restT = (w.restT ?? rnd(...OWNER.restAfter)) - dt; if (w.restT <= 0 && !(w.carry && w.carry.length) && !w.task && !(this.t < (w.cheerUntil || 0))) { if (this.mustWork(w)) { w.restT = 5; return false; } w.rest = OWNER.restLen; w.restT = 0; } return false; },
+  mustWork(w) { if (w.role === 'hall') return this.freeSeats().length <= 1 && this.seats().some(x => x.s.dirty && x.s.cell && !x.s.who); if (w.role === 'roaster') return S.beans < 6; return false; },
+  wakeComing(w) { const o = this.owner; return !!o && (o.wakeW === w || (o.job?.kind === 'wake' && o.job.w === w)); },
+  /* 쉬는 동료 모두 (로스터 앞에 서 있는 무진도 — 예전엔 목록에 없어 깨울 수도 없이 서 있기만 했음 · QA 1116-1) */
+  restingStaff() { return [...new Set([...this.workers, this.barista, this.roastBoy])].filter(w => w && w.rest > 0); },
+  inBar(w) { return w === this.barista || !!w.fixed; },
   cheerK(w) { return this.t < (w.cheerUntil || 0) ? 1 + OWNER.wake : 1; },
   wake(w) { if (!w.rest) return false; w.rest = 0; w.restT = rnd(...OWNER.restAfter); w.cheerUntil = this.t + OWNER.wakeT; this.sparkle(w.pos.clone().setY(150)); sfx('unlock', { vol: 0.4 }); this.ui.float('힘낼게요! +30%', w.pos.clone().setY(240), 'pay sm'); this.jobDone('wake', 3 * storeMult()); return true; },
   // ── 일감 목록 (레일 · 안내 · 봇): 가까운 순 · 급한 것 먼저
@@ -83,7 +100,7 @@ export const OwnerMixin = {
     /* 치우기 */ const dirty = this.seats().filter(x => x.s.dirty && x.s.cell && !this.workers.some(w => w.task && w.task.o === x.o && w.task.k === x.k)).sort((a, b) => dist(a.s.cell) - dist(b.s.cell))[0]; if (dirty) add('clean', dirty.s.cell, () => this.jobClean(dirty.o, dirty.k), !this.freeSeats().length);
     /* 디저트 나르기 */ if (this.caseAt && this.caseTotal() && Object.keys(ST().case).some(k => (ST().case[k] || 0) > 0)) add('dessert', this.accessNear([ci(this.caseAt[0]), cj(this.caseAt[1])]), () => this.jobDessert(), this.tickets.some(t => t.items.some(it => MENU[it.k].oven && (ST().case[it.k] || 0) > 0)));
     /* 첫인사는 문 가까이 있으면 저절로 (레일에는 안 올림) */
-    /* 동료 깨우기 */ for (const w of [...this.workers, this.barista].filter(w => w && w.rest > 0)) { add('wake', w === this.barista ? BAR_EXIT : this.accessNear(this.cellOf(w)), () => this.jobWake(w), false, `${STAFF[w.role].name.split('· ')[1]} 깨우기`); }
+    /* 동료 깨우기 */ for (const w of this.restingStaff()) { add('wake', this.inBar(w) ? BAR_EXIT : this.accessNear(this.cellOf(w)), () => this.jobWake(w), false, `${STAFF[w.role].name.split('· ')[1]} 깨우기`, { w }); }
     /* 돌발 일 */ for (const e of this.events) add('event', e.cells[0], () => this.jobEvent(e), e.t < 20, e.def.name, { ev: e });
     /* 단골 사연 */ const sc2 = this.cust.find(c => c.state === 'story' || (c.story && c.state === 'seated')); if (sc2) add('story', sc2.state === 'story' ? this.nearFree([11, 8]) : sc2.seat.s.cell, () => this.jobStory(sc2), false, `${sc2.reg.name} 사연`);
     /* 화분 돌보기 */ const pot = (this.pots || []).find(p => (ST().plants || {})[p.id] !== today()); if (pot) add('plant', this.accessNear(pot.cell), () => this.jobPlant(pot), false, this.B.feat.yard ? '귤 따기 · 돌담 화분' : OWNER_JOBS.plant.name);
@@ -106,12 +123,14 @@ export const OwnerMixin = {
     if (byOwner) { const tip = Math.round(c.pay * OWNER.far * (1 + this.bossK('tip'))); c.pay += tip; this.ui.float(`가져다 드림 · 팁 +${fmt(tip)}`, c.pos.clone().setY(240), 'pay sm'); this.jobDone('serve', tip); } sfx('blip', { vol: 0.4, rate: 1.4 }); },
   /* 들었던 쟁반을 픽업대로 되돌림 */
   untake(c) { if (!c.taken) return; for (const it of c.items) ST().bar[it.k] = (ST().bar[it.k] || 0) + it.n; c.taken = false; c.reserved = false; c.delBy = null; this.refreshBar(); if (!c.gone && c.state === 'seated') { c.readyT = this.t; } },
-  jobClean(o, k) { const s = o.seats[k]; if (!s.cell) return false; return this.assign([{ cell: s.cell, face: [s.x, s.z], act: () => { if (!s.dirty) return true; const v = this.clean(o, k); this.sparkle(new V(s.x, 100, s.z)); this.jobDone('clean', v); } }], { kind: 'clean' }); },
+  jobClean(o, k) { const s = o.seats[k]; if (!s.cell) return false; return this.assign([{ cell: s.cell, face: [s.x, s.z], act: () => { if (!s.dirty) return true; const v = this.clean(o, k); this.sparkle(new V(s.x, 100, s.z)); this.jobDone('clean', v); } }], { kind: 'clean', o, k }); },
   jobDessert() { const at = this.accessNear([ci(this.caseAt[0]), cj(this.caseAt[1])]);
     return this.assign([{ cell: at, face: this.caseAt, act: () => { const st = ST(); let took = 0; for (const [k, n] of Object.entries(st.case)) { while (st.case[k] > 0 && this.handFree() > 0) { const q = Math.min(st.case[k], MENU[k].n); st.case[k] -= q; this.owner.carry.push({ kind: 'dessert', k, n: q }); took++; } } this.refreshCase(); this.handShow(); if (!took) return false; sfx('pick', { vol: 0.4 }); } },
       { cell: BAR_PICK, face: [150, -455], act: () => { const st = ST(); let n = 0; for (const h of this.owner.carry.filter(h => h.kind === 'dessert')) { st.bar[h.k] = (st.bar[h.k] || 0) + h.n; n += h.n; } this.owner.carry = this.owner.carry.filter(h => h.kind !== 'dessert'); this.handShow(); this.refreshBar(); sfx('drop', { vol: 0.5 }); this.jobDone('dessert', 2 * n * storeMult()); save(); this.ui.progress(); } }], { kind: 'dessert' }); },
   jobGreet(c) { return this.assign([{ cell: this.nearFree([12, 8]), act: () => { if (!c.gone) this.greet(c); } }], { kind: 'greet' }); },
-  jobWake(w) { const at = w === this.barista ? BAR_EXIT : this.accessNear(this.cellOf(w)); return this.assign([{ cell: at, face: [w.pos.x, w.pos.z], act: () => { this.wake(w); } }], { kind: 'wake' }); },
+  jobWake(w) { if (!w || !(w.rest > 0)) return false; const o = this.owner;
+    if (this.inBar(w)) { if (o.mode !== 'bar') this.goBar(); o.wakeW = w; return true; }   /* 바 안 동료: 바에서 옆으로 (ownerAI) */
+    const at = this.accessNear(this.cellOf(w)); return this.assign([{ cell: at, face: [w.pos.x, w.pos.z], act: () => { this.wake(w); } }], { kind: 'wake', w }); },
   jobStory(c) { const at = c.state === 'story' ? this.nearFree([11, 8]) : c.seat.s.cell; return this.assign([{ cell: at, face: [c.pos.x, c.pos.z], act: () => { if (c.gone || !c.story) return true; this.jobDone('story', 3 * storeMult()); if (window.__bot) { const ep = c.reg.eps[(S.reg[c.reg.id]?.ep) || 0]; if (ep) this.storyDone(c, ep.ch.slice().sort((a, b) => b[2] - a[2])[0]); } else this.ui.story(c); } }], { kind: 'story' }); },
   jobPlant(p) { return this.assign([{ cell: this.accessNear(p.cell), face: [p.x, p.z], act: () => { ST().plants[p.id] = today(); this.sparkle(new V(p.x, 120, p.z)); sfx('drop', { vol: 0.4, rate: 1.3 }); const v = this.jobDone('plant', (this.B.feat.yard ? 12 : 3) * storeMult()); if (this.B.feat.yard) { this.earn(v); this.ui.float(`귤 한 바구니 +${fmt(v)}`, new V(p.x, 220, p.z), 'pay sm'); } else this.ui.float('감성 지수 +6 (오늘)', new V(p.x, 220, p.z), 'heart'); save(); this.ui.progress(); } }], { kind: 'plant' }); },
   /* 바닥을 누름 = 그 칸으로 걸어감 (탭 이동) */
@@ -173,7 +192,7 @@ export const OwnerMixin = {
     if (!this.walk(w, dt, (STAFF[w.role].lvx ? (STAFF[w.role].lvx(this.lvOf(w.role)).sp || 300) : 300) * this.cheerK(w))) return; w.dw = (w.dw || 0) + dt; if (w.dw < OWNER.dwell) return;
     T.steps.shift(); w.route = null; let ok = true; try { ok = st.act() !== false; } catch (e) { console.error(e); ok = false; } if (!ok) { T.job?.cancel && T.job.cancel(); w.task = null; } else if (!T.steps.length) w.task = null; },
   workerPick(w) { const r = w.role;
-    if (r === 'hall') { const d = this.seats().find(x => x.s.dirty && x.s.cell && !this.workers.some(o => o.task && o.task.kind === 'clean' && o.task.o === x.o && o.task.k === x.k) && !(this.owner.job?.kind === 'clean')); if (d) { w.task = { kind: 'clean', o: d.o, k: d.k }; w.route = this.path(this.cellOf(w), d.s.cell); } return; }
+    if (r === 'hall') { const oj = this.owner.job, me = this.cellOf(w), d = this.seats().filter(x => x.s.dirty && x.s.cell && !this.workers.some(o => o.task && o.task.kind === 'clean' && o.task.o === x.o && o.task.k === x.k) && !(oj?.kind === 'clean' && oj.o === x.o && oj.k === x.k)).sort((a, b) => Math.hypot(a.s.cell[0] - me[0], a.s.cell[1] - me[1]) - Math.hypot(b.s.cell[0] - me[0], b.s.cell[1] - me[1]))[0]; if (d) {   /* 사장님이 한 자리를 닦는 동안에도 다른 자리는 도윤이 (예전엔 통째로 쉼) · 가까운 자리부터 */ w.task = { kind: 'clean', o: d.o, k: d.k }; w.route = this.path(this.cellOf(w), d.s.cell); } return; }
     if (r === 'roaster' && this.bagAt && ST().bags > 0 && S.beans < STAFF.roaster.lvx(this.lvOf('roaster')).low + 40) { w.carry = []; const at = w.home;
       w.task = { steps: [{ cell: at, act: () => { const st = ST(), n = Math.min(2, Math.ceil(st.bags / OWNER.bag)); for (let k = 0; k < n && st.bags > 0; k++) { const q = Math.min(OWNER.bag, st.bags); st.bags -= q; w.carry.push({ kind: 'bean', n: q }); } this.refreshBags(); if (!w.carry.length) return false; this.carryShow(w); } },
         { cell: BAR_EXIT, act: () => { let n = 0; for (const h of w.carry) n += h.n; w.carry = []; this.carryShow(w); const add = Math.min(BEAN_MAX - S.beans, n); S.beans += add; ST().bags += n - add; this.refreshBags(); this.sparkle(new V(BIN.x, 140, BIN.z)); save(); this.ui.progress(); } }], job: { cancel: () => { for (const h of w.carry) ST().bags += h.n; w.carry = []; this.carryShow(w); this.refreshBags(); } } }; return; }
@@ -189,7 +208,7 @@ export const OwnerMixin = {
   // ── 누르기: 사장님 일감 대상 (돌발 일 · 자루 선반 · 진열장 · 창구 · 화분 · 쉬는 동료 · 금고 · 계약 책상 · 옷장 · 선물 · 잠긴 구역)
   pickOwner(ray) { const near = (x, y, z, r) => ray.distanceToPoint(new V(x, y, z)) < r;
     for (const e of this.events) for (const c of e.cells) if (near(cx(c[0]), 60, cz(c[1]), 90)) return { kind: 'event', e };
-    for (const w of [...this.workers, this.barista].filter(w => w && w.rest > 0)) if (near(w.pos.x, 110, w.pos.z, 80)) return { kind: 'wake', w };
+    for (const w of this.restingStaff()) if (near(w.pos.x, 110, w.pos.z, 80)) return { kind: 'wake', w };
     if (this.bagAt && near(this.bagAt[0], 60, this.bagAt[1], 110)) return { kind: 'bags' };
     if (this.caseAt && near(this.caseAt[0], 80, this.caseAt[1], 90)) return { kind: 'case' };
     if (this.windowAt && near(this.windowAt[0], 80, this.windowAt[1], 120)) return { kind: 'window' };

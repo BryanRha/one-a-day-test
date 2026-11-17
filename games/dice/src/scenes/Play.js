@@ -1,16 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.99.49';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.49';
-import { DESC } from './Deck.js?v=0.99.49';
-import { act } from '../core/ai.js?v=0.99.49';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.49';
-import * as BM from '../bmflow.js?v=0.99.49';
-import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.49';
-import { guidePop } from '../guide.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.50';
+import { DESC } from './Deck.js?v=0.99.50';
+import { act } from '../core/ai.js?v=0.99.50';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.50';
+import * as BM from '../bmflow.js?v=0.99.50';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.50';
+import { guidePop } from '../guide.js?v=0.99.50';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -34,7 +34,8 @@ const RUN0 = () => ({
   hinted: false, danger: null, chillFx: null, minePool: null, recordSaid: false, manaT: 0,
   bpId: null, bpImg: null, bpObjs: null, bpArgs: null,
   drag: null, drag0moved: false, frozen: [], hints: [], targets: [], powerHintObj: null, rarFxT: 0, popT: 0,
-  pulseQ: [], links: [], linked: new Set(), lastLink: null, fingerObj: null, pick: null, itemBusy: false, autoBought: false, itemBar: null, itemTray: null, items: [], itemY: null,
+  pulseQ: [], links: [], linked: new Set(), lastLink: null, fingerObj: null, pick: null, itemBusy: false, autoBought: false, itemBar: null, itemTray: null, items: [], itemY: null, itemNote: null,
+  bossLag: 1, bossLagId: null, bossHitT: 0,
 });
 
 export class PlayScene extends Phaser.Scene {
@@ -65,7 +66,7 @@ export class PlayScene extends Phaser.Scene {
     // 조작부는 화면 아래에 붙이고, 판(+둘레 길)은 위 정보와 조작부 사이 가운데에
     this.ctrlBase = H - 120;
     this.pathBottom = this.ctrlBase - 130;
-    this.itemY = this.items.length ? this.ctrlBase - 50 - 128 : null;   /* 아이템 줄: 강화 버튼 바로 위 · 길 안쪽(입구 · 제단 이름표 사이) */
+    this.itemY = this.items.length ? this.ctrlBase - 50 - 138 : null;   /* 아이템 줄: 강화 버튼 바로 위 · 길 안쪽(입구 · 제단 이름표 사이) */
     this.BX = (W - BW) / 2; this.BY = Math.round(Math.max(410, Math.min(520, 410 + (H - 1920) * 0.3)));
     const m = 82, top = this.BY - m, left = this.BX - m, right = this.BX + BW + m, bottom = this.pathBottom;   // 길은 조작부 바로 위까지 (화면이 길면 길도 길어짐 · 진행 속도는 비율이라 난이도 같음)
     this.pathPts = [[left, bottom], [left, top], [right, top], [right, bottom]];
@@ -91,7 +92,7 @@ export class PlayScene extends Phaser.Scene {
     window.__play = this;
     /* 앱 가격표가 늦게 왔으면(hello 의 prices 가 비었음) 다시 묻고, 이번 판 중에 오면 그 자리에 아이템 줄을 붙임 (v0.10.1 · bmflow.refreshHello) */
     if (!this.bot) {
-      const run = this.runId, ask = () => BM.refreshHello().then(() => { if (run === this.runId && this.scene.isActive() && !this.ended) this.lateItems(); });
+      const run = this.runId, ask = () => BM.refreshHello().then(() => { if (run === this.runId && this.scene.isActive() && !this.ended) { this.lateItems(); this.testNote(); } });
       ask();
       if (itemsOn(this.mode, this.bot) && !this.items.length) this.time.addEvent({ delay: 3000, repeat: 9, callback: () => { if (!this.itemBar && BM.pricesMissing()) ask(); } });   /* 판 도중에도 3초마다 (최대 30초) */
     }
@@ -99,8 +100,8 @@ export class PlayScene extends Phaser.Scene {
   lateItems() {
     if (this.itemBar || !itemsOn(this.mode, this.bot)) return;
     this.items = ITEMS.filter(it => BM.itemPrice(it.sku) > 0); if (!this.items.length) return;
-    this.itemY = this.ctrlBase - 50 - 128;
-    if (this.bpArgs) { const [y0, , x0, x1] = this.bpArgs; this.makeBossPreview(y0, this.itemY - 80, x0, x1); this.updateBossPreview(); }   /* 보스 예고를 아이템 줄 위까지로 줄여 다시 */
+    this.itemY = this.ctrlBase - 50 - 138;
+    if (this.bpArgs) { const [y0, , x0, x1] = this.bpArgs; this.makeBossPreview(y0, this.itemY - 96, x0, x1); this.updateBossPreview(); }   /* 보스 예고를 아이템 줄 위까지로 줄여 다시 */
     this.makeItems();
   }
 
@@ -124,7 +125,7 @@ export class PlayScene extends Phaser.Scene {
     this.goal = this.add.image(ex, ey + 30, 'glow').setTint(0xFF5A7A).setAlpha(0.7).setScale(1.6).setDepth(2).setBlendMode('ADD');
     this.tweens.add({ targets: this.goal, alpha: 0.35, scale: 1.9, duration: 900, yoyo: true, repeat: -1 });
     // 길 시작 · 끝 이름표 (적이 '제단'에 닿으면 생명이 줄어요)
-    const tag = (x, y, str, col) => { const t = T(this, x, y, str, 22, '#FFFFFF', { w: 900, shadow: false }); const g = this.add.graphics(); g.fillStyle(col, 0.92).fillRoundedRect(x - t.width / 2 - 14, y - 18, t.width + 28, 36, 18); g.setDepth(19); t.setDepth(20); return t; };
+    const tag = (x, y, str, col) => { const t = T(this, x, y, str, 26, '#FFFFFF', { w: 900, shadow: false }); const g = this.add.graphics(); g.fillStyle(col, 0.92).fillRoundedRect(x - t.width / 2 - 16, y - 21, t.width + 32, 42, 21); g.setDepth(19); t.setDepth(20); return t; };
     tag(sx, sy - 40, '입구', 0x5A3FD8);
     this.goalTag = tag(ex, ey - 40, '제단 ▼', 0xD8405A);
   }
@@ -180,9 +181,9 @@ export class PlayScene extends Phaser.Scene {
     this.hWave = T(this, W / 2, 92, '', 54, C.text, { w: 900, ls: 2 }).setDepth(D);
     this.hSub = T(this, W / 2, 148, '', 26, C.sub, { w: 800 }).setDepth(D);
     this.hearts = [0, 1, 2].map(i => this.add.image(70 + i * 58, 92, 'i_flame').setDisplaySize(46, 46).setTint(0xFF5A7A).setDepth(D));
-    this.livesT = T(this, 44, 132, '생명 3', 22, '#FF9BB0', { ox: 0, w: 900 }).setDepth(D);
+    this.livesT = T(this, 44, 136, '생명 3', 26, '#FF9BB0', { ox: 0, w: 900 }).setDepth(D);
     const tag = M.ARCADE[this.mode] ? M.ARCADE[this.mode].name : this.mode === 'daily' ? '오늘의 도전' : null;
-    if (tag) T(this, 44, 166, tag, 22, C.gold, { ox: 0, w: 900 }).setDepth(D);
+    if (tag) T(this, 44, 172, tag, 26, C.gold, { ox: 0, w: 900 }).setDepth(D);
     this.hBoss = this.add.container(W / 2, 250).setDepth(D).setVisible(false);
     const bb = this.add.graphics(); bb.fillStyle(0x000000, 0.5).fillRoundedRect(-300, -16, 600, 32, 16);
     this.hBossFill = this.add.graphics(); this.hBossName = T(this, 0, -44, '', 30, '#FF9BB0', { w: 900 });
@@ -199,7 +200,7 @@ export class PlayScene extends Phaser.Scene {
     this.hSp = T(this, ix0 + 80, iy - 6, '0', 48, C.text, { ox: 0, w: 900 }).setDepth(D);
     this.sumBtn = btn(this, ix1 - 170, iy - 12, 300, 118, '소환', () => this.doSummon(), { style: 'indigo', size: 42 }).setDepth(D);
     this.sumCost = T(this, ix1 - 170, iy + 62, '', 24, C.sub, { w: 800 }).setDepth(D);
-    this.makeBossPreview(iy + 100, this.itemY ? this.itemY - 80 : this.pathBottom - 60, ix0, ix1);
+    this.makeBossPreview(iy + 100, this.itemY ? this.itemY - 96 : this.pathBottom - 60, ix0, ix1);
     // 덱 강화 버튼 5개
     this.makePower();
     if (this.items.length) this.makeItems();
@@ -220,10 +221,10 @@ export class PlayScene extends Phaser.Scene {
       const glow = this.add.image(0, 0, 'glow').setTint(0xF5C451).setBlendMode('ADD').setScale(2.6, 2.2).setAlpha(0);
       /* 룬 그림 크게 (QA 9): 주사위 몸통 + 룬 — 예전 룬 58 → 주사위 86 · 룬 54 */
       const die = this.add.image(-40, -24, `die_${t}`).setDisplaySize(86, 86), ic = this.add.image(-40, -24, `rune_${t}`).setDisplaySize(54, 54);
-      const lv = T(this, 40, -40, 'Lv1', 26, C.text, { w: 900 });
-      const nm = T(this, 40, -9, RUNES[t].name, 19, C.sub, { w: 800 });
+      const lv = T(this, 40, -42, 'Lv1', 26, C.text, { w: 900 });
+      const nm = T(this, 40, -8, RUNES[t].name, 26, C.sub, { w: 800, fit: 84 });
       const pill = this.add.graphics();
-      const cost = T(this, 0, 42, '', 24, C.text, { w: 900, shadow: false });
+      const cost = T(this, 0, 42, '', 26, C.text, { w: 900, shadow: false, fit: 136 });
       c.add([glow, g, die, ic, lv, nm, pill, cost]); c.setSize(172, 150).setInteractive({ useHandCursor: true });
       c.on('pointerdown', () => c.setScale(0.94));
       c.on('pointerout', () => c.setScale(1));
@@ -267,11 +268,11 @@ export class PlayScene extends Phaser.Scene {
     const tx = x0 + 60 + ps;
     /* 낮은 칸(아이템 줄이 큰 폰 · QA 22)은 촘촘하게: 이름표 줄 오른쪽에 '언제' · 설명 한 줄 */
     const sm = h < 270, top = cy - h / 2;
-    this.bpTag = T(this, tx, top + (sm ? 34 : 46), 'NEXT BOSS', sm ? 20 : 22, '#FF9BB0', { ox: 0, w: 900, ls: 5 }).setDepth(D);
+    this.bpTag = T(this, tx, top + (sm ? 34 : 46), 'NEXT BOSS', 26, '#FF9BB0', { ox: 0, w: 900, ls: sm ? 2 : 5 }).setDepth(D);
     this.bpName = T(this, tx, sm ? top + 80 : cy - 40, '', sm ? 38 : 44, C.text, { ox: 0, w: 900 }).setDepth(D);
-    this.bpTip = T(this, tx, sm ? top + 124 : cy + 14, '', sm ? 23 : 26, C.sub, { ox: 0, w: 800, wrap: x1 - tx - 30 }).setDepth(D);
+    this.bpTip = T(this, tx, sm ? top + 124 : cy + 14, '', 26, C.sub, sm ? { ox: 0, w: 800, fit: x1 - tx - 24 } : { ox: 0, w: 800, wrap: x1 - tx - 30 }).setDepth(D);
     this.bpBar = this.add.graphics().setDepth(D); this.bpBarX = tx; this.bpBarW = x1 - tx - 40; this.bpBarY = cy + h / 2 - (sm ? 30 : 50);
-    this.bpWhen = (sm ? T(this, x1 - 30, top + 34, '', 20, C.dim, { ox: 1, w: 800 }) : T(this, tx, this.bpBarY - 30, '', 22, C.dim, { ox: 0, w: 800 })).setDepth(D);
+    this.bpWhen = (sm ? T(this, x1 - 24, top + 34, '', 26, C.dim, { ox: 1, w: 800, fit: Math.max(120, x1 - 24 - tx - this.bpTag.width - 14) }) : T(this, tx, this.bpBarY - 34, '', 26, C.dim, { ox: 0, w: 800 })).setDepth(D);
     this.bpObjs = [g, this.bpImg, this.bpGlow, this.bpTag, this.bpName, this.bpTip, this.bpBar, this.bpWhen];
     this.tweens.add({ targets: this.bpGlow, alpha: 0.15, duration: 1200, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: this.bpImg, y: cy - 8, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -488,9 +489,18 @@ export class PlayScene extends Phaser.Scene {
       else if (e.kind === 'normal') { oy = Math.sin(ph) * 15 - 10; sx = 1 + Math.sin(ph * 2) * 0.08; sy = 1 - Math.sin(ph * 2) * 0.08; rot = Math.sin(ph * 0.8) * 0.16 + lean * 0.08; v.aura.setAlpha(0.45 + Math.sin(ph * 2) * 0.2); }
       else if (e.kind === 'fast') { const hop = Math.abs(Math.sin(ph)); oy = -hop * 30; sx = 1 + (1 - hop) * 0.2; sy = 1 - (1 - hop) * 0.18; rot = lean * 0.2 + Math.sin(ph) * 0.08; if (hop < 0.12 && !v.landed) { v.landed = true; if (Math.random() < 0.35) this.dust(x, y + EN_SIZE.fast * 0.4); } if (hop > 0.5) v.landed = false; }
       else if (e.kind === 'big') { const st = Math.max(0, Math.sin(ph)), sw = Math.sin(ph * 0.5); oy = -st * 14; sy = 1 - (1 - st) * 0.1; sx = 1 + (1 - st) * 0.08; rot = sw * 0.12 + lean * 0.04; if (Math.sin(ph) > 0.97 && !v.stepped) { v.stepped = true; this.dust(x, y + EN_SIZE.big * 0.35); } if (Math.sin(ph) < 0) v.stepped = false; }
-      else { const br = Math.sin(t * 2.4 + v.ph), lurch = Math.max(0, Math.sin(t * 1.6 + v.ph)); sx = 1 + br * 0.05; sy = 1 + br * 0.06; rot = Math.sin(t * 1.3) * 0.08 + lean * 0.04; oy = br * 8 - lurch * 6; }
-      // 맞으면: 길 반대쪽으로 밀림 + 가로로 찌그러짐 + 잠깐 떨림 (보스 · 골렘은 묵직하게 덜)
-      const heavy = e.kind === 'boss' ? 0.35 : e.kind === 'big' ? 0.6 : 1;
+      else {
+        /* QA 28 (2026-11-16 '주요 보스의 움직임이 없어 타격감이 약함'): 예전 보스는 숨쉬기(5%) · 8px 흔들림뿐이라 폰에선 서 있는 그림으로 보였음
+           → 성큼성큼 걷기(발 디딜 때마다 몸이 18px 솟았다 눌림 · 좌우로 크게 기울고 · 발밑 먼지) + 3.6초마다 포효(몸이 12% 커졌다 돌아오며 붉은 고리) */
+        const bp = t * 3.4 * slow + v.ph, up = Math.abs(Math.sin(bp)), br = Math.sin(t * 2.4 + v.ph);
+        oy = -up * 18 + br * 3; sx = 1 + (1 - up) * 0.09 + br * 0.02; sy = 1 - (1 - up) * 0.1 + br * 0.03; rot = Math.sin(bp) * 0.11 + lean * 0.07;
+        if (up < 0.15 && !v.stepped) { v.stepped = true; this.dust(x, y + EN_SIZE.boss * 0.4); } if (up > 0.6) v.stepped = false;
+        const rr = (t + v.ph) % 3.6;
+        if (rr < 0.4 && slow > 0.5) { const k = Math.sin(rr / 0.4 * Math.PI); sx *= 1 + k * 0.12; sy *= 1 + k * 0.12; if (!v.roared) { v.roared = true; const rg = this.add.image(x, y, 'ring').setTint(0xFF5A7A).setBlendMode('ADD').setScale(0.5).setAlpha(0.8).setDepth(21); this.tweens.add({ targets: rg, scale: 1.7, alpha: 0, duration: 420, ease: 'Cubic.easeOut', onComplete: () => rg.destroy() }); } }
+        else v.roared = false;
+      }
+      // 맞으면: 길 반대쪽으로 밀림 + 가로로 찌그러짐 + 잠깐 떨림 (골렘은 묵직하게 덜 · 보스는 0.35 → 0.7: 맞는 게 보이게 · QA 28)
+      const heavy = e.kind === 'boss' ? 0.7 : e.kind === 'big' ? 0.6 : 1;
       v.kick *= 0.84; const hk = v.kick * heavy, kb = hk * 30, jit = hk > 0.35 ? (Math.random() - 0.5) * 10 * hk : 0;
       sx *= 1 + hk * 0.24; sy *= 1 - hk * 0.2;
       v.setPosition(x - nx * kb + jit, y - ny * kb + jit * 0.5);
@@ -503,7 +513,7 @@ export class PlayScene extends Phaser.Scene {
       if (e.critT > 0) { e.critT = 0; if (Math.random() < 0.5) this.float(x + (Math.random() - 0.5) * 40, y - EN_SIZE[e.kind] / 2 - 20, '치명!', '#FF8FCB', 30); }
       if (e.kind !== 'boss') { const w = 70, k = Math.max(0, e.hp / e.max), hy = -EN_SIZE[e.kind] / 2 - 14 + oy; v.hb.clear(); if (k < 1) v.hb.fillStyle(0x000000, 0.6).fillRoundedRect(-w / 2, hy, w, 8, 4).fillStyle(0xFF5A7A).fillRoundedRect(-w / 2, hy, w * k, 8, 4); }
       else boss = e;
-      if (e.kind === 'boss' && e.shieldOn > 0) v.aura.setTint(0xFFE08A).setAlpha(0.7); else if (e.kind === 'boss') v.aura.setTint(0xFF4A6A).setAlpha(0.3 + Math.sin(t * 3) * 0.1);
+      if (e.kind === 'boss' && e.shieldOn > 0) v.aura.setTint(0xFFE08A).setAlpha(0.7); else if (e.kind === 'boss') v.aura.setTint(0xFF4A6A).setAlpha(Math.min(1, 0.3 + Math.sin(t * 3) * 0.1 + hk * 0.6));
     }
     for (const [id, v] of this.ePool) if (!seen.has(id)) {
       this.ePool.delete(id);
@@ -521,7 +531,18 @@ export class PlayScene extends Phaser.Scene {
     for (const m of s.mines) { ms.add(m.id); let o = this.minePool.get(m.id); if (!o) { const [mx, my] = this.pathXY(m.d); o = this.add.image(mx, my, 'rune_mine').setDisplaySize(68, 68).setDepth(15); o.setScale(0.01); this.tweens.add({ targets: o, scale: 68 / o.width, duration: 220, ease: 'Back.easeOut' }); this.minePool.set(m.id, o); } o.setAngle(t * 60); }
     for (const [id, o] of this.minePool) if (!ms.has(id)) { this.minePool.delete(id); o.destroy(); }
     this.hBoss.setVisible(!!boss);
-    if (boss) { this.hBossName.setText(boss.name + (boss.shieldOn > 0 ? '  · 방패' : '')); this.hBossFill.clear().fillStyle(0xFF5A7A).fillRoundedRect(-296, -12, 592 * Math.max(0, boss.hp / boss.max), 24, 12); }
+    if (boss) {
+      /* 보스 체력 줄도 맞는 티가 나게 (QA 28): 맞은 순간 줄이 떨리고 · 깎인 만큼 밝은 띠가 남았다가 따라 줄어듦 */
+      const k = Math.max(0, boss.hp / boss.max);
+      if (this.bossLagId !== boss.id) { this.bossLagId = boss.id; this.bossLag = k; }
+      this.bossLag = this.bossLag > k ? Math.max(k, this.bossLag - Math.max(0.0015, (this.bossLag - k) * 0.05)) : k;
+      const jt = this.time.now - this.bossHitT < 130 ? (Math.random() - 0.5) * 9 : 0;
+      this.hBoss.setPosition(W / 2 + jt, 250 + jt * 0.4);
+      this.hBossName.setText(boss.name + (boss.shieldOn > 0 ? '  · 방패' : ''));
+      this.hBossFill.clear();
+      if (this.bossLag > k + 0.002) this.hBossFill.fillStyle(0xFFE3EA, 0.95).fillRoundedRect(-296, -12, 592 * this.bossLag, 24, 12);
+      this.hBossFill.fillStyle(0xFF5A7A).fillRoundedRect(-296, -12, 592 * k, 24, 12);
+    }
   }
   dust(x, y) { for (let k = 0; k < 3; k++) { const d = this.add.image(x + (k - 1) * 22, y, 'glow').setTint(0x8A8070).setAlpha(0.4).setScale(0.3).setDepth(19); this.tweens.add({ targets: d, scale: 0.7, y: y - 10, alpha: 0, duration: 400, onComplete: () => d.destroy() }); } }
   voice() { /* 원작처럼 성우 대사 없음 — 효과음으로만 */ }
@@ -647,7 +668,8 @@ export class PlayScene extends Phaser.Scene {
     if (!v.img || v.flashT > this.time.now) return;
     v.flashT = this.time.now + 70;
     v.img.setTintFill(0xFFFFFF); v.kick = 1;
-    if (this.bolts.length < 25 && this.time.now - (v.sparkT || 0) > 160) { v.sparkT = this.time.now; this.spark.setParticleTint(0xFFFFFF); this.spark.emitParticleAt(v.x, v.y - 8, 2); }   /* 맞은 자리 흰 불티 (QA 26) */
+    const boss = v.kind === 'boss'; if (boss) this.bossHitT = this.time.now;
+    if (this.bolts.length < 25 && this.time.now - (v.sparkT || 0) > 160) { v.sparkT = this.time.now; this.spark.setParticleTint(boss ? 0xFFD9A0 : 0xFFFFFF); this.spark.emitParticleAt(v.x + (boss ? (Math.random() - 0.5) * 70 : 0), v.y - 8 + (boss ? (Math.random() - 0.5) * 70 : 0), boss ? 5 : 2); }   /* 맞은 자리 불티 (QA 26 · 보스는 몸 여기저기 더 많이 · QA 28) */
     this.time.delayedCall(55, () => { if (v.img && v.img.active) v.img.clearTint(); });
   }
   onEvent(e) {
@@ -775,6 +797,17 @@ export class PlayScene extends Phaser.Scene {
   float(x, y, str, col, size = 34) { const t = T(this, x, y, str, size, col, { w: 900, stroke: '#05061A', thick: 6 }).setDepth(70); this.tweens.add({ targets: t, y: y - 70, alpha: 0, duration: 900, onComplete: () => t.destroy() }); }
 
   // 모드 안내 한 장 (처음 한 번) — 닫히면 next
+  /* 테스트 · 개발 앱 전용 안내 (실서버엔 안 나옴 · bmflow.testOff): 이 기기가 BM 그룹 A(대조군)라 아이템 줄이 꺼져 있을 때 판마다 한 번 */
+  testNote() {
+    if (this.itemNote || this.itemBar || !itemsOn(this.mode, this.bot) || !BM.testOff()) return;
+    const y = this.ctrlBase - 50 - 122, c = this.add.container(W / 2, y).setDepth(58), g = this.add.graphics();
+    g.fillStyle(0x0B1026, 0.94).fillRoundedRect(-318, -50, 636, 100, 28).lineStyle(2, 0x8FE3FF, 0.7).strokeRoundedRect(-318, -50, 636, 100, 28);
+    this.itemNote = T(this, 0, 0, '테스트 안내 · 이 기기는 BM 그룹 A 라 아이템 줄이 꺼져 있어요\n원어데이 설정 › 테스트: 게임 안 BM 그룹 › B', 26, '#BFEFFF', { w: 800, shadow: false, lh: 8, fit: 600 });
+    c.add([g, this.itemNote]); c.setAlpha(0);
+    this.tweens.add({ targets: c, alpha: 1, duration: 260 });
+    this.tweens.add({ targets: c, alpha: 0, delay: 9000, duration: 400, onComplete: () => c.destroy() });
+  }
+
   showGuide(next) {
     if (this.ended) return;
     if (M.guideSeen(this.mode)) { next(); return; }
@@ -786,24 +819,26 @@ export class PlayScene extends Phaser.Scene {
   //   한 번 쓸 때마다 앱 확인 창 → 골드 차감 → 효과. 제거 · 교체는 칸을 먼저 고르고(게임 멈춤) 그다음 결제
   //   QA 22 (2026-11-09): 따로 떠 있던 네 칩 → 하나의 '아이템 줄'(한 판 위 유리 받침 + 위쪽 '아이템' 꼬리표 + 칸마다 아이콘 · 이름 · 값/상태 · 남은 횟수)
   //     원할 때 바로 누름: 자동 합성(사면 켜고 끄기) · 폭탄(바로) · 룬 제거 · 1성 교체(칸 고르기) — 처음 한 번 '위기 땐 여기' 안내
+  /* QA 30 (2026-11-16 '제일 작은 글씨가 폰에서 매우 힘듦') · 7 · 10 · 11 · 16 · 22 다시 확인: 칸 글씨가 22px(폰 8px) · 남은 횟수 16px(폰 5.8px)라
+     줄은 있어도 무슨 아이템인지 읽기 어려웠음 → 받침을 키우고(108 → 128) 칸을 두 줄로: 위 = 아이콘 + 값(26px) · 아래 = 이름(26px) · 남은 횟수 동그라미도 키움 */
   makeItems() {
     const D = 50, n = this.items.length, sw = 156, pw = sw * n + 12, x0 = W / 2 - (pw - 12) / 2 + sw / 2, y = this.itemY;
     const tray = this.add.container(W / 2, y).setDepth(D - 1), tg = this.add.graphics();
-    tg.fillStyle(0x000000, 0.42).fillRoundedRect(-pw / 2 + 3, -50, pw, 108, 30).fillStyle(0x0C1030, 0.94).fillRoundedRect(-pw / 2, -54, pw, 108, 30).lineStyle(2, 0xF5C451, 0.5).strokeRoundedRect(-pw / 2, -54, pw, 108, 30);
-    for (let k = 1; k < n; k++) tg.lineStyle(2, 0xFFFFFF, 0.08).lineBetween(-pw / 2 + 6 + k * sw, -38, -pw / 2 + 6 + k * sw, 38);
-    const tw = 104, tabG = this.add.graphics(); tabG.fillStyle(0xF5C451, 1).fillRoundedRect(-pw / 2 + 18, -72, tw, 32, 16);
-    tray.add([tg, tabG, T(this, -pw / 2 + 18 + tw / 2, -56, '아이템', 20, '#2A1A00', { w: 900, shadow: false })]);
+    tg.fillStyle(0x000000, 0.42).fillRoundedRect(-pw / 2 + 3, -60, pw, 128, 30).fillStyle(0x0C1030, 0.94).fillRoundedRect(-pw / 2, -64, pw, 128, 30).lineStyle(2, 0xF5C451, 0.5).strokeRoundedRect(-pw / 2, -64, pw, 128, 30);
+    for (let k = 1; k < n; k++) tg.lineStyle(2, 0xFFFFFF, 0.08).lineBetween(-pw / 2 + 6 + k * sw, -46, -pw / 2 + 6 + k * sw, 46);
+    const tw = 116, tabG = this.add.graphics(); tabG.fillStyle(0xF5C451, 1).fillRoundedRect(-pw / 2 + 18, -88, tw, 40, 20);
+    tray.add([tg, tabG, T(this, -pw / 2 + 18 + tw / 2, -68, '아이템', 26, '#2A1A00', { w: 900, shadow: false })]);
     this.itemTray = tray;
     this.itemBar = this.items.map((it, i) => {
       const x = x0 + i * sw, c = this.add.container(x, y).setDepth(D);
-      const glow = this.add.image(0, 0, 'glow').setTint(0xF5C451).setBlendMode('ADD').setScale(2.2, 1.2).setAlpha(0);
+      const glow = this.add.image(0, 0, 'glow').setTint(0xF5C451).setBlendMode('ADD').setScale(2.2, 1.4).setAlpha(0);
       const g = this.add.graphics();
-      const ring = this.add.circle(-sw / 2 + 34, 0, 27, 0x1E2660).setStrokeStyle(2, 0xFFFFFF, 0.18);
-      const ic = this.add.image(-sw / 2 + 34, 0, { auto: 'i_auto', remove: 'i_trash', reroll: 'i_swap', bomb: 'i_bomb' }[it.id]).setDisplaySize(32, 32);
-      const nm = T(this, -sw / 2 + 68, -15, it.short === '자동' ? '자동합성' : it.name, 22, C.text, { ox: 0, w: 900, shadow: false });
-      const pr = T(this, -sw / 2 + 68, 17, '', 22, C.gold, { ox: 0, w: 900, shadow: false });
-      const badge = this.add.container(sw / 2 - 10, -42); const bc = this.add.circle(0, 0, 13, 0x4F5FE0).setStrokeStyle(2, 0x0B1026); const bt = T(this, 0, 0, '', 16, '#FFFFFF', { w: 900, shadow: false }); badge.add([bc, bt]);
-      c.add([glow, g, ring, ic, nm, pr, badge]); c.setSize(sw - 4, 106).setInteractive({ useHandCursor: true });
+      const ring = this.add.circle(-40, -24, 24, 0x1E2660).setStrokeStyle(2, 0xFFFFFF, 0.18);
+      const ic = this.add.image(-40, -24, { auto: 'i_auto', remove: 'i_trash', reroll: 'i_swap', bomb: 'i_bomb' }[it.id]).setDisplaySize(30, 30);
+      const pr = T(this, -10, -24, '', 26, C.gold, { ox: 0, w: 900, shadow: false, fit: 80 });
+      const nm = T(this, 0, 26, it.short === '자동' ? '자동합성' : it.name, 26, C.text, { w: 900, shadow: false, fit: sw - 20 });
+      const badge = this.add.container(sw / 2 - 12, -58); const bc = this.add.circle(0, 0, 18, 0x4F5FE0).setStrokeStyle(2, 0x0B1026); const bt = T(this, 0, -1, '', 26, '#FFFFFF', { w: 900, shadow: false }); badge.add([bc, bt]);
+      c.add([glow, g, ring, ic, nm, pr, badge]); c.setSize(sw - 4, 124).setInteractive({ useHandCursor: true });
       c.on('pointerdown', () => c.setScale(0.95)); c.on('pointerout', () => c.setScale(1));
       c.on('pointerup', () => { c.setScale(1); this.useItem(it); });
       return { it, c, g, glow, ring, ic, nm, pr, bt, badge, state: '' };
@@ -816,7 +851,7 @@ export class PlayScene extends Phaser.Scene {
     const d = load(); if (this.bot || (d.tips && d.tips.itemTray)) return;
     this.time.delayedCall(1600, () => {
       if (!this.itemTray || this.ended || !this.scene.isActive()) return;
-      const y = this.itemY - 132, c = this.add.container(W / 2, y).setDepth(58), g = this.add.graphics();
+      const y = this.itemY - 150, c = this.add.container(W / 2, y).setDepth(58), g = this.add.graphics();
       g.fillStyle(0x0B1026, 0.94).fillRoundedRect(-300, -36, 600, 72, 36).lineStyle(3, 0xF5C451, 0.9).strokeRoundedRect(-300, -36, 600, 72, 36).fillStyle(0xF5C451, 0.9).fillTriangle(-14, 34, 14, 34, 0, 54);
       c.add([g, T(this, 0, -2, '위기 땐 아이템 · 원할 때 눌러 쓰세요', 26, C.text, { w: 900, shadow: false })]);
       c.setAlpha(0); this.tweens.add({ targets: c, alpha: 1, y: y - 8, duration: 260, ease: 'Back.easeOut' });
@@ -835,7 +870,7 @@ export class PlayScene extends Phaser.Scene {
       const st = [rest, on, usable, hot, this.autoBought].join();
       if (b.state === st) continue; b.state = st;
       const sw = 156, line = on ? 0x5BE39A : hot ? 0xF5C451 : 0x000000;
-      b.g.clear(); if (hot || on) b.g.fillStyle(on ? 0x5BE39A : 0xF5C451, 0.12).fillRoundedRect(-sw / 2 + 5, -48, sw - 10, 96, 22).lineStyle(3, line, 1).strokeRoundedRect(-sw / 2 + 5, -48, sw - 10, 96, 22);
+      b.g.clear(); if (hot || on) b.g.fillStyle(on ? 0x5BE39A : 0xF5C451, 0.12).fillRoundedRect(-sw / 2 + 5, -57, sw - 10, 114, 22).lineStyle(3, line, 1).strokeRoundedRect(-sw / 2 + 5, -57, sw - 10, 114, 22);
       b.ring.setFillStyle(on ? 0x1C5A40 : hot ? 0x5A4416 : 0x1E2660);
       b.pr.setText(it.id === 'auto' && this.autoBought ? (on ? '켜짐' : '꺼짐') : rest > 0 ? `🪙${BM.itemPrice(it.sku)}` : '다 씀').setColor(on ? C.green : it.id === 'auto' && this.autoBought ? C.sub : rest > 0 ? C.gold : C.dim);
       b.badge.setVisible(it.id !== 'auto' && rest > 0); b.bt.setText(String(rest));
@@ -912,7 +947,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.49').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.50').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤

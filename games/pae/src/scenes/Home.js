@@ -1,19 +1,24 @@
 // 첫 화면: 오늘의 패(화투점) 한 장 뒤집기 · 오늘의 판 / 자유 판 / 이어서 · 도감 · 꽃 덱 · 꾸미기 · 소리
-import { W, H, C, TITLE, VERSION } from '../config.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { txt, button, roundButton, modal, toast, boxTex, fmt } from '../ui.js?v=0.99.49';
-import { CardView } from '../cards.js?v=0.99.49';
-import { DECK, rules, fortuneCard, dailySeed, todayCharm, today, helpDue, helpGiven } from '../meta.js?v=0.99.49';
-import { DECKS, Run } from '../core/run.js?v=0.99.49';
-import { CHARM, CHEER } from '../core/charms.js?v=0.99.49';
-import { GOD } from '../core/gods.js?v=0.99.49';
-import { bmOn, owned, BACKS, backShown, backOpen, buyBack, effBack, price, fortuneSeed, helpOn, track } from '../bmflow.js?v=0.99.49';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.49';
+import { W, H, C, TITLE, VERSION } from '../config.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { txt, button, roundButton, modal, toast, boxTex, fmt } from '../ui.js?v=0.99.50';
+import { CardView } from '../cards.js?v=0.99.50';
+import { DECK, rules, fortuneCard, dailySeed, todayCharm, today, helpDue, helpGiven } from '../meta.js?v=0.99.50';
+import { DECKS, Run } from '../core/run.js?v=0.99.50';
+import { CHARM, CHEER } from '../core/charms.js?v=0.99.50';
+import { GOD } from '../core/gods.js?v=0.99.50';
+import { bmOn, owned, BACKS, backShown, backOpen, buyBack, effBack, price, fortuneSeed, helpOn, track } from '../bmflow.js?v=0.99.50';
+import { toOAD } from '../exit.js?v=0.99.50';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }
-  init(data) { this.go = data && (data.again ? 'free' : data.go) || null; }
+  init(data) {
+    this.go = data && (data.again ? 'free' : data.go) || null;
+    /* 넘겨받은 값은 한 번만 쓴다 (QA 1) — Phaser 는 다음 scene.start('Home') 에 값이 없으면 지난 값을 그대로 다시 넘김
+       → '한 판 더'(go: free)로 들어온 판에서 '처음 화면으로'를 누르면 홈이 또 새 판을 열던 원인 */
+    this.sys.settings.data = null;
+  }
   create() {
     const d = load();
     this.busy = false;
@@ -28,7 +33,9 @@ export class HomeScene extends Phaser.Scene {
     txt(this, W / 2, top, TITLE, 132, C.gold, { thick: 0, stroke: null, shadow: true, ls: 10, weight: '900' });
     txt(this, W / 2, top + 98, '열두 달 꽃패 · 하루 한 판', 34, C.ivory, { thick: 0, stroke: null, weight: '700', ls: 4 }).setAlpha(0.85);
     // 꽃잎 · 설정
-    const pet = this.add.container(40, 60);
+    /* 원어데이로 (QA 2): 앱 안 = 원어데이로 나가기 · 단독 링크 = 원어데이 사이트 (룬다이스 홈과 같은 동작) */
+    button(this, 150, 70, 240, 88, '‹ 원어데이', () => toOAD(), { style: 'dark', size: 32 });
+    const pet = this.add.container(W - 330, 70);
     pet.add(this.add.image(0, 0, 'fx_petal').setScale(1.3).setOrigin(0, 0.5));
     this.petT = txt(this, 66, 0, fmt(d.petals), 38, C.pink, { ox: 0, thick: 4 }); pet.add(this.petT);
     roundButton(this, W - 70, 70, 44, '⚙', () => this.settings(), { size: 40 });
@@ -195,7 +202,7 @@ export class HomeScene extends Phaser.Scene {
     row(-200, '효과음', () => load().sfx, () => audio.toggleSfx());
     row(-80, '배경음', () => load().music, () => audio.toggleMusic());
     row(40, '진동', () => load().vib !== false, () => { d.vib = d.vib === false; save(); });
-    if (inOAD) m.add(button(this, 0, 230, 520, 100, '원어데이로', () => exitToOAD(), { style: 'dark', size: 34 }));
+    m.add(button(this, 0, 230, 520, 100, '원어데이로', () => toOAD(), { style: 'dark', size: 34 }));
     m.add(txt(this, 0, 340, `오늘의 패 v${VERSION} · 혼자 하는 점수 퍼즐 (판돈 · 대결 없음)`, 22, C.dim, { weight: '700', thick: 2 }));
   }
   howto() {

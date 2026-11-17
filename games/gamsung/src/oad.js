@@ -3,6 +3,8 @@
 // · 원어데이로 버튼: exitToOAD()
 export const inOAD = (() => { try { return window.parent !== window; } catch { return true; } })();
 export const exitToOAD = () => { try { window.parent.postMessage({ type: 'oad:exit' }, '*'); } catch { /* */ } };
+/* 「원어데이」 단추 (QA 1116 공통 의견 · 룬다이스 홈과 같은 동작): 앱 안 = 앱에 나가기(oad:exit) · 단독 링크 = 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+export const toOAD = () => { if (inOAD) return exitToOAD(); const h = location.hostname; location.href = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/'; };
 const stack = []; let runner = null;
 export const runBack = () => (runner ? runner() : false);   /* PC: Esc 키 = 뒤로 (열린 창 닫기 → 꾸미기 끝내기) */
 export function pushBack(back) { const e = { back }; stack.push(e); return () => { const i = stack.indexOf(e); if (i >= 0) stack.splice(i, 1); }; }

@@ -41,8 +41,10 @@ export const MAPS = [
       '.  .  .  .  .  f  r  .  C0',
     ]),
     units: munits([{ t: 'inf', x: 3, y: 1 }, { t: 'bazooka', x: 5, y: 2 }, { t: 'arty', x: 4, y: 1 }], 14),
-    funds: [4000, 4000], tip: '야포는 움직이지 않고 쏴요 · 적은 생산을 못 해요',
-    camp: { noBuild: [2], extra: [{ t: 'inf', x: 2, y: 2 }, { t: 'ltank', x: 6, y: 2 }, { t: 'arty', x: 3, y: 0 }, { t: 'inf', x: 7, y: 3 }] },
+    funds: [4000, 4000], tip: '야포는 움직이지 않고 쏴요 · 기지에서 부대를 늘려 맞서요 (적은 생산을 못 해요)',
+    /* v0.13 시트 #11 '작전 2부터 급격히 어려움': 작전 1 은 처음 3기만으로도 이기는데(생산 2기 이하 봇 87%) 작전 2 는 적 7기(야포 2 · 전차) 대 3기라 생산을 모르면 2% 였음
+       → 둘째 야포를 빼고 전차는 절반 병력(50)으로 — 바주카병으로 전차 잡기 · 야포 사거리 배우기는 그대로 (tools/early_bot.mjs 로 계단 확인) */
+    camp: { noBuild: [2], extra: [{ t: 'inf', x: 2, y: 2 }, { t: 'ltank', x: 6, y: 2, hp: 50 }, { t: 'inf', x: 7, y: 3 }] },
   },
   {
     id: 'm3', name: '해안 교두보', desc: '바닷가 비행장 · 공격헬기와 대공포차', par: 14,
@@ -403,7 +405,7 @@ export const MAPS = [
 ];
 
 // 캠페인 적 지휘관은 이야기(story.js)에 맞춤
-import { FOES } from '../story.js?v=0.99.49';
+import { FOES } from '../story.js?v=0.99.50';
 for (const m of MAPS) if (FOES[m.id]) m.enemyCo = FOES[m.id];
 
 // 전쟁실: 점수 도전 지도 (속도 · 전력 · 기술 300점 · S~D 등급) — 적은 어려움, 핸디캡 없음

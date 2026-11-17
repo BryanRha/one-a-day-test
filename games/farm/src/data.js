@@ -529,7 +529,7 @@ export const ISLE = { cols: 6, rows: 8, tiles: [['bush', 'axe', 0.28], ['vines',
   ] };
 export const LV_REWARD = lv => ({ coins: 20 + lv * 10, gems: lv % 2 ? 2 : 4, tools: lv >= 3 ? 2 : 0 });
 // 헛간 · 땅
-export const BARN = { base: 60, step: 25, matCost: lv => each(MATS.barn, 1 + Math.floor(lv / 3)) };
+export const BARN = { base: 100, step: 25, matCost: lv => each(MATS.barn, 1 + Math.floor(lv / 3)) };
 export const MAP = 30, ZONE = 5;    // 30×30 칸, 5×5 구역 36개 · 가운데 4개로 시작 (v0.6: 20×20 → 30×30)
 export const START_ZONES = [14, 15, 20, 21];
 export const ZONE_COST = n => ({ coins: 80 + n * 60 + n * n * 30, mats: each(MATS.land, 1 + Math.floor(n / 3)) });   // 뒤로 갈수록 코인이 크게 듦 (후반 코인 쓸 곳)
@@ -541,7 +541,7 @@ const L = (who, face, t) => ({ who, face, t });
 export const QUESTS = [
   { id: 'q1', n: '밀 수확하기', goal: { harvest: 6 }, reward: { coins: 20, xp: 5 }, talk: [L('라벤더 공주', 'princess', '여기가 제가 맡게 된 농장이에요? 밭이… 밀로 가득해요!'), L('한스', 'hans', '공주님, 다 익은 밀은 눌러서 거두면 돼요. 하나 심으면 두 개가 나와요.')] },
   { id: 'q2', n: '사료 공장 짓기', goal: { build: 'feedmill' }, reward: { coins: 30, xp: 8 }, talk: [L('샘', 'sam', '밀이랑 옥수수로 사료를 만들면 동물을 키울 수 있어요! 건설에서 사료 공장을 골라 봐요.')] },
-  { id: 'q3', n: '오두막 짓기', goal: { build: 'cottage' }, reward: { coins: 20, xp: 6 }, talk: [L('라벤더 공주', 'princess', '마을에 사람이 늘어야 큰 건물을 지을 수 있대요. 집부터 지어 볼까요?')] },
+  { id: 'q3', n: '오두막 한 채 더 짓기', goal: { build: 'cottage', n: 2 }, reward: { coins: 20, xp: 6 }, talk: [L('라벤더 공주', 'princess', '마을에 사람이 늘어야 큰 건물을 지을 수 있대요. 집을 한 채 더 지어 볼까요?'), L('한스', 'hans', '건설의 마을 탭에 집이 있어요. 집이 꽉 차면 우물 같은 공공건물로 인구 상한을 늘리면 돼요.')] },
   { id: 'q4', n: '주문 게시판 주문 2개', goal: { order: 2 }, reward: { coins: 40, xp: 10, tools: 2 }, talk: [L('브룩', 'brook', '어머, 새 농장 주인이 공주님이라고? 게시판에 마을 사람들 주문이 있으니 들어줘요~')] },
   { id: 'q5', n: '젖소 우리 짓기', goal: { build: 'cowbarn' }, reward: { coins: 40, xp: 10 }, talk: [L('한스', 'hans', '젖소가 있으면 우유를 얻을 수 있어요. 제가 우리를 지어 드릴게요.')] },
   { id: 'q6', n: '우유 3병 얻기', goal: { make: { milk: 3 } }, reward: { coins: 50, xp: 12 }, talk: [L('라벤더 공주', 'princess', '젖소에게 사료를 주면 우유가 나온대요. 처음 짜 보는 우유라니!')] },
@@ -556,7 +556,7 @@ export const QUESTS = [
   // ── 2장 「수확 축제와 세 사람」
   { id: 'q15', n: '장식 5개 놓기', goal: { deco: 5 }, reward: { coins: 120, xp: 25 }, talk: [L('브룩', 'brook', '수확 축제엔 마을이 예뻐야지! 화단이랑 벤치로 꾸며 봐요~ 사람들이 기분 좋으면 돈도 잘 쓴다니까!')] },
   { id: 'q16', n: '샘의 참새 쫓기 한 번', goal: { mini: 1 }, reward: { coins: 100, xp: 20, gems: 5 }, talk: [L('샘', 'sam', '공주님! 참새 떼가 또 밭에 내려앉았어요! 놀이에서 같이 쫓아 줘요!')] },
-  { id: 'q17', n: '선물 3번 주기', goal: { gift: 3 }, reward: { coins: 150, xp: 30 }, talk: [L('라벤더 공주', 'princess', '한스, 샘, 이안… 다들 날 많이 도와줬지. 좋아하는 걸 선물해 볼까?')] },
+  { id: 'q17', n: '선물 3번 주기', goal: { gift: 3 }, reward: { coins: 150, xp: 30 }, talk: [L('라벤더 공주', 'princess', '한스, 샘, 이안… 다들 날 많이 도와줬지. 작은 선물을 해 볼까?'), L('브룩', 'brook', '사람들 버튼에서 🎁 선물을 눌러요~ 밀이든 우유든, 가진 건 뭐든 좋아해요. 좋아하는 걸 주면 하트가 더 빨리 차고요!')] },
   { id: 'q18', n: '레벨 12 달성', goal: { level: 12 }, reward: { coins: 200, xp: 0, gems: 10 }, talk: [L('파출로', 'pachulo', '흠, 공주님 마을이 커지니 뒷산 광산 얘기를 안 할 수 없군. 철과 금이 묻혀 있다오.')] },
   { id: 'q19', n: '광산 짓기', goal: { build: 'mine' }, reward: { coins: 200, xp: 40, items: { pickaxe: 5 } }, talk: [L('이안', 'ian', '광산은 위험합니다. 곡괭이로 하나씩 깨세요. 대장간에서 곡괭이를 만들 수 있습니다.')] },
   { id: 'q20', n: '철광석 5개 캐기', goal: { make: { ironore: 5 } }, reward: { coins: 200, xp: 40 }, talk: [L('라벤더 공주', 'princess', '반짝이는 돌 속에 철이 있어! 대장간에 가져가면 철 막대가 돼.')] },
@@ -598,7 +598,7 @@ export const QUESTS = [
 export const SUITORS = {
   hans: { n: '한스', job: '목수', likes: ['bread', 'pie', 'applepie', 'cheese'], gift: { tools: 3 }, perk: '건설비 10% 할인', line: ['공주님 덕분에 마을이 살아났어요.', '…이 망치로 공주님의 집을 평생 지어 드리고 싶어요.'] },
   sam: { n: '샘', job: '일꾼', likes: ['milk', 'icecream', 'candy', 'fries'], gift: { gems: 5 }, perk: '작물 자라는 시간 10% 단축', line: ['참새 쫓는 건 자신 있어요! 공주님 밭은 제가 지킬게요.', '저랑… 평생 같이 밭을 갈아요!'] },
-  ian: { n: '이안', job: '기사', likes: ['sweater', 'dress', 'pizza', 'goldbar'], gift: { coins: 200 }, perk: '주문 코인 10% 증가', line: ['기사로서가 아니라, 한 사람으로서 공주님을 지키고 싶습니다.', '라벤더, 저와 결혼해 주시겠습니까?'] },
+  ian: { n: '이안', job: '기사', likes: ['bread', 'sweater', 'dress', 'pizza', 'goldbar'], gift: { coins: 200 }, perk: '주문 코인 10% 증가', line: ['기사로서가 아니라, 한 사람으로서 공주님을 지키고 싶습니다.', '라벤더, 저와 결혼해 주시겠습니까?'] },
 };
 export const HEARTS = 5, HEART_PTS = 100;
 // 광산: 6×8 바위 · 곡괭이 1 = 1칸 · 다이너마이트 = 3×3

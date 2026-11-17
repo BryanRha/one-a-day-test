@@ -1,15 +1,16 @@
 // 월드맵: 월드(10레벨씩)를 세로로 이어 붙이고, 레벨 노드를 구불구불한 길로 연결한다. 화면 근처 월드만 그린다.
-import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.49';
-import { t } from '../i18n.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save, availableStars } from '../save.js?v=0.99.49';
-import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.49';
-import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.49';
-import { dailyState, claimableCount } from '../missions.js?v=0.99.49';
-import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.49';
-import { dexClaimable, achClaimable } from '../progress.js?v=0.99.49';
-import { LEVELS } from '../core/levels.js?v=0.99.49';
-import { popup, button, iconButton, toast, enableGlow } from '../ui/widgets.js?v=0.99.49';
+import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.50';
+import { t } from '../i18n.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save, availableStars } from '../save.js?v=0.99.50';
+import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.50';
+import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.50';
+import { dailyState, claimableCount } from '../missions.js?v=0.99.50';
+import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.50';
+import { dexClaimable, achClaimable } from '../progress.js?v=0.99.50';
+import { LEVELS } from '../core/levels.js?v=0.99.50';
+import { popup, button, iconButton, toast, enableGlow, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.50';
+import { inOAD, toOAD } from '../oad.js?v=0.99.50';
 
 const WORLD_H = 3840;
 const WORLDS = WORLD_COUNT;
@@ -25,15 +26,19 @@ export function nodePos(id) {
 
 export function settingsPopup(scene) {
   const d = load();
-  const p = popup(scene, { title: t('settings'), width: 820, height: 760 });
+  const p = popup(scene, { title: t('settings'), width: 820, height: 1000 });
   const row = (y, label, getOn, toggle, iconOn, iconOff) => {
     const txt = scene.add.text(-300, y, label, TXT.dark).setOrigin(0, 0.5);
     const btn = iconButton(scene, 230, y, getOn() ? iconOn : iconOff, () => { const on = toggle(); btn.icon.setTexture(on ? iconOn : iconOff); });
     p.box.add([txt, btn]);
   };
-  row(-150, t('sound'), () => d.sfx, () => audio.toggleSfx(), 'ico_sound_on', 'ico_sound_off');
-  row(10, t('music'), () => d.music, () => audio.toggleMusic(), 'ico_music_on', 'ico_music_off');
-  const reset = button(scene, 0, 210, t('reset'), () => {
+  row(-330, t('sound'), () => d.sfx, () => audio.toggleSfx(), 'ico_sound_on', 'ico_sound_off');
+  row(-180, t('music'), () => d.music, () => audio.toggleMusic(), 'ico_music_on', 'ico_music_off');
+  /* 화면 흔들림 · 진동 켜고 끄기 (QA 6) */
+  p.box.add([scene.add.text(-300, -30, t('shakeFx'), TXT.dark).setOrigin(0, 0.5), toggleButton(scene, 230, -30, () => d.shake !== false, toggleShake, t('on'), t('off'))]);
+  /* 원어데이로 가기 (QA 공통 '로비 이동 버튼'): 앱 안 = 나가기 · 단독 링크 = 원어데이 사이트 */
+  p.box.add(button(scene, 0, 150, t('toOadLong'), () => { if (!inOAD) audio.stopMusic(); toOAD(); }, { kind: 'secondary', width: 520, height: 130, size: 44 }));
+  const reset = button(scene, 0, 340, t('reset'), () => {
     p.close(true);
     const q = popup(scene, { title: t('reset'), width: 820, height: 620 });
     q.box.add(scene.add.text(0, -60, t('resetAsk'), TXT.body).setOrigin(0.5));
@@ -42,7 +47,8 @@ export function settingsPopup(scene) {
       try { localStorage.removeItem('dessertpop_save_v1'); } catch { /* */ }
       location.reload();
     }, { width: 320, height: 130, size: 44 }));
-  }, { kind: 'secondary', width: 460, height: 130, size: 42 });
+  }, { kind: 'secondary', width: 400, height: 104, size: 34 });
+  reset.setAlpha(0.85);
   p.box.add(reset);
   return p;
 }
@@ -86,6 +92,8 @@ export class MapScene extends Phaser.Scene {
     this.dock = items.map(([icon, label, open, countFn], i) => {
       const x = W * (0.125 + i * 0.25), y = H - 150;
       const btn = iconButton(this, x, y, icon, open, { size: 132 }).setScrollFactor(0).setDepth(30);
+      /* 새 아이콘(v2.9.0 · 색 · 광택)은 유리 단추 안에 크게 */
+      btn.icon.setDisplaySize(104, 104);
       this.add.text(x, H - 58, label, { ...TXT.small, fontSize: '26px', strokeThickness: 7 }).setOrigin(0.5).setScrollFactor(0).setDepth(30);
       const dot = this.add.circle(x + 52, y - 52, 22, 0xFF3B4A).setStrokeStyle(5, 0xffffff).setScrollFactor(0).setDepth(31);
       const txt = this.add.text(dot.x, dot.y - 2, '', { ...TXT.small, fontSize: '26px', strokeThickness: 0 }).setOrigin(0.5).setScrollFactor(0).setDepth(32);

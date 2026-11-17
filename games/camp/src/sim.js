@@ -1,8 +1,8 @@
 // 숲속 힐링 캠프 — 게임 규칙 (화면 없이도 돎: 브라우저 · tools/bot.mjs 가 같이 씀)
 //   손님이 옴 → 자리에 앉아 주문 → 요리(주인공 · 요리사) → 서빙(도우미) → 먹고 코인 · 하트 · 가끔 선물 → 떠남
 //   시간은 전부 '게임 초'(S.t) — 화면은 이벤트(on)를 받아 움직이고, 규칙은 화면을 기다리지 않음 (막힘 0)
-import * as D from './data.js?v=0.99.49';
-import * as W from './walk.js?v=0.99.49';
+import * as D from './data.js?v=0.99.50';
+import * as W from './walk.js?v=0.99.50';
 
 export const S = {};            /* 저장되는 상태 */
 export const R = { guests: [], seats: [], orders: [], ready: [], servers: [], cooks: {}, gifts: [], nextSpawn: 2, ev: [], rateWin: [], earned: 0 };   /* 저장 안 되는 진행 */
@@ -202,10 +202,16 @@ export function upgrade(target) {
   if (o.work && o.work.end > S.t) return '공사 중이에요';
   const c = upCostOf(target); if (!spend('coin', c)) return '숲 코인이 조금 모자라요';
   o.lv++; S.stats.ups++; addXp(2); count('upgrade');
-  const ti = D.UP.tiers.indexOf(o.lv); if (ti >= 0) { const dur = D.UP.tierBuild[ti]; o.work = { start: S.t, end: S.t + dur, dur }; on('work', { target, dur }); }
+  const ti = D.UP.tiers.indexOf(o.lv); if (ti >= 0) { const dur = D.UP.tierBuild[ti]; o.work = { start: S.t, end: S.t + dur, dur }; on('work', { target, dur });
+    /* 공사를 시작한 조리대에 밀려 있던 주문은 바로 다른 요리로 바꿈 (QA 시트 11 '강화하면 음식이 안 만들어짐': 예전엔 손님이 공사 중인 조리대 요리를 90초씩 기다렸음) */
+    const st = target === 'oven' ? 'oven' : o.fac; if (R.orders && !cookOpen(st)) for (const od of R.orders.filter(x => x.st === st)) { const g = R.guests.find(x => x.id === od.gid); if (g && g.st === 'wait') order(g, true); } }
   on('upgrade', { target, lv: o.lv, tier: ti >= 0 }); buildSeats(); return null;
 }
 export const working = target => { const o = target === 'oven' ? S.oven : S.pads[target]; return o && o.work && o.work.end > S.t ? o.work : null; };
+/* 지금 요리할 수 있는 조리대인가: 단계 공사 중이면 쉼 · 단, 열린 조리대가 하나도 없으면 공사 중에도 요리함 (주문은 지금 만들 수 있는 것만 · 요리가 0 이 되는 때 없음 · docs/game-quality.md 1장 3) */
+const stTarget = st => st === 'oven' ? 'oven' : (padOf(st) || {}).id;
+const stLive = st => built(st) && !!R.cooks[st] && menuFor(st).length > 0;
+export const cookOpen = st => !working(stTarget(st)) || !Object.keys(R.cooks || {}).some(x => x !== st && stLive(x) && !working(stTarget(x)));
 /* ── 메뉴 ── */
 export function menuUp(id) {
   const m = D.MENU.find(x => x.id === id); if (!m || !menuOpen(m)) return '설비가 더 필요해요'; const lv = menuLv(m); if (lv >= D.MENU_MAX) return '최고 맛이에요';
@@ -340,7 +346,7 @@ export function step(dt) {
   for (const st of Object.keys(R.cooks)) {
     if (!built(st)) continue; const s = R.stations[st];
     if (s.cur) { s.cur.left -= dt; if (s.cur.left <= 0) { const o = s.cur; s.cur = null; if (waiting(o) && !R.ready.some(x => x.gid === o.gid)) { o.readyAt = S.t; R.ready.push(o); on('cooked', { st, o }); } } }   /* 주인이 이미 먹는 중이면 진열에 안 올림 */
-    else if (R.ready.length < D.TAP.shelf && !working(st === 'oven' ? 'oven' : (padOf(st) || {}).id)) {   /* 진열 8칸이 차면 더 굽지 않음 */ const i = R.orders.findIndex(o => o.st === st); if (i >= 0) { const o = R.orders.splice(i, 1)[0]; o.left = cycleOf(st) * (R.fastCook > 0 ? (R.fastCook--, 0.3) : 1); s.cur = o; on('cook', { st, o, dur: o.left }); } }
+    else if (R.ready.length < D.TAP.shelf && cookOpen(st)) {   /* 진열 8칸이 차면 더 굽지 않음 */ const i = R.orders.findIndex(o => o.st === st); if (i >= 0) { const o = R.orders.splice(i, 1)[0]; o.left = cycleOf(st) * (R.fastCook > 0 ? (R.fastCook--, 0.3) : 1); s.cur = o; on('cook', { st, o, dur: o.left }); } }
   }
   cloudTick(dt); giftTick(dt); visitorTick(dt);
   /* 응원 게이지 회복 · 팁 사라짐 */
@@ -384,7 +390,7 @@ function spawnGuest() {
 }
 function order(g, again) {
   if (!g.orderT) g.orderT = S.t;
-  const sts = Object.keys(R.cooks).filter(st => built(st) && menuFor(st).length);
+  const sts0 = Object.keys(R.cooks).filter(st => built(st) && menuFor(st).length), open = sts0.filter(cookOpen), sts = open.length ? open : sts0;   /* 공사 중인 조리대 요리는 주문하지 않음 */
   if (!sts.length) return;
   if (again) { R.orders = R.orders.filter(o => o.gid !== g.id); }
   const regFav = g.reg ? D.REGULARS.find(r => r.id === g.reg).likes : null;

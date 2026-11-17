@@ -1,15 +1,16 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.99.49';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save, reset } from '../save.js?v=0.99.49';
-import { CATS } from '../core/run.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { wind, ELEMENT } from '../fx.js?v=0.99.49';
-import { WITCHES } from '../core/run.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
-import { hofShown, hofPopup } from '../hof.js?v=0.99.49';
-import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save, reset } from '../save.js?v=0.99.50';
+import { CATS } from '../core/run.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { wind, ELEMENT } from '../fx.js?v=0.99.50';
+import { WITCHES } from '../core/run.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.50';
+import { hofShown, hofPopup } from '../hof.js?v=0.99.50';
+import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.99.50';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -98,6 +99,8 @@ export class LobbyScene extends Phaser.Scene {
     this.missionBox = mBot - mTop > 200 ? this.add.container(W / 2, (mTop + mBot) / 2) : null;
     this.startBtn = button(this, W / 2, sy, '출발!', () => this.start(), { key: 'btn_gold', w: 620, h: 190, size: 78 });
     this.tweens.add({ targets: this.startBtn, scale: 1.04, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    /* 원어데이로 (QA 1): 원어데이 안 = 앱에 나가기(oad:exit) · 단독 링크 = 원어데이 사이트로 — 룬 다이스 홈과 같은 동작 */
+    this.btn.oad = iconButton(this, 110, sy - 6, 'ico_home', () => this.toOAD(), 130, { label: '원어데이' });
 
     this.refresh();
     if (M.dailyState().can) this.time.delayedCall(450, () => this.dailyPopup());
@@ -224,6 +227,12 @@ export class LobbyScene extends Phaser.Scene {
     for (let i = 0; i < 10; i++) { const s = this.add.image(W / 2, this.stageY, 'star_on').setScale(0.4); const ang = i / 10 * Math.PI * 2; this.tweens.add({ targets: s, x: W / 2 + Math.cos(ang) * 320, y: this.stageY + Math.sin(ang) * 320, alpha: 0, duration: 700, onComplete: () => s.destroy() }); }
   }
 
+  /* 원어데이로: 원어데이 안이면 SDK 나가기(oad.js exitToOAD) · 단독 링크면 원어데이 사이트 (테스트 서버에서 열었으면 그 서버 첫 화면) */
+  toOAD() {
+    if (inOAD) return exitToOAD();
+    const h = location.hostname, site = /(^|\.)oneaday\.kr$/.test(h) ? `${location.protocol}//${h}/` : 'https://oneaday.kr/';
+    audio.stopMusic(); location.href = site;
+  }
   start() {
     const d = load();
     if (!d.witches[d.witch]) return;
@@ -475,9 +484,10 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   shopPopup() {
-    /* 원어데이 안이면 아래에 '원어데이 골드' 칸을 더함 (밖이면 예전 그대로) */
-    const oad = M.OAD_SHOP.filter(it => bm.price(it.id) > 0), dy = oad.length ? -20 : 0;
-    const pop = popup(this, '마법 상점', oad.length ? 1300 : 1260, { onClose: () => this.refresh() });
+    /* 원어데이 안이면 아래에 '광고 보고 별가루'(무료 길 · QA 7) · '원어데이 골드' 칸을 더함 (밖이면 예전 그대로) */
+    const oad = M.OAD_SHOP.filter(it => bm.price(it.id) > 0), ad = this.shopAdShown();
+    const rows = (ad ? 1 : 0) + oad.length, up = Math.max(0, rows - 1) * 110, dy = rows ? -20 - up : 0;
+    const pop = popup(this, '마법 상점', rows ? 1300 + up * 2 : 1260, { onClose: () => this.refresh() });
     const b = pop.box;
     const ICON = { coins: 'cur_coin', gems: 'cur_gem', treats: 'cur_treat', crystals: 'cur_crystal', paws: 'cur_paw' };
     M.SHOP.forEach((it, i) => {
@@ -488,8 +498,40 @@ export class LobbyScene extends Phaser.Scene {
       b.add(txt(this, x, y + 30, it.label, 36, '#FFFFFF'));
       b.add(button(this, x, y + 120, fmt(cv), () => { if (M.buy(it.id)) { audio.play('sfx_coin'); this.bar.refresh(); toast(this, `${it.label} 구매!`, '#FFE14D'); } else toast(this, it.give.paws && !load().adopt ? '입양 목표가 없어요' : '재화가 부족해요'); }, { key: 'btn_purple', w: 220, h: 100, size: 36, icon: ICON[ck] }));
     });
-    b.add(txt(this, 0, oad.length ? 322 : 540, '별가루는 미션·업적·출석·보스·별똥별에서 얻어요', 30, '#B8A6F0'));
-    oad.forEach((it, i) => this.shopOadRow(b, it, 440 + i * 220, ICON));
+    b.add(txt(this, 0, rows ? 322 - up : 540, ad ? '별가루로 코인을 사서 마녀를 강화해요 · 미션·출석·보스에서도 얻어요' : '별가루는 미션·업적·출석·보스·별똥별에서 얻어요', ad ? 28 : 30, '#B8A6F0'));
+    let y = 440 - up;
+    if (ad) { this.shopAdRow(b, y, ICON); y += 220; }
+    oad.forEach((it, i) => this.shopOadRow(b, it, y + i * 220, ICON));
+    window.__shop = pop;
+  }
+  /* 광고 보고 별가루 (QA 7 · bm-policy 1장 '모든 골드 상품에 무료 길'): 광고 1회 = 별가루 20(= 🪙20 값) · 하루 2번 · 소장자는 광고 없이 바로
+     칸은 원어데이 안에서 광고를 볼 수 있을 때, 또는 오늘 이미 받아서 '내일 또' 를 보여 줄 때만 */
+  shopAdOk() { const info = bm.info; return !!(info.ok && (info.owned || (info.ads && info.ads.reward))); }
+  shopAdShown() { return bm.info.ok && (this.shopAdOk() || M.adLeft('shop') < M.AD_DAY.shop); }
+  shopAdRow(b, y, ICON) {
+    b.add(this.add.nineslice(0, y + 40, 'card', null, 850, 200, 50, 50, 50, 50));
+    b.add(txt(this, -380, y - 40, '무료 · 하루 ' + M.AD_DAY.shop + '번', 28, '#BFEFFF', { ox: 0 }));
+    b.add(this.add.image(-320, y + 50, ICON.gems).setDisplaySize(110, 110));
+    b.add(txt(this, -240, y + 30, `별가루 ${M.AD_GEMS}`, 44, '#FFFFFF', { ox: 0 }));
+    const left = txt(this, -240, y + 84, '', 28, '#D8CCFF', { ox: 0 });
+    b.add(left);
+    let busy = false;
+    const bt = button(this, 220, y + 45, '', async () => {
+      if (busy || M.adLeft('shop') <= 0) return; busy = true;
+      const a = await bm.rewardedAd('shop'); busy = false;
+      if (!bt.active) { if (a.ok) { M.adUse('shop'); M.grant({ gems: M.AD_GEMS }); } return; }
+      if (a.ok) { M.adUse('shop'); M.grant({ gems: M.AD_GEMS }); audio.play('sfx_coin'); this.bar.refresh(); toast(this, `별가루 ${M.AD_GEMS} 받았어요!`, '#FFE14D'); }
+      else if (a.reason === 'limit') toast(this, '오늘은 여기까지예요');
+      draw();
+    }, { key: 'btn_purple', w: 360, h: 110, size: 36, icon: 'ico_ad' });
+    b.add(bt);
+    const draw = () => {
+      const n = M.adLeft('shop'), can = n > 0 && this.shopAdOk();
+      bt.setLabel(n <= 0 ? '내일 또 받아요' : bm.info.owned ? '소장 혜택 · 바로' : '광고 보고 받기');
+      bt.setEnabled(can);
+      left.setText(n > 0 ? `오늘 ${n}번 남았어요` : '오늘은 다 받았어요');
+    };
+    draw();
   }
   // 원어데이 골드 칸: 별가루 100 = 🪙100 — 가격은 서버(gold.js SHOP.witch)가 정하고, 게임은 받은 뒤 효과만
   shopOadRow(b, it, y, ICON) {

@@ -1,16 +1,16 @@
-import { exitToOAD } from '../oad.js?v=0.99.49';
+import { exitToOAD } from '../oad.js?v=0.99.50';
 // 월드맵: 월드(10레벨씩)를 세로로 이어 붙이고, 레벨 노드를 구불구불한 길로 연결한다. 화면 근처 월드만 그린다.
-import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.49';
-import { t } from '../i18n.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { load, save, availableStars } from '../save.js?v=0.99.49';
-import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.49';
-import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.49';
-import { dailyState, claimableCount } from '../missions.js?v=0.99.49';
-import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.49';
-import { dexClaimable, achClaimable } from '../progress.js?v=0.99.49';
-import { LEVELS } from '../core/levels.js?v=0.99.49';
-import { popup, button, iconButton, toast, enableGlow } from '../ui/widgets.js?v=0.99.49';
+import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.50';
+import { t } from '../i18n.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { load, save, availableStars } from '../save.js?v=0.99.50';
+import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.50';
+import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.50';
+import { dailyState, claimableCount } from '../missions.js?v=0.99.50';
+import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.50';
+import { dexClaimable, achClaimable } from '../progress.js?v=0.99.50';
+import { LEVELS } from '../core/levels.js?v=0.99.50';
+import { popup, button, iconButton, toast, enableGlow } from '../ui/widgets.js?v=0.99.50';
 
 const WORLD_H = 3840;
 const WORLDS = WORLD_COUNT;

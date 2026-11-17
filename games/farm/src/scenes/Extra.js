@@ -1,12 +1,15 @@
-import { frame } from '../frame.js?v=0.99.49';
-import { banner, iconTabs, rewards, card, doneStamp, lockIc, progressBar } from '../evui.js?v=0.99.49';
+import { frame } from '../frame.js?v=0.99.50';
+import { banner, iconTabs, rewards, card, doneStamp, lockIc, progressBar } from '../evui.js?v=0.99.50';
 // 따로 여는 화면: 뒷산 광산 · 미니게임 3종(댐 수리 · 참새 쫓기 · 불량배 쫓기) · 마을 사람들(호감도 · 선물 · 결혼)
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, btn, popup, toast, redDot } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { goPrev } from '../nav.js?v=0.99.49';
-import { ITEMS, MINE, MINIS, SUITORS, HEARTS, HEART_PTS, CHARS, RELIC_N, BUILDS } from '../data.js?v=0.99.49';
-import { load, save, has, mine, mineHit, miniLeft, miniDone, giftTo, hearts, marry, countOf, rewardText, progress } from '../state.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, btn, popup, toast, redDot } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { goPrev } from '../nav.js?v=0.99.50';
+import { ITEMS, MINE, MINIS, SUITORS, HEARTS, HEART_PTS, CHARS, RELIC_N, BUILDS } from '../data.js?v=0.99.50';
+import { load, save, has, mine, mineHit, miniLeft, miniDone, giftTo, hearts, marry, countOf, rewardText, progress, quest, questDone } from '../state.js?v=0.99.50';
+import { RECIPES, CROPS } from '../data.js?v=0.99.50';
+/* 그 물건을 만들 수 있게 되는 레벨 (작물 · 조리법 · 그 공장이 열리는 레벨 중 늦은 쪽) */
+const itemLv = it => CROPS[it] ? CROPS[it].lv || 1 : RECIPES[it] ? Math.max(RECIPES[it].lv || 1, BUILDS[RECIPES[it].b] ? BUILDS[RECIPES[it].b].lv : 1) : 1;
 
 const icon = (sc, x, y, k, s) => { const im = sc.add.image(x, y, k); im.setScale(s / Math.max(im.width, im.height)); return im; };
 // 모든 전체 화면 공통 틀 (frame.js): 위 재화 막대 + 제목 막대 ◀ · 손가락으로 위아래 밀기
@@ -76,19 +79,21 @@ export class PeopleScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, 0xFFF3E0); top(this, '마을 사람들'); const d = load();
     if (d.spouse) { const S = SUITORS[d.spouse], f = this.add.image(W / 2 - 180, 620, 'princess'), f2 = this.add.image(W / 2 + 180, 620, d.spouse); f.setScale(480 / f.height); f2.setScale(480 / f2.height);
       icon(this, W / 2, 470, 'heart', 120); T(this, W / 2, 940, `${S.n}와(과) 결혼했어요`, 48, '#E8507A', { w: 900 }); T(this, W / 2, 1010, `부부 효과: ${S.perk}`, 30, C.brown, { w: 900 }); T(this, W / 2, 1100, `"${S.line[0]}"`, 28, C.dim, { w: 800, wrap: 860 }); return; }
-    T(this, W / 2, 180, '좋아하는 제품을 선물하면 하트가 빨리 차요 · 하트 5개면 프러포즈!', 24, C.dim, { w: 900 });
+    T(this, W / 2, 180, '가진 물건은 무엇이든 선물할 수 있어요 · 좋아하는 것이면 하트가 더 빨리 차요 · 하트 5개면 프러포즈!', 22, C.dim, { w: 900, wrap: 980 });   /* v0.20: '좋아하는 것만 줄 수 있다'로 읽혀 선물 퀘스트가 막힌 것처럼 보였음 */
     Object.entries(SUITORS).forEach(([k, S], i) => { const y = 440 + i * 470, g = this.add.graphics(); g.fillStyle(0xFFFFFF, 1).fillRoundedRect(40, y - 200, W - 80, 420, 36).lineStyle(4, 0xE8A0B4, 1).strokeRoundedRect(40, y - 200, W - 80, 420, 36);
       const f = this.add.image(190, y + 20, k); f.setScale(380 / f.height); { const mk = this.make.graphics({ add: false }); mk.fillStyle(0xffffff).fillRoundedRect(44, y - 196, W - 88, 412, 32); f.setMask(mk.createGeometryMask()); }   // 카드 밖으로 나가지 않게 T(this, 360, y - 150, `${S.n} · ${S.job}`, 40, C.ink, { ox: 0, w: 900 });
       const hv = d.love[k] / HEART_PTS; for (let h = 0; h < HEARTS; h++) { const hi = icon(this, 380 + h * 70, y - 80, 'heart', 56); if (h + 1 > hv) { hi.setTintFill(0xD8CCCC).setAlpha(0.55); if (hv > h) { const part = icon(this, 380 + h * 70, y - 80, 'heart', 56); part.setCrop(0, 0, part.width * (hv - h), part.height); } } }
-      T(this, 360, y - 20, '좋아하는 것', 22, C.dim, { ox: 0, w: 800 }); S.likes.forEach((it, j) => { icon(this, 400 + j * 100, y + 40, it, 76); T(this, 400 + j * 100, y + 92, `${d.items[it] || 0}`, 20, has(it) ? C.green : C.dim, { w: 900 }); });
+      T(this, 360, y - 20, '특히 좋아하는 것 (없어도 선물할 수 있어요)', 22, C.dim, { ox: 0, w: 800 }); const lx = S.likes.length > 4 ? 86 : 100; S.likes.forEach((it, j) => { const lk = !has(it) && itemLv(it) > d.lv, ic = icon(this, 400 + j * lx, y + 40, it, 76); if (lk) ic.setAlpha(0.45); T(this, 400 + j * lx, y + 92, lk ? `Lv.${itemLv(it)}` : `${d.items[it] || 0}`, 20, has(it) ? C.green : C.dim, { w: 900 }); });   /* 아직 못 만드는 것은 열리는 레벨 */
       T(this, 360, y + 140, `결혼 효과: ${S.perk}`, 22, C.brown, { ox: 0, w: 800 });
       if (hearts(k) >= HEARTS) btn(this, W - 190, y + 140, 240, 84, '💍 프러포즈', () => this.propose(k), { size: 26, style: 'green' });
       else btn(this, W - 190, y + 140, 220, 84, '🎁 선물', () => this.gift(k), { size: 26, style: 'green' }); });
+    /* 선물 퀘스트 중이면 첫 선물 단추에 손가락 */
+    { const q = quest(); if (q && q.goal.gift && !questDone() && !d.spouse) { const k0 = Object.keys(SUITORS).findIndex(k => hearts(k) < HEARTS), hand = T(this, W - 120, 440 + Math.max(0, k0) * 470 + 200, '👆', 70, '#000', { w: 900 }).setDepth(50); this.tweens.add({ targets: hand, y: hand.y + 14, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); } }
     window.__people = this;
   }
   gift(k) { const S = SUITORS[k], d = load(), list = Object.keys(d.items).filter(it => d.items[it] > 0 && ITEMS[it] && !['pickaxe', 'dynamite'].includes(it)).sort((a, b) => S.likes.includes(b) - S.likes.includes(a) || ITEMS[b].v - ITEMS[a].v).slice(0, 12);
-    if (!list.length) return toast(this, '줄 물건이 없어요', H / 2); const p = popup(this, 980, 300 + Math.ceil(list.length / 4) * 210); p.content.add(T(this, 0, -60 - Math.ceil(list.length / 4) * 105, `${S.n}에게 무엇을 줄까요?`, 40, C.ink, { w: 900 }));
-    list.forEach((it, i) => { const x = -345 + (i % 4) * 230, y = 40 - Math.ceil(list.length / 4) * 105 + Math.floor(i / 4) * 210, c = this.add.container(x, y), g = this.add.graphics(), like = S.likes.includes(it); g.fillStyle(like ? 0xFFE3EC : 0xFFF6E0, 1).fillRoundedRect(-100, -95, 200, 190, 24); c.add([g, icon(this, 0, -20, it, 100), T(this, 0, 60, `${ITEMS[it].n} ${d.items[it]}${like ? ' ♥' : ''}`, 20, C.ink, { w: 900 })]);
+    if (!list.length) return toast(this, '줄 물건이 없어요 · 밭에서 거둔 밀도 좋은 선물이에요', H / 2); const rows = Math.ceil(list.length / 4), ph = 400 + rows * 210, p = popup(this, 980, ph), y0 = -ph / 2 + 300; p.content.add(T(this, 0, -ph / 2 + 100, `${S.n}에게 무엇을 줄까요?`, 40, C.ink, { w: 900 })); p.content.add(T(this, 0, -ph / 2 + 158, '무엇이든 고마워해요 · ♥ 는 특히 좋아하는 것', 22, C.dim, { w: 900 }));
+    list.forEach((it, i) => { const x = -345 + (i % 4) * 230, y = y0 + Math.floor(i / 4) * 210, c = this.add.container(x, y), g = this.add.graphics(), like = S.likes.includes(it); g.fillStyle(like ? 0xFFE3EC : 0xFFF6E0, 1).fillRoundedRect(-100, -95, 200, 190, 24); c.add([g, icon(this, 0, -20, it, 100), T(this, 0, 60, `${ITEMS[it].n} ${d.items[it]}${like ? ' ♥' : ''}`, 20, C.ink, { w: 900 })]);
       c.setSize(200, 190).setInteractive({ useHandCursor: true }).on('pointerup', () => { const r = giftTo(k, it); if (!r) return; save(); audio.play(r.liked ? 'sfx_levelup' : 'sfx_coin', { volume: 0.6 }); p.close(); toast(this, r.liked ? `${S.n}: "제가 제일 좋아하는 거예요!" ♥+${r.pts}` : `${S.n}: "고마워요." ♥+${r.pts}`, H / 2); this.time.delayedCall(900, () => this.scene.restart()); }); p.content.add(c); }); }
   propose(k) { const S = SUITORS[k]; if (!countOf('wedding')) return toast(this, '먼저 결혼식장을 지어요 (건설 → 마을)', H / 2);
     const p = popup(this, 900, 900, { closable: false }), f = this.add.image(0, -150, k); f.setScale(420 / f.height); p.content.add(f); p.content.add(T(this, 0, 120, `"${S.line[1]}"`, 30, C.ink, { w: 800, wrap: 760 }));
@@ -98,7 +103,7 @@ export class PeopleScene extends Phaser.Scene {
 }
 
 // ── 이벤트 화면: 출석 · 축제 · 레이스 · 스티커 · 패스 (위 탭)
-import { season, seasonBuy, evDots, LOGIN, login, loginClaim, FEST_TIERS, FEST_R, fest, festClaim, RACE, race, raceJoin, raceState, raceClaim, STICKERS, ALBUM_R, album, openPack, albumClaim, albumAll, PASS_TIERS, PASS_FREE, PASS_PREM, pass, passClaim } from '../events.js?v=0.99.49';
+import { season, seasonBuy, evDots, LOGIN, login, loginClaim, FEST_TIERS, FEST_R, fest, festClaim, RACE, race, raceJoin, raceState, raceClaim, STICKERS, ALBUM_R, album, openPack, albumClaim, albumAll, PASS_TIERS, PASS_FREE, PASS_PREM, pass, passClaim } from '../events.js?v=0.99.50';
 const fmtL = ms => { const h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4); return h ? `${h}시간 ${m}분` : `${m}분`; };
 export class EventsScene extends Phaser.Scene {
   constructor() { super('Events'); }
@@ -160,8 +165,8 @@ export class EventsScene extends Phaser.Scene {
 }
 
 // ── 섬 원정: 덤불·덩굴·그루터기=도끼 · 모래·보물=삽 · 바위=곡괭이 → 칸을 열어 보물 찾기
-import { isle, isleHit, isleTool, isleTheme, BOSS } from '../state.js?v=0.99.49';
-import { ISLE } from '../data.js?v=0.99.49';
+import { isle, isleHit, isleTool, isleTheme, BOSS } from '../state.js?v=0.99.50';
+import { ISLE } from '../data.js?v=0.99.50';
 export class IslandScene extends Phaser.Scene {
   constructor() { super('Island'); }
   init() { this.noScroll = true; }
@@ -194,7 +199,7 @@ export class IslandScene extends Phaser.Scene {
 }
 
 // ── 협동조합: 레가타(주간 팀 경주) · 도움 요청
-import { coopDots, coop, standings, weekLeft, takeTask, taskProg, dropTask, tierClaim, prevClaim, helpSend, COOP_TIERS, TIER_R, RANK_R, TASKS_DAY, COOP_LV } from '../coop.js?v=0.99.49';
+import { coopDots, coop, standings, weekLeft, takeTask, taskProg, dropTask, tierClaim, prevClaim, helpSend, COOP_TIERS, TIER_R, RANK_R, TASKS_DAY, COOP_LV } from '../coop.js?v=0.99.50';
 const fmtH = ms => { const m = Math.floor(ms / 6e4); return m >= 1440 ? `${Math.floor(m / 1440)}일 ${Math.floor(m % 1440 / 60)}시간` : m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
 export class CoopScene extends Phaser.Scene {
   constructor() { super('Coop'); }

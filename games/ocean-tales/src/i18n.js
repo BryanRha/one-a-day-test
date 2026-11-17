@@ -2,7 +2,7 @@
 const STR = {
   ko: {
     play: '플레이', level: '레벨', moves: '이동', score: '점수', goal: '목표', start: '시작', next: '다음',
-    retry: '다시 하기', map: '지도', resume: '계속하기', quit: '그만하기', settings: '설정', sound: '효과음', music: '배경음',
+    retry: '다시 하기', map: '지도', resume: '계속하기', quit: '그만하기', settings: '설정', sound: '효과음', music: '배경음', shakeFx: '화면 흔들림 · 진동', toOad: '원어데이', toOadLong: '원어데이로 가기',
     on: '켜짐', off: '꺼짐', paused: '일시정지', levelClear: '레벨 클리어!', failed: '아쉬워요!', outOfMoves: '이동 횟수를 다 썼어요',
     timerBoom: '기뢰가 터졌어요', plus5: '+5 이동', plus5Ask: '이동 5번을 더 받을까요?', notEnough: '코인이 부족해요',
     buy: '구매', coins: '코인', giveUp: '포기', reward: '보상', best: '최고 점수', locked: '잠김', worldName: ['산호초 마을', '해초 숲', '깊은 바다', '열대 석호', '난파선 만', '빙하 바다', '진주 동굴', '화산 해구', '해파리 정원', '해저 도시', '무지개 산호 언덕', '속삭이는 해초 숲', '고요한 심해', '에메랄드 석호', '해적선 무덤', '오로라 바다', '수정 동굴', '불꽃 해구', '등불 해파리 숲', '물속 신전', '해님 산호 정원', '해초 미로', '반딧불 심해', '야자수 석호', '잊힌 항구', '얼음 동굴 바다', '메아리 동굴', '용암 산호', '분홍 해파리 축제', '잃어버린 궁전', '노을 산호 만', '흔들 해초 골짜기', '푸른 해구', '하얀 모래 석호', '유령선 만', '빙산 해협', '무지개 진주굴', '화산섬 바다', '꿈꾸는 해파리 정원', '수정 도시', '별빛 산호섬', '거대 해초 숲', '끝없는 심연', '비밀 석호', '황금 난파선', '북극 수정 바다', '달빛 동굴', '붉은 해저 화산', '은하 해파리 바다', '바다의 왕국'],
@@ -28,7 +28,7 @@ const STR = {
   },
   en: {
     play: 'Play', level: 'Level', moves: 'Moves', score: 'Score', goal: 'Goal', start: 'Start', next: 'Next',
-    retry: 'Retry', map: 'Map', resume: 'Resume', quit: 'Quit', settings: 'Settings', sound: 'Sound', music: 'Music',
+    retry: 'Retry', map: 'Map', resume: 'Resume', quit: 'Quit', settings: 'Settings', sound: 'Sound', music: 'Music', shakeFx: 'Screen shake & buzz', toOad: 'One a Day', toOadLong: 'Go to One a Day',
     on: 'On', off: 'Off', paused: 'Paused', levelClear: 'Level Clear!', failed: 'So close!', outOfMoves: 'Out of moves',
     timerBoom: 'A sea mine went off', plus5: '+5 Moves', plus5Ask: 'Get 5 extra moves?', notEnough: 'Not enough coins',
     buy: 'Buy', coins: 'Coins', giveUp: 'Give up', reward: 'Reward', best: 'Best', locked: 'Locked', worldName: ['Coral Village', 'Kelp Forest', 'Deep Blue', 'Tropical Lagoon', 'Shipwreck Bay', 'Polar Sea', 'Pearl Cave', 'Volcanic Vents', 'Jellyfish Garden', 'Sunken City', 'Rainbow Reef Hill', 'Whispering Kelp', 'Silent Deep', 'Emerald Lagoon', 'Pirate Wreck', 'Aurora Sea', 'Crystal Cave', 'Ember Vents', 'Lantern Jelly Woods', 'Sunken Temple', 'Sunny Coral Garden', 'Kelp Maze', 'Firefly Abyss', 'Palm Lagoon', 'Forgotten Harbor', 'Ice Cave Sea', 'Echo Cave', 'Lava Reef', 'Pink Jelly Festival', 'Lost Palace', 'Sunset Coral Bay', 'Swaying Kelp Valley', 'Blue Trench', 'White Sand Lagoon', 'Ghost Ship Bay', 'Iceberg Strait', 'Rainbow Pearl Grotto', 'Volcano Isle Sea', 'Dreamy Jelly Garden', 'Crystal City', 'Starlight Coral Isle', 'Giant Kelp Forest', 'Endless Abyss', 'Secret Lagoon', 'Golden Wreck', 'Arctic Crystal Sea', 'Moonlit Cave', 'Crimson Seamount', 'Galaxy Jelly Sea', 'Kingdom of the Sea'],

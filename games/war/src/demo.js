@@ -1,15 +1,33 @@
 // 첫 출전 시범 (v0.12 · 테스터 시트 #4): 일반 작전 첫 판의 첫 턴을 아군 AI 가 천천히 보여 줌
 //   유닛 고르기 → 파란 칸으로 이동 → 점령 · 공격 → 기지에서 유닛 구매(생산) 를 한 단계씩 글로 설명하며 실행
 //   [시범 건너뛰기] 언제든 · 뒤로가기 = 일시정지(시범도 멈춤) · 끝나면 기본 안내 → [턴 종료]는 직접
-import { W, H } from './config.js?v=0.99.49';
-import { T, C, btn, fmt } from './pui.js?v=0.99.49';
-import { load, save } from './save.js?v=0.99.49';
-import { AI, apply } from './core/ai.js?v=0.99.49';
-import { UNITS, TERRAIN } from './core/data.js?v=0.99.49';
-import { track } from './bmwar.js?v=0.99.49';
+import { W, H } from './config.js?v=0.99.50';
+import { T, C, btn, fmt } from './pui.js?v=0.99.50';
+import { load, save } from './save.js?v=0.99.50';
+import { AI, apply } from './core/ai.js?v=0.99.50';
+import { UNITS, TERRAIN } from './core/data.js?v=0.99.50';
+import { track } from './bmwar.js?v=0.99.50';
 
-const TOP = 196, BOTTOM = 360, STEP = 1700;
-export const demoWanted = sc => sc.mode === 'campaign' && !sc.auto && !sc.autoplay && !sc.data0.resume && sc.s.day === 1 && sc.s.turn === 1 && !load().tips.demo && (load().battles || 0) === 0;
+/* STEP: 한 단계 설명을 읽는 시간 — v0.13 에서 1.7 → 2.4초 ('천천히 시연' · 폰에서 두 줄 문장을 다 읽기 전에 넘어갔음) */
+const TOP = 196, BOTTOM = 360, STEP = 2400;
+/* 저절로: 처음 사용자의 일반 작전 첫 판 · 골라서(data.demo — 모드 안내 [첫 출전 시범 보기] · v0.13): 이미 여러 판 한 사람도 언제든
+   (v0.12 는 battles 0 일 때만이라, 전에 한 판이라도 해 본 테스터 기기에선 시범을 볼 길이 없었음 — 시트 #4 '확인 X') */
+export const demoWanted = sc => sc.mode === 'campaign' && !sc.auto && !sc.autoplay && !sc.data0.resume && sc.s.day === 1 && sc.s.turn === 1 && (!!sc.data0.demo || (!load().tips.demo && (load().battles || 0) === 0));
+/* 시범 판 시작 값 (작전 1 · 그 작전의 원래 난이도) */
+export const demoPlay = () => ({ mode: 'campaign', mapId: 'm1', level: 'easy', co: load().co, tag: null, demo: true });
+/* 예전부터 하던 사람(battles > 0)에게 일반 작전 목록에서 한 번만 권함 → 보여 줬으면 true */
+export function demoOffer(scene, popup, onYes) {
+  const d = load();
+  if (d.tips.demo || d.tips.demoOffer || !(d.battles > 0) || /[?&]auto(=|&|$)/.test(location.search)) return false;
+  d.tips.demoOffer = 1; save(); track('demo_offer', {});
+  const p = popup(scene, '새로 생겼어요', 860, 640);
+  p.content.add(T(scene, 0, -130, '첫 출전 시범', 44, C.gold, { w: 900 }));
+  p.content.add(T(scene, 0, -30, '작전 1의 첫 턴을 아군 AI 가 천천히 보여 줘요\n이동 · 점령 · 공격 · 기지 생산까지', 28, C.text, { w: 800, lh: 10 }));
+  p.content.add(T(scene, 0, 70, '나중에도 [안내] › 첫 출전 시범 보기에서 볼 수 있어요', 24, C.sub, { w: 800 }));
+  p.content.add(btn(scene, -200, 200, 360, 110, '시범 보기', () => { p.close(); onYes(); }, { style: 'gold', size: 34 }));
+  p.content.add(btn(scene, 200, 200, 300, 110, '괜찮아요', () => p.close(), { style: 'ghost', size: 32 }));
+  return true;
+}
 
 export async function runDemo(sc) {
   const d = load(); d.tips.demo = 1; save(); track('demo_start', { m: sc.map.id });

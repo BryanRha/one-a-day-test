@@ -1,7 +1,7 @@
 // 모델을 코드로 직접 만듦: 낮은 다각형 + 만화풍 3단 음영 (마루미 베이글과 같은 결)
 //   감성커피 공간: 나무 · 돌 · 베이지 회벽 · 리넨 · 한글 서예 · 따뜻한 빛
 import * as THREE from 'three';
-import { BRAND, MENU } from './data.js?v=0.99.49';
+import { BRAND, MENU } from './data.js?v=0.99.50';
 
 export const gm = (() => { const d = new Uint8Array([95, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const mats = {};
@@ -22,6 +22,7 @@ export function person(o = {}) {
   sph(32, 0xFFDDBF, 0, 128, 0, body, 18, 14);
   mesh(geo('phair', () => new THREE.SphereGeometry(33, 18, 14, 0, 6.28, 0, 1.4)), M(o.hair || 0x3A2A1E), 0, 132, -2, body);
   if (o.bun) sph(14, o.hair || 0x3A2A1E, 0, 166, -14, body, 10, 8);
+  if (o.scarf) { mesh(geo('pscarf', () => new THREE.TorusGeometry(25, 7, 8, 20)), M(o.scarf), 0, 99, 1, body).rotation.x = Math.PI / 2; const k = mesh(geo('pknot', () => new THREE.ConeGeometry(9, 22, 4)), M(o.scarf), 9, 86, 27, body); k.rotation.set(Math.PI, 0, 0.25); }   /* 금빛 스카프 = 사장님 표식 (동료와 구분 · QA 1116-7) */
   if (o.glasses) for (const s of [-1, 1]) mesh(geo('glass', () => new THREE.TorusGeometry(7, 1.5, 6, 14)), M(0x2A1A10), s * 12, 130, 31, body);
   for (const s of [-1, 1]) { sph(4, 0x2A1A10, s * 11, 130, 29, body, 8, 6); sph(5, 0xFFB3A0, s * 20, 120, 24, body, 8, 6); }
   const legs = [-1, 1].map(s => { const L = new THREE.Group(); L.position.set(s * 14, 26, 0); g.add(L); mesh(geo('pleg', () => new THREE.CapsuleGeometry(10, 12, 4, 8)), M(o.pants || 0x5A4A3A), 0, -12, 0, L); return L; });

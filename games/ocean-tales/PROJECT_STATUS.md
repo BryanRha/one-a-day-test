@@ -1,9 +1,19 @@
 # 웨일 테일 (Whale Tale, 구 바다이야기 · 원어데이 게임 id `ocean`) — 프로젝트 현황 · 인수인계
 
 - **2026-10-28 PC 공통 정리**: 창 크기 왕복(가로→좁고 긴 창 · 폰 가로→세로) 찌그러짐 수정(main.js fitMode: EXPAND 전환 때 displaySize 비율 고정 해제) · 단독 링크 · 사파리/파이어폭스 Esc = 뒤로(oad.js keydown, 원어데이 안 크롬은 CloseWatcher 그대로) · 보고 team/dev/inbox/20261028-pc-games.md
+- **2026-10-29 원어데이 SDK 갱신**: `src/oad_bm.js` 를 `oneaday/sdk` 최신(22ae6c4)으로 — 광고 · 골드 확인 창 180초는 화면이 보이는 동안만 셈(백그라운드 다녀와도 보상 유지) · 그룹 A 광고 = 'off' · 응답 없음 = 'timeout' · 게임 호출부는 그대로 맞음(고친 곳 없음) · 원어데이 테스트 빌드 안 시험 22개 통과 · tools/bm_test.js 오류 0
 
-마지막 작업: 2026-10-28 · 버전 **v2.8.0** (원어데이 BM) · 공개 주소 https://bryanrha.github.io/dessert-pop/
+마지막 작업: 2026-11-17 · 버전 **v2.9.0** (QA 시트 6건 대응 — 아래 'v2.9.0' 절) · 공개 주소 https://bryanrha.github.io/dessert-pop/
 저장 키 `dessertpop_save_v1` 은 절대 바꾸지 않음 (원어데이 catalog SAVES 와 같음)
+
+## v2.9.0 — QA 시트(261116) 6건 대응 (2026-11-17 · 답 team/dev/tasks/261116-qa-sheet/ocean_reply.md)
+- **아이콘(QA 1)**: 미션 · 도감 · 업적 · 바다 복원 · 꾸미기 5종을 조각과 같은 색 · 광택 화풍으로 다시 그림 — `node tools/gen_icons.mjs` (SVG → PNG · game/assets/img 96px + 원본 ../assets/png/1x · 2x 에도 써서 sync.js 가 되돌리지 않음 · 예전 그림은 ../assets/png_icon_backup_v28/) · 지도 아래 바의 아이콘은 단추 안에서 더 크게(104px)
+- **판 안 광고 부스터(QA 4)**: 다 쓴 부스터 칸에 '▶ 광고' 꼬리표 → 누르면 구매 창에 [▶ 광고 보고 ○○ 1](소장자는 [무료로 ○○ 1]) + [🪙60 부스터 3종] · 하루 3번은 시작 창 광고와 **같은 바구니**(save.bmAds.booster) · 남은 횟수 표시(게임 한도와 앱 한도 중 작은 값 `adShown`) · 원어데이 밖은 예전 그대로(코인 구매만)
+- **흔들림 완화(QA 6)**: 화면 흔들림은 `ui/widgets.js quake()` 한 곳에서만 — 세기 0.5배 · 길이 0.7배 · 상한 ±8px(가로 = 세로 같은 픽셀 · 예전엔 세로가 화면 길이에 비례해 긴 폰에서 ±35px) · 진동 길이 0.6배 · 폭탄 카메라 확대도 약하게 · 설정 · 일시정지 창에 '화면 흔들림 · 진동' 켜고 끄기(save.shake) · **`cameras.main.shake` 를 직접 부르지 말 것**(qa1116_e2e 가 검사)
+- **폭발 손맛(QA 5 일부)**: 폭탄이 터질 때 범위 바로 바깥 한 겹이 충격파에 밀렸다 돌아옴(`Game.shove` · 보이기만 · 판정은 엔진 그대로) — 범위 자체를 넓히는 것은 코어 규칙이라 제안으로(봇 측정: 십자 팔 +4칸이면 승률 63.2 → 65.7%, 5×5 면 72.4%)
+- **원어데이로 가기(공통 의견)**: 제목 화면 왼쪽 위 [‹ 원어데이](앱 안 = oad:exit · 이때 '홈 화면에 추가' 버튼은 숨김) / 단독 링크는 버전 줄 위 [원어데이로 가기] = 원어데이 사이트 · 설정 창에도 같은 버튼 (`oad.js toOAD` · 룬다이스 홈과 같은 동작)
+- 제안으로 남긴 것: 스테이지 배경 10장 · 바다 복원 오브젝트 재제작(QA 2 · 3) · 폭탄 범위 확대(QA 5)
+- 시험: `node tools/browser/qa1116_e2e.mjs <주소>` 26/26 (캡처 docs/shots_qa1116/) · bm_e2e ALL OK · e2e 1~45레벨 어긋남 0 · test_core 3000판 실패 0 · bm_test 오류 0
 
 ## 원어데이 BM (v2.8.0 · docs/bm-policy.md 를 따름)
 - 파일: `src/oad_bm.js`(공통 · 수정 금지) · `src/bmflow.js`(hello · 소리 멈춤 · 광고 횟수 · 판 끝 전면 · 기록 · 장식 · 문구) · `src/core/cont.js`(이어하기 권유 규칙) · `src/core/help.js`(응원 선물 규칙)

@@ -1,22 +1,23 @@
 // 숨은 물건 맵 (Find It Out® 식): 고밀도 세로 맵 · 아래 아이콘 5칸(찾으면 다음 물건이 채워짐) · 실패·시간 제한 없음
 // + 이야기 단서: 분홍 테두리 아이콘 · 찾으면 서윤 혼잣말 · 물건마다 코인 · 힌트는 코인
-import { W, H } from '../config.js?v=0.99.49';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { goPrev } from '../nav.js?v=0.99.49';
-import { pushBack } from '../oad.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import { Viewer } from '../viewer.js?v=0.99.49';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.49';
-import { starOnce } from '../cafe/state.js?v=0.99.49';
-import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { goPrev } from '../nav.js?v=0.99.50';
+import { pushBack } from '../oad.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import { Viewer } from '../viewer.js?v=0.99.50';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.50';
+import { starOnce } from '../cafe/state.js?v=0.99.50';
+import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.50';
 
-import { HINT_COST, roundEnd, oadOn, owner, adLeft, watchAd, failText, peekPrice, buyPeek, PEEK_SEC } from '../bm.js?v=0.99.49';
-import { hintOffer } from '../bmui.js?v=0.99.49';
+import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.50';
+import { hintOffer } from '../bmui.js?v=0.99.50';
 
-const SLOTS = 5, SPAM = { n: 3, t: 2, lock: 3 };
-// 1~3화는 아래 칸 그림을 크게 (QA 시트 #6) · 1화 첫 판은 10초 동안 못 찾으면 자리를 부드럽게 안내 (QA 시트 #2, 무료 · 힌트로 안 셈)
-export const BIG_EPS = 3, GUIDE = { sec: 10 };
+const SPAM = { n: 3, t: 2, lock: 3 };
+// 1~3화는 아래 칸 그림을 크게 (QA 시트 #6) — 11-16 '더 키워야': 5칸 196 은 이미 화면 폭을 다 써서, 1~3화는 한 번에 4칸 · 248 로 (4화부터 5칸 · 160) · 칸을 누르면 크게 보기(모든 화)
+// 1화는 10초 동안 못 찾으면 자리를 부드럽게 안내 (QA 시트 #2, 무료 · 힌트로 안 셈) — 다시 하기에서도 (1화를 이미 끝낸 사람은 다시 하기로만 1화에 들어갈 수 있어 안내를 볼 길이 없었음)
+export const BIG_EPS = 3, GUIDE = { sec: 10 }, TRAY = { big: { n: 4, box: 248, gap: 16, h: 446 }, small: { n: 5, box: 160, gap: 16, h: 358 } };
 export class HuntScene extends Phaser.Scene {
   constructor() { super('Hunt'); }
   create(data) {
@@ -26,13 +27,13 @@ export class HuntScene extends Phaser.Scene {
     const again = passed(ep.id, 'hunt'); this.replay = again && stepOf(ep.id) === 'done'; this.fresh = again; if (!again) advance(ep.id, 'hunt');
     const prog = d.ep[ep.id] ||= { step: 'hunt' }; prog.found ||= []; save();
     Object.assign(this, { misses: [], lock: 0, t: 0, ended: false, paused: false, blur: null, got: 0, hints: 0, idle: 0, guides: 0, peeks: 0 });
-    const idx = EPISODES.indexOf(ep); this.big = idx < BIG_EPS; this.guideOn = idx === 0 && !this.replay;
+    const idx = EPISODES.indexOf(ep); this.big = idx < BIG_EPS; this.guideOn = idx === 0;
     // 순서: 일반 물건 사이사이에 단서 · 결정적 단서(last)는 맨 끝
     const normal = hu.items.filter(i => !i.clue).sort(() => Math.random() - 0.5), clues = hu.items.filter(i => i.clue && !i.last), last = hu.items.find(i => i.last);
     const q = [...normal]; clues.forEach((c, k) => q.splice(Math.min(q.length, 3 + k * 4), 0, c)); if (last) q.push(last);
     this.queue = this.fresh ? q : q.filter(i => !prog.found.includes(i.n)); this.total = hu.items.length; this.got = this.total - this.queue.length;
     this.add.rectangle(W / 2, H / 2, W, H, 0x2E1A2A);
-    const top = 150, trayH = this.big ? 370 : 336; this.trayH = trayH;
+    const TR = this.big ? TRAY.big : TRAY.small, SLOTS = TR.n, top = 150, trayH = TR.h; this.trayH = trayH;
     this.v = new Viewer(this, hu.map, 0, top, W, H - top - trayH, { maxZoom: 4, onTap: (ip, p, later) => this.tap(ip, p, later) });
     this.v.zoom = 1.6; this.v.cy = hu.h * 0.35; this.v.apply();
     // 위: 뒤로 · 화 제목 · 진행 · 코인
@@ -43,16 +44,23 @@ export class HuntScene extends Phaser.Scene {
     this.coinT = T(this, W - 40, 76, '', 32, C.gold, { ox: 1, w: 900 });
     // 아래: 아이콘 5칸 + 힌트
     const ty = H - trayH, tg = this.add.graphics(); tg.fillStyle(0x2E1A2A, 1).fillRect(0, ty, W, trayH); tg.fillStyle(0xFF9DB6, 0.6).fillRect(0, ty, W, 3);
-    this.slots = []; const sw = this.box = this.big ? 196 : 160, gap = this.big ? 12 : 16, x0 = (W - (SLOTS * sw + (SLOTS - 1) * gap)) / 2;
-    for (let k = 0; k < SLOTS; k++) { const x = x0 + sw / 2 + k * (sw + gap), y = ty + 22 + sw / 2; const c = this.add.container(x, y); this.slots.push({ c, x, y, it: null }); }
-    // 아래 줄: 물건 이름 · [미리 보기 🪙] · [광고 단서] · [돋보기 ● 10]
-    const by = ty + trayH - 100, cap = (x, t, col) => T(this, x, by + 70, t, 22, col, { w: 900, lh: 2 });   /* 버튼 아래 두 줄 이름표 */
-    this.nameT = T(this, 60, by, '', 24, C.sub, { ox: 0, w: 800 });
-    this.hintB = iconBtn(this, W - 90, by, 'hint', () => this.hint(), 100); this.hintC = cap(W - 90, `힌트\n● ${HINT_COST}`, C.gold);
-    // 광고 보고 주요 단서 자리 (원어데이 안 · 하루 3 · 앱 광고 한도 안)
-    if (oadOn() && adLeft('clue') > 0) { this.clueB = iconBtn(this, W - 222, by, 'ad', () => this.clueAd(), 100); this.clueC = cap(W - 222, owner() ? '단서 위치\n바로' : '단서 위치\n광고', '#FFB6CB'); }
-    // 그림 미리 보기 (골드 · 서버 가격표에 있을 때만)
-    if (peekPrice()) { const x = this.clueB ? W - 354 : W - 222; this.peekB = iconBtn(this, x, by, 'eye', () => this.peek(), 100); this.peekC = cap(x, `미리 보기\n🪙${peekPrice()}`, C.gold); }
+    this.slots = []; const sw = this.box = TR.box, gap = TR.gap, x0 = (W - (SLOTS * sw + (SLOTS - 1) * gap)) / 2;
+    for (let k = 0; k < SLOTS; k++) { const x = x0 + sw / 2 + k * (sw + gap), y = ty + 40 + sw / 2; const c = this.add.container(x, y); this.slots.push({ c, x, y, it: null }); }
+    // 아래 줄(오른쪽부터): [힌트 ● 10] [단서 위치 · 광고] [미리 보기 🪙] — 이름이 적힌 큰 알약 버튼 (예전 동그란 100 버튼 + 22px 이름표는 폰에서 8px 이라 못 찾았음 · QA 11-16 #3 · #5)
+    const by = this.by = ty + 40 + sw + 18 + 62, defs = [{ k: 'hint', t: `힌트\n● ${HINT_COST}`, st: 'cream', ic: 'hint', fn: () => this.hint() }];
+    /* 광고 보고 주요 단서 자리 (원어데이 안 · BM 그룹 B/C · 하루 3 · 앱 광고 한도 안) — 오늘 다 썼으면 숨기지 않고 '오늘 다 씀' */
+    if (adOn()) defs.push({ k: 'clue', t: adLeft('clue') > 0 ? (owner() ? '단서 위치\n바로' : '단서 위치\n광고') : '단서 위치\n오늘 다 씀', st: 'rose', ic: 'ad', fn: () => this.clueAd() });
+    /* 그림 미리 보기 (골드 · 서버 가격표에 있을 때만) */
+    if (peekPrice()) defs.push({ k: 'peek', t: `미리 보기\n🪙${peekPrice()}`, st: 'gold', ic: 'eye', fn: () => this.peek() });
+    const n = defs.length, bw = Math.floor(Math.min(400, (W - 60 - (n - 1) * 20) / n));
+    defs.forEach((f, i) => {
+      const x = W - 30 - bw / 2 - i * (bw + 20), b = btn(this, x, by, bw, 124, f.t, f.fn, { style: f.st, size: 30 }); b.label.setX(36).setLineSpacing(4);   /* 높이 124 = 폰 44.8px · 글씨 30 = 폰 11px */
+      const ic = iconBtn(this, x - bw / 2 + 60, by - 4, f.ic, () => {}, 84); ic.disableInteractive();   /* 그림만 · 누름은 아래 알약이 받음 */
+      this[f.k + 'B'] = b; this[f.k + 'C'] = b.label; this[f.k + 'I'] = ic;
+    });
+    if (this.clueB && adLeft('clue') <= 0) this.clueOff();
+    /* 테스트 앱 + BM 그룹 A: 미리 보기 · 광고 단서가 안 보이는 까닭과 켜는 법 (실서버에서는 안 나옴) */
+    if (testOff()) this.testT = T(this, 40, by, TEST_NOTE, 22, '#FFB6CB', { ox: 0, w: 700, lh: 4, align: 'left' });
     this.fill(); this.ui(); this.cameras.main.fadeIn(300, 30, 10, 26); window.__hunt = this;
     // 다 찾은 채로 다시 들어온 경우(마지막 단서 대사 중 나갔다 옴 등) 바로 마무리
     if (this.got >= this.total) this.time.delayedCall(600, () => this.win());
@@ -76,10 +84,10 @@ export class HuntScene extends Phaser.Scene {
       s.it = it; s.c.removeAll(true);
       const B = this.box, h = B / 2, bg = this.add.graphics(); bg.fillStyle(it.clue ? 0x5A2A48 : 0xFFFFFF, 1).fillRoundedRect(-h, -h, B, B, 28).lineStyle(it.clue ? 6 : 3, it.clue ? 0xFF9DB6 : 0xE8C8D4, 1).strokeRoundedRect(-h, -h, B, B, 28);
       /* 물건 조각은 칸을 거의 꽉 채움(둥근 모서리 안) · 단서 그림은 여백을 조금 */
-      const im = this.add.image(0, 0, this.thumb(it)); im.setScale((it.clue ? B - 30 : B - 14) / Math.max(im.width, im.height));
-      s.c.add([bg, im]); if (it.clue) { s.c.add(T(this, 0, -h - 14, '단서', 20, '#FFB6CB', { w: 900 })); this.tweens.add({ targets: bg, alpha: 0.7, duration: 600, yoyo: true, repeat: -1 }); }
+      const im = this.add.image(0, 0, this.thumb(it)); im.setScale((it.clue ? B - 16 : B - 14) / Math.max(im.width, im.height));
+      s.c.add([bg, im]); if (it.clue) { s.c.add(T(this, 0, -h - 18, '단서', 26, '#FFB6CB', { w: 900 })); this.tweens.add({ targets: bg, alpha: 0.7, duration: 600, yoyo: true, repeat: -1 }); }
       s.c.setScale(0); this.tweens.add({ targets: s.c, scale: 1, duration: 260, ease: 'Back.easeOut' });
-      s.c.setSize(B, B).setInteractive({ useHandCursor: true }).off('pointerup').on('pointerup', () => { this.nameT.setText(it.n); this.tweens.add({ targets: s.c, scale: 1.1, duration: 100, yoyo: true }); });
+      s.c.setSize(B, B).setInteractive({ useHandCursor: true }).off('pointerup').on('pointerup', () => { this.tweens.add({ targets: s.c, scale: 1.1, duration: 100, yoyo: true }); this.showBig(it); });
     }
   }
   update(time, delta) { if (this.ended || this.paused) return; const dt = Math.min(0.05, delta / 1000); const s0 = Math.floor(this.t); this.t += dt;
@@ -99,7 +107,7 @@ export class HuntScene extends Phaser.Scene {
     if (this.misses.length >= SPAM.n) { this.misses = []; this.lock = SPAM.lock; this.blur = this.add.rectangle(W / 2, H / 2, W, H, 0x1A0814, 0.4).setDepth(50); toast(this, '천천히 살펴봐요 · 잠깐 숨 고르기'); }
   }
   found(s) {
-    const it = s.it, d = load(); s.it = null; this.got++; this.idle = 0; if (!this.fresh) { d.ep[this.ep.id].found.push(it.n); d.coins += it.clue ? 5 : 1; save(); }
+    const it = s.it, d = load(); s.it = null; this.got++; this.idle = 0; if (this.bigV) { this.bigV.destroy(); this.bigV = null; } if (!this.fresh) { d.ep[this.ep.id].found.push(it.n); d.coins += it.clue ? 5 : 1; save(); }
     audio.play('sfx_find', { volume: 0.7 });
     const ring = this.add.image(it.x, it.y, 'ring').setTint(it.clue ? 0xFF7FA6 : 0xFFE08A); ring.setScale(it.r * 2.8 / 160); this.v.layer.add(ring); this.tweens.add({ targets: ring, scale: it.r * 2.2 / 160, duration: 280, ease: 'Back.easeOut' });
     const sp = this.v.toScreen(it.x, it.y);
@@ -150,23 +158,41 @@ export class HuntScene extends Phaser.Scene {
     this.tweens.add({ targets: [g, ring], alpha: { from: 0, to: 0.9 }, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.easeInOut', onComplete: () => { g.destroy(); ring.destroy(); } });
     this.tweens.add({ targets: ring, scale: it.r * 2.4 / 160, duration: 1400, repeat: 1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: s.c, scale: 1.1, duration: 220, yoyo: true, repeat: 1 });
-    this.nameT.setText(it.n); audio.play('sfx_hint', { volume: 0.4 });
+    audio.play('sfx_hint', { volume: 0.4 });
     toast(this, this.guides === 1 ? `「${it.n}」, 바로 이 근처예요 · 천천히 찾아봐요` : '반짝이는 곳 근처를 살펴봐요', 260);
   }
   // 광고 보고 주요 단서 자리: 아래 칸의 단서(분홍)를 짚어 줌 · 칸에 단서가 없으면 물건 하나
   async clueAd() {
     if (this.ended || this.paused || !this.slots.some(s => s.it)) return;
+    if (adLeft('clue') <= 0) return toast(this, '오늘 광고 단서는 다 썼어요 · 내일 다시 받을 수 있어요', 260);
+    if (this.bigV) { this.bigV.destroy(); this.bigV = null; }
     this.paused = true; const r = await watchAd('clue'); this.paused = false;
     if (!r.ok) { const m = failText(r); if (m) toast(this, m); return; }
     if (!this.scene.isActive()) return;
     const s = this.slots.find(s => s.it && s.it.clue);
     if (!s) toast(this, '지금 칸엔 단서가 없어요 · 물건 하나를 짚어 드릴게요', 260);
     this.showHint(s);
-    if (adLeft('clue') <= 0 && this.clueB) { this.clueB.setAlpha(0.4).disableInteractive(); this.clueC.setText('단서 위치\n오늘 다 씀'); }
+    if (adLeft('clue') <= 0) this.clueOff();
+  }
+  /* 광고 단서를 오늘 다 썼을 때: 흐리게 + '오늘 다 씀' · 눌러도 안내만 (버튼은 남겨 둠) */
+  clueOff() { if (!this.clueB) return; this.clueB.setAlpha(0.5); this.clueI.setAlpha(0.5); this.clueC.setText('단서 위치\n오늘 다 씀'); }
+  // 아래 칸 물건을 누르면 크게 보기: 맵 위에 큰 그림 + 이름 · 2.6초 뒤나 누르면 닫힘 (QA 11-16 #6 '단서를 더 키워야')
+  showBig(it) {
+    if (this.bigV) { this.bigV.destroy(); this.bigV = null; }
+    if (this.ended || this.paused) return;
+    const Z = 420, cy = H - this.trayH - 330, c = this.bigV = this.add.container(W / 2, cy).setDepth(55), g = this.add.graphics();
+    g.fillStyle(0x2E1A2A, 0.94).fillRoundedRect(-260, -290, 520, 580, 36).lineStyle(4, it.clue ? 0xFF9DB6 : 0xE8C8D4, 1).strokeRoundedRect(-260, -290, 520, 580, 36);
+    const im = this.add.image(0, -40, this.thumb(it)); im.setScale(Z / Math.max(im.width, im.height));
+    c.add([g, im, T(this, 0, 222, it.clue ? `단서 · ${it.n}` : it.n, 36, it.clue ? '#FFB6CB' : C.text, { w: 900, wrap: 480 })]);
+    const close = () => { if (this.bigV === c) this.bigV = null; if (c.scene) c.destroy(); };
+    c.setSize(520, 580).setInteractive({ useHandCursor: true }).on('pointerup', close);
+    c.setScale(0.85).setAlpha(0); this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut' });
+    this.time.delayedCall(2600, close);
   }
   // 그림 미리 보기 (🪙): 아래 칸 물건 전부의 자리를 3초 동안 반짝 — 맵 전체가 보이게 물러섬
   async peek() {
     if (this.ended || this.paused || !this.slots.some(s => s.it)) return;
+    if (this.bigV) { this.bigV.destroy(); this.bigV = null; }
     this.paused = true; const r = await buyPeek(this.ep); this.paused = false;
     if (!r.ok) { const m = failText(r); if (m) toast(this, m); return; }
     if (!this.scene.isActive()) return;

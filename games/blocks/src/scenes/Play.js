@@ -1,20 +1,20 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.99.49';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.99.49';
-import { choose } from '../core/ai.js?v=0.99.49';
-import { makeLevel } from '../core/levels.js?v=0.99.49';
-import { TINT, THEMES } from './Boot.js?v=0.99.49';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.49';
-import { audio } from '../audio.js?v=0.99.49';
-import { sky } from '../sky.js?v=0.99.49';
-import { load, save } from '../save.js?v=0.99.49';
-import * as M from '../meta.js?v=0.99.49';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.99.49';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.49';
-import { bm } from '../oad_bm.js?v=0.99.49';
-import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.99.49';
-import { roundOver, afterRound, track, helpOn, itemPrice, buyUse, swapAdLeft, swapAdUsed, adShown, adReady, failMsg } from '../bmflow.js?v=0.99.49';
-import { ITEMS, itemsOn, left as itemLeft, area as itemArea, AD_DAY } from '../core/items.js?v=0.99.49';
+import { W, H } from '../config.js?v=0.99.50';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.99.50';
+import { choose } from '../core/ai.js?v=0.99.50';
+import { makeLevel } from '../core/levels.js?v=0.99.50';
+import { TINT, THEMES } from './Boot.js?v=0.99.50';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.50';
+import { audio } from '../audio.js?v=0.99.50';
+import { sky } from '../sky.js?v=0.99.50';
+import { load, save } from '../save.js?v=0.99.50';
+import * as M from '../meta.js?v=0.99.50';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.99.50';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.50';
+import { bm } from '../oad_bm.js?v=0.99.50';
+import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.99.50';
+import { roundOver, afterRound, track, helpOn, itemPrice, buyUse, swapAdLeft, swapAdUsed, adShown, adReady, failMsg, testOff } from '../bmflow.js?v=0.99.50';
+import { ITEMS, itemsOn, left as itemLeft, area as itemArea, AD_DAY } from '../core/items.js?v=0.99.50';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };
@@ -73,6 +73,7 @@ export class PlayScene extends Phaser.Scene {
     this.chips = this.add.particles(0, 0, 'blk_0', { lifespan: { min: 450, max: 800 }, speedX: { min: -320, max: 320 }, speedY: { min: -620, max: -200 }, gravityY: 1600, scale: { start: 0.3, end: 0.05 }, rotate: { min: -180, max: 180 }, emitting: false }).setDepth(59);
     this.makeInput();
     if (this.toolsOn) this.makeTools();
+    this.testNote();
     audio.music('bgm_game', this);
     this.cameras.main.fadeIn(260, 20, 12, 40);
     if (!d.tips.drag && !this.bot) this.time.delayedCall(600, () => this.dragHint());
@@ -330,7 +331,7 @@ export class PlayScene extends Phaser.Scene {
     if (res.allClear) M.track('allclear');
     if (res.dealt) this.time.delayedCall(res.lines ? 400 : 120, () => { audio.play('sfx_deal', { volume: 0.5 }); this.fillTray(true); });
     else this.dimUnfit();
-    if (this.mode === 'classic' && !this.newBest && this.b.score > load().best && load().best > 0) { this.newBest = true; audio.play('sfx_best', { volume: 0.6 }); this.voice('record', 3); toast(this, '최고 기록 갱신!', C.gold, 500); }
+    this.checkBest();
     if (res.won) { this.busy = true; this.time.delayedCall(900, () => this.advWin()); }
     else if (res.over) { this.busy = true; this.time.delayedCall(res.lines ? 1000 : 550, () => this.outOfMoves()); }
   }
@@ -587,6 +588,17 @@ export class PlayScene extends Phaser.Scene {
       b.c.setAlpha(rest > 0 ? 1 : 0.45);
     }
   }
+  /* 테스트 · 개발 앱 전용 안내 (실서버엔 안 나옴 · bmflow.testOff): 이 기기가 BM 그룹 A(대조군)라 폭탄 · 한 줄이 꺼져 있을 때 판마다 한 번 */
+  testNote() {
+    window.__testNote = null;
+    if (this.items.length || !itemsOn(this.mode, this.bot) || !testOff()) return;
+    const c = this.add.container(W / 2, this.BY - 70).setDepth(58), g = this.add.graphics();
+    g.fillStyle(0x1A0F33, 0.94).fillRoundedRect(-460, -56, 920, 112, 30).lineStyle(2, 0x7FE7FF, 0.7).strokeRoundedRect(-460, -56, 920, 112, 30);
+    const msg = '테스트 안내 · 이 기기는 BM 그룹 A 라 폭탄 · 한 줄이 꺼져 있어요\n원어데이 설정 › 테스트: 게임 안 BM 그룹 › B';
+    c.add([g, T(this, 0, 0, msg, 28, '#BFEFFF', { w: 800, lh: 8 })]); c.setAlpha(0); window.__testNote = msg;
+    this.tweens.add({ targets: c, alpha: 1, duration: 260 });
+    this.tweens.add({ targets: c, alpha: 0, delay: 9000, duration: 400, onComplete: () => c.destroy() });
+  }
   // 광고 보고 블록 바꾸기: 아래 조각 3개를 새로 (판마다 1번 · 하루 AD_DAY 번 · 소장자는 광고 없이)
   makeSwapAd(x, y) {
     if (this.swapBtn) this.swapBtn.destroy();
@@ -804,6 +816,14 @@ export class PlayScene extends Phaser.Scene {
     this.bigWord(again ? '한 번 더!' : '이어서 가요!', '#7CFFB2', 96, this.BY + BW / 2);
     this.fillTray(true); this.updateGoals(); this.analyze();
     this.time.delayedCall(400, () => { this.busy = false; });
+  }
+  /* 판 도중 최고 기록을 넘는 순간: 칭찬 + '넘는 만큼 별 보너스' 안내 (QA 시트 #5 — 결과에서만 알던 보너스를 판 안에서도 알게) */
+  checkBest() {
+    if (this.mode !== 'classic' || this.newBest) return;
+    const best = load().best; if (!(best > 0 && this.b.score > best)) return;
+    this.newBest = true; audio.play('sfx_best', { volume: 0.6 }); this.voice('record', 3);
+    const tip = '최고 기록 갱신! · 넘는 만큼 ★ 보너스'; window.__bestTip = tip;
+    toast(this, tip, C.gold, 500);
   }
   endGame() {
     if (this.mode === 'adv') return this.advFail();
