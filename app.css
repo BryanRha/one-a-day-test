@@ -112,6 +112,8 @@ h1, h2, h3, .jua { font-family: 'Jua', sans-serif; font-weight: 400; margin: 0; 
 #player { position: fixed; left: 0; top: 0; width: 100%; height: var(--ph, 100%); z-index: 50; background: #000; overflow: hidden; touch-action: none; overscroll-behavior: none; }
 html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { position: fixed; inset: 0; width: 100%; touch-action: none; }
 #frame { width: 100%; height: 100%; border: 0; display: block; }
+/* 원스토어 앱 안(html.os · onestore.js): 게임 창도 시스템바를 피함 — 원스토어가 알려 준 safeArea(--safe-t · --safe-b) 만큼 위아래를 비움 (게임 HUD 가 상태 표시줄 밑에 깔리지 않게 · 2026-11-24) */
+html.os #player { top: var(--safe-t); height: calc(var(--ph, 100%) - var(--safe-t) - var(--safe-b)); }
 
 /* 시트(팝업) */
 #sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }

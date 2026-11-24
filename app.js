@@ -1,21 +1,23 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.50';
-import * as R from './rules.js?v=0.99.50';
-import * as I from './install.js?v=0.99.50';
-import * as T from './track.js?v=0.99.50';
-import * as P from './pay.js?v=0.99.50';
-import * as A from './account.js?v=0.99.50';
-import * as C from './cloud.js?v=0.99.50';
-import * as BM from './bm.js?v=0.99.50';
-import * as HUB from './hub.js?v=0.99.50';
-import * as O from './operator.js?v=0.99.50';
+import * as OS from './onestore.js?v=0.99.51';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.51';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.51';
+import * as R from './rules.js?v=0.99.51';
+import * as I from './install.js?v=0.99.51';
+import * as T from './track.js?v=0.99.51';
+import * as P from './pay.js?v=0.99.51';
+import * as A from './account.js?v=0.99.51';
+import * as C from './cloud.js?v=0.99.51';
+import * as BM from './bm.js?v=0.99.51';
+import * as HUB from './hub.js?v=0.99.51';
+import * as O from './operator.js?v=0.99.51';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.50').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.51').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.50'), import('./fortune/types.js?v=0.99.50'), import('./fortune/chat.js?v=0.99.50'), import('./fortune/oneword-ui.js?v=0.99.50')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
-const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => fakeAd(label, true) });
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.51'), import('./fortune/types.js?v=0.99.51'), import('./fortune/chat.js?v=0.99.51'), import('./fortune/oneword-ui.js?v=0.99.51')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
 const owOpen = (from, pair = null) => ex().then(E => E.ow.open({ ...XC(), onClose: () => { const el = $('.owentry'); if (el && tab === 'fortune') el.outerHTML = E.ow.entry(XC(), owF); } }, from, pair)).catch(er => { console.error(er); toast('잠시 뒤 다시 열어 주세요'); });
@@ -24,8 +26,11 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.50';
+const VERSION = '0.99.51';
 window.OAD_VERSION = VERSION;
+/* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
+PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
+function adFail(x) { if (x.reason === 'nofill') toast('지금은 볼 수 있는 광고가 없어요 · 잠시 뒤 다시 해 주세요'); else if (x.reason === 'timeout') toast('광고 확인이 늦어지고 있어요 · 잠시 뒤 다시 해 주세요'); else if (x.reason === 'limit') toast('오늘은 여기까지 볼 수 있어요'); else if (x.reason !== 'cancel') toast('광고를 불러오지 못했어요'); }
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(오늘 허브 + 게임) · 'fortune'(점방) · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -164,7 +169,7 @@ function renderToday() {
   R.checkIn();   /* 🔥 들어오기만 해도 출석 */
   const id = R.todayId(), g = id && G(id), s = R.state(), lib = id && s.library[id];
   const playedToday = lib && lib.last === R.keyOf(R.now()), n = R.now();
-  const fill = R.fillable() ? `<div class="stampfill" data-stampfill data-blk="stamp" ${KB}>👣 어제 도장을 놓쳤어요 · 광고 1번 보고 🔥 연속 이어 가기</div>` : '';
+  const fill = R.fillable() && PV.canReward() ? `<div class="stampfill" data-stampfill data-blk="stamp" ${KB}>👣 어제 도장을 놓쳤어요 · 광고 1번 보고 🔥 연속 이어 가기</div>` : '';
   const me = (() => { try { return !!localStorage.getItem('oad_fortune_me'); } catch { return false; } })();
   if (me && FT) setTimeout(hubPick, 0);
   const games = !g ? '' : `<section class="hgames" id="hgames" data-blk="games">
@@ -281,6 +286,8 @@ const goldOf = () => { const m = A.current(); return (m && m.gold && m.gold.tota
 const browserName = () => I.env.ios ? '사파리' : '크롬';
 const inAppLoginNote = () => `${I.env.kakao ? '카카오톡' : '이 앱'} 안에서는 구글 로그인이 막혀 있어요 · ${browserName()}로 열어서 로그인해 주세요`;
 function needLogin(why) {
+  if (PV.store()) return openSheet(`<div class="intro"><h2>🪙 원스토어 계정을 확인하고 있어요</h2><p class="fsub">${why || '골드는 원스토어 계정에 저장돼요'} · 잠시 뒤 다시 눌러 주세요</p>
+    <div class="stack"><button class="btn" data-login>다시 연결하기</button><button class="btn ghost" data-close>닫기</button></div></div>`);   /* 원스토어 안: 구글 로그인 없음 — 원스토어 playerId 세션 */
   if (I.env.inApp) return openSheet(`<div class="intro"><h2>🪙 로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'}</p><p class="fsub">${inAppLoginNote()}</p>
     <div class="stack"><button class="btn" data-ext>🌐 ${browserName()}로 열기</button><button class="btn ghost" data-copy>🔗 주소 복사하기</button><button class="btn ghost" data-close>나중에</button></div></div>`);
   openSheet(`<div class="intro"><h2>🪙 로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'} · 폰을 바꿔도 그대로 이어져요</p>
@@ -292,11 +299,11 @@ const agreeNote = (kind = 'fortune') => `<p class="paynote agree">${kind === 'go
 function shop(note) {
   const m = A.current(); if (!m) return needLogin('골드를 사려면 로그인해 주세요');
   T.track('shop_view', { first: m.first ? 1 : 0 });
-  if (R.PROD && payCfg.goldSale !== true) {   /* 실서버 첫 공개: 골드 충전 판매 전(server gold.js GOLD_SALE_PROD) — 지갑 · 내역만 · 유료 운세는 카드로 */
+  if (PV.store() ? !PV.canBuy() : (R.PROD && payCfg.goldSale !== true)) {   /* 골드 충전 판매 전(서버 gold.js GOLD_SALE_PROD · 원스토어는 결제 지원 · 판매 켬) — 지갑 · 내역만 */
     T.track('shop_closed');
     return openSheet(`<div class="intro shop"><h2>내 골드</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
     <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
-    <p class="fsub">골드 충전은 아직 열지 않았어요. 선물 · 출석으로 받은 골드는 그대로 쓸 수 있고, 점방의 유료 운세는 카드로 바로 결제할 수 있어요.</p>
+    <p class="fsub">골드 충전은 아직 열지 않았어요. 선물 · 출석으로 받은 골드는 그대로 쓸 수 있어요${PV.store() ? '' : ', 점방의 유료 운세는 카드로 바로 결제할 수 있어요'}.</p>
     <div class="stack"><button class="btn" data-tab-go="fortune">점방 가기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
   }
   const card = ([id, price, paid, free]) => `<button class="pack" data-pack="${id}"><span class="pc">🪙</span><b>${gnum(paid + free)}</b>${free ? `<em>+${Math.round(free / paid * 100)}% 보너스</em>` : '<em>&nbsp;</em>'}<span class="pp">${won(price)}</span></button>`;
@@ -304,11 +311,12 @@ function shop(note) {
     <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
     ${m.first ? `<button class="pack first" data-pack="first"><span class="tag">첫 구매 한 번만</span><span class="pc">🪙</span><b>200</b><em>2배 · 처음 산 사람 배지</em><span class="pp">${won(1000)}</span></button>` : ''}
     <div class="packs">${PACKS.map(card).join('')}</div>
-    <p class="paynote">1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 결제 후 7일 안에 쓰지 않은 골드는 환불돼요.</p>
+    <p class="paynote">1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · ${PV.store() ? '원스토어로 결제해요 · 환불은 원스토어 환불 정책을 따라요' : '결제 후 7일 안에 쓰지 않은 골드는 환불돼요'}.</p>
     ${agreeNote('gold')}
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
 }
 async function buyPack(id) {
+  if (PV.store()) { const pk = PACKS.find(x => x[0] === id), name = id === 'first' ? '첫 구매 골드 200' : `골드 ${gnum(pk ? pk[2] + pk[3] : 0)}`; T.track('pay_click', { product: id, via: PV.name() }); return storeBuy(OS.packId(id), () => A.refresh().then(() => goldDone(name))); }
   if (R.PROD && payCfg.goldSale !== true) return toast('골드 충전은 아직 열지 않았어요');
   const c = await P.config(); if (c.mode === 'off') return toast('결제는 곧 열려요');
   const tk = await A.token(); if (!tk) return needLogin();
@@ -323,6 +331,17 @@ async function buyPack(id) {
   $('#mockPay').onclick = async e => { const b = e.target; b.disabled = true; b.textContent = '결제 중…';
     try { await P.confirmGold(o, 'mock_' + Date.now(), o.amount); await A.refresh(); goldDone(o.orderName); }
     catch (er) { toast(er.message); b.disabled = false; b.textContent = '동의하고 테스트로 결제하기'; } };
+}
+/* 스토어 결제(원스토어): 결제 → 서버가 원스토어에 확인 → 골드 → (운세 · 소장이면) 이어서 그 골드로 열기 — 실패해도 골드는 남음 */
+let storeBusy = false;
+async function storeBuy(productId, after) {
+  if (storeBusy) return; storeBusy = true; toast('원스토어 결제창을 여는 중…');
+  try {
+    const x = await PV.buy(productId);
+    if (x.ok) { T.track('gold_bought', { product: productId, via: PV.name() }); await A.refresh().catch(() => {}); return after && after(x); }
+    if (x.reason === 'owned') A.refresh().catch(() => {});
+    if (x.reason !== 'cancel') toast(x.msg || '결제하지 못했어요');
+  } finally { storeBusy = false; }
 }
 function goldDone(name) { T.track('gold_bought'); shop(`${name} 충전 완료! 고마워요 ✨`); }
 async function goldHistory() {
@@ -364,7 +383,7 @@ async function cloudPick(id, side, b) {
 }
 // 소장 권유 (성장형 게임 · 3판 이상 · 게임당 주 1회 · 앱 하루 1회 · 다시 보지 않기)
 function nudgeOwn(id) {
-  if (R.PROD) return false;   /* 실서버 첫 공개: 골드 충전 닫음 → 300골드 소장 권유 안 띄움 (2026-11-16) */
+  if (R.BM_OFF) return false;   /* 실서버 BM 을 끈 때(rules.js PROD_BM_OFF)만: 300골드 소장 권유 안 띄움 */
   if (!A.ON || !SAVES_OK(id) || R.state().owned[id] || (R.state().library[id] || {}).plays < 3) return false;
   let n = {}; try { n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); } catch { /* */ }
   const today = R.keyOf(R.now());
@@ -598,7 +617,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.50')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.51')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -658,6 +677,10 @@ async function packBuy(picks, how, btn) {
     catch (e) { if (e.short) { closeSheet(); return shop(`충전한 골드가 ${gnum(e.need - ((e.gold && e.gold.paid) || 0))}개 모자라요 (보너스 골드는 입문 운세에만)`); } toast(e.message); btn.disabled = false; btn.textContent = '다시 시도'; }
     return;
   }
+  if (PV.store()) return storeBuy('oad_fortune_pack', async () => {   /* 원스토어: 패키지 값의 충전 골드 → 바로 그 골드로 엶 */
+    try { const r = await A.call({ act: 'spend', what: 'pack', me, partner: pt, ...extra }); keepMany(r.receipts || []); T.track('pay_done', { product: 'pack', via: PV.name() }); A.refresh().catch(() => {}); closeSheet(); toast('신년 패키지가 열렸어요'); paidPage('newyear'); }
+    catch (e) { toast(`골드로 넣어 두었어요 · ${e.message}`); }
+  });
   const c = await P.config(); if (c.mode === 'off') return toast('결제는 곧 열려요 · 조금만 기다려 주세요');
   const tk = A.current() ? await A.token().catch(() => '') : '';
   let o; try { o = await P.order('pack', me, pt, extra, tk); } catch (e) { return toast(e.message); }
@@ -734,6 +757,15 @@ function compatLanding() {
 }
 // 결제: 토스 키가 있으면 토스 결제창, 테스트 서버는 모의 결제, 그 밖에는 '곧 열려요'
 async function buy(product) {
+  if (PV.store()) {   /* 원스토어: 그 운세 값만큼의 충전 골드를 사서 바로 그 골드로 엶 (영수증 · 계정 연결은 골드로 산 것과 같음) */
+    const m = await ft(), me0 = m.loadMe(), me = m.toInput(me0), pt = m.toInput(m.pairOf(product, me0)), PR = m.paidOf(product);
+    const adult = m.isAdultFortune(product); if (adult) { if (m.isUnder19(me0)) return adultOnly(); if (!(await adultCheck(product, `${won(PR.price)} 결제하기`))) return paidPage(product); }
+    T.track('pay_click', { product, via: PV.name() });
+    return storeBuy('oad_fortune_' + product, async () => {
+      try { const r = await A.call({ act: 'spend', what: product, me, partner: pt, adult }); P.keepReceipt(r.receipt, me, pt); T.track('pay_done', { product, via: PV.name() }); A.refresh().catch(() => {}); sdClose(); toast('전체 풀이가 열렸어요'); paidPage(product); }
+      catch (e) { toast(`골드로 넣어 두었어요 · ${e.message}`); }
+    });
+  }
   const c = await P.config();
   if (c.mode === 'off') return toast('결제는 곧 열려요 · 조금만 기다려 주세요');
   const m = await ft(), me0 = m.loadMe(), me = m.toInput(me0), pt = m.toInput(m.pairOf(product, me0)), PR = m.paidOf(product);
@@ -904,7 +936,7 @@ function boxMem() {
 // ── 너랑 (웹소설 + AI 캐릭터 대화 · 2026-11-04 대표 승인 시안 D → 실제 화면 neorang/ · 옛 캐릭터 4명 시안(lab/story-mock)은 내림) ──
 //   테스트 · 개발: 탭 안 iframe 에 /neorang/ (같은 주소 · 너랑 쪽 아래 탭은 스스로 숨김) · 실서버: '곧 공개' 안내만
 //   뒤로가기: 아래 '탭 뒤로가기' 받침 {tb} 위에 너랑 안 이동(#hash)이 쌓임 → 너랑 안에서 먼저 바로 전 화면으로, 끝까지 가면 오늘 탭(첫 화면)으로
-const NR_SRC = '/neorang/';
+const NR_SRC = 'neorang/';   /* 상대 주소: 원스토어 테스트 앞말(/ost/<표>/) 안에서도 열리게 (2026-11-24) */
 function renderNeorang() {
   if (R.PROD) return `<div class="nrtab">${header('<span class="nrlogo">너랑<small>NEORANG</small></span>')}${nrSoon()}</div>`;
   const deep = nrDeep && /^[a-z]+(\/[a-z0-9]+){0,3}$/.test(nrDeep) ? '#' + nrDeep : ''; nrDeep = '';   /* 오늘 허브 너랑 카드: 그 작품 · 화로 바로 (너랑 첫 칸 = 그 화면 → 뒤로가기 = 오늘 허브) */
@@ -1070,9 +1102,9 @@ function settingsHTML() {
     <div class="box"><div class="jua" style="font-size:18px;margin-bottom:6px">이용 규칙 (현재)</div><ul class="rules" style="margin:0;padding-left:18px">
       ${R.RULES.openAll ? `<li><b>${R.PROD ? '지금은 모든 게임을 무료로 자유롭게 할 수 있어요' : '지금은 테스트 기간이라 모든 게임을 자유롭게 할 수 있어요'}</b></li>` : ''}
       <li>오늘의 게임은 하루 종일 무료</li>
-      ${R.PROD ? '' : `<li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요 (지금은 테스트 광고)</li>
+      ${R.BM_OFF ? '' : `<li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요${PV.store() ? '' : ' (지금은 테스트 광고)'}</li>
       <li>골드로 하루 열기 10골드 · 소장 300골드 · 전체 소장 2,500골드 (로그인 필요)</li>`}</ul>
-      ${A.current() && setCount() && !R.PROD ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button></div>` : ''}</div>
+      ${A.current() && setCount() && !R.BM_OFF ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button></div>` : ''}</div>
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div>
     <div class="bizfoot">${O.footerHTML()}</div>`;
 }
@@ -1155,8 +1187,8 @@ function detail(id) {
     ? `<div class="saveat"><span>☁ 저장 위치 · <b>내 계정</b></span><small>${last ? `마지막 저장 ${when(last)}` : '게임을 닫으면 저장돼요'}${C.canUndo(id) ? ` · <button class="lnk" data-cundo="${id}">직전 저장으로 되돌리기</button>` : ''}</small></div>`
     : `<div class="saveat"><span>📱 저장 위치 · <b>이 기기</b></span><small>${progressLine(id)}</small></div>`;
   const actions = a !== 'locked'
-    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own && !R.PROD ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`   /* 브랜드 게임도 소장 가능 (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 규칙) */
-    : `<button class="btn alt" data-ad="${id}">📺 광고 보고 ${R.RULES.adUnlock === 'day' ? '오늘 하루' : '한 판'} 플레이</button>
+    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own && !R.BM_OFF ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>` : ''}`   /* 브랜드 게임도 소장 가능 (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 규칙) */
+    : `${PV.canReward() ? `<button class="btn alt" data-ad="${id}">📺 광고 보고 ${R.RULES.adUnlock === 'day' ? '오늘 하루' : '한 판'} 플레이</button>` : ''}
        ${R.isBrand(id) ? '' : `<button class="btn gold" data-gbuy="day" data-gid="${id}">🪙 10골드로 오늘 하루 열기</button>`}
        <button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 언제든 + 기록을 계정에</button>
        <div class="note">오늘의 게임이 돌아오는 날엔 무료로 할 수 있어요</div>`;
@@ -1169,7 +1201,8 @@ function detail(id) {
 }
 
 function watchAd(id) {
-  if (R.PROD) return toast('지금은 모든 게임을 무료로 할 수 있어요');   /* 실서버: 광고 끔 · 모든 게임 무료(rules.js PROD_OPEN_ALL) — 잠긴 게임이 없어 원래 오지 않음 */
+  if (R.BM_OFF) return toast('지금은 모든 게임을 무료로 할 수 있어요');   /* 실서버 BM 을 끈 때(rules.js PROD_BM_OFF): 모든 게임 무료라 원래 오지 않음 */
+  if (PV.store()) { T.track('ad_view', { game: id, from: 'detail_locked', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); T.track('ad_done', { game: id, from: 'detail_locked', via: PV.name() }); R.unlockByAd(id); toast(`${G(id).title} 열림!`); PFROM = 'ad'; play(id); }); }
   let left = R.RULES.adSeconds;
   T.track('ad_view', { game: id, from: 'detail_locked' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
@@ -1183,6 +1216,7 @@ function watchAd(id) {
 /* 놓친 날 도장 보충: 광고 1회 (골드로는 팔지 않음) */
 function stampAd() {
   if (!R.fillable()) return go('today');
+  if (PV.store()) { T.track('ad_view', { what: 'stamp', from: 'stamp', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); R.fillByAd(); T.track('stamp_fill'); go('today'); toast(`🔥 ${R.state().streak.count}일 연속으로 이어졌어요!`); }); }
   let left = R.RULES.adSeconds; T.track('ad_view', { what: 'stamp', from: 'stamp' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">광고를 끝까지 보면 어제 도장이 채워져요</div>
     <div class="stack"><button class="btn" id="adok" disabled>도장 받기</button></div></div>`);
@@ -1344,7 +1378,7 @@ async function gameReq(gid, d) {
     const on = grp !== 'A' && A.ON;
     return done({ ok: true, v: 1, group: grp, login: !!me, owned, noAds: owned, gold: me ? (me.gold && me.gold.total) || 0 : null,
       prices: on ? Object.fromEntries(Object.entries(shopOf()).filter(([, v]) => !v.off).map(([k, v]) => [k, v.gold])) : {}, items: me ? (me.items || []).filter(x => x.startsWith('item:' + gid + ':')).map(x => x.split(':')[2]) : [],
-      ads: { reward: on && BM.rewardLeft(gid) > 0, rewardLeft: on ? BM.rewardLeft(gid) : 0, inter: grp === 'C' && !owned }, help: BM.helpOn(),
+      ads: { reward: on && BM.rewardLeft(gid) > 0 && PV.canReward(gid), rewardLeft: on && PV.canReward(gid) ? BM.rewardLeft(gid) : 0, inter: grp === 'C' && !owned && PV.canInter(gid) }, help: BM.helpOn(),
       env: R.FLAGS.env, coupon: R.FLAGS.coupon, fortune: { seed: fortuneSeed() } });   /* coupon: 브랜드 매장 쿠폰 발급 여부 (실서버 끔 — catalog.js BRAND_COUPON_PROD) */
   }
   if (fn === 'rewardedAd') {
@@ -1353,13 +1387,14 @@ async function gameReq(gid, d) {
     if (BM.rewardLeft(gid) <= 0) { T.track('bm_limit', { game: gid, placement: place }); return done({ ok: false, reason: 'limit' }); }
     if (owned) { BM.useReward(gid); T.track('bm_ad', { game: gid, placement: place, via: 'owner' }); toast('소장 혜택 · 광고 없이 받았어요'); return done({ ok: true, via: 'owner' }); }
     T.track('bm_offer', { game: gid, placement: place, what: 'ad' });
-    return fakeAd('보상형 광고 (테스트)', true).then(ok => { if (ok) { BM.useReward(gid); T.track('bm_ad', { game: gid, placement: place, via: 'test' }); } done(ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }); });
+    if (!PV.canReward(gid)) return done({ ok: false, reason: 'off' });
+    return PV.reward(gid, '보상형 광고 (테스트)').then(x => { if (x.ok) { BM.useReward(gid); T.track('bm_ad', { game: gid, placement: place, via: x.via || PV.name() }); } else if (PV.store()) adFail(x); done(x.ok ? { ok: true, via: x.via || 'test' } : { ok: false, reason: x.reason === 'cancel' || x.reason === 'limit' ? x.reason : PV.store() ? 'off' : 'cancel' }); });
   }
   if (fn === 'interstitial') {
     BM.countPlay(gid);
     if (!BM.interOk(gid, owned)) return done({ ok: true, shown: false });
     BM.useInter(gid); T.track('bm_inter', { game: gid, placement: String(a[0] || '').slice(0, 20) });
-    return fakeAd('전면 광고 (테스트)', false).then(() => done({ ok: true, shown: true }));
+    return PV.inter(gid, '전면 광고 (테스트)').then(sh => done({ ok: true, shown: !!sh }));
   }
   if (fn === 'spend') {
     const item = String(a[0] || ''), ref = /^[A-Za-z0-9-]{8,64}$/.test(a[1] || '') ? a[1] : Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -1395,7 +1430,7 @@ async function gameReq(gid, d) {
 }
 // 테스트 광고 (진짜 광고망은 승인 후): 보상형은 5초 뒤 '보상 받기', 전면은 5초 뒤 '닫기'
 function fakeAd(label, reward) {
-  if (R.PROD) return Promise.resolve(!reward);   /* 실서버: 광고 끔(2026-11-16 대표) — 보상형은 '못 봄', 전면은 '건너뜀' (BM 그룹 A 고정이라 원래 여기까지 오지 않음 · 이중 안전) */
+  if (R.BM_OFF) return Promise.resolve(!reward);   /* 실서버 BM 을 끈 때(rules.js PROD_BM_OFF)만: 보상형은 '못 봄', 전면은 '건너뜀' (그룹 A 고정이라 원래 여기까지 오지 않음 · 이중 안전) */
   return new Promise(res => {
     let left = R.RULES.adSeconds, fin = false; const end = ok => { if (fin) return; fin = true; clearInterval(iv); onSheetClose = null; closeSheet(); res(ok); };
     openSheet(`<div class="ad"><div class="screen">${label}</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
@@ -1456,7 +1491,7 @@ document.addEventListener('click', e => {
   else if ('gfort' in d) fortuneGold(t);
   else if ('lab' in d) { if (!R.PROD && /^\/lab\/[a-z0-9-]+\/$/.test(d.lab)) location.href = d.lab; }
   else if ('strict' in d) { try { localStorage.setItem('oad_strict', R.RULES.openAll ? '1' : '0'); } catch { /* */ } location.reload(); }
-  else if ('login' in d) { T.track('login_click'); if (I.env.inApp) needLogin(); else A.login().catch(er => toast(er.message)); }
+  else if ('login' in d) { T.track('login_click'); if (PV.store()) A.login().then(() => { closeSheet(); toast('원스토어 계정으로 연결됐어요'); }, er => toast(er.message)); else if (I.env.inApp) needLogin(); else A.login().catch(er => toast(er.message)); }
   else if ('logout' in d) { A.logout().then(() => { go('settings'); toast('로그아웃했어요'); }); }
   else if ('trackOff' in d) { T.setOptOut(!T.optedOut()); go('settings'); toast(T.optedOut() ? '이용 기록을 보내지 않아요' : '이용 기록 보내기를 다시 켰어요'); }
   else if ('sdClose' in d) { if (sdOpen) history.back(); else sdClose(); }
@@ -1543,3 +1578,23 @@ ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.
 { const r = parseRoute(location.hash) || { tab: 'today' }; go(r.tab, 'open', r.seg); if (r.games) setTimeout(() => toGames(false), 60); if (r.settings) setTimeout(openSettings, 300); setTimeout(() => moveNote(r.moved), 1200); }
 if (!R.state().intro && !LAND) setTimeout(intro, 400);   /* 공유 링크로 온 첫 방문은 친구 화면 먼저 · 소개는 다음에 */
 window.__oad = { R, go, play };
+/* 원스토어 앱 안 (onestore.js): 백키는 200ms 안에 동기로 답함 — 열린 창 닫기 → 게임에게 바로 묻기(첫 화면이면 게임 닫기) → 오늘 탭으로 → 그다음은 원스토어의 '종료할까요'
+   종료(exit): 게임 화면 저장은 onestore.js 가 먼저(동기) · 소장 게임은 계정 저장도 보냄(keepalive) · 첫 화면을 그린 뒤 로딩 화면을 걷음(startGameAsync) */
+if (OS.looks) OS.ready.then(on => { if (!on) return;
+  window.OAD_OS_MUTE = OS.RINGER_MUTE && OS.silent;
+  document.documentElement.classList.add('os'); const st = document.documentElement.style; st.setProperty('--safe-t', OS.safe.top + 'px'); st.setProperty('--safe-b', OS.safe.bottom + 'px');   /* 원스토어 앱이 알려 준 시스템바 높이 (iframe 안이라 env(safe-area) 가 0) */
+  PV.use({ name: 'onestore', reward: g => OS.rewarded(g), inter: g => OS.interstitial(g).then(x => x.shown), canReward: OS.canReward, canInter: OS.canInter, canBuy: OS.canBuy, buy: OS.buy });
+  OS.progress(60); go(tab, 'open');   /* 공급자가 바뀌었으니 단추(광고 · 결제)를 다시 그림 */
+  OS.handle({
+    back() {
+      if (!sheet.hidden) { closeSheet(); return true; }
+      if (!player.hidden) { if (OS.backInto(frame) !== true) leaveGame(); return true; }
+      if (sdOpen) { sdClose(); return true; }
+      if (tab !== 'today') { go('today', 'tab'); return true; }
+      return false;
+    },
+    exit() { try { if (playing && C.on(playing.id)) C.push(playing.id, { keepalive: true }); } catch { /* */ } },
+  });
+  requestAnimationFrame(() => OS.start());
+  OS.recover().then(x => { if (x && x.recovered) { A.refresh().catch(() => {}); toast('지난 결제의 골드를 넣어 드렸어요'); } });
+});

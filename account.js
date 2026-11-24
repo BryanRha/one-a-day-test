@@ -1,5 +1,7 @@
 // 원어데이 계정: 구글 로그인 (Supabase) · 서버의 /api/me 로 플레이어 기록 + 골드 잔액
 //   서버가 있는 주소에서만 (test.oneaday.kr · oneaday.kr · vercel.app) · 게임은 로그인 없이도 그대로
+//   원스토어 앱 안(onestore.js · 2026-11-24): 구글 로그인 대신 원스토어 playerId → 서버가 준 세션 표(os1.)로 같은 /api/me 를 씀 (늘 '로그인됨' · 이름 · 이메일 없음)
+import * as OS from './onestore.js?v=0.99.51';
 const HOST = location.hostname;
 export const ON = /(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app');
 let sb = null, cfg = null, me = null, listeners = [];
@@ -36,10 +38,10 @@ async function load(session) {
   me = r && r.ok ? await r.json() : null; emit(); return me;
 }
 /* 앱을 열 때: 로그인돼 있으면 계정 불러오기 */
-export async function init() { if (!ON) return null; const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
-export async function login() { const c = await client(); if (!c) throw new Error('로그인은 곧 열려요'); await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/?login=1' } }); }
+export async function init() { if (OS.looks) await OS.ready; if (OS.on) { const t = await OS.token().catch(() => null); return t ? load({ access_token: t }) : null; } if (!ON) return null; const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
+export async function login() { if (OS.on) { if (!(await init())) throw new Error('원스토어 연결을 다시 시도해 주세요'); return; } const c = await client(); if (!c) throw new Error('로그인은 곧 열려요'); await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/?login=1' } }); }
 /* 서버에 계정 일 시키기 (골드 쓰기 · 내역): 로그인 토큰을 붙여 /api/me 로 */
-export async function token() { const c = await client(); if (!c) return ''; const session = await safeSession(c); return session ? session.access_token : ''; }
+export async function token() { if (OS.looks) await OS.ready; if (OS.on) return (await OS.token().catch(() => null)) || ''; const c = await client(); if (!c) return ''; const session = await safeSession(c); return session ? session.access_token : ''; }
 export async function call(body) {
   const t = await token(); if (!t) throw new Error('로그인이 필요해요');
   const r = await fetch('/api/me', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -47,5 +49,5 @@ export async function call(body) {
   if (me && j.gold) { me.gold = j.gold; if (j.items) me.items = j.items; emit(); }
   return j;
 }
-export async function refresh() { const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
-export async function logout() { const c = await client(); if (c) await c.auth.signOut(); me = null; emit(); }
+export async function refresh() { if (OS.on) return init(); const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
+export async function logout() { if (OS.on) return; const c = await client(); if (c) await c.auth.signOut(); me = null; emit(); }

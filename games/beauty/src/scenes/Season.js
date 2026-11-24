@@ -1,13 +1,13 @@
 // 하루 목표 3개 → 시즌 점수 → 월간 시즌 보상 (무료 줄 · 프리미엄 줄은 결제가 열리면)
-import { W, H } from '../config.js?v=0.99.50';
-import { T, R, C, TS, btn, toast, sheet, rbox, chips, stamp, firstTip, helpBtn } from '../ui.js?v=0.99.50';
-import { audio } from '../audio.js?v=0.99.50';
-import { load, save } from '../save.js?v=0.99.50';
-import { goPrev } from '../nav.js?v=0.99.50';
-import { screen } from '../hud.js?v=0.99.50';
-import { daily, season, claimGoal, giveReward, SEASON } from '../state.js?v=0.99.50';
-import { storeOpen } from '../store.js?v=0.99.50';
-import { ACHIEVE, REWARD, tierOf, achClaim, achReady, title } from '../achieve.js?v=0.99.50';
+import { W, H } from '../config.js?v=0.99.51';
+import { T, R, C, TS, btn, toast, sheet, rbox, chips, stamp, firstTip, helpBtn } from '../ui.js?v=0.99.51';
+import { audio } from '../audio.js?v=0.99.51';
+import { load, save } from '../save.js?v=0.99.51';
+import { goPrev } from '../nav.js?v=0.99.51';
+import { screen } from '../hud.js?v=0.99.51';
+import { daily, season, claimGoal, giveReward, SEASON } from '../state.js?v=0.99.51';
+import { storeOpen } from '../store.js?v=0.99.51';
+import { ACHIEVE, REWARD, tierOf, achClaim, achReady, title } from '../achieve.js?v=0.99.51';
 
 export class SeasonScene extends Phaser.Scene {
   constructor() { super('Season'); }

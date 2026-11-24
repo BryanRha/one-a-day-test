@@ -1,15 +1,15 @@
 // 게임 안 BM 규칙: 실험 그룹 · 광고 하루 한도 · 전면 광고 조건 (team/dev/tasks/261027-ingame-bm/summary.md)
 //   A = 지금 그대로(대조) · B = 보상형 광고 + 골드 · C = B + 약한 전면 광고
 //   소장자: 전면 없음 · 보상형 혜택은 광고 없이 바로 (하루 횟수는 같음)
-import { PROD } from './rules.js?v=0.99.50';
+import { PROD, BM_OFF } from './rules.js?v=0.99.51';
 const KEY = 'oad_bm';
-/* 실서버: 지금은 A 고정(아래 group) · 광고망이 열리면 기기 번호로 정한 무작위 그대로 고정 (설정의 '테스트:' 바꾸기 버튼 없음 · 테스트에서 바꿔 둔 값도 무시) */
+/* 실서버: 기기 번호로 정한 무작위 그룹 그대로 고정 (설정의 '테스트:' 바꾸기 버튼 없음 · 테스트에서 바꿔 둔 값도 무시) · 실서버 BM 을 끈 때(rules.js PROD_BM_OFF)만 A 고정 */
 export const LIMIT = { rewardGame: 5, rewardApp: 15, interGame: 4, interApp: 8, interEvery: 3, interGapMs: 3 * 60e3, interFromPlay: 3, rewardBy: { bagel: 10, gamsung: 10 } };
 /* 게임별 보상형 하루 한도 (2026-11-09 대표: 브랜드 게임 마루미 · 감성커피 = 10 · 앱 전체 rewardApp 15 는 그대로) — 없으면 rewardGame · 서버 gold.js ADS.rewardBy 로 바꿀 수 있음 */
 export const rewardCap = id => { const v = LIMIT.rewardBy && LIMIT.rewardBy[id]; return Number.isFinite(v) ? v : LIMIT.rewardGame; };
 
 export function group() {
-  if (PROD) return 'A';   /* 2026-11-16 대표 "실서버에서 광고 꺼" + 골드 충전 닫음 → 실서버는 대조군 A 고정(보상형 · 전면 광고 없음 · 게임 안 골드 상품 숨김) · 광고망 · 골드 판매가 열리면 이 줄을 지움 */
+  if (BM_OFF) return 'A';   /* 2026-11-24 대표: 실서버도 테스트와 같은 그룹 규칙으로 되살림 → PROD_BM_OFF 일 때만 · (예전) 2026-11-16 대표 "실서버에서 광고 꺼" + 골드 충전 닫음 → 실서버는 대조군 A 고정(보상형 · 전면 광고 없음 · 게임 안 골드 상품 숨김) · 광고망 · 골드 판매가 열리면 이 줄을 지움 */
   if (!PROD) try { const o = localStorage.getItem('oad_bm_group'); if (o === 'A' || o === 'B' || o === 'C') return o; } catch { /* */ }
   let d = ''; try { d = localStorage.getItem('oad_did') || ''; } catch { /* */ }
   let h = 0; for (const c of d + 'bm1') h = (h * 31 + c.charCodeAt(0)) >>> 0;

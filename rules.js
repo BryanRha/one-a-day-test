@@ -1,12 +1,18 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.50';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.51';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
 export const PROD = ENV === 'prod';
 // 실서버에서 '모든 게임 무료'를 켤지 — 2026-10-28 대표: 끔(하루 한 게임) → 2026-11-16 켬: 대표 "실서버에서 광고 꺼" + 골드 충전 닫음(총괄)이라 다른 게임을 열 길이 없음 → 첫 공개는 실서버 게임 전부 무료 · 광고나 골드 판매가 열리면 다시 정함
 //   테스트 · 개발에서는 설정의 '테스트: 하루 한 게임 규칙' 버튼으로 바꿔 볼 수 있음 (실서버에서는 버튼이 없음)
-export const PROD_OPEN_ALL = true;   /* 2026-11-16 실서버 첫 공개: 광고 끔 · 골드 충전 닫음 → 모든 게임 무료 (위 설명) */
+//   → 2026-11-24 대표: "실서버 빌드에서 빠져 있는 BM 을 테스트 서버와 똑같이 되살려" (원스토어 결제 모듈을 붙이는 바탕) → 하루 한 게임 · 광고 · 골드 판매 모두 테스트와 같게
+/* 실서버 BM 스위치 하나: false = 테스트와 같은 BM(하루 한 게임 무료 · 나머지는 광고 · 골드 · BM 실험 그룹 A/B/C · 도장 광고 보충)
+   true = 11-16 첫 공개 모습(모든 게임 무료 · 광고 끔 · 그룹 A 고정) · 서버 server/api/_lib/gold.js GOLD_SALE_PROD 와 반대 값이어야 함(build.mjs 확인)
+   광고 · 결제를 실제로 처리하는 곳은 provider.js 한 곳 (일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제) */
+export const PROD_BM_OFF = false;
+export const BM_OFF = PROD && PROD_BM_OFF;
+export const PROD_OPEN_ALL = PROD_BM_OFF;
 // 실서버 노출: 테스트를 통과해 대표가 지정한 게임(catalog.js PROD_LIVE)만 · 테스트 · 개발은 전부 (2026-11-16)
 export const shown = id => !PROD || PROD_LIVE.includes(id);
 export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND = BRAND0.filter(shown);
@@ -88,7 +94,7 @@ export function checkIn() {
   s.streak.last = today; save(); return s.streak;
 }
 /* 오늘 보충할 수 있는 놓친 날 (없으면 null) */
-export const fillable = () => { if (PROD) return null; /* 실서버: 광고 꺼짐(2026-11-16) → 놓친 날 도장 광고 보충 없음 */ const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
+export const fillable = () => { if (BM_OFF) return null; /* 실서버 BM 을 끈 때(PROD_BM_OFF)만: 광고가 없으니 놓친 날 도장 광고 보충 없음 */ const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
 export function fillByAd() {
   const s = state(); if (!fillable()) return false;
   s.streak.count = (s.streak.prev || 0) + 1 + s.streak.count; s.streak.filled = [...(s.streak.filled || []).slice(-30), s.streak.fill];

@@ -1,0 +1,54 @@
+/* 원스토어 안 게임 화면 손잡이 (2026-11-24 운영) — 빌드(tools/build.mjs)가 게임 html <head> 맨 앞에 그대로 심음 · 게임 코드는 고치지 않음
+   켜지는 때: 이 화면을 감싼 같은 주소 페이지가 원스토어 SDK 를 초기화했을 때만(window.parent.OAD_HOST === 'onestore') — 원어데이 앱 · 단독 링크 · 개발 서버에서는 아무것도 안 함
+   하는 일 (부모 onestore.js 가 __oadOS 로 부름)
+   · pause(): 게임 루프(requestAnimationFrame) 멈춤 · 소리(AudioContext · audio/video) 멈춤 · 화면이 숨은 것처럼 알림(visibilitychange — Phaser 등 게임의 자체 정지 · 저장도 같이 돎)
+   · resume(): 되돌림 · mute(on): 무음 모드 · save(): 0.5초 안 동기 저장 기회 — 'oad:save' 이벤트 + 숨김 · pagehide 알림 (게임은 대부분 바뀔 때마다 localStorage 에 바로 씀)
+   · 저장 공간은 손대지 않음 (원스토어 WebView 의 이 기기 저장 · 계정 기준 저장은 서버: 원스토어 playerId → 골드 · 소장 · 소장 게임 클라우드 저장) */
+(function () {
+  var P = null; try { if (window.parent !== window && window.parent.OAD_HOST === 'onestore') P = window.parent; } catch (e) { P = null; }
+  if (!P || window.__oadOS) return;
+  var paused = false, muted = false, held = [], ctxs = [], media = [];
+  var raf = window.requestAnimationFrame && window.requestAnimationFrame.bind(window), caf = window.cancelAnimationFrame && window.cancelAnimationFrame.bind(window);
+  if (raf) {
+    window.requestAnimationFrame = function (cb) { if (!paused) return raf(cb); held.push(cb); return -held.length; };
+    window.cancelAnimationFrame = function (id) { if (id < 0) { held[-id - 1] = null; return; } return caf(id); };
+  }
+  ['AudioContext', 'webkitAudioContext'].forEach(function (n) {
+    var A = window[n]; if (!A || A.__os) return;
+    var W = class extends A {
+      constructor(o) { super(o); ctxs.push(this); }
+      resume() { if (paused || muted) return Promise.resolve(); return super.resume(); }
+    };
+    W.__os = 1; window[n] = W;
+  });
+  var play = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () { if (media.indexOf(this) < 0) media.push(this); if (paused || muted) { this.__osWant = true; return Promise.resolve(); } return play.apply(this, arguments); };
+  var hid = false;
+  function vis(h) {
+    hid = h;
+    try { Object.defineProperty(document, 'hidden', { configurable: true, get: function () { return hid; } }); Object.defineProperty(document, 'visibilityState', { configurable: true, get: function () { return hid ? 'hidden' : 'visible'; } }); } catch (e) { /* */ }
+    try { document.dispatchEvent(new Event('visibilitychange')); } catch (e) { /* */ }
+    try { window.dispatchEvent(new Event(h ? 'blur' : 'focus')); } catch (e) { /* */ }
+  }
+  function hush() {
+    ctxs.forEach(function (c) { try { if (c.state === 'running') c.suspend(); } catch (e) { /* */ } });
+    media.forEach(function (m) { try { if (!m.paused) { m.__osWant = true; m.pause(); } } catch (e) { /* */ } });
+  }
+  function wake() {
+    if (paused || muted) return;
+    ctxs.forEach(function (c) { try { if (c.state === 'suspended') Object.getPrototypeOf(Object.getPrototypeOf(c)).resume.call(c); } catch (e) { /* */ } });
+    media.forEach(function (m) { try { if (m.__osWant) { m.__osWant = false; play.call(m).catch(function () {}); } } catch (e) { /* */ } });
+  }
+  window.__oadOS = {
+    pause: function () { if (paused) return; paused = true; hush(); vis(true); },
+    resume: function () { if (!paused) return; paused = false; vis(false); var h = held; held = []; h.forEach(function (cb) { if (cb) raf(cb); }); wake(); },
+    mute: function (on) { muted = !!on; if (muted) hush(); else wake(); },
+    save: function () {
+      try { window.dispatchEvent(new Event('oad:save')); } catch (e) { /* */ }
+      if (!hid) { vis(true); vis(false); }
+      try { window.dispatchEvent(new Event('pagehide')); } catch (e) { /* */ }
+    },
+    state: function () { return { paused: paused, muted: muted, ctx: ctxs.map(function (c) { return c.state; }), media: media.filter(function (m) { return !m.paused; }).length, held: held.length }; },
+  };
+  try { if (P.OAD_OS_MUTE) window.__oadOS.mute(true); } catch (e) { /* */ }
+})();
