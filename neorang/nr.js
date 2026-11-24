@@ -7,6 +7,7 @@
    주소: 해시 하나 = 화면 하나 → 폰 뒤로가기 · 화면의 ← = 바로 전 화면 (원어데이 탭 안 iframe 이면 원어데이 기록에 함께 쌓임)
    데이터: works.js = 원고(team/dev/tasks/261104-neorang/works)에서 만든 파일 · 그림: img/manifest.json(아트) → 없으면 tmp/ 임시 그림 */
 import { WORKS, SOON } from './works.js';
+import { NR_OFF } from '../rules.js';   /* 실서버 너랑 공개 스위치 (rules.js PROD_NR_OPEN · 2026-11-24) */
 
 const $ = s => document.querySelector(s), app = $('#app');
 const EMB = (() => { try { return window.parent !== window; } catch { return true; } })();
@@ -50,7 +51,7 @@ const epDate = n => { const d = new Date(Date.parse(period() + 'T00:00:00Z') + (
    원어데이 track.js 와 같은 기기 번호(oad_did) · 같은 /api/ev · 같은 '이용 기록 보내지 않기' 설정 · 보내는 주소도 같은 규칙(oneaday.kr · vercel.app)
    보내는 것: 기록 이름 + 작품(w) · 화(ep) · 방법(how · mode · via) · 숫자(n)만 — 대화 원문 · 이름 · 나이는 보내지 않음 · 허용 이름은 server/api/_lib/events.js */
 const EVQ = [], EV1 = new Set(), SID = Math.random().toString(36).slice(2, 12);
-const EV_ON = !PROD && (() => { try { if (localStorage.getItem('oad_track_off') === '1') return false; return /(^|\.)oneaday\.kr$/.test(location.hostname) || location.hostname.endsWith('.vercel.app') || localStorage.getItem('oad_track') === '1'; } catch { return false; } })();
+const EV_ON = !NR_OFF && (() => { try { if (localStorage.getItem('oad_track_off') === '1') return false; return /(^|\.)oneaday\.kr$/.test(location.hostname) || location.hostname.endsWith('.vercel.app') || localStorage.getItem('oad_track') === '1'; } catch { return false; } })();
 const evFlush = () => { if (!EVQ.length) return; const body = JSON.stringify({ d: did(), s: SID, v: 'nr', e: EVQ.splice(0, 50) });
   try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ev', new Blob([body], { type: 'text/plain' })))) fetch('/api/ev', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {}); } catch { /* 기록 실패는 무시 */ } };
 const ev = (n, p, once) => { if (once) { if (EV1.has(once)) return; EV1.add(once); } if (!EV_ON || EVQ.length >= 200) return; EVQ.push({ n, t: Date.now(), p: p || {} }); clearTimeout(ev.h); ev.h = setTimeout(evFlush, 3000); };
@@ -167,7 +168,7 @@ let lastKey = '';
 function render() {
   const r = route(), key = r.slice(0, 3).join('/');
   document.body.className = 'th-' + S.view.th + (EMB ? ' emb' : '');
-  if (PROD) { app.innerHTML = `<div class="page"><header class="top"><div class="brand"><img src="icon/g/logo_light.svg" alt="너랑" style="height:30px;width:auto"></div></header><p class="loading">너랑은 곧 공개돼요</p></div>`; return; }
+  if (NR_OFF) { app.innerHTML = `<div class="page"><header class="top"><div class="brand"><img src="icon/g/logo_light.svg" alt="너랑" style="height:30px;width:auto"></div></header><p class="loading">너랑은 곧 공개돼요</p></div>`; return; }
   const v = VIEWS[r[0]] || VIEWS.home;
   if (key === lastKey && (r[0] === 'talk' || r[0] === 'lunch') && $('#log')) { refreshTalk(); return; }   /* 대화 화면은 다시 그리지 않음(스크롤 · 입력 유지) */
   app.innerHTML = v(...r.slice(1));

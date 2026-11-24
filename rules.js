@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.51';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.52';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -13,6 +13,10 @@ export const PROD = ENV === 'prod';
 export const PROD_BM_OFF = false;
 export const BM_OFF = PROD && PROD_BM_OFF;
 export const PROD_OPEN_ALL = PROD_BM_OFF;
+/* 너랑(AI 웹소설) 실서버 공개 스위치 하나 (2026-11-24 대표 "너랑도 열어야지"): true = 실서버도 테스트와 같이 너랑 탭 · 오늘 허브 너랑 카드 · 너랑 화면을 엶
+   false = '곧 공개돼요' 안내만 · 서버 server/api/story.js NR_PROD 와 같은 값이어야 함(build.mjs 확인) · 날짜 옮기기 같은 테스트 장치는 이 스위치와 상관없이 실서버에서 늘 꺼짐 */
+export const PROD_NR_OPEN = true;
+export const NR_OFF = PROD && !PROD_NR_OPEN;
 // 실서버 노출: 테스트를 통과해 대표가 지정한 게임(catalog.js PROD_LIVE)만 · 테스트 · 개발은 전부 (2026-11-16)
 export const shown = id => !PROD || PROD_LIVE.includes(id);
 export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND = BRAND0.filter(shown);

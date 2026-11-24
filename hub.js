@@ -80,7 +80,7 @@ const nrScene = (w, k, mood) => { const a = nrArt(w), sc = a.scenes || {}, p = (
 const nrAvatar = w => { const a = nrArt(w).avatar || {}; return A(a.smile || a.default || Object.values(a)[0]); };
 const epTitle = (w, no) => (w.eps[no - 1] || {}).title || `${no}화`;
 function nrSt(X) {
-  if (X.PROD) return { st: 'soon', done: false };
+  if (X.NR_OFF) return { st: 'soon', done: false };   /* 실서버 너랑 공개 스위치(rules.js PROD_NR_OPEN)가 꺼져 있을 때만 */
   const S = nrS(), w = nrW(S.lastW) || nrW('c17');
   if (!S.onboarded || !w) return { st: 'first', done: false, w: w || null };
   const H = NR.home || {}, open = typeof H.open === 'number' ? H.open : localOpen(), left = typeof H.left === 'number' ? H.left : DAY_FREE;
@@ -148,8 +148,8 @@ async function post(body) {
 }
 export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
-  if (X.PROD) return;
-  if (!NR.works) import('./neorang/works.js?v=0.99.51').then(m => { NR.works = m.WORKS; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (X.NR_OFF) return;
+  if (!NR.works) import('./neorang/works.js?v=0.99.52').then(m => { NR.works = m.WORKS; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || now() >= NR.home.next9)) {
@@ -177,5 +177,5 @@ function lunchFetch(X, redraw) {
 export function tick(X, redraw) {
   const t = toNine(); document.querySelectorAll('[data-cd9]').forEach(e => { e.textContent = t; });
   const n = X.R.now(), c = `${n.getHours()}시 ${n.getMinutes()}분`; document.querySelectorAll('[data-hclock]').forEach(e => { if (e.textContent !== c) e.textContent = c; });
-  if (!X.PROD && NR.home && !NR.busy && now() >= NR.home.next9) load(X, redraw);
+  if (!X.NR_OFF && NR.home && !NR.busy && now() >= NR.home.next9) load(X, redraw);
 }

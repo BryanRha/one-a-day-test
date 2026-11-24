@@ -136,7 +136,7 @@ export async function buy(productId) {
     if (why === 'already_owned') { const x = await api({ act: 'recover' }).catch(() => null); return { ok: false, reason: 'owned', gold: x && x.gold, msg: x && x.recovered ? '지난 결제를 먼저 넣어 드렸어요 · 골드를 확인해 주세요' : '지난 결제를 정리하는 중이에요 · 잠시 뒤 다시 눌러 주세요' }; }
     return { ok: false, reason: why || 'error', msg: WHY[why] || '결제하지 못했어요 · 잠시 뒤 다시 해 주세요' };
   }
-  const body = { act: 'verify', productId, purchaseToken: r.purchaseToken, purchaseId: r.purchaseId, developerPayload: r.developerPayload || o.developerPayload };
+  const body = { act: 'verify', productId, purchaseToken: r.purchaseToken, purchaseId: r.purchaseId, orderId: r.orderId, developerPayload: r.developerPayload || o.developerPayload };
   for (let i = 0; i < 3; i++) {
     try { const v = await api(body); return { ok: true, gold: v.gold, then: v.then, purchaseId: v.purchaseId }; }
     catch (e) { if (e.status && e.status < 500) return { ok: false, reason: 'verify', msg: e.message }; await wait(1200 * (i + 1)); }

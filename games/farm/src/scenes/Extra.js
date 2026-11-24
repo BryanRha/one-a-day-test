@@ -1,13 +1,13 @@
-import { frame } from '../frame.js?v=0.99.51';
-import { banner, iconTabs, rewards, card, doneStamp, lockIc, progressBar } from '../evui.js?v=0.99.51';
+import { frame } from '../frame.js?v=0.99.52';
+import { banner, iconTabs, rewards, card, doneStamp, lockIc, progressBar } from '../evui.js?v=0.99.52';
 // 따로 여는 화면: 뒷산 광산 · 미니게임 3종(댐 수리 · 참새 쫓기 · 불량배 쫓기) · 마을 사람들(호감도 · 선물 · 결혼)
-import { W, H } from '../config.js?v=0.99.51';
-import { T, C, btn, popup, toast, redDot } from '../ui.js?v=0.99.51';
-import { audio } from '../audio.js?v=0.99.51';
-import { goPrev } from '../nav.js?v=0.99.51';
-import { ITEMS, MINE, MINIS, SUITORS, HEARTS, HEART_PTS, CHARS, RELIC_N, BUILDS } from '../data.js?v=0.99.51';
-import { load, save, has, mine, mineHit, miniLeft, miniDone, giftTo, hearts, marry, countOf, rewardText, progress, quest, questDone } from '../state.js?v=0.99.51';
-import { RECIPES, CROPS } from '../data.js?v=0.99.51';
+import { W, H } from '../config.js?v=0.99.52';
+import { T, C, btn, popup, toast, redDot } from '../ui.js?v=0.99.52';
+import { audio } from '../audio.js?v=0.99.52';
+import { goPrev } from '../nav.js?v=0.99.52';
+import { ITEMS, MINE, MINIS, SUITORS, HEARTS, HEART_PTS, CHARS, RELIC_N, BUILDS } from '../data.js?v=0.99.52';
+import { load, save, has, mine, mineHit, miniLeft, miniDone, giftTo, hearts, marry, countOf, rewardText, progress, quest, questDone } from '../state.js?v=0.99.52';
+import { RECIPES, CROPS } from '../data.js?v=0.99.52';
 /* 그 물건을 만들 수 있게 되는 레벨 (작물 · 조리법 · 그 공장이 열리는 레벨 중 늦은 쪽) */
 const itemLv = it => CROPS[it] ? CROPS[it].lv || 1 : RECIPES[it] ? Math.max(RECIPES[it].lv || 1, BUILDS[RECIPES[it].b] ? BUILDS[RECIPES[it].b].lv : 1) : 1;
 
@@ -103,7 +103,7 @@ export class PeopleScene extends Phaser.Scene {
 }
 
 // ── 이벤트 화면: 출석 · 축제 · 레이스 · 스티커 · 패스 (위 탭)
-import { season, seasonBuy, evDots, LOGIN, login, loginClaim, FEST_TIERS, FEST_R, fest, festClaim, RACE, race, raceJoin, raceState, raceClaim, STICKERS, ALBUM_R, album, openPack, albumClaim, albumAll, PASS_TIERS, PASS_FREE, PASS_PREM, pass, passClaim } from '../events.js?v=0.99.51';
+import { season, seasonBuy, evDots, LOGIN, login, loginClaim, FEST_TIERS, FEST_R, fest, festClaim, RACE, race, raceJoin, raceState, raceClaim, STICKERS, ALBUM_R, album, openPack, albumClaim, albumAll, PASS_TIERS, PASS_FREE, PASS_PREM, pass, passClaim } from '../events.js?v=0.99.52';
 const fmtL = ms => { const h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4); return h ? `${h}시간 ${m}분` : `${m}분`; };
 export class EventsScene extends Phaser.Scene {
   constructor() { super('Events'); }
@@ -165,8 +165,8 @@ export class EventsScene extends Phaser.Scene {
 }
 
 // ── 섬 원정: 덤불·덩굴·그루터기=도끼 · 모래·보물=삽 · 바위=곡괭이 → 칸을 열어 보물 찾기
-import { isle, isleHit, isleTool, isleTheme, BOSS } from '../state.js?v=0.99.51';
-import { ISLE } from '../data.js?v=0.99.51';
+import { isle, isleHit, isleTool, isleTheme, BOSS } from '../state.js?v=0.99.52';
+import { ISLE } from '../data.js?v=0.99.52';
 export class IslandScene extends Phaser.Scene {
   constructor() { super('Island'); }
   init() { this.noScroll = true; }
@@ -199,7 +199,7 @@ export class IslandScene extends Phaser.Scene {
 }
 
 // ── 협동조합: 레가타(주간 팀 경주) · 도움 요청
-import { coopDots, coop, standings, weekLeft, takeTask, taskProg, dropTask, tierClaim, prevClaim, helpSend, COOP_TIERS, TIER_R, RANK_R, TASKS_DAY, COOP_LV } from '../coop.js?v=0.99.51';
+import { coopDots, coop, standings, weekLeft, takeTask, taskProg, dropTask, tierClaim, prevClaim, helpSend, COOP_TIERS, TIER_R, RANK_R, TASKS_DAY, COOP_LV } from '../coop.js?v=0.99.52';
 const fmtH = ms => { const m = Math.floor(ms / 6e4); return m >= 1440 ? `${Math.floor(m / 1440)}일 ${Math.floor(m % 1440 / 60)}시간` : m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
 export class CoopScene extends Phaser.Scene {
   constructor() { super('Coop'); }
