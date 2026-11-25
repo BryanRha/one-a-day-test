@@ -1,7 +1,7 @@
 // 원어데이 계정: 구글 로그인 (Supabase) · 서버의 /api/me 로 플레이어 기록 + 골드 잔액
 //   서버가 있는 주소에서만 (test.oneaday.kr · oneaday.kr · vercel.app) · 게임은 로그인 없이도 그대로
 //   원스토어 앱 안(onestore.js · 2026-11-24): 구글 로그인 대신 원스토어 playerId → 서버가 준 세션 표(os1.)로 같은 /api/me 를 씀 (늘 '로그인됨' · 이름 · 이메일 없음)
-import * as OS from './onestore.js?v=0.99.52';
+import * as OS from './onestore.js?v=0.99.53';
 const HOST = location.hostname;
 export const ON = /(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app');
 let sb = null, cfg = null, me = null, listeners = [];
