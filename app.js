@@ -1583,7 +1583,8 @@ window.__oad = { R, go, play };
 if (OS.looks) OS.ready.then(on => { if (!on) return;
   window.OAD_OS_MUTE = OS.RINGER_MUTE && OS.silent;
   document.documentElement.classList.add('os'); const st = document.documentElement.style; st.setProperty('--safe-t', OS.safe.top + 'px'); st.setProperty('--safe-b', OS.safe.bottom + 'px');   /* 원스토어 앱이 알려 준 시스템바 높이 (iframe 안이라 env(safe-area) 가 0) */
-  PV.use({ name: 'onestore', reward: g => OS.rewarded(g), inter: g => OS.interstitial(g).then(x => x.shown), canReward: OS.canReward, canInter: OS.canInter, canBuy: OS.canBuy, buy: OS.buy });
+  /* ad_shown: 원스토어 광고가 실제로 끝까지 보였을 때만 (리워드 = 서버가 포스트백 확인 · 전면 = 표시 완료) — 운영실 '매출 나눠 보기' 광고 칸 */
+  PV.use({ name: 'onestore', reward: g => OS.rewarded(g).then(x => { if (x.ok) T.track('ad_shown', { what: 'reward', game: g || 'app', via: 'onestore' }); return x; }), inter: g => OS.interstitial(g).then(x => { if (x.shown) T.track('ad_shown', { what: 'inter', game: g || 'app', via: 'onestore' }); return x.shown; }), canReward: OS.canReward, canInter: OS.canInter, canBuy: OS.canBuy, buy: OS.buy });
   OS.progress(60); go(tab, 'open');   /* 공급자가 바뀌었으니 단추(광고 · 결제)를 다시 그림 */
   OS.handle({
     back() {

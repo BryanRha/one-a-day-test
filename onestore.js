@@ -35,6 +35,8 @@ export const safe = { top: 0, bottom: 0, left: 0, right: 0 };
 const H = {};   /* 앱이 끼우는 처리기: back() · pause(e) · resume(e) · exit() · 모두 선택 */
 export const handle = o => Object.assign(H, o);
 let tok = '', tokAt = 0;
+/* 기기 번호(track.js 가 만든 무작위 값) — 결제 확인 · 복구에 붙여 보내 서버 매출 기록(pay_done)이 이 기기로 잡히게 */
+const did = () => { try { return localStorage.getItem('oad_did') || ''; } catch { return ''; } };
 
 /* 셸 안 같은 주소 iframe(게임 · 너랑)에 수명주기 전달 — oshook.js 가 심어 둔 __oadOS (빌드가 게임 html 맨 앞에 넣음) */
 function frames(fn, arg) {
@@ -133,10 +135,10 @@ export async function buy(productId) {
   catch (e) {
     const why = e && e.reason;
     if (why === 'user_cancelled') return { ok: false, reason: 'cancel' };
-    if (why === 'already_owned') { const x = await api({ act: 'recover' }).catch(() => null); return { ok: false, reason: 'owned', gold: x && x.gold, msg: x && x.recovered ? '지난 결제를 먼저 넣어 드렸어요 · 골드를 확인해 주세요' : '지난 결제를 정리하는 중이에요 · 잠시 뒤 다시 눌러 주세요' }; }
+    if (why === 'already_owned') { const x = await api({ act: 'recover', d: did() }).catch(() => null); return { ok: false, reason: 'owned', gold: x && x.gold, msg: x && x.recovered ? '지난 결제를 먼저 넣어 드렸어요 · 골드를 확인해 주세요' : '지난 결제를 정리하는 중이에요 · 잠시 뒤 다시 눌러 주세요' }; }
     return { ok: false, reason: why || 'error', msg: WHY[why] || '결제하지 못했어요 · 잠시 뒤 다시 해 주세요' };
   }
-  const body = { act: 'verify', productId, purchaseToken: r.purchaseToken, purchaseId: r.purchaseId, orderId: r.orderId, developerPayload: r.developerPayload || o.developerPayload };
+  const body = { act: 'verify', productId, purchaseToken: r.purchaseToken, purchaseId: r.purchaseId, orderId: r.orderId, developerPayload: r.developerPayload || o.developerPayload, d: did() };
   for (let i = 0; i < 3; i++) {
     try { const v = await api(body); return { ok: true, gold: v.gold, then: v.then, purchaseId: v.purchaseId }; }
     catch (e) { if (e.status && e.status < 500) return { ok: false, reason: 'verify', msg: e.message }; await wait(1200 * (i + 1)); }
@@ -153,7 +155,7 @@ export async function prices(ids) {
   return out;
 }
 /* 앱을 열 때 한 번: 응답을 못 받은 지난 결제 넣기 (already_owned 예방) */
-export const recover = () => (on && sale ? api({ act: 'recover' }).catch(() => null) : Promise.resolve(null));
+export const recover = () => (on && sale ? api({ act: 'recover', d: did() }).catch(() => null) : Promise.resolve(null));
 /* 골드 묶음 ID (서버 PACKS 이름 → 원스토어 상품 ID) */
 export const packId = k => 'oad_gold_' + (k === 'first' ? 'first' : String(k).replace(/^g/, ''));
 
