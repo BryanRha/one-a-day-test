@@ -1,22 +1,22 @@
 // 레이스 화면: core/race.js 시뮬레이션을 고정 간격으로 돌리고 상태·사건을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.99.62';
-import { Race, LANES, CARS, FEVER_FULL, FEVER_TIME, CHANT, DODGE, laneX, ROAD_X, LANE_W } from '../core/race.js?v=0.99.62';
+import { W, H } from '../config.js?v=0.99.63';
+import { Race, LANES, CARS, FEVER_FULL, FEVER_TIME, CHANT, DODGE, laneX, ROAD_X, LANE_W } from '../core/race.js?v=0.99.63';
 // 스·트·레·스·차·차·차 — 한 글자씩 도레미파솔라도로 올라가며 커짐
 const CHANT_VO = ['vo_seu', 'vo_teu', 'vo_re', 'vo_seu', 'vo_cha', 'vo_cha', 'vo_cha'];
 const CHANT_ST = [0, 2, 4, 5, 7, 9, 12];
 const CHANT_COL = ['#FF6B6B', '#FF9F43', '#FFD23F', '#6EE7A8', '#4DC3FF', '#7A8BFF', '#FF6FB5'];
-import { decide, blockedSide } from '../core/ai.js?v=0.99.62';
-import { txt, fmt, fit, iconButton, button, popup, toast, soundToggles } from '../ui.js?v=0.99.62';
-import { audio } from '../audio.js?v=0.99.62';
-import { load, save } from '../save.js?v=0.99.62';
-import { carStats, CAR_INFO } from '../meta.js?v=0.99.62';
-import { ZONES } from './Boot.js?v=0.99.62';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.62';
-import { bm } from '../oad_bm.js?v=0.99.62';
-import { contOffer, COUNTDOWN } from '../core/cont.js?v=0.99.62';
-import { HELP } from '../core/help.js?v=0.99.62';
-import { helpCheck, helpNoteRun, track, adLeft, adUse } from '../bmflow.js?v=0.99.62';
-import { skinKey, activeSkin, SKINS } from '../skin.js?v=0.99.62';
+import { decide, blockedSide } from '../core/ai.js?v=0.99.63';
+import { txt, fmt, fit, iconButton, button, popup, toast, soundToggles } from '../ui.js?v=0.99.63';
+import { audio } from '../audio.js?v=0.99.63';
+import { load, save } from '../save.js?v=0.99.63';
+import { carStats, CAR_INFO } from '../meta.js?v=0.99.63';
+import { ZONES } from './Boot.js?v=0.99.63';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.63';
+import { bm } from '../oad_bm.js?v=0.99.63';
+import { contOffer, COUNTDOWN } from '../core/cont.js?v=0.99.63';
+import { HELP } from '../core/help.js?v=0.99.63';
+import { helpCheck, helpNoteRun, track, adLeft, adUse } from '../bmflow.js?v=0.99.63';
+import { skinKey, activeSkin, SKINS } from '../skin.js?v=0.99.63';
 
 const DT = 1 / 60;
 // 차종 → 그림 (승용차·경차는 색 여러 가지)

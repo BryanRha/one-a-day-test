@@ -464,7 +464,7 @@ async function send(q, o = {}) {
   ev('nr_say', { w: w.id, how: o.alt != null ? 'alt' : o.edit ? 'edit' : o.how === 'chip' ? 'chip' : 'type', mode: so.mode, n: so.len === 'short' ? 1 : so.len === 'normal' ? 2 : so.len === 'long' ? 3 : 4 });
   if (j.safety) { st.log.push({ k: 'ai', items: [{ k: 'safe', t: j.items[0].t }], safe: true }); }
   else {
-    st.log.push({ k: 'ai', items: j.items, chips: (j.replies || []).slice(0, 3).map((x, i) => [['다가가기', '묻기', '엉뚱하게'][i], x]), image: j.image, card: j.card && !j.card.scene ? j.card.title : '', chapter: j.chapter || null, cost: j.bill });
+    st.log.push({ k: 'ai', items: j.items, chips: (j.replies || []).slice(0, 3).map((x, i) => [['다가가기', '묻기', '엉뚱하게'][i], x, (j.cks && j.cks[i]) || '']), image: j.image, card: j.card && !j.card.scene ? j.card.title : '', chapter: j.chapter || null, cost: j.bill });
     st.hist.push({ r: 'u', t: q }, { r: 'a', t: j.raw || '' }); if (st.hist.length > 80) st.hist.splice(0, st.hist.length - 80);
     if (j.room) st.room = j.room; if (j.stat && st.room) st.room.stat = j.stat;
     const n = j.nr || {}, s0 = st.talks, b0 = bondNow(c);
@@ -552,7 +552,7 @@ document.addEventListener('click', e => {
   if (d.adult) { if (!adultAge()) { toast('성인 칸은 만 19세부터예요'); return; } S.adultOk = true; save(); ev('nr_set', { what: 'adult', ok: 1 }); toast('성인 칸이 열렸어요 · 성적 묘사는 여기에도 없어요'); render(); return; }
   if (d.start) { S.onboarded = true; S.profiles[0].name ||= S.name; save(); ev('nr_set', { what: 'ob', n: S.genres.length }); location.replace('#home'); history.replaceState({ d: 0 }, ''); home().then(render); return; }
   if (d.gtab) { S.gtab = d.gtab; save(); ev('nr_set', { what: 'genre' }); render(); return; }
-  if (d.chip) { const c = ctxOf(), st = c && c.st, last = st && st.log.filter(x => x.k === 'ai' || x.k === 'me').slice(-1)[0], chips = !last ? c.w.opening.chips : last.chips; if (chips && chips[+d.chip]) send(fillName(chips[+d.chip][1], nm(profOf(setOf(c.w.id).prof))), { how: 'chip' }); return; }
+  if (d.chip) { const c = ctxOf(), st = c && c.st, last = st && st.log.filter(x => x.k === 'ai' || x.k === 'me').slice(-1)[0], chips = !last ? c.w.opening.chips : last.chips; if (chips && chips[+d.chip]) send(fillName(chips[+d.chip][1], nm(profOf(setOf(c.w.id).prof))), { how: 'chip', ck: chips[+d.chip][2] || '' }); return; }   /* ck: 서버가 준 추천 서명 — 고치지 않고 보내면 서버가 판별을 건너뜀 */
   if (d.alt) { const c = ctxOf(), st = c && c.st, i = +d.alt; let k = i - 1; while (k >= 0 && st.log[k].k !== 'me') k--; if (k >= 0) send(st.log[k].t, { alt: k }); return; }
   if (d.undo) { const c = ctxOf(), st = c && c.st; let k = +d.undo - 1; while (k >= 0 && st.log[k].k !== 'me') k--; if (k >= 0 && restore(st, k)) { save(); redrawLog(); refreshRoom(); ev('nr_undo', { w: c.w.id }); toast('한 번 전으로 되돌렸어요'); } return; }
   if (d.edit) { const c = ctxOf(), st = c && c.st, i = +d.edit; if (!st || !st.log[i]) return; editing = i; refreshRoom(); const s = $('#say'); if (s) { s.value = st.log[i].t; s.focus(); } ev('nr_undo', { w: c.w.id, what: 'edit' }); return; }

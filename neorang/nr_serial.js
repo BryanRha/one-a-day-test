@@ -503,7 +503,7 @@ async function send(q, o = {}) {
   ev('nr_say', { w: w.id, ep: epNo, how: o.alt ? 'alt' : o.how === 'chip' ? 'chip' : 'type', mode: c.kind === 'lunch' ? 'lunch' : 'talk' });
   if (j.safety) { st.log.push({ k: 'ai', items: [{ k: 'safe', t: j.items[0].t }], safe: true }); }
   else {
-    const entry = { k: 'ai', items: j.items, chips: (j.replies || []).slice(0, 3).map((x, i) => [['다가가기', '묻기', '장난'][i], x]), image: j.image, alt: !!o.alt || undefined };
+    const entry = { k: 'ai', items: j.items, chips: (j.replies || []).slice(0, 3).map((x, i) => [['다가가기', '묻기', '장난'][i], x, (j.cks && j.cks[i]) || '']), image: j.image, alt: !!o.alt || undefined };
     if (o.alt) { st.log[altAt] = entry; st.hist[st.hist.length - 1] = { r: 'a', t: j.raw || '' }; }
     else {
       st.log.push(entry); st.hist.push({ r: 'u', t: q }, { r: 'a', t: j.raw || '' }); if (st.hist.length > HIST_MAX) st.hist.splice(0, st.hist.length - HIST_MAX);
@@ -638,7 +638,7 @@ document.addEventListener('click', e => {
   if (d.age) { S.age = d.age === 't' ? 16 : d.age === 'a' ? 25 : 10; save(); render(); return; }
   if (d.toggle) { S[d.toggle] = !S[d.toggle]; save(); render(); post({ act: 'alarm', id: { alarm: 'night', lunchOn: 'lunch', soonOn: 'soon' }[d.toggle], on: S[d.toggle] }).catch(() => {}); if (d.toggle === 'alarm' && S.alarm) toast('밤 9시에 새 화 소식을 알려 드릴게요'); return; }
   if (d.start) { S.onboarded = true; if (d.start !== 'home') S.lastW = d.start; save(); if (S.alarm) post({ act: 'alarm', id: 'night', on: true }).catch(() => {}); location.replace('#' + (d.start === 'home' ? 'home' : 'work/' + d.start)); history.replaceState({ d: 0 }, ''); return; }
-  if (d.chip) { const c = ctxOf(), st = c && c.store, last = st && st.log.filter(x => x.k === 'ai' || x.k === 'me').slice(-1)[0], chips = !last ? c.chips : last.chips; if (chips && chips[+d.chip]) send(chips[+d.chip][1], { how: 'chip' }); return; }
+  if (d.chip) { const c = ctxOf(), st = c && c.store, last = st && st.log.filter(x => x.k === 'ai' || x.k === 'me').slice(-1)[0], chips = !last ? c.chips : last.chips; if (chips && chips[+d.chip]) send(chips[+d.chip][1], { how: 'chip', ck: chips[+d.chip][2] || '' }); return; }   /* ck: 서버가 준 추천 서명 */
   if (d.alt) { const c = ctxOf(), st = c && c.store, i = +d.alt, me = st && [...st.log.slice(0, i)].reverse().find(x => x.k === 'me'); if (me) send(me.t, { alt: true }); return; }
   if (d.tab) { location.replace('#lib/' + d.tab); return; }
   if (d.bell) { const id = d.bell, a = S.soonBell, k = a.indexOf(id); const on = k < 0; on ? a.push(id) : a.splice(k, 1); save(); render(); post({ act: 'bell', id, on }).catch(() => {}); toast(on ? '공개되는 밤 9시에 알려 드릴게요' : '알림을 껐어요'); return; }
