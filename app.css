@@ -393,7 +393,7 @@ body.playing #app { visibility: hidden; }
 .sdp { position: relative; } .sdp .a19 { position: absolute; top: 8px; left: 8px; z-index: 2; padding: 2px 7px; border-radius: 99px; background: rgba(150,130,200,.28); color: #DCD2F5; font: 700 11px sans-serif; letter-spacing: .3px; }
 .sdp.young { cursor: default; } .sdp.young .sdpi p { margin: 4px 0 0; }
 .adultck { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 6px; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid var(--line); font-size: 14px; line-height: 1.5; cursor: pointer; } .adultck input { width: 20px; height: 20px; flex: none; margin-top: 1px; accent-color: #F2C14E; }
-.adultmsg { color: #FFB3D4; font-size: 12px; margin: 0 0 6px; } .sdbtn.off { opacity: .45; }
+.adultmsg { color: #FFB3D4; font-size: 12px; margin: 0 0 6px; } .sdbtn.off { opacity: .45; } .sdbtn:disabled { opacity: .45; box-shadow: none; cursor: default; filter: none; }
 .shake { animation: oadshake .35s; } @keyframes oadshake { 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
 /* ── 오늘의 타로 · 사주 유형 · AI 상담 (2026-10-28 과제 F) ── */
 .tline { position: relative; z-index: 3; margin: 8px 0 2px; padding: 8px 11px; border-radius: 12px; background: rgba(13,11,12,.78); border: 1px dashed var(--sgold); color: var(--sgold); font-size: 12.5px; max-width: 92%; cursor: pointer; } .tline b { color: var(--paper); }

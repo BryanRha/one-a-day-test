@@ -1,22 +1,22 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.53';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.53';
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.53';
-import * as R from './rules.js?v=0.99.53';
-import * as I from './install.js?v=0.99.53';
-import * as T from './track.js?v=0.99.53';
-import * as P from './pay.js?v=0.99.53';
-import * as A from './account.js?v=0.99.53';
-import * as C from './cloud.js?v=0.99.53';
-import * as BM from './bm.js?v=0.99.53';
-import * as HUB from './hub.js?v=0.99.53';
-import * as O from './operator.js?v=0.99.53';
+import * as OS from './onestore.js?v=0.99.54';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.54';
+import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.54';
+import * as R from './rules.js?v=0.99.54';
+import * as I from './install.js?v=0.99.54';
+import * as T from './track.js?v=0.99.54';
+import * as P from './pay.js?v=0.99.54';
+import * as A from './account.js?v=0.99.54';
+import * as C from './cloud.js?v=0.99.54';
+import * as BM from './bm.js?v=0.99.54';
+import * as HUB from './hub.js?v=0.99.54';
+import * as O from './operator.js?v=0.99.54';
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.53').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.54').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.53'), import('./fortune/types.js?v=0.99.53'), import('./fortune/chat.js?v=0.99.53'), import('./fortune/oneword-ui.js?v=0.99.53')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.54'), import('./fortune/types.js?v=0.99.54'), import('./fortune/chat.js?v=0.99.54'), import('./fortune/oneword-ui.js?v=0.99.54')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -26,7 +26,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.53';
+const VERSION = '0.99.54';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -304,7 +304,7 @@ function shop(note) {
     return openSheet(`<div class="intro shop"><h2>내 골드</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
     <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
     <p class="fsub">골드 충전은 아직 열지 않았어요. 선물 · 출석으로 받은 골드는 그대로 쓸 수 있어요${PV.store() ? '' : ', 점방의 유료 운세는 카드로 바로 결제할 수 있어요'}.</p>
-    <div class="stack"><button class="btn" data-tab-go="fortune">점방 가기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
+    <div class="stack">${osTestBtn()}<button class="btn" data-tab-go="fortune">점방 가기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
   }
   const card = ([id, price, paid, free]) => `<button class="pack" data-pack="${id}"><span class="pc">🪙</span><b>${gnum(paid + free)}</b>${free ? `<em>+${Math.round(free / paid * 100)}% 보너스</em>` : '<em>&nbsp;</em>'}<span class="pp">${won(price)}</span></button>`;
   openSheet(`<div class="intro shop"><h2>골드 상점</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
@@ -313,7 +313,36 @@ function shop(note) {
     <div class="packs">${PACKS.map(card).join('')}</div>
     <p class="paynote">1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · ${PV.store() ? '원스토어로 결제해요 · 환불은 원스토어 환불 정책을 따라요' : '결제 후 7일 안에 쓰지 않은 골드는 환불돼요'}.</p>
     ${agreeNote('gold')}
+    <div class="stack">${osTestBtn()}<button class="btn ghost" data-close>닫기</button></div></div>`);
+}
+/* ── 원스토어 결제 시험 (테스트 서버 + 원스토어 앱 안에서만): 등록 상품을 한 화면에서 하나씩 결제 → 서버 확인 · 골드 · consume
+   검증요청 전에 상품마다 샌드박스 결제 1회('테스트 여부 Y')가 필요해서 (team/dev/tasks/261124-onestore/onestore_docs.md 3절)
+   운세 상품도 여기서는 그 값의 골드만 받음(풀이는 열지 않음) · 결과는 이 기기에 남겨 다 했는지 보이게 */
+const osTestBtn = () => (!R.PROD && PV.store() ? '<button class="btn ghost" data-ostest>🧪 원스토어 결제 시험</button>' : '');
+const OST_KEY = 'oad_ostest';
+const ostGet = () => { try { return JSON.parse(localStorage.getItem(OST_KEY) || '{}'); } catch { return {}; } };
+let ostBusy = false;
+function osTest() {
+  const done = ostGet(), ids = Object.keys(OS.products).sort((a, b) => (OS.products[a].price || 0) - (OS.products[b].price || 0) || a.localeCompare(b));
+  const n = ids.filter(id => done[id] === 'ok').length;
+  const row = id => { const p = OS.products[id] || {}, r = done[id];
+    return `<div class="payrow"><span>${p.name || id}<small style="display:block;opacity:.6">${id}${r && r !== 'ok' ? ` · ${r}` : ''}</small></span><button class="btn${r === 'ok' ? ' ghost' : ''}" data-osbuy="${id}" style="flex:none;width:auto;padding:8px 12px">${r === 'ok' ? '✓ 다시' : won(p.price || 0)}</button></div>`; };
+  openSheet(`<div class="intro"><h2>🧪 원스토어 결제 시험</h2>
+    <p class="fsub">샌드박스(테스트 ID)라 돈이 나가지 않아요 · ${n} / ${ids.length} 완료 · 결제 지원 ${OS.canBuy() ? '켜짐' : '꺼짐'} · 판매 ${OS.sale ? '켬' : '끔'} · 서버 ${OS.mode}</p>
+    ${ids.length ? ids.map(row).join('') : '<p class="fsub">서버에서 상품 목록을 받지 못했어요</p>'}
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
+}
+async function osTestBuy(id) {
+  if (ostBusy) return toast('앞의 결제가 끝나길 기다리는 중이에요'); ostBusy = true; toast('원스토어 결제창을 여는 중…');
+  let x;
+  try { x = await Promise.race([PV.buy(id), new Promise(r => setTimeout(() => r({ ok: false, reason: 'no_answer', msg: '원스토어가 2분 동안 답이 없어요' }), 120000))]); }
+  catch (e) { x = { ok: false, reason: 'error', msg: e.message }; }
+  finally { ostBusy = false; }
+  const d = ostGet(); d[id] = x.ok ? 'ok' : (x.reason || 'error'); try { localStorage.setItem(OST_KEY, JSON.stringify(d)); } catch { /* */ }
+  T.track('os_test', { product: id, ok: x.ok ? 1 : 0, reason: x.ok ? '' : String(x.reason || '') });
+  if (x.ok) A.refresh().catch(() => {});
+  toast(x.ok ? `결제 확인 · 골드 ${gnum(x.gold && x.gold.paid != null ? x.gold.paid : 0)}` : `${x.reason || 'error'} · ${x.msg || '실패'}`);
+  if (!sheet.hidden) osTest();
 }
 async function buyPack(id) {
   if (PV.store()) { const pk = PACKS.find(x => x[0] === id), name = id === 'first' ? '첫 구매 골드 200' : `골드 ${gnum(pk ? pk[2] + pk[3] : 0)}`; T.track('pay_click', { product: id, via: PV.name() }); return storeBuy(OS.packId(id), () => A.refresh().then(() => goldDone(name))); }
@@ -617,7 +646,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.53')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.54')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900;
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -659,10 +688,10 @@ async function fortunePack() {
   sdOff(); openSheet(`<form class="intro paysheet" id="pkForm"><h2>🎁 ${PK.title}</h2><p class="fsub">${won(PK.price)} · 충전 골드 ${gold} — 신년운세(${won(m.paidOf(PK.base).price)})에 아래에서 <b>2개</b>를 더해요</p>
     <div class="pkrow on"><b>2027 정미년 신년운세</b><span>기본 포함</span></div>${PK.picks.map(row).join('')}
     <p class="paynote">이번 달 운세 · 합격운은 지금 팔리는 달(${Number(m.curYm().slice(5))}월) 기준이에요. 결제 후 고른 풀이가 모두 바로 열려 단순 변심 환불은 제한돼요.</p>${agreeNote()}
-    <div class="stack"><button class="sdbtn" type="submit" data-how="won" disabled>${won(PK.price)}로 결제하기</button>${A.ON ? `<button class="sdbtn ghost" type="submit" data-how="gold" disabled>🪙 충전 골드 ${gold}로 열기</button>` : ''}<button class="btn ghost" type="button" data-close>닫기</button></div></form>`);
+    <div class="stack"><button class="sdbtn" type="submit" data-how="won" data-label="${won(PK.price)}로 결제하기" disabled>2개를 골라 주세요</button>${A.ON ? `<button class="sdbtn ghost" type="submit" data-how="gold" disabled>🪙 충전 골드 ${gold}로 열기</button>` : ''}<button class="btn ghost" type="button" data-close>닫기</button></div></form>`);
   $('#sheet .panel').classList.add('sdpanel');
   const f = $('#pkForm'), picks = () => [...f.querySelectorAll('input[name=pk]:checked')].map(x => x.value);
-  f.onchange = e => { if (picks().length > 2) e.target.checked = false; const n = picks().length; f.querySelectorAll('input[name=pk]:not([disabled])').forEach(x => x.parentElement.classList.toggle('dim', n >= 2 && !x.checked)); f.querySelectorAll('[data-how]').forEach(b => { b.disabled = n !== 2; }); };
+  f.onchange = e => { if (picks().length > 2) e.target.checked = false; const n = picks().length; f.querySelectorAll('input[name=pk]:not([disabled])').forEach(x => x.parentElement.classList.toggle('dim', n >= 2 && !x.checked)); f.querySelectorAll('[data-how]').forEach(b => { b.disabled = n !== 2; }); const won1 = f.querySelector('[data-how=won]'); won1.textContent = n === 2 ? won1.dataset.label : `${2 - n}개 더 골라 주세요`; };
   f.onsubmit = e => { e.preventDefault(); const how = (e.submitter && e.submitter.dataset.how) || 'won'; packBuy(picks(), how, e.submitter); };
 }
 async function packBuy(picks, how, btn) {
@@ -1569,6 +1598,7 @@ if (LAND) { history.replaceState(null, '', location.pathname); T.track('share_la
   else if (LAND.from === 'compat') setTimeout(compatLanding, 300);
   else if (LAND.from === 'oneword') ex().then(E => setTimeout(() => { go('fortune', 'share'); E.ow.landing(XC(), LAND.sp); }, 300)).catch(er => console.error(er)); }
 /* 한 단어: 운세 탭 진입 카드 · 공유 랜딩 시트의 '받기' */
+document.addEventListener('click', e => { const t = e.target.closest('[data-ostest],[data-osbuy]'); if (!t) return; if (t.dataset.osbuy) return osTestBuy(t.dataset.osbuy); osTest(); });
 document.addEventListener('click', e => { const o = e.target.closest('[data-ow-open]'); if (!o) return; if (!sheet.hidden) closeSheet(); let pair = null; try { pair = o.dataset.owPair ? JSON.parse(o.dataset.owPair) : null; } catch { /* */ } owOpen(o.closest('.owentry') ? 'tab' : pair ? 'pair' : 'land', pair); });
 /* 한 단어 카드 '내 유형'(설정 · 선택 · 이 기기에만 — 카드 작은 칩 · 친구 비교 한 줄에만 쓰고 AI 엔 안 보냄, 2026-11-03 대표) */
 document.addEventListener('change', e => { const s = e.target.closest && e.target.closest('[data-owtype]'); if (!s) return; try { if (s.value) localStorage.setItem('oad_ow_type', s.value); else localStorage.removeItem('oad_ow_type'); } catch { /* */ } T.track('oneword_type', { set: s.value ? 1 : 0 }); toast(s.value ? '한 단어 카드에 작게 붙여 둘게요' : '유형 칩을 뺐어요'); });
