@@ -1,14 +1,14 @@
 // 시작: 엔진 · 아이콘 · 저장 불러오기 → 타이틀 (시험: ?test=1-1 바로 전투, &auto=1 자동)
-import { initEngine, E } from './engine.js?v=0.99.61';
-import { bindKeys } from './input.js?v=0.99.61';
-import { makeIcons } from './icons.js?v=0.99.61';
-import { load } from './assets.js?v=0.99.61';
-import { STAGES, CHAPTERS } from './data.js?v=0.99.61';
-import { Battle } from './battle.js?v=0.99.61';
-import { preloadSfx, hold } from './audio.js?v=0.99.61';
-import { bm } from './oad_bm.js?v=0.99.61';
-import { G, heroStats } from './state.js?v=0.99.61';
-import { startUI } from './ui.js?v=0.99.61';
+import { initEngine, E } from './engine.js?v=0.99.62';
+import { bindKeys } from './input.js?v=0.99.62';
+import { makeIcons } from './icons.js?v=0.99.62';
+import { load } from './assets.js?v=0.99.62';
+import { STAGES, CHAPTERS } from './data.js?v=0.99.62';
+import { Battle } from './battle.js?v=0.99.62';
+import { preloadSfx, hold } from './audio.js?v=0.99.62';
+import { bm } from './oad_bm.js?v=0.99.62';
+import { G, heroStats } from './state.js?v=0.99.62';
+import { startUI } from './ui.js?v=0.99.62';
 
 const q = new URLSearchParams(location.search);
 /* 원어데이 광고 · 확인 창 동안 게임 루프 · 소리 멈춤 (창이 닫히면 원래 멈춤 상태로) */

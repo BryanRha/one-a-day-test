@@ -1,7 +1,7 @@
 // 움직이는 인물(주인공 · 몬스터) 공통: 모델 · 애니메이션 구간 재생 · 방향 · 맞을 때 번쩍 · 그림자 · 무기 끝 위치
 import * as THREE from 'three';
-import { spawn } from './assets.js?v=0.99.61';
-import { shadowTex } from './fxtex.js?v=0.99.61';
+import { spawn } from './assets.js?v=0.99.62';
+import { shadowTex } from './fxtex.js?v=0.99.62';
 
 const _q = new THREE.Quaternion(), _v = new THREE.Vector3();
 let shadowGeo = null, shadowMat = null;
