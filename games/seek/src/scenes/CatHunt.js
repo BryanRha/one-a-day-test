@@ -1,13 +1,13 @@
 // 오늘의 숨은 고양이: 내가 꾸민 카페 그대로가 맵 · 가구 뒤 · 위에 고양이 6마리가 숨음 · 하루 한 번 별
-import { W, H } from '../config.js?v=0.99.56';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.56';
-import { audio } from '../audio.js?v=0.99.56';
-import { goPrev } from '../nav.js?v=0.99.56';
-import { save } from '../save.js?v=0.99.56';
-import { Viewer } from '../viewer.js?v=0.99.56';
-import { CATS, HIDE, ROOM } from '../cafe/data.js?v=0.99.56';
-import { cafeData, today } from '../cafe/state.js?v=0.99.56';
-import { loadCafe, furnitureList, composeTexture } from '../cafe/room.js?v=0.99.56';
+import { W, H } from '../config.js?v=0.99.57';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.57';
+import { audio } from '../audio.js?v=0.99.57';
+import { goPrev } from '../nav.js?v=0.99.57';
+import { save } from '../save.js?v=0.99.57';
+import { Viewer } from '../viewer.js?v=0.99.57';
+import { CATS, HIDE, ROOM } from '../cafe/data.js?v=0.99.57';
+import { cafeData, today } from '../cafe/state.js?v=0.99.57';
+import { loadCafe, furnitureList, composeTexture } from '../cafe/room.js?v=0.99.57';
 
 const HINT_COST = 10;
 export class CatHuntScene extends Phaser.Scene {

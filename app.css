@@ -1007,3 +1007,4 @@ body[data-tab="neorang"] { background: var(--nrink); } body[data-tab="neorang"]:
 .bizfoot a{color:var(--sub);font-size:12px}
 .bizfoot .opinfo{margin:0}
 .bizfoot .optodo{color:#C9A27A}
+.sdp.own em { color: var(--sgold); } .sdp.own { border-color: rgba(242,193,78,.45); }
