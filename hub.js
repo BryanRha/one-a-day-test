@@ -1,11 +1,11 @@
 // 원어데이 첫 화면 「오늘」 허브 (2026-11-04 대표 "B가 좋아" · "4칸으로 하자" — 시안 lab/home-hub/b 의 4칸 안)
+//   2026-11-26 대표 "3 피트니스": 그리기를 시안 lab/ui-apple/3 으로 바꿈 — 칭찬 + 링 세 겹 → 연속 기록 → 다음 할 일 → 이번 주 링 7개 → 내일도 여기서 (상태 셈은 그대로)
 //   오늘의 게임 · 점방 · 너랑을 같은 크기 카드로 · 진행 링 0~3/3 · 칭찬 문구 · 점심 쪽지 띠 · '내일도 여기서' 예고 2칸
 //   그 아래로 지금 게임 메인(이번 주 달력 · 진열장)을 이어 붙임 (app.js renderToday)
 //   데이터: 게임 = rules.js 기록 · 점방 = fortune.js 계산(오늘 탭에서 연 날 = days()[오늘].f) · 너랑 = 이 기기 nr_v2 + /api/story {act:'home', v:2} (neorang/nr.js 와 같은 규칙)
 //   너랑 카드 (2026-11-26 개편): 밤 9시 새 화 · 점심 쪽지 대신 '이어 하기 / 고르기' + 오늘 남은 무료 — 점심 띠 · 9시 카운트다운 코드는 남겨 둠(NR_SERIAL 다시 켜면)
 //   상태 셈은 여기서만 · 그리기는 html() · 늦게 오는 값(운세 엔진 · 너랑 작품 · 서버 시각)은 load() 가 받아 두고 다시 그리기를 부름
 const NR_KEY = 'nr_v2', LUNCH_MAX = 3, DAY_FREE = 30, NR_SERIAL = false;
-const STAGES = ['낯섦', '호기심', '신뢰', '설렘', '약속'];
 const ls = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
@@ -25,12 +25,10 @@ export const toNine = () => hms(next9() - now());
 const localOpen = () => Math.max(0, Math.min(12, Math.round((Date.parse(period()) - Date.parse('2026-11-02')) / 864e5) + 1));
 const A = p => (p ? 'neorang/img/' + String(p).replace(/^\.?\/?(img\/)?/, '') : '');
 
-/* ── 서비스 로고 줄 (시안 그대로) ── */
-const LOGO = {
-  oad: '<span class="svc oad"><img class="ic" src="icons/icon_192.png" alt="">One a Day</span>',
-  jb: '<span class="svc jb"><img class="ic" src="fortune/brand/c/icon_192.png" alt="">점방</span>',
-  nr: '<span class="svc nr"><img class="ic" src="neorang/icon/g/app_192.png" alt="">너랑</span>',
-};
+import { ic, coin, rings } from './ui.js?v=0.99.65';
+/* ── 새 화면 체계 (2026-11-26 시안 3 피트니스 · lab/ui-apple/3): 칭찬 + 링 세 겹 → 연속 기록 → 다음 할 일(안 닫힌 링부터) → 이번 주 링 7개 → 내일도 여기서 ── */
+const KB = 'role="button" tabindex="0"';
+const img = (X, src, cls = '', extra = '') => (src ? `<img class="${cls}" src="${X.webp ? X.webp(src) : src}" data-png="${src}" alt="" ${extra}>` : '');
 
 /* ── 게임 ── */
 function gameSt(X) {
@@ -40,13 +38,12 @@ function gameSt(X) {
   return { st: played ? 'done' : X.isNew ? 'new' : 'ret', done: played, id, g, n, streak: s.streak.count || 0 };
 }
 function gameCard(X, G0) {
-  if (G0.st === 'none') return `<div class="hcard g" data-hub="game" data-hst="none" role="button" tabindex="0"><div class="in">${LOGO.oad}<div class="k">오늘의 게임</div><div class="t">게임은 곧 하나씩 열려요</div><div class="s">준비가 끝난 게임부터 매일 하나씩 공개할게요</div></div></div>`;
-  const { g, id } = G0, done = G0.st === 'done';
-  const c = done ? { badge: '<span class="badge ok">✓ 했어요</span>', k: `오늘의 게임 · ${g.title}`, t: `오늘 ${G0.n}판 플레이`, s: '보관함에 저장했어요 · 내일 0시 새 게임', go: '한 판 더', goCls: 'ghost', meta: '새 게임까지 <b data-cd>--:--:--</b>' }
-    : { badge: '', k: `오늘의 게임 · ${g.genre} · ${g.time}`, t: g.title, s: g.tagline, go: '▶ 무료 플레이', meta: G0.st === 'new' || !G0.streak ? '👥 오늘 모두 같은 게임' : `🔥 <b>${G0.streak}일</b> 연속 출석 중` };
-  return `<div class="hcard g" data-hub="game" data-hst="${G0.st}" data-play="${id}" data-from="hub" role="button" tabindex="0"><div class="art" style="background-image:url('${X.webp(g.cover)}')"></div>${c.badge}
-    <div class="in">${LOGO.oad}<div class="k">${esc(c.k)}</div><div class="t">${esc(c.t)}</div><div class="s">${esc(c.s)}</div>
-    <div class="row"><button class="go ${c.goCls || ''}" type="button" tabindex="-1">${c.go}</button><span class="meta2">${c.meta}</span></div></div></div>`;
+  if (G0.st === 'none') return `<article class="u-card u-todo u-row2 u-press" data-hub="game" data-hst="none" ${KB}><i class="u-ti g">${ic('sun')}</i><div class="u-lt"><span class="u-eb g">오늘의 게임</span><b>게임은 곧 하나씩 열려요</b><span>준비가 끝난 게임부터 매일 하나씩 공개할게요</span></div></article>`;
+  const { g, id } = G0;
+  if (G0.done) return `<article class="u-card u-done u-press" data-hub="game" data-hst="done" data-play="${id}" data-from="hub" ${KB} aria-label="${esc(g.title)} 한 판 더"><i class="u-ck g">${ic('check')}</i><div class="u-lt"><span class="u-eb g">게임 · 다 했어요</span><b>${esc(g.title)} · 오늘 ${G0.n}판</b></div><span class="u-more g">한 판 더${ic('chev')}</span></article>`;
+  return `<article class="u-card u-todo u-press" data-hub="game" data-hst="${G0.st}" data-play="${id}" data-from="hub" ${KB} aria-label="오늘의 게임 ${esc(g.title)} 플레이">
+    <div class="u-tp u-ph" data-vt>${img(X, g.cover, '', 'decoding="async"')}<span class="u-rb">게임 링 0/1</span></div>
+    <div class="u-tb2"><div class="u-lt"><span class="u-eb g">오늘의 게임 · ${esc(g.time)}</span><b>${esc(g.title)}</b><span>한 판이면 게임 링이 채워져요</span></div><span class="u-btn sm fill g">${ic('play')}플레이</span></div></article>`;
 }
 
 /* ── 점방 (fortune.js 계산 그대로 · 엔진이 아직이면 이름 · 점수 없이) ── */
@@ -58,19 +55,16 @@ function fortSt(X) {
 }
 function fortCard(X, F) {
   const c = F.f && F.m.CHARS[F.f.ch], art = c && c.art ? `fortune/char/${F.f.ch}.webp` : 'fortune/char/heukryeon.webp';
-  let o;
-  if (F.st === 'none') o = { k: '오늘의 신점 · 매일 무료', t: '오늘 너를 읽어 줄 <em>점쟁이</em>가 기다린다', s: '생년월일만 넣으면 끝', go: '내 운세 무료로 보기 →', seal: '獨說' };
-  else if (F.st === 'no') o = { badge: '<span class="badge newb">오늘 것</span>', k: c ? `${c.name}의 오늘의 신점` : '오늘의 신점', t: `${esc(F.me.name)}, 오늘 네 하루를 <em>읽어 뒀다</em>`, s: '점수와 한 줄은 열어야 보여요', go: '오늘 운세 열기 · 무료 →' };
-  else {
-    const h = F.f && F.m.hookOf(F.f, F.key, X.bought(F.m, F.me));
-    o = { badge: '<span class="badge ok">✓ 봤어요</span>', k: c ? `${c.name} · 오늘은 ${F.f.key}의 날` : '오늘의 신점', score: F.f ? F.f.total : '', t: F.f ? `“${esc(F.f.say)}”` : `${esc(F.me.name)}의 오늘`,
-      go: h ? `🔮 ${esc(F.m.paidOf(h.id).title)} 엿보기` : '📜 오늘 운세 다시 보기', paid: h ? h.id : '' };
+  if (F.st === 'yes') {
+    /* 사업 B1: 홈에는 가격 없이 오늘 운세에서 이어지는 질문 한 줄만 (가격은 점방 시트에서) */
+    const h = F.f && F.m.hookOf(F.f, F.key, X.bought(F.m, F.me)), PR = h && F.m.paidOf(h.id);
+    return `<article class="u-card u-done u-press" data-hub="fort" data-hst="yes" ${KB}><i class="u-ck f">${ic('check')}</i><div class="u-lt"><span class="u-eb f">점방 · 다 했어요</span><b>${c ? `${esc(c.name)} · ${F.f.total}점 · ${esc(F.f.key)}의 날` : '오늘 운세 봤어요'}</b></div>${PR ? `<span class="u-more f" data-paid="${h.id}">${esc(PR.hook || PR.title)}${ic('chev')}</span>` : `<span class="u-more f">다시 보기${ic('chev')}</span>`}</article>`;
   }
-  const main = o.score !== undefined ? `<div class="row" style="padding-top:6px;margin-top:6px"><span class="score">${o.score}<small>점</small></span><div class="t" style="font-size:14px;line-height:1.35;max-width:58%">${o.t}</div></div>`
-    : `<div class="t">${o.t}</div><div class="s">${o.s}</div>`;
-  return `<div class="hcard f" data-hub="fort" data-hst="${F.st}" role="button" tabindex="0"><div class="art" style="background-image:url('${art}')"></div>${o.badge || `<span class="seal">${(c && c.seal) || o.seal || '獨說'}</span>`}
-    <div class="in">${LOGO.jb}<div class="k">${esc(o.k)}</div>${main}
-    <div class="row"><button class="go" type="button" tabindex="-1"${o.paid ? ` data-paid="${o.paid}"` : ''}>${o.go}</button></div></div></div>`;
+  const o = F.st === 'none'
+    ? { k: '점방 · 오늘의 신점 · 매일 무료', q: '오늘 너를 읽어 줄 점쟁이가 기다린다', s: '생년월일만 넣으면 끝', go: '무료로 보기' }
+    : { k: c ? `점방 · ${c.name}의 오늘의 신점` : '점방 · 오늘의 신점', q: `${esc(F.me.name)}, 오늘 네 하루를 읽어 뒀다`, s: '점수와 한 줄은 열어야 보여요', go: '열기' };
+  return `<article class="u-card u-todo u-row2 u-press" data-hub="fort" data-hst="${F.st}" ${KB}><div class="u-av u-ph"><img src="${art}" alt="" style="object-position:50% 12%"></div>
+    <div class="u-lt"><span class="u-eb f">${esc(o.k)}</span><b class="u-q">${o.q}</b><span>${o.s}</span></div><span class="u-btn sm fill f">${o.go}</span></article>`;
 }
 
 /* ── 너랑 (nr.js 의 상태 · 서버 home 값) ── */
@@ -102,56 +96,139 @@ function nrSt(X) {
   const st = !open ? 'wait' : !e.read ? 'open' : seenToday ? 'done' : 'wait';
   return { st, done: st === 'done', w, open, left, e, ws, read0, lunch, lun, ask: !lun && S.lunchOn !== false && H.lunchOpen && lunchTime() };
 }
+const lastLine = r => { for (let i = ((r && r.log) || []).length - 1; i >= 0; i--) { const x = r.log[i]; if (x.k === 'ai' && !x.safe) { const y = (x.items || []).find(z => z.k === 'say'); if (y) return y.t; } } return ''; };
+const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+/* 너랑 한 번 값 · 광고 남은 번 (서버 home 값 · 없으면 가격표 기본 🪙2 · 하루 3번) */
+const nrPrice = () => { const p = NR.home && NR.home.price; return (p && p.basic && p.basic.normal) || 2; };
+const nrAdLeft = L => Math.max(0, ((L && L.adMax) || (NR.home && NR.home.price && NR.home.price.adMax) || 3) - ((L && L.ads) || 0));
 function nrCard(X, N) {
-  if (N.st === 'soon') return `<div class="hcard n soon" data-hub="nr" data-hst="soon" role="button" tabindex="0"><div class="in">${LOGO.nr}<div class="k">너랑 쓰는 웹소설</div><div class="t">곧 공개돼요</div><div class="s">매일 밤 9시, 새 화 한 편과 그 사람과의 대화</div>
-    <div class="row"><button class="go ghost" type="button" tabindex="-1">곧 공개</button></div></div></div>`;
-  const w = N.w; let o;
-  const lastLine = r => { for (let i = ((r && r.log) || []).length - 1; i >= 0; i--) { const x = r.log[i]; if (x.k === 'ai' && !x.safe) { const y = (x.items || []).find(z => z.k === 'say'); if (y) return y.t; } } return ''; };
-  const free = N.left ? `오늘 무료 <b>${N.left.free}</b> · 가벼운 <b>${N.left.light}</b>` : '';
-  if (!NR_SERIAL && N.st === 'first') o = { art: w ? A(nrArt(w).cover) : '', k: '너랑 · 내가 들어가는 이야기', t: '고르면 바로 시작, 끝나지 않는 이야기', s: '한 장면을 읽고 내 한 줄로 이어 가요', go: '첫 이야기 고르기 →', meta: '가벼운 대화 하루 <b>60번</b> 무료', link: '' };
-  else if (!NR_SERIAL && N.st === 'pick') o = { art: A(nrArt(w).cover) || nrScene(w, 0, 'smile'), k: `${w.short} · 고르면 바로`, t: `「${esc(w.title)}」`, s: w.hook, go: '작품 보기', meta: free, link: `w/${w.id}` };
-  else if (!NR_SERIAL) { const l = lastLine(N.r); o = { art: nrScene(w, 1, 'serious') || A(nrArt(w).cover), badge: N.done ? '<span class="badge ok">✓ 오늘 이어 감</span>' : '', k: `${w.short} · ${N.r.turns}번째 장면`, t: l ? `“${esc(l.length > 40 ? l.slice(0, 39) + '…' : l)}”` : `${esc(w.ch.short)}${josa(w.ch.short, '이', '가')} 기다려요`,
-    s: `${w.ch.short}${josa(w.ch.short, '이', '가')} 그 자리에서 기다려요`, go: '이어 하기 →', goCls: N.done ? 'ghost' : '', meta: free, link: `room/${w.id}` }; }
-  else if (N.st === 'first') o = { art: w ? A(nrArt(w).cover) : '', k: '너랑 쓰는 웹소설 · 모든 화 무료', t: '읽고 나면, 그가 먼저 말을 건다', s: '1화는 3분 · 매일 밤 9시 새 화', go: '첫 이야기 고르기 →', meta: `대화 하루 <b>${DAY_FREE}번</b> 무료`, link: '' };
-  else if (N.st === 'wait') { const nx = N.open + 1; o = { art: nrScene(w, 0, 'smile'), k: `${w.short} · ${nx}화 · 오늘 밤 9시`, t: `「${esc(epTitle(w, nx))}」`, cd: true, go: N.open ? `${N.open}화 다시 보기` : '작품 보기', goCls: 'ghost', meta: `대화 <b>${N.left}번</b> 남음${N.left < DAY_FREE ? ` · 9시에 ${DAY_FREE}번` : ''}`, link: N.open ? `read/${w.id}/${N.open}` : `work/${w.id}` }; }
-  else if (N.st === 'open') { const no = N.read0 ? 1 : N.open; o = { art: nrScene(w, 1, 'serious'), badge: night() ? '<span class="badge live">오늘 밤 열림</span>' : '<span class="badge newb">새 화</span>', k: `${w.short} · ${N.open}화`, t: `「${esc(epTitle(w, N.open))}」`,
-    s: `다 읽으면 ${w.ch.short}${josa(w.ch.short, '이', '가')} 먼저 말을 걸어요`, go: N.read0 && N.open > 1 ? '1화부터 읽고 대화하기' : '읽고 이어서 대화하기', meta: `대화 <b>${N.left}번</b> ${N.left >= DAY_FREE ? '새로' : '남음'}`, link: `read/${w.id}/${no}` }; }
-  else o = { art: nrScene(w, 1, 'serious'), badge: '<span class="badge ok">✓ 읽었어요</span>', k: `${w.short} · ${N.open}화 읽음`, t: `${w.ch.short}${josa(w.ch.short, '이', '가')} 오늘을 기억해요`,
-    s: `대화 ${N.e.talks || 0}번 · 관계 ‘${STAGES[N.ws.stage || 0]}’`, go: '대화 이어 가기', goCls: 'ghost', meta: `대화 <b>${N.left}번</b> 남음`, link: `talk/${w.id}/${N.open}` };
-  return `<div class="hcard n" data-hub="nr" data-hst="${N.st}" data-nr="${o.link}" role="button" tabindex="0">${o.art ? `<div class="art" style="background-image:url('${o.art}')"></div>` : ''}${o.badge || ''}
-    <div class="in">${LOGO.nr}<div class="k">${esc(o.k)}</div><div class="t">${o.t}</div>${o.cd ? `<div class="cdbig"><span data-cd9>${toNine()}</span><small>뒤 열려요</small></div>` : `<div class="s">${esc(o.s)}</div>`}
-    <div class="row"><button class="go ${o.goCls || ''}" type="button" tabindex="-1">${o.go}</button><span class="meta2">${o.meta}</span></div></div></div>`;
+  if (N.st === 'soon') return `<article class="u-card u-todo u-row2" data-hub="nr" data-hst="soon" ${KB}><i class="u-ti n">${ic('chat')}</i><div class="u-lt"><span class="u-eb n">너랑 · 너랑 쓰는 웹소설</span><b>곧 공개돼요</b><span>매일 밤 9시, 새 화 한 편과 그 사람과의 대화</span></div></article>`;
+  const w = N.w, cover = w ? A(nrArt(w).cover) || nrScene(w, 0, 'smile') : '';
+  const av = cover ? `<div class="u-av u-ph"><img src="${cover}" alt="" style="object-position:50% 14%"></div>` : `<i class="u-ti n">${ic('chat')}</i>`;
+  const row = (st, k, q, s, go, link, extra = '') => `<article class="u-card u-todo u-row2 u-press${extra ? ' u-nrx' : ''}" data-hub="nr" data-hst="${st}" data-nr="${link}" ${KB}>${av}<div class="u-lt"><span class="u-eb n">${esc(k)}</span><b class="u-q">${q}</b><span>${s}</span>${extra}</div>${go ? `<span class="u-btn sm fill n">${go}</span>` : ''}</article>`;
+  if (NR_SERIAL) {
+    if (N.st === 'first' || !w) return row('first', '너랑 · 모든 화 무료', '읽고 나면, 그가 먼저 말을 건다', `1화는 3분 · 매일 밤 9시 새 화`, '고르기', '');
+    if (N.st === 'open') return row('open', `너랑 · ${w.short} · ${N.open}화`, `「${esc(epTitle(w, N.open))}」`, `대화 ${N.left}번 ${N.left >= DAY_FREE ? '새로' : '남음'}`, '읽기', `read/${w.id}/${N.read0 ? 1 : N.open}`);
+    return row(N.st, `너랑 · ${w.short}`, `「${esc(epTitle(w, N.open + 1))}」`, `오늘 밤 9시 · <span data-cd9>${toNine()}</span>`, '', `work/${w.id}`);
+  }
+  if (N.st === 'first') return row('first', '너랑 · 내가 들어가는 이야기', '고르면 바로 시작, 끝나지 않는 이야기', '가벼운 대화 하루 60번 무료', '고르기', '');
+  if (N.st === 'pick') return row('pick', `너랑 · ${w.short}`, `「${esc(w.title)}」`, esc(w.hook || '고르면 바로 시작'), '작품 보기', `w/${w.id}`);
+  const l = lastLine(N.r), q = l ? `“${esc(clip(l, 44))}”` : `${esc(w.ch.short)}${josa(w.ch.short, '이', '가')} 기다려요`, L = N.left || {};
+  /* 사업 A4: 오늘 무료를 다 쓴 뒤에도 장면 대사는 그대로 · 두 길 [광고 보고 +5] · [🪙2로 이어 하기] — 골드가 모자라면(첫 구매 전 포함) 이어 하기가 골드 시트를 엶 */
+  if (L.free === 0 && !(L.ad > 0)) {
+    const ad = X.nrAd && nrAdLeft(L) > 0, p = nrPrice(), enough = X.gold != null && X.gold >= p;
+    const two = `<span class="u-two">${ad ? `<button class="u-btn sm tint n" type="button" data-hub="nr" data-hst="ad" data-nr="room/${w.id}/charge">${ic('tv')}광고 보고 +5</button>` : ''}${enough ? `<button class="u-btn sm fill n" type="button" data-hub="nr" data-hst="gold" data-nr="room/${w.id}">${coin(14)}${p}로 이어 하기</button>` : `<button class="u-btn sm fill n" type="button" data-hub="nr_gold" data-hst="${X.first ? 'first' : 'short'}" data-shop="nr">${coin(14)}${p}로 이어 하기</button>`}</span>`;
+    return row('out', `너랑 · ${w.short}`, q, `오늘 무료 다 썼어요 · 밤 9시에 다시 ${(NR.home && NR.home.price && NR.home.price.freeDay) || 10}번`, '', `room/${w.id}`, two);
+  }
+  if (N.done) return `<article class="u-card u-done u-press" data-hub="nr" data-hst="done" data-nr="room/${w.id}" ${KB}><i class="u-ck n">${ic('check')}</i><div class="u-lt"><span class="u-eb n">너랑 · 오늘 이어 갔어요</span><b>${q}</b></div><span class="u-more n">이어 하기${ic('chev')}</span></article>`;
+  return row('cont', `너랑 · ${w.short}`, q, L.free === 0 ? `보너스 무료 ${L.ad}번 남음` : `오늘 무료 ${L.free != null ? L.free : 10}번 남음${L.ad > 0 ? ` · 보너스 ${L.ad}번` : ''}`, '이어 하기', `room/${w.id}`);
 }
 function lunchStrip(N) {
   if (!N.lunch && !N.ask) return '';
   const w = N.lun ? nrW(N.lun.w) || N.w : N.w, av = nrAvatar(w), txt = N.lun ? `“${esc(N.lun.text)}”` : '낮 12시, 먼저 보낸 쪽지가 있어요';
-  return `<div class="lunch" data-hub="lunch" data-hst="new" data-nr="lunch" role="button" tabindex="0">${av ? `<img src="${av}" alt="">` : ''}<div class="tx"><b>${esc(w.ch.short)}의 점심 쪽지가 왔어요</b><span>${txt}</span></div><span class="badge newb">답장 ${LUNCH_MAX}번</span></div>`;
+  return `<article class="u-card u-todo u-row2 u-press" data-hub="lunch" data-hst="new" data-nr="lunch" ${KB}>${av ? `<div class="u-av u-ph"><img src="${av}" alt=""></div>` : ''}<div class="u-lt"><span class="u-eb n">${esc(w.ch.short)}의 점심 쪽지</span><b class="u-q">${txt}</b><span>답장 ${LUNCH_MAX}번</span></div></article>`;
 }
 
 /* ── 지금 상태 셋 (기록 · 탭 점에도 씀) ── */
 export function states(X) { return { g: gameSt(X), f: fortSt(X), n: nrSt(X) }; }
 export const nrDot = X => { const N = nrSt(X); return N.st === 'open' || N.lunch; };   /* 끝없는 방에서는 'open' 이 없음 — 새 화 점 없음 */
+/* 너랑 이어 하기 목록 (보관함 '이어 하기' — 최근 순) */
+export function nrRooms() {
+  if (!NR.works) return [];
+  const rooms = nrS().rooms || {};
+  return Object.keys(rooms).filter(k => rooms[k] && rooms[k].turns > 0 && nrW(k)).sort((a, b) => (rooms[b].at || 0) - (rooms[a].at || 0)).map(k => { const w = nrW(k); return { w, r: rooms[k], cover: A(nrArt(w).cover) || nrScene(w, 0, 'smile'), line: lastLine(rooms[k]) }; });
+}
+/* 너랑 링을 날마다 남김 (이번 주 링 7개 · 게임 = history · 점방 = oad_days.f 와 같은 칸에 n) */
+function markNr(X) { try { const k = X.R.keyOf(X.R.now()), all = ls('oad_days') || {}; if ((all[k] || {}).n) return; all[k] = { ...(all[k] || {}), n: 1 }; localStorage.setItem('oad_days', JSON.stringify(all)); } catch { /* */ } }
+const WK = ['월', '화', '수', '목', '금', '토', '일'];
+function week(X, today3) {
+  const { R } = X, n = R.now(), dow = (n.getDay() + 6) % 7, hist = R.state().history || {}, days = ls('oad_days') || {}, di = R.dayIndex();
+  return WK.map((w, k) => {
+    const off = k - dow, d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + off), key = R.keyOf(d), lab = `<b>${off === 0 ? '오늘' : w}</b>`;
+    if (off > 0) return `<div class="u-wr"><div class="u-rings u-empty" style="width:36px;height:36px"></div>${lab}</div>`;
+    const v = off === 0 ? today3 : [hist[key] ? 1 : 0, (days[key] || {}).f ? 1 : 0, (days[key] || {}).n ? 1 : 0];
+    const gid = off < 0 && di + off >= 0 ? R.gameOn(di + off) : null;
+    return `<div class="u-wr${off === 0 ? ' now' : ''}"${gid ? ` data-open="${gid}" ${KB} aria-label="${w}요일 · ${esc(X.G(gid).title)}"` : ''}>${rings(36, 4, 1.5, v)}${lab}</div>`;
+  }).join('');
+}
+/* ── 출석판 (2026-11-26 대표): 7칸 · 들어온 날 기준 · 하루 한 번(서버 story act 'att' 가 판단 · 계정 · 기기 · KST) · 보상은 소비성(너랑 무료 +N · 게임 하루 열기권) ──
+   '연속 기록' 숫자(rules.js streak · 주 1회 쉬는 날)와 따로 감 · 서버에 닿지 못하면 칸만 보이고 받기는 숨김 */
+const ATT = { st: null, at: 0, busy: false, fail: false };
+export const attNow = () => ATT.st;
+const attTxt = c => [c.nr ? `너랑 무료 +${c.nr}` : '', c.tk ? `하루 열기 ${c.tk}장` : ''].filter(Boolean).join(' · ');
+function attLoad(redraw, force) {
+  if (ATT.busy || (!force && ATT.st && Date.now() - ATT.at < 60e3)) return;
+  ATT.busy = true;
+  post({ act: 'att' }).then(r => r.json()).then(j => { if (j && j.state) { ATT.st = j.state; ATT.fail = false; } else ATT.fail = true; }).catch(() => { ATT.fail = true; }).finally(() => { ATT.busy = false; ATT.at = Date.now(); redraw(); });
+}
+/* 오늘 칸 받기 → { ok, got:{cell, nr, tk}, state } · 이미 받았으면 { ok:false, already } */
+export async function attClaim() {
+  const r = await post({ act: 'att', sub: 'claim' }), j = await r.json().catch(() => ({}));
+  if (j && j.state) { ATT.st = j.state; ATT.at = Date.now(); }
+  if (j && j.ok && j.got && j.got.nr) NR.at = 0;   /* 너랑 남은 무료를 다시 받게 */
+  return r.ok ? j : { ok: false, already: !!(j && j.already), error: (j && j.error) || '잠시 뒤 다시 눌러 주세요' };
+}
+/* 연속 기록 카드: 연속 N일(쉬는 날 · 놓친 날 광고 보충) + 출석판 7칸 (오늘 칸을 누르면 받음 · 7칸째 = 큰 선물) */
+function streakCard(X) {
+  const { R } = X, c = R.state().streak.count || 0, A0 = ATT.st, cells = (A0 && A0.cells) || [];
+  const left = A0 ? 7 - A0.cell : 0;
+  const gift = !A0 ? '7칸째 선물' : A0.done && A0.cell === 7 ? '선물 받음' : !A0.done && left === 0 ? '오늘 선물' : `${A0.done ? left : left + 1}번 더 오면 선물`;
+  const step = i => {
+    const on = A0 && i <= A0.got, now = A0 && !A0.done && i === A0.cell, cls = `${on ? 'on' : ''}${i === 7 ? ' gf' : ''}${now ? ' now' : ''}`;
+    return now ? `<button class="${cls}" type="button" data-att-claim aria-label="오늘 출석 ${i}칸 받기 · ${attTxt(cells[i - 1] || {})}"><span class="u-num">받기</span></button>` : `<i class="${cls}" aria-hidden="true"><span class="u-num">${i}</span></i>`;
+  };
+  const nx = A0 ? (A0.done ? (A0.cell % 7) + 1 : A0.cell) : 0, rest = R.restLeft && R.restLeft() ? ' · 이번 주 쉬는 날 1번 남음' : '';
+  const note = !A0 ? `${ATT.fail ? '인터넷에 연결되면 출석판이 열려요' : '출석판을 불러오는 중이에요'}${rest}` : A0.done ? `오늘 받았어요 · 다음 ${nx}칸: ${attTxt(cells[nx - 1] || {})}${rest}` : `오늘 ${nx}칸: ${attTxt(cells[nx - 1] || {})} · 칸을 눌러 받아요`;
+  const tk = R.tickets ? R.tickets() : 0;
+  const fill = X.fill ? `<button class="u-fillrow" type="button" data-stampfill data-blk="stamp">${ic('tv')}<span>어제를 놓쳤어요 · 광고 보고 연속 이어 가기</span>${ic('chev')}</button>` : '';
+  return `<section class="u-card u-streak" data-blk="streak">
+    <div class="u-sk"><span class="u-fl">${ic('flame')}</span><div><b class="u-num">${c}일</b><span>${c ? '연속으로 왔어요' : '오늘부터 시작해요'}</span></div><span class="u-gift">${ic('gift')}<small>${gift}</small></span></div>
+    <div class="u-steps" aria-label="출석판 ${A0 ? A0.got : 0}칸 받음 · 7칸">${[1, 2, 3, 4, 5, 6, 7].map(step).join('')}</div>
+    <p class="u-sknote">${note}</p>${tk ? `<button class="u-fillrow" type="button" data-hgo="games" data-hub="tk" data-hst="${tk}">${ic('ticket')}<span>하루 열기권 ${tk}장 · 잠긴 게임 하나를 오늘 열어요</span>${ic('chev')}</button>` : ''}${fill}</section>`;
+}
 
 /* ── 허브 한 덩어리 (#hub — 늦게 온 값으로 이 덩어리만 다시 그림) ── */
 export function html(X) {
   const { g: G0, f: F, n: N } = states(X);
+  if (N.done) markNr(X);
   /* 진행 링: 오늘 할 수 있는 것만 셈 — 실서버에서 게임이 아직 없거나(none) 너랑이 곧 공개(soon)면 분모에서 뺌 (테스트 · 개발은 늘 3) */
   const can = [G0.st === 'none' ? null : G0, F, N.st === 'soon' ? null : N].filter(Boolean), tot = can.length, d = can.filter(x => x.done).length;
-  const C = 2 * Math.PI * 10, ring = `<svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3.5"/><circle cx="13" cy="13" r="10" fill="none" stroke="#FFC93C" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="${C * d / tot} ${C}" transform="rotate(-90 13 13)"/></svg>`;
   const name = (F.me && F.me.name) || nrS().name || '';
-  const hello = X.isNew && !d ? '오늘은 하나만 골라도 좋아요' : d === tot ? `${name ? name + ', ' : ''}오늘 다 챙겼어요` : d ? `${name ? name + ', ' : ''}잘하고 있어요` : name ? `${esc(name)}의 오늘` : '오늘의 세 가지';
-  const n = X.R.now(), clock = `${X.fmtDate(n)} · <span data-hclock>${n.getHours()}시 ${n.getMinutes()}분</span>`;
-  const st = X.R.state().streak.count || 0, tg = X.R.gameOn(X.R.dayIndex() + 1), fresh = tg && !X.R.state().library[tg];
-  const w = N.w, nx = N.open + 1;
-  const tmrN = !NR_SERIAL && N.st !== 'soon' ? ['밤 9시 · 너랑', '오늘의 무료 10번 다시'] : N.st === 'soon' ? ['매일 밤 9시 · 너랑', '곧 공개돼요'] : N.st === 'first' || !w ? ['매일 밤 9시 · 너랑', `새 화 + 대화 ${DAY_FREE}번`] : [`밤 9시 · ${w.short}`, `${nx}화 「${epTitle(w, nx)}」`];
-  return `<div class="hub" id="hub" data-done="${d}">
-    <div class="hello"><div><small>${clock}</small><h1>${esc(hello)}</h1></div><span class="ring" aria-label="오늘 ${d}개 챙김">${ring}<span><b>${d}</b> / ${tot}</span></span></div>
-    ${gameCard(X, G0)}
-    ${fortCard(X, F)}
-    ${nrCard(X, N)}
+  const hello = X.isNew && !d ? '오늘은 하나만 골라도 좋아요' : d === tot ? `${name ? esc(name) + ', ' : ''}오늘 다 챙겼어요` : d ? `${name ? esc(name) + ', ' : ''}잘하고 있어요` : name ? `${esc(name)}의 오늘` : '오늘의 세 가지';
+  const sub = d === tot ? '링을 모두 닫았어요 · 내일 0시에 새로 시작돼요' : !d ? '하나만 해도 오늘의 링이 움직여요' : (d + 1) / tot > .5 && d / tot <= .5 ? '하나만 더 하면 오늘의 절반을 넘어요' : `${tot - d}개 남았어요 · 다 닫으면 오늘 완성`;
+  const c = F.f && F.m.CHARS[F.f.ch];
+  const lg = [
+    ['g', '게임', G0, G0.st === 'none' ? '곧 열려요' : G0.done ? `${G0.g.title} · 오늘 ${G0.n}판` : `${G0.g.title} 한 판`],
+    ['f', '점방', F, F.st === 'none' ? '생년월일만 넣으면 무료' : F.done ? (F.f ? `오늘 운세 ${F.f.total}점 · 봤어요` : '오늘 운세 봤어요') : `${c ? c.name + '의 ' : ''}오늘 운세 열기`],
+    ['n', '너랑', N, N.st === 'soon' ? '곧 공개돼요' : N.st === 'first' || !N.w ? '첫 이야기 고르기' : N.done ? `${N.w.ch.short}${josa(N.w.ch.short, '와', '과')} 오늘 이어 갔어요` : `${N.w.ch.short}${josa(N.w.ch.short, '와', '과')} 한 장면 이어 가기`],
+  ].map(([k, t, x, s]) => `<div class="u-lg ${k}${x.done ? ' d' : ''}"><i></i><div><b>${t} <span class="u-num">${x.done ? 1 : 0}/1</span></b><small>${esc(s)}</small></div></div>`).join('');
+  const v3 = [G0.done ? 1 : 0, F.done ? 1 : 0, N.done ? 1 : 0];
+  /* 다음 할 일 (사업 B4): 안 닫힌 링 순서(게임 · 점방 · 너랑) → 무료를 다 쓴 너랑 → 다 한 것은 점선 한 줄로 */
+  const cards = [[G0, gameCard(X, G0)], [F, fortCard(X, F)], [N, nrCard(X, N)]];
+  const nrOut = !NR_SERIAL && N.left && N.left.free === 0 && !(N.left.ad > 0) && N.st !== 'first' && N.st !== 'pick' && N.st !== 'soon';
+  const todo = [...cards.filter(([x]) => !x.done && !(x === N && nrOut)), ...cards.filter(([x]) => x === N && nrOut), ...cards.filter(([x]) => x.done && !(x === N && nrOut))].map(([, h]) => h).join('');
+  const tg = X.R.gameOn(X.R.dayIndex() + 1), fresh = tg && !X.R.state().library[tg];
+  const tmrN = N.st === 'soon' ? ['너랑 · 곧 공개돼요', '매일 밤 9시'] : NR_SERIAL && N.w && N.st !== 'first' ? [`너랑 · ${N.open + 1}화`, `밤 9시 · ${N.w.short}`] : [`너랑 무료 ${(NR.home && NR.home.price && NR.home.price.freeDay) || 10}번 다시`, '밤 9시'];
+  return `<div class="u-hub" id="hub" data-done="${d}">
+    <div class="u-ca">
+    <section class="u-card u-sum" data-blk="sum" aria-label="오늘 ${d}개 챙김 · ${tot}개 중">
+      <div class="u-praise"><h2 class="t-title">${hello}</h2><p class="t-sub">${sub}</p></div>
+      <div class="u-sumb">${rings(148, 16, 3, v3)}<div class="u-lgs">${lg}</div></div>
+    </section>
+    ${streakCard(X)}
+    </div><div class="u-cb2">
+    <div class="u-sh"><h3 class="t-title">다음 할 일</h3><span class="t-sub">안 한 것부터</span></div>
+    ${todo}
     ${N.st === 'soon' || N.st === 'first' ? '' : lunchStrip(N)}
-    <div class="hsec"><h3>내일도 여기서</h3><span>${st >= 7 ? `🔥 ${st}일 연속` : st ? `🔥 ${st}일 연속 · 7일째 선물` : '오늘 하나 하면 🔥 1일째'}</span></div>
-    <div class="tmr">${tg ? `<div data-hub="tmr_game" data-hst="${fresh ? 'new' : 'ret'}" data-hgo="games" role="button" tabindex="0"><small>내일 0시 · 원어데이</small><b>${fresh ? '🆕 처음 만나는 게임' : '↺ 다시 만나는 게임'}</b><span data-cd>--:--:--</span></div>` : `<div data-hub="tmr_fort" data-hst="tmr" role="button" tabindex="0"><small>내일 0시 · 점방</small><b>내일의 신점</b><span data-cd>--:--:--</span></div>`}<div data-hub="tmr_nr" data-hst="${N.st}" data-nr="" role="button" tabindex="0"><small>${esc(tmrN[0])}</small><b>${esc(tmrN[1])}</b><span data-cd9>${toNine()}</span></div></div>
+    </div><div class="u-cc">
+    <div class="u-sh"><h3 class="t-title">이번 주</h3><button class="u-lnk" type="button" data-tab-go="box">기록 보기</button></div>
+    <section class="u-card u-weekr" data-blk="week">${week(X, v3)}</section>
+    <div class="u-sh"><h3 class="t-title">내일도 여기서</h3></div>
+    <section class="u-card u-tmr">
+      ${tg ? `<div class="u-row u-press" data-hub="tmr_game" data-hst="${fresh ? 'new' : 'ret'}" data-hgo="games" ${KB}><i class="u-ti g">${ic('sun')}</i><div class="u-lt"><b>${fresh ? '처음 만나는 게임' : '다시 만나는 게임'}</b><span>내일 0시 · 링이 새로 시작돼요</span></div><span class="u-cd u-num" data-cd>--:--:--</span></div>`
+    : `<div class="u-row u-press" data-hub="tmr_fort" data-hst="tmr" ${KB}><i class="u-ti f">${ic('moon')}</i><div class="u-lt"><b>내일의 신점</b><span>내일 0시 · 점방</span></div><span class="u-cd u-num" data-cd>--:--:--</span></div>`}
+      <div class="u-row u-press" data-hub="tmr_nr" data-hst="${N.st}" data-nr="" ${KB}><i class="u-ti n">${ic('chat')}</i><div class="u-lt"><b>${esc(tmrN[0])}</b><span>${esc(tmrN[1])}</span></div><span class="u-cd u-num" data-cd9>${toNine()}</span></div>
+    </section></div>
   </div>`;
 }
 
@@ -164,8 +241,9 @@ async function post(body) {
 }
 export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
+  attLoad(redraw);
   if (X.NR_OFF) return;
-  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.64'), import('./neorang/works2.js?v=0.99.64').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.65'), import('./neorang/works2.js?v=0.99.65').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || (NR_SERIAL && now() >= NR.home.next9))) {

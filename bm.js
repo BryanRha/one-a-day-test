@@ -1,7 +1,7 @@
 // 게임 안 BM 규칙: 실험 그룹 · 광고 하루 한도 · 전면 광고 조건 (team/dev/tasks/261027-ingame-bm/summary.md)
 //   A = 지금 그대로(대조) · B = 보상형 광고 + 골드 · C = B + 약한 전면 광고
 //   소장자: 전면 없음 · 보상형 혜택은 광고 없이 바로 (하루 횟수는 같음)
-import { PROD, BM_OFF } from './rules.js?v=0.99.64';
+import { PROD, BM_OFF } from './rules.js?v=0.99.65';
 const KEY = 'oad_bm';
 /* 실서버: 기기 번호로 정한 무작위 그룹 그대로 고정 (설정의 '테스트:' 바꾸기 버튼 없음 · 테스트에서 바꿔 둔 값도 무시) · 실서버 BM 을 끈 때(rules.js PROD_BM_OFF)만 A 고정 */
 export const LIMIT = { rewardGame: 5, rewardApp: 15, interGame: 4, interApp: 8, interEvery: 3, interGapMs: 3 * 60e3, interFromPlay: 3, rewardBy: { bagel: 10, gamsung: 10 } };
@@ -36,6 +36,9 @@ const gs = (s, id) => s.g[id] || (s.g[id] = { r: 0, i: 0, plays: 0, lastI: 0 });
 
 export const rewardLeft = id => { const s = st(), g = gs(s, id); return Math.max(0, Math.min(rewardCap(id) - g.r, LIMIT.rewardApp - s.r)); };
 export function useReward(id) { const s = st(), g = gs(s, id); g.r++; s.r++; save(s); }
+/* 앱 자리(게임 상세 '광고 보고 오늘 하루' · 도장 보충): 앱 전체 하루 한도(rewardApp 15)만 셈 — 상세 광고 줄 '오늘 N번 남음'과 같은 숫자 (2026-11-26 사업 A3) */
+export const appLeft = () => Math.max(0, LIMIT.rewardApp - st().r);
+export function useApp() { const s = st(), g = gs(s, 'app'); g.r++; s.r++; save(s); }
 export function countPlay(id) { const s = st(); gs(s, id).plays++; save(s); }
 // 전면 광고를 지금 보여도 되나: C 그룹 · 비소장 · 처음 쓴 날이 아님 · 그 게임 3번째 판부터 3판에 1번 · 3분 간격 · 하루 한도
 export function interOk(id, owned) {

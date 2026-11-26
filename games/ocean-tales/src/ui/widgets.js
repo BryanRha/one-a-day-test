@@ -1,8 +1,8 @@
 // 공용 UI 위젯: 버튼 · 아이콘 버튼 · 팝업 · 토스트
-import { W, H, TXT, FONT, INK } from '../config.js?v=0.99.64';
-import { audio } from '../audio.js?v=0.99.64';
-import { pushBack } from '../oad.js?v=0.99.64';
-import { load, save } from '../save.js?v=0.99.64';
+import { W, H, TXT, FONT, INK } from '../config.js?v=0.99.65';
+import { audio } from '../audio.js?v=0.99.65';
+import { pushBack } from '../oad.js?v=0.99.65';
+import { load, save } from '../save.js?v=0.99.65';
 
 // 9-slice 버튼 (btn_primary / btn_secondary) + 글자
 export function button(scene, x, y, label, onClick, { kind = 'primary', width = 480, height = 150, size = 56 } = {}) {

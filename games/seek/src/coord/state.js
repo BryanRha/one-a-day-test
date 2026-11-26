@@ -1,8 +1,8 @@
 // 오늘의 코디 저장 · 판정 (d.coord)
-import { save } from '../save.js?v=0.99.64';
-import { cafeData, level, epDone, today } from '../cafe/state.js?v=0.99.64';
-import { OUTFITS, ACCS, THEMES, JUDGES } from './data.js?v=0.99.64';
-import { oadOn, owner, outfitBought, price } from '../bm.js?v=0.99.64';
+import { save } from '../save.js?v=0.99.65';
+import { cafeData, level, epDone, today } from '../cafe/state.js?v=0.99.65';
+import { OUTFITS, ACCS, THEMES, JUDGES } from './data.js?v=0.99.65';
+import { oadOn, owner, outfitBought, price } from '../bm.js?v=0.99.65';
 
 export function coordData() {
   const d = cafeData();

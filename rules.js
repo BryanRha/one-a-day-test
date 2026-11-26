@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.64';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.65';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -89,14 +89,23 @@ export function unlockByAd(id) { const s = state(); s.unlocks[id] = keyOf(now())
 // 🔥 연속 출석: 그날 원어데이에 들어오면 인정 (게임 안 해도 · 2026-10-28 대표 결정)
 //   하루만 놓쳤으면 그날 안에 광고 1회로 도장 보충 가능 (streak.fill = 놓친 날 · prev = 놓치기 전 연속) — 골드로는 못 삼
 const dayBefore = (d, n) => { const x = new Date(d); x.setDate(x.getDate() - n); return keyOf(x); };
+//   쉬는 날 (2026-11-26 사업 A2 · 시안 3 피트니스): 한 주(월~일)에 한 번은 하루를 놓쳐도 연속이 이어짐 — 이미 쓴 주에 놓치면 예전처럼 광고 보충(fill)
+//   하루 열기권(state.tickets): 출석판(서버 story act 'att' · 대표 11-26)이 주는 소비성 보상 — 잠긴 게임 하나를 그날 엶 · 이 기기에만
+export const weekOf = d => { const x = new Date(d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return keyOf(x); };
 export function checkIn() {
   const s = state(), d = now(), today = keyOf(d);
   if (s.streak.last === today) return s.streak;
   const prev = s.streak.count || 0, last = s.streak.last;
   if (last === dayBefore(d, 1)) { s.streak.count = prev + 1; delete s.streak.fill; }
+  else if (last === dayBefore(d, 2) && prev > 0 && s.streak.rest !== weekOf(dayBefore(d, 1))) { s.streak.count = prev + 1; s.streak.rest = weekOf(dayBefore(d, 1)); s.streak.rested = dayBefore(d, 1); delete s.streak.fill; }
   else { s.streak.count = 1; if (last === dayBefore(d, 2) && prev > 0) { s.streak.fill = dayBefore(d, 1); s.streak.prev = prev; } else delete s.streak.fill; }
   s.streak.last = today; save(); return s.streak;
 }
+/* 이번 주 쉬는 날이 남았나 · 하루 열기 이용권 */
+export const restLeft = () => state().streak.rest !== weekOf(now());
+export const tickets = () => state().tickets || 0;
+export function addTickets(n) { const s = state(); s.tickets = Math.max(0, Math.min(99, (s.tickets || 0) + (Number(n) | 0))); save(); return s.tickets; }
+export function useTicket(id) { const s = state(); if (!(s.tickets > 0) || !GAMES[id]) return false; s.tickets--; s.unlocks[id] = keyOf(now()); save(); return true; }
 /* 오늘 보충할 수 있는 놓친 날 (없으면 null) */
 export const fillable = () => { if (BM_OFF) return null; /* 실서버 BM 을 끈 때(PROD_BM_OFF)만: 광고가 없으니 놓친 날 도장 광고 보충 없음 */ const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
 export function fillByAd() {

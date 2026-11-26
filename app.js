@@ -1,23 +1,24 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.64';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.64';
-import { PLANNED, TEASE, PICK } from './catalog.js?v=0.99.64';
-import * as R from './rules.js?v=0.99.64';
-import * as I from './install.js?v=0.99.64';
-import * as T from './track.js?v=0.99.64';
-import * as P from './pay.js?v=0.99.64';
-import * as A from './account.js?v=0.99.64';
-import * as C from './cloud.js?v=0.99.64';
-import * as BM from './bm.js?v=0.99.64';
-import * as HUB from './hub.js?v=0.99.64';
-import * as O from './operator.js?v=0.99.64';
+import * as OS from './onestore.js?v=0.99.65';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.65';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.65';
+import * as R from './rules.js?v=0.99.65';
+import * as I from './install.js?v=0.99.65';
+import * as T from './track.js?v=0.99.65';
+import * as P from './pay.js?v=0.99.65';
+import * as A from './account.js?v=0.99.65';
+import * as C from './cloud.js?v=0.99.65';
+import * as BM from './bm.js?v=0.99.65';
+import * as HUB from './hub.js?v=0.99.65';
+import * as O from './operator.js?v=0.99.65';
+import { ic, coin, ring } from './ui.js?v=0.99.65';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.64').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.65').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.64'), import('./fortune/types.js?v=0.99.64'), import('./fortune/chat.js?v=0.99.64'), import('./fortune/oneword-ui.js?v=0.99.64')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
-const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.65'), import('./fortune/types.js?v=0.99.65'), import('./fortune/chat.js?v=0.99.65'), import('./fortune/oneword-ui.js?v=0.99.65')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
 const owOpen = (from, pair = null) => ex().then(E => E.ow.open({ ...XC(), onClose: () => { const el = $('.owentry'); if (el && tab === 'fortune') el.outerHTML = E.ow.entry(XC(), owF); } }, from, pair)).catch(er => { console.error(er); toast('잠시 뒤 다시 열어 주세요'); });
@@ -26,7 +27,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.64';
+const VERSION = '0.99.65';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -41,7 +42,6 @@ const G = id => R.GAMES[id];
 /* PC 판별: 마우스(정밀 포인터)이고 폰 · 앱 속 브라우저가 아님 (화면 배치 · 설치 문구 · 게임 창 높이에 씀) */
 const isPC = () => !I.env.inApp && !I.env.ios && !I.env.android && (matchMedia('(pointer:fine)').matches || innerWidth >= 1200);
 const KB = 'tabindex="0" role="button"';   /* div 로 만든 눌리는 것: Tab 으로 가고 Enter · Space 로 누름 */
-const STATE_BADGE = { today: ['today', '오늘의 게임'], free: ['open', '자유 플레이'], owned: ['open', '소장'], unlocked: ['open', '오늘 열림'], locked: ['lock', '🔒 잠김'] };
 
 /* 옛 메인 A/B 실험 주소 ?home=a|b 는 지움 (2026-11-04 오늘 허브로 바로 전환 · 실험 끝) */
 { const u = new URL(location.href); if (u.searchParams.has('home')) { u.searchParams.delete('home'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } }
@@ -97,7 +97,7 @@ function go(t, via, seg) {
   if (t !== 'today') R.checkIn();   /* 🔥 출석은 어느 탭으로 들어와도 (오늘 탭은 그리면서 함) */
   view.innerHTML = RENDER[t]();
   view.firstElementChild?.classList.add('fadein');
-  window.scrollTo(0, 0);
+  window.scrollTo(0, 0); onScroll();
   setHash(); tabDot();
   if (t === 'neorang') nrSetup();
   if (via === 'oneword') { hpush({ nrw: 1 }); watchTab(); }   /* 한 단어에서 너랑으로: 그 위에 한 칸 → 너랑에서 뒤로가기 = 한 단어(재하 미리보기)로 */
@@ -130,118 +130,52 @@ function tabDot() { let seen = false; try { seen = localStorage.getItem('oad_nr_
   let news = false; if (seen && tab !== 'neorang' && !R.NR_OFF) try { news = HUB.nrDot(hubX()); } catch { /* */ }
   const b = tabsEl.querySelector('[data-tab="neorang"]'); if (b) b.classList.toggle('dot', !seen || news); }
 
-const GEAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 4.7v-2.4l-2.4-.6-.6-1.5 1.3-2.1-1.7-1.7-2.1 1.3-1.5-.6L13.4 3h-2.4l-.6 2.4-1.5.6-2.1-1.3-1.7 1.7 1.3 2.1-.6 1.5L3 10.6v2.4l2.4.6.6 1.5-1.3 2.1 1.7 1.7 2.1-1.3 1.5.6.6 2.4h2.4l.6-2.4 1.5-.6 2.1 1.3 1.7-1.7-1.3-2.1.6-1.5z"/></svg>';
-const gearBtn = () => `<button class="gear" data-settings aria-label="설정">${GEAR}</button>`;
-const goldChip = () => A.current() ? `<button class="chip goldchip" data-shop>🪙 ${gnum(goldOf())}</button>` : '';
+/* 머리줄 오른쪽 (2026-11-26 시안 3): 골드 알약(로그인했을 때) · 내 정보(= 설정 시트 · 계정이 맨 위) · 예전 톱니는 사람 아이콘으로 */
+const gearBtn = () => `<button class="u-avatar u-press" data-settings aria-label="내 정보 · 설정">${ic('person')}</button>`;
+const goldChip = () => A.current() ? `<button class="u-gp u-press goldchip" data-shop aria-label="내 골드 ${gnum(goldOf())}">${coin(16)}<b class="u-num">${gnum(goldOf())}</b></button>` : '';
 /* 머리줄: 게임 탭 = 로고 · 연속 · 톱니(시안 01) · 다른 탭 = 제목 · 골드 · 톱니(시안 02 · 04) — 설정은 톱니 → 시트 */
-function header(title) {
-  if (title) return `<div class="top tt"><h1 class="ttl">${title}</h1><span class="tchips">${goldChip()}${gearBtn()}</span></div>`;
-  const s = R.state();
-  const streak = s.streak.count && (s.streak.last === R.keyOf(R.now()) || isYesterday(s.streak.last)) ? s.streak.count : 0;
-  return `<div class="top"><div class="brand" data-home role="link" tabindex="0" aria-label="원어데이 메인으로">🌙 <b>One a Day</b></div><span class="tchips"><span class="chip hot">${streak ? `🔥 ${streak}일 연속` : '✨ 오늘 시작!'}</span>${goldChip()}${gearBtn()}</span></div>`;   /* 골드는 폰에서 숨김(시안) · PC 넓은 창 위쪽 메뉴에서만 (app.css) */
+/* 2026-11-26 시안 3: 큰 제목(위에 작은 설명) + 오른쪽 골드 · 내 정보 → 스크롤하면 위에 작은 머리줄(.u-navbar · body.scrolled) */
+function header(title, cap = '') {
+  return `<div class="u-navbar" aria-hidden="true">${title}</div><header class="u-large top"><div><div class="t-cap">${cap}</div><h1 class="t-large">${title}</h1></div><span class="tchips u-hr">${goldChip()}${gearBtn()}</span></header>`;
 }
-function isYesterday(k) { const y = R.now(); y.setDate(y.getDate() - 1); return k === R.keyOf(y); }
+/* 큰 제목이 접히는 때: 44px 넘게 내리면 (오늘 · 보관함) */
+const onScroll = () => document.body.classList.toggle('scrolled', (tab === 'today' || tab === 'box') && window.scrollY > 44);
+addEventListener('scroll', onScroll, { passive: true });
+/* 누름 반응: 눌리면 살짝 작아지고 떼면 스프링으로 (.u-press · CSS) · ?still=1 = 움직임 끔(화면 비교 캡처용) */
+document.addEventListener('pointerdown', e => { const t = e.target.closest && e.target.closest('.u-press'); if (t) t.classList.add('down'); }, { passive: true });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(k => document.addEventListener(k, () => document.querySelectorAll('.u-press.down').forEach(x => x.classList.remove('down')), true));
+if (new URLSearchParams(location.search).has('still')) document.documentElement.classList.add('still');
 
-/* 내일의 게임 예고 (2026-10-28 대표): 흐린 표지 + 장르 · 시간 + 한 줄 떡밥 + 남은 시간 + 홈 화면 추가 · 처음 만나는 게임이면 '처음 만나는 게임' */
-function tomorrowBox() {
-  const tid = R.gameOn(R.dayIndex() + 1), t = tid && G(tid); if (!t) return `<div class="row" data-blk="tmrw"><div class="box"><div class="k">다음 게임 공개까지</div><div class="v" id="cd">--:--:--</div></div></div>`;
-  const fresh = !R.state().library[tid], st = R.state().streak, next = (st.last === R.keyOf(R.now()) ? st.count : 0) + 1;
-  return `<div class="tmrw" data-blk="tmrw"><div class="tmrwbg" style="background-image:url('${webp(t.cover, 600)}')"></div><div class="tmrwin">
-      <div class="k">${fresh ? '🆕 내일 처음 만나는 게임' : '내일의 게임'}</div>
-      <div class="tmrwq">${TEASE[tid] || '두근두근…'}</div>
-      <div class="tmrwm"><span class="chip">🎮 ${t.genre}</span><span class="chip">⏱ ${t.time}</span></div>
-      <div class="tmrwf"><span>⏰ <b id="cd">--:--:--</b> 뒤 공개 · 🔥 ${next}일 연속</span>${I.installed() ? '' : `<button data-install data-where="tmrw">${isPC() ? '설치해 두기' : '홈 화면에 추가'}</button>`}</div>
-    </div></div>`;
-}
-// ── 오늘: 위 = 오늘 허브(hub.js · 시안 lab/home-hub/b 4칸 안) · 아래 = 이번 주 게임 (2026-10-28 '이번 주 달력 허브' 그대로 옮김 · 운세 띠는 허브 점방 카드로) ──
-//   이번 주 7일 달력 → 오늘의 게임(▶) → 내일의 게임 → 만난 게임 → 진열장
-//   PC 넓은 화면: 허브 카드 세 장 한 줄 · 아래 달력 한 줄 · 왼쪽 오늘의 게임 · 오른쪽 내일/만난 게임 · 아래 진열장 (app.css .hb)
-const WK = ['월', '화', '수', '목', '금', '토', '일'];
-const hubX = () => ({ R, G, webp, fmtDate, PROD: R.PROD, NR_OFF: R.NR_OFF, FT: () => FT, ft, bought: boughtFn, isNew: homeSt() === 'new' && !(JSON.parse(localStorage.getItem('nr_v2') || localStorage.getItem('nr_v1') || '{}') || {}).onboarded });
+// ── 오늘 (2026-11-26 대표 "3 피트니스" · 시안 lab/ui-apple/3): 큰 제목 '오늘' → 오늘 허브(hub.js — 링 · 연속 기록 · 다음 할 일 · 이번 주 · 내일) → 설치 띠 → 게임 진열장
+//   예전 '이번 주 게임'(달력 · 오늘의 게임 큰 카드 · 내일 예고 · 만난 게임 줄)은 허브의 다음 할 일 · 이번 주 링 · 내일도 여기서 · 보관함 기록으로 옮김 — 진열장(잠긴 게임 → 상세)은 그대로
+const hubX = () => ({ R, G, webp, fmtDate, PROD: R.PROD, NR_OFF: R.NR_OFF, FT: () => FT, ft, bought: boughtFn, isNew: homeSt() === 'new' && !(JSON.parse(localStorage.getItem('nr_v2') || localStorage.getItem('nr_v1') || '{}') || {}).onboarded,
+  gold: A.current() ? goldOf() : null, first: !!(A.current() && A.current().first) || !A.current(), nrAd: !R.BM_OFF && (PV.store() ? PV.canReward('neorang') : !R.PROD), fill: !!(R.fillable() && PV.canReward()) });
 /* 늦게 온 값(운세 엔진 · 너랑 작품 · 서버 home)으로 허브 덩어리만 다시 그림 — 스크롤 · 아래 게임 칸은 그대로 */
 let hubLast = '';
-const hubRedraw = () => { const el = $('#hub'); if (!el || tab !== 'today') return; let h = ''; try { h = HUB.html(hubX()); } catch (er) { console.error(er); return; } if (h === hubLast) return; hubLast = h; const x = document.createElement('div'); x.innerHTML = h; el.replaceWith(x.firstElementChild); tick(); tabDot(); hubPick(); };
-const hubHTML = () => { try { return (hubLast = HUB.html(hubX())); } catch (er) { console.error(er); return '<div class="hub" id="hub"></div>'; } };
+const hubRedraw = () => { const el = $('#hub'); if (!el || tab !== 'today') return; let h = ''; try { h = HUB.html(hubX()); } catch (er) { console.error(er); return; } if (h === hubLast) return; hubLast = h; const x = document.createElement('div'); x.innerHTML = h; el.replaceWith(x.firstElementChild); tick(); tabDot(); };
+const hubHTML = () => { try { return (hubLast = HUB.html(hubX())); } catch (er) { console.error(er); return '<div class="u-hub" id="hub"></div>'; } };
 const hubLoad = () => { try { HUB.load(hubX(), hubRedraw); } catch (er) { console.error(er); } };
-/* 그날 점쟁이의 오늘의 게임 한 줄 (운세 엔진이 있을 때) */
-function hubPick() { let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ } if (me && FT) fortunePick(FT.fortune(me, R.now()), FT); }
 function renderToday() {
-  R.checkIn();   /* 🔥 들어오기만 해도 출석 */
-  const id = R.todayId(), g = id && G(id), s = R.state(), lib = id && s.library[id];
-  const playedToday = lib && lib.last === R.keyOf(R.now()), n = R.now();
-  const fill = R.fillable() && PV.canReward() ? `<div class="stampfill" data-stampfill data-blk="stamp" ${KB}>👣 어제 도장을 놓쳤어요 · 광고 1번 보고 🔥 연속 이어 가기</div>` : '';
-  const me = (() => { try { return !!localStorage.getItem('oad_fortune_me'); } catch { return false; } })();
-  if (me && FT) setTimeout(hubPick, 0);
-  const games = !g ? '' : `<section class="hgames" id="hgames" data-blk="games">
-    <div class="wkhead"><h2>이번 주 게임</h2><span>다음 게임까지 <b data-cd>--:--:--</b></span></div>
-    ${weekStrip()}${fill}
-    <div class="hbgrid"><div class="hbmain">
-      <div class="tgame"><div class="hero hbhero" data-blk="game">
-        <div class="cover">${img(g.cover, 0, `decoding="async" loading="lazy" class="cv"`)}<div class="ribbon">${n.getMonth() + 1}월 ${n.getDate()}일 · ${R.dayIndex() + 1}번째 게임</div>${g.logo ? '' : `<h2>${g.title}</h2>`}</div>
-        <div class="body">
-          <div class="fpick" id="fpick">${me ? '' : g.tagline}</div>
-          <div class="meta"><span class="chip">🎮 ${g.genre}</span><span class="chip">⏱ ${g.time}</span><span class="chip">👥 모두 같은 게임</span>${R.ratingBadge(id)}</div>
-          <button class="btn" data-play="${id}" data-from="home_hero">▶ 오늘의 게임 무료 플레이</button>
-          ${playedToday ? `<div class="played">✓ 오늘 ${lib.td === R.keyOf(n) ? lib.tn || 1 : lib.plays}판 플레이 · 보관함에 저장됨</div>` : ''}
-        </div></div></div>
-    </div><div class="hbside">
-      ${tomorrowBox()}
-      ${collLine()}
-    </div></div>
+  R.checkIn();   /* 들어오기만 해도 출석 */
+  const games = R.DAILY.length ? `<section class="u-games" id="hgames" data-blk="games">
+    <div class="u-sh"><h3 class="t-title">게임 진열장</h3><span class="t-sub">${R.DAILY.length}개 · ${R.RULES.openAll ? '모두 무료' : '돌아오는 날엔 무료'}</span></div>
     ${shelf()}
-    <div class="hbfoot" data-blk="howto"><span>매일 0시, 모두에게 <b>같은 게임 하나</b>가 열려요</span><span class="more" data-intro ${KB}>이용 방법 ›</span></div>
-  </section>`;
-  return `<div class="today hb">
-    ${header()}
-    ${hubHTML()}
-    ${installBanner()}
-    ${games}
-  </div>`;
+    <p class="u-foot" data-blk="howto">매일 0시, 모두에게 같은 게임 하나가 열려요<br><button class="u-lnk" type="button" data-intro>이용 방법 보기</button></p>
+  </section>` : '';
+  return `<div class="today u-today">${header('오늘', fmtDate(R.now()))}<div class="u-page">${hubHTML()}${installBanner()}${games}</div></div>`;
 }
-/* 이번 주(월~일) 달력: 지난 날 = 한 게임 ✓ / 광고로(잠김) / 열림 · 오늘 = 금테 · 내일 = NEW(처음) 또는 ↺ · 그 뒤 = ? (제목 비공개) */
-function weekStrip() {
-  const n = R.now(), di = R.dayIndex(), dow = (n.getDay() + 6) % 7, s = R.state();
-  const cells = WK.map((w, k) => {
-    const off = k - dow, idx = di + off, d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + off);
-    const gid = idx >= 0 ? R.gameOn(idx) : null, lab = `<div class="lab"><b>${off === 0 ? '오늘' : w}</b>${d.getDate()}일</div>`;
-    if (!gid) return `<div class="wd none"><div class="th"></div>${lab}</div>`;
-    const g = G(gid), pic = `<picture><source media="(pointer: fine) and (min-width: 960px)" srcset="${webp(g.cover, 600)}">${img(g.icon, 0, 'loading="lazy"')}</picture>`;
-    if (off < 0) {
-      const done = s.history[R.keyOf(d)] === gid, a = R.access(gid);
-      const mark = done ? '<span class="ok" aria-label="했어요">✓</span>' : a === 'locked' ? '<span class="adl">📺<em> 광고로</em></span>' : '<span class="adl op">열림</span>';
-      return `<div class="wd past" data-open="${gid}" ${KB} aria-label="${w}요일 ${g.title}"><div class="th">${pic}${mark}</div>${lab}</div>`;
-    }
-    if (off === 0) return `<div class="wd tdy" data-play="${gid}" data-from="home_week" ${KB} aria-label="오늘 ${g.title}"><div class="th">${pic}</div>${lab}</div>`;
-    const fresh = !s.library[gid] && !R.isReleased(gid);
-    return `<div class="wd fut" data-wk="${gid}" data-off="${off}" ${KB} aria-label="${w}요일 게임 · 공개 전"><div class="th">${img(g.icon, 0, 'loading="lazy" class="blur"')}<span class="q">?</span></div>${off === 1 ? `<span class="new">${fresh ? 'NEW' : '↺'}</span>` : ''}${lab}</div>`;
-  });
-  return `<div class="week" data-blk="week">${cells.join('')}</div>`;
-}
-/* 12게임 진열장: 오늘 → 내일 → 다시 돌아오는 순서 · 잠김 = 📺 광고로 열기 + 'D-n 무료' · 아직 공개 전 = ? (목록에서 내린 게임은 DAILY 에 없어 자동 제외) */
+/* 게임 진열장: 오늘 → 내일 → 다시 돌아오는 순서 · 잠김 = 'D-n 무료'(누르면 상세 · 광고 · 골드) · 아직 공개 전 = ? (목록에서 내린 게임은 DAILY 에 없어 자동 제외) */
 function shelf() {
-  const n = R.DAILY.length, di = R.dayIndex(), s = R.state(), ids = [];
+  const n = R.DAILY.length, di = R.dayIndex(), ids = [];
   for (let k = 0; k < n; k++) ids.push(R.gameOn(di + k));
   const tiles = ids.map((gid, k) => {
     const g = G(gid), a = R.access(gid);
-    if (k > 0 && !R.isReleased(gid)) return `<div class="gt unk" data-wk="${gid}" data-off="${k}" ${KB}><div class="im"><span class="q">?</span><span class="st">${k === 1 ? '🆕 내일 공개' : `D-${k} 공개`}</span></div><div class="t">두근두근…</div><div class="s">${g.genre}${k === 1 ? ' · 내일 0시' : ''}</div></div>`;
-    const badge = { today: '<span class="st today">오늘 무료</span>', owned: '<span class="st open">소장 ✓</span>', unlocked: '<span class="st open">오늘 열림</span>', free: '<span class="st open">자유 플레이</span>' }[a] || '<span class="st ad">📺 광고로 열기</span>';
-    return `<div class="gt${a === 'locked' ? ' lock' : ''}" data-open="${gid}" ${KB} aria-label="${g.title}"><div class="im">${img(g.icon, 0, 'loading="lazy"')}${badge}${a === 'locked' ? `<span class="dd">D-${k} 무료</span>` : ''}${R.isBrand(gid) ? '<span class="collab">콜라보</span>' : ''}</div><div class="t">${g.title}</div><div class="s">${s.library[gid] ? '✓ 만난 게임' : g.genre}</div></div>`;
+    if (k > 0 && !R.isReleased(gid)) return `<div class="u-gt u-press" data-wk="${gid}" data-off="${k}" ${KB} aria-label="${k === 1 ? '내일' : k + '일 뒤'} 공개 · ${g.genre}"><div class="im">${img(g.icon, 0, 'loading="lazy" class="blur"')}<span class="q">?</span></div><b>${k === 1 ? '내일 공개' : `D-${k} 공개`}</b><small>${g.genre}</small></div>`;
+    const lab = { today: ['today', '오늘 무료'], owned: ['open', '소장'], unlocked: ['open', '오늘 열림'], free: ['open', '자유 플레이'] }[a] || ['ad', `D-${k} 무료`];
+    return `<div class="u-gt u-press" data-open="${gid}" ${KB} aria-label="${g.title} · ${lab[1]}"><div class="im">${img(g.icon, 0, 'loading="lazy"')}${a === 'owned' ? `<i class="u-own">${ic('cloud')}</i>` : ''}${a === 'today' ? '<i class="u-tdm"></i>' : ''}${R.isBrand(gid) ? '<span class="u-collab">콜라보</span>' : ''}</div><b>${g.title}</b><small class="${lab[0]}">${lab[1]}</small></div>`;
   });
-  return `<div class="section"><h3>게임 진열장</h3><span class="more">${n}개 · ${R.RULES.openAll ? '모두 무료' : '돌아오는 날엔 무료'}</span></div><div class="shelf" data-blk="shelf">${tiles.join('')}</div>`;
+  return `<section class="u-card u-shelf" data-blk="shelf">${tiles.join('')}</section>`;
 }
-/* 만난 게임 도장: 공개된 게임은 아이콘 · 만난 것만 색 · 오늘 것은 점선 */
-function collLine() {
-  const lib = R.state().library, tid = R.todayId(), n = R.DAILY.length, met = R.DAILY.filter(id => lib[id]).length, rel = R.released();
-  return `<div class="coll" data-blk="coll" data-tab-go="collection" ${KB}><div class="ch"><b class="jua">만난 게임 ${met} / ${n}</b><span>${tid && !lib[tid] ? `오늘의 게임을 하면 ${met + 1} / ${n}` : '컬렉션 보기 ›'}</span></div>
-    <div class="dots">${R.DAILY.map(id => `<i class="${lib[id] ? 'on' : id === tid ? 'now' : ''}">${rel.includes(id) || lib[id] ? img(G(id).icon, 0, 'loading="lazy"') : ''}</i>`).join('')}</div></div>`;
-}
-/* 그날 점쟁이가 오늘의 게임을 한 줄로 (사업 안 A · catalog.js PICK) */
-function fortunePick(f, m) {
-  const el = $('#fpick'), id = R.todayId(); if (!el || !id) return;
-  const c = m.CHARS[f.ch], line = PICK[id] || G(id).tagline;
-  el.innerHTML = `<span class="who">${face(m, f.ch)}</span><span><b>${c.name}</b> “오늘은 ${f.key}의 날. ${line}”</span>`; el.classList.add('on');
-}
-
 // ── 오늘 허브 기록 (2026-11-04): hub_view(열 때 한 번 · 세 카드 상태) · hub_card{svc, state}(카드 누름) · 설치 노출 — 옛 메인 실험 기록(home_view · blk_* · home_depth · home_perf)은 끝냄 ──
 const HM = { live: false, via: '', t: 0, nth: 0 };
 const tabsH = () => { const tb = $('#tabs'); const r = tb && tb.getBoundingClientRect(); return r && r.top > innerHeight / 2 ? r.height : 0; };
@@ -267,6 +201,7 @@ let nrDeep = '', nrVia = '';   /* nrVia: 너랑에 들어온 길 (너랑 이용 
 function hubTap(el, t) {
   const svc = el.dataset.hub, st = el.dataset.hst || '';
   T.track('hub_card', { svc, state: st });
+  if (svc === 'tk') return toGames(true);   /* 하루 열기권 → 진열장(잠긴 게임을 골라 씀) */
   if (svc === 'game' || svc === 'tmr_game') { if (el.dataset.hgo) return toGames(true); if (!el.dataset.play) toGames(true); return 'play'; }
   if (svc === 'fort' || svc === 'tmr_fort') { if (t.closest('[data-paid]')) return 'paid'; FFROM = 'hub'; return go('fortune', 'tab'); }   /* tmr_fort: 게임이 아직 없는 실서버의 '내일 0시 · 점방' 칸 */
   if (svc === 'nr' || svc === 'lunch' || svc === 'tmr_nr') { if (!R.NR_OFF && el.dataset.nr) nrDeep = el.dataset.nr; nrVia = 'hub'; return go('neorang', 'tab'); }
@@ -291,34 +226,63 @@ const goldOf = () => { const m = A.current(); return (m && m.gold && m.gold.tota
 const browserName = () => I.env.ios ? '사파리' : '크롬';
 const inAppLoginNote = () => `${I.env.kakao ? '카카오톡' : '이 앱'} 안에서는 구글 로그인이 막혀 있어요 · ${browserName()}로 열어서 로그인해 주세요`;
 function needLogin(why) {
-  if (PV.store()) return openSheet(`<div class="intro"><h2>🪙 원스토어 계정을 확인하고 있어요</h2><p class="fsub">${why || '골드는 원스토어 계정에 저장돼요'} · 잠시 뒤 다시 눌러 주세요</p>
+  if (PV.store()) return openSheet(`<div class="intro"><h2>원스토어 계정을 확인하고 있어요</h2><p class="fsub">${why || '골드는 원스토어 계정에 저장돼요'} · 잠시 뒤 다시 눌러 주세요</p>
     <div class="stack"><button class="btn" data-login>다시 연결하기</button><button class="btn ghost" data-close>닫기</button></div></div>`);   /* 원스토어 안: 구글 로그인 없음 — 원스토어 playerId 세션 */
-  if (I.env.inApp) return openSheet(`<div class="intro"><h2>🪙 로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'}</p><p class="fsub">${inAppLoginNote()}</p>
+  if (I.env.inApp) return openSheet(`<div class="intro"><h2>로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'}</p><p class="fsub">${inAppLoginNote()}</p>
     <div class="stack"><button class="btn" data-ext>🌐 ${browserName()}로 열기</button><button class="btn ghost" data-copy>🔗 주소 복사하기</button><button class="btn ghost" data-close>나중에</button></div></div>`);
-  openSheet(`<div class="intro"><h2>🪙 로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'} · 폰을 바꿔도 그대로 이어져요</p>
+  openSheet(`<div class="intro"><h2>로그인이 필요해요</h2><p class="fsub">${why || '골드는 계정에 저장돼요'} · 폰을 바꿔도 그대로 이어져요</p>
     <div class="stack"><button class="btn" data-login>구글로 로그인</button><p class="fsub" style="margin:0;font-size:12px">만 14세 이상만 가입할 수 있어요.</p><button class="btn ghost" data-close>나중에</button></div></div>`);
 }
 /* 결제 동의 문구 (PG 심사 · 전자상거래법 — 2026-11-04): 결제 버튼 가까이 · 환불 정책 · 유료 안내 링크 (정책 페이지는 새 창 — 앱 화면 그대로) */
 const NEW = 'target="_blank" rel="noopener"';
 const agreeNote = (kind = 'fortune') => `<p class="paynote agree">${kind === 'gold' ? '골드는 현금으로 바꾸거나 다른 계정에 줄 수 없어요 · 유효기간 충전 골드 5년 · 보너스 골드 1년 · ' : ''}미성년자는 법정대리인 동의 후 결제해 주세요 (동의 없는 결제는 취소 가능).<br><b>주문 내용(상품 · 가격 · 환불 조건)을 확인했으며, 구매 조건 확인 및 결제 진행에 동의합니다.</b> <a href="refund/" ${NEW}>환불 정책</a> · <a href="paid/" ${NEW}>유료 서비스 안내</a> · <a href="terms/" ${NEW}>이용약관</a></p>`;
-function shop(note) {
+/* 골드 시트 (2026-11-26 시안 3 · 사업 A1): 지갑(지금 할 수 있는 것) · 첫 구매 · 묶음 6개마다 '이걸로 무엇을 할 수 있나' — 쓰임 줄은 시트를 연 곳에 맞춤
+   ctx: 'game'(게임 상세 · 하루 열기 · 소장) · 'nr'(너랑 · 기본 🪙2 · 깊은 🪙6) · 'fort'(점방 · 풀이 한 편 값 = 웹 가격 ÷ 10) · 'home'(머리줄 알약 · 세 서비스 한 줄씩)
+   need: 모자란 골드 — 그만큼 채우는 가장 작은 묶음 하나만 '이걸로 충분해요' (근거 없는 '인기' 같은 말은 쓰지 않음) · 가격은 원스토어 결제가 그대로(shown) */
+let shopCtx = { ctx: 'home', need: 0, pid: '' };
+const NRP = () => ({ basic: 2, deep: 6 });   /* 너랑 한 번 값 기본 (서버 nr_room.js NR_PRICE · 너랑 home 응답과 같은 값) */
+const fortCost = pid => { const m = FT; const p = m && m.paidOf(pid || 'reunion'); return p ? Math.round(p.price / 10) : 1490; };
+const setCost = () => Math.min(2500, setCount() * 300);
+function useLine(g, ctx, pid) {
+  if (ctx === 'nr') { const P0 = NRP(); return `기본 대화 ${gnum(Math.floor(g / P0.basic))}번 · 깊은 대화 ${gnum(Math.floor(g / P0.deep))}번`; }
+  if (ctx === 'fort') { const c = fortCost(pid), n = Math.floor(g / c), t = FT ? FT.paidOf(pid || 'reunion').title : '풀이'; return n ? `${t} ${n}편${g - n * c >= 10 ? ` + 하루 열기 ${Math.floor((g - n * c) / 10)}번` : ''}` : `입문 운세 ${Math.floor(g / 390)}편 · 하루 열기 ${Math.floor(g / 10)}번`; }
+  const sc = setCost();
+  if (sc && g >= sc && setCount() > 1) return `전체 소장 + ${gnum(g - sc)}골드 남음`;
+  const own = Math.floor(g / 300), day = Math.floor((g - own * 300) / 10);
+  return own ? `${own === 1 && day < 5 ? '게임 1개 소장' : `소장 ${own}개`}${day >= 5 ? ` + 하루 열기 ${day}번` : ''}` : `하루 열기 ${day}번`;
+}
+function wallet(g, ctx, pid) {
+  const cell = (n, u, t) => `<span><b class="u-num">${gnum(n)}</b>${u}<small>${t}</small></span>`;
+  if (ctx === 'nr') { const P0 = NRP(); return `<div class="u-can">${cell(Math.floor(g / P0.basic), '번', '기본 대화')}${cell(Math.floor(g / P0.deep), '번', '깊은 대화')}</div>`; }
+  if (ctx === 'fort') return `<div class="u-can">${cell(Math.floor(g / fortCost(pid)), '편', FT ? FT.paidOf(pid || 'reunion').title : '풀이')}${cell(Math.floor(g / 10), '번', '하루 열기')}</div>`;
+  if (ctx === 'home') return `<div class="u-can three">${cell(Math.floor(g / 10), '번', '하루 열기')}${cell(Math.floor(g / NRP().basic), '번', '너랑 대화')}${cell(Math.floor(g / fortCost('monthly')), '편', '입문 운세')}</div>`;
+  return `<div class="u-can">${cell(Math.floor(g / 10), '번', '하루 열기')}${cell(Math.floor(g / 300), '개', '게임 소장')}</div>`;
+}
+function shop(note, ctx, need, pid) {
   const m = A.current(); if (!m) return needLogin('골드를 사려면 로그인해 주세요');
-  T.track('shop_view', { first: m.first ? 1 : 0 });
+  shopCtx = { ctx: ctx || (tab === 'fortune' ? 'fort' : 'home'), need: Math.max(0, need || 0), pid: pid || '' };
+  const C0 = shopCtx, g0 = goldOf();
+  T.track('shop_view', { first: m.first ? 1 : 0, ctx: C0.ctx, need: C0.need ? 1 : 0 });
+  const head = `<div class="u-sheethead"><span style="width:32px"></span><b class="t-head">골드</b><button class="u-x u-press" data-close aria-label="닫기">${ic('x')}</button></div>`;
+  const wal = `<div class="u-card u-gw wallet"><div class="u-gwt"><span class="t-sub">내 골드</span><button class="u-lnk lnk" data-ghist>내역</button></div><div class="u-wn u-num">${coin(28)}<b>${gnum(g0)}</b></div>${wallet(g0, C0.ctx, C0.pid)}</div>`;
   if (PV.store() ? !PV.canBuy() : (R.PROD && payCfg.goldSale !== true)) {   /* 골드 충전 판매 전(서버 gold.js GOLD_SALE_PROD · 원스토어는 결제 지원 · 판매 켬) — 지갑 · 내역만 */
     T.track('shop_closed');
-    return openSheet(`<div class="intro shop"><h2>내 골드</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
-    <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
-    <p class="fsub">골드 충전은 아직 열지 않았어요. 선물 · 출석으로 받은 골드는 그대로 쓸 수 있어요${PV.store() ? '' : ', 점방의 유료 운세는 카드로 바로 결제할 수 있어요'}.</p>
-    <div class="stack">${osTestBtn()}<button class="btn" data-tab-go="fortune">점방 가기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
+    return openSheet(`<div class="intro shop">${head}${note ? `<p class="u-note">${note}</p>` : ''}${wal}
+    <p class="fsub" style="margin:16px 4px 0">골드 충전은 아직 열지 않았어요. 선물 · 출석으로 받은 골드는 그대로 쓸 수 있어요${PV.store() ? '' : ', 점방의 유료 운세는 카드로 바로 결제할 수 있어요'}.</p>
+    <div class="stack">${osTestBtn()}<button class="btn" data-tab-go="fortune">점방 가기</button></div></div>`, 'u full');
   }
-  const card = ([id, price, paid, free]) => `<button class="pack" data-pack="${id}"><span class="pc">🪙</span><b>${gnum(paid + free)}</b>${free ? `<em>+${Math.round(free / paid * 100)}% 보너스</em>` : '<em>&nbsp;</em>'}<span class="pp">${won(shown(OS.packId(id), price))}</span></button>`;
-  openSheet(`<div class="intro shop"><h2>골드 상점</h2>${note ? `<p class="fsub" style="color:var(--gold)">${note}</p>` : ''}
-    <div class="wallet"><span>내 골드</span><b>🪙 ${gnum(goldOf())}</b><button class="lnk" data-ghist>내역</button></div>
-    ${m.first ? `<button class="pack first" data-pack="first"><span class="tag">첫 구매 한 번만</span><span class="pc">🪙</span><b>200</b><em>2배 · 처음 산 사람 배지</em><span class="pp">${won(shown('oad_gold_first', 1000))}</span></button>` : ''}
-    <div class="packs">${PACKS.map(card).join('')}</div>
-    <p class="paynote">${PV.store() ? '가격은 부가세 포함이에요 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 원스토어로 결제해요 · 환불은 원스토어 환불 정책을 따라요' : '1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 결제 후 7일 안에 쓰지 않은 골드는 환불돼요'}.</p>
-    ${agreeNote('gold')}
-    <div class="stack">${osTestBtn()}<button class="btn ghost" data-close>닫기</button></div></div>`);
+  /* 모자란 만큼을 채우는 가장 작은 묶음 (첫 구매 포함) */
+  const all = [...(m.first ? [['first', 1000, 200, 0]] : []), ...PACKS];
+  const fit = C0.need ? (all.find(([, , p, f]) => g0 + p + f >= g0 + C0.need) || [])[0] : '';
+  const max = 6000;
+  const row = ([id, price, paid, free]) => `<button class="u-row u-pk pack u-press${fit === id ? ' fit' : ''}" data-pack="${id}" aria-label="${gnum(paid + free)} 골드 ${won(shown(OS.packId(id), price))}">${coin(26)}<span class="u-lt"><b class="u-num">${gnum(paid + free)} 골드${free ? ` <em>+${Math.round(free / paid * 100)}%</em>` : ''}${fit === id ? '<span class="fitag">이걸로 충분해요</span>' : ''}</b><span>${useLine(paid + free, C0.ctx, C0.pid)}</span><i class="u-mt"><i style="width:${Math.max(4, (paid + free) / max * 100)}%"></i></i></span><span class="u-pb pp u-num">${won(shown(OS.packId(id), price))}</span></button>`;
+  openSheet(`<div class="intro shop">${head}${note ? `<p class="u-note">${note}</p>` : ''}${wal}
+    ${m.first ? `<button class="u-card u-first pack first u-press${fit === 'first' ? ' fit' : ''}" data-pack="first"><span class="tag">처음 한 번만 · 두 배</span><span class="u-lt"><b class="u-num">200 골드${fit === 'first' ? '<span class="fitag" style="color:var(--u-gold)"> 이걸로 충분해요</span>' : ''}</b><span>같은 값에 두 배 · ${useLine(200, C0.ctx, C0.pid)}</span></span><span class="u-btn sm fill gold pp u-num">${won(shown('oad_gold_first', 1000))}</span></button>` : ''}
+    <div class="u-ghead">무엇을 할 수 있는지 보고 고르세요</div>
+    <div class="u-group packs">${PACKS.map(row).join('')}</div>
+    <div class="u-legal"><p class="paynote">${PV.store() ? '가격은 부가세 포함이에요 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 원스토어로 결제해요 · 환불은 원스토어 환불 정책을 따라요' : '1골드 = 10원 · 보너스 골드는 무료 골드로 먼저 쓰여요 · 결제 후 7일 안에 쓰지 않은 골드는 환불돼요'}.</p>
+    ${agreeNote('gold')}</div>
+    ${osTestBtn() ? `<div class="stack">${osTestBtn()}</div>` : ''}</div>`, 'u full');
 }
 /* ── 원스토어 결제 시험 (테스트 서버 + 원스토어 앱 안에서만): 등록 상품을 한 화면에서 하나씩 결제 → 서버 확인 · 골드 · consume
    검증요청 전에 상품마다 샌드박스 결제 1회('테스트 여부 Y')가 필요해서 (team/dev/tasks/261124-onestore/onestore_docs.md 3절)
@@ -357,7 +321,7 @@ async function buyPack(id) {
   T.track('pay_click', { product: id });
   let o; try { o = await P.orderGold(id, tk); } catch (e) { return toast(e.message); }
   if (c.mode === 'toss') { try { await P.toss(o, null, null, true); } catch { toast('결제창을 열지 못했어요'); } return; }
-  openSheet(`<div class="intro paysheet"><h2>🪙 ${o.orderName}</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
+  openSheet(`<div class="intro paysheet"><h2>${o.orderName}</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
     <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div>
     <p class="paynote">결제 후 7일 안에 쓰지 않은 골드는 환불돼요.</p>${agreeNote('gold')}
     <div class="stack"><button class="btn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" id="payCancel">취소</button></div></div>`);
@@ -394,7 +358,7 @@ function progressLine(id) {
 /* 원스토어 안: 소장 · 하루 열기 · 전체 소장을 현금으로 바로 (11-26 대표: 지우지 않음) — 원스토어 상품(서버 PRODUCTS)으로 결제 → 같은 값의 유상 골드 → 바로 그 골드로 spend
    골드 값이 같아(300 · 10 · 2,500 = 기본가격 ÷ 10) 남지 않음 · 어떤 게임인지는 원스토어 결제에 싣지 않고 이어지는 spend 에 game 으로 (실패하면 골드로 남아 골드로 다시 살 수 있음) */
 const CASH = { own: ['oad_own_game', 3000, '으로 바로 소장'], day: ['oad_day_pass', 100, '으로 오늘 하루 열기'], set: ['oad_own_set', 25000, '으로 전체 게임 소장'] };
-const cashBtn = (what, id) => (PV.store() && PV.canBuy() && !R.BM_OFF ? `<button class="btn ghost" data-cbuy="${what}"${id ? ` data-gid="${id}"` : ''}>💳 ${won(OS.paidPrice(CASH[what][0], CASH[what][1]))}${CASH[what][2]}</button>` : '');
+const cashBtn = (what, id) => (PV.store() && PV.canBuy() && !R.BM_OFF ? `<button class="btn ghost u-cashbtn" data-cbuy="${what}"${id ? ` data-gid="${id}"` : ''}>${ic('card')}${won(OS.paidPrice(CASH[what][0], CASH[what][1]))}${CASH[what][2]}</button>` : '');   /* 원스토어 현금 결제 (원화는 여기에만 — 사업 B2) */
 function cashBuy(what, id, b) {
   if (!A.current()) return needLogin('원스토어 계정을 확인한 뒤 다시 눌러 주세요');
   T.track('pay_click', { product: CASH[what][0], game: id || '', via: PV.name() });
@@ -402,8 +366,8 @@ function cashBuy(what, id, b) {
 }
 async function ownedDone(id) {
   const line = progressLine(id);
-  openSheet(`<div class="intro"><h2>🎉 ${G(id).title} 소장 완료</h2><p class="fsub" id="odmsg">${C.hasLocal(id) ? '☁ 지금까지의 기록을 계정으로 옮기는 중…' : '이제 언제든 할 수 있고, 기록은 계정에 저장돼요'}</p>
-    ${line ? `<div class="cloudcard"><b>☁ 내 계정</b><span>${line}</span></div>` : ''}
+  openSheet(`<div class="intro"><h2>${G(id).title} 소장 완료</h2><p class="fsub" id="odmsg">${C.hasLocal(id) ? '지금까지의 기록을 계정으로 옮기는 중…' : '이제 언제든 할 수 있고, 기록은 계정에 저장돼요'}</p>
+    ${line ? `<div class="cloudcard"><b>${ic('cloud')} 내 계정</b><span>${line}</span></div>` : ''}
     <div class="stack"><button class="btn" data-play="${id}">▶ 플레이</button><button class="btn ghost" data-close>닫기</button></div></div>`);
   if (!C.hasLocal(id)) return;
   const r = await C.push(id, { force: true }); const el = $('#odmsg');
@@ -413,9 +377,9 @@ async function ownedDone(id) {
 function cloudAsk(id, r) {
   const t = x => x ? new Date(x).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   const serverNewer = !r.local.at || new Date(r.server.at) > new Date(r.local.at);
-  openSheet(`<div class="intro"><h2>☁ 어느 기록으로 할까요?</h2><p class="fsub">${G(id).title} 기록이 이 기기와 계정(다른 기기)에서 따로 바뀌었어요. 고르지 않은 쪽도 계정에 하나 남아서, 게임 정보 화면에서 되돌릴 수 있어요.</p>
-    <div class="cpick"><button class="cloudcard ${serverNewer ? 'on' : ''}" data-cpick="server" data-gid="${id}"><b>☁ 계정 (다른 기기)</b><span>${r.server.sum || '저장된 기록'}</span><small>${t(r.server.at)}</small></button>
-    <button class="cloudcard ${serverNewer ? '' : 'on'}" data-cpick="local" data-gid="${id}"><b>📱 이 기기</b><span>${r.local.sum || '이 기기 기록'}</span><small>${r.local.at ? t(r.local.at) + ' 이후 바뀜' : ''}</small></button></div>
+  openSheet(`<div class="intro"><h2>어느 기록으로 할까요?</h2><p class="fsub">${G(id).title} 기록이 이 기기와 계정(다른 기기)에서 따로 바뀌었어요. 고르지 않은 쪽도 계정에 하나 남아서, 게임 정보 화면에서 되돌릴 수 있어요.</p>
+    <div class="cpick"><button class="cloudcard ${serverNewer ? 'on' : ''}" data-cpick="server" data-gid="${id}"><b>${ic('cloud')} 계정 (다른 기기)</b><span>${r.server.sum || '저장된 기록'}</span><small>${t(r.server.at)}</small></button>
+    <button class="cloudcard ${serverNewer ? '' : 'on'}" data-cpick="local" data-gid="${id}"><b>${ic('phone')} 이 기기</b><span>${r.local.sum || '이 기기 기록'}</span><small>${r.local.at ? t(r.local.at) + ' 이후 바뀜' : ''}</small></button></div>
     <div class="stack"><button class="btn ghost" data-close>취소</button></div></div>`);
 }
 async function cloudPick(id, side, b) {
@@ -433,9 +397,9 @@ function nudgeOwn(id) {
   if (n.off || n.day === today || (n[id] && Date.now() - n[id] < 7 * 864e5)) return false;
   n[id] = Date.now(); n.day = today; try { localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ }
   T.track('own_nudge', { game: id });
-  setTimeout(() => openSheet(`<div class="intro"><h2>☁ 내 기록, 이제 계정에 안전하게</h2><p class="fsub">${G(id).title}에 쌓은 기록은 지금 이 기기에 저장돼 있어요. 소장하면 계정에 저장돼 폰을 바꿔도 그대로 이어지고, 언제든 할 수 있어요.</p>
-    <div class="cloudcard"><b>📱 이 기기</b><span>${progressLine(id)}</span></div>
-    <div class="stack"><button class="btn gold" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장하기</button>${cashBtn('own', id)}<button class="btn ghost" data-close>나중에</button><button class="lnk" data-nudge-off style="margin:4px auto 0;border:0;background:none;color:var(--mute);font:13px 'Jua';text-decoration:underline">다시 보지 않기</button></div></div>`), 400);
+  setTimeout(() => openSheet(`<div class="intro"><h2>내 기록, 이제 계정에 안전하게</h2><p class="fsub">${G(id).title}에 쌓은 기록은 지금 이 기기에 저장돼 있어요. 소장하면 계정에 저장돼 폰을 바꿔도 그대로 이어지고, 언제든 할 수 있어요.</p>
+    <div class="cloudcard"><b>${ic('phone')} 이 기기</b><span>${progressLine(id)}</span></div>
+    <div class="stack"><button class="btn gold" data-gbuy="own" data-gid="${id}">${coin(18)} 300골드로 소장하기</button>${cashBtn('own', id)}<button class="btn ghost" data-close>나중에</button><button class="lnk" data-nudge-off style="margin:4px auto 0;border:0;background:none;color:var(--mute);font:13px 'Jua';text-decoration:underline">다시 보지 않기</button></div></div>`), 400);
   return true;
 }
 const SAVES_OK = id => C.hasLocal(id) || false;
@@ -447,21 +411,23 @@ async function fortuneGold(b) {
   const adult = m.isAdultFortune(id); if (adult) { if (m.isUnder19(me0)) return adultOnly(); if (!(await adultCheck(id, `🪙 ${gnum(PR.price / 10)}골드로 열기`))) return paidPage(id); }
   b.disabled = true; b.textContent = '여는 중…';
   try { const r = await A.call({ act: 'spend', what: id, me, partner: pt, adult }); P.keepReceipt(r.receipt, me, pt); T.track('gold_spend', { what: id }); A.refresh().catch(() => {}); sdClose(); toast('전체 풀이가 열렸어요'); paidPage(id); }
-  catch (e) { if (e.short) { sdClose(); const have = e.paidOnly ? (e.gold && e.gold.paid) || 0 : (e.gold && e.gold.total) || 0; return shop(`${e.paidOnly ? '충전한 ' : ''}골드가 ${gnum(e.need - have)}개 모자라요${e.paidOnly ? ' (보너스 골드는 입문 운세에만 쓸 수 있어요)' : ''} · 2만원 충전이면 ${PR.title} 한 편 + 남는 골드로 게임 소장까지`); } toast(e.message); b.disabled = false; b.textContent = label; }
+  catch (e) { if (e.short) { sdClose(); const have = e.paidOnly ? (e.gold && e.gold.paid) || 0 : (e.gold && e.gold.total) || 0; return shop(`${e.paidOnly ? '충전한 ' : ''}골드가 ${gnum(e.need - have)}개 모자라요${e.paidOnly ? ' (보너스 골드는 입문 운세에만 쓸 수 있어요)' : ''}`, 'fort', e.need - have, id); } toast(e.message); b.disabled = false; b.textContent = label; }
 }
 // 골드로 사기: 소장 · 하루 열기 · 전체 소장 (모자라면 상점으로)
 async function spendGold(what, id, b) {
   const m = A.current(); if (!m) return needLogin('골드로 사려면 로그인해 주세요');
+  const cost = what === 'day' ? 10 : what === 'own' ? 300 : setCost(), have = goldOf();
+  if (have < cost) { T.track('gold_short', { what, game: id || '' }); return shop(`${what === 'day' ? '하루 열기' : what === 'own' ? '소장' : '전체 소장'}에 ${gnum(cost)}골드가 필요해요 · ${gnum(cost - have)}골드 모자라요`, 'game', cost - have); }   /* 사업 A3: 막다른 단추 없이 그 자리에서 충전 */
   if (b) { b.disabled = true; b.dataset.t = b.textContent; b.textContent = '처리 중…'; }
   try {
     const r = await A.call({ act: 'spend', what, game: id });
     R.syncItems(r.items); T.track('gold_spend', { what, game: id || '' }); closeSheet();
-    if (what === 'set') { toast('모든 게임을 소장했어요! 🎉 기록을 계정에 옮기는 중…'); go(tab); let n = 0; for (const g of R.ORDER) if (C.hasLocal(g)) { const x = await C.push(g); if (x.ok) n++; } if (n) toast(`☁ ${n}개 게임 기록을 계정에 안전하게 옮겼어요`); return; }
+    if (what === 'set') { toast('모든 게임을 소장했어요! 기록을 계정에 옮기는 중…'); go(tab); let n = 0; for (const g of R.ORDER) if (C.hasLocal(g)) { const x = await C.push(g); if (x.ok) n++; } if (n) toast(`☁ ${n}개 게임 기록을 계정에 안전하게 옮겼어요`); return; }
     if (what === 'own') return ownedDone(id);
-    toast(`${G(id).title} 오늘 하루 열림!`); play(id);
+    openLog(id); toast(`${G(id).title} 오늘 하루 열림!`); play(id);
   } catch (e) {
     if (b) { b.disabled = false; b.textContent = b.dataset.t; }
-    if (e.short) return shop(`골드가 ${gnum(e.need - ((e.gold && e.gold.total) || 0))}개 모자라요`);
+    if (e.short) return shop(`골드가 ${gnum(e.need - ((e.gold && e.gold.total) || 0))}개 모자라요`, 'game', e.need - ((e.gold && e.gold.total) || 0));
     toast(e.message);
   }
 }
@@ -479,7 +445,7 @@ const boughtFn = (m, me) => id => { const pt = m.pairOf(id, me); return !!(P.ON 
 function fortuneCard(me, f, m) {
   const c = m.CHARS[f.ch], key = R.keyOf(R.now()), h = m.hookOf(f, key, boughtFn(m, me)), day = m.days()[key] || {};
   const eve = R.now().getHours() >= 18;
-  const gift = freebieOk() ? `<div class="sdgift" data-freebie ${KB}>🔥 ${R.state().streak.count}일 연속 출석 선물 · 입문 운세(${fwon('monthly', 3900)}) 1회 무료로 열기 →</div>` : '';
+  const gift = freebieOk() ? `<div class="sdgift" data-freebie ${KB}>연속 7일 달성 선물 (계정당 한 번) · 입문 운세(${fwon('monthly', 3900)}) 무료로 열기 →</div>` : '';
   const recap = !eve ? '' : day.r ? `<div class="recap done">오늘의 회고 ${({ y: '⭕ 맞았다', h: '🔺 반반', n: '✖ 아니던데' })[day.r]} · <button class="lnk" data-fcal>운세 달력 보기</button></div>`
     : `<div class="recap"><b>오늘, 맞았나요?</b><span><button data-recap="y">맞았다</button><button data-recap="h">반반</button><button data-recap="n">아니던데</button></span></div>`;
   return `<div class="sdcard" data-fortune ${KB}>${face(m, f.ch)}<div class="sdin"><div class="sdtag">${c.name}의 오늘의 신점 · ${f.today.ko}일</div>
@@ -510,7 +476,7 @@ async function fortuneCalendar(ym) {
     cells.push(`<i class="c-${col}${k === todayK ? ' now' : ''}" data-fday="${k}" ${KB}><small>${d}</small><b>${f.total}</b><em>${f.key}</em><s>${st}</s></i>`);
   }
   const pm = new Date(y, mo - 2, 1), nm = new Date(y, mo, 1), ymOf = x => `${x.getFullYear()}-${x.getMonth() + 1}`, canNext = nm <= t;
-  sdOff(); openSheet(`<div class="intro fcalw"><h2>📅 ${y}년 ${mo}월 운세 달력</h2><p class="fsub">이번 달 도장 ${stamps}개 · 내가 '맞았다' 누른 날 ${yes}일 · 지난 날을 누르면 그날 운세를 다시 볼 수 있어요</p>
+  sdOff(); fSheet(`<div class="intro fcalw"><h2>📅 ${y}년 ${mo}월 운세 달력</h2><p class="fsub">이번 달 도장 ${stamps}개 · 내가 '맞았다' 누른 날 ${yes}일 · 지난 날을 누르면 그날 운세를 다시 볼 수 있어요</p>
     <div class="fcalnav"><button class="btn ghost small" data-fcal="${ymOf(pm)}">◀ 지난달</button>${canNext ? `<button class="btn ghost small" data-fcal="${ymOf(nm)}">다음 달 ▶</button>` : ''}</div>
     <div class="fcal"><u>일</u><u>월</u><u>화</u><u>수</u><u>목</u><u>금</u><u>토</u>${cells.join('')}</div>
     <p class="fsub">👣 들어온 날 · 🔮 운세 본 날 · 🃏 타로 · 💬 AI 상담 · 🎮 오늘의 게임 · ⭕🔺✖ 저녁 회고 — 기록은 이 기기에만 있어요</p>
@@ -609,7 +575,7 @@ function birthFields(v, who) {
 const readBirth = fd => { const n = k => fd.get(k) === '' || fd.get(k) == null ? null : Number(fd.get(k)); return { name: String(fd.get('name')).trim().slice(0, 10) || '그 사람', y: n('y'), m: n('m'), d: n('d'), h: n('h'), mi: n('h') == null ? 0 : n('mi'), cal: fd.get('cal'), leap: !!fd.get('leap'), lon: n('lon') || null, sex: fd.get('sex') }; };
 /* 연애 독설 5종에 만 19세 미만이 들어왔을 때(공유 링크 · 바로가기 · 카드 어디서든): 막지 않고 다른 길 — 이미 산 풀이는 그대로 보여 줌 */
 function adultOnly() {
-  sdOff(); openSheet(`<div class="intro"><h2>이 운세는 만 19세 이상만 볼 수 있어요</h2><p class="fsub">연애 · 외도 같은 어른 주제를 다뤄서 나이를 확인하고 있어요.<br>친구가 보낸 궁합은 같이 볼 수 있어요!</p>
+  sdOff(); fSheet(`<div class="intro"><h2>이 운세는 만 19세 이상만 볼 수 있어요</h2><p class="fsub">연애 · 외도 같은 어른 주제를 다뤄서 나이를 확인하고 있어요.<br>친구가 보낸 궁합은 같이 볼 수 있어요!</p>
     <div class="stack"><button class="sdbtn" data-paid="compat">우리 궁합 보기</button><button class="btn ghost" data-fortune>오늘의 운세로</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel'); T.track('adult_block');
 }
@@ -618,7 +584,7 @@ function adultCheck(id, label) {
   sdOff();   /* 풀이 화면은 접어 두고 시트로 — 취소하면 그 칸으로 돌아가 풀이 화면이 다시 보임 (park) */
   return new Promise(res => {
     let done = false; const fin = v => { if (done) return; done = true; onSheetClose = null; if (v) closeSheet(); res(v); };
-    openSheet(`<div class="intro paysheet"><h2>🔞 결제 전에 확인해 주세요</h2>
+    fSheet(`<div class="intro paysheet"><h2>🔞 결제 전에 확인해 주세요</h2>
       <label class="adultck"><input type="checkbox" id="adultOk"><span><b>만 19세 이상이에요.</b> 연애 · 외도를 다루는 성인용 풀이라는 걸 알고 볼게요.</span></label>
       <p class="adultmsg" id="adultMsg" hidden>만 19세 이상인지 먼저 체크해 주세요</p>
       <div class="stack"><button class="sdbtn" id="adultGo">${label}</button><button class="btn ghost" data-close>취소</button></div></div>`);
@@ -634,7 +600,7 @@ async function partnerForm(id = 'cheating') {
   if (m.isAdultFortune(id) && m.isUnder19(me) && !boughtFn(m, me)(id) && !acctHas(id)) return adultOnly();
   if (PR.solo) { T.track('paid_open', { product: id }); return paidPage(id); }   /* 내 사주만 보는 상품은 입력 없이 바로 미리보기 */
   const p = m.loadPartner(id) || { sex: me.sex === 'm' ? 'f' : 'm' }, [ttl, sub, who] = PR.form;
-  sdOff(); openSheet(`<form class="fform sdform" id="pForm"><h2>${ttl}</h2><p class="fsub">${sub}</p>${birthFields(p, who)}<div class="stack"><button class="sdbtn" type="submit">${PR.title} 무료 미리보기</button></div></form>`);
+  sdOff(); fSheet(`<form class="fform sdform" id="pForm"><h2>${ttl}</h2><p class="fsub">${sub}</p>${birthFields(p, who)}<div class="stack"><button class="sdbtn" type="submit">${PR.title} 무료 미리보기</button></div></form>`);
   $('#sheet .panel').classList.add('sdpanel');
   $('#pForm').onsubmit = async e => { e.preventDefault(); const v = readBirth(new FormData(e.target)); try { await m.paidPreview(id, me, v); m.savePartner(v, id); } catch { toast('날짜를 다시 확인해 주세요'); return; } T.track('partner_form', { product: id, hour: v.h == null ? 0 : 1 }); park(); paidPage(id); };   /* 입력 시트는 접어 둠 → 풀이에서 뒤로가기 = 입력 */
 }
@@ -642,7 +608,7 @@ const acctHas = id => { const me = A.current(); return !!(me && (me.items || [])
 /* 카드 결제 완료: 주문번호 + 복원 코드 (로그인했으면 '계정에 저장됨') → 전체 풀이 */
 function payDone(product, r) {
   const open = product === 'pack' ? 'newyear' : product, txt = `원어데이 주문번호 ${r.orderId}${r.code ? ` · 복원 코드 ${r.code}` : ''}`;
-  openSheet(`<div class="intro paysheet"><h2>🎉 결제 완료</h2><p class="fsub">${r.saved ? '내 계정에 저장됐어요 · 다른 기기에서 로그인해도 다시 볼 수 있어요' : '이 풀이는 이 기기에 저장돼요 · 다른 기기나 브라우저에서 다시 보려면 아래 두 가지를 적어 두세요'}</p>
+  fSheet(`<div class="intro paysheet"><h2>🎉 결제 완료</h2><p class="fsub">${r.saved ? '내 계정에 저장됐어요 · 다른 기기에서 로그인해도 다시 볼 수 있어요' : '이 풀이는 이 기기에 저장돼요 · 다른 기기나 브라우저에서 다시 보려면 아래 두 가지를 적어 두세요'}</p>
     <div class="payrow"><span>주문번호</span><b style="font-size:13px">${r.orderId}</b></div>${r.code ? `<div class="payrow"><span>복원 코드</span><b>${r.code}</b></div>` : ''}
     <p class="paynote">다시 받기: 설정 → 내 구매 → ‘주문번호로 다시 받기’ · 문의할 때도 주문번호를 알려 주세요</p>
     <div class="stack"><button class="sdbtn" data-mypaid="${open}">전체 풀이 보기</button><button class="btn ghost" id="payCopy">주문번호 · 코드 복사</button></div></div>`);
@@ -660,7 +626,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.64')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.65')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -699,7 +665,7 @@ async function fortunePack() {
   if (has(PK.base)) return toast('신년운세를 이미 가지고 있어요 · 나머지는 낱개로 골라 보세요');
   const row = id => { const p = m.paidOf(id), owned = has(id), needPt = id === 'compat' && !m.loadPartner('compat');
     return `<label class="pkrow${owned ? ' off' : ''}"><input type="checkbox" name="pk" value="${id}" ${owned ? 'disabled' : ''}><b>${p.title}</b><span>${owned ? '이미 있어요' : `낱개 ${fwon(id, p.price)}${needPt ? ' · 상대 정보 필요' : ''}`}</span></label>`; };
-  sdOff(); openSheet(`<form class="intro paysheet" id="pkForm"><h2>🎁 ${PK.title}</h2><p class="fsub">${pkWon} · 충전 골드 ${gold} — 신년운세(${fwon(PK.base, m.paidOf(PK.base).price)})에 아래에서 <b>2개</b>를 더해요</p>
+  sdOff(); fSheet(`<form class="intro paysheet" id="pkForm"><h2>🎁 ${PK.title}</h2><p class="fsub">${pkWon} · 충전 골드 ${gold} — 신년운세(${fwon(PK.base, m.paidOf(PK.base).price)})에 아래에서 <b>2개</b>를 더해요</p>
     <div class="pkrow on"><b>2027 정미년 신년운세</b><span>기본 포함</span></div>${PK.picks.map(row).join('')}
     <p class="paynote">이번 달 운세 · 합격운은 지금 팔리는 달(${Number(m.curYm().slice(5))}월) 기준이에요. 결제 후 고른 풀이가 모두 바로 열려 단순 변심 환불은 제한돼요.</p>${agreeNote()}
     <div class="stack"><button class="sdbtn" type="submit" data-how="won" data-label="${pkWon}로 결제하기" disabled>2개를 골라 주세요</button>${A.ON ? `<button class="sdbtn ghost" type="submit" data-how="gold" disabled>🪙 충전 골드 ${gold}로 열기</button>` : ''}<button class="btn ghost" type="button" data-close>닫기</button></div></form>`);
@@ -728,7 +694,7 @@ async function packBuy(picks, how, btn) {
   const tk = A.current() ? await A.token().catch(() => '') : '';
   let o; try { o = await P.order('pack', me, pt, extra, tk); } catch (e) { return toast(e.message); }
   if (c.mode === 'toss') { try { await P.toss(o, me, pt); } catch { toast('결제창을 열지 못했어요'); } return; }
-  closeSheet(); openSheet(`<div class="intro paysheet"><h2>🎁 ${m.PACK.title}</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
+  closeSheet(); fSheet(`<div class="intro paysheet"><h2>🎁 ${m.PACK.title}</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
     <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div><p class="paynote">신년운세 + ${picks.map(id => m.paidOf(id).title).join(' + ')} · 결제 후 바로 열리는 콘텐츠라 단순 변심 환불은 제한돼요.</p>${agreeNote()}
     <div class="stack"><button class="sdbtn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" data-close>취소</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel');
@@ -741,7 +707,7 @@ function freebieOk() { try { return R.state().streak.count >= 7 && localStorage.
 async function freebieOpen() {
   const m = await ft(), me = m.loadMe(); if (!me) return fortuneForm();
   const has = boughtFn(m, me), ids = m.PAID.filter(p => p.entry);
-  sdOff(); openSheet(`<div class="intro paysheet"><h2>🔥 ${R.state().streak.count}일 연속 출석 선물</h2><p class="fsub">입문 운세 하나를 무료로 열어 드려요 (계정당 한 번 · 로그인 필요)</p>
+  sdOff(); fSheet(`<div class="intro paysheet"><h2>🔥 ${R.state().streak.count}일 연속 출석 선물</h2><p class="fsub">입문 운세 하나를 무료로 열어 드려요 (계정당 한 번 · 로그인 필요)</p>
     ${ids.map(p => `<button class="sdbtn ${has(p.id) ? 'ghost' : ''}" data-fbclaim="${p.id}" ${has(p.id) ? 'disabled' : ''}>${p.title} (${fwon(p.id, p.price)}) ${has(p.id) ? '· 이미 있어요' : '무료로 열기'}</button>`).join('')}
     <div class="stack"><button class="btn ghost" data-close>나중에</button></div></div>`);
   $('#sheet .panel').classList.add('sdpanel');
@@ -795,7 +761,7 @@ async function saveCompatCard(id) {
 }
 /* 궁합 공유 링크로 들어온 친구: 나도 무료로 (유형 테스트 · 오늘의 운세) */
 function compatLanding() {
-  openSheet(`<div class="intro"><h2>💞 친구가 궁합 결과를 보냈어요</h2><p class="fsub">원어데이에선 오늘의 운세와 사주 유형 테스트가 무료예요. 생년월일만 넣으면 30초, 이 폰에서만 계산해요.</p>
+  fSheet(`<div class="intro"><h2>💞 친구가 궁합 결과를 보냈어요</h2><p class="fsub">원어데이에선 오늘의 운세와 사주 유형 테스트가 무료예요. 생년월일만 넣으면 30초, 이 폰에서만 계산해요.</p>
     <div class="stack"><button class="sdbtn" data-type>🔮 내 사주 유형 보기 (무료)</button><button class="sdbtn ghost" data-tab-go="fortune">🌙 오늘의 운세 무료로 보기</button><button class="btn ghost" data-close>나중에</button></div></div>`);
 }
 // 결제: 토스 키가 있으면 토스 결제창, 테스트 서버는 모의 결제, 그 밖에는 '곧 열려요'
@@ -817,7 +783,7 @@ async function buy(product) {
   let o; try { o = await P.order(product, me, pt, adult ? { adult: true } : null, tk); } catch (e) { return toast(e.message); }
   if (c.mode === 'toss') { try { await P.toss(o, me, pt); } catch { toast('결제창을 열지 못했어요'); } return; }
   sdOff();
-  openSheet(`<div class="intro paysheet"><h2>🔓 ${PR.title} 전체 풀이</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
+  fSheet(`<div class="intro paysheet"><h2>🔓 ${PR.title} 전체 풀이</h2><p class="fsub">테스트 결제예요 · 실제로 돈이 나가지 않아요</p>
     <div class="payrow"><span>${o.orderName}</span><b>${won(o.amount)}</b></div>
     <p class="paynote">결제 후 풀이가 바로 제공되어 단순 변심 환불은 제한돼요 (오류 · 중복 결제는 전액 환불).</p>${agreeNote()}
     <div class="stack"><button class="sdbtn" id="mockPay">동의하고 테스트로 결제하기</button><button class="btn ghost" id="payCancel">취소</button></div></div>`);
@@ -832,7 +798,7 @@ async function buy(product) {
 function fortuneForm() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ } me ||= { name: '', y: 1995, m: 1, d: 1, cal: 'solar', sex: 'f', h: null, mi: 0, lon: 126.98 };
   const opt = (a, b, v) => Array.from({ length: b - a + 1 }, (_, i) => a + i).map(n => `<option ${n === v ? 'selected' : ''}>${n}</option>`).join('');
-  sdOff(); openSheet(`<form class="fform sdform" id="fForm"><h2>사주를 내놔라</h2><p class="fsub">태어난 시까지 넣어야 제대로 읽는다. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>
+  sdOff(); fSheet(`<form class="fform sdform" id="fForm"><h2>사주를 내놔라</h2><p class="fsub">태어난 시까지 넣어야 제대로 읽는다. 생년월일 원본은 내 폰에만 · AI 상담 때는 해석 요약만 보내고 저장하지 않아요.</p>
     <label>이름<input name="name" maxlength="10" placeholder="이름 또는 별명" value="${me.name}" required></label>
     <div class="seg"><label><input type="radio" name="cal" value="solar" ${me.cal !== 'lunar' ? 'checked' : ''}>양력</label><label><input type="radio" name="cal" value="lunar" ${me.cal === 'lunar' ? 'checked' : ''}>음력</label><label class="lp"><input type="checkbox" name="leap" ${me.leap ? 'checked' : ''}>윤달</label></div>
     <div class="row3"><label>년<select name="y">${opt(1930, R.now().getFullYear(), me.y)}</select></label><label>월<select name="m">${opt(1, 12, me.m)}</select></label><label>일<select name="d">${opt(1, 31, me.d)}</select></label></div>
@@ -923,57 +889,52 @@ const giftOpen = () => I.standalone() && INSTALL_REWARD && ['pending', 'later'].
 
 function tick() { const v = hms(R.msToTomorrow()); document.querySelectorAll('#cd,[data-cd]').forEach(el => { el.textContent = v; }); if (tab === 'today') HUB.tick(hubX(), hubRedraw); if (R.msToTomorrow() < 1000) setTimeout(() => go('today', 'midnight'), 1200); }
 
-function itemCard(id) {
-  const g = G(id), lib = R.state().library[id];
-  const a = R.access(id), [cls, label] = STATE_BADGE[a];
-  const sub = lib ? `처음 만난 날 ${fmtKey(lib.first)} · ${lib.plays}판` : a === 'owned' ? `${g.genre} · 소장 · 아직 안 해 봤어요` : `${g.genre} · 아직 안 해 봤어요`;
-  return `<div class="item" data-open="${id}" ${KB}><img src="${g.icon}" alt=""><div><div class="t">${g.title}</div><div class="s">${sub}</div></div><span class="state badge ${cls}">${label}</span></div>`;
-}
 
-// ── 보관함 (2026-10-30 A안 · 시안 shots/oad/04): 라이브러리 + 컬렉션 + 너랑 기억 — 안쪽 칸 [게임 · 컬렉션 · 너랑 기억] ──
-const BSEG = [['game', '게임'], ['coll', '컬렉션'], ['mem', '너랑 기억']];
+// ── 보관함 = 기록 (2026-11-26 대표 "3 피트니스" · 시안 lab/ui-apple/3 box): 만난 게임 링 · 플레이한 날 · 소장 → 이어 하기(게임 · 너랑) → 내 게임(소장 먼저 · 최근 순) → 브랜드관
+//   예전 안쪽 칸 [게임 · 컬렉션 · 너랑 기억]은 한 화면으로 합침 (옛 주소 #box/collection · #box/memory 는 이 화면으로) · 배지는 다음 단계(자리만)
 function renderBox() {
-  const seg = BSEG.some(([k]) => k === boxSeg) ? boxSeg : (boxSeg = 'game');
-  return `<div class="boxtab">${header('보관함')}
-    <div class="bseg" role="tablist" aria-label="보관함 칸">${BSEG.map(([k, t]) => `<button role="tab" aria-selected="${k === seg}" class="${k === seg ? 'on' : ''}${k === 'mem' ? ' nr' : ''}" data-bseg="${k}">${t}</button>`).join('')}</div>
-    ${seg === 'coll' ? boxColl() : seg === 'mem' ? boxMem() : boxGames()}</div>`;
+  boxSeg = 'game';
+  const st = R.state(), lib = st.library, total = Math.max(PLANNED, R.DAILY.length), met = R.DAILY.filter(id => lib[id]).length;
+  const ids = R.myGames().filter(id => !R.isBrand(id)), last = id => (lib[id] && lib[id].last) || '';
+  const own = ids.filter(id => st.owned[id]).sort((x, y) => (last(y) > last(x) ? 1 : -1)), rest = ids.filter(id => !st.owned[id]).sort((x, y) => (last(y) > last(x) ? 1 : -1));
+  const days = Object.keys(st.history || {}).length, owns = Object.keys(st.owned || {}).filter(k => st.owned[k] && G(k)).length;
+  const stats = `<section class="u-card u-stats3" data-blk="stats">
+      <div>${ring(met / total, 64, 7, 'var(--u-game)', 'var(--u-tg)')}<b class="u-num">${met}<small>/${total}</small></b><span>만난 게임</span></div>
+      <div><span class="big u-num">${days}</span><span>플레이한 날</span></div>
+      <div><span class="big u-num">${owns}</span><span>소장</span></div></section>`;
+  const grid = list => `<section class="u-grid4">${list.map(boxTile).join('')}</section>`;
+  const mine = ids.length ? `<div class="u-sh"><h3 class="t-title">내 게임</h3><span class="t-sub">소장 먼저 · 최근 순</span></div>${grid([...own, ...rest])}`
+    : `<div class="u-card u-empty-box">${R.DAILY.length ? `<p>아직 비어 있어요.<br>오늘의 게임을 하면 여기에 모여요</p><button class="u-btn fill g u-press" data-tab-go="today">오늘의 게임 보러 가기</button>` : `<p>게임은 곧 하나씩 열려요.<br>열리면 플레이한 게임이 여기에 모여요</p><button class="u-btn fill f u-press" data-tab-go="fortune">오늘의 운세 무료로 보기</button>`}</div>`;   /* 실서버에 보이는 게임이 아직 없으면 점방으로 안내 */
+  if (!R.NR_OFF) try { HUB.load(hubX(), boxContRedraw); } catch { /* */ }
+  return `<div class="boxtab u-box">${header('보관함', '내 기록')}<div class="u-page">
+    ${stats}
+    <!-- 배지 선반 자리 (다음 단계 intent — 연속 · 첫 소장 · 만난 게임 · 너랑 첫 장면) -->
+    <div id="boxcont">${boxCont()}</div>
+    ${mine}
+    ${R.BRAND.length ? `<div class="u-sh"><h3 class="t-title">브랜드관</h3><span class="t-sub">브랜드와 함께 만든 게임</span></div>${grid(R.BRAND)}` : ''}
+    <p class="u-foot">소장한 게임은 광고 없이 언제든 · 기록은 계정에</p></div></div>`;
 }
-/* 게임 칸 (옛 라이브러리): 만난 게임 · 소장 · 플레이한 날 + 3칸 격자 (소장 먼저 · 최근 순) · 브랜드관은 아래 따로 */
+/* 이어 하기: 최근에 한 게임 · 너랑 방을 섞어 최근 순 5개 */
+function boxCont() {
+  const lib = R.state().library, today = R.keyOf(R.now());
+  const when = k => { if (k === today) return '오늘'; const y = R.now(); y.setDate(y.getDate() - 1); return k === R.keyOf(y) ? '어제' : fmtKey(k); };
+  const games = Object.keys(lib).filter(id => G(id) && lib[id].last).map(id => ({ t: Date.parse(lib[id].last + 'T12:00:00'), h: (() => {
+    const g = G(id), a = R.access(id), sum = C.hasLocal(id) ? C.localSummary(id) : '', ok = a !== 'locked';
+    const sub = [`${when(lib[id].last)}${lib[id].td === today && lib[id].tn ? ` ${lib[id].tn}판` : ''}`, `모두 ${lib[id].plays}판`, sum].filter(Boolean).join(' · ');
+    return `<div class="u-row u-cr u-press" ${ok ? `data-play="${id}" data-from="box_cont"` : `data-open="${id}"`} ${KB} aria-label="${g.title} ${ok ? '이어 하기' : '열기'}">${img(g.icon, 0, 'class="u-th" loading="lazy"')}<div class="u-lt"><b>${g.title}</b><span>${sub}</span></div><span class="u-pb2" aria-hidden="true">${ok ? ic('play') : ic('lock')}</span></div>`;
+  })() }));
+  let rooms = []; try { rooms = R.NR_OFF ? [] : HUB.nrRooms(); } catch { /* */ }
+  const nr = rooms.map(({ w, r, cover }) => ({ t: r.at || 0, h: `<div class="u-row u-cr u-press" data-nrgo="room/${w.id}" ${KB} aria-label="너랑 ${w.title} 이어 하기">${cover ? `<img class="u-th nr" src="${cover}" alt="" loading="lazy">` : `<i class="u-ti n">${ic('chat')}</i>`}<div class="u-lt"><b>${w.title}</b><span>${r.turns}번째 장면 · ${w.ch.short}${josa(w.ch.short, '이', '가')} 기다려요</span></div><span class="u-pb2 n" aria-hidden="true">${ic('play')}</span></div>` }));
+  const all = [...games, ...nr].sort((x, y) => y.t - x.t).slice(0, 5);
+  return all.length ? `<div class="u-sh"><h3 class="t-title">이어 하기</h3></div><section class="u-card u-cl">${all.map(x => x.h).join('')}</section>` : '';
+}
+const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
+const boxContRedraw = () => { const el = $('#boxcont'); if (!el || tab !== 'box') return; const h = boxCont(); if (el.innerHTML !== h) el.innerHTML = h; };
+/* 내 게임 칸: 아이콘 · 이름 · 소장(구름) · 오늘의 게임(파란 점) · 콜라보 */
 function boxTile(id) {
   const g = G(id), a = R.access(id);
-  const st = { today: '<span class="st today">오늘 무료</span>', owned: '<span class="st own">소장 ✓</span>', unlocked: '<span class="st open">오늘 열림</span>', free: '<span class="st open">자유 플레이</span>' }[a] || '<span class="st">📺 광고로</span>';
-  const sub = { today: '오늘의 게임', owned: '언제든 무료', unlocked: '오늘 하루 열림', free: '자유 플레이' }[a] || '돌아오는 날 무료';
-  return `<div class="bg" data-open="${id}" ${KB} aria-label="${g.title}"><div class="im">${img(g.icon, 0, 'loading="lazy"')}${st}${R.isBrand(id) ? '<span class="collab">콜라보</span>' : ''}</div><div class="t">${g.title}</div><div class="s">${sub}</div></div>`;
-}
-function boxGames() {
-  const st = R.state(), lib = st.library, ids = R.myGames().filter(id => !R.isBrand(id));
-  const last = id => (lib[id] && lib[id].last) || '';
-  const own = ids.filter(id => st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
-  const rest = ids.filter(id => !st.owned[id]).sort((a, b) => (last(b) > last(a) ? 1 : -1));
-  const days = Object.keys(st.history || {}).length;
-  const general = ids.length
-    ? `<div class="sumrow"><div><b>${ids.filter(id => lib[id]).length}</b><small>만난 게임</small></div><div><b>${own.length}</b><small>소장</small></div><div><b>${days}</b><small>플레이한 날</small></div></div>
-      <div class="bgrid">${[...own, ...rest].map(boxTile).join('')}</div>`
-    : `<div class="empty"><div class="big">🎮</div>${R.DAILY.length ? '<p>아직 비어 있어요.<br>오늘의 게임을 플레이하면 여기에 모여요!</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="today">오늘의 게임 보러 가기</button>' : '<p>게임은 곧 하나씩 열려요.<br>열리면 플레이한 게임이 여기에 모여요.</p><button class="btn small" style="max-width:220px;margin:0 auto" data-tab-go="fortune">오늘의 운세 무료로 보기</button>'}</div>`;   /* 실서버에 보이는 게임이 아직 없으면 점방으로 안내 */
-  return `${general}
-    ${R.BRAND.length ? `<div class="bsub"><b>🤝 브랜드관</b><span>브랜드와 함께 만든 게임</span></div><div class="bgrid">${R.BRAND.map(boxTile).join('')}</div>` : ''}
-    <p class="bfoot">한 번 만난 게임은 여기 모여요 · 소장하면 광고 없이 언제든</p>`;
-}
-/* 컬렉션 칸 (옛 컬렉션): 만난 게임 x / 전체 · 번호 붙은 타일 · 다가올 게임 */
-function boxColl() {
-  const rel = R.released(), st = R.state(), lib = st.library, total = Math.max(PLANNED, R.DAILY.length), tid = R.todayId();
-  const met = rel.filter(id => lib[id]).length;
-  const tile = (id, n) => `<div class="tile" data-open="${id}" ${KB}><img src="${G(id).icon}" alt="">${n ? `<span class="n">#${n}</span>` : ''}${st.owned[id] ? '<span class="own">소장</span>' : ''}${R.isBrand(id) ? '<span class="collab">콜라보</span>' : ''}${lib[id] ? '' : '<span class="lk">✨</span>'}</div>`;
-  const tiles = R.DAILY.map((id, i) => rel.includes(id) ? tile(id, i + 1) : `<div class="tile unk">?</div>`), soon = [];
-  for (let i = R.DAILY.length; i < total; i++) soon.push(`<div class="tile unk" style="font-size:16px">곧 공개</div>`);
-  return `<div class="bh"><b>만난 게임 ${met} / ${total}</b><span>${tid && !lib[tid] && rel.includes(tid) ? `오늘의 게임을 하면 ${met + 1} / ${total}` : `공개 ${rel.length}개`}</span></div>
-    <div class="progress"><i style="width:${(met / total) * 100}%"></i></div>
-    <div class="grid">${tiles.join('')}</div>
-    ${soon.length ? `<div class="section"><h3>다가올 게임</h3><span class="more">하루 하나씩 공개돼요</span></div><div class="grid">${soon.join('')}</div>` : ''}`;
-}
-/* 너랑 기억 칸: 서비스 전이라 '곧 공개' (테스트는 너랑 탭으로 가는 길만 — 기억 · 비밀 · 장면 카드는 너랑 안 '내 서재') */
-function boxMem() {
-  return `<div class="nrsoon sm"><div class="moon" aria-hidden="true"></div><b class="serif">너랑 기억은 곧 공개돼요</b><p>너랑의 캐릭터가 기억하는 것, 대화 중에 모은 장면이 여기에 모여요.</p>${R.NR_OFF ? '' : `<button class="nrgo" data-tab-go="neorang">너랑 열기${R.PROD ? '' : ' (테스트)'}</button>`}</div>`;
+  const sub = { today: '오늘 무료', owned: '소장', unlocked: '오늘 열림', free: '자유 플레이' }[a] || '돌아오는 날 무료';
+  return `<div class="u-gi u-press" data-open="${id}" ${KB} aria-label="${g.title} · ${sub}"><div class="im">${img(g.icon, 0, 'loading="lazy"')}${a === 'owned' ? `<i class="u-own">${ic('cloud')}</i>` : a === 'today' ? '<i class="u-tdm"></i>' : ''}${R.isBrand(id) ? '<span class="u-collab">콜라보</span>' : ''}</div><b>${g.title}</b></div>`;
 }
 
 // ── 너랑 (웹소설 + AI 캐릭터 대화 · 2026-11-04 대표 승인 시안 D → 실제 화면 neorang/ · 옛 캐릭터 4명 시안(lab/story-mock)은 내림) ──
@@ -1005,7 +966,7 @@ addEventListener('message', e => {
   const d = e.data; if (!d || d.type !== 'oad:nr' || e.origin !== location.origin) return;
   const fr = $('#nrframe'); if (!fr || e.source !== fr.contentWindow) return;
   const done = result => { try { fr.contentWindow.postMessage({ type: 'oad:nrres', id: d.id, result }, location.origin); } catch { /* */ } };
-  if (d.fn === 'shop') { const go = () => { shop(String(d.note || '').slice(0, 80)); onSheetClose = () => { A.refresh().catch(() => {}); done({ ok: true }); }; }; return A.current() ? go() : (needLogin('너랑에서 골드로 이어 가려면 로그인해 주세요'), onSheetClose = () => done({ ok: !!A.current() })); }
+  if (d.fn === 'shop') { const go = () => { shop(String(d.note || '').slice(0, 80), 'nr', NRP().basic - goldOf()); onSheetClose = () => { A.refresh().catch(() => {}); done({ ok: true }); }; }; return A.current() ? go() : (needLogin('너랑에서 골드로 이어 가려면 로그인해 주세요'), onSheetClose = () => done({ ok: !!A.current() })); }
   if (d.fn === 'login') { if (A.current()) return done({ ok: true }); needLogin('너랑에서 골드로 이어 가려면 로그인해 주세요 · 골드는 원어데이 계정에 있어요'); onSheetClose = () => done({ ok: !!A.current() }); return; }
   if (d.fn === 'ad') {
     if (R.BM_OFF || !PV.canReward('neorang')) return done({ ok: false, reason: 'off' });
@@ -1071,7 +1032,7 @@ function accountCard() {
   const m = A.current();
   if (!m && I.env.inApp) return `<div class="acct"><div><b>원어데이 계정</b><p>${inAppLoginNote()}</p></div><button class="gbtn" data-ext>🌐 ${browserName()}로 열기</button></div>`;
   if (!m) return `<div class="acct"><div><b>원어데이 계정</b><p>로그인하면 골드와 구매 내역이 계정에 저장돼 폰을 바꿔도 이어져요 · 게임은 로그인 없이도 그대로</p></div><button class="gbtn" data-login><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>구글로 로그인</button></div>`;
-  return `<div class="acct in"><div class="av">${(m.name || m.email || '?')[0]}</div><div class="who"><b>${m.name || '원어데이 친구'}</b><small>${m.email || ''}</small></div><button class="gold" data-shop><span>골드 · 충전</span><b>🪙 ${gnum((m.gold && m.gold.total) || 0)}</b></button><button class="lo" data-logout>로그아웃</button></div>`;
+  return `<div class="acct in"><div class="av">${(m.name || m.email || '?')[0]}</div><div class="who"><b>${m.name || '원어데이 친구'}</b><small>${m.email || ''}</small></div><button class="gold" data-shop><span>골드 · 충전</span><b>${coin(15)} ${gnum((m.gold && m.gold.total) || 0)}</b></button><button class="lo" data-logout>로그아웃</button></div>`;
 }
 /* 내 구매: 이 기기의 운세 영수증 + (로그인) 계정에 남은 운세 · 다른 기기에서 산 건 그 풀이를 열면 계정에서 자동 복원 */
 function purchasesRow() {
@@ -1109,7 +1070,7 @@ function deleteAccount() {
   const m = A.current(); if (!m) return;
   const paid = (m.gold && m.gold.paid) || 0, free = (m.gold && m.gold.free) || 0;
   openSheet(`<div class="intro"><h2>탈퇴하고 내 정보 지우기</h2><p class="fsub">원어데이 계정과 계정에 저장된 것(소장 게임 · 클라우드 저장 · 명예의 전당 · 계정에 남은 운세 구매)이 모두 지워지고 되돌릴 수 없어요.</p>
-    ${paid || free ? `<div class="payrow"><span>남은 골드</span><b>🪙 ${gnum(paid + free)}</b></div><p class="fsub">${paid ? `충전한 골드 ${gnum(paid)}개(${won(paid * (PV.store() ? 11 : 10))})도 함께 사라져요. 결제 후 7일 안에 쓰지 않은 골드는 환불받을 수 있으니, 지우기 전에 <a href="refund/" ${NEW}>환불 정책</a>을 확인하고 고객센터에 먼저 문의해 주세요.` : '선물로 받은 무료 골드도 함께 사라져요.'}</p>` : ''}
+    ${paid || free ? `<div class="payrow"><span>남은 골드</span><b>${coin(18)} ${gnum(paid + free)}</b></div><p class="fsub">${paid ? `충전한 골드 ${gnum(paid)}개(${won(paid * (PV.store() ? 11 : 10))})도 함께 사라져요. 결제 후 7일 안에 쓰지 않은 골드는 환불받을 수 있으니, 지우기 전에 <a href="refund/" ${NEW}>환불 정책</a>을 확인하고 고객센터에 먼저 문의해 주세요.` : '선물로 받은 무료 골드도 함께 사라져요.'}</p>` : ''}
     <p class="fsub">결제 기록은 법에 따라 5년 보관하지만, 이 계정과의 연결은 끊어요. 이 기기의 게임 기록 · 운세 정보는 그대로예요 (지우려면 '모든 기록 지우기').</p>
     <div class="stack"><button class="btn warn" data-delacct>탈퇴하고 지우기</button><button class="btn ghost" data-close>그만두기</button></div></div>`);
 }
@@ -1126,8 +1087,11 @@ function owTypeRow() { let t = ''; try { t = localStorage.getItem('oad_ow_type')
     <select class="owtsel" data-owtype aria-label="내 성격 유형"><option value="">안 씀</option>${OWT.map(x => `<option${x === t ? ' selected' : ''}>${x}</option>`).join('')}</select></div></div>`; }
 function settingsHTML() {
   const s = R.state();
-  return `<div class="sethead"><h2>설정</h2><button class="setx" data-close aria-label="닫기">✕</button></div>
+  const TH = [['auto', '자동'], ['light', '밝게'], ['dark', '어둡게']], tp = themePick();
+  return `<div class="sethead"><h2>설정</h2><button class="u-x u-press" data-close aria-label="닫기">${ic('x')}</button></div>
     ${A.ON ? accountCard() : ''}
+    <h4 class="sgh">화면</h4>
+    <div class="group"><div><span>화면 모드<br><small style="color:var(--mute)">자동은 폰 설정(라이트 · 다크)을 따라가요</small></span><span class="u-seg" role="radiogroup" aria-label="화면 모드">${TH.map(([k, t]) => `<button type="button" role="radio" aria-checked="${k === tp}" class="${k === tp ? 'on' : ''}" data-theme-set="${k}">${t}</button>`).join('')}</span></div></div>
     <h4 class="sgh">앱</h4>
     <div class="group">
       <div><span>${isPC() ? 'PC에 앱으로 설치' : '홈 화면에 추가'}</span>${I.standalone() ? '<span class="badge open">설치 앱으로 열림</span>' : I.installed() ? '<span><span class="badge open">추가됨</span> <button data-install data-where="settings">다시 추가</button></span>' : `<button data-install data-where="settings">${isPC() ? '설치' : '추가하기'}</button>`}</div>
@@ -1162,12 +1126,12 @@ function settingsHTML() {
       <li>오늘의 게임은 하루 종일 무료</li>
       ${R.BM_OFF ? '' : `<li>다른 게임은 광고를 보면 ${R.RULES.adUnlock === 'day' ? '그날 하루' : '한 판'} 열려요${PV.store() ? '' : ' (지금은 테스트 광고)'}</li>
       <li>골드로 하루 열기 10골드 · 소장 300골드 · 전체 소장 2,500골드 (로그인 필요)</li>`}</ul>
-      ${A.current() && setCount() && !R.BM_OFF ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">🪙 ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button>${setLeft() * 300 >= 2500 ? cashBtn('set') : ''}</div>` : ''}</div>
-    <div class="stack"><button class="btn ghost" data-close>닫기</button></div>
-    <div class="bizfoot">${O.footerHTML()}</div>`;
+      ${A.current() && setCount() && !R.BM_OFF ? `<div class="stack" style="margin-top:10px"><button class="btn gold ghost" data-gbuy="set">${coin(16)} ${setCount()}개 게임 전체 소장 · ${gnum(Math.min(2500, setCount() * 300))}골드</button>${setLeft() * 300 >= 2500 ? cashBtn('set') : ''}</div>` : ''}</div>
+    <div class="bizfoot">${O.footerHTML()}</div>
+    <div class="stack"><button class="btn ghost" data-close>닫기</button></div>`;   /* 닫기를 맨 끝으로: PC 에서 시트 바닥에 붙어 늘 보임(app.css .stack:last-child) */
 }
 const settingsOpen = () => !sheet.hidden && panel.classList.contains('setpanel');
-function openSettings() { openSheet(settingsHTML()); panel.classList.add('setpanel'); }
+function openSettings() { openSheet(settingsHTML(), 'u full'); panel.classList.add('setpanel'); }
 /* 설정 시트가 열려 있으면 내용만 새로 (로그인 · 설치 가능 · 테스트 스위치 등) */
 function refreshSettings() { if (settingsOpen()) openSettings(); }
 
@@ -1177,23 +1141,26 @@ const setCount = () => R.ORDER.filter(id => !R.isBrand(id)).length;
 const setLeft = () => R.ORDER.filter(id => !R.isBrand(id) && !R.state().owned[id]).length;
 // ── 시트(상세 · 광고 · 소개) ─────────────────────────
 const sheet = $('#sheet'), panel = $('#sheet .panel');
-function openSheet(html) {
+/* 시트 모양 (2026-11-26 시안 3): cls 없음 = 새 체계 'u'(라이트/다크 · 뒤 화면이 살짝 물러남) · 'u full' = 키 큰 시트(상세 · 골드 · 설정) · 'f' = 점방 쪽 시트(예전 톤 그대로 — fSheet) */
+const fSheet = html => openSheet(html, 'f');
+const recede = () => { const on = !sheet.hidden && panel.classList.contains('u') && player.hidden && !isPC(); if (on) document.documentElement.style.setProperty('--u-sy', Math.round(scrollY) + 'px'); document.documentElement.classList.toggle('u-recede', on); };
+function openSheet(html, cls = 'u') {
   if (stepNext && Date.now() - stepNext < 3000 && !sheet.hidden && sheetPushed && $('#player').hidden) park();   /* 시트 안에서 다음 화면(설정 → 내 구매 등): 앞 화면은 그 칸에 접어 두고 새 칸 */
   stepNext = 0;
-  panel.classList.remove('sdpanel', 'setpanel'); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
+  panel.classList.remove('sdpanel', 'setpanel', 'u', 'full', 'f'); String(cls).split(' ').forEach(c => c && panel.classList.add(c)); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
   panel.innerHTML = `<div class="grab"></div>${html}`;
   /* 폰 '뒤로'가 앱을 나가지 않고 이 창만 닫게: 게임 밖에서 처음 열 때 기록 한 칸 (2026-10-29 대표 — 상담 창에서 뒤로 누르면 나가 버림)
      터치 없이 열린 시트(공유 링크로 들어옴 등)는 지금 칸을 넣으면 폰 크롬이 그 아래 칸을 건너뜀 → 첫 터치 때 넣고(tbArm), 그 전엔 CloseWatcher 로 받음 */
   if (sheet.hidden && !sheetPushed && $('#player').hidden) {
     if (spare || canPush()) { sheetOver = takePark(); hpush({ sheet: 1 }); sheetPushed = true; } else { sheetNeed = true; sheet.hidden = false; watchTab(); }
   }
-  sheet.hidden = false; }
+  sheet.hidden = false; panel.scrollTop = 0; recede(); }
 let onSheetClose = null, sheetPushed = false, spare = false, sheetNeed = false, sheetOver = 0, sdOver = 0, stepNext = 0;
 /* 버튼으로 닫을 때는 그 자리에서 history.back() 을 부르지 않음 — 닫자마자 게임 · 상세를 여는 흐름(광고 보고 열기 → play 등)에서
    늦게 도착한 '뒤로'가 막 연 화면을 닫아 버림(0.87.1 버그 · 2026-10-29) → 남은 칸(spare)은 같은 순간에 열리는 다음 화면이 다시 쓰고, 아무것도 안 열리면 바로 되돌림(markSpare)
    접어 둔 앞 단계 위에서 열린 시트면 닫는 순간 앞 단계를 되살림 (돌려주는 값 true) */
 function closeSheet(fromPop) {
-  const was = !sheet.hidden; sheet.hidden = true; sheetNeed = false;
+  const was = !sheet.hidden; sheet.hidden = true; sheetNeed = false; recede();
   let back = false;
   if (sheetPushed) { sheetPushed = false; if (fromPop !== true) { markSpare(); if (sheetOver && PARK.has(sheetOver)) { unpark(sheetOver); back = true; } } }
   sheetOver = 0;
@@ -1225,7 +1192,7 @@ const takePark = () => { const id = parkTop; parkTop = 0; return id; };
 function unpark(id) {
   const it = PARK.get(id); if (!it) return false; PARK.delete(id);
   if (it.sd) { document.body.append(it.sd); sdOpen = true; sdOver = it.under; document.body.style.overflow = 'hidden'; }
-  if (it.sheet) { panel.className = it.cls; panel.replaceChildren(...it.sheet); sheet.classList.toggle('over', it.over); sheet.hidden = false; sheetPushed = true; onSheetClose = it.onClose; sheetOver = it.under; }
+  if (it.sheet) { panel.className = it.cls; panel.replaceChildren(...it.sheet); sheet.classList.toggle('over', it.over); sheet.hidden = false; sheetPushed = true; onSheetClose = it.onClose; sheetOver = it.under; recede(); }
   return true;
 }
 const unparkHere = () => { const st = history.state; return !!(st && st.re && unpark(st.re)); };
@@ -1239,50 +1206,110 @@ function layersOff(soft) {
   if (!soft) { spare = false; clearTimeout(spareT); }
 }
 
-function detail(id) {
-  const g = G(id), a = R.access(id), lib = R.state().library[id];
+/* 게임 상세 시트 (2026-11-26 시안 3 · 사업 A3 · B2 · B3): 표지 → 아이콘 · 제목 → (잠김) 무료로 돌아오는 날 D-n → '오늘 하려면'(이용권 · 광고 · 골드 하루 · 소장) → 고정 단추
+   광고 줄 = 실제 한도와 같은 '오늘 N번 남음'(bm.js appLeft · 앱 15) · 0이면 흐리게 + 아래 단추가 '골드로 플레이' · 골드가 모자라면 그 자리에서 골드 시트(spendGold)
+   쓰임 줄에는 골드만(B2 · 원화는 골드 묶음 · 원스토어 현금 단추에만) · 이번 주 2번 넘게 연 게임은 소장 줄을 위로(B3) · 소장한 게임은 '플레이' 하나 */
+const OPENS = 'oad_opens';
+function openLog(id) { try { const o = JSON.parse(localStorage.getItem(OPENS) || '{}'), w = R.weekOf(R.now()); o[id] = [...(o[id] || []).filter(k => k >= w), R.keyOf(R.now())].slice(-7); localStorage.setItem(OPENS, JSON.stringify(o)); } catch { /* */ } }
+function opensThisWeek(id) { try { const o = JSON.parse(localStorage.getItem(OPENS) || '{}'), w = R.weekOf(R.now()); return (o[id] || []).filter(k => k >= w).length; } catch { return 0; } }
+/* 진열장에서 그 게임이 무료로 돌아오는 날 (없으면 null) */
+function backDay(id) { const n = R.DAILY.length, di = R.dayIndex(); for (let k = 1; k < n; k++) if (R.gameOn(di + k) === id) { const d = R.now(); d.setDate(d.getDate() + k); return { k, n, d }; } return null; }
+function detail(id, from) {
+  const g = G(id), a = R.access(id), lib = R.state().library[id], login = !!A.current();
   const own = A.current() && R.state().owned[id], last = C.on(id) && C.lastSaved(id);
   const when = d => d.toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const where = !A.ON || !lib ? '' : C.on(id)
-    ? `<div class="saveat"><span>☁ 저장 위치 · <b>내 계정</b></span><small>${last ? `마지막 저장 ${when(last)}` : '게임을 닫으면 저장돼요'}${C.canUndo(id) ? ` · <button class="lnk" data-cundo="${id}">직전 저장으로 되돌리기</button>` : ''}</small></div>`
-    : `<div class="saveat"><span>📱 저장 위치 · <b>이 기기</b></span><small>${progressLine(id)}</small></div>`;
-  const actions = a !== 'locked'
-    ? `${where}<button class="btn" data-play="${id}">▶ 플레이</button>${A.ON && !own && !R.BM_OFF ? `<button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 기록을 계정에 안전하게</button>${cashBtn('own', id)}` : ''}`   /* 브랜드 게임도 소장 가능 (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 규칙) */
-    : `${PV.canReward() ? `<button class="btn alt" data-ad="${id}">📺 광고 보고 ${R.RULES.adUnlock === 'day' ? '오늘 하루' : '한 판'} 플레이</button>` : ''}
-       ${R.isBrand(id) ? '' : `<button class="btn gold" data-gbuy="day" data-gid="${id}">🪙 10골드로 오늘 하루 열기</button>${cashBtn('day', id)}`}
-       <button class="btn gold ghost" data-gbuy="own" data-gid="${id}">🪙 300골드로 소장 · 언제든 + 기록을 계정에</button>${cashBtn('own', id)}
-       <div class="note">오늘의 게임이 돌아오는 날엔 무료로 할 수 있어요</div>`;
+    ? `<div class="saveat"><span>${ic('cloud')} 저장 위치 · <b>내 계정</b></span><small>${last ? `마지막 저장 ${when(last)}` : '게임을 닫으면 저장돼요'}${C.canUndo(id) ? ` · <button class="lnk" data-cundo="${id}">직전 저장으로 되돌리기</button>` : ''}</small></div>`
+    : `<div class="saveat"><span>${ic('phone')} 저장 위치 · <b>이 기기</b></span><small>${progressLine(id)}</small></div>`;
+  const way = (cls, icon, t, sub, pill, data, extra = '') => `<button class="u-way u-press${extra}" type="button" ${data}><i class="u-wi ${cls}">${icon}</i><span class="u-lt"><b>${t}</b><span>${sub}</span></span><span class="u-wb${pill[1] ? ' fill' : ''} u-num">${pill[0]}</span></button>`;
+  const ownWay = (sub) => way('own', ic('cloud'), '소장하기', sub, [`${coin(14)}300`], `data-gbuy="own" data-gid="${id}"`);
+  const brand = R.isBrand(id), adOn = PV.canReward() && !R.BM_OFF, adLeft = adOn ? BM.appLeft() : 0, tk = brand ? 0 : R.tickets();
+  const gold = login ? `<span class="t-sub">내 골드 ${coin(13)} <b class="u-num">${gnum(goldOf())}</b></span>` : '';
+  let body;
+  if (a !== 'locked') {
+    const canOwn = A.ON && !own && !R.BM_OFF;   /* 브랜드 게임도 소장 가능 (2026-11-09 대표: 브랜드 게임도 일반 게임과 같은 골드 규칙) */
+    body = `${where}<button class="u-btn block fill g u-press" data-play="${id}">${ic('play')}플레이</button>
+      ${canOwn ? `<div class="u-sh in"><h3 class="t-head">언제든 하려면</h3>${gold}</div><div class="u-card u-ways">${ownWay('광고 없이 · 기록은 계정에 안전하게')}</div>${cashBtn('own', id) ? `<div class="u-cash">${cashBtn('own', id)}</div>` : ''}` : ''}`;
+  } else {
+    const bd = brand ? null : backDay(id), W = ['일', '월', '화', '수', '목', '금', '토'];
+    const cnt = bd ? `<div class="u-card u-cnt"><div class="u-ct"><b>${bd.d.getMonth() + 1}월 ${bd.d.getDate()}일 ${W[bd.d.getDay()]}요일엔 무료</b><span class="u-num">D-${bd.k}</span></div><div class="u-cb"><i style="width:${Math.max(4, (bd.n - bd.k) / bd.n * 100)}%"></i></div><small>오늘의 게임으로 돌아오는 날까지 기다려도 돼요</small></div>` : '';
+    const wk = opensThisWeek(id), ownFirst = wk >= 2 && A.ON;
+    const rows = [];
+    if (tk) rows.push(way('tk', ic('ticket'), '하루 열기 이용권 쓰기', `7일 연속 선물 · ${tk}장 있어요`, ['쓰기', 1], `data-ticket="${id}"`));
+    if (adOn) rows.push(adLeft > 0 ? way('ad', ic('tv'), '광고 한 편 보고 오늘 하루', `짧은 광고 · 오늘 밤 12시까지 마음껏 · 오늘 ${adLeft}번 남음`, ['무료', !tk], `data-ad="${id}"`, tk ? '' : ' best')
+      : `<div class="u-way off" aria-disabled="true"><i class="u-wi ad">${ic('tv')}</i><span class="u-lt"><b>광고 한 편 보고 오늘 하루</b><span>오늘 볼 수 있는 광고를 다 봤어요 · 내일 다시 ${BM.LIMIT.rewardApp}번</span></span><span class="u-wb u-num">무료</span></div>`);
+    if (!brand) rows.push(way('day', coin(22), '골드로 오늘 하루', '광고 없이 바로', [`${coin(14)}10`], `data-gbuy="day" data-gid="${id}"`));
+    const ow = ownWay(ownFirst ? `이번 주 ${wk}번 열었어요 · 언제든 · 광고 없이 · 기록은 계정에` : '언제든 · 광고 없이 · 기록은 계정에');
+    if (ownFirst) rows.unshift(ow.replace('class="u-way u-press"', 'class="u-way u-press hi"')); else rows.push(ow);
+    const cta = tk ? `<button class="u-btn block fill g u-press" data-ticket="${id}">${ic('ticket')}이용권으로 플레이</button>`
+      : adOn && adLeft > 0 ? `<button class="u-btn block fill g u-press" data-ad="${id}">${ic('play')}광고 보고 플레이</button>`
+      : !brand ? `<button class="u-btn block fill gold u-press" data-gbuy="day" data-gid="${id}">${coin(18)}골드로 플레이 · 10</button>`
+      : `<button class="u-btn block fill gold u-press" data-gbuy="own" data-gid="${id}">${coin(18)}300골드로 소장하고 플레이</button>`;
+    const cash = [brand ? '' : cashBtn('day', id), cashBtn('own', id)].join('');
+    body = `${cnt}<div class="u-sh in"><h3 class="t-head">오늘 하려면</h3>${gold}</div><div class="u-card u-ways">${rows.join('')}</div>${cta}${cash ? `<div class="u-cash">${cash}</div>` : ''}`;
+  }
   T.track('detail_open', { game: id, how: a, from: tab === 'today' ? 'home' : tab });
-  openSheet(`<div class="cover" role="img" aria-label="${g.title}" style="background-image:url('${webp(g.cover)}')"></div>
-    ${g.logo ? '' : `<h2>${g.title}</h2><div class="en" style="color:var(--sub);font-size:13px;letter-spacing:1.5px">${g.en.toUpperCase()}</div>`}
-    <div class="meta" style="margin:10px 0"><span class="chip">🎮 ${g.genre}</span><span class="chip">⏱ ${g.time}</span>${lib ? `<span class="chip">🗓 ${fmtKey(lib.first)} 첫 플레이</span>` : ''}${R.ratingBadge(id)}</div>
-    <p style="color:#DDD5FA">${g.desc}</p>
-    <div class="stack">${actions}<button class="btn ghost" data-close>닫기</button></div>`);
+  const html = `<div class="u-sheethead"><span></span><button class="u-x u-press" data-close aria-label="닫기">${ic('x')}</button></div>
+    <div class="u-dsc"><div class="u-dcv u-ph cover" role="img" aria-label="${g.title}" data-vt>${img(g.cover, 0, 'decoding="async"')}</div>
+    <div class="u-dti">${img(g.icon, 0, 'class="u-li"')}<div class="u-lt"><span class="u-eb">${g.genre} · ${g.time}</span><h1 class="t-title">${g.title}</h1><span>${g.tagline || ''}</span></div></div>
+    ${lib || R.ratingBadge(id) ? `<div class="u-meta">${lib ? `<span>${fmtKey(lib.first)} 첫 플레이 · ${lib.plays}판</span>` : ''}${R.ratingBadge(id)}</div>` : ''}
+    ${body}
+    <p class="u-desc">${g.desc}</p></div>`;
+  /* 카드 펼침 전환 (시안 3 · View Transition): 누른 칸의 그림이 상세 표지 자리로 커지며 펼쳐짐 — 지원 안 하는 브라우저 · 동작 줄이기 · 게임 중에는 그냥 시트 */
+  const src = from && from.closest && from.closest('[data-open]'), pic = src && src.querySelector('img');
+  if (!pic || !document.startViewTransition || !player.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('still')) return openSheet(html, 'u full');
+  pic.style.viewTransitionName = 'u-hero';
+  try {
+    document.startViewTransition(() => { pic.style.viewTransitionName = ''; openSheet(html, 'u full vt'); const c = panel.querySelector('.u-dcv'); if (c) c.style.viewTransitionName = 'u-hero'; })
+      .finished.finally(() => { const c = panel.querySelector('.u-dcv'); if (c) c.style.viewTransitionName = ''; panel.classList.remove('vt'); });
+  } catch { pic.style.viewTransitionName = ''; openSheet(html, 'u full'); }
 }
-
+/* 출석판 오늘 칸 받기 (대표 11-26): 서버가 하루 한 번만 줌 → 하루 열기권은 이 기기에 · 너랑 무료 +N 은 서버 칸에 → 칭찬 시트 + 바로 쓰는 곳으로 이어지는 단추 */
+let attBusy = false;
+async function attClaimGo(b) {
+  if (attBusy) return; attBusy = true; if (b) { b.disabled = true; b.classList.add('busy'); }
+  let r; try { r = await HUB.attClaim(); } catch { r = { ok: false, error: '연결이 불안정해요 · 잠시 뒤 다시 눌러 주세요' }; } finally { attBusy = false; }
+  hubRedraw(); hubLoad();
+  if (!r.ok) { toast(r.already ? '오늘 칸은 이미 받았어요 · 내일 다음 칸이 열려요' : r.error); return; }
+  const g = r.got || {}; if (g.tk) R.addTickets(g.tk);
+  T.track('att_claim', { cell: g.cell, nr: g.nr || 0, tk: g.tk || 0 });
+  const big = g.cell === 7;
+  const rows = [g.nr && !R.NR_OFF ? `<div class="u-row"><i class="u-ti n">${ic('chat')}</i><span class="u-lt"><b>너랑 무료 +${g.nr}번</b><span>오늘 밤 12시까지 · 기본 대화에 먼저 쓰여요</span></span><button class="u-btn sm fill n" data-att-go="neorang">너랑 열기</button></div>` : '',
+    g.tk ? `<div class="u-row"><i class="u-ti g">${ic('ticket')}</i><span class="u-lt"><b>게임 하루 열기 ${g.tk}장</b><span>잠긴 게임 하나를 오늘 열어요 · 지금 ${R.tickets()}장</span></span><button class="u-btn sm fill g" data-att-go="games">게임 고르기</button></div>` : ''].join('');
+  openSheet(`<div class="intro u-attdone"><div class="u-attbadge${big ? ' big' : ''}">${big ? ic('gift') : ic('check')}</div>
+    <h2>${big ? '7칸 다 모았어요! 큰 선물이에요' : `${g.cell}칸째 출석, 잘하고 있어요`}</h2>
+    <p class="fsub">${R.state().streak.count || 1}일 연속으로 왔어요 · ${big ? '내일부터 1칸부터 다시 모아요' : `${7 - g.cell}번 더 오면 큰 선물`}</p>
+    <div class="u-card u-group">${rows}</div>
+    <div class="stack"><button class="btn ghost" data-close>좋아요</button></div></div>`);
+}
+/* 하루 열기권 쓰기 (상세 시트 · 잠긴 게임) */
+function useTicketGo(id) { if (!R.useTicket(id)) return toast('하루 열기권이 없어요'); T.track('ticket_use', { game: id }); openLog(id); closeSheet(); toast(`${G(id).title} 오늘 하루 열림!`); PFROM = 'ticket'; play(id); }
+/* 화면 모드: auto(폰 설정) · light · dark — index.html 첫 스크립트(__oadTheme)가 html[data-theme] 를 다시 정함 */
+function setTheme(v) { try { if (v === 'auto') localStorage.removeItem('oad_theme'); else localStorage.setItem('oad_theme', v); } catch { /* */ } if (window.__oadTheme) window.__oadTheme(); T.track('theme', { v }); refreshSettings(); }
+const themePick = () => document.documentElement.dataset.themePick || 'auto';
 function watchAd(id) {
   if (R.BM_OFF) return toast('지금은 모든 게임을 무료로 할 수 있어요');   /* 실서버 BM 을 끈 때(rules.js PROD_BM_OFF): 모든 게임 무료라 원래 오지 않음 */
-  if (PV.store()) { T.track('ad_view', { game: id, from: 'detail_locked', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); T.track('ad_done', { game: id, from: 'detail_locked', via: PV.name() }); R.unlockByAd(id); toast(`${G(id).title} 열림!`); PFROM = 'ad'; play(id); }); }
+  if (PV.store()) { T.track('ad_view', { game: id, from: 'detail_locked', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); T.track('ad_done', { game: id, from: 'detail_locked', via: PV.name() }); BM.useApp(); openLog(id); R.unlockByAd(id); toast(`${G(id).title} 열림!`); PFROM = 'ad'; play(id); }); }
   let left = R.RULES.adSeconds;
   T.track('ad_view', { game: id, from: 'detail_locked' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
     <div class="stack"><button class="btn" id="adok" disabled>보상 받기</button></div></div>`);
   const iv = setInterval(() => {
     left--; const c = $('#adc'); if (c) c.textContent = left;
-    if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => { T.track('ad_done', { game: id, from: 'detail_locked' }); R.unlockByAd(id); closeSheet(); toast(`${G(id).title} 열림!`); PFROM = 'ad'; play(id); }; } }
+    if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => { T.track('ad_done', { game: id, from: 'detail_locked' }); BM.useApp(); openLog(id); R.unlockByAd(id); closeSheet(); toast(`${G(id).title} 열림!`); PFROM = 'ad'; play(id); }; } }
   }, 1000);
 }
 
 /* 놓친 날 도장 보충: 광고 1회 (골드로는 팔지 않음) */
 function stampAd() {
   if (!R.fillable()) return go('today');
-  if (PV.store()) { T.track('ad_view', { what: 'stamp', from: 'stamp', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); R.fillByAd(); T.track('stamp_fill'); go('today'); toast(`🔥 ${R.state().streak.count}일 연속으로 이어졌어요!`); }); }
+  if (PV.store()) { T.track('ad_view', { what: 'stamp', from: 'stamp', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); BM.useApp(); R.fillByAd(); T.track('stamp_fill'); go('today'); toast(`🔥 ${R.state().streak.count}일 연속으로 이어졌어요!`); }); }
   let left = R.RULES.adSeconds; T.track('ad_view', { what: 'stamp', from: 'stamp' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">광고를 끝까지 보면 어제 도장이 채워져요</div>
     <div class="stack"><button class="btn" id="adok" disabled>도장 받기</button></div></div>`);
   const iv = setInterval(() => {
     left--; const c = $('#adc'); if (c) c.textContent = left;
-    if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => { R.fillByAd(); T.track('stamp_fill'); closeSheet(); go('today'); toast(`🔥 ${R.state().streak.count}일 연속으로 이어졌어요!`); }; } }
+    if (left <= 0) { clearInterval(iv); const b = $('#adok'); if (b) { b.disabled = false; b.onclick = () => { BM.useApp(); R.fillByAd(); T.track('stamp_fill'); closeSheet(); go('today'); toast(`🔥 ${R.state().streak.count}일 연속으로 이어졌어요!`); }; } }
   }, 1000);
 }
 function intro() {
@@ -1310,13 +1337,13 @@ let frame = null, playing = null;
 function play(id, synced) {
   if (R.access(id) === 'hidden') return toast('이 게임은 곧 열려요');
   if (!R.canPlay(id)) return detail(id);
-  if (!synced && C.alwaysOn(id) && !C.on(id)) { openSheet(`<div class="intro"><h2>☁ 계정 기록 확인 중…</h2></div>`); C.syncAlways(id, 'before').then(() => play(id, true)); return; }
+  if (!synced && C.alwaysOn(id) && !C.on(id)) { openSheet(`<div class="intro"><h2>계정 기록 확인 중…</h2></div>`); C.syncAlways(id, 'before').then(() => play(id, true)); return; }
   if (!synced && C.on(id)) {
     const t0 = Date.now();
-    openSheet(`<div class="intro"><h2>☁ 계정 기록 확인 중…</h2><p class="fsub">${G(id).title}</p></div>`);
+    openSheet(`<div class="intro"><h2>계정 기록 확인 중…</h2><p class="fsub">${G(id).title}</p></div>`);
     C.syncAlways(id, 'before').then(() => C.beforePlay(id)).then(r => {
       if (r.act === 'ask') return cloudAsk(id, r);
-      if (r.act === 'pull') { openSheet(`<div class="intro"><h2>☁ 계정 기록을 불러왔어요</h2><p class="fsub">다른 기기에서 하던 ${G(id).title} 기록이에요${r.sum ? ` · ${r.sum}` : ''}</p><div class="stack"><button class="btn" data-play-synced="${id}">▶ 이어서 하기</button></div></div>`); return; }
+      if (r.act === 'pull') { openSheet(`<div class="intro"><h2>계정 기록을 불러왔어요</h2><p class="fsub">다른 기기에서 하던 ${G(id).title} 기록이에요${r.sum ? ` · ${r.sum}` : ''}</p><div class="stack"><button class="btn" data-play-synced="${id}">▶ 이어서 하기</button></div></div>`); return; }
       if (Date.now() - t0 > 2500) { openSheet(`<div class="intro"><h2>준비됐어요</h2><div class="stack"><button class="btn" data-play-synced="${id}">▶ 플레이</button></div></div>`); return; }
       play(id, true);
     });
@@ -1337,7 +1364,7 @@ function play(id, synced) {
   player.prepend(frame); lockFrame(true);
   // 게임 안 오류도 함께 기록 (같은 주소라 직접 들을 수 있음)
   frame.addEventListener('load', () => { try { const w = frame && frame.contentWindow; if (!w) return; w.addEventListener('error', e => T.trackError('game:' + id, e.error || e.message)); w.addEventListener('unhandledrejection', e => T.trackError('game:' + id, e.reason)); } catch { /* 다른 주소면 건너뜀 */ } });
-  player.hidden = false;
+  player.hidden = false; recede();
   document.body.style.overflow = 'hidden';
   watch();
 }
@@ -1368,14 +1395,14 @@ window.visualViewport && visualViewport.addEventListener('resize', () => { if (!
 function closeGame() {
   const was = playing && playing.id;
   if (playing) { T.track('game_end', { game: playing.id, sec: Math.round((Date.now() - playing.t) / 1000) }); playing = null; }
-  player.hidden = true; lockFrame(false);
+  player.hidden = true; lockFrame(false); recede();
   if (frame) { frame.remove(); frame = null; }
   document.body.style.overflow = '';
   go(tab, 'game');
   setTimeout(() => { if (player.hidden) unparkHere(); }, 0);   /* 접어 둔 앞 단계 위에서 연 게임이면 닫은 뒤 그 단계로 */
   // 소장 게임: 닫은 뒤 계정에 올림 · 아니면 (조건 맞을 때) 소장 권유
   if (was && C.alwaysOn(was)) setTimeout(() => C.syncAlways(was, 'after'), 300);
-  if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('☁ 계정에 저장됐어요'); }), 300);
+  if (was && C.on(was)) setTimeout(() => C.afterPlay(was).then(r => { if (r.ok) toast('계정에 저장됐어요'); }), 300);
   else if (was && nudgeOwn(was)) return;
   // 첫 게임을 마치고 돌아오면 홈 화면 추가 권유 (사다리 1차 · 예전 한 번 권유를 이미 본 사람은 1차를 쓴 것으로)
   if (localStorage.getItem('oad_nudged')) { const o = offerState(); if (!(o.done || []).includes('first')) { o.done = [...(o.done || []), 'first']; o.n = (o.n || 0) + 1; offerSave(o); } }
@@ -1465,8 +1492,8 @@ async function gameReq(gid, d) {
     const gold = (me.gold && me.gold.total) || 0;
     T.track('bm_offer', { game: gid, item, what: 'gold' });
     onSheetClose = () => done({ ok: false, reason: 'cancel' });
-    openSheet(`<div class="intro"><h2>🪙 ${x.name}</h2><div class="payrow"><span>내 골드 ${gnum(gold)}</span><b>🪙 ${gnum(x.gold)}</b></div>
-      <div class="stack">${gold >= x.gold ? `<button class="btn" id="bmUse">🪙 ${gnum(x.gold)} 골드 쓰기</button>` : `<button class="btn gold" id="bmShop">골드 충전하기 (${gnum(x.gold - gold)}개 모자라요)</button>`}<button class="btn ghost" id="bmNo">괜찮아요</button></div></div>`);
+    openSheet(`<div class="intro"><h2>${x.name}</h2><div class="payrow"><span>내 골드 ${gnum(gold)}</span><b>${coin(18)} ${gnum(x.gold)}</b></div>
+      <div class="stack">${gold >= x.gold ? `<button class="btn" id="bmUse">${coin(18)} ${gnum(x.gold)} 골드 쓰기</button>` : `<button class="btn gold" id="bmShop">골드 충전하기 (${gnum(x.gold - gold)}개 모자라요)</button>`}<button class="btn ghost" id="bmNo">괜찮아요</button></div></div>`);
     $('#bmNo').onclick = () => closeSheet();
     const sb = $('#bmShop'); if (sb) sb.onclick = () => { onSheetClose = () => done({ ok: false, reason: 'short' }); shop(); };
     const ub = $('#bmUse'); if (ub) ub.onclick = async () => {
@@ -1503,9 +1530,9 @@ function fakeAd(label, reward) {
 
 // ── 공통 클릭 처리 ─────────────────────────────────
 /* 시트 안에서 눌러 다른 시트 화면으로 넘어가는 것 = 한 단계 (뒤로가기 = 앞 시트 화면) */
-const STEP_KEYS = ['mybuy', 'restoreCode', 'delacctOpen', 'shop', 'ghist', 'fortuneEdit', 'paid', 'paidEdit', 'type', 'chat', 'fpack', 'freebie', 'login'];
+const STEP_KEYS = ['gbuy', 'mybuy', 'restoreCode', 'delacctOpen', 'shop', 'ghist', 'fortuneEdit', 'paid', 'paidEdit', 'type', 'chat', 'fpack', 'freebie', 'login'];
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-tycard],[data-sharecard],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-cbuy],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-lab],[data-settings],[data-bseg],[data-home]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-tycard],[data-sharecard],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-cbuy],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-lab],[data-settings],[data-bseg],[data-home],[data-att-claim],[data-att-go],[data-ticket],[data-theme-set],[data-nrgo]');
   if (!t) return;
   const d = t.dataset;
   /* 게임 · 운세로 넘어갈 때 붙일 from: 오늘 허브 카드(hub) · 아래 게임 칸(home_<칸>) */
@@ -1516,7 +1543,12 @@ document.addEventListener('click', e => {
   const iwhere = d.where || (home ? (bk.dataset.blk === 'install' ? 'banner' : bk.dataset.blk) : !sheet.hidden ? 'sheet' : tab);
   if ('install' in d || 'ext' in d || 'hideInstall' in d) T.track('install_click', { where: iwhere, how: I.how(), what: 'install' in d ? 'install' : 'ext' in d ? 'ext' : 'hide' });
   if (!sheet.hidden && t.closest('#sheet') && STEP_KEYS.some(k => k in d)) stepNext = Date.now();   /* 시트 안에서 다음 화면 → 한 단계 (openSheet) */
-  if ('settings' in d) { T.track('tab', { tab: 'settings' }); openSettings(); }
+  if ('attClaim' in d) attClaimGo(t);
+  else if (d.attGo) { closeSheet(); if (d.attGo === 'neorang') { nrVia = 'att'; go('neorang', 'tab'); } else { if (tab !== 'today') go('today', 'tab'); setTimeout(() => toGames(true), 80); } }
+  else if (d.ticket) useTicketGo(d.ticket);
+  else if (d.themeSet) setTheme(d.themeSet);
+  else if (d.nrgo !== undefined) { if (!R.NR_OFF) nrDeep = d.nrgo; nrVia = 'box'; go('neorang', 'tab'); }
+  else if ('settings' in d) { T.track('tab', { tab: 'settings' }); openSettings(); }
   else if (d.bseg) { if (d.bseg !== boxSeg) { boxSeg = d.bseg; T.track('tab', { tab: 'box', what: d.bseg }); } go('box', 'seg', d.bseg); }
   else if (d.mypaid) { park(); paidPage(d.mypaid); }   /* 내 구매 → 풀이: 내 구매는 접어 둠 */
   else if ('mybuy' in d) myBuys();
@@ -1544,7 +1576,7 @@ document.addEventListener('click', e => {
   else if (d.cpick) cloudPick(d.gid, d.cpick, t);
   else if ('nudgeOff' in d) { try { const n = JSON.parse(localStorage.getItem('oad_ownnudge') || '{}'); n.off = 1; localStorage.setItem('oad_ownnudge', JSON.stringify(n)); } catch { /* */ } closeSheet(); toast('다시 보지 않을게요'); }
   else if (d.cundo) { if (!t.dataset.confirm) { t.dataset.confirm = 1; t.textContent = '한 번 더 누르면 되돌려요'; } else C.undo(d.cundo).then(() => { closeSheet(); toast('☁ 직전 저장으로 되돌렸어요'); }).catch(er => toast(er.message)); }
-  else if ('shop' in d) shop();
+  else if ('shop' in d) shop('', d.shop || (tab === 'fortune' ? 'fort' : 'home'), d.shop === 'nr' ? NRP().basic - (A.current() ? goldOf() : 0) : 0);
   else if (d.pack) buyPack(d.pack);
   else if ('ghist' in d) goldHistory();
   else if (d.cbuy) cashBuy(d.cbuy, d.gid, t);
@@ -1562,7 +1594,7 @@ document.addEventListener('click', e => {
   else if ('fortuneEdit' in d) fortuneForm();
   else if ('fortuneDel' in d) { localStorage.removeItem('oad_fortune_me'); closeSheet(); go(tab); toast('사주 정보를 지웠어요'); }
   else if (d.play) { if (sdOpen) sdClose(); play(d.play); }
-  else if (d.open) detail(d.open);
+  else if (d.open) detail(d.open, t);
   else if (d.ad) watchAd(d.ad);
   else if ('close' in d) closeSheet();
   else if ('home' in d) { e.preventDefault(); goHome(); }   /* 원어데이 로고 = 어디서든 오늘 허브 맨 위 */
