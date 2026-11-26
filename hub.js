@@ -25,10 +25,15 @@ export const toNine = () => hms(next9() - now());
 const localOpen = () => Math.max(0, Math.min(12, Math.round((Date.parse(period()) - Date.parse('2026-11-02')) / 864e5) + 1));
 const A = p => (p ? 'neorang/img/' + String(p).replace(/^\.?\/?(img\/)?/, '') : '');
 
-import { ic, coin, rings } from './ui.js?v=0.99.65';
+import { ic, coin, rings } from './ui.js?v=0.99.66';
 /* ── 새 화면 체계 (2026-11-26 시안 3 피트니스 · lab/ui-apple/3): 칭찬 + 링 세 겹 → 연속 기록 → 다음 할 일(안 닫힌 링부터) → 이번 주 링 7개 → 내일도 여기서 ── */
 const KB = 'role="button" tabindex="0"';
 const img = (X, src, cls = '', extra = '') => (src ? `<img class="${cls}" src="${X.webp ? X.webp(src) : src}" data-png="${src}" alt="" ${extra}>` : '');
+
+/* 다 한 카드 (2026-11-26 대표 "완료처럼 아이콘이 사라지고 텍스트로만 보여 접근성이 떨어져"): 그림 · 체크 · 바로가기 단추를 남긴 작은 카드 — 점선 한 줄로 접지 않음
+   k: g · f · n (색) · pic: 그림 칸 HTML · attrs: 카드 전체를 눌렀을 때(data-hub 등) · btn: [글, 단추에 붙일 data] */
+const doneCard = (k, pic, attrs, eb, title, sub, btn) => `<article class="u-card u-todo u-row2 u-dn u-press" ${attrs} ${KB}><div class="u-dpic">${pic}<i class="u-ck ${k}" aria-hidden="true">${ic('check')}</i></div>
+  <div class="u-lt"><span class="u-eb ${k}">${eb}</span><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}</div><span class="u-btn sm tint ${k}"${btn[1] ? ' ' + btn[1] : ''}>${btn[0]}</span></article>`;
 
 /* ── 게임 ── */
 function gameSt(X) {
@@ -40,7 +45,7 @@ function gameSt(X) {
 function gameCard(X, G0) {
   if (G0.st === 'none') return `<article class="u-card u-todo u-row2 u-press" data-hub="game" data-hst="none" ${KB}><i class="u-ti g">${ic('sun')}</i><div class="u-lt"><span class="u-eb g">오늘의 게임</span><b>게임은 곧 하나씩 열려요</b><span>준비가 끝난 게임부터 매일 하나씩 공개할게요</span></div></article>`;
   const { g, id } = G0;
-  if (G0.done) return `<article class="u-card u-done u-press" data-hub="game" data-hst="done" data-play="${id}" data-from="hub" ${KB} aria-label="${esc(g.title)} 한 판 더"><i class="u-ck g">${ic('check')}</i><div class="u-lt"><span class="u-eb g">게임 · 다 했어요</span><b>${esc(g.title)} · 오늘 ${G0.n}판</b></div><span class="u-more g">한 판 더${ic('chev')}</span></article>`;
+  if (G0.done) return doneCard('g', `<div class="u-av sq u-ph">${img(X, g.icon, '', 'loading="lazy"')}</div>`, `data-hub="game" data-hst="done" data-play="${id}" data-from="hub" aria-label="${esc(g.title)} 한 판 더"`, '게임 · 다 했어요', esc(g.title), `오늘 ${G0.n}판 · 게임 링 닫힘`, [`${ic('play')}한 판 더`]);
   return `<article class="u-card u-todo u-press" data-hub="game" data-hst="${G0.st}" data-play="${id}" data-from="hub" ${KB} aria-label="오늘의 게임 ${esc(g.title)} 플레이">
     <div class="u-tp u-ph" data-vt>${img(X, g.cover, '', 'decoding="async"')}<span class="u-rb">게임 링 0/1</span></div>
     <div class="u-tb2"><div class="u-lt"><span class="u-eb g">오늘의 게임 · ${esc(g.time)}</span><b>${esc(g.title)}</b><span>한 판이면 게임 링이 채워져요</span></div><span class="u-btn sm fill g">${ic('play')}플레이</span></div></article>`;
@@ -58,8 +63,10 @@ function fortCard(X, F) {
   if (F.st === 'yes') {
     /* 사업 B1: 홈에는 가격 없이 오늘 운세에서 이어지는 질문 한 줄만 (가격은 점방 시트에서) */
     const h = F.f && F.m.hookOf(F.f, F.key, X.bought(F.m, F.me)), PR = h && F.m.paidOf(h.id);
-    return `<article class="u-card u-done u-press" data-hub="fort" data-hst="yes" ${KB}><i class="u-ck f">${ic('check')}</i><div class="u-lt"><span class="u-eb f">점방 · 다 했어요</span><b>${c ? `${esc(c.name)} · ${F.f.total}점 · ${esc(F.f.key)}의 날` : '오늘 운세 봤어요'}</b></div>${PR ? `<span class="u-more f" data-paid="${h.id}">${esc(PR.hook || PR.title)}${ic('chev')}</span>` : `<span class="u-more f">다시 보기${ic('chev')}</span>`}</article>`;
+    return doneCard('f', `<div class="u-av u-ph"><img src="${art}" alt="" style="object-position:50% 12%"></div>`, `data-hub="fort" data-hst="yes" aria-label="점방 · 오늘 운세 다시 보기"`, '점방 · 다 했어요',
+      c ? `${esc(c.name)} · ${F.f.total}점 · ${esc(F.f.key)}의 날` : '오늘 운세 봤어요', PR ? esc(PR.hook || PR.title) : '', PR ? ['풀이 보기', `data-paid="${h.id}"`] : ['다시 보기']);
   }
+
   const o = F.st === 'none'
     ? { k: '점방 · 오늘의 신점 · 매일 무료', q: '오늘 너를 읽어 줄 점쟁이가 기다린다', s: '생년월일만 넣으면 끝', go: '무료로 보기' }
     : { k: c ? `점방 · ${c.name}의 오늘의 신점` : '점방 · 오늘의 신점', q: `${esc(F.me.name)}, 오늘 네 하루를 읽어 뒀다`, s: '점수와 한 줄은 열어야 보여요', go: '열기' };
@@ -120,7 +127,7 @@ function nrCard(X, N) {
     const two = `<span class="u-two">${ad ? `<button class="u-btn sm tint n" type="button" data-hub="nr" data-hst="ad" data-nr="room/${w.id}/charge">${ic('tv')}광고 보고 +5</button>` : ''}${enough ? `<button class="u-btn sm fill n" type="button" data-hub="nr" data-hst="gold" data-nr="room/${w.id}">${coin(14)}${p}로 이어 하기</button>` : `<button class="u-btn sm fill n" type="button" data-hub="nr_gold" data-hst="${X.first ? 'first' : 'short'}" data-shop="nr">${coin(14)}${p}로 이어 하기</button>`}</span>`;
     return row('out', `너랑 · ${w.short}`, q, `오늘 무료 다 썼어요 · 밤 9시에 다시 ${(NR.home && NR.home.price && NR.home.price.freeDay) || 10}번`, '', `room/${w.id}`, two);
   }
-  if (N.done) return `<article class="u-card u-done u-press" data-hub="nr" data-hst="done" data-nr="room/${w.id}" ${KB}><i class="u-ck n">${ic('check')}</i><div class="u-lt"><span class="u-eb n">너랑 · 오늘 이어 갔어요</span><b>${q}</b></div><span class="u-more n">이어 하기${ic('chev')}</span></article>`;
+  if (N.done) return doneCard('n', cover ? `<div class="u-av u-ph"><img src="${cover}" alt="" style="object-position:50% 14%"></div>` : `<i class="u-ti n">${ic('chat')}</i>`, `data-hub="nr" data-hst="done" data-nr="room/${w.id}" aria-label="너랑 ${esc(w.title)} 이어 하기"`, `너랑 · ${esc(w.short)} · 오늘 이어 갔어요`, q, L.free != null ? `오늘 무료 ${L.free}번 남음${L.ad > 0 ? ` · 보너스 ${L.ad}번` : ''}` : '', ['이어 하기']);
   return row('cont', `너랑 · ${w.short}`, q, L.free === 0 ? `보너스 무료 ${L.ad}번 남음` : `오늘 무료 ${L.free != null ? L.free : 10}번 남음${L.ad > 0 ? ` · 보너스 ${L.ad}번` : ''}`, '이어 하기', `room/${w.id}`);
 }
 function lunchStrip(N) {
@@ -148,7 +155,7 @@ function week(X, today3) {
     if (off > 0) return `<div class="u-wr"><div class="u-rings u-empty" style="width:36px;height:36px"></div>${lab}</div>`;
     const v = off === 0 ? today3 : [hist[key] ? 1 : 0, (days[key] || {}).f ? 1 : 0, (days[key] || {}).n ? 1 : 0];
     const gid = off < 0 && di + off >= 0 ? R.gameOn(di + off) : null;
-    return `<div class="u-wr${off === 0 ? ' now' : ''}"${gid ? ` data-open="${gid}" ${KB} aria-label="${w}요일 · ${esc(X.G(gid).title)}"` : ''}>${rings(36, 4, 1.5, v)}${lab}</div>`;
+    return `<div class="u-wr${off === 0 ? ' now' : ''}"${gid ? ` data-open="${gid}" ${KB} aria-label="${w}요일 · ${esc(X.G(gid).title)}"` : ''}>${rings(36, 4, 1.5, v, 'wk' + key)}${lab}</div>`;
   }).join('');
 }
 /* ── 출석판 (2026-11-26 대표): 7칸 · 들어온 날 기준 · 하루 한 번(서버 story act 'att' 가 판단 · 계정 · 기기 · KST) · 보상은 소비성(너랑 무료 +N · 게임 하루 열기권) ──
@@ -213,7 +220,7 @@ export function html(X) {
     <div class="u-ca">
     <section class="u-card u-sum" data-blk="sum" aria-label="오늘 ${d}개 챙김 · ${tot}개 중">
       <div class="u-praise"><h2 class="t-title">${hello}</h2><p class="t-sub">${sub}</p></div>
-      <div class="u-sumb">${rings(148, 16, 3, v3)}<div class="u-lgs">${lg}</div></div>
+      <div class="u-sumb">${rings(148, 16, 3, v3, 'sum')}<div class="u-lgs">${lg}</div></div>
     </section>
     ${streakCard(X)}
     </div><div class="u-cb2">
@@ -243,7 +250,7 @@ export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
   attLoad(redraw);
   if (X.NR_OFF) return;
-  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.65'), import('./neorang/works2.js?v=0.99.65').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.66'), import('./neorang/works2.js?v=0.99.66').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || (NR_SERIAL && now() >= NR.home.next9))) {

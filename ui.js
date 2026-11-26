@@ -23,13 +23,31 @@ const P = {
 export const ic = (k, cls = '') => `<svg class="u-ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[k] || ''}</svg>`;
 /* 골드 동전 (직접 그림 · 🪙 대신) */
 export const coin = (s = 16) => `<svg class="u-coin" width="${s}" height="${s}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="url(#oadcg)"/><circle cx="10" cy="10" r="6.2" fill="none" stroke="#FFF3C4" stroke-opacity=".75" stroke-width="1.2"/><path d="M10 5.6l1.3 3.1 3.1 1.3-3.1 1.3L10 14.4l-1.3-3.1L5.6 10l3.1-1.3z" fill="#FFF6D6" fill-opacity=".95"/></svg>`;
-/* 진행 링 한 겹 (값 0~1) · 색은 CSS 변수라 style 로 (사파리는 SVG 속성 안 var() 를 못 읽음) */
-export const ring = (v, size, w, color, track) => {
-  const r = (size - w) / 2, c = 2 * Math.PI * r, h = size / 2;
-  return `<svg class="u-rg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${h}" cy="${h}" r="${r}" fill="none" style="stroke:${track || 'var(--u-fill)'}" stroke-width="${w}"/>${v > 0 ? `<circle class="u-rf" cx="${h}" cy="${h}" r="${r}" fill="none" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(c * Math.min(1, v)).toFixed(2)} ${c.toFixed(2)}" style="stroke:${color};--c:${c.toFixed(2)}" transform="rotate(-90 ${h} ${h})"/>` : ''}</svg>`;
+/* 진행 링 한 겹 (값 0~1) · 색은 CSS 변수라 style 로 (사파리는 SVG 속성 안 var() 를 못 읽음)
+   key 가 있으면 그 링이 마지막으로 그려진 값을 기억함 (2026-11-26 대표 "링이 두 번 움직여"):
+   처음 보일 때만 0 → 값으로 차오르고, 늦게 온 값으로 다시 그릴 때는 같으면 멈춘 채로 · 바뀌면 지금 각도에서 새 각도로 이어서 (0부터 다시 안 그림)
+   ringReset(): 화면에 새로 들어올 때(다른 탭에서 '오늘' · '보관함'으로) — 시안처럼 그때 한 번 다시 차오름 */
+const RM = new Map(), NOW = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+export const ringReset = () => RM.clear();
+/* 그 링의 애니메이션 상태: 처음이면 0 → 값(1.1초 · 0.15초 뒤) · 같은 값이면 하던 애니메이션을 그 자리에서 이어서(음수 지연) · 끝났으면 멈춤 · 값이 바뀌면 지금 값 → 새 값(0.8초) */
+function ringAnim(key, len) {
+  if (!key) return { cls: 'u-rf', from: 0, delay: null };
+  const p = RM.get(key), t = NOW();
+  let e;
+  if (!p) e = { len, from: 0, t0: t + 150, dur: 1100, cls: 'u-rf' };
+  else if (Math.abs(p.len - len) <= .5) e = p;
+  else e = { len, from: p.len, t0: t, dur: 800, cls: 'u-rf u-rf2' };
+  RM.set(key, e);
+  if (t >= e.t0 + e.dur) return { cls: 'u-rf u-still', from: e.from, delay: null };
+  return { cls: e.cls, from: e.from, delay: p ? Math.round(e.t0 - t) : null };
+}
+export const ring = (v, size, w, color, track, key) => {
+  const r = (size - w) / 2, c = 2 * Math.PI * r, h = size / 2, len = c * Math.min(1, Math.max(0, v || 0));
+  const an = v > 0 ? ringAnim(key, len) : (key && RM.set(key, { len: 0, from: 0, t0: 0, dur: 0, cls: 'u-rf' }), null);
+  return `<svg class="u-rg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${h}" cy="${h}" r="${r}" fill="none" style="stroke:${track || 'var(--u-fill)'}" stroke-width="${w}"/>${an ? `<circle class="${an.cls}"${key ? ` data-rk="${key}"` : ''} cx="${h}" cy="${h}" r="${r}" fill="none" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${len.toFixed(2)} ${c.toFixed(2)}" style="stroke:${color};--c:${c.toFixed(2)};--from:${an.from.toFixed(2)}${an.delay != null ? `;animation-delay:${an.delay}ms` : ''}" transform="rotate(-90 ${h} ${h})"/>` : ''}</svg>`;
 };
 /* 링 세 겹: 바깥 게임 · 가운데 점방 · 안 너랑 (값이 null 이면 그 링은 바탕만 · 쉬는 서비스) */
-export const rings = (sz, w, gap, vals) => {
+export const rings = (sz, w, gap, vals, key) => {
   const cs = ['var(--u-game)', 'var(--u-fort)', 'var(--u-nr)'], bg = ['var(--u-tg)', 'var(--u-tf)', 'var(--u-tn)'];
-  return `<div class="u-rings" style="width:${sz}px;height:${sz}px">${vals.map((v, i) => { const s = sz - i * 2 * (w + gap); return `<div style="inset:${i * (w + gap)}px;color:${cs[i]}">${ring(v || 0, s, w, cs[i], bg[i])}</div>`; }).join('')}</div>`;
+  return `<div class="u-rings" style="width:${sz}px;height:${sz}px">${vals.map((v, i) => { const s = sz - i * 2 * (w + gap); return `<div style="inset:${i * (w + gap)}px;color:${cs[i]}">${ring(v || 0, s, w, cs[i], bg[i], key ? key + ':' + i : undefined)}</div>`; }).join('')}</div>`;
 };

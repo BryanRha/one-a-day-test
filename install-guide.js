@@ -3,8 +3,8 @@
 //   openGuide(how)  환경별 단계 안내      openOffer(kind)  권유 시트(첫 게임 끝 · 2일째 · 3일 연속)
 //   openInstalled()  설치 앱 첫 실행 화면  openHelp() · openDiag()  '설치가 안 돼요' · 설정 진단
 //   열 때만 불러옴(install.js ui()) · 모양은 install-guide.css · 기록은 track.js
-import * as I from './install.js?v=0.99.65';
-import { track } from './track.js?v=0.99.65';
+import * as I from './install.js?v=0.99.66';
+import { track } from './track.js?v=0.99.66';
 
 /* ── 모양 불러오기 ── */
 let cssP = null;
@@ -262,6 +262,9 @@ export async function openGuide(h, opts = {}) {
 /* ── 권유 시트 ── kind: 'first'(첫 게임 끝) · 'day2'(다음 날 재방문) · 'day3'(3일 연속) / opts: { where, reward } → Promise<'accept'|'later'> */
 const preview = reward => `<div class="preview"><div class="grid">${'<i></i>'.repeat(8)}</div><div class="me"><span></span>One a Day</div>${reward ? '<div class="plus">+50 <i class="coin"></i></div>' : ''}</div>`;
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
+/* 새 체계 선 아이콘 (shell/ui.js 와 같은 그림 · 이 모듈은 열 때만 불러서 따로 둠) */
+const FLAME = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-4 0-6.5-2.7-6.5-6.3 0-3.6 3-5.6 3.8-9.7 2.4 1.4 3.4 3.6 3.6 5.4.9-.6 1.6-1.6 1.9-2.9 2 1.7 3.7 4.3 3.7 7.2C18.5 18.3 16 21 12 21z"/></svg>';
+const FLAME_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 export async function openOffer(kind = 'first', opts = {}) {
   await css();
   const reward = opts.reward !== false, inApp = I.env.inApp;
@@ -276,12 +279,17 @@ export async function openOffer(kind = 'first', opts = {}) {
       <div class="benefits">${reward ? '<span>🎁 설치하고 열면 50골드</span>' : '<span>🌙 아이콘 한 번에</span>'}<span>⏱ 10초면 끝</span></div>
       <div class="stack"><button class="btn" data-ig="ok">${okBtn}</button><button class="later" data-ig="later">나중에</button></div></div>`;
   } else {
-    const n = kind === 'day3' ? 3 : 2, today = new Date();
-    const days = Array.from({ length: 7 }, (_, k) => { const d = new Date(today); d.setDate(d.getDate() + k - (n - 1)); return WD[d.getDay()]; });
-    body = `<div class="sheet streak"><div class="grab"></div><div class="flame">🔥</div><h2 style="margin-top:8px">${n}일 연속이에요!</h2><p class="lead">${n === 2 ? '어제도 오늘도 왔어요. 멋져요' : '사흘째 빠짐없이 왔어요. 대단해요'}</p>
-      <div class="days">${days.map((d, k) => `<div class="${k < n ? 'on' : k === n ? 'nx' : ''}"><i>${k < n ? '✓' : k === n ? '?' : ''}</i>${d}</div>`).join('')}</div>
-      <div class="tip"><i class="ico"></i><div>${n === 2 ? `<b class="jua" style="font-size:16px;font-weight:400">내일은 홈 화면에서 한 번에</b><br>${reward ? '설치하고 열면 50골드 <i class="coin"></i>' : '아이콘 하나로 바로 들어와요'}` : `<b class="jua" style="font-size:16px;font-weight:400">🔥 연속 출석, 놓치지 않게</b><br>${opts.keeper ? '앱으로 3일 들어오면 연속 지킴이 1장' : reward ? '설치하고 열면 50골드 <i class="coin"></i>' : '홈 화면에서 한 번에 들어와요'}`}</div></div>
-      <div class="stack"><button class="btn" data-ig="ok">${inApp ? '🌐 ' + I.extLabel() : okBtn}</button><button class="later" data-ig="later">나중에</button></div></div>`;
+    /* 연속 권유 (2026-11-26): 숫자 · 날 칸은 앱이 넘겨준 연속 기록(rules.js streakNow — 홈 연속 칸과 같은 값)만 씀 · 모양은 새 시트 틀(ui.css .u-ofs · 라이트/다크) */
+    const sn = opts.streak || { count: kind === 'day3' ? 3 : 2, days: [] }, n = sn.count, base = new Date();
+    const days = (sn.days && sn.days.length ? sn.days : Array.from({ length: n }, () => ({ st: 'on' }))).slice(-6);
+    const cells = [...days.map((x, k) => { const d = new Date(base); d.setDate(d.getDate() - (days.length - 1 - k)); return `<div class="${x.st}"><i>${x.st === 'rest' ? '쉼' : FLAME_OK}</i>${k === days.length - 1 ? '오늘' : WD[d.getDay()]}</div>`; }),
+      (() => { const d = new Date(base); d.setDate(d.getDate() + 1); return `<div class="nx"><i>?</i>${WD[d.getDay()]}</div>`; })()].join('');
+    const lead = n === 2 ? '어제도 오늘도 왔어요. 멋져요' : sn.days && sn.days.some(x => x.st === 'rest') ? `쉬는 날 하루를 빼고 ${n}일째 이어 왔어요` : `${n}일째 빠짐없이 왔어요. 대단해요`;
+    const tip = n === 2 ? `<b>내일은 홈 화면에서 한 번에</b>${reward ? '설치하고 열면 50골드' : '아이콘 하나로 바로 들어와요'}` : `<b>연속 기록, 놓치지 않게</b>${opts.keeper ? '앱으로 3일 들어오면 연속 지킴이 1장' : reward ? '설치하고 열면 50골드' : '홈 화면에서 한 번에 들어와요'}`;
+    body = `<div class="sheet streak u-ofs"><div class="grab"></div><div class="u-ofs-badge">${FLAME}</div><h2>${n}일 연속이에요!</h2><p class="lead">${lead}</p>
+      <div class="days">${cells}</div>
+      <div class="tip"><i class="ico"></i><div>${tip}</div></div>
+      <div class="stack"><button class="btn" data-ig="ok">${inApp ? I.extLabel() + '로 열기' : okBtn}</button><button class="later" data-ig="later">나중에</button></div></div>`;
   }
   const nth = opts.nth ? { nth: opts.nth } : {};
   T('install_view', { where: opts.where || 'nudge', how: I.how(), ...nth });
@@ -372,7 +380,7 @@ async function doAct(a, d) {
 }
 async function send(d) {
   T('install_diag', { what: 'send', how: d.verdict.code, msg: `${d.summary} | ${d.ua}`.slice(0, 200) });
-  try { const m = await import('./track.js?v=0.99.65'); m.flush && m.flush(); } catch { /* */ }
+  try { const m = await import('./track.js?v=0.99.66'); m.flush && m.flush(); } catch { /* */ }
   toast('보냈어요. 고마워요! 빨리 살펴볼게요');
 }
 /* 자주 막히는 3가지 (환경마다 다름) */

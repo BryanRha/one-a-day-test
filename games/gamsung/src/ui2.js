@@ -3,15 +3,15 @@
 //   원칙 (마루미 0.3.1): 방 창 = 할 일 하나 큰 카드 + 더 보기 · 설명 한 줄 · 팝업은 한 번에 하나 · 날아가는 물건은 3초 안에 도착 · 광고 종이는 그 자리에 고정
 //   UI.prototype 에 섞어 씀 (ui.js 끝)
 import * as THREE from 'three';
-import { MENU, STAFF, STAFF_UP, STORES, STORE_TMP, OWNER, OWNER_JOBS, AD_DAY, AD_PLACES, GOLD, VIP, IDLE, CHAIN, THEME_SETS, APRONS, SEASON, TRUCK, BRAND, FURN, REGULARS, MACHINES } from './data.js?v=0.99.65';
-import { S, ST, save, today, now } from './state.js?v=0.99.65';
-import { fmt, storeMult, priceMult, vipOn, machineCount, cx, cz } from './game.js?v=0.99.65';
-import { BRANCHES, FLOORS, FDX, hms, instGold, floorOfX, FINISHED } from './layout.js?v=0.99.65';
-import { areaBox } from './world.js?v=0.99.65';
-import { bm } from './oad_bm.js?v=0.99.65';
-import { sfx } from './audio.js?v=0.99.65';
-import { pushBack, inOAD, track, toOAD } from './oad.js?v=0.99.65';
-import { pic } from './ui.js?v=0.99.65';
+import { MENU, STAFF, STAFF_UP, STORES, STORE_TMP, OWNER, OWNER_JOBS, AD_DAY, AD_PLACES, GOLD, VIP, IDLE, CHAIN, THEME_SETS, APRONS, SEASON, TRUCK, BRAND, FURN, REGULARS, MACHINES } from './data.js?v=0.99.66';
+import { S, ST, save, today, now } from './state.js?v=0.99.66';
+import { fmt, storeMult, priceMult, vipOn, machineCount, cx, cz } from './game.js?v=0.99.66';
+import { BRANCHES, FLOORS, FDX, hms, instGold, floorOfX, FINISHED } from './layout.js?v=0.99.66';
+import { areaBox } from './world.js?v=0.99.66';
+import { bm } from './oad_bm.js?v=0.99.66';
+import { sfx } from './audio.js?v=0.99.66';
+import { pushBack, inOAD, track, toOAD } from './oad.js?v=0.99.66';
+import { pic } from './ui.js?v=0.99.66';
 
 const $ = s => document.querySelector(s);
 const mmss = s => s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;

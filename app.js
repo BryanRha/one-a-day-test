@@ -1,23 +1,23 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.65';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.65';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.65';
-import * as R from './rules.js?v=0.99.65';
-import * as I from './install.js?v=0.99.65';
-import * as T from './track.js?v=0.99.65';
-import * as P from './pay.js?v=0.99.65';
-import * as A from './account.js?v=0.99.65';
-import * as C from './cloud.js?v=0.99.65';
-import * as BM from './bm.js?v=0.99.65';
-import * as HUB from './hub.js?v=0.99.65';
-import * as O from './operator.js?v=0.99.65';
-import { ic, coin, ring } from './ui.js?v=0.99.65';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.66';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.66';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.66';
+import * as R from './rules.js?v=0.99.66';
+import * as I from './install.js?v=0.99.66';
+import * as T from './track.js?v=0.99.66';
+import * as P from './pay.js?v=0.99.66';
+import * as A from './account.js?v=0.99.66';
+import * as C from './cloud.js?v=0.99.66';
+import * as BM from './bm.js?v=0.99.66';
+import * as HUB from './hub.js?v=0.99.66';
+import * as O from './operator.js?v=0.99.66';
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.66';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.65').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.66').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.65'), import('./fortune/types.js?v=0.99.65'), import('./fortune/chat.js?v=0.99.65'), import('./fortune/oneword-ui.js?v=0.99.65')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.66'), import('./fortune/types.js?v=0.99.66'), import('./fortune/chat.js?v=0.99.66'), import('./fortune/oneword-ui.js?v=0.99.66')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -27,7 +27,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.65';
+const VERSION = '0.99.66';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -95,8 +95,9 @@ function go(t, via, seg) {
   if (from !== t) tabLvl = tbPushed ? tbLvl : lvl() - (spare ? 1 : 0);   /* 이 탭 맨 아래 칸 (탭을 옮길 때 여기까지 되돌림) */
   FVIA = via || '';
   if (t !== 'today') R.checkIn();   /* 🔥 출석은 어느 탭으로 들어와도 (오늘 탭은 그리면서 함) */
+  if (from !== t) ringReset();   /* 링은 탭에 새로 들어올 때만 0부터 차오름 · 같은 탭을 다시 그리면(로그인 · 설치 가능 · 늦게 온 값) 이어서 (ui.js ring) */
   view.innerHTML = RENDER[t]();
-  view.firstElementChild?.classList.add('fadein');
+  if (from !== t) view.firstElementChild?.classList.add('fadein');   /* 등장 흐림도 탭에 들어올 때만 (같은 탭 다시 그리기에서 되풀이 안 함) */
   window.scrollTo(0, 0); onScroll();
   setHash(); tabDot();
   if (t === 'neorang') nrSetup();
@@ -152,7 +153,9 @@ const hubX = () => ({ R, G, webp, fmtDate, PROD: R.PROD, NR_OFF: R.NR_OFF, FT: (
   gold: A.current() ? goldOf() : null, first: !!(A.current() && A.current().first) || !A.current(), nrAd: !R.BM_OFF && (PV.store() ? PV.canReward('neorang') : !R.PROD), fill: !!(R.fillable() && PV.canReward()) });
 /* 늦게 온 값(운세 엔진 · 너랑 작품 · 서버 home)으로 허브 덩어리만 다시 그림 — 스크롤 · 아래 게임 칸은 그대로 */
 let hubLast = '';
-const hubRedraw = () => { const el = $('#hub'); if (!el || tab !== 'today') return; let h = ''; try { h = HUB.html(hubX()); } catch (er) { console.error(er); return; } if (h === hubLast) return; hubLast = h; const x = document.createElement('div'); x.innerHTML = h; el.replaceWith(x.firstElementChild); tick(); tabDot(); };
+/* 링 애니메이션 표시(진행 중 지연 · 멈춤)만 다른 것은 같은 화면으로 봄 → 다시 그리지 않음 (대표 11-26 '링이 두 번 움직여') */
+const hubNorm = h => h.replace(/;animation-delay:-?\d+ms/g, '').replace(/class="u-rf[^"]*"/g, 'class="u-rf"');
+const hubRedraw = () => { const el = $('#hub'); if (!el || tab !== 'today') return; let h = ''; try { h = HUB.html(hubX()); } catch (er) { console.error(er); return; } if (hubNorm(h) === hubNorm(hubLast)) return; hubLast = h; const x = document.createElement('div'); x.innerHTML = h; el.replaceWith(x.firstElementChild); tick(); tabDot(); };
 const hubHTML = () => { try { return (hubLast = HUB.html(hubX())); } catch (er) { console.error(er); return '<div class="u-hub" id="hub"></div>'; } };
 const hubLoad = () => { try { HUB.load(hubX(), hubRedraw); } catch (er) { console.error(er); } };
 function renderToday() {
@@ -626,7 +629,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.65')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.66')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -849,7 +852,7 @@ async function extOpen() {
 }
 /* 권유 사다리 (biz 4-1): 각 차례 한 번씩 · 평생 3번 · 하루 1번 · '나중에'면 3일 쉼 · 시트 · 운세 상세 · 게임 · 안내가 열려 있으면 안 띄움
    첫 게임 끝인데 안드로이드 크롬 설치 창이 아직이면 미룸(차례를 쓰지 않음, ops A4) */
-async function offerInstall(kind) {
+async function offerInstall(kind, streak) {
   if (I.installed() || (isPC() && !I.canPrompt())) return false;
   const o = offerState(), k = todayKey();
   if ((o.n || 0) >= 3 || (o.done || []).includes(kind) || (o.next && k < o.next) || o.last === k) return false;
@@ -858,17 +861,19 @@ async function offerInstall(kind) {
   const UI = await I.ui().catch(() => null); if (!UI) return false;
   if (!sheet.hidden || !player.hidden || document.querySelector('.ig')) return false;
   o.n = (o.n || 0) + 1; o.last = k; o.done = [...(o.done || []), kind]; offerSave(o);
-  const r = await UI.openOffer(kind, { where: 'nudge', nth: o.n, reward: INSTALL_REWARD });
+  const r = await UI.openOffer(kind, { where: 'nudge', nth: o.n, reward: INSTALL_REWARD, streak: kind === 'first' ? null : streak || R.streakNow() });
   if (r === 'accept') { if (I.env.inApp) extOpen(); else doInstall('nudge'); }
   else { o.next = plusDays(k, 3); offerSave(o); }
   if (tab === 'today') go('today');   /* 배너는 시트를 띄운 날 숨김 */
   return true;
 }
+/* 2일째 · 3일째 권유는 연속 숫자(rules.js streakNow — 홈 연속 칸과 같은 값)로만 정함 (2026-11-26: 예전엔 '처음 온 날이 아님(visitAgain)'으로 띄우고 시트에 '2일 연속'을 박아 써서, 며칠 쉬고 온 사람에게 홈은 1일 · 시트는 2일로 어긋났음) */
 function maybeOffer() {
   if (LAND || tab !== 'today' || I.installed()) return;   /* 공유 링크로 들어온 판엔 설치 제안을 겹치지 않음 */
-  const st = R.state().streak, k = todayKey();
-  if (st && st.last === k && st.count >= 3) offerInstall('day3');
-  else if (visitAgain()) offerInstall('day2');
+  const sn = R.streakNow();
+  if (!sn.today) return;
+  if (sn.count >= 3) offerInstall('day3', sn);
+  else if (sn.count === 2) offerInstall('day2', sn);
 }
 /* 설치 앱 첫 실행: 기록(install_open · ref 로 원래 기기와 이어 붙임) + 설치 완료 화면 · 선물은 로그인한 계정에 한 번 (서버 me act install) */
 const GIFT = 'oad_install_gift';
@@ -899,7 +904,7 @@ function renderBox() {
   const own = ids.filter(id => st.owned[id]).sort((x, y) => (last(y) > last(x) ? 1 : -1)), rest = ids.filter(id => !st.owned[id]).sort((x, y) => (last(y) > last(x) ? 1 : -1));
   const days = Object.keys(st.history || {}).length, owns = Object.keys(st.owned || {}).filter(k => st.owned[k] && G(k)).length;
   const stats = `<section class="u-card u-stats3" data-blk="stats">
-      <div>${ring(met / total, 64, 7, 'var(--u-game)', 'var(--u-tg)')}<b class="u-num">${met}<small>/${total}</small></b><span>만난 게임</span></div>
+      <div>${ring(met / total, 64, 7, 'var(--u-game)', 'var(--u-tg)', 'box')}<b class="u-num">${met}<small>/${total}</small></b><span>만난 게임</span></div>
       <div><span class="big u-num">${days}</span><span>플레이한 날</span></div>
       <div><span class="big u-num">${owns}</span><span>소장</span></div></section>`;
   const grid = list => `<section class="u-grid4">${list.map(boxTile).join('')}</section>`;
@@ -1147,7 +1152,8 @@ const recede = () => { const on = !sheet.hidden && panel.classList.contains('u')
 function openSheet(html, cls = 'u') {
   if (stepNext && Date.now() - stepNext < 3000 && !sheet.hidden && sheetPushed && $('#player').hidden) park();   /* 시트 안에서 다음 화면(설정 → 내 구매 등): 앞 화면은 그 칸에 접어 두고 새 칸 */
   stepNext = 0;
-  panel.classList.remove('sdpanel', 'setpanel', 'u', 'full', 'f'); String(cls).split(' ').forEach(c => c && panel.classList.add(c)); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
+  const keepVt = !sheet.hidden && panel.classList.contains('vt');   /* 펼침 전환으로 연 시트 안에서 다음 화면 · 다시 그리기: 올라오기 애니메이션을 되풀이하지 않음 */
+  panel.classList.remove('sdpanel', 'setpanel', 'u', 'full', 'f', 'vt'); String(cls).split(' ').forEach(c => c && panel.classList.add(c)); if (keepVt) panel.classList.add('vt'); sheet.classList.toggle('over', !!$('#sd'));   /* 운세 상세 위에서 열면 그 위로 — 닫으면 상세로 돌아감 */
   panel.innerHTML = `<div class="grab"></div>${html}`;
   /* 폰 '뒤로'가 앱을 나가지 않고 이 창만 닫게: 게임 밖에서 처음 열 때 기록 한 칸 (2026-10-29 대표 — 상담 창에서 뒤로 누르면 나가 버림)
      터치 없이 열린 시트(공유 링크로 들어옴 등)는 지금 칸을 넣으면 폰 크롬이 그 아래 칸을 건너뜀 → 첫 터치 때 넣고(tbArm), 그 전엔 CloseWatcher 로 받음 */
@@ -1235,7 +1241,7 @@ function detail(id, from) {
     const cnt = bd ? `<div class="u-card u-cnt"><div class="u-ct"><b>${bd.d.getMonth() + 1}월 ${bd.d.getDate()}일 ${W[bd.d.getDay()]}요일엔 무료</b><span class="u-num">D-${bd.k}</span></div><div class="u-cb"><i style="width:${Math.max(4, (bd.n - bd.k) / bd.n * 100)}%"></i></div><small>오늘의 게임으로 돌아오는 날까지 기다려도 돼요</small></div>` : '';
     const wk = opensThisWeek(id), ownFirst = wk >= 2 && A.ON;
     const rows = [];
-    if (tk) rows.push(way('tk', ic('ticket'), '하루 열기 이용권 쓰기', `7일 연속 선물 · ${tk}장 있어요`, ['쓰기', 1], `data-ticket="${id}"`));
+    if (tk) rows.push(way('tk', ic('ticket'), '하루 열기 이용권 쓰기', `출석판 선물 · ${tk}장 있어요`, ['쓰기', 1], `data-ticket="${id}"`));
     if (adOn) rows.push(adLeft > 0 ? way('ad', ic('tv'), '광고 한 편 보고 오늘 하루', `짧은 광고 · 오늘 밤 12시까지 마음껏 · 오늘 ${adLeft}번 남음`, ['무료', !tk], `data-ad="${id}"`, tk ? '' : ' best')
       : `<div class="u-way off" aria-disabled="true"><i class="u-wi ad">${ic('tv')}</i><span class="u-lt"><b>광고 한 편 보고 오늘 하루</b><span>오늘 볼 수 있는 광고를 다 봤어요 · 내일 다시 ${BM.LIMIT.rewardApp}번</span></span><span class="u-wb u-num">무료</span></div>`);
     if (!brand) rows.push(way('day', coin(22), '골드로 오늘 하루', '광고 없이 바로', [`${coin(14)}10`], `data-gbuy="day" data-gid="${id}"`));
@@ -1261,7 +1267,7 @@ function detail(id, from) {
   pic.style.viewTransitionName = 'u-hero';
   try {
     document.startViewTransition(() => { pic.style.viewTransitionName = ''; openSheet(html, 'u full vt'); const c = panel.querySelector('.u-dcv'); if (c) c.style.viewTransitionName = 'u-hero'; })
-      .finished.finally(() => { const c = panel.querySelector('.u-dcv'); if (c) c.style.viewTransitionName = ''; panel.classList.remove('vt'); });
+      .finished.finally(() => { const c = panel.querySelector('.u-dcv'); if (c) c.style.viewTransitionName = ''; });   /* vt 는 남겨 둠 — 지우면 그 순간 시트가 아래에서 다시 올라옴 */
   } catch { pic.style.viewTransitionName = ''; openSheet(html, 'u full'); }
 }
 /* 출석판 오늘 칸 받기 (대표 11-26): 서버가 하루 한 번만 줌 → 하루 열기권은 이 기기에 · 너랑 무료 +N 은 서버 칸에 → 칭찬 시트 + 바로 쓰는 곳으로 이어지는 단추 */

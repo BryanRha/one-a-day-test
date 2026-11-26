@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.65';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.66';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -100,6 +100,14 @@ export function checkIn() {
   else if (last === dayBefore(d, 2) && prev > 0 && s.streak.rest !== weekOf(dayBefore(d, 1))) { s.streak.count = prev + 1; s.streak.rest = weekOf(dayBefore(d, 1)); s.streak.rested = dayBefore(d, 1); delete s.streak.fill; }
   else { s.streak.count = 1; if (last === dayBefore(d, 2) && prev > 0) { s.streak.fill = dayBefore(d, 1); s.streak.prev = prev; } else delete s.streak.fill; }
   s.streak.last = today; save(); return s.streak;
+}
+/* 연속 숫자는 여기 하나에서만 (2026-11-26 총괄 확인: 설치 권유 시트가 '처음 온 날 아님'을 '2일 연속'으로 적어 홈 숫자와 어긋남)
+   streakNow(): { count, today(오늘 들어옴), rested, days } — days = 오늘부터 거꾸로 이어진 날(최대 n칸, 오래된 것부터) · st: 'on'(온 날 · 광고 보충 포함) · 'rest'(쉬는 날) */
+export function streakNow(n = 6) {
+  const s = state().streak || {}, d = now(), today = keyOf(d), count = s.last === today || s.last === dayBefore(d, 1) ? s.count || 0 : 0;
+  const days = []; let left = s.last === today ? count : 0;
+  for (let i = 0; left > 0 && days.length < n; i++) { const k = dayBefore(d, i); if (k === s.rested) days.push({ k, st: 'rest' }); else { days.push({ k, st: 'on' }); left--; } }
+  return { count, today: s.last === today, rested: s.rested || '', days: days.reverse() };
 }
 /* 이번 주 쉬는 날이 남았나 · 하루 열기 이용권 */
 export const restLeft = () => state().streak.rest !== weekOf(now());
