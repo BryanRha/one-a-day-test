@@ -1,9 +1,10 @@
 // 원어데이 첫 화면 「오늘」 허브 (2026-11-04 대표 "B가 좋아" · "4칸으로 하자" — 시안 lab/home-hub/b 의 4칸 안)
 //   오늘의 게임 · 점방 · 너랑을 같은 크기 카드로 · 진행 링 0~3/3 · 칭찬 문구 · 점심 쪽지 띠 · '내일도 여기서' 예고 2칸
 //   그 아래로 지금 게임 메인(이번 주 달력 · 진열장)을 이어 붙임 (app.js renderToday)
-//   데이터: 게임 = rules.js 기록 · 점방 = fortune.js 계산(오늘 탭에서 연 날 = days()[오늘].f) · 너랑 = 이 기기 nr_v1 + /api/story {act:'home'} (neorang/nr.js 와 같은 규칙)
+//   데이터: 게임 = rules.js 기록 · 점방 = fortune.js 계산(오늘 탭에서 연 날 = days()[오늘].f) · 너랑 = 이 기기 nr_v2 + /api/story {act:'home', v:2} (neorang/nr.js 와 같은 규칙)
+//   너랑 카드 (2026-11-26 개편): 밤 9시 새 화 · 점심 쪽지 대신 '이어 하기 / 고르기' + 오늘 남은 무료 — 점심 띠 · 9시 카운트다운 코드는 남겨 둠(NR_SERIAL 다시 켜면)
 //   상태 셈은 여기서만 · 그리기는 html() · 늦게 오는 값(운세 엔진 · 너랑 작품 · 서버 시각)은 load() 가 받아 두고 다시 그리기를 부름
-const NR_KEY = 'nr_v1', LUNCH_MAX = 3, DAY_FREE = 30;
+const NR_KEY = 'nr_v2', LUNCH_MAX = 3, DAY_FREE = 30, NR_SERIAL = false;
 const STAGES = ['낯섦', '호기심', '신뢰', '설렘', '약속'];
 const ls = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -73,14 +74,23 @@ function fortCard(X, F) {
 }
 
 /* ── 너랑 (nr.js 의 상태 · 서버 home 값) ── */
-const nrS = () => ls(NR_KEY) || {};
+const nrS = () => ls(NR_KEY) || ls('nr_v1') || {};
 const nrW = id => (NR.works || []).find(w => w.id === id);
 const nrArt = w => NR.art[w.id] || {};
-const nrScene = (w, k, mood) => { const a = nrArt(w), sc = a.scenes || {}, p = (w.places[k] || w.places[0] || {}).tag; return A(sc[`${w.id}_${p}_${mood}`] || a.cover || Object.values(sc)[0]); };
+const nrScene = (w, k, mood) => { const a = nrArt(w), sc = a.scenes || {}, pl = w.places || [], p = (pl[k] || pl[0] || {}).tag; return A(sc[`${w.id}_${p}_${mood}`] || a.cover || Object.values(sc)[0]); };
 const nrAvatar = w => { const a = nrArt(w).avatar || {}; return A(a.smile || a.default || Object.values(a)[0]); };
 const epTitle = (w, no) => (w.eps[no - 1] || {}).title || `${no}화`;
 function nrSt(X) {
   if (X.NR_OFF) return { st: 'soon', done: false };   /* 실서버 너랑 공개 스위치(rules.js PROD_NR_OPEN)가 꺼져 있을 때만 */
+  if (!NR_SERIAL) {   /* 끝없는 방: 마지막으로 이어 간 방 → 이어 하기 · 없으면 고르기 */
+    const S = nrS(), rooms = S.rooms || {}, ids = Object.keys(rooms).filter(k => rooms[k] && rooms[k].turns > 0 && nrW(k)).sort((a, b) => (rooms[b].at || 0) - (rooms[a].at || 0));
+    const w = nrW(ids[0] || S.lastW) || nrW('c17');
+    if (!S.onboarded || !w || S.v !== 2) return { st: 'first', done: false, w: w || null };
+    const r = rooms[w.id], left = (NR.home && NR.home.left) || { light: 60, free: 10 };
+    const seenToday = !!S.seen && new Date(S.seen).toDateString() === new Date(now()).toDateString();
+    const st = r && r.turns ? (seenToday ? 'done' : 'cont') : 'pick';
+    return { st, done: st === 'done', w, r, left, lunch: false, ask: false };
+  }
   const S = nrS(), w = nrW(S.lastW) || nrW('c17');
   if (!S.onboarded || !w) return { st: 'first', done: false, w: w || null };
   const H = NR.home || {}, open = typeof H.open === 'number' ? H.open : localOpen(), left = typeof H.left === 'number' ? H.left : DAY_FREE;
@@ -96,7 +106,13 @@ function nrCard(X, N) {
   if (N.st === 'soon') return `<div class="hcard n soon" data-hub="nr" data-hst="soon" role="button" tabindex="0"><div class="in">${LOGO.nr}<div class="k">너랑 쓰는 웹소설</div><div class="t">곧 공개돼요</div><div class="s">매일 밤 9시, 새 화 한 편과 그 사람과의 대화</div>
     <div class="row"><button class="go ghost" type="button" tabindex="-1">곧 공개</button></div></div></div>`;
   const w = N.w; let o;
-  if (N.st === 'first') o = { art: w ? A(nrArt(w).cover) : '', k: '너랑 쓰는 웹소설 · 모든 화 무료', t: '읽고 나면, 그가 먼저 말을 건다', s: '1화는 3분 · 매일 밤 9시 새 화', go: '첫 이야기 고르기 →', meta: `대화 하루 <b>${DAY_FREE}번</b> 무료`, link: '' };
+  const lastLine = r => { for (let i = ((r && r.log) || []).length - 1; i >= 0; i--) { const x = r.log[i]; if (x.k === 'ai' && !x.safe) { const y = (x.items || []).find(z => z.k === 'say'); if (y) return y.t; } } return ''; };
+  const free = N.left ? `오늘 무료 <b>${N.left.free}</b> · 가벼운 <b>${N.left.light}</b>` : '';
+  if (!NR_SERIAL && N.st === 'first') o = { art: w ? A(nrArt(w).cover) : '', k: '너랑 · 내가 들어가는 이야기', t: '고르면 바로 시작, 끝나지 않는 이야기', s: '한 장면을 읽고 내 한 줄로 이어 가요', go: '첫 이야기 고르기 →', meta: '가벼운 대화 하루 <b>60번</b> 무료', link: '' };
+  else if (!NR_SERIAL && N.st === 'pick') o = { art: A(nrArt(w).cover) || nrScene(w, 0, 'smile'), k: `${w.short} · 고르면 바로`, t: `「${esc(w.title)}」`, s: w.hook, go: '작품 보기', meta: free, link: `w/${w.id}` };
+  else if (!NR_SERIAL) { const l = lastLine(N.r); o = { art: nrScene(w, 1, 'serious') || A(nrArt(w).cover), badge: N.done ? '<span class="badge ok">✓ 오늘 이어 감</span>' : '', k: `${w.short} · ${N.r.turns}번째 장면`, t: l ? `“${esc(l.length > 40 ? l.slice(0, 39) + '…' : l)}”` : `${esc(w.ch.short)}${josa(w.ch.short, '이', '가')} 기다려요`,
+    s: `${w.ch.short}${josa(w.ch.short, '이', '가')} 그 자리에서 기다려요`, go: '이어 하기 →', goCls: N.done ? 'ghost' : '', meta: free, link: `room/${w.id}` }; }
+  else if (N.st === 'first') o = { art: w ? A(nrArt(w).cover) : '', k: '너랑 쓰는 웹소설 · 모든 화 무료', t: '읽고 나면, 그가 먼저 말을 건다', s: '1화는 3분 · 매일 밤 9시 새 화', go: '첫 이야기 고르기 →', meta: `대화 하루 <b>${DAY_FREE}번</b> 무료`, link: '' };
   else if (N.st === 'wait') { const nx = N.open + 1; o = { art: nrScene(w, 0, 'smile'), k: `${w.short} · ${nx}화 · 오늘 밤 9시`, t: `「${esc(epTitle(w, nx))}」`, cd: true, go: N.open ? `${N.open}화 다시 보기` : '작품 보기', goCls: 'ghost', meta: `대화 <b>${N.left}번</b> 남음${N.left < DAY_FREE ? ` · 9시에 ${DAY_FREE}번` : ''}`, link: N.open ? `read/${w.id}/${N.open}` : `work/${w.id}` }; }
   else if (N.st === 'open') { const no = N.read0 ? 1 : N.open; o = { art: nrScene(w, 1, 'serious'), badge: night() ? '<span class="badge live">오늘 밤 열림</span>' : '<span class="badge newb">새 화</span>', k: `${w.short} · ${N.open}화`, t: `「${esc(epTitle(w, N.open))}」`,
     s: `다 읽으면 ${w.ch.short}${josa(w.ch.short, '이', '가')} 먼저 말을 걸어요`, go: N.read0 && N.open > 1 ? '1화부터 읽고 대화하기' : '읽고 이어서 대화하기', meta: `대화 <b>${N.left}번</b> ${N.left >= DAY_FREE ? '새로' : '남음'}`, link: `read/${w.id}/${no}` }; }
@@ -114,7 +130,7 @@ function lunchStrip(N) {
 
 /* ── 지금 상태 셋 (기록 · 탭 점에도 씀) ── */
 export function states(X) { return { g: gameSt(X), f: fortSt(X), n: nrSt(X) }; }
-export const nrDot = X => { const N = nrSt(X); return N.st === 'open' || N.lunch; };
+export const nrDot = X => { const N = nrSt(X); return N.st === 'open' || N.lunch; };   /* 끝없는 방에서는 'open' 이 없음 — 새 화 점 없음 */
 
 /* ── 허브 한 덩어리 (#hub — 늦게 온 값으로 이 덩어리만 다시 그림) ── */
 export function html(X) {
@@ -127,7 +143,7 @@ export function html(X) {
   const n = X.R.now(), clock = `${X.fmtDate(n)} · <span data-hclock>${n.getHours()}시 ${n.getMinutes()}분</span>`;
   const st = X.R.state().streak.count || 0, tg = X.R.gameOn(X.R.dayIndex() + 1), fresh = tg && !X.R.state().library[tg];
   const w = N.w, nx = N.open + 1;
-  const tmrN = N.st === 'soon' ? ['매일 밤 9시 · 너랑', '곧 공개돼요'] : N.st === 'first' || !w ? ['매일 밤 9시 · 너랑', `새 화 + 대화 ${DAY_FREE}번`] : [`밤 9시 · ${w.short}`, `${nx}화 「${epTitle(w, nx)}」`];
+  const tmrN = !NR_SERIAL && N.st !== 'soon' ? ['밤 9시 · 너랑', '오늘의 무료 10번 다시'] : N.st === 'soon' ? ['매일 밤 9시 · 너랑', '곧 공개돼요'] : N.st === 'first' || !w ? ['매일 밤 9시 · 너랑', `새 화 + 대화 ${DAY_FREE}번`] : [`밤 9시 · ${w.short}`, `${nx}화 「${epTitle(w, nx)}」`];
   return `<div class="hub" id="hub" data-done="${d}">
     <div class="hello"><div><small>${clock}</small><h1>${esc(hello)}</h1></div><span class="ring" aria-label="오늘 ${d}개 챙김">${ring}<span><b>${d}</b> / ${tot}</span></span></div>
     ${gameCard(X, G0)}
@@ -141,7 +157,7 @@ export function html(X) {
 
 /* ── 늦게 오는 값 받기: 운세 엔진 · 너랑 작품 · 그림 목록 · 서버 시각/남은 횟수 · (점심 지난 뒤) 점심 쪽지 → 받을 때마다 redraw ── */
 const did = () => { try { return localStorage.getItem('oad_did') || ''; } catch { return ''; } };
-const ageNow = S => { if (S.age) return S.age; const me = ls('oad_fortune_me'); return me && me.y ? new Date().getFullYear() - me.y : 0; };
+const ageNow = S => { if (S.birth) return new Date().getFullYear() - S.birth; if (S.age) return S.age; const me = ls('oad_fortune_me'); return me && me.y ? new Date().getFullYear() - me.y : 0; };
 async function post(body) {
   const S = nrS();
   return fetch('/api/story', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ d: did(), age: ageNow(S) || 30, name: S.name || '하람', ...body }) });
@@ -149,17 +165,17 @@ async function post(body) {
 export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
   if (X.NR_OFF) return;
-  if (!NR.works) import('./neorang/works.js?v=0.99.57').then(m => { NR.works = m.WORKS; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.58'), import('./neorang/works2.js?v=0.99.58').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
-  if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || now() >= NR.home.next9)) {
+  if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || (NR_SERIAL && now() >= NR.home.next9))) {
     NR.busy = true;
-    post({ act: 'home' }).then(r => r.json().then(j => ({ r, j }))).then(({ r, j }) => {
-      if (r.ok && typeof j.open === 'number') { NR.home = j; SKEW = j.now - Date.now(); }
+    post(NR_SERIAL ? { act: 'home' } : { act: 'home', v: 2 }).then(r => r.json().then(j => ({ r, j }))).then(({ r, j }) => {
+      if (r.ok && (typeof j.open === 'number' || j.v === 2)) { NR.home = j; if (j.now) SKEW = j.now - Date.now(); }
       else NR.home = { open: localOpen(), next9: next9(), left: DAY_FREE, lunchOpen: false, off: 1 };
     }).catch(() => { NR.home = { open: localOpen(), next9: next9(), left: DAY_FREE, lunchOpen: false, off: 1 }; })
-      .finally(() => { NR.busy = false; NR.at = Date.now(); redraw(); lunchFetch(X, redraw); });
-  } else lunchFetch(X, redraw);
+      .finally(() => { NR.busy = false; NR.at = Date.now(); redraw(); if (NR_SERIAL) lunchFetch(X, redraw); });
+  } else if (NR_SERIAL) lunchFetch(X, redraw);
 }
 /* 점심 쪽지: 너랑 화면(nr.js lunch())과 같은 요청 · 같은 저장 모양 — 너랑 탭을 열기 전에도 허브 띠에 글이 보이게 (하루 한 번) */
 function lunchFetch(X, redraw) {
