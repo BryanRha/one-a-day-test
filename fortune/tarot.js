@@ -56,7 +56,7 @@ export async function open(X, flipped) {
   X.openSheet(`<div class="intro tarot${done || flipped ? ' open' : ''}" id="tarotBox"><h2>🃏 오늘의 타로 한 장</h2><p class="fsub">${jo(r.who, '이', '가')} 오늘 뽑아 둔 카드예요 · 하루 한 장 · 무료</p>
     <div class="tcard" data-tflip><div class="tback"><b>${m.HAN[m.CHARS[f.ch].el]}</b><small>눌러서 뒤집기</small></div><img class="tfront" src="${cardImg(i)}" alt="${r.name}"></div>
     <div class="tread"><h3>${i}. ${r.name} <small>· ${r.kw}</small></h3><p class="tl">“${r.line}”</p><p>${r.link}</p><p class="ta">오늘의 행동 — ${r.act}</p>
-      <div class="sdhook" data-paid="${P.id}"><small>이 카드가 마음에 걸린다면</small>${m.CHARS[P.ch].name}의 ${P.title} 미리보기 <em>→ 전체 ${X.won(P.price)}</em></div>
+      <div class="sdhook" data-paid="${P.id}"><small>이 카드가 마음에 걸린다면</small>${m.CHARS[P.ch].name}의 ${P.title} 미리보기 <em>→ 전체 ${X.fwon(P.id, P.price)}</em></div>
       <p class="fsub" style="margin-top:10px">저녁에 '오늘, 맞았나요?'로 기록하면 운세 달력에 남아요 · 재미로 보는 카드 풀이예요</p></div>
     <div class="stack"><button class="btn ghost" data-close>닫기</button></div></div>`);
   const flip = () => { const b = X.$('#tarotBox'); if (!b || b.classList.contains('open')) return; b.classList.add('open'); m.markDay(key, { tc: i }); X.T.track('tarot_flip', { card: i, ch: f.ch }); };

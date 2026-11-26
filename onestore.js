@@ -125,6 +125,7 @@ const WHY = {
   service_unavailable: '원스토어 연결이 불안정해요 · 잠시 뒤 다시 해 주세요', security_error: '결제를 진행할 수 없는 상태예요',
 };
 /* 결제 → 서버 확인 → 골드. 반환 { ok, gold, then } | { ok: false, reason, msg } — reason 'cancel' 이면 아무 안내 없이 원래 화면으로
+   purchaseId 는 이어서 그 골드로 열 때(/api/me spend 의 os) 그 결제 골드만큼 정확히 빼는 데 씀
    결제는 됐는데 서버 확인이 늦으면 'pending' (PNS · 매일 대조가 넣어 줌 → 다음에 열 때 들어가 있음) */
 export async function buy(productId) {
   if (!canBuy()) return { ok: false, reason: 'off', msg: '결제는 곧 열려요' };
@@ -145,12 +146,22 @@ export async function buy(productId) {
   }
   return { ok: false, reason: 'pending', msg: '결제는 됐어요 · 골드는 잠시 뒤 자동으로 들어가요' };
 }
-/* 원스토어 화면 가격 (원 · 숫자) — 조회가 되면 그 값, 아니면 서버 상품표 값 */
-export async function prices(ids) {
-  const out = Object.fromEntries(ids.filter(i => products[i]).map(i => [i, products[i].price]));
-  if (!on || !sdkOk(() => sdk.iap.isSupported('getProductDetails'))) return out;
+/* 손님 결제가 (원 · 부가세 포함) — 원스토어 기본가격은 부가세 별도라 손님은 기본가격 × 1.1 을 냄 (11-26 대표 B안 · team/dev/tasks/261124-onestore/store/iap_products.md)
+   값은 서버 상품표(session products 의 price)가 기준 · 아직 못 받았으면 기본가격(base) × 1.1 (앱 화면에 부가세 뺀 금액이 보이면 원스토어 검증 반려 사유) */
+export const VAT = 1.1;
+export const paidPrice = (productId, base) => { const p = products[productId]; return p && p.price > 0 ? p.price : Math.round((Number(base) || 0) * VAT); };
+export const goldOf = productId => (products[productId] && products[productId].gold) || null;
+/* 원스토어 조회 가격과 서버 상품표 대조 (앱을 열 때 한 번 · 표시는 늘 서버 값) — 다르면 [{ id, store, ours, base }] (조회가 안 되면 빈 목록) */
+export async function priceCheck() {
+  const ids = Object.keys(products), out = [];
+  if (!on || !ids.length || !sdkOk(() => sdk.iap.isSupported('getProductDetails'))) return out;
   for (let i = 0; i < ids.length; i += 20) {
-    try { for (const p of await sdk.iap.getProductDetailsAsync(ids.slice(i, i + 20))) if (p && p.productId && p.priceAmountMicros) out[p.productId] = Math.round(p.priceAmountMicros / 1e6); } catch { /* 표시만 서버 값으로 */ }
+    let list = []; try { list = await sdk.iap.getProductDetailsAsync(ids.slice(i, i + 20)) || []; } catch { continue; }
+    for (const p of list) {
+      const our = p && products[p.productId]; if (!our) continue;
+      const n = p.priceAmountMicros != null ? Math.round(Number(p.priceAmountMicros) / 1e6) : Number(String(p.price || '').replace(/[^0-9.]/g, ''));
+      if (Number.isFinite(n) && n > 0 && n !== our.price) out.push({ id: p.productId, store: n, ours: our.price, base: our.base });
+    }
   }
   return out;
 }

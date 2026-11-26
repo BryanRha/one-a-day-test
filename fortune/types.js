@@ -98,7 +98,7 @@ function result(X, m, from, mine, v) {
     <div class="tyc"><b>${sc}</b><span>${label}</span></div><p class="tyl">${line}</p>
     <p class="fsub">두 사람 유형(일간)만 본 재미 궁합이에요. 실제 두 사람 생년월일시로 보는 궁합은 더 정확해요.</p>
     <div class="stack">${m.loadMe() ? '' : `<button class="sdbtn ghost" data-tysave>이 정보로 내 오늘의 운세도 보기 (무료)</button>`}
-      <button class="sdbtn" data-paid="compat">${m.CHARS[C.ch].name}의 우리 궁합 미리보기 · 전체 ${X.won(C.price)}</button>
+      <button class="sdbtn" data-paid="compat">${m.CHARS[C.ch].name}의 우리 궁합 미리보기 · 전체 ${X.fwon('compat', C.price)}</button>
       <button class="sdbtn ghost" data-tyshare="${mine}">💌 내 유형도 친구에게 보내기</button><button class="btn ghost" data-close>닫기</button></div></div>`);
   const b = X.$('[data-tysave]'); if (b) b.onclick = () => { m.saveMe({ ...v, sex: 'f', lon: 126.98 }); X.closeSheet(); X.go('today'); X.fortuneForm(); };
   X.T.track('type_compat', { type: mine, from });
