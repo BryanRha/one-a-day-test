@@ -119,7 +119,7 @@ html.os #player { top: var(--safe-t); height: calc(var(--ph, 100%) - var(--safe-
 #sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }
 #sheet[hidden] { display: none; }
 #sheet.over { z-index: 95; }
-#sheet .dim { position: absolute; inset: 0; background: rgba(5,3,15,.7); animation: fade .2s; }
+#sheet > .dim { position: absolute; inset: 0; background: rgba(5,3,15,.7); animation: fade .2s; }
 #sheet .panel { position: relative; width: 100%; max-width: 480px; max-height: 92vh; overflow: auto; background: linear-gradient(180deg, var(--card2), var(--card)); border-radius: 28px 28px 0 0; padding: 22px 20px calc(22px + var(--safe-b)); animation: up .26s cubic-bezier(.2,.9,.3,1.2); border-top: 1px solid rgba(255,255,255,.15); }
 #sheet .panel .grab { width: 44px; height: 5px; border-radius: 9px; background: rgba(255,255,255,.25); margin: -8px auto 14px; }
 #sheet .cover { width: 100%; aspect-ratio: 1200/630; border-radius: 18px; background-size: cover; background-position: center; margin-bottom: 14px; }
@@ -320,7 +320,7 @@ html.os #player { top: var(--safe-t); height: calc(var(--ph, 100%) - var(--safe-
 .sdp.pk { border-color: #F2C14E; background: linear-gradient(135deg, rgba(242,193,78,.12), var(--ink3)); }
 .pkrow { display: flex; align-items: center; gap: 10px; margin: 6px 0; padding: 11px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--sline); cursor: pointer; }
 .pkrow b { flex: 1; font-size: 14px; } .pkrow span { font-size: 12px; color: var(--sub); } .pkrow input { width: 18px; height: 18px; accent-color: #F2C14E; }
-.pkrow.on { border-color: #F2C14E; } .pkrow.on span { color: #F2C14E; } .pkrow.off, .pkrow.dim { opacity: .45; }
+.pkrow.on { border-color: #F2C14E; } .pkrow.on span { color: #F2C14E; } .pkrow.off, .pkrow.pkdim { opacity: .45; }
 
 /* ── PC 브라우저 (2026-10-28 · team/dev/tasks/261028-pc-layout) — 손가락(폰) 화면은 그대로, 마우스 · 넓은 창에서만 달라짐 ── */
 /* 게임 중에는 아래 앱 화면을 숨겨 눌리지 않게 (게임 창보다 창이 커진 순간에도 다른 게임 · 탭이 눌리던 문제) */
