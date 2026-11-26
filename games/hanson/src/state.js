@@ -1,5 +1,5 @@
 // 공용 상태 — 데이터(D) · 원어데이 연결 정보(H) · 지금 손님 판(cur)
-import { bm } from './oad_bm.js?v=0.99.67';
+import { bm } from './oad_bm.js?v=0.99.68';
 export const D = { items: {}, cast: {}, weeks: [], reserve: [], extras: [], specials: [] };
 export const H = { ok: false, owned: false, gold: 0, prices: {}, ads: {} };
 export const cur = { v: null };

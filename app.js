@@ -1,23 +1,23 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.67';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.67';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.67';
-import * as R from './rules.js?v=0.99.67';
-import * as I from './install.js?v=0.99.67';
-import * as T from './track.js?v=0.99.67';
-import * as P from './pay.js?v=0.99.67';
-import * as A from './account.js?v=0.99.67';
-import * as C from './cloud.js?v=0.99.67';
-import * as BM from './bm.js?v=0.99.67';
-import * as HUB from './hub.js?v=0.99.67';
-import * as O from './operator.js?v=0.99.67';
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.67';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.68';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.68';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.68';
+import * as R from './rules.js?v=0.99.68';
+import * as I from './install.js?v=0.99.68';
+import * as T from './track.js?v=0.99.68';
+import * as P from './pay.js?v=0.99.68';
+import * as A from './account.js?v=0.99.68';
+import * as C from './cloud.js?v=0.99.68';
+import * as BM from './bm.js?v=0.99.68';
+import * as HUB from './hub.js?v=0.99.68';
+import * as O from './operator.js?v=0.99.68';
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.68';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.67').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.68').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.67'), import('./fortune/types.js?v=0.99.67'), import('./fortune/chat.js?v=0.99.67'), import('./fortune/oneword-ui.js?v=0.99.67')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.68'), import('./fortune/types.js?v=0.99.68'), import('./fortune/chat.js?v=0.99.68'), import('./fortune/oneword-ui.js?v=0.99.68')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -27,7 +27,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.67';
+const VERSION = '0.99.68';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -629,7 +629,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.67')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.68')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -1682,7 +1682,7 @@ window.__oad = { R, go, play };
    종료(exit): 게임 화면 저장은 onestore.js 가 먼저(동기) · 소장 게임은 계정 저장도 보냄(keepalive) · 첫 화면을 그린 뒤 로딩 화면을 걷음(startGameAsync) */
 if (OS.looks) OS.ready.then(on => { if (!on) return;
   window.OAD_OS_MUTE = OS.RINGER_MUTE && OS.silent;
-  document.documentElement.classList.add('os'); const st = document.documentElement.style; st.setProperty('--safe-t', OS.safe.top + 'px'); st.setProperty('--safe-b', OS.safe.bottom + 'px');   /* 원스토어 앱이 알려 준 시스템바 높이 (iframe 안이라 env(safe-area) 가 0) */
+  document.documentElement.classList.add('os'); const st = document.documentElement.style; st.setProperty('--safe-t', OS.safe.top + 'px'); st.setProperty('--safe-b', OS.safe.bottom + 'px'); T.track('os_safe', { raw: OS.safeRaw, t: OS.safe.top, b: OS.safe.bottom, dpr: window.devicePixelRatio || 1, h: innerHeight });   /* safeArea 단위 확인용 (11-27 상단 밀림) */   /* 원스토어 앱이 알려 준 시스템바 높이 (iframe 안이라 env(safe-area) 가 0) */
   /* ad_shown: 원스토어 광고가 실제로 끝까지 보였을 때만 (리워드 = 서버가 포스트백 확인 · 전면 = 표시 완료) — 운영실 '매출 나눠 보기' 광고 칸 */
   PV.use({ name: 'onestore', reward: g => OS.rewarded(g).then(x => { if (x.ok) T.track('ad_shown', { what: 'reward', game: g || 'app', via: 'onestore' }); return x; }), inter: g => OS.interstitial(g).then(x => { if (x.shown) T.track('ad_shown', { what: 'inter', game: g || 'app', via: 'onestore' }); return x.shown; }), canReward: OS.canReward, canInter: OS.canInter, canBuy: OS.canBuy, buy: OS.buy });
   OS.progress(60); go(tab, 'open');   /* 공급자가 바뀌었으니 단추(광고 · 결제)를 다시 그림 */

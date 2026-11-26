@@ -32,6 +32,7 @@ const sdkUrl = (() => { const x = Q.get('ossdk') || ''; return ENV !== 'prod' &&
 
 export let on = false, sdk = null, info = null, pid = '', silent = false, paused = false, sale = false, products = {}, mode = 'off';
 export const safe = { top: 0, bottom: 0, left: 0, right: 0 };
+export let safeRaw = null;   /* 원스토어가 준 그대로 (기록용) */
 const H = {};   /* 앱이 끼우는 처리기: back() · pause(e) · resume(e) · exit() · 모두 선택 */
 export const handle = o => Object.assign(H, o);
 let tok = '', tokAt = 0;
@@ -60,6 +61,10 @@ async function boot() {
   if (!r || r.err || !r.playerId) return false;
   sdk = s; info = r; pid = String(r.playerId); silent = !!r.ringerSilent; on = true;
   for (const k of ['top', 'bottom', 'left', 'right']) safe[k] = Math.max(0, Number(r.safeArea && r.safeArea[k]) || 0);
+  /* 원스토어 safeArea 는 문서에 'px' 로만 적혀 있고 실제로는 기기 픽셀로 옴 (11-27 대표 폰: 상단이 상태 표시줄 높이 × 기기 배율만큼 밀림) → CSS px 로 나눔.
+     이미 CSS px 로 오는 기기를 대비해, 나눈 값이 아니라 원래 값이 시스템바 최대 높이(64px)를 넘을 때만 나눔 · 원래 값은 safeRaw 로 남겨 기록 */
+  safeRaw = { ...safe }; const dpr = window.devicePixelRatio || 1;
+  if (dpr > 1 && Math.max(safe.top, safe.bottom) > 64) for (const k in safe) safe[k] = Math.round(safe[k] / dpr);
   window.OAD_HOST = 'onestore'; window.OAD_OS_SAFE = { ...safe };
   progress(20);
   await session().catch(() => null);   /* 판매 여부 · 상품표 · 세션 표 — 못 받아도 게임은 됨(결제 · 광고만 닫힘) */
