@@ -7,9 +7,9 @@
 //   광고: rewarded · interstitial (원스토어 광고만 · 지면 ID 는 PLACE) · 결제: buy(상품 ID) → 서버 검증 → 골드 → consume (api/onestore.js)
 export const SDK = 'https://h5sdk.onestore.net/lib/v1.2.0/onestore-h5-sdk.min.js';
 export const APP = 'oad';
-/* 광고 지면 ID — 원스토어 개발자센터에서 웹 상품 OH01013449 에 리워드 · 전면 따로 발급 (11-24 아직 미발급 · 받으면 여기에) · 빈 값이면 그 광고는 '없음'(광고 단추를 그리지 않음)
+/* 광고 지면 ID — 원스토어 개발자센터에서 웹 상품 OH01013449 에 리워드 · 전면 따로 발급 (11-26 발급됨) · 빈 값이면 그 광고는 '없음'(광고 단추를 그리지 않음)
    게임마다 지면을 나누고 싶으면 게임 id 로 칸을 더함 (없으면 oad 값) */
-export const PLACE = { oad: { reward: '', inter: '' } };
+export const PLACE = { oad: { reward: 'xS9RM-JJJF-4EU3-LATV', inter: 'xSTVA-G35H-42CY-RKWD' } };   /* 원스토어 발급 상용 지면 ID (11-26 · 테스트용 ID 는 원스토어가 주지 않음) */
 /* 소리: 단말이 무음이면 게임 소리도 끔 (원스토어 가이드: ringerSilent 로 BGM 초기 상태) — false 면 무음 모드여도 소리 남 */
 export const RINGER_MUTE = true;
 /* 시험용: 개발 · 테스트 빌드에서만 ?osplace=리워드ID,전면ID 로 지면 ID 를 넣어 볼 수 있음 (실서버는 무시) */
