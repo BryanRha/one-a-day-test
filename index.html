@@ -21,9 +21,9 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <script>/* 설치 창(beforeinstallprompt)을 가장 먼저 받아 둠 — app.js · install.js 는 모듈이라 늦게 실려 놓칠 수 있음 (2026-10-28 설치 안내 ops A4) */addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});</script>
 <script>/* 원스토어 앱 안(다른 주소가 감싼 iframe — 응답 헤더 frame-ancestors 가 원스토어 · 같은 주소만 허용)이면 원스토어 H5 SDK 를 앱 코드보다 먼저 받기 시작 (2026-11-24 · 실제 초기화는 onestore.js 가 같은 주소를 ESM 으로 import) · 그 밖에서는 아무것도 안 함 */try{if(window.parent!==window){var po=null;try{po=window.parent.location.origin}catch(e){}if(po!==location.origin){var l=document.createElement('link');l.rel='modulepreload';l.crossOrigin='anonymous';l.href='https://h5sdk.onestore.net/lib/v1.2.0/onestore-h5-sdk.min.js';document.head.appendChild(l)}}}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
-<link rel="stylesheet" href="app.css?v=0.99.63">
+<link rel="stylesheet" href="app.css?v=0.99.64">
 </head>
-<body><!--oad:test--><div style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:99999;background:#E02440;color:#fff;font:700 11px sans-serif;padding:2px 10px;border-radius:0 0 8px 8px;pointer-events:none">TEST 0.99.63</div><!--/oad:test-->
+<body><!--oad:test--><div style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:99999;background:#E02440;color:#fff;font:700 11px sans-serif;padding:2px 10px;border-radius:0 0 8px 8px;pointer-events:none">TEST 0.99.64</div><!--/oad:test-->
 <div id="app">
   <main id="view"></main>
   <nav id="tabs" aria-label="아래 탭">
@@ -38,6 +38,6 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <div id="player" hidden>
 </div>
 <div id="sheet" hidden><div class="dim"></div><div class="panel"></div></div>
-<script type="module" src="app.js?v=0.99.63"></script>
+<script type="module" src="app.js?v=0.99.64"></script>
 </body>
 </html>

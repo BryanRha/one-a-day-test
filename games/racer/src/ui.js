@@ -1,8 +1,8 @@
 // 공용 UI 위젯: 글자 · 버튼 · 아이콘 버튼 · 재화 표시줄 · 팝업 · 토스트
-import { W, H, FONT, INK } from './config.js?v=0.99.63';
-import { load } from './save.js?v=0.99.63';
-import { audio } from './audio.js?v=0.99.63';
-import { pushBack } from './oad.js?v=0.99.63';
+import { W, H, FONT, INK } from './config.js?v=0.99.64';
+import { load } from './save.js?v=0.99.64';
+import { audio } from './audio.js?v=0.99.64';
+import { pushBack } from './oad.js?v=0.99.64';
 
 // 그림의 긴 변이 size 가 되도록 크기 조절 (원화 해상도가 바뀌어도 화면 크기 유지)
 export const fit = (img, size) => img.setScale(size / Math.max(img.width, img.height));
