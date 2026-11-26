@@ -1,9 +1,9 @@
 // 로딩: 그림 · 효과 시트 · 효과음, 코드로 그리는 텍스처
-import { W, H, TITLE } from '../config.js?v=0.99.66';
-import { SFX } from '../audio.js?v=0.99.66';
-import { makeTextures } from '../fx.js?v=0.99.66';
-import { makeIcons } from '../pui.js?v=0.99.66';
-import { bm } from '../oad_bm.js?v=0.99.66';
+import { W, H, TITLE } from '../config.js?v=0.99.67';
+import { SFX } from '../audio.js?v=0.99.67';
+import { makeTextures } from '../fx.js?v=0.99.67';
+import { makeIcons } from '../pui.js?v=0.99.67';
+import { bm } from '../oad_bm.js?v=0.99.67';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }

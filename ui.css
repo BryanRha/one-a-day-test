@@ -237,6 +237,8 @@ html[data-theme="dark"] .u-rings .u-rf { filter: drop-shadow(0 0 6px currentColo
 #sheet .panel.u { --text: var(--u-label); --sub: var(--u-label2); --mute: var(--u-label2); --card: var(--u-card); --card2: var(--u-card); --line: var(--u-sep); --gold: var(--u-gold); --mint: var(--ok-c, #1E9E57);
   max-width: 520px; max-height: calc(100% - 48px - var(--safe-t)); background: var(--u-sheet); color: var(--u-label); border-top: 0; padding: 22px 16px calc(28px + var(--safe-b)); font-family: var(--u-font); box-shadow: 0 -1px 0 var(--u-bar-line); }
 html[data-theme="dark"] #sheet .panel.u { --ok-c: #34C774; }
+/* 점방 쪽 시트(.f)는 예전 어두운 톤 그대로 — 글자색을 body(라이트 테마 검정)에서 물려받지 않게 직접 정함 (11-27 상담 시트 글자 안 보임) */
+#sheet .panel.f { color: var(--text); }
 #sheet .panel.u.full { min-height: calc(100% - 58px - var(--safe-t)); }
 #sheet .panel.u .grab { background: var(--u-label3); }
 #sheet .panel.u h2 { font: 700 1.375rem/1.25 var(--u-font); letter-spacing: -.022em; }
