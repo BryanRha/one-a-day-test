@@ -2,12 +2,12 @@
 //  한 주 = 월요일 시작(한국 날짜 · threat.weekOf) · 도전 번호 #N = 그 주 - CH.epoch 주 + 1
 //  weekly(N) → 그 주 판의 전부(지도 · seed · 날씨 · 위협 Lv · 규칙 3 · 지급 장비) — 주 번호만으로 정해짐(내 저장과 상관없음) = 모두 같은 판
 //  순위표: 원어데이 공통 랭킹(2026-11-27) — 제출 · 결과 한 줄 · 순위표 시트는 rank.js(판 'salvage:weekly') · 여기는 내 기록(주마다 최고 점수 · 메달)만
-import { CH, CH_RULES, CH_RULE_KEYS, TITLES } from './data/m5b.js?v=0.99.83';
-import { WEAPONS, FACILITIES, FAC_KEYS, freshMods, MAPS, ENEMIES, GEAR } from './data.js?v=0.99.83';
-import { loadout, kstDay } from './econ.js?v=0.99.83';
-import { rng } from './plan.js?v=0.99.83';
-import { threatOf, weekOf, dayNum } from './threat.js?v=0.99.83';
-import { forecast } from './data/weather.js?v=0.99.83';
+import { CH, CH_RULES, CH_RULE_KEYS, TITLES } from './data/m5b.js?v=0.99.84';
+import { WEAPONS, FACILITIES, FAC_KEYS, freshMods, MAPS, ENEMIES, GEAR } from './data.js?v=0.99.84';
+import { loadout, kstDay } from './econ.js?v=0.99.84';
+import { rng } from './plan.js?v=0.99.84';
+import { threatOf, weekOf, dayNum } from './threat.js?v=0.99.84';
+import { forecast } from './data/weather.js?v=0.99.84';
 
 export const BOARD = { submit: null, fetch: null }; /* 옛 자리 (쓰지 않음 — 순위는 rank.js) */
 

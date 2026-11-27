@@ -143,7 +143,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 export async function rewarded(game) {
   if (!canReward(game)) return { ok: false, reason: 'off' };
   let r1; try { r1 = await api({ act: 'rid', game: game || 'app' }); } catch (e) { return { ok: false, reason: e.limit ? 'limit' : 'off' }; }
+  const t0 = Date.now();
   let r; try { r = await sdk.ads.showRewardedAsync({ placementId: placeOf('reward', game), requestId: r1.rid }); } catch { r = { status: 'failed', reason: 'internal_error' }; }
+  window.OAD_AD_MS = Date.now() - t0;   /* 보상 광고 길이 (기록용 · app.js ad_shown/ad_len) */
   if (r.status === 'dismissed') return { ok: false, reason: 'cancel' };
   if (r.status !== 'rewarded') return { ok: false, reason: r.reason === 'no_fill' || r.reason === 'ad_opt_out' ? 'nofill' : r.reason === 'already_showing' ? 'busy' : 'off' };
   for (let i = 0; i < 8; i++) {   /* 포스트백은 보통 몇 초 안 · 최대 약 12초 기다림 */
@@ -154,7 +156,9 @@ export async function rewarded(game) {
 }
 export async function interstitial(game) {
   if (!canInter(game)) return { ok: true, shown: false };
-  try { const r = await sdk.ads.showInterstitialAsync({ placementId: placeOf('inter', game) }); return { ok: true, shown: r.status === 'completed' }; } catch { return { ok: true, shown: false }; }
+  /* ms = 광고를 부른 때부터 닫혀 돌아올 때까지 (11-27 대표: 전면 광고가 실제로 얼마나 긴지 재기 — 원스토어는 길이 · 건너뛰기를 정할 수 없음) */
+  const t0 = Date.now();
+  try { const r = await sdk.ads.showInterstitialAsync({ placementId: placeOf('inter', game) }); return { ok: true, shown: r.status === 'completed', ms: Date.now() - t0, status: r.status, reason: r.reason || '' }; } catch { return { ok: true, shown: false, ms: Date.now() - t0, status: 'error' }; }
 }
 
 /* ── 결제 (관리형 상품 · 전부 소비형) ── */
