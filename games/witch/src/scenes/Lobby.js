@@ -1,16 +1,16 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.99.89';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.99.89';
-import { audio } from '../audio.js?v=0.99.89';
-import { load, save, reset } from '../save.js?v=0.99.89';
-import { CATS } from '../core/run.js?v=0.99.89';
-import * as M from '../meta.js?v=0.99.89';
-import { wind, ELEMENT } from '../fx.js?v=0.99.89';
-import { WITCHES } from '../core/run.js?v=0.99.89';
-import { bm } from '../oad_bm.js?v=0.99.89';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.89';
-import { hofShown, hofPopup } from '../hof.js?v=0.99.89';
-import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.99.89';
+import { W, H } from '../config.js?v=0.99.90';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.99.90';
+import { audio } from '../audio.js?v=0.99.90';
+import { load, save, reset } from '../save.js?v=0.99.90';
+import { CATS } from '../core/run.js?v=0.99.90';
+import * as M from '../meta.js?v=0.99.90';
+import { wind, ELEMENT } from '../fx.js?v=0.99.90';
+import { WITCHES } from '../core/run.js?v=0.99.90';
+import { bm } from '../oad_bm.js?v=0.99.90';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.90';
+import { hofShown, hofPopup } from '../hof.js?v=0.99.90';
+import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.99.90';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
