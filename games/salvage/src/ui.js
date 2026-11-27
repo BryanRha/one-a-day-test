@@ -1,23 +1,23 @@
 // 화면(DOM): 은신처(시설 · 무기 · 장비 · 창고 · 의뢰 탭) · 출격 준비 · 전투 HUD · 가방(끌어 놓기 · 회전) · 뒤지기 · 결과
-import { DUCK, duckVeil, initVeil2, pickTargets } from './look_duck.js?v=0.99.90'; /* 시안용 ?look=duck */
-import * as WXUI from './ui_wx.js?v=0.99.90'; /* M4-B 판 상태 5 · 맵 장비 */
-import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS, ACHIEVEMENTS } from './data.js?v=0.99.90';
-import { S, save, rollDay } from './save.js?v=0.99.90';
-import * as E from './econ.js?v=0.99.90';
-import { A } from './assets.js?v=0.99.90';
-import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.90';
-import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.90';
-import { Wardrobe } from './wardrobe.js?v=0.99.90';
-import { grantEarned, COS } from './look.js?v=0.99.90';
-import * as BM from './bmflow.js?v=0.99.90';
-import { frac } from './chips.js?v=0.99.90'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
-import * as GL from './goal.js?v=0.99.90'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
-import * as TU from './threat_ui.js?v=0.99.90'; /* M4-A 오늘 위협 · 주간 변주 */
-import * as M5 from './ui_m5b.js?v=0.99.90'; /* M5-B 도전 탭(주간 도전 · 깊은 물 · 업적) · 알림 · 칭호 */
-import * as G from './ui_grow.js?v=0.99.90'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
-import * as M5C from './ui_m5c.js?v=0.99.90'; /* M5-C 반려 · 단련 */
-import { V } from './view.js?v=0.99.90'; /* 판 크기 (PC 가운데 판 · QA 시트 1 · 5번) */
-import { inOAD, exitToOAD, pushBack } from './oad.js?v=0.99.90';
+import { DUCK, duckVeil, initVeil2, pickTargets } from './look_duck.js?v=0.99.91'; /* 시안용 ?look=duck */
+import * as WXUI from './ui_wx.js?v=0.99.91'; /* M4-B 판 상태 5 · 맵 장비 */
+import { ITEMS, MATS, MAT_KEYS, FACILITIES, FAC_KEYS, WEAPONS, WEAPON_KEYS, MODS, MOD_KEYS, GEAR, CRAFTS, MEALS, QUESTS, ENEMIES, ZONES, RAID, EXITS, DAILY_SORTIES, VERSION, CATS, MARKET, MAPS, MAP_KEYS, CONDS, AMMO, CHARMS, ACHIEVEMENTS } from './data.js?v=0.99.91';
+import { S, save, rollDay } from './save.js?v=0.99.91';
+import * as E from './econ.js?v=0.99.91';
+import { A } from './assets.js?v=0.99.91';
+import { dims, fits, remove, bagValue, bagWeight, mkBag, mkItem, autoAdd } from './inv.js?v=0.99.91';
+import { sfx, unlock, soundLabel, cycleSound } from './audio.js?v=0.99.91';
+import { Wardrobe } from './wardrobe.js?v=0.99.91';
+import { grantEarned, COS } from './look.js?v=0.99.91';
+import * as BM from './bmflow.js?v=0.99.91';
+import { frac } from './chips.js?v=0.99.91'; /* '가진 / 필요' 공통 (검수 M3 Top 2) */
+import * as GL from './goal.js?v=0.99.91'; /* 가까운 목표 — 시설 탭 · 출격 준비 · 결과 '다음엔?' 한 곳 (v0.6.1) */
+import * as TU from './threat_ui.js?v=0.99.91'; /* M4-A 오늘 위협 · 주간 변주 */
+import * as M5 from './ui_m5b.js?v=0.99.91'; /* M5-B 도전 탭(주간 도전 · 깊은 물 · 업적) · 알림 · 칭호 */
+import * as G from './ui_grow.js?v=0.99.91'; /* M3-A 시설 카드 · 무기대 · 장비 · 상인 · 업적 · 난이도 */
+import * as M5C from './ui_m5c.js?v=0.99.91'; /* M5-C 반려 · 단련 */
+import { V } from './view.js?v=0.99.91'; /* 판 크기 (PC 가운데 판 · QA 시트 1 · 5번) */
+import { inOAD, exitToOAD, pushBack } from './oad.js?v=0.99.91';
 
 const $ = (s, r = document) => r.querySelector(s);
 /* 조작표 (v0.9.1 · QA 시트 4번): [하는 일, 화면(손가락 · 마우스), 키보드] — bindStick 의 키와 같아야 함 (tools/qa1116_check.mjs 가 맞춰 봄) */
