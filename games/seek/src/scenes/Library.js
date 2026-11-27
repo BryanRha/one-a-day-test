@@ -1,19 +1,19 @@
 // 서재 (Choices 식): 작품 표지 · 화 목록(진행·잠금) · 곧 공개 모드(냥카페 · 오늘의 코디) · 코인
-import { W, H, TITLE, TITLE_EN, VERSION } from '../config.js?v=0.99.80';
-import { T, C, btn, iconBtn, panel, popup, toast } from '../ui.js?v=0.99.80';
-import { audio } from '../audio.js?v=0.99.80';
-import { load } from '../save.js?v=0.99.80';
-import { SERIES, EPISODES, SEASONS, seasonOf, epNo } from '../episodes.js?v=0.99.80';
-import { loadEp } from './Boot.js?v=0.99.80';
-import { medal, TIERS } from '../replay.js?v=0.99.80';
-import { cafeData } from '../cafe/state.js?v=0.99.80';
-import { coordData, todayTheme, doneToday, wearNow } from '../coord/state.js?v=0.99.80';
-import { buildLook } from '../coord/look.js?v=0.99.80';
-import { waitLeft, fmtWait } from '../bm.js?v=0.99.80';
-import { nextOffer } from '../bmui.js?v=0.99.80';
-import { oadOn } from '../bm.js?v=0.99.80';
-import { SPECIAL, hasCard } from '../special.js?v=0.99.80';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.80';
+import { W, H, TITLE, TITLE_EN, VERSION } from '../config.js?v=0.99.81';
+import { T, C, btn, iconBtn, panel, popup, toast } from '../ui.js?v=0.99.81';
+import { audio } from '../audio.js?v=0.99.81';
+import { load } from '../save.js?v=0.99.81';
+import { SERIES, EPISODES, SEASONS, seasonOf, epNo } from '../episodes.js?v=0.99.81';
+import { loadEp } from './Boot.js?v=0.99.81';
+import { medal, TIERS } from '../replay.js?v=0.99.81';
+import { cafeData } from '../cafe/state.js?v=0.99.81';
+import { coordData, todayTheme, doneToday, wearNow } from '../coord/state.js?v=0.99.81';
+import { buildLook } from '../coord/look.js?v=0.99.81';
+import { waitLeft, fmtWait } from '../bm.js?v=0.99.81';
+import { nextOffer } from '../bmui.js?v=0.99.81';
+import { oadOn } from '../bm.js?v=0.99.81';
+import { SPECIAL, hasCard } from '../special.js?v=0.99.81';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.81';
 
 export class LibraryScene extends Phaser.Scene {
   constructor() { super('Library'); }

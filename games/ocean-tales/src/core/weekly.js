@@ -4,7 +4,7 @@
 //   · 판 모양 8가지를 주마다 돌려 씀 + 씨앗은 주마다 새로 → 같은 모양도 8주 뒤엔 다른 첫 판
 //   · 이어하기(+5수)는 판당 2번까지(광고 · 골드 · 게임 코인 · 보유 +5 모두 합쳐서) · 부스터는 종류마다 판당 상한
 //   · 연승 보너스 · 응원 선물 · 튜토리얼은 이 판에 없음(모두 같은 출발선)
-import { WORLD_COUNT } from '../config.js?v=0.99.80';
+import { WORLD_COUNT } from '../config.js?v=0.99.81';
 
 export const BOARD = 'ocean:weekly';
 export const MOVES = 25;
