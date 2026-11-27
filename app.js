@@ -1,28 +1,28 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.88';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.88';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.88';
-import * as R from './rules.js?v=0.99.88';
-import * as I from './install.js?v=0.99.88';
-import * as T from './track.js?v=0.99.88';
-import * as P from './pay.js?v=0.99.88';
-import * as A from './account.js?v=0.99.88';
-import * as C from './cloud.js?v=0.99.88';
-import * as SY from './sync.js?v=0.99.88';   /* 계정 기준 앱 상태 (2026-11-27): 링 · 출석 · 게임 기록 · 하루 열기 · 이용권 · 화면 모드 · (동의하면) 점방 내 정보 */
-import * as BM from './bm.js?v=0.99.88';
-import * as HUB from './hub.js?v=0.99.88';
-import * as O from './operator.js?v=0.99.88';
-import * as RS from './rank.js?v=0.99.88';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.88';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.89';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.89';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.89';
+import * as R from './rules.js?v=0.99.89';
+import * as I from './install.js?v=0.99.89';
+import * as T from './track.js?v=0.99.89';
+import * as P from './pay.js?v=0.99.89';
+import * as A from './account.js?v=0.99.89';
+import * as C from './cloud.js?v=0.99.89';
+import * as SY from './sync.js?v=0.99.89';   /* 계정 기준 앱 상태 (2026-11-27): 링 · 출석 · 게임 기록 · 하루 열기 · 이용권 · 화면 모드 · (동의하면) 점방 내 정보 */
+import * as BM from './bm.js?v=0.99.89';
+import * as HUB from './hub.js?v=0.99.89';
+import * as O from './operator.js?v=0.99.89';
+import * as RS from './rank.js?v=0.99.89';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.89';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 /* 원스토어 안(다른 주소가 감쌈)이면 처음부터 '원스토어 모드' (11-27 QA A1 · C4): SDK 준비 전 · 연결 실패 때도 웹 공급자(토스 결제창 · 원어데이 테스트 광고 · 구글 로그인 · 크롬으로 열기)로 가지 않음
    준비가 끝나면 아래 OS.ready 에서 진짜 원스토어 공급자로 바꿈 · 안 되면 이 '기다림' 공급자가 그대로 남아 '다시 연결' 안내만 */
 if (OS.looks) PV.use({ name: 'onestore', reward: async () => ({ ok: false, reason: 'off' }), inter: async () => false, canReward: () => false, canInter: () => false, canBuy: () => false, buy: async () => ({ ok: false, reason: 'off', msg: OS.failText() }) });
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.88').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.89').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.88'), import('./fortune/types.js?v=0.99.88'), import('./fortune/chat.js?v=0.99.88'), import('./fortune/oneword-ui.js?v=0.99.88')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.89'), import('./fortune/types.js?v=0.99.89'), import('./fortune/chat.js?v=0.99.89'), import('./fortune/oneword-ui.js?v=0.99.89')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -32,7 +32,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.88';
+const VERSION = '0.99.89';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -649,7 +649,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.88')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.89')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -985,7 +985,7 @@ function nrBar() {
   const h = RS.nrHTML(id => NRW.find(w => w.id === id)); slot.innerHTML = h; $('.nrtab').classList.toggle('withbar', !!h);
 }
 let NRWP = null;
-const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.88'), import('./neorang/works2.js?v=0.99.88').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
+const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.89'), import('./neorang/works2.js?v=0.99.89').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
 function openWork(id) {
   if (R.NR_OFF) return;
   const fr = $('#nrframe');
@@ -1077,8 +1077,8 @@ function accountCard() {
   if (!m && I.env.inApp) return `<div class="acct"><div><b>원어데이 계정</b><p>${inAppLoginNote()}</p></div><button class="gbtn" data-ext>🌐 ${browserRo()} 열기</button></div>`;
   if (!m && A.prov && A.prov.kakao) return `<div class="acct"><div><b>원어데이 계정</b><p>로그인하면 골드와 구매 내역이 계정에 저장돼 폰을 바꿔도 이어져요 · 게임은 로그인 없이도 그대로</p></div><div class="stack" style="min-width:150px"><button class="btn kk" data-login="kakao">카카오로 로그인</button><button class="gbtn" data-login>구글로 로그인</button></div></div>`;
   if (!m) return `<div class="acct"><div><b>원어데이 계정</b><p>로그인하면 골드와 구매 내역이 계정에 저장돼 폰을 바꿔도 이어져요 · 게임은 로그인 없이도 그대로</p></div><button class="gbtn" data-login><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>구글로 로그인</button></div>`;
-  /* 원스토어 앱 안 (2026-11-27 대표: 일반 게임처럼) — 연결 전 = 게스트(원스토어 계정에 저장) + [카카오로 계정 연결] [구글로 계정 연결] · 연결 뒤 = 그 계정 이름 · 이메일 */
-  if (OS.on && !A.osMode()) { const pv = A.prov || {}; return `<div class="acct in"><div class="av">G</div><div class="who"><b>게스트</b><small>원스토어 계정에 저장돼요</small></div><button class="gold" data-shop><span>골드 · 충전</span><b>${coin(15)} ${gnum((m.gold && m.gold.total) || 0)}</b></button></div>${R.PROD ? '' : `<div class="stack" style="margin:-4px 0 10px">${pv.kakao ? '<button class="btn kk" data-osconnect="kakao">카카오로 계정 연결</button>' : ''}<button class="btn ghost" data-osconnect="google">구글로 계정 연결</button><p class="fsub" style="margin:0;font-size:12px">연결하면 다른 폰 · 브라우저에서도 이어져요 · 안 해도 지금처럼 쓸 수 있어요</p></div>`}`; }
+  /* 원스토어 앱 안 (2026-11-27 대표: 일반 게임처럼) — 연결 전 = 게스트(원스토어 계정에 저장) + [구글로 계정 연결] (실서버도 · 카카오 안 함 11-28) · 연결 뒤 = 그 계정 이름 · 이메일 */
+  if (OS.on && !A.osMode()) { const pv = A.prov || {}; return `<div class="acct in"><div class="av">G</div><div class="who"><b>게스트</b><small>원스토어 계정에 저장돼요</small></div><button class="gold" data-shop><span>골드 · 충전</span><b>${coin(15)} ${gnum((m.gold && m.gold.total) || 0)}</b></button></div>${`<div class="stack" style="margin:-4px 0 10px"><button class="btn ghost" data-osconnect="google">구글로 계정 연결</button><p class="fsub" style="margin:0;font-size:12px">연결하면 다른 폰 · 브라우저에서도 이어져요 · 안 해도 지금처럼 쓸 수 있어요</p></div>`}`; }
   return `<div class="acct in"><div class="av">${(m.name || m.email || (OS.on ? '원' : '?'))[0]}</div><div class="who"><b>${m.name || '원어데이 친구'}</b><small>${m.email || (OS.on ? '원스토어 계정으로 연결됨' : '')}</small></div><button class="gold" data-shop><span>골드 · 충전</span><b>${coin(15)} ${gnum((m.gold && m.gold.total) || 0)}</b></button>${OS.on ? '' : '<button class="lo" data-logout>로그아웃</button>'}</div>`;   /* 원스토어 앱 안: 계정 = 원스토어 계정(늘 연결 · account.js logout 이 하는 일 없음) → 눌러도 안 바뀌는 로그아웃 단추를 두지 않음 (2026-11-27 대표 제보) */
 }
 /* 내 구매: 이 기기의 운세 영수증 + (로그인) 계정에 남은 운세 · 다른 기기에서 산 건 그 풀이를 열면 계정에서 자동 복원 */
@@ -1755,14 +1755,14 @@ if (!R.PROD) A.googleBack().then(r => { if (r) { T.track('os_login_try', { how: 
 if (OS.looks) OS.ready.then(on => { if (on && A.linkPending()) osLinkWatch(); if (on) setTimeout(osAsk, 2500); });
 A.providers().then(() => refreshSettings()).catch(() => {});
 SY.start(() => { if (!player.hidden) return; if (tab === 'today' && sheet.hidden) go(tab); else if (tab === 'today') hubRedraw(); });
-/* 원스토어 앱 첫 화면 안내 (한 번만 · 조르지 않음 · 테스트 서버만 — 연결 길(/link)이 테스트 서버에만 있음): 게스트로 시작 / 카카오로 계속하기 / 구글로 계속하기 */
+/* 원스토어 앱 첫 화면 안내 (한 번만 · 조르지 않음 · 실서버도 11-28): 게스트로 시작 / 구글로 계속하기 (카카오는 안 함 · 대표 11-28) */
 function osAsk() {
-  if (R.PROD || !OS.on || A.osMode() || A.linkPending() || !sheet.hidden || playing) return;
+  if (!OS.on || A.osMode() || A.linkPending() || !sheet.hidden || playing) return;
   try { if (localStorage.getItem('oad_os_ask')) return; localStorage.setItem('oad_os_ask', new Date().toISOString().slice(0, 10)); } catch { return; }
   const pv = A.prov || {};
   T.track('login_click', { via: 'os_ask_view' });
   openSheet(`<div class="intro"><h2>원어데이 시작하기</h2><p class="fsub">게스트로 바로 시작해도 골드 · 소장 · 산 풀이는 원스토어 계정에 저장돼요. 계정을 연결하면 다른 폰 · 브라우저에서도 이어져요.</p>
-    <div class="stack"><button class="btn" data-close data-osguest>게스트로 시작</button>${pv.kakao ? '<button class="btn kk" data-osconnect="kakao">카카오로 계속하기</button>' : ''}<button class="btn ghost" data-osconnect="google">구글로 계속하기</button><p class="fsub" style="margin:0;font-size:12px">나중에 설정에서 언제든 연결할 수 있어요</p></div></div>`);
+    <div class="stack"><button class="btn" data-close data-osguest>게스트로 시작</button><button class="btn ghost" data-osconnect="google">구글로 계속하기</button><p class="fsub" style="margin:0;font-size:12px">나중에 설정에서 언제든 연결할 수 있어요</p></div></div>`);
 }
 /* 원스토어 안이면 어디서 열렸는지 한 번 (저장 칸이 들어오는 길마다 나뉘는지 보려고 · host 만 · n = 이 칸에 든 저장 키 수) */
 if (OS.where) { let n = 0; try { n = localStorage.length; } catch { /* */ } T.track('os_where', { ...OS.where, n, new: T.isNew ? 1 : 0 }); }
