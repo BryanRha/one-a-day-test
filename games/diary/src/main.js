@@ -1,15 +1,17 @@
 // 오늘의 다꾸 v0.2.1 — 시작 · 화면 잇기 · 판 끝 보상 (메인 다꾸 · 스피드 다꾸 · 자유 다꾸)
 //   오늘의 페이지(하루 3판 → 날짜 도장 페이지 한 장) · 자유 다꾸(무제한 · 스티커 서랍 · 테마 노트) · 진행 맵 30단계
-import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.99.95';
-import { S, load, save, day, dayKey, give } from './save.js?v=0.99.95';
-import * as A from './audio.js?v=0.99.95';
-import * as Game from './game.js?v=0.99.95';
-import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.99.95';
-import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.99.95';
-import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.99.95';
-import { bm } from './oad_bm.js?v=0.99.95';
-import { installBack } from './oad.js?v=0.99.95';
-import { cur, closeSheets } from './screens.js?v=0.99.95';
+import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.99.96';
+import { S, load, save, day, dayKey, give } from './save.js?v=0.99.96';
+import * as A from './audio.js?v=0.99.96';
+import * as Game from './game.js?v=0.99.96';
+import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.99.96';
+import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.99.96';
+import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.99.96';
+import { bm } from './oad_bm.js?v=0.99.96';
+import { installBack } from './oad.js?v=0.99.96';
+import { cur, closeSheets } from './screens.js?v=0.99.96';
+/* 원스토어 앱 안(원어데이 셸이 OAD_SHOT 을 줌): 웹뷰가 그림 저장 · 공유를 막아 '공유 카드 만들기'를 숨김 (대표 11-28) */
+const OS_IN = (() => { try { return parent !== window && !!parent.OAD_SHOT; } catch { return false; } })();
 
 const Q = new URLSearchParams(location.search);
 window.__errs = [];
@@ -134,7 +136,7 @@ async function showToday() {
   $('#pageUI').classList.remove('on');
   pg.animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }], { duration: sp(520), easing: 'cubic-bezier(.2,.9,.3,1)', fill: 'forwards' });
   await renderPage(pg, k, { animate: true });
-  $('#pageUI').innerHTML = `<button class="btn main" data-p="share">공유 카드 만들기</button><button class="btn" data-p="free">자유 다꾸 계속</button><button class="btn ghost" data-p="home">홈</button>`;
+  $('#pageUI').innerHTML = `${OS_IN ? '' : '<button class="btn main" data-p="share">공유 카드 만들기</button>'}<button class="btn" data-p="free">자유 다꾸 계속</button><button class="btn ghost" data-p="home">홈</button>`;
   $('#pageUI').classList.add('on');
   $('#pageUI').onclick = e => { const p = e.target.dataset.p; if (p === 'share') openShare(k); if (p === 'free' || p === 'home') { pg.classList.remove('on'); $('#pageUI').classList.remove('on'); if (p === 'free') go.free(); else { show('home'); bm.interstitial('round_end'); } } };
 }
