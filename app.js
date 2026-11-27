@@ -1,24 +1,24 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.72';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.72';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.72';
-import * as R from './rules.js?v=0.99.72';
-import * as I from './install.js?v=0.99.72';
-import * as T from './track.js?v=0.99.72';
-import * as P from './pay.js?v=0.99.72';
-import * as A from './account.js?v=0.99.72';
-import * as C from './cloud.js?v=0.99.72';
-import * as BM from './bm.js?v=0.99.72';
-import * as HUB from './hub.js?v=0.99.72';
-import * as O from './operator.js?v=0.99.72';
-import * as RS from './rank.js?v=0.99.72';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.72';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.73';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.73';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.73';
+import * as R from './rules.js?v=0.99.73';
+import * as I from './install.js?v=0.99.73';
+import * as T from './track.js?v=0.99.73';
+import * as P from './pay.js?v=0.99.73';
+import * as A from './account.js?v=0.99.73';
+import * as C from './cloud.js?v=0.99.73';
+import * as BM from './bm.js?v=0.99.73';
+import * as HUB from './hub.js?v=0.99.73';
+import * as O from './operator.js?v=0.99.73';
+import * as RS from './rank.js?v=0.99.73';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.73';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.72').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.73').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.72'), import('./fortune/types.js?v=0.99.72'), import('./fortune/chat.js?v=0.99.72'), import('./fortune/oneword-ui.js?v=0.99.72')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.73'), import('./fortune/types.js?v=0.99.73'), import('./fortune/chat.js?v=0.99.73'), import('./fortune/oneword-ui.js?v=0.99.73')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -28,7 +28,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.72';
+const VERSION = '0.99.73';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -108,7 +108,7 @@ function go(t, via, seg) {
 }
 /* 순위 값이 늦게 오면 그 자리만 다시: 홈 전광판 · 점방 대박 줄 · 너랑 많이 본 작품 줄 */
 function rankRedraw() {
-  if (tab === 'today') { const el = $('#rkTicker'); if (el) { const x = document.createElement('div'); x.innerHTML = RS.tickerHTML(); el.replaceWith(x.firstElementChild); RS.tickerMount(); } }
+  if (tab === 'today') { const el = $('#rkTicker'); if (el && !RS.tickerRefresh()) { const x = document.createElement('div'); x.innerHTML = RS.tickerHTML(); el.replaceWith(x.firstElementChild); RS.tickerMount(); } }   /* 카드가 이미 돌고 있으면 그 자리에서 값만 (보던 장 그대로) */
   if (tab === 'fortune') { const el = $('.rk-luckslot'); if (el) el.innerHTML = RS.luckHTML(); }
   if (tab === 'neorang') nrBar();
 }
@@ -638,7 +638,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.72')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.73')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -968,9 +968,11 @@ let nrHist = [];
 let NRW = null;
 function nrBar() {
   const slot = $('.rk-nrslot'); if (!slot || R.NR_OFF) return;
-  if (!NRW) { Promise.all([import('./neorang/works.js?v=0.99.72'), import('./neorang/works2.js?v=0.99.72').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; nrBar();   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */ }).catch(() => {}); return; }
+  if (!NRW) { nrWorks().then(nrBar); return; }
   const h = RS.nrHTML(id => NRW.find(w => w.id === id)); slot.innerHTML = h; $('.nrtab').classList.toggle('withbar', !!h);
 }
+let NRWP = null;
+const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.73'), import('./neorang/works2.js?v=0.99.73').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
 function openWork(id) {
   if (R.NR_OFF) return;
   const fr = $('#nrframe');
@@ -1706,7 +1708,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.ma
 ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) payDone(r.product, r); else toast(r.msg); });
 /* 공통 랭킹: 시트 · 기록 · 계정 함수를 넘겨 줌 → 앱을 열고 로그인이 확인되면 보관한 제출을 보내고 지난주 선물을 알림 */
 RS.init({ openSheet, closeSheet, toast, A, T, G, R, needLogin, img: (src, w, extra) => img(src, w, extra), tab: () => tab, sheetHidden: () => sheet.hidden, playerHidden: () => player.hidden,
-  myLuck: () => { FFROM = 'rank'; go('fortune', 'tab'); }, openWork });
+  myLuck: () => { FFROM = 'rank'; go('fortune', 'tab'); }, openWork,
+  /* 전광판 장 누르기: 점방 → 점방 탭 + 대박 시트 · 게임 → 그 게임 상세 · 전체 수 → 게임 진열장 · 공지 · 이벤트의 탭 이동 */
+  goLuck: () => { FFROM = 'ticker'; go('fortune', 'tab'); setTimeout(() => { if (tab === 'fortune') RS.luckSheet(); }, 450); },
+  openGame: id => detail(id), toGames: () => toGames(true), rankRedraw, goTab: t => go(t, 'tab'),
+  work: id => (R.NR_OFF || !NRW ? null : NRW.find(w => w.id === id) || null) });
+if (!R.NR_OFF) nrWorks().then(() => rankRedraw());   /* 전광판 너랑 장(작품 이름)이 쓰도록 작품 목록을 미리 받음 */
 A.onChange(m => { if (m) { RS.resend(); setTimeout(() => { if (tab === 'today' && sheet.hidden && player.hidden) RS.gifts(); }, 1500); } });
 /* 처음 열 때: 주소(#fortune · #box · #game … · 옛 #library · #collection · #settings)대로 · 없으면 오늘 허브 */
 { const r = parseRoute(location.hash) || { tab: 'today' }; go(r.tab, 'open', r.seg); if (r.games) setTimeout(() => toGames(false), 60); if (r.settings) setTimeout(openSettings, 300); setTimeout(() => moveNote(r.moved), 1200); }

@@ -3,7 +3,7 @@
 //   서버: /api/me — GET ?rank=<판>|top3|today (CDN 캐시 · 로그인 없음) · POST act 'rank'(start · submit · mine · gifts · claim) · 'nick'
 //   광고 · 결제 단추는 이 화면들에 두지 않음 (사업 bm.md 4-1 — 자랑하는 자리)
 //   app.js 가 init(ctx) 로 시트 · 토스트 · 계정 · 기록 함수를 넘겨 줌 (아래 보관 줄 함수는 ctx 없이도 동작 — tools/rank_check.mjs 가 node 에서 시험)
-import { ic, coin } from './ui.js?v=0.99.72';
+import { ic, coin } from './ui.js?v=0.99.73';
 
 /* ── 오프라인 보관 (판마다 마지막 제출 하나 · 다시 연결되면 한 번 · 마감 + 10분 지나면 버림) ── */
 const KQ = 'oad_rank_q', GRACE = 10 * 60e3;
@@ -66,13 +66,13 @@ async function sendNow(body) {
   return r.json().catch(() => ({ ok: false, reason: 'error' }));
 }
 export const boardGet = (board, p = '') => getJ(p ? { rank: board, p } : { rank: board }, 30e3);
-export const top3 = () => getJ({ rank: 'top3' }, 60e3);
-export const today = () => getJ({ rank: 'today' }, 300e3);
+export const top3 = (ttl = 60e3) => getJ({ rank: 'top3' }, ttl);
+export const today = (ttl = 300e3) => getJ({ rank: 'today' }, ttl);
 let TOP = null, TODAY = null;
 export const peekTop = () => TOP, peekToday = () => TODAY;
-export function warm(redraw) {
-  top3().then(j => { const was = JSON.stringify(TOP); TOP = j && j.ok ? j : TOP; if (redraw && JSON.stringify(TOP) !== was) redraw('top'); });
-  today().then(j => { const was = JSON.stringify(TODAY); TODAY = j && j.ok ? j : TODAY; if (redraw && JSON.stringify(TODAY) !== was) redraw('today'); });
+export function warm(redraw, ttl) {
+  top3(ttl).then(j => { const was = JSON.stringify(TOP); TOP = j && j.ok ? j : TOP; if (redraw && JSON.stringify(TOP) !== was) redraw('top'); });
+  today(ttl).then(j => { const was = JSON.stringify(TODAY); TODAY = j && j.ok ? j : TODAY; if (redraw && JSON.stringify(TODAY) !== was) redraw('today'); });
 }
 
 /* ── 게임 쪽 요청 (app.js gameReq 가 넘김): start · submit · open · mine ── */
@@ -233,32 +233,103 @@ async function claimGo(b) {
   else X.toast('잠시 뒤 다시 받아 주세요');
 }
 
-/* ── 홈 상단 전광판 (6-1 · 시안 mock/home.html): 한 장 = 한 사람 · 3.5초마다 위로 한 장 · 손으로 넘김 · 누르면 순위표 ── */
-const TK = { i: 0, slides: [], t: 0, pause: 0, hover: false, el: null, busy: false };
-export function slides() {
-  const d = TOP; if (!d || !d.boards) return [];
-  return d.boards.flatMap(b => b.top.slice(0, 3).map((x, k) => ({ board: b.board, game: b.game, k, n: Math.min(3, b.top.length), nick: x.nick, tag: x.tag, score: x.score, total: b.total }))).filter(s => X.G(s.game));
+/* ── 홈 상단 전광판 (6-1 · 대표 11-27 정정 "랭킹과 함께 이런 정보들을 … 실시간으로 흐르는 전광판처럼" · "나중에 공지 이벤트 알림 용도로도") ──
+   장 하나 = { kind, key, eb(작은 머리글), main(큰 글), medal?, tag?, right(오른쪽 숫자 · 글), icon({ game } | { kind }), go(누르면 갈 곳), n · k(오른쪽 점) }
+     kind: rank 게임 순위 1~3위 · luck 점방 오늘의 대박(띠 · 년생 · 월생) · neorang 오늘 많이 본 작품 1~3위 · 지금 뜨는 작품 · live 오늘 함께한 사람 · notice 공지 · event 이벤트
+     go: { type: board · luck · work · game · games · tab · sheet · link, to } — 새 종류는 slides() 에 큐 하나 + tickerGo 에 길 하나만 더하면 됨
+   공지 · 이벤트 = 서버 설정 한 곳(server/api/_lib/ticker.js NOTICES · GET ?rank=top3 의 notices)에서 받음: { id, kind, eb, text, prio, from, to, who: all · login · guest, go }
+     prio 50 이상(맨 앞 공지): 첫 장 + 다른 장 NOTICE_EVERY 장마다 다시 · 그 아래는 다른 종류와 번갈아 · 기간(from ~ to) 밖이면 안 나옴 (서버 · 앱 둘 다 거름)
+   섞기 = 종류가 번갈아(rank → notice/event → luck → neorang → live → rank …) · 3.5초마다 위로 한 장 · 손으로 넘김 · 동작 줄이기면 멈춤 · 서버 값은 2분마다 다시 받아 그 자리에서 바꿈
+   보여 줄 게 하나도 없으면 카드 자체를 숨김 (참가 하한 · 비로그인 · 운세 생년월일 없음 상태에서도 빈 칸 없음) */
+const TK = { i: 0, slides: [], t: 0, r: 0, pause: 0, hover: false, el: null, busy: false };
+export const KINDS = ['rank', 'notice', 'luck', 'neorang', 'live'];
+export const NOTICE_EVERY = 4, NOTICE_TOP = 50;
+/* 공지 · 이벤트 고르기: 기간 · 대상 · 모양 확인 (서버가 이미 걸렀어도 앱이 다시 — 캐시 60초 사이에 끝난 공지가 남지 않게) */
+export function liveNotices(list, { now = Date.now(), login = false } = {}) {
+  return (Array.isArray(list) ? list : []).filter(n => n && n.id && n.text && (!n.from || Date.parse(n.from) <= now) && (!n.to || now < Date.parse(n.to)) && (n.who === 'login' ? login : n.who === 'guest' ? !login : true))
+    .sort((a, b) => (b.prio || 0) - (a.prio || 0));
 }
-const say = s => `이번 주 순위 — ${titleOf(s.board)} ${s.k + 1}위 ${s.nick} ${fmt(s.score)}점`;
-const lineHTML = (s, cls = '') => `<div class="rk-tl${cls}"><span class="rk-tk">${esc(titleOf(s.board))} · 이번 주 순위</span><span class="rk-tv"><span class="rk-md m${s.k + 1} u-num">${s.k + 1}</span><b>${esc(s.nick)}</b>${s.tag ? `<small>${esc(s.tag)}</small>` : ''}<span class="rk-ts u-num">${fmt(s.score)}</span></span></div>`;
+/* 섞기 (DOM 없음 · tools/rank_check.mjs 가 시험): Q = 종류별 장 목록 · notices = 서버 공지 */
+export function mix(Q, notices = [], o = {}) {
+  const ns = liveNotices(notices, o).map(n => ({ kind: n.kind === 'event' ? 'event' : 'notice', key: 'x:' + n.id, eb: n.eb || (n.kind === 'event' ? '이벤트' : '공지'), main: n.text, right: n.right || '', go: n.go || null, prio: n.prio || 0, n: 1, k: 0 }));
+  const top = ns.filter(n => n.prio >= NOTICE_TOP), rest = { ...Q, notice: [...(Q.notice || []), ...ns.filter(n => n.prio < NOTICE_TOP)] };
+  const base = [], idx = {};
+  while (KINDS.some(k => (idx[k] || 0) < (rest[k] || []).length)) for (const k of KINDS) { const i = idx[k] || 0; if (i < (rest[k] || []).length) { base.push(rest[k][i]); idx[k] = i + 1; } }
+  if (!top.length) return base;
+  const out = []; let t = 0;
+  out.push(top[t++ % top.length]);
+  base.forEach((x, i) => { out.push(x); if ((i + 1) % NOTICE_EVERY === 0 && i < base.length - 1) out.push(top[t++ % top.length]); });
+  return out.map((x, i) => (out.indexOf(x) === i ? x : { ...x, key: x.key + '#' + i }));   /* 다시 나오는 공지도 장마다 다른 열쇠 */
+}
+export function slides() {
+  const Q = { rank: [], luck: [], neorang: [], live: [] };
+  const d = TOP;
+  if (d && d.boards) for (const b of d.boards) { if (!X.G(b.game)) continue; const n = Math.min(3, b.top.length);
+    b.top.slice(0, 3).forEach((x, k) => Q.rank.push({ kind: 'rank', key: 'r:' + b.board + ':' + k, icon: { game: b.game }, eb: `${titleOf(b.board)} · 이번 주 순위`, medal: k + 1, main: x.nick, tag: x.tag, right: fmt(x.score), sayx: `${k + 1}위 ${x.nick} ${fmt(x.score)}점`, go: { type: 'board', to: b.board }, k, n })); }
+  const T0 = TODAY, L = T0 && T0.luck;
+  const lk = (key, eb, main, v, k) => ({ kind: 'luck', key, icon: { kind: 'luck' }, eb: '점방 · ' + eb, main, right: `평균 ${Number(v).toFixed(1)}점`, go: { type: 'luck' }, k, n: 3 });
+  if (L && L.zodiac && L.zodiac[0]) Q.luck.push(lk('l:z', '오늘의 대박 띠', `${L.zodiac[0].name}띠`, L.zodiac[0].avg, 0));
+  if (L && L.year && L.year[0]) Q.luck.push(lk('l:y', '오늘의 대박 년생', `${L.year[0].y}년생`, L.year[0].avg, 1));
+  if (L && L.month && L.month[0]) Q.luck.push(lk('l:m', '오늘의 대박 월생', `${L.month[0].m}월생`, L.month[0].avg, 2));
+  const W = ((T0 && T0.works) || []).map(x => ({ ...x, work: X.work ? X.work(x.w) : null })).filter(x => x.work).slice(0, 3);
+  const hot = T0 && T0.hot && X.work ? { ...T0.hot, work: X.work(T0.hot.w) } : null, nn = W.length + (hot && hot.work ? 1 : 0);
+  W.forEach((x, k) => Q.neorang.push({ kind: 'neorang', key: 'n:' + x.w, icon: { kind: 'neorang' }, eb: '너랑 · 오늘 가장 많이 본 작품', medal: k + 1, main: x.work.title, right: fmt(x.n) + '명', go: { type: 'work', to: x.w }, k, n: nn }));
+  if (hot && hot.work) Q.neorang.push({ kind: 'neorang', key: 'n:hot', icon: { kind: 'neorang' }, eb: '너랑 · 지금 뜨는 작품', main: hot.work.title, right: `1시간 ${fmt(hot.n)}명`, go: { type: 'work', to: hot.w }, k: W.length, n: nn });
+  const G0 = Object.entries((T0 && T0.games) || {}).filter(([g]) => X.G(g)).sort((a, b) => b[1] - a[1]);
+  if (G0.length) {
+    const sum = G0.reduce((a, [, n]) => a + n, 0), two = G0.length > 1;
+    Q.live.push({ kind: 'live', key: 'v:top', icon: { game: G0[0][0] }, eb: '지금 원어데이 · 오늘 가장 많이 한 게임', main: X.G(G0[0][0]).title, right: fmt(G0[0][1]) + '명', go: { type: 'game', to: G0[0][0] }, k: 0, n: two ? 2 : 1 });
+    if (two) Q.live.push({ kind: 'live', key: 'v:all', icon: { kind: 'live' }, eb: '지금 원어데이 · 오늘 함께한 사람', main: '오늘 게임을 한 사람', right: fmt(sum) + '명', go: { type: 'games' }, k: 1, n: 2 });
+  }
+  return mix(Q, (TOP && TOP.notices) || [], { login: !!(X.A && X.A.current()) });
+}
+const say = s => `${s.eb} — ${s.sayx || `${s.medal ? s.medal + '위 ' : ''}${s.main}${s.right ? ' · ' + s.right : ''}`}`;
+const lineHTML = (s, cls = '') => `<div class="rk-tl${cls}"><span class="rk-tk">${esc(s.eb)}</span><span class="rk-tv">${s.medal ? `<span class="rk-md m${s.medal} u-num">${s.medal}</span>` : ''}<b>${esc(s.main)}</b>${s.tag ? `<small>${esc(s.tag)}</small>` : ''}${s.right ? `<span class="rk-ts u-num">${esc(s.right)}</span>` : ''}</span></div>`;
+/* 왼쪽 그림: 게임 = 게임 아이콘 · 점방 붉은 칸(반짝임) · 너랑 보라 칸(말풍선) · 전체 수 파란 칸(사람들) · 공지 회색 칸(종) · 이벤트 금색 칸(선물) */
+const ICO = { luck: 'spark', neorang: 'chat', live: 'people', notice: 'bell', event: 'gift' };
+const iconKey = s => (s.icon && s.icon.game ? 'g:' + s.icon.game : s.kind);
+const iconHTML = s => (s.icon && s.icon.game && X.G(s.icon.game) ? X.img(X.G(s.icon.game).icon, 0, 'loading="lazy"') : `<i class="rk-it ${s.kind}">${ic(ICO[s.kind] || 'spark')}</i>`);
+const pagerHTML = s => Array.from({ length: s.n || 1 }, (_, k) => `<b class="${k === (s.k || 0) ? 'on' : ''}"></b>`).join('');
 export function tickerHTML() {
   const L = slides(); TK.slides = L; if (!L.length) return '<div id="rkTicker" hidden></div>';
   if (TK.i >= L.length) TK.i = 0;
-  const s = L[TK.i], g = X.G(s.game);
-  return `<div id="rkTicker" class="u-card rk-ticker u-press" role="button" tabindex="0" aria-live="off" aria-label="${esc(say(s))}" data-blk="ticker">
-    <span class="rk-ic u-ph">${X.img(g.icon, 0, 'loading="lazy"')}</span><span class="rk-slot">${lineHTML(s)}</span>
-    <span class="rk-pg" aria-hidden="true">${Array.from({ length: s.n }, (_, k) => `<b class="${k === s.k ? 'on' : ''}"></b>`).join('')}</span><span class="rk-ch">${ic('chev')}</span></div>`;
+  const s = L[TK.i];
+  return `<div id="rkTicker" class="u-card rk-ticker u-press" role="button" tabindex="0" aria-live="off" aria-label="${esc(say(s))}" data-blk="ticker" data-kind="${s.kind}">
+    <span class="rk-ic u-ph" data-g="${esc(iconKey(s))}">${iconHTML(s)}</span><span class="rk-slot">${lineHTML(s)}</span>
+    <span class="rk-pg" aria-hidden="true">${pagerHTML(s)}</span><span class="rk-ch">${ic('chev')}</span></div>`;
+}
+/* 서버 값이 새로 오면: 카드가 이미 있으면 그 자리에서 목록만 바꿈(보던 장 그대로 · 다음 넘김부터 새 값) → true · 카드를 새로 그려야 하면(없다가 생김 · 있다가 비움) false */
+export function tickerRefresh() {
+  const el = document.getElementById('rkTicker'); if (!el || el.hidden) return false;
+  const L = slides(); if (!L.length) return false;
+  const cur = TK.slides[TK.i], j = cur ? L.findIndex(x => x.key === cur.key) : -1;
+  TK.slides = L; TK.i = j >= 0 ? j : Math.min(TK.i, L.length - 1);
+  return true;
+}
+/* 누르면 그 장의 자리로 (go.type 하나에 길 하나) */
+function tickerGo(s) {
+  const g = s.go || {};
+  X.T.track('rank_view', { where: 'ticker', what: s.kind, ...(g.type === 'board' ? { board: g.to } : {}), ...(g.type === 'game' ? { game: g.to } : {}) });
+  if (g.type === 'board') return openBoard(g.to, { from: 'ticker' });
+  if (g.type === 'luck') return X.goLuck();
+  if (g.type === 'work') return X.openWork(g.to);
+  if (g.type === 'game') return X.openGame(g.to);
+  if (g.type === 'games') return X.toGames();
+  if (g.type === 'tab' && ['today', 'fortune', 'neorang', 'box'].includes(g.to)) return X.goTab(g.to);
+  if (g.type === 'link' && /^https:\/\//.test(g.to || '')) return window.open(g.to, '_blank', 'noopener');
+  if (g.type === 'sheet') return X.openSheet(`<div class="intro"><h2>${esc(g.title || s.main)}</h2><p class="fsub">${esc(g.body || '')}</p><div class="stack"><button class="btn ghost" type="button" data-close>닫기</button></div></div>`, 'u');
 }
 const still = () => (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.classList.contains('still');
 export function tickerMount() {
   const el = document.getElementById('rkTicker'); TK.el = el; clearInterval(TK.t);
+  clearInterval(TK.r); TK.r = setInterval(() => { if (X.tab() === 'today' && document.visibilityState === 'visible') warm(X.rankRedraw, 120e3); }, 120e3);   /* 실시간처럼: 2분마다 다시 받음 (서버는 CDN 캐시라 DB 는 1~5분에 한 번) */
   if (!el || el.hidden || !TK.slides.length) return;
   let y0 = null;
   el.addEventListener('pointerenter', () => { TK.hover = true; }); el.addEventListener('pointerleave', () => { TK.hover = false; });
   el.addEventListener('pointerdown', e => { y0 = e.clientY; TK.hover = true; });
   el.addEventListener('pointerup', e => { TK.hover = e.pointerType === 'mouse'; if (y0 != null && Math.abs(e.clientY - y0) > 18) { el.dataset.swiped = '1'; step(e.clientY < y0 ? 1 : -1, true); } y0 = null; });
   el.addEventListener('pointercancel', () => { TK.hover = false; y0 = null; });
-  el.addEventListener('click', e => { if (el.dataset.swiped) { delete el.dataset.swiped; e.preventDefault(); return; } const s = TK.slides[TK.i]; if (s) openBoard(s.board, { from: 'ticker' }); });
+  el.addEventListener('click', e => { if (el.dataset.swiped) { delete el.dataset.swiped; e.preventDefault(); return; } const s = TK.slides[TK.i]; if (s) tickerGo(s); });
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } if (e.key === 'ArrowDown') step(1, true); if (e.key === 'ArrowUp') step(-1, true); });
   if (still()) return;   /* 동작 줄이기: 자동 넘김 없음 (손으로만) */
   TK.t = setInterval(() => { if (!running()) return; step(1, false); }, 3500);
@@ -269,10 +340,10 @@ function step(dir, hand) {
   const L = TK.slides, el = TK.el; if (!L.length || !el || TK.busy || L.length < 2) return;
   if (hand) TK.pause = Date.now() + 6000;
   TK.i = (TK.i + dir + L.length) % L.length;
-  const s = L[TK.i], slot = el.querySelector('.rk-slot'), cur = slot.firstElementChild, g = X.G(s.game);
-  el.setAttribute('aria-label', say(s));
-  const ic0 = el.querySelector('.rk-ic'); if (ic0 && ic0.dataset.g !== s.game) { ic0.innerHTML = X.img(g.icon, 0, ''); ic0.dataset.g = s.game; }
-  el.querySelector('.rk-pg').innerHTML = Array.from({ length: s.n }, (_, k) => `<b class="${k === s.k ? 'on' : ''}"></b>`).join('');
+  const s = L[TK.i], slot = el.querySelector('.rk-slot'), cur = slot.firstElementChild;
+  el.setAttribute('aria-label', say(s)); el.dataset.kind = s.kind;
+  const ic0 = el.querySelector('.rk-ic'), ik = iconKey(s); if (ic0 && ic0.dataset.g !== ik) { ic0.innerHTML = iconHTML(s); ic0.dataset.g = ik; }
+  el.querySelector('.rk-pg').innerHTML = pagerHTML(s);
   if (still()) { cur.outerHTML = lineHTML(s); return; }
   TK.busy = true;
   slot.insertAdjacentHTML('beforeend', lineHTML(s, dir > 0 ? ' in-up' : ' in-down'));

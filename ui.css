@@ -504,6 +504,10 @@ html.still .ig .sheet.u-ofs, html.still .ig .u-ofs-badge { animation: none !impo
 .rk-ticker { display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 10px 0 10px; margin: 2px 0 12px; overflow: hidden; }
 .rk-ticker[hidden] { display: none; }
 .rk-ic { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.rk-it { width: 40px; height: 40px; display: grid; place-items: center; color: #fff; }
+.rk-it .u-ico { width: 22px; height: 22px; stroke-width: 2.1; }
+.rk-it.luck { background: var(--u-fort-fill); } .rk-it.neorang { background: var(--u-nr-fill); } .rk-it.live { background: var(--u-game-fill); }
+.rk-it.notice { background: var(--u-fill); color: var(--u-label); } .rk-it.event { background: var(--u-gold-fill); color: var(--u-gold-ink); }
 .rk-slot { flex: 1; min-width: 0; height: 60px; position: relative; overflow: hidden; }
 .rk-tl { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
 .rk-tk { font-size: .75rem; font-weight: 600; color: var(--u-label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
