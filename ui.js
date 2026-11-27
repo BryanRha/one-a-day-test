@@ -19,6 +19,10 @@ const P = {
   card: '<rect x="3" y="6" width="18" height="12.5" rx="2.4"/><path d="M3 10h18M7 15h4"/>',
   moon: '<path d="M19.5 14.5A7.5 7.5 0 019.5 4.5a7.5 7.5 0 1010 10z"/>',
   phone: '<rect x="7" y="2.8" width="10" height="18.4" rx="2.4"/><path d="M11 18h2"/>',
+  /* 공통 랭킹 (2026-11-27): 트로피 · 사람들 · 반짝임 */
+  trophy: '<path d="M8 4.5h8v5a4 4 0 01-8 0zM8 6H5v1.5a3 3 0 003 3M16 6h3v1.5a3 3 0 01-3 3M12 13.5v3.5M8.5 20.5h7M9.5 17h5"/>',
+  people: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.7-3.1 2.9-4.8 5.5-4.8s4.8 1.7 5.5 4.8"/><path d="M15.5 5.6a3 3 0 010 5.8M17 14.9c1.9.5 3.1 2 3.5 4.6"/>',
+  spark: '<path d="M12 3.5l1.9 5.6 5.6 1.9-5.6 1.9L12 18.5l-1.9-5.6L4.5 11l5.6-1.9z"/>',
 };
 export const ic = (k, cls = '') => `<svg class="u-ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[k] || ''}</svg>`;
 /* 골드 동전 (직접 그림 · 🪙 대신) */

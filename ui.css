@@ -498,3 +498,106 @@ html.still .u-rf, html.still .u-steps button, html.still .u-attbadge, html.still
 .ig .sheet.u-ofs .later { min-height: 44px; padding: 0 16px; font: 600 .9375rem var(--u-font); color: var(--u-label2); }
 @media (prefers-reduced-motion: reduce) { .ig .sheet.u-ofs, .ig .u-ofs-badge { animation: none !important; } }
 html.still .ig .sheet.u-ofs, html.still .ig .u-ofs-badge { animation: none !important; }
+
+/* ── 공통 랭킹 (2026-11-27 · team/dev/tasks/261127-ranking/mock · rank.js) ── */
+/* 홈 상단 전광판: 카드 한 장 60px · 한 줄이 위로 밀려 올라가고 다음 줄이 아래에서 (흐르는 글자 · 깜빡임 없음) */
+.rk-ticker { display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 10px 0 10px; margin: 2px 0 12px; overflow: hidden; }
+.rk-ticker[hidden] { display: none; }
+.rk-ic { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.rk-slot { flex: 1; min-width: 0; height: 60px; position: relative; overflow: hidden; }
+.rk-tl { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.rk-tk { font-size: .75rem; font-weight: 600; color: var(--u-label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-tv { display: flex; align-items: center; gap: 7px; font-size: 1rem; font-weight: 700; white-space: nowrap; min-width: 0; }
+.rk-tv b { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rk-tv small { font-size: .6875rem; color: var(--u-label2); font-weight: 600; flex: none; }
+.rk-ts { margin-left: auto; padding-left: 6px; color: var(--u-label2); font-weight: 650; font-size: .9375rem; flex: none; }
+.rk-md { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 800; color: #1F1500; background: #E2B54A; flex: none; }
+.rk-md.m2 { background: #C7CAD1; } .rk-md.m3 { background: #D49A6A; }
+.rk-pg { display: flex; flex-direction: column; gap: 3px; flex: none; }
+.rk-pg b { width: 4px; height: 4px; border-radius: 2px; background: var(--u-label3); transition: height .3s; }
+.rk-pg b.on { height: 12px; background: var(--u-game); }
+.rk-ch { color: var(--u-label3); display: grid; flex: none; }
+.rk-ch .u-ico { width: 16px; height: 16px; }
+.rk-tl.in-up { transform: translateY(100%); animation: rk-in .35s ease-out forwards; }
+.rk-tl.in-down { transform: translateY(-100%); animation: rk-in .35s ease-out forwards; }
+.rk-tl.out-up { animation: rk-out-up .35s ease-out forwards; }
+.rk-tl.out-down { animation: rk-out-down .35s ease-out forwards; }
+@keyframes rk-in { to { transform: none; } }
+@keyframes rk-out-up { to { transform: translateY(-100%); opacity: 0; } }
+@keyframes rk-out-down { to { transform: translateY(100%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rk-tl { animation: none !important; transform: none !important; } }
+/* 순위표 시트 (시안 shot_1) */
+#sheet .panel.u .rk h2 { margin: 2px 0 2px; }
+.rk-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+.rk-seg { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; margin: 14px 0 12px; }
+#sheet .panel.u .rk-seg button { min-height: 36px; font-size: .875rem; border: 0; }
+.rk-list { overflow: hidden; }
+.rk-wait { min-height: 220px; background: linear-gradient(90deg, var(--u-card), var(--u-fill2), var(--u-card)); background-size: 200% 100%; animation: rk-sh 1.4s linear infinite; }
+@keyframes rk-sh { to { background-position: -200% 0; } }
+.rk-row, .rk-pin { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; position: relative; }
+.rk-row + .rk-row::before, .rk-gap + .rk-row::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--u-sep); }
+.rk-n { width: 28px; flex: none; font-weight: 700; font-size: 1rem; color: var(--u-label2); }
+.rk-n.m1, .rk-n.m2, .rk-n.m3 { color: var(--u-gold); }
+.rk-nm { flex: 1; min-width: 0; font-size: 1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-nm small { font-size: .75rem; color: var(--u-label2); font-weight: 600; }
+.rk-nm b { font-weight: 700; }
+.rk-sc { flex: none; font-weight: 700; font-size: 1rem; }
+.rk-gap { text-align: center; color: var(--u-label2); letter-spacing: 4px; font-size: .75rem; padding: 6px 0 2px; }
+.rk-more { display: block; width: 100%; min-height: 44px; border: 0; border-top: .5px solid var(--u-sep); background: none; color: var(--u-game); font: 600 .875rem var(--u-font); cursor: pointer; }
+.rk-pin { margin-top: 10px; border-radius: 16px; background: var(--u-card); box-shadow: var(--u-shadow); min-height: 52px; position: sticky; bottom: calc(8px + var(--safe-b)); flex-wrap: wrap; }
+.rk-pin.me { background: linear-gradient(var(--u-tg), var(--u-tg)), var(--u-card); box-shadow: inset 0 0 0 1.5px var(--u-game); }
+.rk-pin.me .rk-n, .rk-pin.me .rk-nm b { color: var(--u-game); }
+.rk-pin .t-sub { flex-basis: 100%; margin: -10px 0 10px; }
+.rk-pin.login { width: 100%; border: 0; font: 600 .9375rem var(--u-font); color: var(--u-game); cursor: pointer; justify-content: flex-start; }
+.rk-pin.login span { flex: 1; text-align: left; }
+.rk-pin.login .u-ico { width: 18px; height: 18px; }
+#sheet .panel.u .rk-foot { font-size: .8125rem; line-height: 1.5; color: var(--u-label2); margin: 12px 2px 4px; }
+.rk-empty { padding: 28px 16px; text-align: center; }
+.rk-empty p { margin: 0 0 12px; }
+.rk-me .u-row { min-height: 60px; }
+.rk-me .u-lnk { color: var(--u-game); font-weight: 600; font-size: .875rem; }
+/* 순위 이름 시트 (시안 shot_2) */
+.rk-in { display: flex; align-items: center; gap: 10px; min-height: 52px; margin: 16px 0 8px; padding: 0 16px; border-radius: 14px; background: var(--u-card); box-shadow: inset 0 0 0 1.5px var(--u-game); }
+.rk-in.bad { box-shadow: inset 0 0 0 1.5px var(--u-fort); }
+.rk-in input { flex: 1; min-width: 0; border: 0; background: none; color: var(--u-label); font: 600 1.25rem var(--u-font); outline: none; padding: 0; }
+.rk-in span { color: var(--u-label2); font-size: .875rem; }
+#sheet .panel.u .rk-msg { margin: 0 2px 12px; font-size: .875rem; font-weight: 600; color: var(--ok-c, #1E7A45); }
+#sheet .panel.u .rk-msg.bad { color: var(--u-fort); }
+.rk-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.rk-chip { min-height: 40px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--u-fill); color: var(--u-label); font: 600 .875rem var(--u-font); cursor: pointer; }
+.rk-chip:first-child { color: var(--u-label2); }
+/* 게임 상세 두 줄 (이번 주 순위 · 오늘 함께한 사람) */
+.rk-drows { margin: 12px 0 4px; overflow: hidden; }
+.rk-drows .u-row { width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+.rk-drows button.u-row { cursor: pointer; }
+.rk-drows .u-row .u-lt b { font-size: .9375rem; }
+.rk-drows .u-ti.gold { background: var(--u-gold-fill); color: var(--u-gold-ink); }
+.rk-drows .u-ti.sun { background: var(--u-fill); color: var(--u-label2); }
+.rk-dv { flex: none; font-size: .875rem; font-weight: 650; color: var(--u-label2); }
+.rk-drows .u-row > .u-ico { width: 14px; height: 14px; color: var(--u-label3); }
+/* 받기 창 · 오늘의 대박 시트 */
+.rkgift .u-group, .rkluck .u-group { text-align: left; margin: 14px 0; }
+.rkgift .u-row b.u-num { flex: none; font-size: 1rem; }
+.rkluck .u-row { min-height: 72px; }
+.rkluck .u-lt b { font-size: 1.0625rem; }
+.rkluck .rk-sc small { font-size: .75rem; font-weight: 600; color: var(--u-label2); margin-left: 1px; }
+#sheet .panel.u .btn.f { background: var(--u-fort-fill); }
+/* 점방 '오늘의 대박' 줄 (점방 탭은 검은 종이 톤) */
+.rk-luckslot:empty { display: none; }
+.rk-luck { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); min-height: 52px; margin: 12px 16px 4px; padding: 0 14px; border: 1px solid rgba(241,215,162,.28); border-radius: 14px; background: rgba(255,255,255,.04); color: #F3EADB; font: inherit; cursor: pointer; text-align: left; }
+.rk-luck .rk-lk { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: #F1D7A2; flex: none; }
+.rk-luck .rk-lk .u-ico { width: 15px; height: 15px; }
+.rk-luck .rk-lv { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; font-size: .9375rem; }
+.rk-luck .rk-lv i { font-style: normal; color: rgba(243,234,219,.5); }
+.rk-luck > .u-ico { width: 15px; height: 15px; color: rgba(243,234,219,.6); flex: none; }
+.fnew .rk-luck { width: 100%; margin: 12px 0 4px; }
+/* 너랑 탭 위 '오늘 많이 본 작품' 한 줄 (너랑 종이 톤 · 높이 44) */
+.rk-nrslot:empty { display: none; }
+.rk-nrbar { position: fixed; left: 50%; transform: translateX(-50%); top: 0; z-index: 3; width: 100%; max-width: 480px; display: flex; align-items: center; gap: 8px; min-height: calc(44px + var(--safe-t)); padding: var(--safe-t) 16px 0; border: 0; border-bottom: .5px solid rgba(40,30,20,.12); background: #F6F4F0; color: #2B2420; font: 500 .875rem var(--u-font); cursor: pointer; text-align: left; }
+.rk-nrbar .rk-lk { display: flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 700; color: #6B3FD6; flex: none; }
+.rk-nrbar .rk-lk .u-ico { width: 15px; height: 15px; }
+.rk-nrbar b { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rk-nrbar .u-num { color: rgba(43,36,32,.66); font-size: .8125rem; flex: none; }
+.rk-nrbar > .u-ico { width: 14px; height: 14px; color: rgba(43,36,32,.4); flex: none; }
+.nrtab.withbar .nrbox { top: calc(44px + var(--safe-t)); }
+@media (min-width: 960px) { .rk-nrbar { top: var(--tabh, 56px); padding-top: 0; min-height: 44px; } .nrtab.withbar .nrbox { top: calc(var(--tabh, 56px) + 44px); } }

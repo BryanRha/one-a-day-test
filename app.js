@@ -1,23 +1,24 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.71';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.71';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.71';
-import * as R from './rules.js?v=0.99.71';
-import * as I from './install.js?v=0.99.71';
-import * as T from './track.js?v=0.99.71';
-import * as P from './pay.js?v=0.99.71';
-import * as A from './account.js?v=0.99.71';
-import * as C from './cloud.js?v=0.99.71';
-import * as BM from './bm.js?v=0.99.71';
-import * as HUB from './hub.js?v=0.99.71';
-import * as O from './operator.js?v=0.99.71';
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.71';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.72';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.72';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.72';
+import * as R from './rules.js?v=0.99.72';
+import * as I from './install.js?v=0.99.72';
+import * as T from './track.js?v=0.99.72';
+import * as P from './pay.js?v=0.99.72';
+import * as A from './account.js?v=0.99.72';
+import * as C from './cloud.js?v=0.99.72';
+import * as BM from './bm.js?v=0.99.72';
+import * as HUB from './hub.js?v=0.99.72';
+import * as O from './operator.js?v=0.99.72';
+import * as RS from './rank.js?v=0.99.72';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.72';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.71').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.72').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.71'), import('./fortune/types.js?v=0.99.71'), import('./fortune/chat.js?v=0.99.71'), import('./fortune/oneword-ui.js?v=0.99.71')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.72'), import('./fortune/types.js?v=0.99.72'), import('./fortune/chat.js?v=0.99.72'), import('./fortune/oneword-ui.js?v=0.99.72')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -27,7 +28,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.71';
+const VERSION = '0.99.72';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -102,7 +103,14 @@ function go(t, via, seg) {
   setHash(); tabDot();
   if (t === 'neorang') nrSetup();
   if (via === 'oneword') { hpush({ nrw: 1 }); watchTab(); }   /* 한 단어에서 너랑으로: 그 위에 한 칸 → 너랑에서 뒤로가기 = 한 단어(재하 미리보기)로 */
-  if (t === 'today') { tick(); timer = setInterval(tick, 1000); hubLoad(); hubEnter(via || 're', re); if (via !== 'game') setTimeout(maybeOffer, 900); }
+  if (t === 'today') { tick(); timer = setInterval(tick, 1000); hubLoad(); hubEnter(via || 're', re); if (via !== 'game') setTimeout(maybeOffer, 900); RS.tickerMount(); }
+  if (t === 'today' || t === 'fortune' || t === 'neorang') RS.warm(rankRedraw);
+}
+/* 순위 값이 늦게 오면 그 자리만 다시: 홈 전광판 · 점방 대박 줄 · 너랑 많이 본 작품 줄 */
+function rankRedraw() {
+  if (tab === 'today') { const el = $('#rkTicker'); if (el) { const x = document.createElement('div'); x.innerHTML = RS.tickerHTML(); el.replaceWith(x.firstElementChild); RS.tickerMount(); } }
+  if (tab === 'fortune') { const el = $('.rk-luckslot'); if (el) el.innerHTML = RS.luckHTML(); }
+  if (tab === 'neorang') nrBar();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => go(b.dataset.tab, 'tab'));
 /* 탭 바 높이 → 너랑 시안 칸 크기 (PC 넓은 창은 위쪽 메뉴) */
@@ -165,7 +173,7 @@ function renderToday() {
     ${shelf()}
     <p class="u-foot" data-blk="howto">매일 0시, 모두에게 같은 게임 하나가 열려요<br><button class="u-lnk" type="button" data-intro>이용 방법 보기</button></p>
   </section>` : '';
-  return `<div class="today u-today">${header('오늘', fmtDate(R.now()))}<div class="u-page">${hubHTML()}${installBanner()}${games}</div></div>`;
+  return `<div class="today u-today">${header('오늘', fmtDate(R.now()))}<div class="u-page">${RS.tickerHTML()}${hubHTML()}${installBanner()}${games}</div></div>`;
 }
 /* 게임 진열장: 오늘 → 내일 → 다시 돌아오는 순서 · 잠김 = 'D-n 무료'(누르면 상세 · 광고 · 골드) · 아직 공개 전 = ? (목록에서 내린 게임은 DAILY 에 없어 자동 제외) */
 function shelf() {
@@ -539,6 +547,7 @@ function fortuneBody(m, me, f, date, past) {
   const youngCard = young && list.length < m.PAID.length ? `<div class="sdp young"><div class="sdpi"><b>연애 운세는 만 19세부터 열려요</b><p>대신 오늘은 궁합이랑 이번 달 운세 어때요?</p><div class="sdbtns" style="margin-top:8px"><button class="sdbtn ghost" data-paid="compat">우리 궁합 보기</button><button class="sdbtn ghost" data-paid="monthly">이번 달 내 운세</button></div></div></div>` : '';
   const paid = (bought(PK.base) ? '' : packCard) + list.map(p => `<div class="sdp${bought(p.id) ? ' own' : ''}" data-paid="${p.id}" ${KB}>${m.isAdultFortune(p.id) ? '<span class="a19" aria-label="만 19세 이상 이용 가능">19+</span>' : ''}${face(m, p.ch, 'sm')}<div class="sdpi"><small>${m.CHARS[p.ch].name}${p.entry ? ' · 입문' : ''}</small><b>${p.title} · ${fwon(p.id, p.price)}</b><p>“${p.hook}”</p><ul>${p.tease.map(t => `<li>${t}</li>`).join('')}</ul><em>${bought(p.id) ? '✓ 열림 · 전체 풀이 다시 보기' : `무료 미리보기 → 전체 ${fwon(p.id, p.price)}${p.entry ? ' · 보너스 골드 OK' : ''}`}</em></div><span class="seal sm">${m.CHARS[p.ch].seal}</span></div>`).join('') + youngCard;
   return `<div class="sdhero">${face(m, f.ch, 'lg')}<div class="sdheroin"><div class="sdtag">${c.name} · ${fmtDate(date)} · ${f.today.ko}일</div><h1>${me.name},<br>${past ? '그날은' : '오늘은'} <em>${f.key}</em>의 날${past ? '이었다' : '이다'}</h1><div class="sdscore big"><b>${f.total}</b><small>/100</small></div></div><span class="seal lg">${c.seal}</span></div>
+    ${!past ? `<div class="rk-luckslot">${RS.luckHTML()}</div>` : ''}
     ${!past && EX ? EX.chat.entry(m, me, f, XC()) : ''}
     ${!past && EX && EX.ow ? ((owF = f), EX.ow.entry(XC(), f)) : ''}
     <section><h3>${past ? '그날의' : '오늘의'} 한마디</h3><blockquote>“${f.say}”</blockquote><p class="sdwarn">⚠ ${past ? '그날' : '오늘'} 조심할 것 — ${f.warn}</p><p class="sdwhy">왜 ${c.name}? ${f.why}</p>${!past ? `<button class="sdbtn ghost" data-tarot style="margin-top:10px">🃏 오늘의 타로 한 장</button>` : ''}</section>
@@ -558,7 +567,7 @@ const ftop = () => `<div class="ftop"><h1 class="ttl"><img class="jblogo" src="f
 function renderFortune() {
   let me = null; try { me = JSON.parse(localStorage.getItem('oad_fortune_me') || 'null'); } catch { /* */ }
   const via = FVIA;
-  if (!me) return `<div class="ftab sdpage new">${ftop()}<div class="fnew">${fortuneCardStatic()}<p class="sdfoot">생년월일 원본은 내 폰에만 저장돼요 · 재미로 보는 운세예요</p></div></div>`;
+  if (!me) return `<div class="ftab sdpage new">${ftop()}<div class="fnew">${fortuneCardStatic()}<div class="rk-luckslot">${RS.luckHTML()}</div><p class="sdfoot">생년월일 원본은 내 폰에만 저장돼요 · 재미로 보는 운세예요</p></div></div>`;
   ex().then(() => {
     const m = FT, el = $('#ftab'); if (!el || tab !== 'fortune') return;
     const f = m.fortune(me, R.now()); m.markDay(R.keyOf(R.now()), { v: 1, f: 1 });
@@ -629,7 +638,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.71')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.72')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -950,12 +959,26 @@ function renderNeorang() {
   if (R.NR_OFF) return `<div class="nrtab">${header('<span class="nrlogo">너랑<small>NEORANG</small></span>')}${nrSoon()}</div>`;
   const deep = nrDeep && /^[a-z]+(\/[a-z0-9]+){0,3}$/.test(nrDeep) ? '#' + nrDeep : ''; nrDeep = '';   /* 오늘 허브 너랑 카드: 그 작품 · 화로 바로 (너랑 첫 칸 = 그 화면 → 뒤로가기 = 오늘 허브) */
   const via = nrVia || ({ open: 'link', oneword: 'oneword' })[FVIA] || 'tab'; nrVia = '';   /* 들어온 길 → 너랑 기록(nr_open) : 허브 카드 · 앱을 #neorang 으로 엶 · 한 단어 · 탭 */
-  return `<div class="nrtab live"><div class="nrbox"><iframe id="nrframe" title="너랑" src="${NR_SRC}?via=${via}${PV.store() ? '&os=1' : ''}${deep}" allow="autoplay"></iframe><div class="nrfail" hidden>${nrSoon(R.PROD ? '너랑을 불러오지 못했어요 · 잠시 뒤 다시 열어 주세요' : '너랑을 불러오지 못했어요 · test.oneaday.kr 에서 열어 주세요')}</div></div></div>`;
+  return `<div class="nrtab live"><div class="rk-nrslot"></div><div class="nrbox"><iframe id="nrframe" title="너랑" src="${NR_SRC}?via=${via}${PV.store() ? '&os=1' : ''}${deep}" allow="autoplay"></iframe><div class="nrfail" hidden>${nrSoon(R.PROD ? '너랑을 불러오지 못했어요 · 잠시 뒤 다시 열어 주세요' : '너랑을 불러오지 못했어요 · test.oneaday.kr 에서 열어 주세요')}</div></div></div>`;
 }
 const nrSoon = note => `<div class="nrsoon"><div class="moon" aria-hidden="true"></div><span class="tag">AI 캐릭터 대화</span><b class="serif">너랑, 곧 만나요</b><p>매일 밤 9시, 캐릭터마다 사건 하나.<br>기억이 이어지는 대화를 준비하고 있어요.</p>
   <div class="nrcards" aria-hidden="true">${['로맨스', '미스터리', '로판'].map(t => `<div><span>${t}</span><i>?</i></div>`).join('')}</div>${note ? `<p class="note">${note}</p>` : '<p class="note">공개되면 이 탭에서 바로 열려요</p>'}</div>`;
 let nrHist = [];
+/* 너랑 탭 위 '오늘 많이 본 작품' 한 줄 (공통 랭킹 1차 · 오늘 대화한 사람 수 · 하한 미만이면 줄 없음) — 작품 이름은 작품 목록에서 */
+let NRW = null;
+function nrBar() {
+  const slot = $('.rk-nrslot'); if (!slot || R.NR_OFF) return;
+  if (!NRW) { Promise.all([import('./neorang/works.js?v=0.99.72'), import('./neorang/works2.js?v=0.99.72').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; nrBar();   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */ }).catch(() => {}); return; }
+  const h = RS.nrHTML(id => NRW.find(w => w.id === id)); slot.innerHTML = h; $('.nrtab').classList.toggle('withbar', !!h);
+}
+function openWork(id) {
+  if (R.NR_OFF) return;
+  const fr = $('#nrframe');
+  if (tab === 'neorang' && fr) { try { fr.contentWindow.location.hash = 'w/' + id; return; } catch { /* */ } }
+  nrDeep = 'w/' + id; nrVia = 'rank'; go('neorang', 'tab');
+}
 function nrSetup() {
+  nrBar();
   const fr = $('#nrframe'); if (!fr) return;
   fr.addEventListener('load', () => {
     let w, d; try { w = fr.contentWindow; d = fr.contentDocument; } catch { /* */ }
@@ -1103,6 +1126,7 @@ function settingsHTML() {
       ${giftOpen() ? '<div><span>🎁 설치 선물 50골드</span><button data-igift>받기</button></div>' : ''}
       <div><span>설치가 안 돼요<br><small style="color:var(--mute)">내 폰 · 브라우저를 살펴보고 알려 드려요</small></span><button data-idiag>진단</button></div>
       <div><span>이용 방법 다시 보기</span><button data-intro>보기</button></div>
+      ${A.current() ? '<div><span>순위에 보일 이름<br><small style="color:var(--mute)">게임 순위에는 이 이름만 보여요 · 하루 한 번 바꿀 수 있어요</small></span><button data-rk-nick>바꾸기</button></div>' : ''}
       <div><span>버전</span><span class="badge">v${VERSION}</span></div>
     </div>
     ${R.PROD ? '' : owTypeRow()}
@@ -1255,10 +1279,12 @@ function detail(id, from) {
     body = `${cnt}<div class="u-sh in"><h3 class="t-head">오늘 하려면</h3>${gold}</div><div class="u-card u-ways">${rows.join('')}</div>${cta}${cash ? `<div class="u-cash">${cash}</div>` : ''}`;
   }
   T.track('detail_open', { game: id, how: a, from: tab === 'today' ? 'home' : tab });
+  setTimeout(() => RS.detailLoad(id), 0);
   const html = `<div class="u-sheethead"><span></span><button class="u-x u-press" data-close aria-label="닫기">${ic('x')}</button></div>
     <div class="u-dsc"><div class="u-dcv u-ph cover" role="img" aria-label="${g.title}" data-vt>${img(g.cover, 0, 'decoding="async"')}</div>
     <div class="u-dti">${img(g.icon, 0, 'class="u-li"')}<div class="u-lt"><span class="u-eb">${g.genre} · ${g.time}</span><h1 class="t-title">${g.title}</h1><span>${g.tagline || ''}</span></div></div>
     ${lib || R.ratingBadge(id) ? `<div class="u-meta">${lib ? `<span>${fmtKey(lib.first)} 첫 플레이 · ${lib.plays}판</span>` : ''}${R.ratingBadge(id)}</div>` : ''}
+    ${RS.detailRows(id)}
     ${body}
     <p class="u-desc">${g.desc}</p></div>`;
   /* 카드 펼침 전환 (시안 3 · View Transition): 누른 칸의 그림이 상세 표지 자리로 커지며 펼쳐짐 — 지원 안 하는 브라우저 · 동작 줄이기 · 게임 중에는 그냥 시트 */
@@ -1509,10 +1535,14 @@ async function gameReq(gid, d) {
     };
     return;
   }
+  /* 공통 랭킹 (2026-11-27): 옛 v2 submitScore = 판 이름이 게임 id 인 주간 판 · 로그인한 누구나(소장 조건 없음) · assisted 판도 오름 (대표 11-27) · 연결이 끊기면 기기에 보관했다 다시 보냄 */
   if (fn === 'score') {
-    if (!me) return done({ ok: false, reason: 'login' });
-    if (!owned) return done({ ok: false, reason: 'owned' });
-    try { const r = await A.call({ act: 'score', game: gid, score: a[0], assisted: !!(a[1] && a[1].assisted) }); if (r.ok) T.track('hall_post', { game: gid, rank: r.rank }); return done(r); }
+    try { const r = await RS.fromLegacy(gid, a[0], !!(a[1] && a[1].assisted)); if (r.ok) T.track('hall_post', { game: gid, rank: r.rank }); return done(r); }
+    catch (e) { return done({ ok: false, reason: 'error' }); }
+  }
+  /* v3 bm.rank.start · submit · open · mine — 판은 그 게임 것만 (rank.js boardOf) */
+  if (fn === 'rank') {
+    try { return done(await RS.fromGame(gid, String(a[0] || ''), (a[1] && typeof a[1] === 'object') ? a[1] : {})); }
     catch (e) { return done({ ok: false, reason: 'error' }); }
   }
   if (fn === 'board') {
@@ -1674,6 +1704,10 @@ document.addEventListener('click', e => { const o = e.target.closest('[data-ow-o
 document.addEventListener('change', e => { const s = e.target.closest && e.target.closest('[data-owtype]'); if (!s) return; try { if (s.value) localStorage.setItem('oad_ow_type', s.value); else localStorage.removeItem('oad_ow_type'); } catch { /* */ } T.track('oneword_type', { set: s.value ? 1 : 0 }); toast(s.value ? '한 단어 카드에 작게 붙여 둘게요' : '유형 칩을 뺐어요'); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches && e.target.matches('.owentry[data-ow-open]')) owOpen('tab'); });
 ft().then(() => P.resume()).then(r => { if (!r) return; if (r.ok && r.gold) { A.refresh().then(() => goldDone('골드')); return; } if (r.ok) payDone(r.product, r); else toast(r.msg); });
+/* 공통 랭킹: 시트 · 기록 · 계정 함수를 넘겨 줌 → 앱을 열고 로그인이 확인되면 보관한 제출을 보내고 지난주 선물을 알림 */
+RS.init({ openSheet, closeSheet, toast, A, T, G, R, needLogin, img: (src, w, extra) => img(src, w, extra), tab: () => tab, sheetHidden: () => sheet.hidden, playerHidden: () => player.hidden,
+  myLuck: () => { FFROM = 'rank'; go('fortune', 'tab'); }, openWork });
+A.onChange(m => { if (m) { RS.resend(); setTimeout(() => { if (tab === 'today' && sheet.hidden && player.hidden) RS.gifts(); }, 1500); } });
 /* 처음 열 때: 주소(#fortune · #box · #game … · 옛 #library · #collection · #settings)대로 · 없으면 오늘 허브 */
 { const r = parseRoute(location.hash) || { tab: 'today' }; go(r.tab, 'open', r.seg); if (r.games) setTimeout(() => toGames(false), 60); if (r.settings) setTimeout(openSettings, 300); setTimeout(() => moveNote(r.moved), 1200); }
 if (!R.state().intro && !LAND) setTimeout(intro, 400);   /* 공유 링크로 온 첫 방문은 친구 화면 먼저 · 소개는 다음에 */
