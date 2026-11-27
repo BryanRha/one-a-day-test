@@ -18,7 +18,7 @@ import { pushBack } from '../oad.js?v=0.99.69';
 import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.69';
 
 const US = 2.25;                 // 원작 UI 배율 (가로 화면 480 → 1080)
-const HUD_H = 196, HUD_TOP = 14, TRAY_MIN = 250, CS = 2.4;   // 세로 화면: 위 띠 높이 · 자원 줄 위 여백 · 아래 카드 칸 최소 높이 · 카드 배율
+const HUD_H = 196, HUD_TOP = 14, CARD_PAD = 16, CS = 2.4;   // 세로 화면: 위 띠 높이 · 자원 줄 위 여백 · 카드 줄 위아래 최소 여백 · 카드 배율
 // 효과 번호 → 그림 묶음 (원작 렌더러 표)
 const FX_SET = { 0: 500, 33: 532, 2: 502, 3: 503, 4: 504, 5: 505, 9: 509, 10: 510, 12: 533, 13: 512, 14: 513, 15: 514, 36: 502, 37: 534, 38: 535 };
 const ARROW_IMG = { 0: ['arrow_0_0'], 2: ['arrow_2_0', 'arrow_2_1'], 3: ['arrow_3_0', 'arrow_3_1'], 5: ['arrow_1_0', 'arrow_1_1'], 10: ['arrow_4_0', 'arrow_4_1', 'arrow_4_2', 'arrow_4_3', 'arrow_4_4', 'arrow_4_5'], 12: ['arrow_9_0', 'arrow_9_1'] };
@@ -109,21 +109,43 @@ export class PlayScene extends Phaser.Scene {
       this.ox = Math.round((SW - 800 * US) / 2); this.oy = Math.round((SH - 480 * US) / 2);
       this.TL = T0(this.ox, this.oy, US);
       this.k = US; this.bx = this.TL.x(62); this.by = this.TL.y(30); this.bw = 675 * US; this.bh = 450 * US; this.trayTop = this.by + this.bh;
-      this.TM = this.TL; this.TP = this.TL; this.TV = this.TL; this.TH = this.TL;
+      this.TM = this.TL; this.TP = this.TL; this.TV = this.TL; this.TH = this.TL; this.ext = 0;
     } else {
-      const room = SH - HUD_H - TRAY_MIN;
-      this.k = Math.min(SW / 450, room / 675);
+      /* 세로 판 자리 (11-27 대표: 입구가 위 띠에 가리고 아래만 비던 것)
+         위에서부터 [위 띠] [판 위로 튀어나온 입구 · 물건 자리 + 남는 칸 일부 = 풀밭 이어 그림] [판] [틈] [카드 줄] [아래 여백]
+         · 입구 그림이 판 윗변 위로 튀어나온 만큼(ovU)을 늘 비워 둠 → 위 띠에 안 가림
+         · 판은 폭이 한계라 더 못 키움 → 남는 세로 칸은 판 위 풀밭 60%(판 높이 30% 까지) · 나머지를 판-카드 틈 4 : 카드 아래 6 으로 나눔 (아래만 비지 않게)
+         · 다음 웨이브 안내는 원작처럼 판 아래쪽 위에 잠깐 겹쳐 뜸 (자리를 따로 비워 두지 않음) */
+      const ovU = this.topOverhang(), CB = CARD_PAD * 2 + 72 * CS;
+      this.k = Math.min(SW / 450, (SH - HUD_H - CB) / (675 + ovU));
       this.bw = 450 * this.k; this.bh = 675 * this.k;
-      this.bx = (SW - this.bw) / 2; this.by = HUD_H; this.trayTop = this.by + this.bh;
+      const L = Math.max(0, SH - HUD_H - ovU * this.k - this.bh - CB);
+      const extra = Math.min(L * 0.6, this.bh * 0.3);
+      this.ext = Math.round(ovU * this.k + extra);
+      this.bx = (SW - this.bw) / 2; this.by = HUD_H + this.ext; this.trayTop = this.by + this.bh;
+      this.cardTop = Math.round(this.trayTop + CARD_PAD + (L - extra) * 0.4);
       this.TL = T0(0, 0, US);
       /* 위 자원 줄: 원작 그림은 가로 화면 윗변에 붙는 띠라 세로 화면 맨 위(y=0)에 두면 테두리가 잘려 보임 → 위를 조금 띄움 (위 띠 높이 안) */
       this.TH = T0(0, HUD_TOP, US);
       const ms = SW / 800; this.TM = T0(0, SH - 480 * ms, ms);
       const ps = Math.min(1.9, SW / 520); this.TP = T0(SW / 2 - 400 * ps, this.by + this.bh * 0.45 - 242 * ps, ps);
-      // 다음 웨이브 안내는 카드 줄 아래 빈 칸(모자라면 판 아래쪽)에
-      this.TV = T0(0, SH - 480 * ms, ms);
+      // 다음 웨이브 안내: 원작(가로)처럼 판 아래쪽 위에 겹쳐 잠깐 뜸 — 안내 띠 아랫변 = 판 아랫변
+      this.TV = T0(0, this.trayTop - 480 * ms, ms);
     }
     this.sp = this.k / SCALE;   // 판 그림 배율
+  }
+  // 세로 판: 물건 그림(입구 · 성문 · 큰 나무)이 판 윗변 위로 튀어나오는 높이 (판 1칸 = 45 단위 · objectView 와 같은 자리 계산)
+  topOverhang() {
+    let top = 0;
+    for (const o of this.sim.objects) {
+      if (!o.alive) continue;
+      let n = OBJ_NAMES[o.type]; const col = 450 - o.y / 50;
+      if (o.role === 'start' || o.role === 'goal') n = (o.role === 'start' ? 'object_start' : 'object_goal') + (col < 30 ? 'w' : col > 420 ? 'e' : 's');
+      const f = this.frame(n); if (!f) continue;
+      const fh = this.textures.getFrame(f[0], f[1])?.height || 0;
+      top = Math.min(top, o.x / 50 + (o.size === 2 ? 45 : 22) - fh / SCALE);
+    }
+    return Math.ceil(-top);
   }
   // 원작 좌표(위치 단위 = px×50) → 화면
   rot(x, y) { return this.land ? [this.bx + x / 50 * this.k, this.by + y / 50 * this.k] : [this.bx + (450 - y / 50) * this.k, this.by + (x / 50) * this.k]; }
@@ -161,6 +183,11 @@ export class PlayScene extends Phaser.Scene {
       }
     } else {
       this.add.image(this.bx, this.by, `bg${ch}`).setOrigin(0).setDisplaySize(this.bw, this.bh);
+      /* 판 위 빈 칸(입구가 튀어나오는 자리 + 남는 칸): 바닥 그림을 위아래로 뒤집어 이어 붙임 — 판이 위로 이어지는 숲처럼 */
+      if (this.ext > 0) {
+        const m = this.make.graphics({ add: false }); m.fillRect(this.bx, this.by - this.ext, this.bw, this.ext);
+        this.add.image(this.bx, this.by, `bg${ch}`).setOrigin(0, 1).setFlipY(true).setDisplaySize(this.bw, this.bh).setDepth(-1).setMask(m.createGeometryMask());
+      }
       if (this.bx > 0) { const sg = this.add.graphics().setDepth(4001); sg.fillStyle(0x0E1118, 1).fillRect(0, this.by, this.bx, this.bh).fillRect(this.bx + this.bw, this.by, this.bx + 2, this.bh); }
       for (let i = 0; i < 15; i++) for (let j = 0; j < 10; j++) {
         const t = s.tiles[i][j]; if (t < 0) continue;
@@ -168,7 +195,7 @@ export class PlayScene extends Phaser.Scene {
         this.add.image(this.bx + (450 - (j + 1) * 45) * this.k, this.by + i * 45 * this.k, f[0], f[1]).setOrigin(0).setScale(this.sp);
       }
       const g = this.add.graphics().setDepth(4000);
-      for (let i = 0; i < 10; i++) { g.fillStyle(0x000000, 0.22 * (1 - i / 10)); g.fillRect(this.bx, this.by + i * 4, this.bw, 4); g.fillRect(this.bx, this.trayTop - (i + 1) * 4, this.bw, 4); }
+      for (let i = 0; i < 10; i++) { g.fillStyle(0x000000, 0.22 * (1 - i / 10)); g.fillRect(this.bx, this.by - this.ext + i * 4, this.bw, 4); g.fillRect(this.bx, this.trayTop - (i + 1) * 4, this.bw, 4); }
     }
     this.placeLayer = this.add.graphics().setDepth(5);
     this.gridG = this.add.graphics().setDepth(5);
@@ -315,7 +342,7 @@ export class PlayScene extends Phaser.Scene {
     } else {
       // 세로: 카드 칸 위쪽에 HERO + 병사 6장 한 줄 (원작 그림 · 원작 순서)
       const T = this.cardT = T0(0, 0, CS), n = 7, cw = 56 * CS, gap = (SW - n * cw) / (n + 1);
-      const top = this.trayTop + Math.min(40, Math.max(16, (SH - this.trayTop - 200) / 3));
+      const top = this.cardTop;
       const g = this.add.graphics().setDepth(5990); g.fillStyle(0x07090D, 1).fillRect(0, this.trayTop, SW, SH - this.trayTop); g.lineStyle(3, 0x1E2A44, 1).lineBetween(0, this.trayTop, SW, this.trayTop);
       this.heroBtnPos = [(gap + cw / 2) / CS, top / CS];
       BUY_ORDER.forEach((kind, i) => this.cards.push({ i, kind, row: BUY_ROWS[kind], cx: (gap + (i + 1) * (cw + gap) + cw / 2) / CS, cy: top / CS, slide: 0 }));
@@ -1044,19 +1071,22 @@ export class PlayScene extends Phaser.Scene {
     this.hint = g; this.hintBand = [bxx, byy, bw, bh];
   }
   // 성문 자리 (가리면 안 되는 곳 · 목숨 숫자까지)
-  gateRect() {
-    const o = this.sim.objects.find(o => o.role === 'goal'); if (!o) return null;
+  gateRect() { return this.objRect('goal'); }
+  objRect(role) {
+    const o = this.sim.objects.find(o => o.role === role); if (!o) return null;
+    const v = this.views.get(o); if (v?.img?.getBounds) { const b = v.img.getBounds(); return [b.x, b.y - (role === 'goal' ? 40 * this.k : 0), b.width, b.height + (role === 'goal' ? 40 * this.k : 0)]; }
     const [x, y] = this.rot(o.x, o.y), K = this.k;
     return [x - 60 * K, y - 75 * K, 120 * K, 110 * K];
   }
-  // 안내 띠 세로 자리 고르기 (판 위에 둘 때): 성문 · 가리킨 곳은 절대 피하고, 길(적이 걷는 곳)은 덜 가리는 쪽 · 같으면 위쪽
+  // 안내 띠 세로 자리 고르기: 화면 전체(위 띠 아래 ~ 화면 아래)에서 고름
+  //   절대 피함: 성문 · 입구 · 가리킨 곳 · 카드 줄 / 덜 가리기: 길(적이 걷는 곳) / 같으면 판 밖 빈 칸 → 위쪽
+  //   띠가 떠 있는 동안 '다음 웨이브' 안내는 미뤘다가 띠가 걷힌 뒤 보여 줌(겹침 방지)
   bandY(x, w, h, avoid = []) {
-    /* 세로 화면: 카드 줄 아래 빈 칸이 넉넉하면 거기 (판을 하나도 안 가림) */
-    if (!this.land && this.cardRowBottom) { const SH = this.scale.height, free = SH - this.cardRowBottom - 16; if (free >= h + 24) { this.trayBand = true; const v = this.mview; if (v) { v.c.destroy(); v.warn?.destroy(); v.glow?.destroy(); this.mview = null; } return Math.round(this.cardRowBottom + 16 + (free - h) / 2); } }
-    const s = this.sim, K = this.k, ov = (a, b) => Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
-    const hard = avoid.slice(), gr = this.gateRect(); if (gr) hard.push(gr);
+    const s = this.sim, K = this.k, SH = this.scale.height, ov = (a, b) => Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
+    const hard = avoid.slice(); for (const r of [this.gateRect(), this.objRect('start')]) if (r) hard.push(r);
+    if (!this.land && this.cardRowTop) hard.push([0, this.cardRowTop - 8, this.scale.width, this.cardRowBottom - this.cardRowTop + 16]);
     const path = []; for (let i = 0; i < 15; i++) for (let j = 0; j < 10; j++) if (s.tiles[i]?.[j] >= 0) { const [cx, cy] = this.tileCenter(i, j); path.push([cx - 22 * K, cy - 22 * K, 45 * K, 45 * K]); }
-    const y0 = this.by + 16, y1 = this.by + this.bh - h - 16;
+    const y0 = this.land ? this.by + 16 : HUD_H + 8, y1 = this.land ? this.by + this.bh - h - 16 : SH - h - 8;
     let best = y0, bsc = Infinity;
     for (let y = y0; y <= y1; y += 12) {
       const r = [x, y, w, h];
@@ -1064,10 +1094,11 @@ export class PlayScene extends Phaser.Scene {
       sc += (y - y0) * 0.01;
       if (sc < bsc) { bsc = sc; best = y; }
     }
+    this.trayBand = true; const v = this.mview; if (v) { v.c.destroy(); v.warn?.destroy(); v.glow?.destroy(); this.mview = null; }
     return best;
   }
   hideHint() { if (this.hint) { this.hint.destroy(); this.hint = null; } this.bandDone(); }
-  // 카드 줄 아래 안내 띠가 걷힘 → 미뤄 둔 웨이브 안내
+  // 안내 띠가 걷힘 → 미뤄 둔 웨이브 안내
   bandDone() { if (!this.trayBand) return; this.trayBand = false; if (this.mviewWait !== undefined && !this.ended) this.showMonsterView(this.mviewWait); }
   coachCheck() {
     const s = this.sim, d = load(); if (this.hint || this.coachOn || this.ended || this.cutin || this.menu || this.mview) return;
