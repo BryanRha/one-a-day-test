@@ -1,14 +1,14 @@
 // 바다 복원: 모은 별로 오염된 바다를 하나씩 되살린다.
 // 처음엔 탁한 물 + 기름띠 + 버려진 그물 + 회색 실루엣. 과제를 해결할수록 물이 맑아지고 산호·해초·친구들이 돌아온다.
-import { W, H, TXT, WORLD_COUNT, LEVELS_PER_WORLD, asset, themeOf } from '../config.js?v=0.99.92';
-import { t } from '../i18n.js?v=0.99.92';
-import { audio } from '../audio.js?v=0.99.92';
-import { load, save, availableStars, spendStars, addCoins, addBooster } from '../save.js?v=0.99.92';
-import { RESTORE_TASKS, TASK_COINS, WORLD_COINS, restoreTheme, taskCost } from '../restore.js?v=0.99.92';
-import { track, flush } from '../missions.js?v=0.99.92';
-import { button, iconButton, toast, enableGlow, popup } from '../ui/widgets.js?v=0.99.92';
-import { bm } from '../oad_bm.js?v=0.99.92';
-import { goldify, bt, oadOn, decoOpen, decoOnPref, decoShown, setDeco, buyDeco, failMsg } from '../bmflow.js?v=0.99.92';
+import { W, H, TXT, WORLD_COUNT, LEVELS_PER_WORLD, asset, themeOf } from '../config.js?v=0.99.93';
+import { t } from '../i18n.js?v=0.99.93';
+import { audio } from '../audio.js?v=0.99.93';
+import { load, save, availableStars, spendStars, addCoins, addBooster } from '../save.js?v=0.99.93';
+import { RESTORE_TASKS, TASK_COINS, WORLD_COINS, restoreTheme, taskCost } from '../restore.js?v=0.99.93';
+import { track, flush } from '../missions.js?v=0.99.93';
+import { button, iconButton, toast, enableGlow, popup } from '../ui/widgets.js?v=0.99.93';
+import { bm } from '../oad_bm.js?v=0.99.93';
+import { goldify, bt, oadOn, decoOpen, decoOnPref, decoShown, setDeco, buyDeco, failMsg } from '../bmflow.js?v=0.99.93';
 
 export class ReefScene extends Phaser.Scene {
   constructor() { super('Reef'); }

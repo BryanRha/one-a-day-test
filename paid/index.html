@@ -22,14 +22,15 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <h2>1. 유료 운세 풀이 (건별 결제)</h2>
 <p>점방에서 무료 미리보기(목차 · 일부 풀이)를 먼저 보고, 원하면 그 풀이 하나를 원화로 결제합니다. <b>결제하는 즉시 화면에 전체 풀이가 열리며</b>, 한 번 결제하면 같은 입력 정보의 풀이를 계속 다시 볼 수 있습니다(이 기기 · 로그인했다면 계정 · 주문번호와 복원 코드로 다른 기기에서도).</p>
 <div class="tw"><table id="fortuneTable">
-<tr><th>상품</th><th>내용</th><th>가격</th><th>골드로</th></tr>
+<tr><th>상품</th><th>내용</th><th>가격</th><th>골드로</th><th>원스토어 앱</th></tr>
 </table></div>
 <p class="meta">입문 운세(3,900원)는 보너스 골드도 쓸 수 있고, 그보다 비싼 운세는 충전 골드로만 열 수 있어요. 이번 달 운세 · 합격운은 결제한 달 기준이며 매월 21일부터는 다음 달 운세로 판매합니다.</p>
 
 <h2>2. 골드 (원어데이 공용 재화)</h2>
 <!-- 실서버 첫 공개(2026-11-16): 골드 충전 판매 전 — server/api/_lib/gold.js GOLD_SALE_PROD 를 켜면 이 안내(goldoff)와 refund/ 의 같은 안내를 지움 -->
-<p class="box goldoff" hidden><b>지금은 골드 충전(원화로 골드 구매)을 판매하지 않습니다.</b> 아래 묶음 표는 판매를 시작할 때의 가격이며, 시작하면 이 페이지와 앱에서 먼저 알립니다. 선물 · 출석 등으로 받은 보너스 골드는 그대로 쓸 수 있고, 유료 운세는 카드로 건별 결제합니다.</p>
+<p class="box goldoff" hidden><b>골드 충전(원화로 골드 구매)은 원스토어 앱에서 판매하고, 웹(브라우저)에서는 아직 판매하지 않습니다.</b> 아래 묶음 표는 원스토어 앱의 가격(부가세 포함)이며, 웹 판매를 시작하면 이 페이지와 앱에서 먼저 알립니다. 선물 · 출석 등으로 받은 보너스 골드는 그대로 쓸 수 있고, 유료 운세는 카드로 건별 결제합니다.</p>
 <script>if (window.OAD_ENV === 'prod') document.querySelectorAll('.goldoff').forEach(e => { e.hidden = false; });</script>
+<p class="box">표의 <b>원스토어 앱</b> 칸은 원스토어 앱에서 결제할 때 내는 금액이에요(원스토어 기본가격에 부가세 10%를 더한 값). 받는 골드 · 풀이 내용은 같아요.</p>
 <ul>
 <li><b>1골드 = 10원.</b> 로그인한 계정에 저장되어 기기를 바꿔도 이어집니다.</li>
 <li>유효기간: 충전 골드(유상) 5년 · 보너스 골드(무상) 받은 날부터 1년.</li>
@@ -37,14 +38,14 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 <li>환불: 결제 후 7일 안에 쓰지 않은 골드는 환불 — 자세한 기준은 <a href="../refund/">환불 · 청약철회 정책</a>.</li>
 </ul>
 <div class="tw"><table id="goldTable">
-<tr><th>묶음</th><th>가격</th><th>충전 골드</th><th>보너스 골드</th></tr>
-<tr data-pack="first"><td>첫 구매 (계정당 한 번)</td><td class="n">1,000원</td><td class="n">100</td><td class="n">100</td></tr>
-<tr data-pack="g100"><td>골드 100</td><td class="n">1,000원</td><td class="n">100</td><td class="n">0</td></tr>
-<tr data-pack="g315"><td>골드 315</td><td class="n">3,000원</td><td class="n">300</td><td class="n">15</td></tr>
-<tr data-pack="g550"><td>골드 550</td><td class="n">5,000원</td><td class="n">500</td><td class="n">50</td></tr>
-<tr data-pack="g1100"><td>골드 1,100</td><td class="n">10,000원</td><td class="n">1,000</td><td class="n">100</td></tr>
-<tr data-pack="g2300"><td>골드 2,300</td><td class="n">20,000원</td><td class="n">2,000</td><td class="n">300</td></tr>
-<tr data-pack="g6000"><td>골드 6,000</td><td class="n">50,000원</td><td class="n">5,000</td><td class="n">1,000</td></tr>
+<tr><th>묶음</th><th>가격</th><th>충전 골드</th><th>보너스 골드</th><th>원스토어 앱</th></tr>
+<tr data-pack="first"><td>첫 구매 (계정당 한 번)</td><td class="n">1,000원</td><td class="n">100</td><td class="n">100</td><td class="n">1,100원</td></tr>
+<tr data-pack="g100"><td>골드 100</td><td class="n">1,000원</td><td class="n">100</td><td class="n">0</td><td class="n">1,100원</td></tr>
+<tr data-pack="g315"><td>골드 315</td><td class="n">3,000원</td><td class="n">300</td><td class="n">15</td><td class="n">3,300원</td></tr>
+<tr data-pack="g550"><td>골드 550</td><td class="n">5,000원</td><td class="n">500</td><td class="n">50</td><td class="n">5,500원</td></tr>
+<tr data-pack="g1100"><td>골드 1,100</td><td class="n">10,000원</td><td class="n">1,000</td><td class="n">100</td><td class="n">11,000원</td></tr>
+<tr data-pack="g2300"><td>골드 2,300</td><td class="n">20,000원</td><td class="n">2,000</td><td class="n">300</td><td class="n">22,000원</td></tr>
+<tr data-pack="g6000"><td>골드 6,000</td><td class="n">50,000원</td><td class="n">5,000</td><td class="n">1,000</td><td class="n">55,000원</td></tr>
 </table></div>
 <h3>골드를 쓰는 곳</h3>
 <div class="tw"><table>
@@ -74,9 +75,11 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 import { mount } from '../operator.js';
 import { PAID, PACK } from '../fortune/fortune.js';
 /* 운세 상품 표: 앱과 같은 목록(fortune.js PAID · PACK — 가격 표시용, 실제 결제 가격은 서버 gold.js FORTUNE · 둘은 tabs_check 가 대조) */
+/* 원스토어 앱 가격 = 원스토어 기본가격(웹 가격을 천 원 단위로 올림) × 1.1 부가세 (app.js fprice · onestore.js VAT · 11-26 대표 B안) */
+const os = w => Math.round(Math.ceil(w / 1000) * 1000 * 1.1);
 const won = n => n.toLocaleString('ko-KR') + '원', esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const rows = PAID.map(p => `<tr data-fortune="${p.id}"><td>${esc(p.title)}</td><td>${esc(p.hook || '')}</td><td class="n">${won(p.price)}</td><td class="n">${(p.price / 10).toLocaleString('ko-KR')}</td></tr>`);
-rows.push(`<tr data-fortune="pack"><td>${esc(PACK.title)}</td><td>신년운세 + 고른 풀이 2개</td><td class="n">${won(PACK.price)}</td><td class="n">${(PACK.price / 10).toLocaleString('ko-KR')}</td></tr>`);
+const rows = PAID.map(p => `<tr data-fortune="${p.id}"><td>${esc(p.title)}</td><td>${esc(p.hook || '')}</td><td class="n">${won(p.price)}</td><td class="n">${(p.price / 10).toLocaleString('ko-KR')}</td><td class="n">${won(os(p.price))}</td></tr>`);
+rows.push(`<tr data-fortune="pack"><td>${esc(PACK.title)}</td><td>신년운세 + 고른 풀이 2개</td><td class="n">${won(PACK.price)}</td><td class="n">${(PACK.price / 10).toLocaleString('ko-KR')}</td><td class="n">${won(os(PACK.price))}</td></tr>`);
 document.getElementById('fortuneTable').insertAdjacentHTML('beforeend', rows.join(''));
 mount();
 </script>
