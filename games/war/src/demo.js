@@ -1,12 +1,12 @@
 // 첫 출전 시범 (v0.12 · 테스터 시트 #4): 일반 작전 첫 판의 첫 턴을 아군 AI 가 천천히 보여 줌
 //   유닛 고르기 → 파란 칸으로 이동 → 점령 · 공격 → 기지에서 유닛 구매(생산) 를 한 단계씩 글로 설명하며 실행
 //   [시범 건너뛰기] 언제든 · 뒤로가기 = 일시정지(시범도 멈춤) · 끝나면 기본 안내 → [턴 종료]는 직접
-import { W, H } from './config.js?v=0.99.73';
-import { T, C, btn, fmt } from './pui.js?v=0.99.73';
-import { load, save } from './save.js?v=0.99.73';
-import { AI, apply } from './core/ai.js?v=0.99.73';
-import { UNITS, TERRAIN } from './core/data.js?v=0.99.73';
-import { track } from './bmwar.js?v=0.99.73';
+import { W, H } from './config.js?v=0.99.74';
+import { T, C, btn, fmt } from './pui.js?v=0.99.74';
+import { load, save } from './save.js?v=0.99.74';
+import { AI, apply } from './core/ai.js?v=0.99.74';
+import { UNITS, TERRAIN } from './core/data.js?v=0.99.74';
+import { track } from './bmwar.js?v=0.99.74';
 
 /* STEP: 한 단계 설명을 읽는 시간 — v0.13 에서 1.7 → 2.4초 ('천천히 시연' · 폰에서 두 줄 문장을 다 읽기 전에 넘어갔음) */
 const TOP = 196, BOTTOM = 360, STEP = 2400;

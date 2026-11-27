@@ -1,14 +1,14 @@
 // 차고: 메인 일러스트 + 드라이버 선택 · 자동차 선택 · 부품 강화 → 출발
-import { W, H, VERSION } from '../config.js?v=0.99.73';
-import { txt, fmt, fit, button, iconButton, toast, popup, soundToggles } from '../ui.js?v=0.99.73';
-import { audio } from '../audio.js?v=0.99.73';
-import { load, save } from '../save.js?v=0.99.73';
-import { wind } from '../fx.js?v=0.99.73';
-import * as M from '../meta.js?v=0.99.73';
-import { bm } from '../oad_bm.js?v=0.99.73';
-import { helloOnce } from '../bmflow.js?v=0.99.73';
-import { hallShown, hallPopup } from '../hall.js?v=0.99.73';
-import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.99.73';
+import { W, H, VERSION } from '../config.js?v=0.99.74';
+import { txt, fmt, fit, button, iconButton, toast, popup, soundToggles } from '../ui.js?v=0.99.74';
+import { audio } from '../audio.js?v=0.99.74';
+import { load, save } from '../save.js?v=0.99.74';
+import { wind } from '../fx.js?v=0.99.74';
+import * as M from '../meta.js?v=0.99.74';
+import { bm } from '../oad_bm.js?v=0.99.74';
+import { helloOnce } from '../bmflow.js?v=0.99.74';
+import { hallShown, hallPopup } from '../hall.js?v=0.99.74';
+import { SKINS, SKIN_ORDER, skinShown, skinOpen, activeSkin, wear, buySkin, skinKey } from '../skin.js?v=0.99.74';
 
 // 게임 코인 가격 (코인 그림 + 숫자) — 🪙 는 원어데이 골드 전용이라 게임 코인엔 쓰지 않음
 function coinTxt(scene, x, y, n, size) {

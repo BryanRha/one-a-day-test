@@ -3,7 +3,7 @@
 //   서버: /api/me — GET ?rank=<판>|top3|today (CDN 캐시 · 로그인 없음) · POST act 'rank'(start · submit · mine · gifts · claim) · 'nick'
 //   광고 · 결제 단추는 이 화면들에 두지 않음 (사업 bm.md 4-1 — 자랑하는 자리)
 //   app.js 가 init(ctx) 로 시트 · 토스트 · 계정 · 기록 함수를 넘겨 줌 (아래 보관 줄 함수는 ctx 없이도 동작 — tools/rank_check.mjs 가 node 에서 시험)
-import { ic, coin } from './ui.js?v=0.99.73';
+import { ic, coin } from './ui.js?v=0.99.74';
 
 /* ── 오프라인 보관 (판마다 마지막 제출 하나 · 다시 연결되면 한 번 · 마감 + 10분 지나면 버림) ── */
 const KQ = 'oad_rank_q', GRACE = 10 * 60e3;
@@ -71,8 +71,10 @@ export const today = (ttl = 300e3) => getJ({ rank: 'today' }, ttl);
 let TOP = null, TODAY = null;
 export const peekTop = () => TOP, peekToday = () => TODAY;
 export function warm(redraw, ttl) {
-  top3(ttl).then(j => { const was = JSON.stringify(TOP); TOP = j && j.ok ? j : TOP; if (redraw && JSON.stringify(TOP) !== was) redraw('top'); });
-  today(ttl).then(j => { const was = JSON.stringify(TODAY); TODAY = j && j.ok ? j : TODAY; if (redraw && JSON.stringify(TODAY) !== was) redraw('today'); });
+  /* 값이 그대로여도 전광판이 아직 숨어 있으면 다시 그림 (여러 번 부른 warm 중 먼저 온 값으로 그린 때 홈이 아직 없었으면 영영 숨던 것) */
+  const hid = () => { const el = typeof document !== 'undefined' && document.getElementById('rkTicker'); return !!(el && el.hidden); };
+  top3(ttl).then(j => { const was = JSON.stringify(TOP); TOP = j && j.ok ? j : TOP; if (redraw && (JSON.stringify(TOP) !== was || hid())) redraw('top'); });
+  today(ttl).then(j => { const was = JSON.stringify(TODAY); TODAY = j && j.ok ? j : TODAY; if (redraw && (JSON.stringify(TODAY) !== was || hid())) redraw('today'); });
 }
 
 /* ── 게임 쪽 요청 (app.js gameReq 가 넘김): start · submit · open · mine ── */
@@ -323,6 +325,8 @@ const still = () => (typeof matchMedia !== 'undefined' && matchMedia('(prefers-r
 export function tickerMount() {
   const el = document.getElementById('rkTicker'); TK.el = el; clearInterval(TK.t);
   clearInterval(TK.r); TK.r = setInterval(() => { if (X.tab() === 'today' && document.visibilityState === 'visible') warm(X.rankRedraw, 120e3); }, 120e3);   /* 실시간처럼: 2분마다 다시 받음 (서버는 CDN 캐시라 DB 는 1~5분에 한 번) */
+  /* 숨은 자리인데 그릴 장이 생겼으면 그 자리를 새로 그려 붙임 (11-27 대표 폰: 값은 왔는데 숨은 채 — 첫 그림이 값보다 먼저 · 값이 오는 순간 홈을 다시 그려 다시 그리기를 놓침) */
+  if (el && el.hidden && slides().length) { const x = document.createElement('div'); x.innerHTML = tickerHTML(); el.replaceWith(x.firstElementChild); return tickerMount(); }
   if (!el || el.hidden || !TK.slides.length) return;
   let y0 = null;
   el.addEventListener('pointerenter', () => { TK.hover = true; }); el.addEventListener('pointerleave', () => { TK.hover = false; });
