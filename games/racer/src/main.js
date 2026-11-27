@@ -1,12 +1,12 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.85';
-import { audio } from './audio.js?v=0.99.85';
-import { WindFX } from './fx.js?v=0.99.85';
-import { BootScene } from './scenes/Boot.js?v=0.99.85';
-import { LobbyScene } from './scenes/Lobby.js?v=0.99.85';
-import { PlayScene } from './scenes/Play.js?v=0.99.85';
-import { ResultScene } from './scenes/Result.js?v=0.99.85';
-import { installBack } from './oad.js?v=0.99.85';
-import { initBM } from './bmflow.js?v=0.99.85';
+import { W, BASE_H, setH } from './config.js?v=0.99.86';
+import { audio } from './audio.js?v=0.99.86';
+import { WindFX } from './fx.js?v=0.99.86';
+import { BootScene } from './scenes/Boot.js?v=0.99.86';
+import { LobbyScene } from './scenes/Lobby.js?v=0.99.86';
+import { PlayScene } from './scenes/Play.js?v=0.99.86';
+import { ResultScene } from './scenes/Result.js?v=0.99.86';
+import { installBack } from './oad.js?v=0.99.86';
+import { initBM } from './bmflow.js?v=0.99.86';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 기본 폰트 */ }

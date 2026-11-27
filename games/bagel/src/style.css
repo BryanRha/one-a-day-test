@@ -123,3 +123,17 @@ button { font-family: inherit; font-weight: 900; border: 0; cursor: pointer; col
 .hi i { display: none; }
 .hi.edge i { display: block; position: absolute; left: 50%; top: 50%; width: 0; height: 0; border: 7px solid transparent; border-left: 11px solid #FF6720; transform: rotate(var(--a, 0rad)) translate(26px, -7px); transform-origin: 0 0; }
 .hi.edge::after { display: none; }
+/* 0.7.3 첫 이동 안내: 안내 줄 첫 줄(이동 방법)은 주황 · 길 안내는 아래 줄 / 손가락 끌기 시범 — 처음 끌어서 걸을 때까지만 (그 뒤 계속 움직이는 HUD 없음 · 0.6.3) */
+.hint .mv { display: block; color: #E2702A; font-size: 15px; } .hint span { display: block; }
+.drag { position: absolute; left: 50%; top: 62%; width: 0; height: 0; opacity: 0; pointer-events: none; transition: opacity .2s; zoom: var(--z, 1); }
+.drag.on { opacity: 1; } .joy.on ~ .drag { opacity: 0; }   /* 손가락이 화면에 닿은 동안엔 진짜 조이스틱만 */
+.drag .rg { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; background: #ffffff55; border: 3px solid #ffffffcc; box-sizing: border-box; }
+.drag .kn { position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 var(--sh); }
+.drag b { position: absolute; left: -6px; top: -2px; font-size: 34px; line-height: 1; filter: drop-shadow(0 2px 2px #4A2B1655); }
+.drag.on .kn, .drag.on b { animation: dragmv 2.2s ease-in-out infinite; }
+.drag.on.nudge .kn, .drag.on.nudge b { animation-name: dragmv2; }   /* 탭했을 때 시범을 처음부터 (이름이 바뀌어야 다시 시작) */
+@keyframes dragmv { 0%, 12% { transform: translate(0, 0); } 40%, 52% { transform: translate(30px, -16px); } 72%, 84% { transform: translate(-26px, 14px); } 100% { transform: translate(0, 0); } }
+@keyframes dragmv2 { 0%, 12% { transform: translate(0, 0); } 40%, 52% { transform: translate(30px, -16px); } 72%, 84% { transform: translate(-26px, 14px); } 100% { transform: translate(0, 0); } }
+#app.placing .drag { display: none !important; }
+/* 0.7.3 쿠폰 꺼짐(대표 11-27): 쿠폰 칸을 숨기고 왼쪽 단추 줄을 그 자리로 */
+.cp[hidden] { display: none !important; } #app.nocp .lside { top: calc(var(--st) + 66px); }

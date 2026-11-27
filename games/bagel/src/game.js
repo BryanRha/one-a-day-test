@@ -1,12 +1,12 @@
 // 가게 놀이: 끌어서 이동 · 굽기/바르기/내리기 · 진열 · 손님 줄 · 계산 · 돈 줍기 · 열기 칸 · 직원 · 테이블 치우기 · 드라이브스루
 import * as THREE from 'three';
-import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS, TERRACE } from './data.js?v=0.99.85';
+import { BRANCHES, MENU, PLAYER, STAFF, CUST_COLORS, BRAND, BRANCH_MENU, setBranchMenu, DECO, REGULARS, MASTERY, MASTERY_K, MOOD, FAVOR, josa, ST_NAME, UPGRADES, tierOf, TIER_NAME, OUTFITS, REST, FX, EVENTS, TERRACE } from './data.js?v=0.99.86';
 export const L = id => (S.branch[S.bi]?.lv?.[id]) || 0;   /* 이 지점 업그레이드 단계 */
-import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.85';
-import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.85';
-import { installZone } from './zone.js?v=0.99.85';
-import { S, save, addSold, mission, today } from './state.js?v=0.99.85';
-import { sfx } from './audio.js?v=0.99.85';
+import { M, box, cyl, item, person, shopShell, STATION, car, ITEM_H, LOOK, DECO_MODEL, ownerRing, ghostify } from './models.js?v=0.99.86';
+import { stationBody, stationDetail, ovenGlow } from './looks.js?v=0.99.86';
+import { installZone } from './zone.js?v=0.99.86';
+import { S, save, addSold, mission, today } from './state.js?v=0.99.86';
+import { sfx } from './audio.js?v=0.99.86';
 
 const V = THREE.Vector3, R = 85, rnd = (a, b) => a + Math.random() * (b - a);
 const RIGHT = new V(1, 0, -1).normalize(), DOWN = new V(1, 0, 1).normalize();
@@ -226,7 +226,7 @@ export class Game {
     this.t += dt; if (this.later?.length) { const due = this.later.filter(q => q.at <= this.t); if (due.length) { this.later = this.later.filter(q => q.at > this.t); for (const q of due) q.fn(); } } const pl = this.pl; const mult = this.B.mult * (this.ui.boost() ? 2 : 1);
     // 이동
     const mv = new V().addScaledVector(RIGHT, input.x).addScaledVector(DOWN, input.y); const ml = Math.min(1, mv.length());
-    if (ml > 0.08) { mv.normalize(); const sp = PLAYER.speed * (S.up.speed ? PLAYER.speedUp : 1) * (fxOn('speed') ? FX.speed.k : 1) * ml; pl.pos.addScaledVector(mv, sp * dt); pl.P.g.rotation.y = Math.atan2(mv.x, mv.z); this.calmT = 0; } else this.calmT += dt;   /* calmT: 조작 없는 시간 (직원 쉬기) */
+    if (ml > 0.08) { mv.normalize(); const sp = PLAYER.speed * (S.up.speed ? PLAYER.speedUp : 1) * (fxOn('speed') ? FX.speed.k : 1) * ml; pl.pos.addScaledVector(mv, sp * dt); pl.P.g.rotation.y = Math.atan2(mv.x, mv.z); this.calmT = 0; if (!S.moved && (this.mvT = (this.mvT || 0) + dt) > 0.3) { S.moved = true; save(); } } else this.calmT += dt;   /* calmT: 조작 없는 시간 (직원 쉬기) · 0.7.3: 0.3초 걸으면 「끌어서 움직이기」를 배운 것 (첫 이동 안내를 내림) */
     pl.cap = (S.up.carry ? PLAYER.carryUp : PLAYER.carry) + (fxOn('tray') ? FX.tray.n : 0);   /* 큰 쟁반: 잠깐 더 들기 */
     this.collide(pl.pos, 34); pl.P.carry = pl.stack.length > 0; pl.P.anim(dt, ml > 0.08);
     this.ring.position.set(pl.pos.x, 0, pl.pos.z); this.ring.userData.ring.scale.setScalar(1 + Math.sin(this.t * 4) * 0.06);

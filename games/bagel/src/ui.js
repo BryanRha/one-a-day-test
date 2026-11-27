@@ -1,14 +1,15 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.85';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.85';
-import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.85';
-import { sfx, setAudio } from './audio.js?v=0.99.85';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.85';
-import { bm } from './oad_bm.js?v=0.99.85';
+import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.86';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.86';
+import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.86';
+import { sfx, setAudio } from './audio.js?v=0.99.86';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.86';
+import { bm } from './oad_bm.js?v=0.99.86';
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
+const MOVE_HELP = '👆 화면 어디든 끌어서 걸어가요';   /* 첫 이동 안내 줄 (봇 G 시험이 이 글을 찾음) */
 const SLOT = 'marumi_slot_';
 /* 광고 보상: 원어데이 쪽 자리 이름 (bm.rewardedAd) · 수익 2배 길이 */
 const PLACE = { boost: 'boost2x', offline: 'offline2x', speed: 'speed', coins: 'coins' }, BOOST_MS = 180000, FX_MS = 180000;
@@ -23,24 +24,26 @@ export class UI {
       <div class="cp" id="cp"><b>🎟 매장 쿠폰까지</b><div class="pb"><s id="cpb"></s></div><span id="cpt"></span></div>
       <div class="evb" id="evb" hidden></div><div class="buffs" id="buffs"></div>
       <div class="side"><button class="sb ad" id="bAd"><b>📺</b><span id="adT">광고 보상</span><i class="cnt" id="adN"></i></button><button class="sb up" id="bUp"><b>⬆</b>업그레이드<i class="dot" id="upDot"></i></button><button class="sb" id="bMs"><b>📋</b>미션<i class="dot" id="msDot"></i></button><button class="sb" id="bMap"><b>🗺</b>지점<i class="dot" id="mapDot"></i></button><button class="sb" id="bSet"><b>⚙</b>설정</button>${inOAD ? '<button class="sb" id="bExit"><b>↩</b>원어데이</button>' : ''}</div>
-      <div class="joy" id="joy"><i id="knob"></i></div><div class="hint" id="hint">어디든 끌어서 움직여요</div>`;
+      <div class="joy" id="joy"><i id="knob"></i></div><div class="hint" id="hint">어디든 끌어서 움직여요</div>
+      <div class="drag" id="drag"><i class="rg"></i><i class="kn"></i><b>👆</b></div>`;   /* 0.7.3 첫 이동 안내: 손가락 끌기 시범 (처음 끌어서 걸을 때까지만) */
     this.tags = $('#tags'); this.floats = $('#floats');
     $('#scent').onclick = () => this.decoShop();
     $('#bAd').onclick = () => this.adPick(); $('#bUp').onclick = () => this.upgrades(); $('#bMs').onclick = () => this.missions(); $('#bMap').onclick = () => this.map(); $('#bSet').onclick = () => this.settings(); $('#cp').onclick = () => this.coupon();
     if ($('#bExit')) $('#bExit').onclick = () => exitToOAD();
-    this.joy(); this.progress();
-    bm.hello().then(() => this.adUi());   /* 원어데이 그룹 A(광고 꺼짐)면 광고 버튼을 숨김 */
+    this.cpOn = false; this.cpUi(); this.joy(); this.progress();
+    bm.hello().then(() => this.adUi()); bm.couponOn().then(on => { this.cpOn = !!(COUPON.on && on); this.cpUi(); this.progress(); });   /* 0.7.3 쿠폰: data.js COUPON.on 과 원어데이 hello().coupon 이 둘 다 켜졌을 때만 보임 (그 전엔 처음부터 숨김) */   /* 원어데이 그룹 A(광고 꺼짐)면 광고 버튼을 숨김 */
   }
   joy() {
     const area = $('#app'), base = $('#joy'), knob = $('#knob'); let id = null, cx = 0, cy = 0; const R = 50;
     /* 꾸미기 자리 고르기: 끈 만큼 그림자가 바닥을 따라 움직임 (손가락이 가리지 않게 상대 이동) */ let pg = null;
-    const down = e => { if (this.app.game.focus) this.app.game.focus = null;   /* 단계 연출 중 누르면 카메라가 바로 돌아옴 */
-      if (e.target.closest('button, .modal, .cp, .scent, .regcard, .placebar')) return; const t = e.changedTouches ? e.changedTouches[0] : e; id = e.changedTouches ? t.identifier : 'm'; cx = t.clientX; cy = t.clientY;
+    /* 0.7.3 탭 알아보기: 누른 뒤 거의 안 움직이고 짧게 뗌 = 탭 (설비를 눌러 쓰려는 새 사용자) → 「끌어서 가까이」 안내 */ let t0 = 0, far = 0, skip = false;
+    const down = e => { skip = !!this.app.game.focus; if (this.app.game.focus) this.app.game.focus = null;   /* 단계 연출 중 누르면 카메라가 바로 돌아옴 */
+      if (e.target.closest('button, .modal, .cp, .scent, .regcard, .placebar')) return; const t = e.changedTouches ? e.changedTouches[0] : e; id = e.changedTouches ? t.identifier : 'm'; cx = t.clientX; cy = t.clientY; t0 = performance.now(); far = 0;
       const g = this.app.game; if (g.placing) { const h = this.groundAt(cx, cy); pg = h && { h, x: g.placing.x, z: g.placing.z }; return; } base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.classList.add('on'); };
     const move = e => { if (id === null) return; const t = e.changedTouches ? [...e.changedTouches].find(q => q.identifier === id) : e; if (!t) return;
       const g = this.app.game; if (g.placing) { if (pg) { const h = this.groundAt(t.clientX, t.clientY); if (h) { g.movePlace(pg.x + h.x - pg.h.x, pg.z + h.z - pg.h.z); this.placeUi(); } } e.cancelable && e.preventDefault(); return; }
-      let dx = t.clientX - cx, dy = t.clientY - cy; const l = Math.hypot(dx, dy); if (l > R) { dx *= R / l; dy *= R / l; } IN.x = dx / R; IN.y = dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`; e.cancelable && e.preventDefault(); };
-    const up = e => { if (id === null) return; if (e.changedTouches && ![...e.changedTouches].some(q => q.identifier === id)) return; id = null; pg = null; IN.x = IN.y = 0; base.classList.remove('on'); knob.style.transform = ''; };
+      let dx = t.clientX - cx, dy = t.clientY - cy; const l = Math.hypot(dx, dy); far = Math.max(far, l); if (l > R) { dx *= R / l; dy *= R / l; } IN.x = dx / R; IN.y = dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`; e.cancelable && e.preventDefault(); };
+    const up = e => { if (id === null) return; if (e.changedTouches && ![...e.changedTouches].some(q => q.identifier === id)) return; if (!skip && !pg && !this.app.game.placing && far < 10 && performance.now() - t0 < 400) this.tapHelp(); id = null; pg = null; IN.x = IN.y = 0; base.classList.remove('on'); knob.style.transform = ''; };
     area.addEventListener('touchstart', down, { passive: true }); area.addEventListener('touchmove', move, { passive: false }); area.addEventListener('touchend', up); area.addEventListener('touchcancel', up);
     area.addEventListener('mousedown', down); addEventListener('mousemove', move); addEventListener('mouseup', up);
     const keys = new Set(); addEventListener('keydown', e => { if (e.code === 'Escape') { if (this.app.game.placing) { this.placeBack(); return; } const b = document.querySelector('#modal .mback'); b && b.click(); return; }
@@ -64,7 +67,15 @@ export class UI {
   adLeft() { const h = bm.info; if (h.ok) return h.group === 'A' ? 0 : Math.max(0, (h.ads && h.ads.rewardLeft) || 0); if (S.ads.day !== today()) S.ads = { day: today(), n: 0 }; return Math.max(0, AD_DAY - S.ads.n); }
   adOn() { const h = bm.info; return h.ok ? (h.group !== 'A' && !!(h.ads && h.ads.reward)) : this.adLeft() > 0; }
   adUi() { const b = $('#bAd'); if (!b) return; const h = bm.info; b.hidden = !!(h.ok && h.group === 'A'); b.classList.toggle('spent', !this.adOn() && !this.boost()); const n = $('#adN'); if (n) n.textContent = this.adOn() ? this.adLeft() : ''; }
-  hint(t) { const h = $('#hint'); if (t) { if (h.textContent !== t) { h.textContent = t; h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); } h.classList.remove('off'); } else if (h.textContent !== '어디든 끌어서 움직여요') h.classList.add('off'); }   /* 0.6.3: 계속 커졌다 작아지던 박동을 빼고, 글이 바뀔 때 한 번만 */
+  /* 0.6.3: 계속 커졌다 작아지던 박동을 빼고, 글이 바뀔 때 한 번만
+     0.7.3 (QA 11-27 「새 사용자가 끌어서 움직인다를 못 봄」): 원인은 기본 글 「어디든 끌어서 움직여요」를 첫 프레임부터 길 안내가 덮어쓴 것(덮어쓰기 순서)
+       → 이동 방법은 기본 글이 아니라 안내 줄의 첫 줄로: 처음 끌어서 걸을 때까지(S.moved) 늘 맨 위 · 길 안내는 그 아래 줄 · 손가락 끌기 시범(#drag)도 같이 */
+  hint(t) { const h = $('#hint'), mv = !S.moved; $('#drag').classList.toggle('on', mv); const k = (mv ? 'mv|' : '') + (t || '');
+    if (!k) { if (h._k) h.classList.add('off'); return; }
+    if (h._k !== k) { h._k = k; h.textContent = ''; if (mv) { const b = document.createElement('b'); b.className = 'mv'; b.textContent = MOVE_HELP; h.append(b); } if (t) { const sp = document.createElement('span'); sp.textContent = t; h.append(sp); } h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); }
+    h.classList.remove('off'); }
+  /* 탭만 했을 때(처음 끌어서 걷기 전): 부드럽게 「끌어서 가까이」 + 손가락 시범을 처음부터 한 번 더 · 터치 뒤 따라오는 마우스 이벤트로 두 번 뜨지 않게 1.2초 간격 */
+  tapHelp() { if (S.moved) return; const n = performance.now(); if (n - (this._tapAt || 0) < 1200) return; this._tapAt = n; this.toast('누른 채로 끌어서 가까이 가요'); const d = $('#drag'); d.classList.remove('nudge'); void d.offsetWidth; d.classList.add('nudge'); }
   frame(g) {
     $('#cn').textContent = fmt(S.coins); const cam = g.cam, W = innerWidth, H = innerHeight, v = new THREE.Vector3();
     for (const p of g.padList()) { v.set(p.s.x, 30, p.s.z).project(cam); p.tag.style.transform = `translate(${(v.x + 1) / 2 * W}px,${(1 - v.y) / 2 * H}px) translate(-50%,-50%)`; p.tag.classList.toggle('can', S.coins > 0); }
@@ -90,8 +101,8 @@ export class UI {
   progress() {
     const g = this.app.game; if (!g || !g.unl) return; const B = BRANCHES[S.bi], all = B.slots.filter(s => !s.free).length, done = B.slots.filter(s => !s.free && g.unl.has(s.id)).length;
     $('#bn').textContent = B.name; $('#bl').textContent = `${done} / ${all}`; $('#bp').style.width = done / all * 100 + '%';
-    const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '오늘 쿠폰 받았어요 · 눌러서 보기' : couponReady() ? '쿠폰 받기!' : `베이글 ${S.sold} / ${COUPON.goal}개 팔기`;
-    $('#cp').classList.toggle('ready', couponReady()); $('#shopDot') && ($('#shopDot').style.display = this.giftReady() ? 'block' : 'none'); this.adUi(); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() || this.regNew() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() || this.cheapDeco() || this.giftReady() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
+    if (this.cpOn) { const r = Math.min(1, S.sold / COUPON.goal); $('#cpb').style.width = r * 100 + '%'; $('#cpt').textContent = S.coupon ? '오늘 쿠폰 받았어요 · 눌러서 보기' : couponReady() ? '쿠폰 받기!' : `베이글 ${S.sold} / ${COUPON.goal}개 팔기`;
+    $('#cp').classList.toggle('ready', couponReady()); } $('#shopDot') && ($('#shopDot').style.display = this.giftReady() ? 'block' : 'none'); this.adUi(); $('#scv') && ($('#scv').textContent = g.scent()); $('#decoDot') && ($('#decoDot').style.display = this.cheapDeco() ? 'block' : 'none'); $('#regDot') && ($('#regDot').style.display = Object.values(S.reg).some(r => (r.lv || 0) > (r.seen || 0)) ? 'block' : 'none'); $('#msDot').style.display = missionReady() || this.regNew() ? 'block' : 'none'; $('#upDot').style.display = this.cheapUp() || this.cheapDeco() || this.giftReady() ? 'block' : 'none'; $('#mapDot') && ($('#mapDot').style.display = this.idleTotal() > 0 ? 'block' : 'none');
   }
   /* 머리 위 아이콘 (0.6.2 대표 「손님 클레임 · 자는 직원 등은 전부 머리 위 아이콘으로」): 그 사람에게 가서 풀어야 하는 일 = 컴플레인 손님 😤(빨강 · 남은 시간 고리) · 쉬는 직원 💤(남색)
      예전 글 꼬리표(.evp · .zz)는 CSS 박동(transform: scale)이 자리 translate 를 덮어써 1~1.6초마다 화면 구석으로 튀었음 → 아이콘은 움직이는 애니메이션 없음 · 자리는 translate 하나
@@ -124,7 +135,9 @@ export class UI {
     m.innerHTML = `<div class="mback"><div class="modal">${html}</div></div>`; m.firstChild.onclick = e => { if (e.target === m.firstChild) this.close(); }; this._oc = onClose; this._ub = pushBack(() => { this.close(); return true; }); sfx('tap', { vol: 0.4 }); return m; }
   close() { $('#modal').innerHTML = ''; this._ub && this._ub(); this._ub = null; const f = this._oc; this._oc = null; f && f(); }
   // ── 쿠폰
-  coupon() {
+  /* 쿠폰이 꺼지면 칸을 숨기고 왼쪽 단추 줄을 그 자리로 올림 · 창도 열지 않음 */
+  cpUi() { const c = $('#cp'); c.hidden = !this.cpOn; if (!this.cpOn) { c.classList.remove('ready'); $('#cpt').textContent = ''; } $('#app').classList.toggle('nocp', !this.cpOn); }
+  coupon() { if (!this.cpOn) return;
     if (S.coupon) return this.showCoupon(S.coupon);
     if (!couponReady()) return this.modal(`<h3>🎟 매장 쿠폰</h3><p>오늘 베이글을 <b>${COUPON.goal}개</b> 팔면<br>실제 ${BRAND.name} 매장에서 쓸 수 있는 쿠폰을 드려요.</p><div class="cpbig">${S.sold} / ${COUPON.goal}</div><p class="sm">${COUPON.text}</p><button class="btn" onclick="document.querySelector('#modal').innerHTML=''">계속 굽기</button>`);
     const c = claimCoupon(); sfx('reward'); this.showCoupon(c); this.progress();

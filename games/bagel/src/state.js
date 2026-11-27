@@ -1,7 +1,7 @@
 // 저장 (localStorage 'marumi_v4' · 기준판 재정비 0.5.0 — 모양은 기준판 v1 과 같음): 돈 · 지점별 열린 것/직원/칸에 부은 돈 · 강화 · 오늘 판 개수(쿠폰) · 미션 · 출석
 //   처음 열 때 한 번 옮김(옛 키는 지우지 않음 · 되돌리기용): v3(0.4.x 테스터) → v2(0.3.x) → v1(0.2 · 지인 주소 판 — 모양이 같아 그대로)
 //   옮기는 원칙: 돈 손해 0(없어진 칸 · 방에 낸 값 · 부어 둔 돈 · 금고는 돈으로) · 진행률은 줄지 않게(모자라면 여는 순서대로 다음 칸을 열어 줌)
-import { COUPON, BRANCHES } from './data.js?v=0.99.85';
+import { COUPON, BRANCHES } from './data.js?v=0.99.86';
 export const KEY = 'marumi_v4', OLD = ['marumi_v3', 'marumi_v2', 'marumi_v1'];
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fresh = () => ({ v: 4, coins: 0, earned: 0, bi: 0, branch: {}, up: {}, day: '', sold: 0, totalSold: 0, coupon: null, miss: {}, missDone: {}, set: { sfx: true, bgm: true }, last: Date.now(), id: Math.random().toString(36).slice(2, 10), seen: {}, mast: {}, deco: {}, reg: {}, boostUntil: 0, fx: {}, ads: { day: '', n: 0 }, gift: '', outfit: 'basic', outfits: ['basic'], decoPos: {} });
@@ -69,7 +69,10 @@ export function loadSave() {
   for (const [k, v] of Object.entries(S.deco)) if (!Array.isArray(v)) delete S.deco[k];
   for (const k of ['fx', 'decoPos', 'up']) if (!S[k] || typeof S[k] !== 'object') S[k] = {};
   if (!S.ads || typeof S.ads !== 'object') S.ads = { day: '', n: 0 }; if (!Array.isArray(S.outfits)) S.outfits = ['basic']; if (!S.outfits.includes(S.outfit)) S.outfit = 'basic';
-  if (!Number.isFinite(S.coins)) S.coins = 0; dayTick(); return S; }
+  if (!Number.isFinite(S.coins)) S.coins = 0;
+  /* 0.7.3 첫 이동 안내: moved = 한 번이라도 끌어서 걸어 봤나 · 이 값이 없는 옛 저장은 판 흔적(판매 · 번 돈 · 연 칸)이 있으면 이미 아는 것으로 */
+  if (typeof S.moved !== 'boolean') S.moved = !!(S.totalSold || S.earned || Object.values(S.branch || {}).some(b => b.unl.length));
+  dayTick(); return S; }
 /* 처음부터 (0.4.5 state.js 의 쓰기 한 곳 · 초기화 시각을 고쳐서 가져옴 — 11-11 대표 제보 「처음부터 했는데 예전 판으로 열림」)
    원인(기준판에도 같음): save() 가 0.4초 뒤에 쓰는 타이머를 남김 → 처음부터가 저장을 지우고 reload 를 걸어도, 새 페이지 전에 그 타이머가 메모리의 옛 판을 다시 씀
    막는 법: ① 새 판에 「처음부터 시각」(resetAt)을 적고, 모든 쓰기는 저장에 적힌 resetAt 이 내 것보다 새로우면 쓰지 않고 다시 엶(남은 타이머 · 다른 탭)

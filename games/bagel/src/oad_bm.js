@@ -13,7 +13,7 @@
 //   이어하기 · 응원 선물을 받은 판은 assisted: true (순위에 안 올라감)
 //   실시간 게임은 광고 · 확인 창 동안 스스로 멈출 것: bm.onPause = on => { ... }
 //   브랜드 매장 쿠폰(실물 경품): await bm.couponOn() 이 true 일 때만 발급 — 실서버(oneaday.kr)는 계약 · 게임위 자문 전까지 false
-//     앱 안이면 hello().coupon, 앱 밖(단독 링크)이면 window.OAD_ENV !== 'prod'
+//     앱 안이면 hello().coupon, 앱 밖(단독 링크)이면 false (0.7.3 대표 11-27 「쿠폰은 안 보이게」 — 예전엔 window.OAD_ENV !== 'prod')
 export const V = 2;
 const inFrame = (() => { try { return window.parent !== window; } catch { return true; } })();
 const TEST = /[?&]oadtest=1/.test(location.search);
@@ -45,7 +45,7 @@ for (let i = 1; i <= 20; i++) FAKEP['choice' + i] = 30;
 /* 게임별 실제 가격으로 시험하려면 ?oadtest=1&oadprice=outfit:200,skin:300 */
 for (const kv of ((location.search.match(/[?&]oadprice=([^&]+)/) || [])[1] || '').split(',')) { const [k, v] = decodeURIComponent(kv).split(':'); if (k && Number(v) > 0) FAKEP[k] = Number(v); }
 function fake(fn, args) {
-  if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: FAKEP, items: [], ads: { reward: true, rewardLeft: 5, inter: false }, help: !/[?&]help=0/.test(location.search), coupon: true };
+  if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: FAKEP, items: [], ads: { reward: true, rewardLeft: 5, inter: false }, help: !/[?&]help=0/.test(location.search), coupon: /[?&]coupon=1/.test(location.search) };   /* 시험 창: 셸과 같이 꺼짐 · ?coupon=1 로 켜 봄 */
   if (fn === 'spend') { const p = (cache && cache.prices[args[0]]) || 20; if (wallet < p) return { ok: false, reason: 'short' }; wallet -= p; return { ok: true, gold: wallet }; }
   if (fn === 'rewardedAd') return { ok: true, via: 'test' };
   if (fn === 'score') return args[1] && args[1].assisted ? { ok: false, reason: 'assisted' } : { ok: true, best: args[0], rank: 3 };
@@ -62,7 +62,7 @@ export const bm = {
   price: item => (cache && cache.ok && cache.prices[item]) || 0,
   async spend(item) { await bm.hello(); if (!bm.price(item)) return { ok: false, reason: 'off' }; const r = await paused(ask('spend', [item, rid()], 180000, true)); if (r.ok && cache && r.gold != null) cache.gold = r.gold; return r; },
   async rewardedAd(placement) { await bm.hello(); if (!cache.ok || !cache.ads.reward) return { ok: false, reason: !cache.ok ? 'standalone' : cache.group === 'A' ? 'off' : 'limit' }; const r = await paused(ask('rewardedAd', [placement], 180000, true)); if (r.ok && cache.ads) { cache.ads.rewardLeft = Math.max(0, (cache.ads.rewardLeft || 1) - 1); cache.ads.reward = cache.ads.rewardLeft > 0; } return r; },
-  async couponOn() { await bm.hello(); return cache.ok ? cache.coupon !== false : window.OAD_ENV !== 'prod'; },
+  async couponOn() { await bm.hello(); return cache.ok ? cache.coupon === true : false; },   /* 앱이 켠다고 분명히 말할 때만 (값이 없거나 앱 밖이면 꺼짐) */
   helpOn() { return cache && cache.ok ? cache.help !== false : true; },
   async submitScore(score, opt = {}) { await bm.hello(); if (!cache.ok) return { ok: false, reason: 'standalone' }; return ask('score', [Math.floor(Number(score) || 0), { assisted: !!opt.assisted }], 8000); },
   async board() { await bm.hello(); if (!cache.ok) return { ok: false, reason: 'standalone' }; return ask('board', [], 8000); },
