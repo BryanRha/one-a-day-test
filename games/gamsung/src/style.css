@@ -146,7 +146,7 @@ body.decoing .bottom, body.decoing .side, body.decoing .cp, body.decoing .brand 
 .cupv { position: relative; width: 34px; height: 30px; border: 3px solid #3B2A20; border-top: 0; border-radius: 0 0 11px 11px; overflow: hidden; background: #FFFDF8; }
 .cupv::after { content: ''; position: absolute; right: -11px; top: 5px; width: 8px; height: 11px; border: 3px solid #3B2A20; border-left: 0; border-radius: 0 7px 7px 0; }
 .cupv { overflow: visible; } .cupv s { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(#C9925E, #6E4128); border-radius: 0 0 8px 8px; }
-.ring .fing { position: absolute; right: -14px; bottom: -18px; font-style: normal; font-size: 40px; animation: press 1.1s infinite; pointer-events: none; filter: drop-shadow(0 2px 2px #0003); }
+.ring .fing { position: absolute; right: -16px; bottom: -4px; line-height: 1; font-style: normal; font-size: 40px; animation: press 1.1s infinite; pointer-events: none; filter: drop-shadow(0 2px 2px #0003); }
 .ring.hold .fing { animation: none; translate: -4px -6px; }
 @keyframes press { 0%, 100% { translate: 0 0; } 45% { translate: -5px -8px; } }
 .pull .pl { display: inline-block; background: var(--card); border-radius: 16px; padding: 8px 15px; font-size: 13px; font-weight: 900; box-shadow: 0 3px 0 var(--sh); }
@@ -174,6 +174,11 @@ body.decoing .poemp { display: none; }
 .finger.up { flex-direction: column-reverse; transform: translate(-50%, -100%); } .finger.up i { animation: pressd 1.1s infinite; } @keyframes pressd { 45% { translate: 0 7px; } }
 .finger.drag i { animation: dragr 1.6s infinite; } @keyframes dragr { 0%, 15% { translate: 0 0; } 70% { translate: 60px 6px; opacity: 1; } 85% { opacity: 0; } 100% { translate: 60px 6px; opacity: 0; } }
 .finger.say { transform: translate(-50%, -100%); } .finger.say i { display: none; } .finger.say span { background: var(--card); color: var(--ink); }
+/* 안내 자리 규칙 (ui.js fingerAt · QA 1127): 상자 왼쪽 위 = left/top · 손가락은 대상 쪽 끝 · 말풍선은 바깥쪽 */
+.finger.at { transform: none; gap: 0; } .finger.at.right { flex-direction: row; align-items: center; } .finger.at.left { flex-direction: row-reverse; align-items: center; }
+.finger.at.up { flex-direction: column-reverse; align-items: flex-start; } .finger.at.down { flex-direction: column; align-items: flex-start; } .finger.at.say { align-items: center; }
+.finger.at.right i { animation: pressl 1.1s infinite; } .finger.at.left i { animation: pressr 1.1s infinite; } .finger.at.up i { animation: pressd 1.1s infinite; } .finger.at.down i { animation: pressu 1.1s infinite; }
+@keyframes pressl { 45% { translate: -7px 0; } } @keyframes pressr { 45% { translate: 7px 0; } } @keyframes pressu { 45% { translate: 0 -7px; } }
 .cloud { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 3px; border-radius: 14px; padding: 2px 8px 2px 4px; font-size: 11px; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 6px #0002; }
 .cloud i { font-style: normal; font-size: 15px; line-height: 1.2; } .cloud b { font-weight: 900; } .cloud em { font-style: normal; color: var(--red); }
 .cloud.dim { background: #EEE9E2E6; color: #8A7F74; } .cloud.dim:not(:has(b)) { padding: 1px 4px; }

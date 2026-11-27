@@ -3,22 +3,22 @@
 //   · 세로: 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 띠는 원작 그림 그대로 · 카드 줄(HERO + 병사 6)은 아래 엄지 자리
 //   · 병사 · 영웅을 누르면 원작 메뉴: 전신 일러스트 · 이름 · lv · 능력치 4줄 · 판매 · 전직(다음 직업 미리보기) · 레벨 업 · 필살기 → 확인 창(예/아니오) → 전직 컷인(일러스트 바뀜)
 //   · 메뉴가 열려 있으면 판 시간이 멈춘다 (원작 update_GAME_PLAYING: 메뉴 상태에선 효과만 움직임)
-import { W, H, C, SCALE } from '../config.js?v=0.99.68';
-import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.68';
-import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.68';
-import * as M from '../core/meta.js?v=0.99.68';
-import { BUNDLE } from '../core/balance.js?v=0.99.68';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.68';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.99.68';
-import { audio, S } from '../audio.js?v=0.99.68';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.99.68';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.68';
-import { T0, img, num, label, inRect } from './orig.js?v=0.99.68';
-import { pushBack } from '../oad.js?v=0.99.68';
-import { bm, can, owned, track } from '../bmflow.js?v=0.99.68';
+import { W, H, C, SCALE } from '../config.js?v=0.99.69';
+import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.69';
+import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.69';
+import * as M from '../core/meta.js?v=0.99.69';
+import { BUNDLE } from '../core/balance.js?v=0.99.69';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.69';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.99.69';
+import { audio, S } from '../audio.js?v=0.99.69';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.99.69';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.69';
+import { T0, img, num, label, inRect } from './orig.js?v=0.99.69';
+import { pushBack } from '../oad.js?v=0.99.69';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.69';
 
 const US = 2.25;                 // 원작 UI 배율 (가로 화면 480 → 1080)
-const HUD_H = 196, TRAY_MIN = 250, CS = 2.4;   // 세로 화면: 위 띠 높이 · 아래 카드 칸 최소 높이 · 카드 배율
+const HUD_H = 196, HUD_TOP = 14, TRAY_MIN = 250, CS = 2.4;   // 세로 화면: 위 띠 높이 · 자원 줄 위 여백 · 아래 카드 칸 최소 높이 · 카드 배율
 // 효과 번호 → 그림 묶음 (원작 렌더러 표)
 const FX_SET = { 0: 500, 33: 532, 2: 502, 3: 503, 4: 504, 5: 505, 9: 509, 10: 510, 12: 533, 13: 512, 14: 513, 15: 514, 36: 502, 37: 534, 38: 535 };
 const ARROW_IMG = { 0: ['arrow_0_0'], 2: ['arrow_2_0', 'arrow_2_1'], 3: ['arrow_3_0', 'arrow_3_1'], 5: ['arrow_1_0', 'arrow_1_1'], 10: ['arrow_4_0', 'arrow_4_1', 'arrow_4_2', 'arrow_4_3', 'arrow_4_4', 'arrow_4_5'], 12: ['arrow_9_0', 'arrow_9_1'] };
@@ -50,7 +50,7 @@ export class PlayScene extends Phaser.Scene {
     this.speed = dd.speed === 3 ? 3 : 1; this.ended = false; this.cutin = null; this.contUsed = 0; this.contAd = false; this.offer = null; this.offerClose = null;
     this.hintStep = dd.tips.place ? 9 : 0; this.coachOn = false; this.coachTick = 0; this.hint = null;
     this.pauseUI = null; this.pauseGlow = null; this.menuUI = null; this.menuUIBack = null; this.menuBack = null; this.pendingSpecial = null; this.menuWasRunning = false;
-    this.heroRow = false; this.upAnim = 0; this.lvAnim = 0; this.uiTick = 0; this.uiAcc = 0; this.mview = null; this.blink = 0; this.goalBlink = 0; this.lastGoalTick = -1; this.needRelayout = false; this.result = null;
+    this.heroRow = false; this.upAnim = 0; this.lvAnim = 0; this.uiTick = 0; this.uiAcc = 0; this.mview = null; this.trayBand = false; this.mviewWait = undefined; this.blink = 0; this.goalBlink = 0; this.lastGoalTick = -1; this.needRelayout = false; this.result = null;
     dd.tries[this.stageNo] = (dd.tries[this.stageNo] || 0) + 1; save();
     this.build();
     this.input.on('pointerdown', this.onDown, this);
@@ -95,9 +95,11 @@ export class PlayScene extends Phaser.Scene {
     this.needRelayout = false;
     this.closeConfirm(); this.closeMenu(true); this.cancelDrag(); this.hideHint();
     if (this.cutin) { this.cutin.c.destroy(); this.cutin.fx.destroy(); this.cutin = null; }
-    this.mview = null; this.pauseGlow?.stop(); this.pauseGlow = null; this.pauseUI = null;
+    this.mview = null; this.coachOn = false; this.trayBand = false; this.mviewWait = undefined; this.pauseGlow?.stop(); this.pauseGlow = null; this.pauseUI = null;
     this.tweens.killAll(); this.time.removeAllEvents(); this.children.removeAll(true);
     this.build();
+    /* 첫 판 안내 중 화면을 돌리면 새 자리에 다시 띄움 */
+    if (this.hintStep < 9 && this.stageNo === 0) this.showHint();
   }
   layout() {
     const SW = this.scale.width, SH = this.scale.height;
@@ -107,13 +109,15 @@ export class PlayScene extends Phaser.Scene {
       this.ox = Math.round((SW - 800 * US) / 2); this.oy = Math.round((SH - 480 * US) / 2);
       this.TL = T0(this.ox, this.oy, US);
       this.k = US; this.bx = this.TL.x(62); this.by = this.TL.y(30); this.bw = 675 * US; this.bh = 450 * US; this.trayTop = this.by + this.bh;
-      this.TM = this.TL; this.TP = this.TL; this.TV = this.TL;
+      this.TM = this.TL; this.TP = this.TL; this.TV = this.TL; this.TH = this.TL;
     } else {
       const room = SH - HUD_H - TRAY_MIN;
       this.k = Math.min(SW / 450, room / 675);
       this.bw = 450 * this.k; this.bh = 675 * this.k;
       this.bx = (SW - this.bw) / 2; this.by = HUD_H; this.trayTop = this.by + this.bh;
       this.TL = T0(0, 0, US);
+      /* 위 자원 줄: 원작 그림은 가로 화면 윗변에 붙는 띠라 세로 화면 맨 위(y=0)에 두면 테두리가 잘려 보임 → 위를 조금 띄움 (위 띠 높이 안) */
+      this.TH = T0(0, HUD_TOP, US);
       const ms = SW / 800; this.TM = T0(0, SH - 480 * ms, ms);
       const ps = Math.min(1.9, SW / 520); this.TP = T0(SW / 2 - 400 * ps, this.by + this.bh * 0.45 - 242 * ps, ps);
       // 다음 웨이브 안내는 카드 줄 아래 빈 칸(모자라면 판 아래쪽)에
@@ -225,7 +229,7 @@ export class PlayScene extends Phaser.Scene {
 
   // ---------- 위 띠 (원작 drawPlayingUi) ----------
   drawHud() {
-    const SW = this.scale.width, T = this.TL;
+    const SW = this.scale.width, T = this.TH;
     if (!this.land) { const g = this.add.graphics().setDepth(5990); g.fillStyle(0x07090D, 1).fillRect(0, 0, SW, HUD_H); g.lineStyle(3, 0x1E2A44, 1).lineBetween(0, HUD_H, SW, HUD_H); }
     const bar = img(this, T, 'ui_upper_upbar', 0, 0, 18).setDepth(6000);
     if (!this.land) bar.setDisplaySize(SW, bar.displayHeight);
@@ -278,7 +282,7 @@ export class PlayScene extends Phaser.Scene {
     else { set(this.speedImgs[0], 'ui_upper_speedempty', 21, 7); set(this.speedImgs[1], 'ui_upper_speedempty', 15, 7); set(this.speedImgs[2], 'ui_upper_speed0', 0); }
   }
   updateHud() {
-    const s = this.sim, T = this.TL;
+    const s = this.sim, T = this.TH;
     this.nMoney.set(s.money); this.nMana.set(s.mana);
     let w = s.wave; if ((s.mode === 0 || s.mode === 2) && w >= s.waveTotal) w = s.waveTotal - 1;
     this.nWave.set(w + 1);
@@ -669,6 +673,9 @@ export class PlayScene extends Phaser.Scene {
 
   // ---------- 다음 웨이브 안내 (원작 drawMonsterViewMenu · 웨이브 시작마다 1.5초 · 보스 웨이브는 경고) ----------
   showMonsterView(waveIdx) {
+    /* 안내 띠가 카드 줄 아래(같은 자리)에 떠 있으면 띠가 걷힌 뒤에 보여 줌 */
+    if (this.trayBand) { this.mviewWait = waveIdx; return; }
+    this.mviewWait = undefined;
     this.mview?.c.destroy();
     const s = this.sim, w = s.mob[waveIdx % s.waveTotal]; if (!w) return;
     const boss = w[6] === 3, T = this.TV, c = this.add.container(0, 0).setDepth(7500);
@@ -1012,26 +1019,58 @@ export class PlayScene extends Phaser.Scene {
   }
 
   // ---------- 안내 (첫 판) ----------
+  // 첫 판 안내: 첫 병사 카드에 빛 테두리 + 놓을 칸 반짝임 + 손짓 · 안내 띠는 성문 · 놓을 칸 · 길을 피한 자리에
   showHint() {
     if (this.hintStep >= 9 || this.ended) return;
     const s = this.sim;
     let best = null, bs = -1;
     for (let i = 0; i < 15; i++) for (let j = 0; j < 10; j++) if (s.canPlace(i, j)) { let r = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (s.tiles[i + a]?.[j + b] >= 0) r++; if (r > bs) { bs = r; best = [i, j]; } }
     if (!best) return;
-    const c = this.cards[0], [tx, ty] = this.tileCenter(best[0], best[1]);
+    const c = this.cards[0], [tx, ty] = this.tileCenter(best[0], best[1]), K = this.k;
     const g = this.add.container(0, 0).setDepth(9800);
-    const ring = this.add.graphics(); ring.lineStyle(6, 0xFFC94A, 1).strokeRoundedRect(tx - 24 * this.k, ty - 24 * this.k, 48 * this.k, 48 * this.k, 12); g.add(ring);
+    const ring = this.add.graphics(); ring.lineStyle(6, 0xFFC94A, 1).strokeRoundedRect(tx - 24 * K, ty - 24 * K, 48 * K, 48 * K, 12); g.add(ring);
     this.tweens.add({ targets: ring, alpha: 0.3, duration: 500, yoyo: true, repeat: -1 });
+    /* 끌 카드 강조: 카드 둘레 빛 테두리 (값 숫자까지 감쌈) */
+    const cp = 8, cr = [c.x - cp, c.y - cp, c.w + cp * 2, c.h + cp * 2];
+    const cardRing = this.add.graphics(); cardRing.lineStyle(7, 0xFFC94A, 1).strokeRoundedRect(cr[0], cr[1], cr[2], cr[3], 18); g.add(cardRing);
+    this.tweens.add({ targets: cardRing, alpha: 0.35, duration: 500, yoyo: true, repeat: -1 });
     const hand = this.add.circle(c.x + c.w / 2, c.y + c.h / 2, 30, 0xFFFFFF, 0.9).setStrokeStyle(6, 0xFFC94A); g.add(hand);
     this.tweens.add({ targets: hand, x: tx, y: ty, duration: 1100, ease: 'Sine.inOut', repeat: -1, repeatDelay: 400, hold: 300 });
-    const bw = this.land ? 900 : this.scale.width - 180, bxx = this.land ? this.bx + this.bw / 2 - 450 : 90, byy = this.land ? this.by + this.bh - 150 : this.trayTop - 190;
-    g.add(panel(this, bxx, byy, bw, 120, { r: 30, fill: 0x2A2010, line: 0xFFC94A }));
-    g.add(text(this, bxx + bw / 2, byy + 60, 'Warrior 카드를 끌어 길 옆 칸에 세우세요', 40, C.ink));
-    this.hint = g;
+    const bw = this.land ? 900 : this.scale.width - 120, bh = 150, bxx = this.land ? this.bx + this.bw / 2 - 450 : 60;
+    const byy = this.bandY(bxx, bw, bh, [[tx - 40 * K, ty - 40 * K, 80 * K, 80 * K]]);
+    g.add(panel(this, bxx, byy, bw, bh, { r: 30, fill: 0x2A2010, line: 0xFFC94A }));
+    g.add(text(this, bxx + bw / 2, byy + 52, '빛나는 전사 카드를 끌어', 40, C.ink));
+    g.add(text(this, bxx + bw / 2, byy + 104, '반짝이는 칸(길 옆)에 놓으세요', 40, C.gold));
+    this.hint = g; this.hintBand = [bxx, byy, bw, bh];
   }
-  hideHint() { if (this.hint) { this.hint.destroy(); this.hint = null; } }
+  // 성문 자리 (가리면 안 되는 곳 · 목숨 숫자까지)
+  gateRect() {
+    const o = this.sim.objects.find(o => o.role === 'goal'); if (!o) return null;
+    const [x, y] = this.rot(o.x, o.y), K = this.k;
+    return [x - 60 * K, y - 75 * K, 120 * K, 110 * K];
+  }
+  // 안내 띠 세로 자리 고르기 (판 위에 둘 때): 성문 · 가리킨 곳은 절대 피하고, 길(적이 걷는 곳)은 덜 가리는 쪽 · 같으면 위쪽
+  bandY(x, w, h, avoid = []) {
+    /* 세로 화면: 카드 줄 아래 빈 칸이 넉넉하면 거기 (판을 하나도 안 가림) */
+    if (!this.land && this.cardRowBottom) { const SH = this.scale.height, free = SH - this.cardRowBottom - 16; if (free >= h + 24) { this.trayBand = true; const v = this.mview; if (v) { v.c.destroy(); v.warn?.destroy(); v.glow?.destroy(); this.mview = null; } return Math.round(this.cardRowBottom + 16 + (free - h) / 2); } }
+    const s = this.sim, K = this.k, ov = (a, b) => Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
+    const hard = avoid.slice(), gr = this.gateRect(); if (gr) hard.push(gr);
+    const path = []; for (let i = 0; i < 15; i++) for (let j = 0; j < 10; j++) if (s.tiles[i]?.[j] >= 0) { const [cx, cy] = this.tileCenter(i, j); path.push([cx - 22 * K, cy - 22 * K, 45 * K, 45 * K]); }
+    const y0 = this.by + 16, y1 = this.by + this.bh - h - 16;
+    let best = y0, bsc = Infinity;
+    for (let y = y0; y <= y1; y += 12) {
+      const r = [x, y, w, h];
+      let sc = 0; for (const a of hard) sc += ov(r, a) * 100; for (const a of path) sc += ov(r, a);
+      sc += (y - y0) * 0.01;
+      if (sc < bsc) { bsc = sc; best = y; }
+    }
+    return best;
+  }
+  hideHint() { if (this.hint) { this.hint.destroy(); this.hint = null; } this.bandDone(); }
+  // 카드 줄 아래 안내 띠가 걷힘 → 미뤄 둔 웨이브 안내
+  bandDone() { if (!this.trayBand) return; this.trayBand = false; if (this.mviewWait !== undefined && !this.ended) this.showMonsterView(this.mviewWait); }
   coachCheck() {
-    const s = this.sim, d = load(); if (this.hint || this.coachOn || this.ended || this.cutin || this.menu) return;
+    const s = this.sim, d = load(); if (this.hint || this.coachOn || this.ended || this.cutin || this.menu || this.mview) return;
     const tip = (key, msg, rect) => { if (d.tips[key]) return false; d.tips[key] = 1; save(); this.coach(msg, rect); return true; };
     const units = s.towers.filter(t => !t.hero);
     if (units.length && s.money >= 200 && s.wave >= 1) { const t = units[0], [x, y] = this.rot(t.ox, t.oy); if (tip('upgrade', '병사를 누르면 레벨 업 · 전직할 수 있어요', [x - 60, y - 110, 120, 140])) return; }
@@ -1046,11 +1085,11 @@ export class PlayScene extends Phaser.Scene {
     const ring = this.add.graphics(); ring.lineStyle(7, 0xFFC94A, 1).strokeRoundedRect(x - 6, y - 6, w + 12, h + 12, 20); c.add(ring);
     this.tweens.add({ targets: ring, alpha: 0.25, duration: 450, yoyo: true, repeat: 7 });
     const pw = Math.min(SW - 120, 1000), px = SW / 2 - pw / 2;
-    const by = y > this.by + this.bh / 2 ? Math.max(this.by + 20, y - 150) : Math.min(this.by + this.bh - 140, y + h + 30);
+    const by = this.bandY(px, pw, 110, [[x - 6, y - 6, w + 12, h + 12]]);
     c.add(panel(this, px, by, pw, 110, { r: 30, fill: 0x2A2010, line: 0xFFC94A }));
     c.add(text(this, SW / 2, by + 55, msg, 36, C.ink));
     c.setAlpha(0); this.tweens.add({ targets: c, alpha: 1, duration: 200 });
-    this.time.delayedCall(4200, () => this.tweens.add({ targets: c, alpha: 0, duration: 300, onComplete: () => { c.destroy(); this.coachOn = false; } }));
+    this.time.delayedCall(4200, () => this.tweens.add({ targets: c, alpha: 0, duration: 300, onComplete: () => { c.destroy(); this.coachOn = false; this.bandDone(); } }));
   }
 
   // ---------- 일시정지 · 결과 ----------
@@ -1148,14 +1187,12 @@ export class PlayScene extends Phaser.Scene {
     const best = this.mode === 1 ? (d.infBest[this.stageNo] || 0) : 0;
     const boss = s.pattern >= 2;
     const close = this.mode === 1 ? s.wave >= best - 2 && s.wave >= 10 : (s.progress() >= 0.6 || boss);
-    /* 광고도 골드 값도 없으면(실서버 지금) 권유 창 없이 바로 결과로 */
-    const offer = s.life <= 0 && this.contUsed < 2 && d.plays >= 3 && close && can.cont(this.contUsed, this.contAd).any;
-    if (!offer) { this.showResult(false); return; }
+    const can = s.life <= 0 && this.contUsed < 2 && d.plays >= 3 && close && oadOn();
+    if (!can) { this.showResult(false); return; }
     this.offerContinue();
   }
   offerContinue() {
-    const s = this.sim, way = can.cont(this.contUsed, this.contAd), { sku, price } = way;
-    if (!way.any) { this.showResult(false); return; }
+    const s = this.sim, sku = this.contUsed === 0 ? 'cont1' : 'cont2', price = (bm.price && bm.price(sku)) || (this.contUsed === 0 ? 20 : 40);
     this.closeConfirm(); this.closeMenu(true);
     const c = this.vbox(9900), CX = 540, CY = 960; this.offer = c;
     c.add(panel(this, 100, CY - 430, 880, 860, { r: 44, line: 0xFFC94A }));
@@ -1168,11 +1205,11 @@ export class PlayScene extends Phaser.Scene {
     const close = () => { tm.remove(); c.destroy(); this.offer = null; this.offerClose = null; };
     this.offerClose = close;
     let y = CY + 40;
-    if (way.ad) {
-      c.add(button(this, CX, y, 640, 130, '▷ 광고 보고 이어하기', async () => { tm.paused = true; const r = await bm.rewardedAd('revive'); if (r && r.ok) { this.contAd = true; close(); this.doContinue(); } else { tm.paused = false; } }, { size: 42, fill: 0x2B3A1E, edge: 0x9BD56A, color: '#DFF5C6' }).setData('bm', 'ad'));
+    if (!this.contAd && adReady()) {
+      c.add(button(this, CX, y, 640, 130, '▷ 광고 보고 이어하기', async () => { tm.paused = true; const r = await bm.rewardedAd('revive'); if (r && r.ok) { this.contAd = true; close(); this.doContinue(); } else { tm.paused = false; } }, { size: 42, fill: 0x2B3A1E, edge: 0x9BD56A, color: '#DFF5C6' }));
       y += 150;
     }
-    if (price > 0) c.add(button(this, CX, y, 640, 130, `⚡ 이어하기 · 골드 ${price}`, async () => { tm.paused = true; const r = await bm.spend(sku); if (r && r.ok) { close(); this.doContinue(); } else { tm.paused = false; if (r && r.reason !== 'cancel') toast(this, r.reason === 'short' ? '골드가 조금 모자라요' : '지금은 쓸 수 없어요', this.scale.height / 2 + 330, C.life); } }, { size: 42, fill: 0x5A3B12, edge: C.accent, color: C.gold }).setData('bm', 'gold'));
+    c.add(button(this, CX, y, 640, 130, `⚡ 이어하기 · 골드 ${price}`, async () => { tm.paused = true; const r = await bm.spend(sku); if (r && r.ok) { close(); this.doContinue(); } else { tm.paused = false; if (r && r.reason !== 'cancel') toast(this, r.reason === 'short' ? '골드가 조금 모자라요' : '지금은 쓸 수 없어요', this.scale.height / 2 + 330, C.life); } }, { size: 42, fill: 0x5A3B12, edge: C.accent, color: C.gold }));
     c.add(button(this, CX, CY + 340, 400, 100, '그만할게요', () => { close(); this.showResult(false); }, { size: 36 }));
     track('continue_offer', { stage: this.stageNo, mode: this.mode, n: this.contUsed + 1 });
   }
@@ -1244,10 +1281,10 @@ export class PlayScene extends Phaser.Scene {
       if (notes.length) step(7, [label(this, T, notes.join('  ·  '), 400, 352, 12, '#BFE59A', 9, { stroke: '#000000', st: 3 })]);
       // 광고 보고 명예 2배 (하루 3번 · 소장자는 광고 없이)
       const ads = (d.ads.date === day ? d.ads : (d.ads = { date: day, x2: 0 }));
-      if (hero > 0 && can.ad() && ads.x2 < 3) {
-        const at = label(this, T, `▷ 광고 보고 명예 2배 (${3 - ads.x2})`, 640, 288, 12, '#DFF5C6', 9, { stroke: '#1A2A10', st: 4 }).setData('bm', 'ad');
+      if (hero > 0 && adReady() && ads.x2 < 3) {
+        const at = label(this, T, `▷ 광고 보고 명예 2배 (${3 - ads.x2})`, 640, 288, 12, '#DFF5C6', 9, { stroke: '#1A2A10', st: 4 });
         const z = this.add.zone(at.x, at.y, at.width + 40, at.height + 30).setInteractive({ useHandCursor: true });
-        step(5, [at]); panelC.add(z); at.setData('zone', z);
+        step(5, [at]); panelC.add(z);
         z.on('pointerup', async () => { z.disableInteractive(); const rr = await bm.rewardedAd('reward2x'); if (rr && rr.ok) { ads.x2++; d.heroism += hero; save(); hn.set(hero * 2); at.setText('2배로 받았어요'); } else z.setInteractive(); });
       }
       // 아래 단추 (원작 y 382)
@@ -1266,7 +1303,7 @@ export class PlayScene extends Phaser.Scene {
     this.time.delayedCall(1300, showPanel);
     this.resultShow = showPanel;
   }
-  async leave(go) { try { if (can.inter()) await bm.interstitial('round_end'); } catch { /* 늘 넘어감 */ } go(); }
+  async leave(go) { try { if (oadOn()) await bm.interstitial('round_end'); } catch { /* 늘 넘어감 */ } go(); }
   stageBanner() {
     const nm = `${Math.floor(this.stageNo / 10) + 1}-${this.stageNo % 10 + 1}  ${STAGE_NAMES[Math.floor(this.stageNo / 10)][this.stageNo % 10]}`;
     const cx = this.bx + this.bw / 2, cy = this.by + this.bh * 0.45;

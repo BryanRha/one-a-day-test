@@ -111,7 +111,9 @@ export const STORE_TMP = '가칭 · 실제 매장 이름으로 바뀌어요';
 
 // 손님 기분: 주문하고 받기까지(초) · 빨리 받으면 마음(♥) + 팁 · 오래 걸려도 벌 없음
 export const MOOD = { happy: 20, ok: 50, tip: 0.2 };
-export const COUPON = { goal: 60, text: '아메리카노 사이즈업 · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };
+/* 실물 혜택 스위치 (대표 2026-11-27 「마루미와 감성커피 쿠폰은 안 보이게 · 미팅하고 알려 줄게」): on = false 면 매장 쿠폰(HUD 진행 줄 · 창 · 발급 · gs_coupon)과 매장 QR 선물(?qr · gs_qr)을 모두 숨김
+   on = true 로 바꿔도 원어데이 앱 안에서 hello().coupon 이 true 일 때만 보임(앱 밖 단독 링크 = 늘 숨김 · ui.js couponShown) · 쿠폰 코드 · 저장은 그대로 둠 */
+export const COUPON = { on: false, goal: 60, text: '아메리카노 사이즈업 · 시험용', valid: '시험 기간에는 매장에서 쓸 수 없어요' };
 
 // 오늘의 주문서: 하루 3장 (메뉴 · 잔 수 · 보상)
 export const ORDER_POOL = [

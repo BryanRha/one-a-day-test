@@ -1,18 +1,18 @@
 // 판 화면: 관문 소개 → 손패 고르기(점수 미리보기) → 내기(점수 연출) / 바람 → 통과 · 장터 → 다음 달 … → 판 끝
 //   규칙은 전부 core/run.js(엔진) — 이 파일은 보여 주기와 입력만
-import { W, H, C, N } from '../config.js?v=0.99.68';
-import { load, save } from '../save.js?v=0.99.68';
-import { audio } from '../audio.js?v=0.99.68';
-import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.99.68';
-import { CardView, CW, CH } from '../cards.js?v=0.99.68';
-import { ambient, burst } from '../fx.js?v=0.99.68';
-import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.99.68';
-import { yakuRow } from '../yakuview.js?v=0.99.68';
-import { Run, TOOL, TUNE } from '../core/run.js?v=0.99.68';
-import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.99.68';
-import { GOD } from '../core/gods.js?v=0.99.68';
-import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.99.68';
-import { toOAD } from '../exit.js?v=0.99.68';
+import { W, H, C, N } from '../config.js?v=0.99.69';
+import { load, save } from '../save.js?v=0.99.69';
+import { audio } from '../audio.js?v=0.99.69';
+import { txt, button, roundButton, modal, toast, boxTex, panel, fmt, pressable } from '../ui.js?v=0.99.69';
+import { CardView, CW, CH } from '../cards.js?v=0.99.69';
+import { ambient, burst } from '../fx.js?v=0.99.69';
+import { DECK, rules, praise, pickLine, recordBook, noteRunEnd, today, yakuOrder } from '../meta.js?v=0.99.69';
+import { yakuRow } from '../yakuview.js?v=0.99.69';
+import { Run, TOOL, TUNE } from '../core/run.js?v=0.99.69';
+import { CHARM, RARITY_NAME } from '../core/charms.js?v=0.99.69';
+import { GOD } from '../core/gods.js?v=0.99.69';
+import { bm, bmOn, owned, price, buyContinue, adLeft, effBack, track, roundOver } from '../bmflow.js?v=0.99.69';
+import { toOAD } from '../exit.js?v=0.99.69';
 
 const S_HAND = 0.52, S_STAGE = 0.42;
 const wait = (sc, ms) => new Promise(r => sc.time.delayedCall(Math.max(0, ms / (sc.speed || 1)), r));
@@ -651,23 +651,38 @@ export class PlayScene extends Phaser.Scene {
   }
 
   // ── 첫 판 안내 (안내는 지금 실제로 성공하는 행동만 가리킴) ──
+  /* y 가 숫자면 그 자리(가운데) · 'stage' 면 무대 빈칸 규칙(tSlot)으로 말풍선 높이에 맞춰 자리를 정함 */
   say(msg, x, y, o = {}) {
     this.tutHide();
     const t = txt(this, 0, 0, msg, 32, '#2A1C10', { stroke: null, weight: '800', wrap: 760 });
     const w = Math.min(860, t.width + 70), h = t.height + 50;
+    if (y === 'stage') y = this.tSlot(h);
     const c = this.add.container(x, y, [this.add.image(0, 0, boxTex(this, 'ivory', Math.round(w), Math.round(h), 26, 3)), t]).setDepth(4500);
     c.setScale(0.8).setAlpha(0); this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 220, ease: 'Back.out' });
     this.tweens.add({ targets: c, y: y - 8, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    this.bubble = c;
+    this.bubble = c; c.baseY = y;
     if (o.ms) this.time.delayedCall(o.ms, () => { if (this.bubble === c) this.tutHide(); });
     return c;
   }
   tutHide() {
     if (this.bubble) { this.bubble.destroy(); this.bubble = null; }
+    if (this.hintT) this.hintT.setVisible(true);
     if (this.tutGlow) { this.tutGlow.forEach(t => t.remove()); this.tutGlow = null; for (const v of this.views.values()) v.glow.setAlpha(v.selected ? 1 : 0); this.playB.setScale(1); }
   }
   get first() { return this.run.mode === 'first'; }
-  tY() { return this.L.stTop + 400; }   /* 안내 말풍선 자리: 미리보기 아래 · 손패 위 */
+  /* 무대 말풍선 자리 (높이 h): 말풍선은 위로 BOB 만큼 흔들리므로 그 폭까지 넣어 셈
+     ① 안내 줄(hintT) 아래 ~ 손패 윗변 사이에 들어가면 거기 (가운데)
+     ② 안 들어가면(낮은 화면) 안내 줄을 잠시 숨기고 꽃 점수 줄 아래 ~ 손패 윗변 사이 가운데
+     → 화면 높이 · 글 줄 수가 달라도 안내 줄 · 손패와 겹치지 않음 (shots_tut.mjs 로 확인) */
+  tSlot(h) {
+    const L = this.L, BOB = 8, GAP = 14;
+    const handTop = L.handY - CH * S_HAND / 2 - 54 - GAP;
+    const hintBot = this.hintT.y + Math.max(this.hintT.height, 40) / 2 + GAP;
+    if (handTop - hintBot >= h + BOB) return hintBot + BOB + h / 2 + (handTop - hintBot - h - BOB) / 2;
+    this.hintT.setVisible(false);
+    const totBot = L.stTop + 262 + 30 + GAP;
+    return Math.max(totBot + BOB + h / 2, (totBot + BOB + handTop) / 2);
+  }
   // 첫 판 단계 공개: 한 번 보인 안내는 판 저장(run.seenTut)에 남아 이어서 해도 다시 안 나옴
   once(k) { const s = this.run.seenTut || (this.run.seenTut = {}); if (s[k]) return false; s[k] = 1; this.saveRun(); return true; }
   tstep(step) { if (!this.first) return; const s = this.run.seenTut || (this.run.seenTut = {}); if (s['st' + step]) return; s['st' + step] = 1; track('tut_step', { step, sec: this.sec() }); }
@@ -679,7 +694,7 @@ export class PlayScene extends Phaser.Scene {
     const ms = run.hand.filter(u => run.card(u).month === run.month).slice(0, 3);
     if (ms.length < 2) return;
     this.tutStep = 1; this.tutPair = ms;
-    this.say(`${run.month}월 패 ${ms.length}장이 빛나요.\n한 장씩 눌러 보세요`, W / 2, this.tY());
+    this.say(`${run.month}월 패 ${ms.length}장이 빛나요.\n한 장씩 눌러 보세요`, W / 2, 'stage');
     this.tutGlow = ms.filter(u => this.views.get(u)).map(u => { const v = this.views.get(u); return this.tweens.add({ targets: v.glow, alpha: { from: 0.2, to: 0.9 }, duration: 500, yoyo: true, repeat: -1 }); });
   }
   tutCheck() {
@@ -691,11 +706,11 @@ export class PlayScene extends Phaser.Scene {
     if (n === all) {
       this.tutHide(); this.tutStep = 2; this.tstep(1);
       for (const u of this.sel) this.viewOf(u).setSelected(true);
-      this.say(`${this.run.preview(this.sel).yaku.name}!! 같은 달이 많을수록 점수가 커져요.\n「내기」를 눌러요`, W / 2, this.L.stTop - 40);
+      this.say(`${this.run.preview(this.sel).yaku.name}!! 같은 달이 많을수록 점수가 커져요.\n「내기」를 눌러요`, W / 2, 'stage');
       this.tutGlow = [this.tweens.add({ targets: this.playB, scale: { from: 1, to: 1.06 }, duration: 450, yoyo: true, repeat: -1 })];
     } else if (n > 0 && this.bubble) {
       const y = this.run.preview(this.sel).yaku.name;
-      this.say(n === 1 ? `${y} — 한 장 더 눌러 보세요` : `${y}! 점수가 커졌죠? 한 장 더`, W / 2, this.tY());
+      this.say(n === 1 ? `${y} — 한 장 더 눌러 보세요` : `${y}! 점수가 커졌죠? 한 장 더`, W / 2, 'stage');
       glowRest();
     }
   }
@@ -706,9 +721,9 @@ export class PlayScene extends Phaser.Scene {
     // 1월: 짝 맞는 패가 없을 때만 '바꾸기' 한 줄 (다음 달 이야기는 아직 안 함)
     const best = run.hand.length ? this.bestYaku() : 'high';
     if (run.gate === 1 && best === 'high' && run.winds > 0 && this.once('wind1')) {
-      this.say('맞는 짝이 없으면 「바람」으로 패를 바꿔요\n(바꿀 패를 골라 「바람」)', W / 2, this.tY(), { ms: 6000 });
+      this.say('맞는 짝이 없으면 「바람」으로 패를 바꿔요\n(바꿀 패를 골라 「바람」)', W / 2, 'stage', { ms: 6000 });
     } else if (run.gate === 2 && this.once('wind2')) {
-      this.say('다음 달(3월) 꽃을 「바람」에 실어 두면,\n다음 달 첫 손에 돌아와요', W / 2, this.tY(), { ms: 6000 });
+      this.say('다음 달(3월) 꽃을 「바람」에 실어 두면,\n다음 달 첫 손에 돌아와요', W / 2, 'stage', { ms: 6000 });
     }
   }
   // 지금 손패에서 가장 센 족보 (같은 달 짝이 있나) — 엔진 미리보기만 씀
@@ -722,7 +737,7 @@ export class PlayScene extends Phaser.Scene {
   tutDeal(back) {
     const run = this.run;
     if (!this.first) return;
-    if (back && back.length && this.once('back')) { this.say(`지난달 「바람」에 실은 패 ${back.length}장이 돌아왔어요!`, W / 2, this.tY(), { ms: 4500 }); return; }
-    if (run.gate === 2 && this.once('season2')) this.say('2월 꽃(매화)은 점수 2배!\n손에 있으면 같이 내 보세요', W / 2, this.tY(), { ms: 5000 });
+    if (back && back.length && this.once('back')) { this.say(`지난달 「바람」에 실은 패 ${back.length}장이 돌아왔어요!`, W / 2, 'stage', { ms: 4500 }); return; }
+    if (run.gate === 2 && this.once('season2')) this.say('2월 꽃(매화)은 점수 2배!\n손에 있으면 같이 내 보세요', W / 2, 'stage', { ms: 5000 });
   }
 }

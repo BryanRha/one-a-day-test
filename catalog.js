@@ -75,7 +75,7 @@ export const GAMES = {
   bagel: {
     title: '마루미 베이글 하우스', en: 'Marumi Bagel House', genre: '가게 경영', color: '#F28C38',
     tagline: '굽고, 바르고, 나르고, 팔고! 내 베이글 가게 키우기',
-    desc: '마루미베이글 매장을 직접 운영해요. 오븐에서 갓 구운 베이글을 쌓아 들고 계산대에 진열하면 손님이 줄을 서요. 번 돈으로 크림치즈 바·커피 머신·테이블·드라이브스루를 열고, 직원을 뽑아 가게가 저절로 돌아가게 만들어요. 오늘 베이글 100개를 팔면 매장 쿠폰까지!',
+    desc: '마루미베이글 매장을 직접 운영해요. 오븐에서 갓 구운 베이글을 쌓아 들고 계산대에 진열하면 손님이 줄을 서요. 번 돈으로 크림치즈 바·커피 머신·테이블·드라이브스루를 열고, 직원을 뽑아 가게가 저절로 돌아가게 만들어요.',
     path: 'games/bagel/', cover: 'covers/bagel.png', icon: 'covers/bagel_icon.png', time: '5~15분',
   },
   gamsung: {
@@ -173,9 +173,11 @@ export const RATING = {};
 //   '실서버에 올린다' = 이 목록에 한 줄 + server/api/_lib/gold.js PROD_LIVE + server/middleware.js PROD_DIRS(폴더 이름) 에 같은 게임 (다르면 build.mjs 가 멈춤) → 테스트 배포 → 실서버 승격
 //   2026-11-16 첫 공개 15개 · 빠진 것: salvage · rhythm(테스트 통과 전) · bagel(0.7.2 통과 뒤 넣음)
 export const PROD_LIVE = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson'];
-// 브랜드 매장 쿠폰(게임 성과 → 실물 쿠폰)을 실서버에서도 발급할지 — 서면 계약 · 게임위 자문 전까지 false (테스트 · 개발은 늘 켜짐)
-//   게임은 hello() 응답의 coupon 으로 받음 (앱 밖에서 바로 열면 window.OAD_ENV !== 'prod' 일 때만)
+// 브랜드 매장 쿠폰(게임 성과 → 실물 쿠폰)을 실서버에서도 발급할지 — 서면 계약 · 게임위 자문 전까지 false
+//   게임은 hello() 응답의 coupon 으로 받음 (false 면 쿠폰 화면 · 안내를 모두 숨김)
 export const BRAND_COUPON_PROD = false;
+// 테스트 · 개발에서도 쿠폰을 보일지 — 2026-11-27 대표 "마루미와 감성커피 쿠폰은 안 보이게 · 오늘 미팅하고 어떻게 할지 알려줄게" → false (미팅 결과가 오면 다시 정함)
+export const BRAND_COUPON_TEST = false;
 // 여명기사단 키우기(idle)는 2026-10-25 사용자 요청으로 목록에서 내림 — 보류 중 (CATALOG 항목·소스·idle/PROJECT_STATUS.md 남겨 둠)
 // K-다이스 투어(tour)는 2026-10-24 사용자 요청으로 목록에서 내림 — 대전 네트워크(서버)가 붙으면 다시 올림 (CATALOG 항목·소스는 남겨 둠)
 

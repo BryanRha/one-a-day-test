@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, PROD_LIVE } from './catalog.js?v=0.99.68';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, BRAND_COUPON_TEST, PROD_LIVE } from './catalog.js?v=0.99.69';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -21,7 +21,7 @@ export const NR_OFF = PROD && !PROD_NR_OPEN;
 export const shown = id => !PROD || PROD_LIVE.includes(id);
 export const DAILY = DAILY0.filter(shown), ORDER = ORDER0.filter(shown), BRAND = BRAND0.filter(shown);
 // 게임에 알려 주는 스위치 (hello() 응답) — coupon: 브랜드 매장 쿠폰 발급 (실서버는 계약 · 게임위 자문 전까지 끔)
-export const FLAGS = { env: ENV, coupon: !PROD || BRAND_COUPON_PROD };
+export const FLAGS = { env: ENV, coupon: PROD ? BRAND_COUPON_PROD : BRAND_COUPON_TEST };
 
 export const RULES = {
   openAll: PROD ? PROD_OPEN_ALL : (() => { try { return localStorage.getItem('oad_strict') === '0'; } catch { return false; } })(),   // 2026-10-28 대표: 테스트도 서비스 상태(하루 한 게임)가 기본 · 설정의 '테스트: 하루 한 게임 규칙'을 끄면 모든 게임 자유 플레이
@@ -72,7 +72,8 @@ export function syncItems(skus) {
   const s = state(); let ch = false;
   for (const k of skus || []) { const [t, g, d] = k.split(':');
     if (t === 'own' && GAMES[g] && !s.owned[g]) { s.owned[g] = true; ch = true; }
-    if (t === 'day' && GAMES[g] && d && s.unlocks[g] !== d) { s.unlocks[g] = d; ch = true; } }
+    /* 같은 게임의 하루 열기가 여러 날짜로 오면 가장 늦은 날만 (11-27: 서버 목록 순서대로 덮어써 어제 날짜가 남아 오늘 산 하루 열기가 '잠김'이던 것) */
+    if (t === 'day' && GAMES[g] && d && (!s.unlocks[g] || d > s.unlocks[g])) { s.unlocks[g] = d; ch = true; } }
   if (ch) save(); return ch;
 }
 export const canPlay = id => { const a = access(id); return a !== 'locked' && a !== 'hidden'; };

@@ -1,13 +1,14 @@
 // 시작: 렌더러 · 쿼터뷰 카메라(끌어서 둘러보기 · 두 손가락/휠 확대) · 누르기 · 저장 · 루프
 import * as THREE from 'three';
-import { Game, STACK } from './game.js?v=0.99.68';
-import { UI } from './ui.js?v=0.99.68';
-import { S, ST, loadSave, save, addSkew, KEY, OLD_KEY } from './state.js?v=0.99.68';
-import { FDX } from './layout.js?v=0.99.68';
-import { areaBox } from './world.js?v=0.99.68';
-import { music, setAudio, preloadSfx } from './audio.js?v=0.99.68';
-import { installBack, runBack, inOAD, track } from './oad.js?v=0.99.68';
-import { bm } from './oad_bm.js?v=0.99.68';
+import { Game, STACK } from './game.js?v=0.99.69';
+import { UI } from './ui.js?v=0.99.69';
+import { S, ST, loadSave, save, addSkew, KEY, OLD_KEY } from './state.js?v=0.99.69';
+import { FDX } from './layout.js?v=0.99.69';
+import { COUPON } from './data.js?v=0.99.69';
+import { areaBox } from './world.js?v=0.99.69';
+import { music, setAudio, preloadSfx } from './audio.js?v=0.99.69';
+import { installBack, runBack, inOAD, track } from './oad.js?v=0.99.69';
+import { bm } from './oad_bm.js?v=0.99.69';
 
 const app = {}; window.__app = app; window.__S = () => S;
 const canvas = document.getElementById('view');
@@ -93,14 +94,14 @@ music('cafe');
 bm.onPause = on => { app.paused = !!on; };
 // 자리를 비운 사이: 머신·로스터는 실제 시각으로 계속 → 다 된 것 알림
 setTimeout(() => { if (!window.__bot) app.ui.welcome(away0); }, 900);
-/* 매장 QR 선물 (의뢰사 협조 뒤 · 계획안 6-1): ?qr=지점번호 → 그 지점 서예 액자 한 번 · 지표 gs_qr */
-{ const qr = new URLSearchParams(location.search).get('qr'); if (qr != null && /^[0-6]$/.test(qr) && !(S.tip.qr || {})[qr]) { (S.tip.qr ||= {})[qr] = Date.now(); S.inv.calli = (S.inv.calli || 0) + 1; save(true); track('gs_qr', { b: +qr }); setTimeout(() => app.ui.toast('매장 방문 선물 · 서예 액자를 받았어요 (꾸미기 벽)'), 1600); } }   /* 동료 2명이면 쉬는 동안 번 돈 (ui.awayCard) */
+/* 매장 QR 선물 (의뢰사 협조 뒤 · 계획안 6-1): ?qr=지점번호 → 그 지점 서예 액자 한 번 · 지표 gs_qr — 실물 매장 혜택이라 쿠폰과 같은 스위치(data.js COUPON.on · 꺼지면 ?qr 무시) */
+{ const qr = new URLSearchParams(location.search).get('qr'); if (COUPON.on && qr != null && /^[0-6]$/.test(qr) && !(S.tip.qr || {})[qr]) { (S.tip.qr ||= {})[qr] = Date.now(); S.inv.calli = (S.inv.calli || 0) + 1; save(true); track('gs_qr', { b: +qr }); setTimeout(() => app.ui.toast('매장 방문 선물 · 서예 액자를 받았어요 (꾸미기 벽)'), 1600); } }   /* 동료 2명이면 쉬는 동안 번 돈 (ui.awayCard) */
 
 /* 한 프레임의 오류가 화면 전체를 멈추지 않게 */
 const errSeen = new Set(); window.__errs = [];
 const report = e => { const k = String(e && e.stack || e).split('\n').slice(0, 2).join(' '); if (errSeen.has(k)) return; errSeen.add(k); window.__errs.push(k); console.error('[game]', e); try { if (parent !== window) parent.postMessage({ type: 'oad:error', msg: String(e && e.message || e).slice(0, 200) }, '*'); } catch { /* 단독 실행 */ } };
 addEventListener('error', e => report(e.error || e.message)); addEventListener('unhandledrejection', e => report(e.reason));
-const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.99.68').then(m => m.startBot(app));
+const q = new URLSearchParams(location.search), SPEED = +(q.get('speed') || 1); if (q.get('bot')) import('./bot.js?v=0.99.69').then(m => m.startBot(app));
 if (q.get('fresh')) { window.__noSave = true; localStorage.removeItem(KEY); localStorage.removeItem(OLD_KEY);   /* 떠날 때 저장이 지운 것을 되살리지 않게 */ q.delete('fresh'); location.replace(location.pathname + '?' + q.toString()); }
 let last = performance.now();
 const loop = now => { requestAnimationFrame(loop); const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
