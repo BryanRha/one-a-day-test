@@ -1,17 +1,17 @@
 // 매장 (원작의 식당 꾸미기): 낡은 가게 → 할 일(코인)로 이야기 · 수리 · 디자인 3종 선택(언제든 무료 변경)
-import { W, H } from '../config.js?v=0.99.96';
-import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip, coach } from '../ui.js?v=0.99.96';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.96';
-import { load as loadSave } from '../save.js?v=0.99.96';
-import { audio } from '../audio.js?v=0.99.96';
-import { load, save } from '../save.js?v=0.99.96';
-import { hud } from '../hud.js?v=0.99.96';
-import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.99.96';
-import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.99.96';
-import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.99.96';
-import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.99.96';
-import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.99.96';
-import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.99.96';
+import { W, H } from '../config.js?v=0.99.97';
+import { T, R, C, TS, btn, sheet, rbox, chips, stamp, rewardIcons, toast, firstTip, coach } from '../ui.js?v=0.99.97';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.97';
+import { load as loadSave } from '../save.js?v=0.99.97';
+import { audio } from '../audio.js?v=0.99.97';
+import { load, save } from '../save.js?v=0.99.97';
+import { hud } from '../hud.js?v=0.99.97';
+import { DESIGNS, ROOM, CHAPTERS } from '../data.js?v=0.99.97';
+import { daily, season, chapter, curTask, canNextChapter, nextChapter, giveReward, rewardText } from '../state.js?v=0.99.97';
+import { packCount, claimable, albumClaimable, loginCheck, LOGIN } from '../album.js?v=0.99.97';
+import { bingo, spin, dig, DUO, duoState, duoJoin, duoClaim } from '../minigames.js?v=0.99.97';
+import { ownerDeco, OWNER_DECO, initBM } from '../store.js?v=0.99.97';
+import { RACE, raceState, raceJoin, raceClaim, LADDER, theme, decoInfo, decoName, THEMES, ladder, ladderReady, ladderClaim, ladderEndsIn, VIP, vip, vipClaim, vipEndsIn, fmtLeft } from '../events.js?v=0.99.97';
 
 const OWNER_POS = [444, 1470, 150];
 // 받침 그림 (한 번만 만듦): 금 받침 · 크림 대리석 기둥(세로 홈) · 금 머리 · 진홍 벨벳
@@ -305,10 +305,7 @@ export class HomeScene extends Phaser.Scene {
       if (od === 'open') { const b = btn(this, 170, y, 260, 80, this.d.ownerDecoOff ? '꺼짐' : '놓기', () => { this.d.ownerDecoOff = !this.d.ownerDecoOff; save(); b.setLabel(this.d.ownerDecoOff ? '꺼짐' : '놓기'); this.drawRoom(); }, { style: 'gold', size: 28 }); p.content.add(b); }
       else p.content.add(T(this, 170, y, '🔒 소장하면 열려요', TS.min + 2, '#C2408A', { w: 800 }));
       y += 120; }
-    // 저장 백업: 코드로 복사 · 붙여 넣어 불러오기 (폰을 바꾸거나 기록을 지웠을 때)
-    p.content.add(T(this, 0, y + 10, '기록 백업', TS.cap, C.dim, { w: 900 }));
-    p.content.add(btn(this, -160, y + 90, 300, 96, '백업 코드 복사', async () => { const code = 'KB1' + btoa(unescape(encodeURIComponent(localStorage.getItem('kbeauty_v1') || ''))); try { await navigator.clipboard.writeText(code); toast(this, '백업 코드를 복사했어요 · 메모장 등에 보관해요', H / 2); } catch { window.prompt('이 코드를 복사해 보관해요', code); } }, { style: 'cream', size: 28 }));
-    p.content.add(btn(this, 160, y + 90, 300, 96, '백업 불러오기', () => { const code = (window.prompt('백업 코드를 붙여 넣어요') || '').trim(); if (!code) return; try { if (!code.startsWith('KB1')) throw 0; const js = decodeURIComponent(escape(atob(code.slice(3)))); const o = JSON.parse(js); if (!o || o.v !== 1) throw 0; localStorage.setItem('kbeauty_v1', js); location.reload(); } catch { toast(this, '코드가 올바르지 않아요', H / 2); } }, { style: 'cream', size: 28 }));
+    // 저장 백업 코드(복사 · 붙여 넣기)는 뺌 (대표 11-28): 고쳐 넣으면 재화가 늘고, 기록은 원어데이 계정 저장(catalog SAVES kbeauty_v1)이 이어 줌
     p.foot([{ t: '닫기', style: 'cream' }]);
   }
   // 뒤로가기: 디자인 고르기 취소 → 지난 장을 보고 있으면 지금 장으로 → 첫 화면이면 원어데이로

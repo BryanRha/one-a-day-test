@@ -1,18 +1,18 @@
 // 숨은 물건 맵 (Find It Out® 식): 고밀도 세로 맵 · 아래 아이콘 5칸(찾으면 다음 물건이 채워짐) · 실패·시간 제한 없음
 // + 이야기 단서: 분홍 테두리 아이콘 · 찾으면 서윤 혼잣말 · 물건마다 코인 · 힌트는 코인
-import { W, H } from '../config.js?v=0.99.96';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.96';
-import { audio } from '../audio.js?v=0.99.96';
-import { goPrev } from '../nav.js?v=0.99.96';
-import { pushBack } from '../oad.js?v=0.99.96';
-import { load, save } from '../save.js?v=0.99.96';
-import { Viewer } from '../viewer.js?v=0.99.96';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.96';
-import { starOnce } from '../cafe/state.js?v=0.99.96';
-import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.96';
+import { W, H } from '../config.js?v=0.99.97';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.97';
+import { audio } from '../audio.js?v=0.99.97';
+import { goPrev } from '../nav.js?v=0.99.97';
+import { pushBack } from '../oad.js?v=0.99.97';
+import { load, save } from '../save.js?v=0.99.97';
+import { Viewer } from '../viewer.js?v=0.99.97';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.97';
+import { starOnce } from '../cafe/state.js?v=0.99.97';
+import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.97';
 
-import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.96';
-import { hintOffer } from '../bmui.js?v=0.99.96';
+import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.97';
+import { hintOffer } from '../bmui.js?v=0.99.97';
 
 const SPAM = { n: 3, t: 2, lock: 3 };
 // 1~3화는 아래 칸 그림을 크게 (QA 시트 #6) — 11-16 '더 키워야': 5칸 196 은 이미 화면 폭을 다 써서, 1~3화는 한 번에 4칸 · 248 로 (4화부터 5칸 · 160) · 칸을 누르면 크게 보기(모든 화)

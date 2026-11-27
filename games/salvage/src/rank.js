@@ -3,9 +3,9 @@
 //    → 점수가 실력만으로 갈림. 보통 출격(내 장비 · 시설 성장 · 남은 가방)은 성장 차이가 커서 순위에 올리지 않음
 //  판 이름 'salvage:weekly' · 점수 = challenge.score (탈출 가치 + 처치 + 보스 + 구역 + 남은 초) · tie = 남은 초(같은 점수면 빨리 나온 쪽)
 //  원어데이 밖(단독 링크 · 개발 서버 · 봇)이면 아무것도 안 함 (내 기록만 — 지금까지와 같음) · ?oadtest=1 은 SDK 가짜 순위
-import { bm } from './oad_bm.js?v=0.99.96';
-import { chalNo } from './challenge.js?v=0.99.96';
-import { kstDay } from './econ.js?v=0.99.96';
+import { bm } from './oad_bm.js?v=0.99.97';
+import { chalNo } from './challenge.js?v=0.99.97';
+import { kstDay } from './econ.js?v=0.99.97';
 
 export const BOARD_ID = 'salvage:weekly';
 /* 원어데이 앱 안인가 (hello 는 SDK 가 한 번만 물음) */

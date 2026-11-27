@@ -1,13 +1,13 @@
 // 웹툰 결말: 컷이 차례로 내려오고 말풍선이 하나씩 · 마지막 컷 반전 → "다음 화에 계속"
-import { W, H } from '../config.js?v=0.99.96';
-import { T, C, btn } from '../ui.js?v=0.99.96';
-import { audio } from '../audio.js?v=0.99.96';
-import { goPrev } from '../nav.js?v=0.99.96';
-import { load, save } from '../save.js?v=0.99.96';
-import { EPISODES, hero, seasonOf, epNo } from '../episodes.js?v=0.99.96';
-import { waitLeft, fmtWait } from '../bm.js?v=0.99.96';
-import { nextOffer } from '../bmui.js?v=0.99.96';
-import { starOnce } from '../cafe/state.js?v=0.99.96';
+import { W, H } from '../config.js?v=0.99.97';
+import { T, C, btn } from '../ui.js?v=0.99.97';
+import { audio } from '../audio.js?v=0.99.97';
+import { goPrev } from '../nav.js?v=0.99.97';
+import { load, save } from '../save.js?v=0.99.97';
+import { EPISODES, hero, seasonOf, epNo } from '../episodes.js?v=0.99.97';
+import { waitLeft, fmtWait } from '../bm.js?v=0.99.97';
+import { nextOffer } from '../bmui.js?v=0.99.97';
+import { starOnce } from '../cafe/state.js?v=0.99.97';
 
 export class ToonScene extends Phaser.Scene {
   constructor() { super('Toon'); }
