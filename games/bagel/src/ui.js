@@ -1,11 +1,13 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.93';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.93';
-import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.93';
-import { sfx, setAudio } from './audio.js?v=0.99.93';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.93';
-import { bm } from './oad_bm.js?v=0.99.93';
+import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.94';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.94';
+import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.94';
+import { sfx, setAudio } from './audio.js?v=0.99.94';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.94';
+import { bm } from './oad_bm.js?v=0.99.94';
+/* 실서버 주소인가 (oneaday.kr · www — test.oneaday.kr 은 아님): 테스트 도구는 실서버에서 안 보이게 */
+const PROD_HOST = /(^|\.)oneaday\.kr$/i.test(location.hostname) && !/^test\./i.test(location.hostname);
 
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString('en-US');
 export const IN = { x: 0, y: 0 };
@@ -318,5 +320,6 @@ export class UI {
     m.querySelectorAll('[data-sv]').forEach(b => b.onclick = () => { save(true); try { localStorage.setItem(SLOT + b.dataset.sv, JSON.stringify({ at: Date.now(), d: localStorage.getItem(KEY) })); } catch { /* */ } this.toast(`슬롯 ${b.dataset.sv}에 저장했어요`); this.settings(); });
     m.querySelectorAll('[data-ld]').forEach(b => b.onclick = () => { const v = JSON.parse(localStorage.getItem(SLOT + b.dataset.ld) || 'null'); if (!v) return; S.last = Date.now(); window.__noSave = true; localStorage.setItem(KEY, v.d); location.reload(); });
     $('#dvMoney').onclick = () => { S.coins += 10000 * BRANCHES[S.bi].mult; save(); this.toast('돈 +' + fmt(10000 * BRANCHES[S.bi].mult)); };
-    $('#dvReset').onclick = () => { if (!confirm('지금 진행이 모두 지워져요. 처음부터 할까요? (슬롯은 그대로)')) return; resetAll(); location.reload(); }; }
+    $('#dvReset').onclick = () => { if (!confirm('지금 진행이 모두 지워져요. 처음부터 할까요? (슬롯은 그대로)')) return; resetAll(); location.reload(); };
+    if (PROD_HOST) m.querySelector('.dev')?.remove();   /* 실서버(oneaday.kr)에서는 테스트 도구를 지움 — 대표 11-28 실서버 제보 (게임 화면엔 OAD_ENV 가 없어 주소로 봄) */ }
 }

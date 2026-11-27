@@ -1,14 +1,16 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, APRONS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.93';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.93';
-import { cup, FURN_MODEL } from './models.js?v=0.99.93';
-import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong, vipOn } from './game.js?v=0.99.93';
-import { bm } from './oad_bm.js?v=0.99.93';
-import { sfx, setAudio } from './audio.js?v=0.99.93';
-import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.93';
-import { UI2 } from './ui2.js?v=0.99.93';
-import { FLOORS, FINISHED } from './layout.js?v=0.99.93';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, APRONS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.94';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.94';
+import { cup, FURN_MODEL } from './models.js?v=0.99.94';
+import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong, vipOn } from './game.js?v=0.99.94';
+import { bm } from './oad_bm.js?v=0.99.94';
+import { sfx, setAudio } from './audio.js?v=0.99.94';
+import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.94';
+import { UI2 } from './ui2.js?v=0.99.94';
+import { FLOORS, FINISHED } from './layout.js?v=0.99.94';
+/* 실서버 주소인가 (oneaday.kr · www — test.oneaday.kr 은 아님): 테스트 도구는 실서버에서 안 보이게 */
+const PROD_HOST = /(^|\.)oneaday\.kr$/i.test(location.hostname) && !/^test\./i.test(location.hostname);
 
 const $ = s => document.querySelector(s);
 /* 꾸미기 목록 그림 (QA 1116-17): 종류마다 같은 이모지(🪴 · 🪨 는 옛 폰에서 네모로 나오기도 함) 대신 그 가구의 실제 3D 모델을 한 번 그려서 씀 → 그림 = 놓이는 물건 */
@@ -497,6 +499,7 @@ export class UI {
     $('#dvMoney').onclick = () => { S.coins += 5000; S.hearts += 50; S.beans = Math.min(BEAN_MAX, S.beans + 200); save(); this.toast('돈 · 마음 · 원두를 채웠어요'); };
     $('#dvXp').onclick = () => { const need = XP[S.lv] ?? S.xp; this.app.game.gainXp(Math.max(1, need - S.xp)); this.close(); };
     $('#dvReset').onclick = () => { if (!confirm('지금 진행이 모두 지워져요. 처음부터 할까요? (슬롯은 그대로)')) return; resetAll(); location.reload(); };   /* state.js resetAll: 남은 저장 타이머 · 다른 탭 · 계정 저장까지 막음 (예전엔 키를 지워 계정의 옛 판이 되살아날 수 있었음) */
+    if (PROD_HOST) m.querySelector('.dev')?.remove();   /* 실서버(oneaday.kr)에서는 테스트 도구를 지움 — 대표 11-28 실서버 제보 (게임 화면엔 OAD_ENV 가 없어 주소로 봄) */
   }
 }
 const machineCountAt = (k, lv) => MACHINES[k].filter(l => lv >= l).length;

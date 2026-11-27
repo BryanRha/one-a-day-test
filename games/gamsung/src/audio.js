@@ -5,7 +5,7 @@ const HAS = new Set();
 let ctx = null, master = null, sfxG = null, bgmG = null; const buf = {}, loading = {}; let cur = null, curName = '', want = '';
 export const AUD = { sfx: true, bgm: true };
 function ac() { if (ctx) return ctx; const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); master = ctx.createGain(); master.connect(ctx.destination); sfxG = ctx.createGain(); sfxG.gain.value = AUD.sfx ? 1 : 0; sfxG.connect(master); bgmG = ctx.createGain(); bgmG.gain.value = AUD.bgm ? 0.55 : 0; bgmG.connect(master); return ctx; }
-export function unlock() { const c = ac(); if (c && c.state === 'suspended') c.resume(); if (want && !cur) music(want); }
+export function unlock() { const c = ac(); if (c && c.state !== 'running' && c.state !== 'closed') c.resume();   /* 'interrupted'(광고 · 전화 뒤)도 다시 켬 */ if (want && !cur) music(want); }
 addEventListener('pointerdown', unlock, { capture: true }); addEventListener('keydown', unlock, { capture: true });
 document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
 function get(name) { if (buf[name]) return Promise.resolve(buf[name]); const f = ext => fetch(`assets/audio/${name}.${ext}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject());

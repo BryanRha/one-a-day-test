@@ -1,29 +1,29 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.93';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.93';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.93';
-import * as R from './rules.js?v=0.99.93';
-import * as I from './install.js?v=0.99.93';
-import * as T from './track.js?v=0.99.93';
-import * as P from './pay.js?v=0.99.93';
-import * as A from './account.js?v=0.99.93';
-import * as C from './cloud.js?v=0.99.93';
-import * as SY from './sync.js?v=0.99.93';   /* 계정 기준 앱 상태 (2026-11-27): 링 · 출석 · 게임 기록 · 하루 열기 · 이용권 · 화면 모드 · (동의하면) 점방 내 정보 */
-import * as BM from './bm.js?v=0.99.93';
-import * as HUB from './hub.js?v=0.99.93';
-import * as O from './operator.js?v=0.99.93';
-import * as LK from './oslinks.js?v=0.99.93';   /* 원스토어 앱 안 링크 지킴이 (11-28): 새 창 링크가 원스토어 틀을 벗기지 않게 */
-import * as RS from './rank.js?v=0.99.93';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.93';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.94';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.94';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.94';
+import * as R from './rules.js?v=0.99.94';
+import * as I from './install.js?v=0.99.94';
+import * as T from './track.js?v=0.99.94';
+import * as P from './pay.js?v=0.99.94';
+import * as A from './account.js?v=0.99.94';
+import * as C from './cloud.js?v=0.99.94';
+import * as SY from './sync.js?v=0.99.94';   /* 계정 기준 앱 상태 (2026-11-27): 링 · 출석 · 게임 기록 · 하루 열기 · 이용권 · 화면 모드 · (동의하면) 점방 내 정보 */
+import * as BM from './bm.js?v=0.99.94';
+import * as HUB from './hub.js?v=0.99.94';
+import * as O from './operator.js?v=0.99.94';
+import * as LK from './oslinks.js?v=0.99.94';   /* 원스토어 앱 안 링크 지킴이 (11-28): 새 창 링크가 원스토어 틀을 벗기지 않게 */
+import * as RS from './rank.js?v=0.99.94';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.94';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 /* 원스토어 안(다른 주소가 감쌈)이면 처음부터 '원스토어 모드' (11-27 QA A1 · C4): SDK 준비 전 · 연결 실패 때도 웹 공급자(토스 결제창 · 원어데이 테스트 광고 · 구글 로그인 · 크롬으로 열기)로 가지 않음
    준비가 끝나면 아래 OS.ready 에서 진짜 원스토어 공급자로 바꿈 · 안 되면 이 '기다림' 공급자가 그대로 남아 '다시 연결' 안내만 */
 if (OS.looks) PV.use({ name: 'onestore', reward: async () => ({ ok: false, reason: 'off' }), inter: async () => false, canReward: () => false, canInter: () => false, canBuy: () => false, buy: async () => ({ ok: false, reason: 'off', msg: OS.failText() }) });
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.93').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.94').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.93'), import('./fortune/types.js?v=0.99.93'), import('./fortune/chat.js?v=0.99.93'), import('./fortune/oneword-ui.js?v=0.99.93')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.94'), import('./fortune/types.js?v=0.99.94'), import('./fortune/chat.js?v=0.99.94'), import('./fortune/oneword-ui.js?v=0.99.94')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -33,7 +33,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.93';
+const VERSION = '0.99.94';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) , canReward: () => !R.PROD, canInter: () => !R.PROD });   /* 실서버 웹(원스토어 밖)은 진짜 광고망이 없음 → 광고 단추 없음 · 시험 광고 창으로 공짜로 열리지 않게 (대표 11-28 실서버 제보) */
@@ -57,6 +57,16 @@ const webp = (src, w) => { if (!src || !/\.png$/.test(src)) return src; const st
 document.addEventListener('error', e => { const el = e.target; if (!el || el.tagName !== 'IMG' || !el.dataset.png || el.src.endsWith('.png')) return; const pic = el.closest('picture'); if (pic) pic.querySelectorAll('source').forEach(x => x.remove()); el.src = el.dataset.png; }, true);
 const img = (src, w, extra = '') => `<img src="${webp(src, w)}" data-png="${src}" alt="" ${extra}>`;
 
+/* 원스토어 광고 뒤 소리 되살리기 (대표 11-28 실서버 제보 「광고 보상 받고 오면 소리가 안 나요」): 광고가 폰의 소리를 가져갔다 돌려줄 때 안드로이드 웹뷰는
+   게임 iframe 에 '가려짐' 신호를 주지 않아 게임 소리 엔진이 멈춘 채 남음 → 광고가 끝나면 열린 게임 · 너랑 iframe 에 가려짐 → 보임 신호를 한 번 흉내 냄
+   (게임들은 visibilitychange 로 소리를 끊고 다시 켬 — 끊었다 켜야 소리를 다시 가져옴) · 같은 주소 iframe 만 · 흉내 값은 바로 지워 원래대로 */
+function kickAudio() {
+  document.querySelectorAll('iframe').forEach(f => {
+    let d; try { d = f.contentDocument; } catch { return; } if (!d || !d.defaultView) return;
+    const fake = (h) => { try { Object.defineProperty(d, 'hidden', { configurable: true, get: () => h }); Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => (h ? 'hidden' : 'visible') }); d.dispatchEvent(new Event('visibilitychange')); } catch { /* */ } };
+    fake(true); setTimeout(() => { fake(false); try { delete d.hidden; delete d.visibilityState; } catch { /* */ } }, 200);
+  });
+}
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
 LK.start(toast);
 
@@ -651,7 +661,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.93')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.94')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -987,7 +997,7 @@ function nrBar() {
   const h = RS.nrHTML(id => NRW.find(w => w.id === id)); slot.innerHTML = h; $('.nrtab').classList.toggle('withbar', !!h);
 }
 let NRWP = null;
-const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.93'), import('./neorang/works2.js?v=0.99.93').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
+const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.94'), import('./neorang/works2.js?v=0.99.94').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
 function openWork(id) {
   if (R.NR_OFF) return;
   const fr = $('#nrframe');
@@ -1813,7 +1823,7 @@ if (OS.looks) OS.ready.then(on => { if (!on) { refreshSettings(); return; }
   window.OAD_OS_MUTE = OS.RINGER_MUTE && OS.silent;
   document.documentElement.classList.add('os'); const st = document.documentElement.style; st.setProperty('--safe-t', OS.safe.top + 'px'); st.setProperty('--safe-b', OS.safe.bottom + 'px'); T.track('os_safe', { raw: OS.safeRaw, t: OS.safe.top, b: OS.safe.bottom, dpr: window.devicePixelRatio || 1, h: innerHeight });   /* safeArea 단위 확인용 (11-27 상단 밀림) */   /* 원스토어 앱이 알려 준 시스템바 높이 (iframe 안이라 env(safe-area) 가 0) */
   /* ad_shown: 원스토어 광고가 실제로 끝까지 보였을 때만 (리워드 = 서버가 포스트백 확인 · 전면 = 표시 완료) — 운영실 '매출 나눠 보기' 광고 칸 */
-  PV.use({ name: 'onestore', reward: g => OS.rewarded(g).then(x => { if (x.ok) T.track('ad_shown', { what: 'reward', game: g || 'app', via: 'onestore', ms: window.OAD_AD_MS || 0 }); if (window.OAD_AD_MS) T.track('ad_len', { what: 'reward', game: g || 'app', ms: window.OAD_AD_MS, status: x.ok ? 'rewarded' : (x.reason || 'fail') }); window.OAD_AD_MS = 0; return x; }), inter: g => OS.interstitial(g).then(x => { if (x.shown) T.track('ad_shown', { what: 'inter', game: g || 'app', via: 'onestore', ms: x.ms }); T.track('ad_len', { what: 'inter', game: g || 'app', ms: x.ms, status: x.status, reason: x.reason || '' }); return x.shown; }), canReward: OS.canReward, canInter: OS.canInter, canBuy: OS.canBuy, buy: OS.buy });
+  PV.use({ name: 'onestore', reward: g => OS.rewarded(g).finally(kickAudio).then(x => { if (x.ok) T.track('ad_shown', { what: 'reward', game: g || 'app', via: 'onestore', ms: window.OAD_AD_MS || 0 }); if (window.OAD_AD_MS) T.track('ad_len', { what: 'reward', game: g || 'app', ms: window.OAD_AD_MS, status: x.ok ? 'rewarded' : (x.reason || 'fail') }); window.OAD_AD_MS = 0; return x; }), inter: g => OS.interstitial(g).finally(kickAudio).then(x => { if (x.shown) T.track('ad_shown', { what: 'inter', game: g || 'app', via: 'onestore', ms: x.ms }); T.track('ad_len', { what: 'inter', game: g || 'app', ms: x.ms, status: x.status, reason: x.reason || '' }); return x.shown; }), canReward: OS.canReward, canInter: OS.canInter, canBuy: OS.canBuy, buy: OS.buy });
   OS.progress(60); go(tab, 'open');   /* 공급자가 바뀌었으니 단추(광고 · 결제)를 다시 그림 */
   /* 원스토어가 알려 주는 상품 가격과 서버 상품표(손님 결제가)가 다르면 기록만 (화면은 늘 서버 값) — 운영실 오류 기록 'os_price' */
   OS.priceCheck().then(d => { if (d.length) { console.warn('원스토어 가격이 상품표와 달라요', d); T.trackError('os_price', d.map(x => `${x.id} ${x.store}/${x.ours}`).join(' ')); } }).catch(() => {});
