@@ -47,6 +47,8 @@ h1, h2, h3, .jua { font-family: 'Jua', sans-serif; font-weight: 400; margin: 0; 
 .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #C46A00, 0 6px 14px rgba(255,159,28,.3); }
 .btn.alt { color: #fff; background: linear-gradient(180deg, #9B7BFF, #6A45E0); box-shadow: 0 6px 0 #3E22A0, 0 12px 24px rgba(106,69,224,.35); }
 .btn.ghost { color: var(--sub); background: rgba(255,255,255,.07); box-shadow: none; font-size: 18px; }
+/* 카카오 로그인 · 계정 연결 단추 (카카오 디자인 가이드 색: 노랑 바탕 · 검은 글자) */
+.btn.kk { background: #FEE500; color: #191919; box-shadow: none; }
 .btn.small { padding: 11px; font-size: 17px; border-radius: 14px; }
 .btn[disabled] { opacity: .45; pointer-events: none; }
 .played { text-align: center; color: var(--mint); font-size: 13px; margin-top: 10px; }

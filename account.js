@@ -1,7 +1,7 @@
 // 원어데이 계정: 구글 로그인 (Supabase) · 서버의 /api/me 로 플레이어 기록 + 골드 잔액
 //   서버가 있는 주소에서만 (test.oneaday.kr · oneaday.kr · vercel.app) · 게임은 로그인 없이도 그대로
 //   원스토어 앱 안(onestore.js · 2026-11-24): 구글 로그인 대신 원스토어 playerId → 서버가 준 세션 표(os1.)로 같은 /api/me 를 씀 (늘 '로그인됨' · 이름 · 이메일 없음)
-import * as OS from './onestore.js?v=0.99.81';
+import * as OS from './onestore.js?v=0.99.82';
 const HOST = location.hostname;
 export const ON = /(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app');
 let sb = null, cfg = null, me = null, listeners = [];
@@ -50,11 +50,24 @@ async function osTok() {
   if (m === 'google') { const c = await client(); const s = c && await safeSession(c); if (s) return s.access_token; }
   return (await OS.token().catch(() => null)) || '';
 }
+/* 연결한 계정 표만 (게스트면 '') — 원스토어 결제 · 광고 보상이 연결한 계정으로 가게 OS.api 에 끼움 */
+async function acctTok() { const m = lsg(OSA); if (m === 'link' && lkOk(lsg(LK))) return lsg(LK); if (m === 'google') { const c = await client(); const s = c && await safeSession(c); if (s) return s.access_token; } return ''; }
+OS.setAcct(acctTok);
 /* 원스토어 번호 계정으로 돌아가기 (시험 · 로그인 해제) */
 export async function osPlain() { lss(OSA, ''); lss(LK, ''); return init(); }
 /* 앱을 열 때: 로그인돼 있으면 계정 불러오기 */
-export async function init() { if (OS.looks) await OS.ready; if (OS.on) { const t = await osTok(); return t ? load({ access_token: t }) : null; } if (!ON) return null; const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
-export async function login() { if (OS.on) { if (!(await init())) throw new Error('원스토어 연결을 다시 시도해 주세요'); return; } const c = await client(); if (!c) throw new Error('로그인은 곧 열려요'); await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/?login=1' } }); }
+export async function init() { if (OS.looks) await OS.ready; if (OS.looks && !OS.on) return null;   /* 원스토어 안인데 연결 실패: 웹 로그인으로 가지 않음 (11-27 QA A1) */
+  if (OS.on) { const t = await osTok(); return t ? load({ access_token: t }) : null; } if (!ON) return null; const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
+export async function login(provider = 'google') { if (OS.looks) { await OS.ready; if (!OS.on) throw new Error(OS.failText()); if (!(await init())) throw new Error(OS.failText()); return; } const c = await client(); if (!c) throw new Error('로그인은 곧 열려요'); await c.auth.signInWithOAuth({ provider: provider === 'kakao' ? 'kakao' : 'google', options: { redirectTo: location.origin + '/?login=1' } }); }
+/* 켜져 있는 로그인 공급자 (Supabase Auth 공개 설정 · 카카오는 대표가 키를 넣으면 켜짐 — 꺼져 있으면 단추를 그리지 않음) · 한 번만 받음 */
+export let prov = null;
+export async function providers() {
+  if (prov) return prov; if (!ON) return (prov = { google: false, kakao: false });
+  const cf = await remote().catch(() => null); if (!cf || !cf.url || !cf.anon) return { google: true, kakao: false };
+  const j = await fetch(cf.url + '/auth/v1/settings', { headers: { apikey: cf.anon } }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  prov = { google: !j || !j.external || j.external.google !== false, kakao: !!(j && j.external && j.external.kakao) };
+  return prov;
+}
 
 /* ── 원스토어 앱 안 구글 로그인 시험 (테스트 서버만 · 2026-11-27) ──
    how: frame = 이 화면(iframe)에서 바로 · top = 원스토어 화면 전체를 구글로 · pop = 새 창
@@ -81,7 +94,7 @@ export async function googleBack() {
   const err = new URLSearchParams(h.replace(/^#/, '')).get('error_description') || q.get('error_description') || '';
   const c = await client(); const s = c && await safeSession(c);
   lss(TRY, '');
-  if (s && OS.looks) { await OS.ready; if (OS.on) { lss(OSA, 'google'); await init(); } }
+  if (s && OS.looks) { await OS.ready; if (OS.on) { lss(OSA, 'google'); await mergeGuest(); await init(); } }
   return { how: (t && t.how) || '?', ok: s ? 1 : 0, reason: s ? 'session' : (err ? 'err:' + err.slice(0, 50) : 'no_session') };
 }
 
@@ -96,10 +109,10 @@ async function osCall(body) {
   const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || '연결에 실패했어요'), j, { status: r.status });
   return j;
 }
-export async function linkStart() {
+export async function linkStart(p = '') {
   const j = await osCall({ act: 'link', sub: 'new' });
   lss(LINKK, JSON.stringify({ k: j.k, exp: j.exp }));
-  return { k: j.k, url: `${location.origin}/link/?k=${encodeURIComponent(j.k)}` };
+  return { k: j.k, url: `${location.origin}/link/?k=${encodeURIComponent(j.k)}${p === 'kakao' || p === 'google' ? '&p=' + p : ''}` };
 }
 export const linkPending = () => { try { const x = JSON.parse(lsg(LINKK) || 'null'); return x && x.exp > Date.now() ? x : null; } catch { return null; } };
 /* 묶였으면 true (그 계정으로 다시 불러옴) · 아직이면 false · 끝났으면(만료 · 이미 씀) 열쇠를 버림 */
@@ -107,10 +120,15 @@ export async function linkPoll() {
   const x = linkPending(); if (!x) { lss(LINKK, ''); return false; }
   let j; try { j = await osCall({ act: 'link', sub: 'poll', k: x.k }); } catch (e) { if (e.status === 410 || e.status === 404) lss(LINKK, ''); return false; }
   if (!j.token) return false;
-  lss(LINKK, ''); lss(LK, j.token); lss(OSA, 'link'); await init(); return true;
+  lss(LINKK, ''); lss(LK, j.token); lss(OSA, 'link'); await mergeGuest(); await init(); return true;
+}
+/* 게스트(원스토어 계정)의 골드 · 소장 · 산 풀이를 연결한 계정으로 (서버가 한 번만 · 다시 불러도 그대로) → { moved, copied } | null */
+export let lastMerge = null;
+async function mergeGuest() {
+  try { const g = (await OS.token().catch(() => null)) || ''; if (!g) return null; lastMerge = await call({ act: 'merge', from: g }); return lastMerge; } catch { return null; }
 }
 /* 서버에 계정 일 시키기 (골드 쓰기 · 내역): 로그인 토큰을 붙여 /api/me 로 */
-export async function token() { if (OS.looks) await OS.ready; if (OS.on) return osTok(); const c = await client(); if (!c) return ''; const session = await safeSession(c); return session ? session.access_token : ''; }
+export async function token() { if (OS.looks) await OS.ready; if (OS.on) return osTok(); if (OS.looks) return ''; const c = await client(); if (!c) return ''; const session = await safeSession(c); return session ? session.access_token : ''; }
 export async function call(body) {
   const t = await token(); if (!t) throw new Error('로그인이 필요해요');
   const r = await fetch('/api/me', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -118,8 +136,8 @@ export async function call(body) {
   if (me && j.gold) { me.gold = j.gold; if (j.items) me.items = j.items; emit(); }
   return j;
 }
-export async function refresh() { if (OS.on) return init(); const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
-export async function logout() { if (OS.on) return; const c = await client(); if (c) await c.auth.signOut(); me = null; emit(); }
+export async function refresh() { if (OS.looks) return init(); const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
+export async function logout() { if (OS.looks) return; const c = await client(); if (c) await c.auth.signOut(); me = null; emit(); }
 /* 같은 주소 iframe(너랑 등)이 셸과 같은 계정 하나를 보게 (2026-11-27 대표 제보 '원어데이는 로그인인데 너랑은 로그인 전 · 로그아웃이 안 이어짐')
    iframe 이 account.js 를 따로 불러오면 모듈이 하나 더 생겨 원스토어 세션 · 로그인 변화를 모름 → 셸 창에 이 모듈을 걸어 두고 iframe 은 window.parent.__oadAcct 를 씀 */
 try { window.__oadAcct = { ON, current, onChange, init, token, refresh }; } catch { /* */ }

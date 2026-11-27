@@ -25,7 +25,7 @@ export const toNine = () => hms(next9() - now());
 const localOpen = () => Math.max(0, Math.min(12, Math.round((Date.parse(period()) - Date.parse('2026-11-02')) / 864e5) + 1));
 const A = p => (p ? 'neorang/img/' + String(p).replace(/^\.?\/?(img\/)?/, '') : '');
 
-import { ic, coin, rings } from './ui.js?v=0.99.81';
+import { ic, coin, rings } from './ui.js?v=0.99.82';
 /* ── 새 화면 체계 (2026-11-26 시안 3 피트니스 · lab/ui-apple/3): 칭찬 + 링 세 겹 → 연속 기록 → 다음 할 일(안 닫힌 링부터) → 이번 주 링 7개 → 내일도 여기서 ── */
 const KB = 'role="button" tabindex="0"';
 const img = (X, src, cls = '', extra = '') => (src ? `<img class="${cls}" src="${X.webp ? X.webp(src) : src}" data-png="${src}" alt="" ${extra}>` : '');
@@ -53,8 +53,9 @@ function gameCard(X, G0) {
 
 /* ── 점방 (fortune.js 계산 그대로 · 엔진이 아직이면 이름 · 점수 없이) ── */
 function fortSt(X) {
-  const me = ls('oad_fortune_me'); if (!me) return { st: 'none', done: false };
-  const key = X.R.keyOf(X.R.now()), seen = !!((ls('oad_days') || {})[key] || {}).f, m = X.FT();
+  const key = X.R.keyOf(X.R.now()), seen = !!((ls('oad_days') || {})[key] || {}).f, me = ls('oad_fortune_me');
+  if (!me) return seen ? { st: 'yes', done: true, me: null, f: null, m: null, key } : { st: 'none', done: false };   /* 다른 기기에서 오늘 운세를 봄(계정 하루 기록) · 이 기기엔 점방 정보 없음 */
+  const m = X.FT();
   const f = m ? m.fortune(me, X.R.now()) : null;
   return { st: seen ? 'yes' : 'no', done: seen, me, f, m, key };
 }
@@ -89,10 +90,12 @@ function nrSt(X) {
     const S = nrS(), rooms = S.rooms || {}, wait = !(NR.works && NR.works.length);   /* 목록 전 · 못 받음 */
     const ids = Object.keys(rooms).filter(k => rooms[k] && rooms[k].turns > 0 && (wait || nrW(k))).sort((a, b) => (rooms[b].at || 0) - (rooms[a].at || 0));
     const w = nrW(ids[0] || S.lastW) || nrW('c17') || null;
-    if (!S.onboarded || S.v !== 2 || (!w && !wait)) return { st: 'first', done: false, w };
+    /* 다른 기기 · 그릇에서 오늘 이어 간 것(계정 하루 기록 oad_days.n · sync.js)도 오늘 링으로 */
+    const dn = !!((ls('oad_days') || {})[X.R.keyOf(X.R.now())] || {}).n;
+    if (!S.onboarded || S.v !== 2 || (!w && !wait)) return dn ? { st: 'done', done: true, w, rid: w ? w.id : '', r: null, left: (NR.home && NR.home.left) || { light: 60, free: 10 }, lunch: false, ask: false } : { st: 'first', done: false, w };
     const rid = w ? w.id : ids[0] || S.lastW || '', r = rooms[rid], left = (NR.home && NR.home.left) || { light: 60, free: 10 };
     const seenToday = !!S.seen && new Date(S.seen).toDateString() === new Date(now()).toDateString();
-    const st = r && r.turns ? (seenToday ? 'done' : 'cont') : 'pick';
+    const st = r && r.turns ? (seenToday || dn ? 'done' : 'cont') : dn ? 'done' : 'pick';
     return { st, done: st === 'done', w, rid, r, left, lunch: false, ask: false };
   }
   const S = nrS(), w = nrW(S.lastW) || nrW('c17');
@@ -259,7 +262,7 @@ export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
   attLoad(redraw);
   if (X.NR_OFF) return;
-  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.81'), import('./neorang/works2.js?v=0.99.81').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.82'), import('./neorang/works2.js?v=0.99.82').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || (NR_SERIAL && now() >= NR.home.next9))) {

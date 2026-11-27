@@ -15,6 +15,7 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
 .lk{max-width:420px;margin:12vh auto 0;padding:0 20px;text-align:center}
 .lk h1{font-size:22px;margin:0 0 10px}.lk p{color:var(--mute,#8a86a6);line-height:1.6;margin:0 0 22px}
 .lk button{width:100%;min-height:52px;border:0;border-radius:14px;font:700 16px/1 inherit;cursor:pointer;background:#fff;color:#1f1f1f;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.lk .kk{background:#FEE500;color:#191919;margin-bottom:10px}
 .lk .ok{font-size:44px;margin-bottom:8px}
 .lk [hidden]{display:none}
 </style>
@@ -25,6 +26,7 @@ S.clear=function(){for(var j=this.length-1;j>=0;j--){var y=k.call(this,j);if(y&&
   <div id="go">
     <h1>원어데이 로그인</h1>
     <p>여기서 로그인하면, 원스토어 앱의 원어데이가 이 계정으로 이어져요.</p>
+    <button type="button" id="kbtn" class="kk" hidden>카카오로 로그인</button>
     <button type="button" id="gbtn">구글로 로그인</button>
   </div>
   <div id="done" hidden>

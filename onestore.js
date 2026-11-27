@@ -61,25 +61,31 @@ function onExit() { frames('save'); try { H.exit && H.exit(); } catch { /* */ } 
 /* 백키: 반환값이 정확히 true 일 때만 '게임이 처리' — 아니면 원스토어의 종료 확인 창 */
 function onBack() { try { return H.back ? H.back() === true : false; } catch { return false; } }
 
+/* 원스토어와 연결이 안 된 까닭 (11-27 QA A1 — 웹 안내로 떨어지지 않게 이 글을 그대로 보여 줌): sdk 못 불러옴 · init 거절 · timeout 12초 · session 서버 거절(서버 문구 · 상한) */
+export const fail = { why: '', msg: '', limit: false, status: 0 };
 async function boot() {
-  let mod; try { mod = await import(sdkUrl); } catch { return false; }
+  let mod; try { mod = await import(sdkUrl); } catch { fail.why = 'sdk'; return false; }
   const s = mod.createSDK();
   s.on('pause', onPause); s.on('resume', onResume); s.on('exit', onExit);   /* 리스너는 initializeAsync 전에 (가이드) */
   try { s.onBackPressed(onBack); } catch { /* */ }
-  let r; try { r = await s.initializeAsync(); } catch { return false; }
-  if (!r || r.err || !r.playerId) return false;
+  let r; try { r = await s.initializeAsync(); } catch { fail.why = 'init'; return false; }
+  if (!r || r.err || !r.playerId) { fail.why = 'init'; return false; }
   sdk = s; info = r; pid = String(r.playerId); silent = !!r.ringerSilent; on = true;
   for (const k of ['top', 'bottom', 'left', 'right']) safe[k] = Math.max(0, Number(r.safeArea && r.safeArea[k]) || 0);
   /* 원스토어 safeArea 는 문서에 'px' 로만 적혀 있고 실제로는 기기 픽셀로 옴 (11-27 대표 폰: 상단이 상태 표시줄 높이 × 기기 배율만큼 밀림) → CSS px 로 나눔.
      이미 CSS px 로 오는 기기를 대비해, 나눈 값이 아니라 원래 값이 시스템바 최대 높이(64px)를 넘을 때만 나눔 · 원래 값은 safeRaw 로 남겨 기록 */
   safeRaw = { ...safe }; const dpr = window.devicePixelRatio || 1;
-  if (dpr > 1 && Math.max(safe.top, safe.bottom) > 64) for (const k in safe) safe[k] = Math.round(safe[k] / dpr);
+  /* 11-27 QA B3: 64px 문턱은 배율 2.625 + 제스처 내비(위 63px = 24dp)처럼 작은 값을 못 잡음 → 상태 표시줄(위) 값을 배율로 나눈 값이 CSS px 상태 표시줄의 정상 범위(16~60)면 기기 픽셀로 보고 모두 나눔
+     (원래 CSS px 로 온 값은 나누면 16 아래로 떨어짐 — 예: 24 ÷ 2 = 12 → 그대로) · 위가 0 이면 아래 값으로 같은 판단(제스처 16~ · 3버튼 48 안팎) */
+  const ref0 = safe.top || safe.bottom, per = ref0 / dpr;
+  if (dpr > 1 && ref0 > 0 && per >= (safe.top ? 16 : 12) && per <= 60) for (const k in safe) safe[k] = Math.round(safe[k] / dpr);
   window.OAD_HOST = 'onestore'; window.OAD_OS_SAFE = { ...safe };
   progress(20);
   await session().catch(() => null);   /* 판매 여부 · 상품표 · 세션 표 — 못 받아도 게임은 됨(결제 · 광고만 닫힘) */
   return true;
 }
-export const ready = looks ? Promise.race([boot(), new Promise(r => setTimeout(() => r(false), 12000))]).catch(() => false) : Promise.resolve(false);
+export const ready = looks ? Promise.race([boot(), new Promise(r => setTimeout(() => { if (!on && !fail.why) fail.why = 'timeout'; r(false); }, 12000))]).catch(() => false) : Promise.resolve(false);
+export let settled = !looks; ready.then(() => { settled = true; });
 
 /* ── 로딩 · 시작 ── */
 export function progress(n) { if (on) try { sdk.setLoadingProgress(Math.max(0, Math.min(100, n))); } catch { /* */ } }
@@ -88,6 +94,12 @@ export function start() { if (!on) return Promise.resolve(false); return started
 export function quit() { if (!on) return; frames('save'); try { H.exit && H.exit(); } catch { /* */ } try { sdk.quit(); } catch { /* */ } }
 
 /* ── 서버 (api/onestore.js) ── */
+/* 사람에게 보일 한 줄 (원스토어 안 · 계정이 아직 없을 때) */
+export function failText() {
+  if (!settled) return '원스토어와 연결하고 있어요 · 잠깐만 기다려 주세요';
+  if (fail.why === 'session') return fail.msg || (fail.status ? '원스토어 계정을 확인하지 못했어요 · 잠시 뒤 다시 연결해 주세요' : '인터넷 연결을 확인한 뒤 다시 연결해 주세요');
+  return '원스토어와 연결하지 못했어요 · 다시 연결해 주세요';
+}
 /* 기기 열쇠: 이 기기에서 처음 한 번 만든 무작위 값 — 서버가 '이 계정을 늘 쓰던 기기인지' 알아보는 데만 씀(이름표만 저장 · 2026-11-27 보안 점검 #1-c) */
 function devKey() {
   try {
@@ -99,15 +111,21 @@ function devKey() {
 async function session(force) {
   if (!on) return null;
   if (tok && !force && Date.now() - tokAt < 20 * 864e5) return tok;
-  const r = await fetch('/api/onestore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'session', app: APP, pid, dk: devKey() }) });
-  const j = await r.json().catch(() => ({})); if (!r.ok || !j.token) { mode = 'off'; sale = false; return null; }
+  const r = await fetch('/api/onestore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'session', app: APP, pid, dk: devKey() }) }).catch(() => null);
+  if (!r) { Object.assign(fail, { why: 'session', msg: '', limit: false, status: 0 }); return null; }
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.token) { mode = 'off'; sale = false; Object.assign(fail, { why: 'session', msg: String(j.error || '').slice(0, 120), limit: !!j.limit, status: r.status }); return null; }
+  fail.why = ''; fail.msg = '';
   tok = j.token; tokAt = Date.now(); sale = !!j.sale; products = j.products || {}; mode = j.mode || 'off';
   return tok;
 }
 export const token = () => session();
+/* 연결한 계정(카카오 · 구글)의 표를 내 주는 함수 — account.js 가 끼움 · 있으면 결제 · 광고 보상이 그 계정으로 (서버 x-oad-acct) */
+let acctTok = null;
+export const setAcct = f => { acctTok = f; };
 export async function api(body, retry = true) {
   const t = await session(); if (!t) throw Object.assign(new Error('원스토어 연결을 준비하고 있어요'), { reason: 'off' });
-  const r = await fetch('/api/onestore', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify(body) });
+  const a = acctTok ? await Promise.resolve(acctTok()).catch(() => '') : '';
+  const r = await fetch('/api/onestore', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t, ...(a ? { 'x-oad-acct': a } : {}) }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && retry) { await session(true); return api(body, false); }
   if (!r.ok) throw Object.assign(new Error(j.error || '연결에 실패했어요'), j, { status: r.status });

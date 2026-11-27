@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, BRAND_COUPON_TEST, PROD_LIVE } from './catalog.js?v=0.99.81';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, BRAND_COUPON_TEST, PROD_LIVE } from './catalog.js?v=0.99.82';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -112,9 +112,13 @@ export function streakNow(n = 6) {
 }
 /* 이번 주 쉬는 날이 남았나 · 하루 열기 이용권 */
 export const restLeft = () => state().streak.rest !== weekOf(now());
-export const tickets = () => state().tickets || 0;
-export function addTickets(n) { const s = state(); s.tickets = Math.max(0, Math.min(99, (s.tickets || 0) + (Number(n) | 0))); save(); return s.tickets; }
-export function useTicket(id) { const s = state(); if (!(s.tickets > 0) || !GAMES[id]) return false; s.tickets--; s.unlocks[id] = keyOf(now()); save(); return true; }
+/* 이용권은 장부로 (2026-11-27 계정 기준 상태 · sync.js): tk.got{받은 곳 id: 장수} · tk.used{쓴 곳 id: 1} — 두 기기 장부를 합쳐도 두 번 세지 않음 · 수 = 받음 − 씀 */
+const tkOf = s => { if (!s.tk) { s.tk = { got: {}, used: {} }; if (s.tickets > 0) s.tk.got['old:' + Date.now().toString(36)] = s.tickets | 0; delete s.tickets; } return s.tk; };
+export const tickets = () => { const t = tkOf(state()); return Math.max(0, Math.min(99, Object.values(t.got).reduce((a, n) => a + (n | 0), 0) - Object.keys(t.used).length)); };
+export function addTickets(n, from) { const s = state(), t = tkOf(s); const k = from || 'g:' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); if (!(k in t.got)) t.got[k] = Math.max(0, Math.min(20, Number(n) | 0)); save(); return tickets(); }
+export function useTicket(id) { const s = state(); if (!(tickets() > 0) || !GAMES[id]) return false; tkOf(s).used[`use:${id}:${keyOf(now())}:${Math.random().toString(36).slice(2, 7)}`] = 1; s.unlocks[id] = keyOf(now()); save(); return true; }
+/* 점방 내 정보를 계정에 저장할지 기본값 (대표 11-27 '켬' · 대표 결정 전까지 · 한 줄로 바꿈) — 사람마다 점방 입력 화면 · 설정에서 끌 수 있음 */
+export const FORTUNE_ME_CLOUD_DEFAULT = true;
 /* 오늘 보충할 수 있는 놓친 날 (없으면 null) */
 export const fillable = () => { if (BM_OFF) return null; /* 실서버 BM 을 끈 때(PROD_BM_OFF)만: 광고가 없으니 놓친 날 도장 광고 보충 없음 */ const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
 export function fillByAd() {

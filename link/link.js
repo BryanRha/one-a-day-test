@@ -5,13 +5,15 @@ const KK = 'oad_link_kb';
 const $ = id => document.getElementById(id);
 const show = id => ['go', 'done', 'bad'].forEach(x => { $(x).hidden = x !== id; });
 const q = new URLSearchParams(location.search);
-const qk = q.get('k');
-if (qk && /^[A-Za-z0-9_-]{32}$/.test(qk)) { try { localStorage.setItem(KK, JSON.stringify({ k: qk, at: Date.now() })); } catch { /* */ } history.replaceState(null, '', location.pathname); }
-const pend = () => { try { const x = JSON.parse(localStorage.getItem(KK) || 'null'); return x && Date.now() - x.at < 10 * 60e3 ? x.k : ''; } catch { return ''; } };
+const qk = q.get('k'), qp = q.get('p');
+if (qk && /^[A-Za-z0-9_-]{32}$/.test(qk)) { try { localStorage.setItem(KK, JSON.stringify({ k: qk, at: Date.now(), p: qp === 'kakao' ? 'kakao' : qp === 'google' ? 'google' : '' })); } catch { /* */ } history.replaceState(null, '', location.pathname); }
+const pendX = () => { try { const x = JSON.parse(localStorage.getItem(KK) || 'null'); return x && Date.now() - x.at < 10 * 60e3 ? x : null; } catch { return null; } };
+const pend = () => (pendX() || {}).k || '';
 const bad = msg => { $('why').textContent = msg; show('bad'); };
 
+let CFG = null;
 async function client() {
-  const cfg = await fetch('/api/admin/config').then(r => r.json()).catch(() => null);
+  const cfg = CFG = await fetch('/api/admin/config').then(r => r.json()).catch(() => null);
   if (!cfg || !cfg.url || !cfg.anon) return null;
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm');
   return createClient(cfg.url, cfg.anon);
@@ -30,6 +32,13 @@ async function bind(token, k) {
   const { data } = await c.auth.getSession().catch(() => ({ data: {} }));
   const s = data && data.session;
   if (s) return bind(s.access_token, k);
+  /* 카카오 단추는 Supabase 에 카카오가 켜져 있을 때만 · 앱에서 고른 공급자가 있으면 바로 그 로그인으로 */
+  const st = await fetch(CFG.url + '/auth/v1/settings', { headers: { apikey: CFG.anon } }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  const kakao = !!(st && st.external && st.external.kakao);
+  const go = provider => { try { const x = pendX(); if (x) localStorage.setItem(KK, JSON.stringify({ ...x, p: '' })); } catch { /* */ } c.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + '/link/' } }); };
+  const want = (pendX() || {}).p;
+  if (want === 'google' || (want === 'kakao' && kakao)) return go(want);
   show('go');
-  $('gbtn').onclick = () => c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/link/' } });
+  $('kbtn').hidden = !kakao; $('kbtn').onclick = () => go('kakao');
+  $('gbtn').onclick = () => go('google');
 })();
