@@ -1,20 +1,20 @@
 // 게임 화면 (클래식 · 어드벤처 공용): 8×8 판 + 조각 3개 끌어 놓기. 로직은 core/board.js, 여기는 그림·소리·손맛.
-import { W, H } from '../config.js?v=0.99.69';
-import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.99.69';
-import { choose } from '../core/ai.js?v=0.99.69';
-import { makeLevel } from '../core/levels.js?v=0.99.69';
-import { TINT, THEMES } from './Boot.js?v=0.99.69';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.69';
-import { audio } from '../audio.js?v=0.99.69';
-import { sky } from '../sky.js?v=0.99.69';
-import { load, save } from '../save.js?v=0.99.69';
-import * as M from '../meta.js?v=0.99.69';
-import { evaluateMoves, rateMove } from '../core/value.js?v=0.99.69';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.69';
-import { bm } from '../oad_bm.js?v=0.99.69';
-import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.99.69';
-import { roundOver, afterRound, track, helpOn, itemPrice, buyUse, swapAdLeft, swapAdUsed, adShown, adReady, failMsg, testOff } from '../bmflow.js?v=0.99.69';
-import { ITEMS, itemsOn, left as itemLeft, area as itemArea, AD_DAY } from '../core/items.js?v=0.99.69';
+import { W, H } from '../config.js?v=0.99.70';
+import { Board, N, COMBO_KEEP } from '../core/board.js?v=0.99.70';
+import { choose } from '../core/ai.js?v=0.99.70';
+import { makeLevel } from '../core/levels.js?v=0.99.70';
+import { TINT, THEMES } from './Boot.js?v=0.99.70';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.70';
+import { audio } from '../audio.js?v=0.99.70';
+import { sky } from '../sky.js?v=0.99.70';
+import { load, save } from '../save.js?v=0.99.70';
+import * as M from '../meta.js?v=0.99.70';
+import { evaluateMoves, rateMove } from '../core/value.js?v=0.99.70';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.70';
+import { bm } from '../oad_bm.js?v=0.99.70';
+import { contOffer, advProgress, roundStars, COUNTDOWN, MAX_CONT } from '../core/cont.js?v=0.99.70';
+import { roundOver, afterRound, track, helpOn, itemPrice, buyUse, swapAdLeft, swapAdUsed, adShown, adReady, failMsg, testOff } from '../bmflow.js?v=0.99.70';
+import { ITEMS, itemsOn, left as itemLeft, area as itemArea, AD_DAY } from '../core/items.js?v=0.99.70';
 
 // 성우 대사: 상황별 버전 수 (같은 말이 연달아 나오지 않게 번갈아)
 const VO = { hype: 3, good: 2, great: 2, excellent: 2, amazing: 2, unbelievable: 2, best: 4, allclear: 2, record: 2, levelclear: 2, onfire: 1, unstoppable: 1, comeback: 2 };

@@ -1,13 +1,13 @@
 // 결과: 거리·점수(최고 기록) · 주운 재화 · 입양 진행 · 미션 진행 → 다시 날기 / 로비
-import { W, H } from '../config.js?v=0.99.69';
-import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.99.69';
-import { audio } from '../audio.js?v=0.99.69';
-import { load } from '../save.js?v=0.99.69';
-import { wind } from '../fx.js?v=0.99.69';
-import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.99.69';
-import { bm } from '../oad_bm.js?v=0.99.69';
-import { outfitKey } from '../outfit.js?v=0.99.69';
-import { hofShown, hofPopup, submitRun } from '../hof.js?v=0.99.69';
+import { W, H } from '../config.js?v=0.99.70';
+import { txt, fmt, fit, button, iconButton, toast } from '../ui.js?v=0.99.70';
+import { audio } from '../audio.js?v=0.99.70';
+import { load } from '../save.js?v=0.99.70';
+import { wind } from '../fx.js?v=0.99.70';
+import { applyRun, CAT_INFO, missions, ranking, grant, adLeft, adUse } from '../meta.js?v=0.99.70';
+import { bm } from '../oad_bm.js?v=0.99.70';
+import { outfitKey } from '../outfit.js?v=0.99.70';
+import { hofShown, hofPopup, submitRun } from '../hof.js?v=0.99.70';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }

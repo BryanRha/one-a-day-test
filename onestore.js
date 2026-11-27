@@ -79,10 +79,18 @@ export function start() { if (!on) return Promise.resolve(false); return started
 export function quit() { if (!on) return; frames('save'); try { H.exit && H.exit(); } catch { /* */ } try { sdk.quit(); } catch { /* */ } }
 
 /* ── 서버 (api/onestore.js) ── */
+/* 기기 열쇠: 이 기기에서 처음 한 번 만든 무작위 값 — 서버가 '이 계정을 늘 쓰던 기기인지' 알아보는 데만 씀(이름표만 저장 · 2026-11-27 보안 점검 #1-c) */
+function devKey() {
+  try {
+    let k = localStorage.getItem('oad_os_dk');
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(k || '')) { const a = new Uint8Array(18); crypto.getRandomValues(a); k = btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); localStorage.setItem('oad_os_dk', k); }
+    return k;
+  } catch { return ''; }
+}
 async function session(force) {
   if (!on) return null;
   if (tok && !force && Date.now() - tokAt < 20 * 864e5) return tok;
-  const r = await fetch('/api/onestore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'session', app: APP, pid }) });
+  const r = await fetch('/api/onestore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ act: 'session', app: APP, pid, dk: devKey() }) });
   const j = await r.json().catch(() => ({})); if (!r.ok || !j.token) { mode = 'off'; sale = false; return null; }
   tok = j.token; tokAt = Date.now(); sale = !!j.sale; products = j.products || {}; mode = j.mode || 'off';
   return tok;
