@@ -1,24 +1,24 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.79';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.79';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.79';
-import * as R from './rules.js?v=0.99.79';
-import * as I from './install.js?v=0.99.79';
-import * as T from './track.js?v=0.99.79';
-import * as P from './pay.js?v=0.99.79';
-import * as A from './account.js?v=0.99.79';
-import * as C from './cloud.js?v=0.99.79';
-import * as BM from './bm.js?v=0.99.79';
-import * as HUB from './hub.js?v=0.99.79';
-import * as O from './operator.js?v=0.99.79';
-import * as RS from './rank.js?v=0.99.79';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.79';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.80';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.80';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.80';
+import * as R from './rules.js?v=0.99.80';
+import * as I from './install.js?v=0.99.80';
+import * as T from './track.js?v=0.99.80';
+import * as P from './pay.js?v=0.99.80';
+import * as A from './account.js?v=0.99.80';
+import * as C from './cloud.js?v=0.99.80';
+import * as BM from './bm.js?v=0.99.80';
+import * as HUB from './hub.js?v=0.99.80';
+import * as O from './operator.js?v=0.99.80';
+import * as RS from './rank.js?v=0.99.80';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.80';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.79').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.80').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.79'), import('./fortune/types.js?v=0.99.79'), import('./fortune/chat.js?v=0.99.79'), import('./fortune/oneword-ui.js?v=0.99.79')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.80'), import('./fortune/types.js?v=0.99.80'), import('./fortune/chat.js?v=0.99.80'), import('./fortune/oneword-ui.js?v=0.99.80')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -28,7 +28,7 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.79';
+const VERSION = '0.99.80';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
 PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
@@ -638,7 +638,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.79')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.80')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -972,7 +972,7 @@ function nrBar() {
   const h = RS.nrHTML(id => NRW.find(w => w.id === id)); slot.innerHTML = h; $('.nrtab').classList.toggle('withbar', !!h);
 }
 let NRWP = null;
-const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.79'), import('./neorang/works2.js?v=0.99.79').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
+const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.80'), import('./neorang/works2.js?v=0.99.80').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
 function openWork(id) {
   if (R.NR_OFF) return;
   const fr = $('#nrframe');
@@ -1115,6 +1115,45 @@ const OWT = ['ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP', 'ES
 function owTypeRow() { let t = ''; try { t = localStorage.getItem('oad_ow_type') || ''; } catch { /* */ }
   return `<h4 class="sgh">운세 · 한 단어 카드</h4><div class="group"><div><span>내 성격 유형 (선택)<br><small style="color:var(--mute)">한 단어 카드에 작은 칩 · 친구 비교에 한 줄 · 이 기기에만 저장 · AI 엔 보내지 않아요</small></span>
     <select class="owtsel" data-owtype aria-label="내 성격 유형"><option value="">안 씀</option>${OWT.map(x => `<option${x === t ? ' selected' : ''}>${x}</option>`).join('')}</select></div></div>`; }
+/* ── 원스토어 앱 안 로그인 시험 (2026-11-27 · 테스트 서버만 · 로그인은 늘 선택 — 안 해도 원스토어 번호 계정으로 골드 · 내역 · 소장 그대로) ──
+   ① WebView 안 구글 로그인 세 가지(이 화면 · 원스토어 화면 전체 · 새 창) ② 바깥 브라우저로 로그인 → 뒤로 가기로 돌아오면 이어짐 · 결과는 os_login_try{how, what, ok, reason, ctr} */
+const OSM = { frame: '이 화면', top: '전체', pop: '새 창' };
+function osLoginRows() {
+  const m = A.osMode(), now = m === 'google' ? '구글(이 화면 로그인)' : m === 'link' ? '구글(브라우저로 이음)' : '원스토어 번호';
+  return `<div><span>테스트: 원스토어 안 구글 로그인<br><small style="color:var(--mute)">지금 계정: ${now} · 결과는 기록(os_login_try)으로 남아요</small></span><span>${Object.entries(OSM).map(([k, t]) => `<button data-oslogin="${k}">${t}</button>`).join(' ')}</span></div>
+      <div><span>테스트: 바깥 브라우저로 로그인<br><small style="color:var(--mute)">브라우저에서 로그인 → 뒤로 가기로 돌아오면 이어져요</small></span><button data-oslink>열기</button></div>
+      ${m ? '<div><span>테스트: 원스토어 번호 계정으로 돌아가기</span><button data-osplain>돌아가기</button></div>' : ''}`;
+}
+async function osLoginTry(how) {
+  const r = await A.googleTry(how).catch(e => ({ ok: 0, reason: String(e && e.message || 'err').slice(0, 60) }));
+  T.track('os_login_try', { how, what: 'start', ok: r.ok, reason: r.reason, ctr: CTR });
+  if (!r.ok) toast(`시작하지 못했어요 (${r.reason})`);
+}
+/* 바깥 브라우저 열기: 원스토어 화면 전체를 안드로이드 인텐트로(원스토어가 바깥 앱으로 넘기면 됨) → 안 되면 새 창 → 그래도 안 되면 주소 복사 */
+let osLinkT = 0;
+async function osLinkStart() {
+  let L; try { L = await A.linkStart(); } catch (e) { T.track('os_login_try', { how: 'ext', what: 'start', ok: 0, reason: String(e.message || '').slice(0, 60), ctr: CTR }); return toast(e.message || '잠시 뒤 다시 해 주세요'); }
+  const it = `intent://${L.url.replace(/^https?:\/\//, '')}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(L.url)};end`;
+  let via = 'intent';
+  try { window.top.location.href = it; } catch { via = 'pop'; const w = window.open(L.url, '_blank'); if (!w) { via = 'copy'; try { await navigator.clipboard.writeText(L.url); } catch { /* */ } } }
+  T.track('os_login_try', { how: 'ext', what: 'start', ok: 1, reason: via, ctr: CTR });
+  if (via === 'copy') toast('주소를 복사했어요 · 브라우저에 붙여 넣어 열어 주세요');
+  /* 1.5초 뒤에도 이 화면이 그대로면(원스토어가 인텐트를 넘기지 않음) 주소를 보여 줌 — 길게 눌러 복사 · 브라우저에 붙여 넣기 */
+  setTimeout(() => { if (document.visibilityState !== 'visible' || !A.linkPending()) return; T.track('os_login_try', { how: 'ext', what: 'stuck', ok: 0, reason: via, ctr: CTR });
+    openSheet(`<h2 style="margin:0 0 8px">브라우저에서 열어 주세요</h2><p class="fsub">아래 주소를 복사해 크롬 · 삼성 인터넷에 붙여 넣으면 로그인 화면이 나와요 · 10분 안에</p><input readonly value="${L.url}" style="width:100%;font-size:13px;padding:10px;border-radius:10px" onfocus="this.select()"><div class="stack" style="margin-top:12px"><button class="btn" type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.closest('.panel,#sheet').querySelector('input').value).then(()=>this.textContent='복사했어요')">주소 복사</button><button class="btn ghost" data-close>닫기</button></div>`); }, 1500);
+  osLinkWatch();
+}
+/* 돌아왔을 때 + 3초마다(최대 10분) 열쇠를 물어 묶였으면 그 계정으로 */
+function osLinkWatch() {
+  if (osLinkT || !A.linkPending()) return;
+  const t0 = Date.now();
+  const tick = async () => {
+    if (!A.linkPending() || Date.now() - t0 > 10 * 60e3) { clearInterval(osLinkT); osLinkT = 0; return; }
+    if (await A.linkPoll()) { clearInterval(osLinkT); osLinkT = 0; T.track('os_login_try', { how: 'ext', what: 'back', ok: 1, reason: 'linked', ctr: CTR }); toast('로그인됐어요 · 이 계정으로 이어 갈게요'); go(tab); refreshSettings(); }
+  };
+  osLinkT = setInterval(tick, 3000); tick();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && A.linkPending()) { clearInterval(osLinkT); osLinkT = 0; osLinkWatch(); } });
 function settingsHTML() {
   const s = R.state();
   const TH = [['auto', '자동'], ['light', '밝게'], ['dark', '어둡게']], tp = themePick();
@@ -1149,6 +1188,7 @@ function settingsHTML() {
       <div><span>테스트: 게임 안 BM 그룹 <span class="badge">${BM.group()}</span><br><small style="color:var(--mute)">A 지금 그대로 · B 보상형 광고 + 골드 · C B + 약한 전면 광고</small></span><span><button data-bmg="A">A</button> <button data-bmg="B">B</button> <button data-bmg="C">C</button></span></div>
       <div><span>테스트: 연속 실패 응원 선물 <span class="badge">${BM.helpOn() ? '켜짐' : '꺼짐'}</span></span><span><button data-helpg="on">켜기</button> <button data-helpg="off">끄기</button></span></div>
       <div><span>테스트: 하루 한 게임 규칙<br><small style="color:var(--mute)">켜면 실제처럼 잠기고 광고 · 골드로 열어요</small></span><button data-strict>${R.RULES.openAll ? '켜기' : '끄기'}</button></div>
+      ${OS.on ? osLoginRows() : ''}
       <div><span>테스트: 너랑 새 창으로<br><small style="color:var(--mute)">원어데이 탭 밖에서 너랑만 열어요</small></span><span><button data-lab="/neorang/">너랑</button></span></div>`}
       <div><span>모든 기록 지우기</span><button class="warn" data-reset>초기화</button></div>
     </div>
@@ -1570,7 +1610,7 @@ function fakeAd(label, reward) {
 /* 시트 안에서 눌러 다른 시트 화면으로 넘어가는 것 = 한 단계 (뒤로가기 = 앞 시트 화면) */
 const STEP_KEYS = ['gbuy', 'mybuy', 'restoreCode', 'delacctOpen', 'shop', 'ghist', 'fortuneEdit', 'paid', 'paidEdit', 'type', 'chat', 'fpack', 'freebie', 'login'];
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-tycard],[data-sharecard],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-cbuy],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-lab],[data-settings],[data-bseg],[data-home],[data-att-claim],[data-att-go],[data-ticket],[data-theme-set],[data-nrgo]');
+  const t = e.target.closest('[data-tarot],[data-type],[data-tyshare],[data-tycard],[data-sharecard],[data-chat],[data-mypaid],[data-mybuy],[data-restore-code],[data-delacct-open],[data-delacct],[data-fpack],[data-freebie],[data-fbclaim],[data-recap],[data-fcal],[data-fday],[data-stampfill],[data-share],[data-paid-edit],[data-rest],[data-helpg],[data-bmg],[data-play-synced],[data-cpick],[data-nudge-off],[data-cundo],[data-shop],[data-pack],[data-ghist],[data-cbuy],[data-gbuy],[data-strict],[data-gfort],[data-login],[data-logout],[data-track-off],[data-sd-close],[data-paid],[data-buy],[data-fortune],[data-fortune-edit],[data-fortune-del],[data-play],[data-open],[data-ad],[data-close],[data-exit],[data-intro],[data-day],[data-reset],[data-tab-go],[data-install],[data-ext],[data-copy],[data-hide-install],[data-idiag],[data-igift],[data-wk],[data-lab],[data-settings],[data-bseg],[data-home],[data-att-claim],[data-att-go],[data-ticket],[data-theme-set],[data-nrgo],[data-oslogin],[data-oslink],[data-osplain]');
   if (!t) return;
   const d = t.dataset;
   /* 게임 · 운세로 넘어갈 때 붙일 from: 오늘 허브 카드(hub) · 아래 게임 칸(home_<칸>) */
@@ -1622,6 +1662,9 @@ document.addEventListener('click', e => {
   else if ('gfort' in d) fortuneGold(t);
   else if ('lab' in d) { if (!R.PROD && /^\/lab\/[a-z0-9-]+\/$/.test(d.lab)) location.href = d.lab; }
   else if ('strict' in d) { try { localStorage.setItem('oad_strict', R.RULES.openAll ? '1' : '0'); } catch { /* */ } location.reload(); }
+  else if ('oslogin' in d) osLoginTry(d.oslogin);
+  else if ('oslink' in d) osLinkStart();
+  else if ('osplain' in d) A.osPlain().then(() => { toast('원스토어 번호 계정으로 돌아왔어요'); refreshSettings(); });
   else if ('login' in d) { T.track('login_click'); if (PV.store()) A.login().then(() => { closeSheet(); toast('원스토어 계정으로 연결됐어요'); }, er => toast(er.message)); else if (I.env.inApp) needLogin(); else A.login().catch(er => toast(er.message)); }
   else if ('logout' in d) { A.logout().then(() => { go('settings'); toast('로그아웃했어요'); }); }
   else if ('trackOff' in d) { T.setOptOut(!T.optedOut()); go('settings'); toast(T.optedOut() ? '이용 기록을 보내지 않아요' : '이용 기록 보내기를 다시 켰어요'); }
@@ -1685,6 +1728,9 @@ document.addEventListener('oad:installed', () => { T.track('installed', { via: D
 /* ctr: 어느 그릇에서 열렸나 (2026-11-27 저장 칸 조사 — 그릇마다 저장소가 따로) os = 원스토어(다른 주소가 감싼 iframe) · pwa = 홈 화면 설치 아이콘(standalone) · frame = 같은 주소 iframe · web = 브라우저 */
 const CTR = OS.looks ? 'os' : I.standalone() ? 'pwa' : window.parent !== window ? 'frame' : 'web';
 T.start(VERSION, { br: I.env.br, osv: I.env.osv, ctr: CTR });
+/* 원스토어 안 구글 로그인 시험에서 돌아왔나 (테스트 서버만) · 바깥 브라우저 로그인 기다리는 중이면 다시 물음 */
+if (!R.PROD) A.googleBack().then(r => { if (r) { T.track('os_login_try', { how: r.how, what: 'back', ok: r.ok, reason: r.reason, ctr: CTR }); toast(r.ok ? '구글로 로그인됐어요 (시험)' : `로그인 결과: ${r.reason}`); } }).catch(() => {});
+if (OS.looks) OS.ready.then(on => { if (on && A.linkPending()) osLinkWatch(); });
 /* 원스토어 안이면 어디서 열렸는지 한 번 (저장 칸이 들어오는 길마다 나뉘는지 보려고 · host 만 · n = 이 칸에 든 저장 키 수) */
 if (OS.where) { let n = 0; try { n = localStorage.length; } catch { /* */ } T.track('os_where', { ...OS.where, n, new: T.isNew ? 1 : 0 }); }
 // 계정: 로그인돼 있으면 불러오기 · 구글에서 막 돌아왔으면 환영

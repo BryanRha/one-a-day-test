@@ -1,7 +1,7 @@
 // 원어데이 계정: 구글 로그인 (Supabase) · 서버의 /api/me 로 플레이어 기록 + 골드 잔액
 //   서버가 있는 주소에서만 (test.oneaday.kr · oneaday.kr · vercel.app) · 게임은 로그인 없이도 그대로
 //   원스토어 앱 안(onestore.js · 2026-11-24): 구글 로그인 대신 원스토어 playerId → 서버가 준 세션 표(os1.)로 같은 /api/me 를 씀 (늘 '로그인됨' · 이름 · 이메일 없음)
-import * as OS from './onestore.js?v=0.99.79';
+import * as OS from './onestore.js?v=0.99.80';
 const HOST = location.hostname;
 export const ON = /(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app');
 let sb = null, cfg = null, me = null, listeners = [];
@@ -37,11 +37,80 @@ async function load(session) {
   const r = await fetch('/api/me', { method: 'POST', headers: { Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' }, body: JSON.stringify({ d }) }).catch(() => null);
   me = r && r.ok ? await r.json() : null; emit(); return me;
 }
+/* 원스토어 앱 안의 계정 (2026-11-27 대표 '원스토어 앱 안에도 진짜 로그인'): 기본 = 원스토어 번호 계정(os1.) · 로그인하면 그 계정
+   oad_os_acct: '' 원스토어 번호 · 'google' 이 WebView 안에서 구글 로그인이 된 경우(Supabase 세션) · 'link' 바깥 브라우저에서 로그인하고 받은 표(lk1. · oad_lk) */
+const OSA = 'oad_os_acct', LK = 'oad_lk';
+const lsg = k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } };
+const lss = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch { /* */ } };
+export const osMode = () => (OS.on ? lsg(OSA) : '');
+const lkOk = t => { const p = String(t || '').split('.'); return p[0] === 'lk1' && Number(p[2]) > Date.now(); };
+async function osTok() {
+  const m = lsg(OSA);
+  if (m === 'link' && lkOk(lsg(LK))) return lsg(LK);
+  if (m === 'google') { const c = await client(); const s = c && await safeSession(c); if (s) return s.access_token; }
+  return (await OS.token().catch(() => null)) || '';
+}
+/* 원스토어 번호 계정으로 돌아가기 (시험 · 로그인 해제) */
+export async function osPlain() { lss(OSA, ''); lss(LK, ''); return init(); }
 /* 앱을 열 때: 로그인돼 있으면 계정 불러오기 */
-export async function init() { if (OS.looks) await OS.ready; if (OS.on) { const t = await OS.token().catch(() => null); return t ? load({ access_token: t }) : null; } if (!ON) return null; const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
+export async function init() { if (OS.looks) await OS.ready; if (OS.on) { const t = await osTok(); return t ? load({ access_token: t }) : null; } if (!ON) return null; const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
 export async function login() { if (OS.on) { if (!(await init())) throw new Error('원스토어 연결을 다시 시도해 주세요'); return; } const c = await client(); if (!c) throw new Error('로그인은 곧 열려요'); await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/?login=1' } }); }
+
+/* ── 원스토어 앱 안 구글 로그인 시험 (테스트 서버만 · 2026-11-27) ──
+   how: frame = 이 화면(iframe)에서 바로 · top = 원스토어 화면 전체를 구글로 · pop = 새 창
+   돌아오면(?login=1 또는 #access_token) googleBack() 이 세션을 확인 → 되면 이 앱의 계정을 구글로 (oad_os_acct=google) */
+const TRY = 'oad_os_login_try';
+export async function googleTry(how) {
+  const c = await client(); if (!c) return { ok: 0, reason: 'no_client' };
+  const back = location.origin + location.pathname + '?login=1';
+  const { data, error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back, skipBrowserRedirect: true } });
+  if (error || !data || !data.url) return { ok: 0, reason: String((error && error.message) || 'no_url').slice(0, 60) };
+  lss(TRY, JSON.stringify({ how, at: Date.now() }));
+  try {
+    if (how === 'pop') { const w = window.open(data.url, '_blank'); return { ok: w ? 1 : 0, reason: w ? 'opened' : 'popup_null' }; }
+    if (how === 'top') { window.top.location.href = data.url; return { ok: 1, reason: 'top_nav' }; }
+    location.assign(data.url); return { ok: 1, reason: 'frame_nav' };
+  } catch (e) { return { ok: 0, reason: String(e && e.name || 'err').slice(0, 40) }; }
+}
+/* 로그인 뒤 돌아왔을 때 (원스토어 안 · 밖 모두): { how, ok, reason } | null(시험 중이 아님) */
+export async function googleBack() {
+  const q = new URLSearchParams(location.search), h = location.hash || '';
+  let t = null; try { t = JSON.parse(lsg(TRY) || 'null'); } catch { /* */ }
+  if (!t && !OS.looks) return null;   /* 일반 웹 로그인은 원래 길(app.js ?login=1)이 맡음 */
+  if (!q.has('login') && !/access_token|error_description|[?&]code=/.test(h + location.search)) return null;
+  const err = new URLSearchParams(h.replace(/^#/, '')).get('error_description') || q.get('error_description') || '';
+  const c = await client(); const s = c && await safeSession(c);
+  lss(TRY, '');
+  if (s && OS.looks) { await OS.ready; if (OS.on) { lss(OSA, 'google'); await init(); } }
+  return { how: (t && t.how) || '?', ok: s ? 1 : 0, reason: s ? 'session' : (err ? 'err:' + err.slice(0, 50) : 'no_session') };
+}
+
+/* ── 바깥 브라우저로 로그인하고 돌아오기 (대표 11-27 "브라우저에서 로그인 하고 뒤로가기하면 다시 원어데이로") ──
+   ① 앱(원스토어 번호 계정)이 서버에 한 번 쓰는 열쇠를 받음(10분) → 바깥 브라우저로 /link/?k=<열쇠>
+   ② 브라우저에서 구글 로그인 → 서버가 열쇠에 그 계정을 묶음
+   ③ 앱이 돌아왔을 때 · 몇 초마다 열쇠를 물어 묶였으면 표(lk1.)를 받아 그 계정으로 */
+const LINKK = 'oad_link_k';
+async function osCall(body) {
+  const t = (await OS.token().catch(() => null)) || ''; if (!t) throw new Error('원스토어 연결을 준비하고 있어요');
+  const r = await fetch('/api/me', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || '연결에 실패했어요'), j, { status: r.status });
+  return j;
+}
+export async function linkStart() {
+  const j = await osCall({ act: 'link', sub: 'new' });
+  lss(LINKK, JSON.stringify({ k: j.k, exp: j.exp }));
+  return { k: j.k, url: `${location.origin}/link/?k=${encodeURIComponent(j.k)}` };
+}
+export const linkPending = () => { try { const x = JSON.parse(lsg(LINKK) || 'null'); return x && x.exp > Date.now() ? x : null; } catch { return null; } };
+/* 묶였으면 true (그 계정으로 다시 불러옴) · 아직이면 false · 끝났으면(만료 · 이미 씀) 열쇠를 버림 */
+export async function linkPoll() {
+  const x = linkPending(); if (!x) { lss(LINKK, ''); return false; }
+  let j; try { j = await osCall({ act: 'link', sub: 'poll', k: x.k }); } catch (e) { if (e.status === 410 || e.status === 404) lss(LINKK, ''); return false; }
+  if (!j.token) return false;
+  lss(LINKK, ''); lss(LK, j.token); lss(OSA, 'link'); await init(); return true;
+}
 /* 서버에 계정 일 시키기 (골드 쓰기 · 내역): 로그인 토큰을 붙여 /api/me 로 */
-export async function token() { if (OS.looks) await OS.ready; if (OS.on) return (await OS.token().catch(() => null)) || ''; const c = await client(); if (!c) return ''; const session = await safeSession(c); return session ? session.access_token : ''; }
+export async function token() { if (OS.looks) await OS.ready; if (OS.on) return osTok(); const c = await client(); if (!c) return ''; const session = await safeSession(c); return session ? session.access_token : ''; }
 export async function call(body) {
   const t = await token(); if (!t) throw new Error('로그인이 필요해요');
   const r = await fetch('/api/me', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
