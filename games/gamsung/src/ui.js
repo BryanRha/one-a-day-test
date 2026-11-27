@@ -1,14 +1,14 @@
 // 화면: 돈 · 마음 · 원두 · 레벨 · 머신/로스터 창 · 단골 사연 · 꾸미기 · 주문서 · 출석 · 가게(매장·동료) · 설정 · 말풍선
 import * as THREE from 'three';
-import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, APRONS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.97';
-import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.97';
-import { cup, FURN_MODEL } from './models.js?v=0.99.97';
-import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong, vipOn } from './game.js?v=0.99.97';
-import { bm } from './oad_bm.js?v=0.99.97';
-import { sfx, setAudio } from './audio.js?v=0.99.97';
-import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.97';
-import { UI2 } from './ui2.js?v=0.99.97';
-import { FLOORS, FINISHED } from './layout.js?v=0.99.97';
+import { BRAND, GAME, MENU, CATS, ROAST, FURN, FURN_CATS, APRONS, STAFF, STAFF_UP, OFFLINE, STORES, REGULARS, XP, COUPON, BEAN_MAX, FAVOR_MAX, MACHINES, PULL, ART, POEMS, POEM_PER, CHEER } from './data.js?v=0.99.98';
+import { S, ST, save, today, couponReady, claimCoupon, levelOf, dayTick, newStore, now, resetAll } from './state.js?v=0.99.98';
+import { cup, FURN_MODEL } from './models.js?v=0.99.98';
+import { fmt, machineCount, storeMult, priceMult, WALL_SLOTS, STACK, poemLen, isJeong, vipOn } from './game.js?v=0.99.98';
+import { bm } from './oad_bm.js?v=0.99.98';
+import { sfx, setAudio } from './audio.js?v=0.99.98';
+import { pushBack, inOAD, exitToOAD, track, flushDay } from './oad.js?v=0.99.98';
+import { UI2 } from './ui2.js?v=0.99.98';
+import { FLOORS, FINISHED } from './layout.js?v=0.99.98';
 /* 실서버 주소인가 (oneaday.kr · www — test.oneaday.kr 은 아님): 테스트 도구는 실서버에서 안 보이게 */
 const PROD_HOST = /(^|\.)oneaday\.kr$/i.test(location.hostname) && !/^test\./i.test(location.hostname);
 

@@ -172,7 +172,7 @@ export const RATING = {};
 //   테스트 · 개발은 늘 전부 보임 · 여기 없는 게임은 실서버 목록 · 오늘의 게임 순서 · 보관함 · 골드 구매에서 빠지고, 직접 주소(/games/<폴더>/)도 실서버 middleware 가 404
 //   '실서버에 올린다' = 이 목록에 한 줄 + server/api/_lib/gold.js PROD_LIVE + server/middleware.js PROD_DIRS(폴더 이름) 에 같은 게임 (다르면 build.mjs 가 멈춤) → 테스트 배포 → 실서버 승격
 //   2026-11-16 첫 공개 15개 · 빠진 것: salvage · rhythm(테스트 통과 전) · bagel(0.7.2 통과 뒤 넣음)
-export const PROD_LIVE = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson', 'bagel'];
+export const PROD_LIVE = ['witch', 'ocean', 'racer', 'blocks', 'dice', 'war', 'seek', 'beauty', 'farm', 'gamsung', 'pae', 'camp', 'diary', 'fdefense', 'hanson', 'bagel', 'salvage', 'rhythm'];
 // 브랜드 매장 쿠폰(게임 성과 → 실물 쿠폰)을 실서버에서도 발급할지 — 서면 계약 · 게임위 자문 전까지 false
 //   게임은 hello() 응답의 coupon 으로 받음 (false 면 쿠폰 화면 · 안내를 모두 숨김)
 export const BRAND_COUPON_PROD = false;

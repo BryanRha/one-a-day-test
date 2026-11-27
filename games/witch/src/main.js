@@ -1,13 +1,13 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.97';
-import { audio } from './audio.js?v=0.99.97';
-import { BootScene } from './scenes/Boot.js?v=0.99.97';
-import { TitleScene } from './scenes/Title.js?v=0.99.97';
-import { LobbyScene } from './scenes/Lobby.js?v=0.99.97';
-import { PlayScene } from './scenes/Play.js?v=0.99.97';
-import { ResultScene } from './scenes/Result.js?v=0.99.97';
-import { WindFX } from './fx.js?v=0.99.97';
-import { installBack } from './oad.js?v=0.99.97';
-import { bm } from './oad_bm.js?v=0.99.97';
+import { W, BASE_H, setH } from './config.js?v=0.99.98';
+import { audio } from './audio.js?v=0.99.98';
+import { BootScene } from './scenes/Boot.js?v=0.99.98';
+import { TitleScene } from './scenes/Title.js?v=0.99.98';
+import { LobbyScene } from './scenes/Lobby.js?v=0.99.98';
+import { PlayScene } from './scenes/Play.js?v=0.99.98';
+import { ResultScene } from './scenes/Result.js?v=0.99.98';
+import { WindFX } from './fx.js?v=0.99.98';
+import { installBack } from './oad.js?v=0.99.98';
+import { bm } from './oad_bm.js?v=0.99.98';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 기본 폰트 */ }
