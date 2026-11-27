@@ -25,7 +25,7 @@ export const toNine = () => hms(next9() - now());
 const localOpen = () => Math.max(0, Math.min(12, Math.round((Date.parse(period()) - Date.parse('2026-11-02')) / 864e5) + 1));
 const A = p => (p ? 'neorang/img/' + String(p).replace(/^\.?\/?(img\/)?/, '') : '');
 
-import { ic, coin, rings } from './ui.js?v=0.99.76';
+import { ic, coin, rings } from './ui.js?v=0.99.77';
 /* ── 새 화면 체계 (2026-11-26 시안 3 피트니스 · lab/ui-apple/3): 칭찬 + 링 세 겹 → 연속 기록 → 다음 할 일(안 닫힌 링부터) → 이번 주 링 7개 → 내일도 여기서 ── */
 const KB = 'role="button" tabindex="0"';
 const img = (X, src, cls = '', extra = '') => (src ? `<img class="${cls}" src="${X.webp ? X.webp(src) : src}" data-png="${src}" alt="" ${extra}>` : '');
@@ -84,13 +84,16 @@ const epTitle = (w, no) => (w.eps[no - 1] || {}).title || `${no}화`;
 function nrSt(X) {
   if (X.NR_OFF) return { st: 'soon', done: false };   /* 실서버 너랑 공개 스위치(rules.js PROD_NR_OPEN)가 꺼져 있을 때만 */
   if (!NR_SERIAL) {   /* 끝없는 방: 마지막으로 이어 간 방 → 이어 하기 · 없으면 고르기 */
-    const S = nrS(), rooms = S.rooms || {}, ids = Object.keys(rooms).filter(k => rooms[k] && rooms[k].turns > 0 && nrW(k)).sort((a, b) => (rooms[b].at || 0) - (rooms[a].at || 0));
-    const w = nrW(ids[0] || S.lastW) || nrW('c17');
-    if (!S.onboarded || !w || S.v !== 2) return { st: 'first', done: false, w: w || null };
-    const r = rooms[w.id], left = (NR.home && NR.home.left) || { light: 60, free: 10 };
+    /* 상태(링)는 이 기기 nr_v2 만으로 셈 — 작품 목록(works.js · 늦게 옴)은 카드 그림 · 글에만 씀
+       (2026-11-27 대표 제보: 새로 열 때 첫 그림이 작품 목록 전이라 'first' → 링 2/3 → 다시 오면 3/3) */
+    const S = nrS(), rooms = S.rooms || {}, wait = !(NR.works && NR.works.length);   /* 목록 전 · 못 받음 */
+    const ids = Object.keys(rooms).filter(k => rooms[k] && rooms[k].turns > 0 && (wait || nrW(k))).sort((a, b) => (rooms[b].at || 0) - (rooms[a].at || 0));
+    const w = nrW(ids[0] || S.lastW) || nrW('c17') || null;
+    if (!S.onboarded || S.v !== 2 || (!w && !wait)) return { st: 'first', done: false, w };
+    const rid = w ? w.id : ids[0] || S.lastW || '', r = rooms[rid], left = (NR.home && NR.home.left) || { light: 60, free: 10 };
     const seenToday = !!S.seen && new Date(S.seen).toDateString() === new Date(now()).toDateString();
     const st = r && r.turns ? (seenToday ? 'done' : 'cont') : 'pick';
-    return { st, done: st === 'done', w, r, left, lunch: false, ask: false };
+    return { st, done: st === 'done', w, rid, r, left, lunch: false, ask: false };
   }
   const S = nrS(), w = nrW(S.lastW) || nrW('c17');
   if (!S.onboarded || !w) return { st: 'first', done: false, w: w || null };
@@ -119,6 +122,12 @@ function nrCard(X, N) {
     return row(N.st, `너랑 · ${w.short}`, `「${esc(epTitle(w, N.open + 1))}」`, `오늘 밤 9시 · <span data-cd9>${toNine()}</span>`, '', `work/${w.id}`);
   }
   if (N.st === 'first') return row('first', '너랑 · 내가 들어가는 이야기', '고르면 바로 시작, 끝나지 않는 이야기', '가벼운 대화 하루 60번 무료', '고르기', '');
+  /* 작품 목록이 아직(새로 연 직후 잠깐): 상태 · 링은 맞게, 카드는 글만 — 목록이 오면 다시 그림 */
+  if (!w) {
+    const link = N.rid ? (N.st === 'pick' ? `w/${N.rid}` : `room/${N.rid}`) : '';
+    if (N.done) return doneCard('n', `<i class="u-ti n">${ic('chat')}</i>`, `data-hub="nr" data-hst="done" data-nr="${link}" aria-label="너랑 이어 하기"`, '너랑 · 오늘 이어 갔어요', '이어 가던 이야기', '', ['이어 하기']);
+    return row(N.st, '너랑', N.st === 'pick' ? '고르던 이야기' : '이어 가던 이야기', '이야기를 불러오는 중이에요', N.st === 'pick' ? '작품 보기' : '이어 하기', link);
+  }
   if (N.st === 'pick') return row('pick', `너랑 · ${w.short}`, `「${esc(w.title)}」`, esc(w.hook || '고르면 바로 시작'), '작품 보기', `w/${w.id}`);
   const l = lastLine(N.r), q = l ? `“${esc(clip(l, 44))}”` : `${esc(w.ch.short)}${josa(w.ch.short, '이', '가')} 기다려요`, L = N.left || {};
   /* 사업 A4: 오늘 무료를 다 쓴 뒤에도 장면 대사는 그대로 · 두 길 [광고 보고 +5] · [🪙2로 이어 하기] — 골드가 모자라면(첫 구매 전 포함) 이어 하기가 골드 시트를 엶 */
@@ -207,7 +216,7 @@ export function html(X) {
   const lg = [
     ['g', '게임', G0, G0.st === 'none' ? '곧 열려요' : G0.done ? `${G0.g.title} · 오늘 ${G0.n}판` : `${G0.g.title} 한 판`],
     ['f', '점방', F, F.st === 'none' ? '생년월일만 넣으면 무료' : F.done ? (F.f ? `오늘 운세 ${F.f.total}점 · 봤어요` : '오늘 운세 봤어요') : `${c ? c.name + '의 ' : ''}오늘 운세 열기`],
-    ['n', '너랑', N, N.st === 'soon' ? '곧 공개돼요' : N.st === 'first' || !N.w ? '첫 이야기 고르기' : N.done ? `${N.w.ch.short}${josa(N.w.ch.short, '와', '과')} 오늘 이어 갔어요` : `${N.w.ch.short}${josa(N.w.ch.short, '와', '과')} 한 장면 이어 가기`],
+    ['n', '너랑', N, N.st === 'soon' ? '곧 공개돼요' : N.st === 'first' ? '첫 이야기 고르기' : !N.w ? (N.done ? '오늘 이어 갔어요' : N.st === 'pick' ? '이야기 고르기' : '한 장면 이어 가기') : N.done ? `${N.w.ch.short}${josa(N.w.ch.short, '와', '과')} 오늘 이어 갔어요` : `${N.w.ch.short}${josa(N.w.ch.short, '와', '과')} 한 장면 이어 가기`],
   ].map(([k, t, x, s]) => `<div class="u-lg ${k}${x.done ? ' d' : ''}"><i></i><div><b>${t} <span class="u-num">${x.done ? 1 : 0}/1</span></b><small>${esc(s)}</small></div></div>`).join('');
   const v3 = [G0.done ? 1 : 0, F.done ? 1 : 0, N.done ? 1 : 0];
   /* 다음 할 일 (사업 B4): 안 닫힌 링 순서(게임 · 점방 · 너랑) → 무료를 다 쓴 너랑 → 다 한 것은 점선 한 줄로 */
@@ -250,7 +259,7 @@ export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
   attLoad(redraw);
   if (X.NR_OFF) return;
-  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.76'), import('./neorang/works2.js?v=0.99.76').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.77'), import('./neorang/works2.js?v=0.99.77').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || (NR_SERIAL && now() >= NR.home.next9))) {

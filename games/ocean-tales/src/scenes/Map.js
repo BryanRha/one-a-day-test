@@ -1,18 +1,18 @@
 // 월드맵: 월드(10레벨씩)를 세로로 이어 붙이고, 레벨 노드를 구불구불한 길로 연결한다. 화면 근처 월드만 그린다.
-import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.76';
-import { t } from '../i18n.js?v=0.99.76';
-import { audio } from '../audio.js?v=0.99.76';
-import { load, save, availableStars } from '../save.js?v=0.99.76';
-import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.76';
-import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.76';
-import { dailyState, claimableCount } from '../missions.js?v=0.99.76';
-import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.76';
-import { dexClaimable, achClaimable } from '../progress.js?v=0.99.76';
-import { LEVELS } from '../core/levels.js?v=0.99.76';
-import { popup, button, iconButton, toast, enableGlow, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.76';
-import { inOAD, toOAD } from '../oad.js?v=0.99.76';
-import { UNLOCK as WK_UNLOCK, weekOf } from '../core/weekly.js?v=0.99.76';
-import { wt, wkPlayed } from '../weeklyflow.js?v=0.99.76';
+import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.77';
+import { t } from '../i18n.js?v=0.99.77';
+import { audio } from '../audio.js?v=0.99.77';
+import { load, save, availableStars } from '../save.js?v=0.99.77';
+import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.77';
+import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.77';
+import { dailyState, claimableCount } from '../missions.js?v=0.99.77';
+import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.77';
+import { dexClaimable, achClaimable } from '../progress.js?v=0.99.77';
+import { LEVELS } from '../core/levels.js?v=0.99.77';
+import { popup, button, iconButton, toast, enableGlow, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.77';
+import { inOAD, toOAD } from '../oad.js?v=0.99.77';
+import { UNLOCK as WK_UNLOCK, weekOf } from '../core/weekly.js?v=0.99.77';
+import { wt, wkPlayed } from '../weeklyflow.js?v=0.99.77';
 
 const WORLD_H = 3840;
 const WORLDS = WORLD_COUNT;

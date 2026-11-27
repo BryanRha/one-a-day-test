@@ -86,6 +86,7 @@ export function start(version, extra) {   /* extra: 판별 결과 등 open 에 �
 }
 
 export const enabled = ON;
+export { isNew };   /* 이 저장 칸에서 처음 연 것인지 (기기 번호를 막 만듦) */
 // 설정의 「이용 기록 보내지 않기」 — 바꾼 뒤 다음 접속부터 적용, 지금 쌓인 것도 버림
 export const optedOut = () => { try { return localStorage.getItem('oad_track_off') === '1'; } catch { return false; } };
 export function setOptOut(off) { try { if (off) { localStorage.setItem('oad_track_off', '1'); q.length = 0; } else localStorage.removeItem('oad_track_off'); } catch { /* 저장 불가 */ } }

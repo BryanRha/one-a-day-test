@@ -63,7 +63,9 @@ export function detect(ua = '', platform = '', touch = 0, standalone = false) {
 }
 
 const nav = typeof navigator !== 'undefined' ? navigator : { userAgent: '', platform: '', maxTouchPoints: 0 };
-const isStandalone = () => { try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || nav.standalone === true; } catch { return false; } };
+/* 설치 앱(홈 화면 아이콘)은 늘 최상위로 열림 — 다른 화면이 감싼 iframe 이면 설치 앱이 아님 (11-27: 원스토어 앱이 전체 화면이라 display-mode: fullscreen 이 iframe 안까지 참 → 원스토어 안에서 '설치 완료 · 선물 받기' 창이 떠서 원스토어 계정은 선물을 못 받아 넘어가지 않던 것) */
+const framedWin = (() => { try { return typeof window !== 'undefined' && window.parent !== window; } catch { return true; } })();
+const isStandalone = () => { if (framedWin) return false; try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || nav.standalone === true; } catch { return false; } };
 export const env = detect(nav.userAgent, nav.platform, nav.maxTouchPoints, typeof window !== 'undefined' && isStandalone());
 export const standalone = isStandalone;
 /* 배너 · 넛지를 숨길지: 설치 앱으로 열림 · 이 브라우저에서 설치 완료(appinstalled) · '이미 추가했어요'(30일, ops F1) */
@@ -136,7 +138,7 @@ export function bannerHTML(o = {}) {
 
 /* 그림 안내 모듈 (열 때만 불러옴) */
 let G = null;
-export const ui = () => G || (G = import('./install-guide.js?v=0.99.76'));
+export const ui = () => G || (G = import('./install-guide.js?v=0.99.77'));
 
 /* ── 글 안내 (PC · 그림 모듈을 못 불러올 때의 폴백) ── */
 const SHARE_IOS = '<svg viewBox="0 0 24 24" width="22" height="22" style="vertical-align:-5px"><path fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M7.5 7.5L12 3l4.5 4.5M6 11H5v10h14V11h-1"/></svg>';

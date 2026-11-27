@@ -27,6 +27,15 @@ const ourFrame = (() => { try { return framed && window.parent.location.origin =
 /* 원스토어가 감쌌다고 보는 때: 다른 주소가 감싼 iframe (실서버 · 테스트 서버는 frame-ancestors 로 원스토어 · 같은 주소만 감쌀 수 있음) — 원스토어 도메인 · os=1 은 기록용 */
 export const looks = framed && !ourFrame;
 export const seenOneStore = anc().some(o => OSO.test(o)) || OSO.test(ref()) || Q.get('os') === '1';
+/* 어디서 열렸나 (open 기록용 · 2026-11-27 저장 칸 나뉨 조사): 원스토어 앱 안 저장소(localStorage)는 '감싼 주소들'(최상위 사이트 · 중간 iframe)에 따라 칸이 나뉠 수 있음
+   → 주소 이름(host)만 남김 — 경로 · 질의(입장표 · 토큰)는 남기지 않음 · 개인정보 없음
+   host: 우리 주소(칸은 주소마다 따로 — 콘솔 테스트 URL 이 바뀌면 새 칸) · top: 최상위 · anc: 감싼 주소 사슬(가까운 쪽부터, 최대 4) · ref: 들어온 주소 · ent: 우리 입구(ost = /ost/<표>/ · root) · fr: iframe 안 · sa: 저장 접근 API 있음(칸 나뉨 브라우저) */
+const hostOf = s => { try { return new URL(s).host.slice(0, 60); } catch { return ''; } };
+export const where = (() => {
+  if (!framed && !seenOneStore) return null;
+  const a = anc().map(hostOf).filter(Boolean).slice(0, 4);
+  return { host: location.host.slice(0, 60), top: a[a.length - 1] || '', anc: a.join('>'), ref: hostOf(document.referrer), ent: /^\/ost\//.test(location.pathname) ? 'ost' : 'root', fr: framed ? 1 : 0, sa: typeof document.hasStorageAccess === 'function' ? 1 : 0 };
+})();
 /* 시험용 가짜 SDK: 개발 · 테스트 빌드에서만, 같은 주소의 파일만 (?ossdk=/…) — 실서버는 늘 원스토어 CDN */
 const sdkUrl = (() => { const x = Q.get('ossdk') || ''; return ENV !== 'prod' && /^\/[^/\\]/.test(x) ? x : SDK; })();
 
