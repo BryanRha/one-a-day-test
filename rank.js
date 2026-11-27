@@ -3,7 +3,8 @@
 //   서버: /api/me — GET ?rank=<판>|top3|today (CDN 캐시 · 로그인 없음) · POST act 'rank'(start · submit · mine · gifts · claim) · 'nick'
 //   광고 · 결제 단추는 이 화면들에 두지 않음 (사업 bm.md 4-1 — 자랑하는 자리)
 //   app.js 가 init(ctx) 로 시트 · 토스트 · 계정 · 기록 함수를 넘겨 줌 (아래 보관 줄 함수는 ctx 없이도 동작 — tools/rank_check.mjs 가 node 에서 시험)
-import { ic, coin } from './ui.js?v=0.99.91';
+import { ic, coin } from './ui.js?v=0.99.92';
+import * as LK from './oslinks.js?v=0.99.92';
 
 /* ── 오프라인 보관 (판마다 마지막 제출 하나 · 다시 연결되면 한 번 · 마감 + 10분 지나면 버림) ── */
 const KQ = 'oad_rank_q', GRACE = 10 * 60e3;
@@ -322,7 +323,7 @@ function tickerGo(s) {
   if (g.type === 'game') return X.openGame(g.to);
   if (g.type === 'games') return X.toGames();
   if (g.type === 'tab' && ['today', 'fortune', 'neorang', 'box'].includes(g.to)) return X.goTab(g.to);
-  if (g.type === 'link' && /^https:\/\//.test(g.to || '')) return window.open(g.to, '_blank', 'noopener');
+  if (g.type === 'link' && /^https:\/\//.test(g.to || '')) return LK.openOut(g.to);   /* 원스토어 안이면 틀을 안 벗어나게 (oslinks.js) */
   if (g.type === 'sheet') return X.openSheet(`<div class="intro"><h2>${esc(g.title || s.main)}</h2><p class="fsub">${esc(g.body || '')}</p><div class="stack"><button class="btn ghost" type="button" data-close>닫기</button></div></div>`, 'u');
 }
 const still = () => (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.classList.contains('still');

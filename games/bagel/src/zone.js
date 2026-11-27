@@ -4,10 +4,10 @@
 //   구역 직원: 원료 설비(오븐 · 토핑 바)에서 바로 받아 정해진 길(way · 76cm 틈을 안 지남)로 판매대 · 구역 테이블을 치움 · 쉬지 않음 · 청소 직원 · 실내 손님은 구역을 안 봄
 //   지점 공통 구조(OUT_ZONE[지점]) — 1단계는 1호점만 켬
 import * as THREE from 'three';
-import { OUT_ZONE, MENU, BRAND, DECO } from './data.js?v=0.99.91';
-import { box, cyl, sph, mesh, M, item, person, ITEM_H } from './models.js?v=0.99.91';
-import { S, save, addSold } from './state.js?v=0.99.91';
-import { sfx } from './audio.js?v=0.99.91';
+import { OUT_ZONE, MENU, BRAND, DECO } from './data.js?v=0.99.92';
+import { box, cyl, sph, mesh, M, item, person, ITEM_H } from './models.js?v=0.99.92';
+import { S, save, addSold } from './state.js?v=0.99.92';
+import { sfx } from './audio.js?v=0.99.92';
 
 const V = THREE.Vector3, rnd = (a, b) => a + Math.random() * (b - a), fmt = n => Math.round(n).toLocaleString('en-US');
 const LANE_DX = [-45, 45];   /* 판매대 두 줄 (구역 메뉴 순서대로) */

@@ -1,28 +1,29 @@
 // One a Day 앱 화면: 아래 탭 [오늘 · 점방 · 너랑 · 보관함] + 설정 시트(머리줄 톱니) + 게임 실행(iframe) + 잠금 해제(테스트 광고)
 //   2026-10-30 대표 A안 확정 (lab/story-mock/oad.html) — 예전 탭 오늘 · 라이브러리 · 컬렉션 · 설정은 게임 · 보관함 칸 · 설정 시트로 옮김
 //   2026-11-04 대표 '오늘 허브'(lab/home-hub/b 4칸 안): 첫 탭 = 오늘 허브(게임 · 점방 · 너랑 카드) + 그 아래 이번 주 게임(달력 · 진열장) — hub.js
-import * as OS from './onestore.js?v=0.99.91';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
-import * as PV from './provider.js?v=0.99.91';
-import { PLANNED, TEASE } from './catalog.js?v=0.99.91';
-import * as R from './rules.js?v=0.99.91';
-import * as I from './install.js?v=0.99.91';
-import * as T from './track.js?v=0.99.91';
-import * as P from './pay.js?v=0.99.91';
-import * as A from './account.js?v=0.99.91';
-import * as C from './cloud.js?v=0.99.91';
-import * as SY from './sync.js?v=0.99.91';   /* 계정 기준 앱 상태 (2026-11-27): 링 · 출석 · 게임 기록 · 하루 열기 · 이용권 · 화면 모드 · (동의하면) 점방 내 정보 */
-import * as BM from './bm.js?v=0.99.91';
-import * as HUB from './hub.js?v=0.99.91';
-import * as O from './operator.js?v=0.99.91';
-import * as RS from './rank.js?v=0.99.91';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
-import { ic, coin, ring, ringReset } from './ui.js?v=0.99.91';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
+import * as OS from './onestore.js?v=0.99.92';   /* 원스토어 앱 안이면 SDK 를 불러 초기화 (OS.ready) — 밖에서는 아무것도 안 함 */
+import * as PV from './provider.js?v=0.99.92';
+import { PLANNED, TEASE } from './catalog.js?v=0.99.92';
+import * as R from './rules.js?v=0.99.92';
+import * as I from './install.js?v=0.99.92';
+import * as T from './track.js?v=0.99.92';
+import * as P from './pay.js?v=0.99.92';
+import * as A from './account.js?v=0.99.92';
+import * as C from './cloud.js?v=0.99.92';
+import * as SY from './sync.js?v=0.99.92';   /* 계정 기준 앱 상태 (2026-11-27): 링 · 출석 · 게임 기록 · 하루 열기 · 이용권 · 화면 모드 · (동의하면) 점방 내 정보 */
+import * as BM from './bm.js?v=0.99.92';
+import * as HUB from './hub.js?v=0.99.92';
+import * as O from './operator.js?v=0.99.92';
+import * as LK from './oslinks.js?v=0.99.92';   /* 원스토어 앱 안 링크 지킴이 (11-28): 새 창 링크가 원스토어 틀을 벗기지 않게 */
+import * as RS from './rank.js?v=0.99.92';   /* 공통 랭킹 (2026-11-27): 순위표 · 이름 · 전광판 · 상세 줄 · 점방 대박 · 너랑 많이 본 작품 · 받기 · 오프라인 보관 */
+import { ic, coin, ring, ringReset } from './ui.js?v=0.99.92';   /* 2026-11-26 시안 3 피트니스: 선 아이콘 · 골드 동전 · 진행 링 */
 /* 원스토어 안(다른 주소가 감쌈)이면 처음부터 '원스토어 모드' (11-27 QA A1 · C4): SDK 준비 전 · 연결 실패 때도 웹 공급자(토스 결제창 · 원어데이 테스트 광고 · 구글 로그인 · 크롬으로 열기)로 가지 않음
    준비가 끝나면 아래 OS.ready 에서 진짜 원스토어 공급자로 바꿈 · 안 되면 이 '기다림' 공급자가 그대로 남아 '다시 연결' 안내만 */
 if (OS.looks) PV.use({ name: 'onestore', reward: async () => ({ ok: false, reason: 'off' }), inter: async () => false, canReward: () => false, canInter: () => false, canBuy: () => false, buy: async () => ({ ok: false, reason: 'off', msg: OS.failText() }) });
 // 오늘의 운세: 엔진(330KB)은 처음 볼 때만 불러옴
-let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.91').then(m => (FT = m));
+let FT = null; const ft = () => FT ? Promise.resolve(FT) : import('./fortune/fortune.js?v=0.99.92').then(m => (FT = m));
 /* 운세 덧붙이기(2026-10-28 과제 F): 오늘의 타로 · 사주 유형 · AI 상담 실험 — 새 파일로 나눠 두고 여기선 연결만 */
-let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.91'), import('./fortune/types.js?v=0.99.91'), import('./fortune/chat.js?v=0.99.91'), import('./fortune/oneword-ui.js?v=0.99.91')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
+let EX = null; const ex = () => EX ? Promise.resolve(EX) : Promise.all([ft(), import('./fortune/tarot.js?v=0.99.92'), import('./fortune/types.js?v=0.99.92'), import('./fortune/chat.js?v=0.99.92'), import('./fortune/oneword-ui.js?v=0.99.92')]).then(([, tarot, types, chat, ow]) => (EX = { tarot, types, chat, ow }));
 const XC = () => ({ H, $, ft, R, T, P, A, won, fwon, face, openSheet: fSheet, closeSheet, sdClose, toast, go, paidPage, partnerForm, fortuneForm, shareLink, saveImage, shareBase, needLogin, goldOf, gnum, rewardAd: label => PV.reward('app', label).then(x => { if (!x.ok) adFail(x); return x.ok; }) });
 /* 「AI 가 본 나, 한 단어」 (2026-11-02 대표 확정 B안 · fortune/oneword-ui.js): 운세 탭 진입 카드 → 겹 화면 · 닫으면 진입 카드만 다시 그림 */
 let owF = null;
@@ -32,10 +33,10 @@ const LAND = (() => { const q = new URLSearchParams(location.search), type = q.g
 
 const $ = s => document.querySelector(s);
 const view = $('#view');
-const VERSION = '0.99.91';
+const VERSION = '0.99.92';
 window.OAD_VERSION = VERSION;
 /* 광고 · 결제 공급자 (provider.js): 일반 브라우저 = 원어데이 테스트 광고 · 토스 / 원스토어 안 = 원스토어 광고 · 인앱결제 */
-PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) });
+PV.setWeb({ reward: (g, label) => fakeAd(label, true).then(ok => ok ? { ok: true, via: 'test' } : { ok: false, reason: 'cancel' }), inter: (g, label) => fakeAd(label, false).then(() => true) , canReward: () => !R.PROD, canInter: () => !R.PROD });   /* 실서버 웹(원스토어 밖)은 진짜 광고망이 없음 → 광고 단추 없음 · 시험 광고 창으로 공짜로 열리지 않게 (대표 11-28 실서버 제보) */
 function adFail(x) { if (x.reason === 'nofill') toast('지금은 볼 수 있는 광고가 없어요 · 잠시 뒤 다시 해 주세요'); else if (x.reason === 'timeout') toast('광고 확인이 늦어지고 있어요 · 잠시 뒤 다시 해 주세요'); else if (x.reason === 'limit') toast('오늘은 여기까지 볼 수 있어요'); else if (x.reason !== 'cancel') toast('광고를 불러오지 못했어요'); }
 let tab = 'today', timer = null, boxSeg = 'game';   /* tab: 'today'(오늘 허브 + 게임) · 'fortune'(점방) · 'neorang' · 'box' — boxSeg: 보관함 안 칸 'game' · 'coll' · 'mem' */
 
@@ -57,6 +58,7 @@ document.addEventListener('error', e => { const el = e.target; if (!el || el.tag
 const img = (src, w, extra = '') => `<img src="${webp(src, w)}" data-png="${src}" alt="" ${extra}>`;
 
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 1800); }
+LK.start(toast);
 
 // ── 탭 ─────────────────────────────────────────────
 const RENDER = { today: renderToday, fortune: renderFortune, neorang: renderNeorang, box: renderBox };
@@ -649,7 +651,7 @@ async function paidPage(id = 'cheating') {
   /* 이 기기엔 없지만 계정에 산 기록이 있으면(다른 기기 · 다른 브라우저에서 산 것) 계정에서 영수증을 다시 받아 옴 */
   if (!rc && P.ON && acctHas(id)) { try { const r = await A.call({ act: 'restore', product: id, me: m.toInput(me), partner: m.toInput(pt) }); P.keepReceipt(r.receipt, m.toInput(me), m.toInput(pt)); rc = P.receiptFor(id, m.toInput(me), m.toInput(pt)); T.track('receipt_restore', { how: 'account', product: id }); } catch { /* 다른 사람 정보로 산 것 → 미리보기 그대로 */ } }
   if (rc) { try { rp = await P.report(rc, m.toInput(me), m.toInput(pt)); paid = true; } catch (e) { toast(e.message); } }
-  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.91')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
+  const pk = paid ? null : (await import('./fortune/peek.js?v=0.99.92')).peek(id, rp, me, pt, m);   /* 궁금증 설계: 개인화 부제 · 첫 문장 앞부분 · 절벽 (fortune/peek.js) */
   let lk = 0;
   const lvlCol = PR.cols[rp.grade.level], locked = rp.sections.filter(s => !s.free).length, gold = gnum(PR.price / 10), life = rp.line === 'life', paidGold = PR.price > 3900, prWon = fwon(id, PR.price);
   /* 가려진 시기: 미리보기엔 ██ · 결제 후 서버가 계산한 같은 값 */
@@ -985,7 +987,7 @@ function nrBar() {
   const h = RS.nrHTML(id => NRW.find(w => w.id === id)); slot.innerHTML = h; $('.nrtab').classList.toggle('withbar', !!h);
 }
 let NRWP = null;
-const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.91'), import('./neorang/works2.js?v=0.99.91').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
+const nrWorks = () => NRWP || (NRWP = Promise.all([import('./neorang/works.js?v=0.99.92'), import('./neorang/works2.js?v=0.99.92').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { NRW = [...(m2.WORKS2 || []), ...(m.WORKS || [])]; return NRW; }).catch(() => (NRW = [])));   /* works2 가 같은 id 의 새 판 (hub.js 와 같은 순서) */
 function openWork(id) {
   if (R.NR_OFF) return;
   const fr = $('#nrframe');
@@ -1382,6 +1384,7 @@ const themePick = () => document.documentElement.dataset.themePick || 'auto';
 function watchAd(id) {
   if (R.BM_OFF) return toast('지금은 모든 게임을 무료로 할 수 있어요');   /* 실서버 BM 을 끈 때(rules.js PROD_BM_OFF): 모든 게임 무료라 원래 오지 않음 */
   if (PV.store()) { T.track('ad_view', { game: id, from: 'detail_locked', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); T.track('ad_done', { game: id, from: 'detail_locked', via: PV.name() }); BM.useApp(); openLog(id); R.unlockByAd(id); toast(`${G(id).title} 열림!`); PFROM = 'ad'; play(id); }); }
+  if (R.PROD) return toast('광고는 원스토어 앱에서 볼 수 있어요');   /* 실서버 웹: 시험 광고 창 금지 (11-28) */
   let left = R.RULES.adSeconds;
   T.track('ad_view', { game: id, from: 'detail_locked' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">실제 서비스에서는 여기에 광고가 나와요</div>
@@ -1396,6 +1399,7 @@ function watchAd(id) {
 function stampAd() {
   if (!R.fillable()) return go('today');
   if (PV.store()) { T.track('ad_view', { what: 'stamp', from: 'stamp', via: PV.name() }); return PV.reward('app', '광고').then(r => { if (!r.ok) return adFail(r); BM.useApp(); R.fillByAd(); T.track('stamp_fill'); go('today'); toast(`🔥 ${R.state().streak.count}일 연속으로 이어졌어요!`); }); }
+  if (R.PROD) return toast('광고는 원스토어 앱에서 볼 수 있어요');   /* 실서버 웹: 시험 광고 창 금지 (11-28) */
   let left = R.RULES.adSeconds; T.track('ad_view', { what: 'stamp', from: 'stamp' });
   openSheet(`<div class="ad"><div class="screen">광고 영역 (테스트)</div><div class="count" id="adc">${left}</div><div class="note">광고를 끝까지 보면 어제 도장이 채워져요</div>
     <div class="stack"><button class="btn" id="adok" disabled>도장 받기</button></div></div>`);
@@ -1613,6 +1617,7 @@ async function gameReq(gid, d) {
 }
 // 테스트 광고 (진짜 광고망은 승인 후): 보상형은 5초 뒤 '보상 받기', 전면은 5초 뒤 '닫기'
 function fakeAd(label, reward) {
+  if (R.PROD) return Promise.resolve(!reward);   /* 실서버: 시험 광고 창은 절대 안 띄움 — 보상형 '못 봄' · 전면 '건너뜀' (11-28 대표 제보 · 원스토어 밖 웹) */
   if (R.BM_OFF) return Promise.resolve(!reward);   /* 실서버 BM 을 끈 때(rules.js PROD_BM_OFF)만: 보상형은 '못 봄', 전면은 '건너뜀' (그룹 A 고정이라 원래 여기까지 오지 않음 · 이중 안전) */
   return new Promise(res => {
     let left = R.RULES.adSeconds, fin = false; const end = ok => { if (fin) return; fin = true; clearInterval(iv); onSheetClose = null; closeSheet(); res(ok); };

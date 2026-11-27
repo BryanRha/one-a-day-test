@@ -605,3 +605,10 @@ html.still .ig .sheet.u-ofs, html.still .ig .u-ofs-badge { animation: none !impo
 .rk-nrbar > .u-ico { width: 14px; height: 14px; color: rgba(43,36,32,.4); flex: none; }
 .nrtab.withbar .nrbox { top: calc(44px + var(--safe-t)); }
 @media (min-width: 960px) { .rk-nrbar { top: var(--tabh, 56px); padding-top: 0; min-height: 44px; } .nrtab.withbar .nrbox { top: calc(var(--tabh, 56px) + 44px); } }
+
+/* 원스토어 앱 안 안내 창 (oslinks.js · 11-28): 약관 · 환불 · 고객센터를 틀 안에서 — 새 창으로 열면 원스토어 틀이 사라짐 */
+#osGuide { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; background: var(--bg); padding-top: env(safe-area-inset-top); }
+#osGuide[hidden] { display: none; }
+#osGuide .bar { display: flex; justify-content: flex-end; padding: 8px 12px; border-bottom: 1px solid var(--line, #0001); }
+#osGuide .bar button { width: 44px; height: 44px; border-radius: 22px; border: 0; background: var(--card, #eee); color: var(--text); font-size: 18px; }
+#osGuide iframe { flex: 1; width: 100%; border: 0; background: #fff; }
