@@ -1,13 +1,13 @@
-import { W, BASE_H, setH } from './config.js?v=0.99.82';
-import { audio } from './audio.js?v=0.99.82';
-import { BootScene } from './scenes/Boot.js?v=0.99.82';
-import { TitleScene } from './scenes/Title.js?v=0.99.82';
-import { MapScene } from './scenes/Map.js?v=0.99.82';
-import { GameScene } from './scenes/Game.js?v=0.99.82';
-import { WorldClearScene } from './scenes/WorldClear.js?v=0.99.82';
-import { ReefScene } from './scenes/Reef.js?v=0.99.82';
-import { installBack } from './oad.js?v=0.99.82';
-import { initBM } from './bmflow.js?v=0.99.82';
+import { W, BASE_H, setH } from './config.js?v=0.99.83';
+import { audio } from './audio.js?v=0.99.83';
+import { BootScene } from './scenes/Boot.js?v=0.99.83';
+import { TitleScene } from './scenes/Title.js?v=0.99.83';
+import { MapScene } from './scenes/Map.js?v=0.99.83';
+import { GameScene } from './scenes/Game.js?v=0.99.83';
+import { WorldClearScene } from './scenes/WorldClear.js?v=0.99.83';
+import { ReefScene } from './scenes/Reef.js?v=0.99.83';
+import { installBack } from './oad.js?v=0.99.83';
+import { initBM } from './bmflow.js?v=0.99.83';
 
 async function start() {
   try { await document.fonts.load('48px Jua'); } catch { /* 폰트 실패 시 기본 폰트 */ }

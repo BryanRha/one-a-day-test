@@ -1,5 +1,5 @@
 // 이용 규칙 + 저장. BM 이 정해지면 RULES 값만 바꾸면 되도록 분리해 둠.
-import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, BRAND_COUPON_TEST, PROD_LIVE } from './catalog.js?v=0.99.82';
+import { LAUNCH, GAMES, ORDER as ORDER0, DAILY as DAILY0, BRAND as BRAND0, RETIRED, RATING, BRAND_COUPON_PROD, BRAND_COUPON_TEST, PROD_LIVE } from './catalog.js?v=0.99.83';
 
 // 환경: 빌드가 심은 window.OAD_ENV (dev · test · prod) — 없으면(옛 캐시 등) 주소로 판단
 export const ENV = (typeof window !== 'undefined' && window.OAD_ENV) || (/^(www\.)?oneaday\.kr$/.test(location.hostname) ? 'prod' : 'dev');
@@ -119,6 +119,9 @@ export function addTickets(n, from) { const s = state(), t = tkOf(s); const k = 
 export function useTicket(id) { const s = state(); if (!(tickets() > 0) || !GAMES[id]) return false; tkOf(s).used[`use:${id}:${keyOf(now())}:${Math.random().toString(36).slice(2, 7)}`] = 1; s.unlocks[id] = keyOf(now()); save(); return true; }
 /* 점방 내 정보를 계정에 저장할지 기본값 (대표 11-27 '켬' · 대표 결정 전까지 · 한 줄로 바꿈) — 사람마다 점방 입력 화면 · 설정에서 끌 수 있음 */
 export const FORTUNE_ME_CLOUD_DEFAULT = true;
+/* 실서버에서 점방 내 정보 계정 저장을 열지 (11-27 QA R2): 처리방침 시행 전 false · 대표가 시행일을 정하면 true — 서버 server/api/me.js FME_PROD_OPEN 과 같은 값(build.mjs 확인)
+   테스트 · 개발도 서버가 켜졌다고 알려 줄 때(/api/me 응답 fme:true · 열쇠 ME_ENC_KEY 있음)만 동의 줄 · 설정 줄을 그림 */
+export const PROD_FME_OPEN = false;
 /* 오늘 보충할 수 있는 놓친 날 (없으면 null) */
 export const fillable = () => { if (BM_OFF) return null; /* 실서버 BM 을 끈 때(PROD_BM_OFF)만: 광고가 없으니 놓친 날 도장 광고 보충 없음 */ const s = state(); return s.streak.fill && s.streak.last === keyOf(now()) ? s.streak.fill : null; };
 export function fillByAd() {

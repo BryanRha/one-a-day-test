@@ -25,7 +25,7 @@ export const toNine = () => hms(next9() - now());
 const localOpen = () => Math.max(0, Math.min(12, Math.round((Date.parse(period()) - Date.parse('2026-11-02')) / 864e5) + 1));
 const A = p => (p ? 'neorang/img/' + String(p).replace(/^\.?\/?(img\/)?/, '') : '');
 
-import { ic, coin, rings } from './ui.js?v=0.99.82';
+import { ic, coin, rings } from './ui.js?v=0.99.83';
 /* ── 새 화면 체계 (2026-11-26 시안 3 피트니스 · lab/ui-apple/3): 칭찬 + 링 세 겹 → 연속 기록 → 다음 할 일(안 닫힌 링부터) → 이번 주 링 7개 → 내일도 여기서 ── */
 const KB = 'role="button" tabindex="0"';
 const img = (X, src, cls = '', extra = '') => (src ? `<img class="${cls}" src="${X.webp ? X.webp(src) : src}" data-png="${src}" alt="" ${extra}>` : '');
@@ -172,12 +172,13 @@ function week(X, today3) {
 }
 /* ── 출석판 (2026-11-26 대표): 7칸 · 들어온 날 기준 · 하루 한 번(서버 story act 'att' 가 판단 · 계정 · 기기 · KST) · 보상은 소비성(너랑 무료 +N · 게임 하루 열기권) ──
    '연속 기록' 숫자(rules.js streak · 주 1회 쉬는 날)와 따로 감 · 서버에 닿지 못하면 칸만 보이고 받기는 숨김 */
-const ATT = { st: null, at: 0, busy: false, fail: false };
+const ATT = { st: null, at: 0, busy: false, fail: false, who: '' };
 export const attNow = () => ATT.st;
 const attTxt = c => [c.nr ? `너랑 무료 +${c.nr}` : '', c.tk ? `하루 열기 ${c.tk}장` : ''].filter(Boolean).join(' · ');
 function attLoad(redraw, force) {
+  if (ATT.who !== who()) force = true;   /* 계정이 생기거나 바뀌면 바로 다시 (기기 기준 → 계정 기준) */
   if (ATT.busy || (!force && ATT.st && Date.now() - ATT.at < 60e3)) return;
-  ATT.busy = true;
+  ATT.busy = true; ATT.who = who();
   post({ act: 'att' }).then(r => r.json()).then(j => { if (j && j.state) { ATT.st = j.state; ATT.fail = false; } else ATT.fail = true; }).catch(() => { ATT.fail = true; }).finally(() => { ATT.busy = false; ATT.at = Date.now(); redraw(); });
 }
 /* 오늘 칸 받기 → { ok, got:{cell, nr, tk}, state } · 이미 받았으면 { ok:false, already } */
@@ -254,15 +255,18 @@ export function html(X) {
 /* ── 늦게 오는 값 받기: 운세 엔진 · 너랑 작품 · 그림 목록 · 서버 시각/남은 횟수 · (점심 지난 뒤) 점심 쪽지 → 받을 때마다 redraw ── */
 const did = () => { try { return localStorage.getItem('oad_did') || ''; } catch { return ''; } };
 const ageNow = S => { if (S.birth) return new Date().getFullYear() - S.birth; if (S.age) return S.age; const me = ls('oad_fortune_me'); return me && me.y ? new Date().getFullYear() - me.y : 0; };
+/* 셸 계정 표(구글 · 원스토어 세션 · 연결 표)를 붙임 — 출석판 · 너랑 무료가 기기 말고 계정 기준 (11-27 QA R1 · R4) · 계정이 아직 없으면 기기 번호만 */
+const acct = () => { try { const A = window.__oadAcct; return A && A.current && A.current() ? A : null; } catch { return null; } };
+const who = () => { const A = acct(); return A ? String(A.current().id || '') : ''; };
 async function post(body) {
-  const S = nrS();
-  return fetch('/api/story', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ d: did(), age: ageNow(S) || 30, name: S.name || '하람', ...body }) });
+  const S = nrS(), A = acct(), t = A ? await Promise.resolve(A.token()).catch(() => '') : '';
+  return fetch('/api/story', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: 'Bearer ' + t } : {}) }, body: JSON.stringify({ d: did(), age: ageNow(S) || 30, name: S.name || '하람', ...body }) });
 }
 export function load(X, redraw) {
   if (ls('oad_fortune_me') && !X.FT()) X.ft().then(redraw).catch(() => {});
   attLoad(redraw);
   if (X.NR_OFF) return;
-  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.82'), import('./neorang/works2.js?v=0.99.82').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
+  if (!NR.works) Promise.all([import('./neorang/works.js?v=0.99.83'), import('./neorang/works2.js?v=0.99.83').catch(() => ({ WORKS2: [] }))]).then(([m, m2]) => { const ids = new Set((m2.WORKS2 || []).map(x => x.id)); NR.works = [...m.WORKS.filter(w => !ids.has(w.id)), ...(m2.WORKS2 || [])]; NR.soon = m.SOON; redraw(); }).catch(() => { NR.works = []; });
   if (!NR.artAsked) { NR.artAsked = 1; fetch('neorang/img/manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : {})).then(m => { if (m && typeof m === 'object') { NR.art = m; redraw(); } }).catch(() => {}); }
   /* 서버 home: 1분에 한 번 · 밤 9시를 지나면 다시 */
   if (!NR.busy && (!NR.home || Date.now() - NR.at > 60e3 || (NR_SERIAL && now() >= NR.home.next9))) {

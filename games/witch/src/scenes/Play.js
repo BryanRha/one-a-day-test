@@ -1,16 +1,16 @@
 // 비행 화면: core/run.js 시뮬레이션을 고정 간격으로 돌리고, 상태(s)와 사건(events)을 그림·소리로 옮긴다.
-import { W, H } from '../config.js?v=0.99.82';
-import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.99.82';
-import { decideX } from '../core/ai.js?v=0.99.82';
-import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.99.82';
-import { audio } from '../audio.js?v=0.99.82';
-import { load, save } from '../save.js?v=0.99.82';
-import { wind, tipOf, bodyOf, ELEMENT } from '../fx.js?v=0.99.82';
-import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.99.82';
-import { bm } from '../oad_bm.js?v=0.99.82';
-import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.99.82';
-import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.99.82';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.82';
+import { W, H } from '../config.js?v=0.99.83';
+import { Run, LANE_W, LANES, ITEM_TIME, ZONE_EVERY } from '../core/run.js?v=0.99.83';
+import { decideX } from '../core/ai.js?v=0.99.83';
+import { txt, fmt, fit, iconButton, button, popup, toast } from '../ui.js?v=0.99.83';
+import { audio } from '../audio.js?v=0.99.83';
+import { load, save } from '../save.js?v=0.99.83';
+import { wind, tipOf, bodyOf, ELEMENT } from '../fx.js?v=0.99.83';
+import { ZONES, BOSS_NAME, ITEM_NAME, REVIVE_COST, REVIVE_MAX, OAD_REVIVE_MAX, REVIVE_SEC, reviveMood, BOOSTERS, pay } from '../meta.js?v=0.99.83';
+import { bm } from '../oad_bm.js?v=0.99.83';
+import { activeOutfit, outfitKey, outfitFx } from '../outfit.js?v=0.99.83';
+import { helpCheck, giftMeters, helpShown, noteRun, track } from '../help.js?v=0.99.83';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.83';
 
 const DT = 1 / 60;
 const SHOT_KEY = { star: 'bolt_star', fire: 'bolt_fire', ice: 'bolt_ice', bolt: 'bolt_bolt', furball: 'furball' };

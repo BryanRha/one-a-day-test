@@ -4,9 +4,9 @@
 //   합치기: 링 · 출석 날은 합집합(켜진 것은 안 꺼짐) · 게임 판 수는 큰 쪽 · 날짜는 늦은 쪽 · 이용권은 장부 합집합 · 설정은 늦게 바꾼 쪽
 //   흐름: 계정이 생기면 pull → 합침 → 기기에 씀 → (달라졌으면) push · 그 뒤 15초마다 바뀐 게 있으면 push · 화면을 떠날 때 한 번 · 충돌(409)이면 다시 받아 합쳐 올림
 //   점방 내 정보: 카카오 · 구글 계정만(게스트 안 됨) · 동의(기본 켬 · rules.js FORTUNE_ME_CLOUD_DEFAULT)일 때만 · 서버가 암호화해 저장 · 계산은 기기에서
-import * as R from './rules.js?v=0.99.82';
-import * as A from './account.js?v=0.99.82';
-import * as OS from './onestore.js?v=0.99.82';
+import * as R from './rules.js?v=0.99.83';
+import * as A from './account.js?v=0.99.83';
+import * as OS from './onestore.js?v=0.99.83';
 
 const DKEY = 'oad_days', SETAT = 'oad_set_at', MEK = 'oad_fortune_me', MEC = 'oad_fme_cloud';
 const js = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
@@ -104,7 +104,7 @@ export function start(redraw) {
 }
 
 /* ── 점방 내 정보 (카카오 · 구글 계정 · 동의했을 때만) ── */
-export const fmeAllowed = () => !!A.current() && (!OS.on || !!A.osMode());
+export const fmeAllowed = () => { const m = A.current(); return !!m && m.fme === true && (!R.PROD || R.PROD_FME_OPEN) && (!OS.on || !!A.osMode()); };   /* 서버가 켜짐(fme · 열쇠 있음 · 실서버 스위치)일 때만 — 아니면 줄을 그리지 않고 동의도 받지 않음 (QA R2) */
 export const fmeOn = () => { const v = localStorage.getItem(MEC); return v == null ? R.FORTUNE_ME_CLOUD_DEFAULT : v === '1'; };
 export const FME = { off: false, last: '' };
 /* 동의 바꾸기: 끄면 서버 것을 바로 지움 */
