@@ -107,7 +107,9 @@ const seedOf = (w, no) => (no <= 1 ? w.hook : no <= 4 ? (w.eps[no - 2] || {}).te
 const lastSay = body => { const s = [...(body || [])].reverse().find(x => x[0] === 's'); return s ? s[1] : ''; };
 
 /* ── 로그인(있으면): 계정에 진행을 이어 붙임 ── */
-(async () => { try { const A = await import('../account.js'); if (!A.ON) return; await A.init(); TOK = (await A.token()) || ''; if (TOK) sync(); } catch { /* 로그인 없이 */ } })();
+(async () => { try {   /* 셸 안이면 셸의 계정 모듈 하나(__oadAcct · 원스토어 세션 포함)를 씀 — 따로 불러오면 원스토어 계정을 모름 (2026-11-27 · nr.js 와 같은 까닭) */
+  const P = (() => { try { return window.parent !== window && window.parent.location.origin === location.origin ? window.parent.__oadAcct || null : null; } catch { return null; } })();
+  const A = P || await import('../account.js'); if (!A.ON) return; if (!P) await A.init(); TOK = (await A.token()) || ''; if (TOK) sync(); } catch { /* 로그인 없이 */ } })();
 
 /* ── 그림: 아트 세션의 img/manifest.json (경로는 img/ 기준 · 파일명은 같고 내용만 바뀔 수 있어 경로를 코드에 적지 않음) → 없으면 tmp/ 임시 그림
    작품마다 cover · cover_s(목록) · avatar{default,감정} · bust · portrait · scenes{작품_장소_감정} · places{장소} · (C17) cast · teaser{epN} · 곧 공개 soon{id}

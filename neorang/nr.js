@@ -18,6 +18,9 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 ? a : b; };
 const gnum = n => Number(n || 0).toLocaleString('ko-KR');
 document.documentElement.dataset.nr = '1';   /* 원어데이 셸이 '불러옴'을 확인하는 표시 */
+/* 원스토어 앱 안 표시(html.os): 셸이 원스토어 SDK 를 켰으면(OAD_HOST) — 셸이 늦게 켜질 수 있어 몇 번 더 봄 · CSS 가 오른쪽 위 원스토어 단추 자리를 비움 */
+const osMark = () => { try { if (Q.get('os') === '1' || (EMB && window.parent.OAD_HOST === 'onestore')) document.documentElement.classList.add('os'); } catch { /* 다른 주소 */ } };
+osMark(); setTimeout(osMark, 1500); setTimeout(osMark, 5000);
 const SOONLIST = SOON;   /* 곧 공개 카드(시안 D)는 이번 개편에서 홈에 두지 않음 — 이용자 제작(2차)과 같이 다시 */
 
 /* ── 작품 (기존 원고 → 같은 모양 · 새 형식이 같은 id 를 덮음) — 서버 home 의 rooms(장르 · 칸 · 상태 창)가 오면 그 값이 앞섬 ── */
@@ -78,9 +81,12 @@ async function post(body, signal) {
   const h = { 'Content-Type': 'application/json' }; if (TOK) h.Authorization = 'Bearer ' + TOK;
   return fetch('/api/story', { method: 'POST', headers: h, signal, body: JSON.stringify({ d: did(), age: ageNow() || 30, name: nm(profOf(S.prof)), ad: PROD ? undefined : adToday(), ...body }) });
 }
+let HG = 0;   /* home() 차례 번호 — 늦게 온 옛 응답(로그인 전 토큰으로 보낸 첫 요청 등)이 새 값을 덮지 않게 */
 async function home() {
+  const g = ++HG;
   try {
     const r = await post({ act: 'home', v: 2 }); const j = await r.json();
+    if (g !== HG) return;
     if (r.ok && j.v === 2) {
       Object.assign(H, { loaded: true, on: j.on, login: j.login, gold: j.gold, used: j.used, rank: j.rank || {}, price: j.price || H.price, left: j.left || H.left, teenUsed: j.teenUsed || 0 });
       for (const x of j.rooms || []) { const w = W(x.id); if (w) Object.assign(w, { genre: x.genre, genre2: x.genre2, room: x.room, kind: x.kind, sale: x.sale, stat: x.stat && x.stat.length ? x.stat : w.stat, goal: x.goal || w.goal }); }
@@ -88,7 +94,7 @@ async function home() {
       return;
     }
   } catch { /* 아래 */ }
-  Object.assign(H, { on: false, loaded: true });
+  if (g === HG) Object.assign(H, { on: false, loaded: true });
 }
 /* 진행 맞추기: 이 기기 값 ↔ 서버(계정 · 기기) 값 — 대화 원문(log · hist)은 보내지 않음 */
 async function sync() {
@@ -97,7 +103,30 @@ async function sync() {
     for (const [k, v] of Object.entries(j.works)) { if (!W(k)) continue; const x = RS(k); x.talks = Math.max(x.talks, v.talks | 0); x.secrets = [...new Set([...x.secrets, ...(v.secrets || [])])]; if ((v.mem || []).length > x.mem.length) x.mem = v.mem; }
     save(); } catch { /* 다음에 */ }
 }
-(async () => { try { const A = await import('../account.js'); if (!A.ON) return; await A.init(); TOK = (await A.token()) || ''; if (TOK) { sync(); home().then(render); } } catch { /* 로그인 없이 */ } })();
+/* ── 계정 (2026-11-27 대표 제보: 원스토어 앱에서 원어데이는 로그인인데 너랑은 '로그인 전' · 원어데이에서 로그아웃해도 너랑 단추가 그대로)
+   원인: 너랑(iframe)이 account.js 를 따로 불러 계정 모듈이 둘 — 원스토어 세션은 셸 창에만 있고(iframe 은 '원스토어 아님'), 셸의 로그인 · 로그아웃도 몰랐음
+   → 셸 안이면 셸의 계정 모듈 하나(window.parent.__oadAcct)만 보고, 바뀌면(onChange) 토큰을 다시 받아 서버 값(골드 · 남은 무료)을 새로 그림 · 셸 밖(너랑 주소 바로)만 자기 모듈 */
+const shellAcct = () => { try { return EMB && window.parent.location.origin === location.origin ? window.parent.__oadAcct || null : null; } catch { return null; } };
+let ACC = null;
+const acct = async () => ACC || (ACC = shellAcct() || await import('../account.js'));
+async function acctSync(first) {
+  let A; try { A = await acct(); } catch { return; }
+  if (!A || !A.ON) return;
+  const was = TOK; let t = ''; try { if (first && !shellAcct()) await A.init(); t = (await A.token()) || ''; } catch { t = ''; }
+  if (shellAcct() && !A.current()) t = '';   /* 셸이 '로그인 전'이면 너랑도 로그인 전 (셸 한 곳이 기준 · 셸이 계정을 다 불러오면 onChange 로 다시 옴) */
+  TOK = t;
+  if (!TOK) Object.assign(H, { login: false, gold: null });   /* 로그아웃: 서버를 못 불러도 옛 골드를 남기지 않음 */
+  if (TOK && (first || TOK !== was)) sync();
+  if (first && !TOK && !was) return;   /* 처음 · 로그인 없음: 위 home() 그대로 */
+  await home(); render();
+}
+let acctT = 0;
+(async () => {
+  await acctSync(true);
+  const A = shellAcct(); if (!A || !A.onChange) return;
+  const off = A.onChange(() => { clearTimeout(acctT); acctT = setTimeout(() => acctSync(false), 250); });   /* 셸에서 로그인 · 로그아웃 · 골드가 바뀌면 */
+  addEventListener('pagehide', () => { try { off && off(); } catch { /* */ } });
+})();
 
 /* ── 원어데이 셸에 부탁 (골드 상점 · 로그인 · 광고) — 셸 밖(너랑 주소를 바로 연 경우)이면 원어데이로 보내거나 테스트 광고 ── */
 const CALLS = new Map(); let CID = 0;
@@ -108,7 +137,7 @@ const shell = (fn, extra = {}) => new Promise(res => {
   try { parent.postMessage({ type: 'oad:nr', fn, id, ...extra }, location.origin); } catch { CALLS.delete(id); res({ ok: false, reason: 'noshell' }); }
   setTimeout(() => { if (CALLS.has(id) && fn !== 'shop' && fn !== 'login') { CALLS.delete(id); res({ ok: false, reason: 'timeout' }); } }, 120000);
 });
-async function refreshGold() { try { const A = await import('../account.js'); TOK = (await A.token()) || TOK; } catch { /* */ } await home(); render(); }
+async function refreshGold() { await acctSync(false); }   /* 셸 상점 · 로그인 창이 닫힌 뒤: 토큰을 새로(로그아웃이면 빈 값 — 옛 토큰을 붙들지 않음) */
 async function goShop(note) { ev('nr_charge', { what: 'shop' }); if (!EMB) { location.href = '/#shop'; return; } await shell('shop', { note }); await refreshGold(); }
 async function goLogin() { ev('nr_charge', { what: 'login' }); if (!EMB) { location.href = '/'; return; } await shell('login'); await refreshGold(); }
 async function watchAd() {

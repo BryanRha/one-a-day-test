@@ -114,6 +114,11 @@ html.playing, body.playing { overflow: hidden; height: 100%; } body.playing { po
 #frame { width: 100%; height: 100%; border: 0; display: block; }
 /* 원스토어 앱 안(html.os · onestore.js): 게임 창도 시스템바를 피함 — 원스토어가 알려 준 safeArea(--safe-t · --safe-b) 만큼 위아래를 비움 (게임 HUD 가 상태 표시줄 밑에 깔리지 않게 · 2026-11-24) */
 html.os #player { top: var(--safe-t); height: calc(var(--ph, 100%) - var(--safe-t) - var(--safe-b)); }
+/* 원스토어 앱 안: 너랑 탭(iframe)도 시스템바를 피함 · 오른쪽 위 원스토어가 띄우는 단추(약 40px) 자리를 비움 — 머리줄 골드 · 톱니 · 닫기가 그 밑에 깔리지 않게 (2026-11-27 대표 제보 · 너랑 쪽은 neorang/index.html 같은 값) */
+html.os { --os-fab: 44px; }
+html.os .nrbox { top: var(--safe-t); }
+html.os .u-large, html.os .ftop { padding-right: calc(16px + var(--os-fab)); }
+html.os .sdx { right: calc(12px + var(--os-fab)); }
 
 /* 시트(팝업) */
 #sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; }

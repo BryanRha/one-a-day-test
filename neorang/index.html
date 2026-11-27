@@ -601,6 +601,10 @@ body.emb .toast { bottom: 24px; }
 .defs { margin: 0 18px; display: grid; gap: 8px; }
 .setlist .r { display: flex; align-items: center; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 14px; } .setlist .r span { flex: 1; color: var(--ink2); } .setlist .r:last-child { border-bottom: 0; }
 .setlist button .t small { display: block; font-size: 12px; color: var(--ink3); } .setlist button .t { flex: 1; }
+/* 줄(.r) 안 작은 단추('바꾸기')는 줄 전체 폭 단추 규칙(.setlist button)을 받지 않음 — 받으면 왼쪽 글('태어난 해')이 한 글자 폭으로 눌려 세로로 쪼개짐 (2026-11-27 대표 제보) */
+.setlist .r button { width: auto; flex: none; padding: 6px 0; border-bottom: 0; } .setlist .r span { white-space: nowrap; }
+/* 원스토어 앱 안(html.os · nr.js): 오른쪽 위에 원스토어가 띄우는 단추 자리를 비움 — 골드 · 로그인 알약이 그 밑에 깔리지 않게 (셸 app.css 와 같은 --os-fab) */
+html.os { --os-fab: 44px; } html.os .top { padding-right: calc(10px + var(--os-fab)); }
 .ptable { margin: 0 18px; background: var(--sf); border: 1px solid var(--line); border-radius: 18px; padding: 6px 12px 10px; font-size: 13px; }
 .ptable > div { display: grid; grid-template-columns: 1.3fr repeat(4, 1fr); gap: 4px; padding: 9px 0; border-bottom: 1px solid var(--line); text-align: center; } .ptable > div span:first-child { text-align: left; font-weight: 700; }
 .ptable .h { font-size: 11.5px; color: var(--ink3); font-weight: 700; } .ptable p { margin: 10px 0 0; font-size: 11.5px; color: var(--ink3); line-height: 1.55; }

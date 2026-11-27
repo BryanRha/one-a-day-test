@@ -1,12 +1,12 @@
 // 원어데이 계정: 구글 로그인 (Supabase) · 서버의 /api/me 로 플레이어 기록 + 골드 잔액
 //   서버가 있는 주소에서만 (test.oneaday.kr · oneaday.kr · vercel.app) · 게임은 로그인 없이도 그대로
 //   원스토어 앱 안(onestore.js · 2026-11-24): 구글 로그인 대신 원스토어 playerId → 서버가 준 세션 표(os1.)로 같은 /api/me 를 씀 (늘 '로그인됨' · 이름 · 이메일 없음)
-import * as OS from './onestore.js?v=0.99.77';
+import * as OS from './onestore.js?v=0.99.78';
 const HOST = location.hostname;
 export const ON = /(^|\.)oneaday\.kr$/.test(HOST) || HOST.endsWith('.vercel.app');
 let sb = null, cfg = null, me = null, listeners = [];
 const emit = () => listeners.forEach(f => { try { f(me); } catch { /* */ } });
-export const onChange = f => { listeners.push(f); };
+export const onChange = f => { listeners.push(f); return () => { listeners = listeners.filter(x => x !== f); }; };   /* 끄개를 돌려줌 (너랑 iframe 이 닫힐 때 떼어 냄) */
 export const current = () => me;
 
 /* 로그인 정보가 깨졌을 때(만료된 refresh 토큰 등) 멈추지 않게: 6초 안에 못 받거나 오류면 이 기기 로그인 정보를 지우고 '로그아웃' 상태로 */
@@ -51,3 +51,6 @@ export async function call(body) {
 }
 export async function refresh() { if (OS.on) return init(); const c = await client(); if (!c) return null; const session = await safeSession(c); return session ? load(session) : null; }
 export async function logout() { if (OS.on) return; const c = await client(); if (c) await c.auth.signOut(); me = null; emit(); }
+/* 같은 주소 iframe(너랑 등)이 셸과 같은 계정 하나를 보게 (2026-11-27 대표 제보 '원어데이는 로그인인데 너랑은 로그인 전 · 로그아웃이 안 이어짐')
+   iframe 이 account.js 를 따로 불러오면 모듈이 하나 더 생겨 원스토어 세션 · 로그인 변화를 모름 → 셸 창에 이 모듈을 걸어 두고 iframe 은 window.parent.__oadAcct 를 씀 */
+try { window.__oadAcct = { ON, current, onChange, init, token, refresh }; } catch { /* */ }
