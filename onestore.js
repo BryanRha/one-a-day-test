@@ -120,7 +120,7 @@ export async function rewarded(game) {
   if (r.status === 'dismissed') return { ok: false, reason: 'cancel' };
   if (r.status !== 'rewarded') return { ok: false, reason: r.reason === 'no_fill' || r.reason === 'ad_opt_out' ? 'nofill' : r.reason === 'already_showing' ? 'busy' : 'off' };
   for (let i = 0; i < 8; i++) {   /* 포스트백은 보통 몇 초 안 · 최대 약 12초 기다림 */
-    try { const x = await api({ act: 'reward', rid: r1.rid, mock: mode === 'mock' }); if (x.granted) return { ok: true, via: 'onestore', rid: r1.rid }; } catch { /* 잠깐 끊김 */ }
+    try { const x = await api({ act: 'reward', rid: r1.rid, mock: mode === 'mock', seen: true }); if (x.granted) return { ok: true, via: 'onestore', rid: r1.rid }; } catch { /* 잠깐 끊김 */ }
     await wait(i < 3 ? 800 : 1800);
   }
   return { ok: false, reason: 'timeout' };

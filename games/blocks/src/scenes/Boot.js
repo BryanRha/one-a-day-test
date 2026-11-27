@@ -1,10 +1,10 @@
 // 로딩 + 코드로 그리는 그림들: 블록 스킨 7종 × 7색 · 보석 3종 · 배경 테마 · 아이콘
-import { W, H, TITLE } from '../config.js?v=0.99.70';
-import { SFX } from '../audio.js?v=0.99.70';
-import { makeTextures } from '../fx.js?v=0.99.70';
-import { makeIcons } from '../pui.js?v=0.99.70';
-import { load } from '../save.js?v=0.99.70';
-import { helloOnce, effSkin } from '../bmflow.js?v=0.99.70';
+import { W, H, TITLE } from '../config.js?v=0.99.71';
+import { SFX } from '../audio.js?v=0.99.71';
+import { makeTextures } from '../fx.js?v=0.99.71';
+import { makeIcons } from '../pui.js?v=0.99.71';
+import { load } from '../save.js?v=0.99.71';
+import { helloOnce, effSkin } from '../bmflow.js?v=0.99.71';
 
 // 블록 색: [기본, 밝은 면, 어두운 면]
 export const PALETTE = [
