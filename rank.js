@@ -3,7 +3,7 @@
 //   서버: /api/me — GET ?rank=<판>|top3|today (CDN 캐시 · 로그인 없음) · POST act 'rank'(start · submit · mine · gifts · claim) · 'nick'
 //   광고 · 결제 단추는 이 화면들에 두지 않음 (사업 bm.md 4-1 — 자랑하는 자리)
 //   app.js 가 init(ctx) 로 시트 · 토스트 · 계정 · 기록 함수를 넘겨 줌 (아래 보관 줄 함수는 ctx 없이도 동작 — tools/rank_check.mjs 가 node 에서 시험)
-import { ic, coin } from './ui.js?v=0.99.75';
+import { ic, coin } from './ui.js?v=0.99.76';
 
 /* ── 오프라인 보관 (판마다 마지막 제출 하나 · 다시 연결되면 한 번 · 마감 + 10분 지나면 버림) ── */
 const KQ = 'oad_rank_q', GRACE = 10 * 60e3;
@@ -126,7 +126,11 @@ export async function resend() {
 /* ── 순위표 시트 ── */
 const S = { board: '', tab: 'now', data: {}, mine: null, more: false };
 const gameOf = board => board.split(':')[0];
-const titleOf = board => { const g = X.G(gameOf(board)); const m = /^rhythm:(s\d\d):(\w+)$/.exec(board); return (g ? g.title : gameOf(board)) + (m ? ` · 이번 주의 곡 ${DIFF[m[2]] || ''}` : ''); };
+/* 게임 안 한 모드 판의 이름 · 점수 단위 (11-27 랭킹 2차 — 판 이름은 server/api/_lib/rank.js RANK 와 같게) */
+const MODE = { 'fdefense:inf': '이번 주 무한 전장', 'ocean:weekly': '이번 주 도전', 'salvage:weekly': '주간 도전' };
+const UNIT = { 'fdefense:inf': '웨이브' };
+const sc = (board, n) => fmt(n) + (UNIT[board] ? ' ' + UNIT[board] : '');
+const titleOf = board => { const g = X.G(gameOf(board)); const m = /^rhythm:(s\d\d):(\w+)$/.exec(board); return (g ? g.title : gameOf(board)) + (m ? ` · 이번 주의 곡 ${DIFF[m[2]] || ''}` : MODE[board] ? ` · ${MODE[board]}` : ''); };
 export async function openBoard(board, { from = 'app' } = {}) {
   S.board = board; S.tab = 'now'; S.more = false; S.data = {}; S.mine = null;
   X.T.track('rank_view', { where: from, board, game: gameOf(board) });
@@ -139,7 +143,7 @@ export async function openBoard(board, { from = 'app' } = {}) {
 const prevOf = p => { const [y, w] = p.split('-W').map(Number); if (w > 1) return `${y}-W${String(w - 1).padStart(2, '0')}`; const d = new Date(Date.UTC(y, 0, 4)); d.setUTCDate(d.getUTCDate() - 7); const t = new Date(d); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); const yy = t.getUTCFullYear(); return `${yy}-W${String(Math.ceil(((t - Date.UTC(yy, 0, 1)) / 864e5 + 1) / 7)).padStart(2, '0')}`; };
 function redrawSheet() { const el = document.querySelector('#sheet .panel .rk'); if (el) el.outerHTML = body(); }
 const medal = r => `<span class="rk-n${r <= 3 ? ' m' + r : ''} u-num">${r}</span>`;
-const row = (x, me) => `<div class="rk-row${me ? ' me' : ''}">${medal(x.rank)}<span class="rk-nm">${esc(x.nick)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}${me ? ' <b>(나)</b>' : ''}</span><span class="rk-sc u-num">${fmt(x.score)}</span></div>`;
+const row = (x, me) => `<div class="rk-row${me ? ' me' : ''}">${medal(x.rank)}<span class="rk-nm">${esc(x.nick)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}${me ? ' <b>(나)</b>' : ''}</span><span class="rk-sc u-num">${sc(S.board, x.score)}</span></div>`;
 function sheetHTML() { return body(); }
 function body() {
   const d = S.tab === 'prev' ? S.data.prev : S.data.now, m = S.mine;
@@ -168,7 +172,7 @@ function pin(d) {
   if (!m) return `<div class="rk-pin"><span class="rk-nm">이번 주 기록이 아직 없어요</span><span class="t-sub">한 판이면 순위에 올라요</span></div>`;
   if (m.review || m.hidden) return `<div class="rk-pin"><span class="rk-nm">${esc(nick)} <b>(나)</b></span><span class="t-sub">${esc(m.reason)}</span></div>`;
   const pv = S.mine.prev, up = pv && m.score > pv.score ? ` · 지난주보다 +${fmt(m.score - pv.score)}` : '';
-  const right = `<span class="rk-sc u-num">${fmt(m.score)}</span>`;
+  const right = `<span class="rk-sc u-num">${sc(S.board, m.score)}</span>`;
   if (m.rank && m.rank <= (S.more ? 100 : 5)) return '';   /* 이미 목록에 보이면 아래 고정 줄은 없음 */
   if (m.rank) return `<div class="rk-pin me">${medal(m.rank)}<span class="rk-nm">${esc(nick)} <b>(나)</b>${m.tier ? ` <small>상위 ${m.tier}%</small>` : ''}</span>${right}</div>`;
   if (m.tier) return `<div class="rk-pin me"><span class="rk-n u-num">·</span><span class="rk-nm">${esc(nick)} <b>(나)</b> <small>상위 ${m.tier}% 안${up}</small></span>${right}</div>`;
@@ -267,7 +271,7 @@ export function slides() {
   const Q = { rank: [], luck: [], neorang: [], live: [] };
   const d = TOP;
   if (d && d.boards) for (const b of d.boards) { if (!X.G(b.game)) continue; const n = Math.min(3, b.top.length);
-    b.top.slice(0, 3).forEach((x, k) => Q.rank.push({ kind: 'rank', key: 'r:' + b.board + ':' + k, icon: { game: b.game }, eb: `${titleOf(b.board)} · 이번 주 순위`, medal: k + 1, main: x.nick, tag: x.tag, right: fmt(x.score), sayx: `${k + 1}위 ${x.nick} ${fmt(x.score)}점`, go: { type: 'board', to: b.board }, k, n })); }
+    b.top.slice(0, 3).forEach((x, k) => Q.rank.push({ kind: 'rank', key: 'r:' + b.board + ':' + k, icon: { game: b.game }, eb: `${titleOf(b.board)} · 이번 주 순위`, medal: k + 1, main: x.nick, tag: x.tag, right: sc(b.board, x.score), sayx: `${k + 1}위 ${x.nick} ${sc(b.board, x.score)}${UNIT[b.board] ? '' : '점'}`, go: { type: 'board', to: b.board }, k, n })); }
   const T0 = TODAY, L = T0 && T0.luck;
   const lk = (key, eb, main, v, k) => ({ kind: 'luck', key, icon: { kind: 'luck' }, eb: '점방 · ' + eb, main, right: `평균 ${Number(v).toFixed(1)}점`, go: { type: 'luck' }, k, n: 3 });
   if (L && L.zodiac && L.zodiac[0]) Q.luck.push(lk('l:z', '오늘의 대박 띠', `${L.zodiac[0].name}띠`, L.zodiac[0].avg, 0));

@@ -4,11 +4,11 @@
 //   · 원어데이 안: 판 시작 bm.rank.start · 판 끝 bm.rank.submit → 결과 한 줄 bm.rank.line · '순위 보기' bm.rank.open
 //   · 원어데이 밖: 기기 기록만 (결과 창에 '원어데이에서 하면 순위에 올라요')
 //   · 결제 · 이어하기 · 부스터를 쓴 판도 그대로 올림 (대표 11-27 · 딱지 없음) — assisted 는 늘 false
-import { bm } from './oad_bm.js?v=0.99.75';
-import { load, save } from './save.js?v=0.99.75';
-import { BOARD, weekOf, weekEnd } from './core/weekly.js?v=0.99.75';
-import { LANG } from './i18n.js?v=0.99.75';
-import { oadOn, oadTrack } from './bmflow.js?v=0.99.75';
+import { bm } from './oad_bm.js?v=0.99.76';
+import { load, save } from './save.js?v=0.99.76';
+import { BOARD, weekOf, weekEnd } from './core/weekly.js?v=0.99.76';
+import { LANG } from './i18n.js?v=0.99.76';
+import { oadOn, oadTrack } from './bmflow.js?v=0.99.76';
 
 export function wkState(p = weekOf()) {
   const d = load();
