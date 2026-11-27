@@ -1,9 +1,9 @@
 // 오늘 페이지 — 날마다 다른 세트 · 틀 7종(자리 · 속지 · 테이프) · 내가 고르는 기분 도장/한 줄 · 날짜 도장 '쿵' · 공유 카드(9:16)
 //   운세 한 줄은 운영 연동 전까지 숨김 (dd.fortune 이 오면 그 자리에 씀)
-import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.99.94';
-import { S, day, dayKey, parseDay, save } from './save.js?v=0.99.94';
-import * as A from './audio.js?v=0.99.94';
-import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.99.94';
+import { img, nameOf, PAGE_TPL, MOODS, linesFor, dailySet } from './data.js?v=0.99.95';
+import { S, day, dayKey, parseDay, save } from './save.js?v=0.99.95';
+import * as A from './audio.js?v=0.99.95';
+import { $, sp, DAYS, toast, modal, closeModal, moodSVG, esc } from './ui.js?v=0.99.95';
 
 export function pickStickers(got, k) {
   const { lucky, tpl } = dailySet(k); const spots = PAGE_TPL[tpl].spots;
@@ -138,9 +138,12 @@ export async function makeCard(k) {
 function wrap(g, s, x, y, mw, lh) { let line = ''; for (const wd of s.split(' ')) { const t = line ? line + ' ' + wd : wd; if (line && g.measureText(t).width > mw) { g.fillText(line, x, y); line = wd; y += lh; } else line = t; } g.fillText(line, x, y); }
 export async function openShare(k) {
   const c = await makeCard(k); const url = c.toDataURL('image/png'); const sh = $('#share');
-  sh.innerHTML = `<div class="wrap"><img src="${url}" alt="오늘 페이지 카드"><div class="row"><a class="btn main" download="oneaday-diary-${k}.png" href="${url}">이미지 저장</a><button class="btn" data-s="share">공유</button></div><button class="btn" data-s="close">닫기</button></div>`;
+  sh.innerHTML = `<div class="wrap"><img src="${url}" alt="오늘 페이지 카드"><div class="row"><a class="btn main" data-s="save" download="oneaday-diary-${k}.png" href="${url}">이미지 저장</a><button class="btn" data-s="share">공유</button></div><button class="btn" data-s="close">닫기</button></div>`;
   sh.classList.add('on'); window.__card = url;
+  /* 원스토어 앱 안(원어데이 셸이 OAD_SHOT 을 줌): 내려받기 · 공유 창이 막혀 있어 → 카드 크게 + 캡처 안내 (11-28 대표 제보) */
+  const shot = (() => { try { return parent !== window && parent.OAD_SHOT; } catch { return null; } })();
   sh.onclick = async e => { const a = e.target.dataset?.s; if (a === 'close') sh.classList.remove('on');
+    if (shot && (a === 'save' || a === 'share')) { e.preventDefault(); shot(url); return; }
     if (a === 'share') { try { const blob = await (await fetch(url)).blob(); const f = new File([blob], `oneaday-diary-${k}.png`, { type: 'image/png' }); if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], title: '오늘의 다꾸' }); else toast('이 기기에선 이미지 저장을 눌러 주세요'); } catch { /* 공유 창을 닫음 */ } } };
 }
 

@@ -1,14 +1,14 @@
 // 결과: 거리 · 점수(최고 기록) · 코인 · 칼치기 기록 → 다시 달리기 / 차고
-import { W, H } from '../config.js?v=0.99.94';
-import { txt, fmt, fit, button, iconButton } from '../ui.js?v=0.99.94';
-import { audio } from '../audio.js?v=0.99.94';
-import { load, save } from '../save.js?v=0.99.94';
-import { wind } from '../fx.js?v=0.99.94';
-import { applyRun } from '../meta.js?v=0.99.94';
-import { bm } from '../oad_bm.js?v=0.99.94';
-import { canDouble, AD_DAY } from '../core/cont.js?v=0.99.94';
-import { adLeft, adUse } from '../bmflow.js?v=0.99.94';
-import { hallShown, submitLine, hallPopup } from '../hall.js?v=0.99.94';
+import { W, H } from '../config.js?v=0.99.95';
+import { txt, fmt, fit, button, iconButton } from '../ui.js?v=0.99.95';
+import { audio } from '../audio.js?v=0.99.95';
+import { load, save } from '../save.js?v=0.99.95';
+import { wind } from '../fx.js?v=0.99.95';
+import { applyRun } from '../meta.js?v=0.99.95';
+import { bm } from '../oad_bm.js?v=0.99.95';
+import { canDouble, AD_DAY } from '../core/cont.js?v=0.99.95';
+import { adLeft, adUse } from '../bmflow.js?v=0.99.95';
+import { hallShown, submitLine, hallPopup } from '../hall.js?v=0.99.95';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }

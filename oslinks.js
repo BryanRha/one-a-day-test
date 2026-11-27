@@ -4,7 +4,7 @@
 //   막는 법(한 곳): 원스토어 안(OS.looks)이면 셸 문서와 같은 주소 iframe(게임 · 너랑 · 안내 창) 안에서 틀을 벗기는 링크(새 창 · 최상위 창) 누름을 여기서 받음
 //     우리 주소 페이지(약관 · 환불 · 고객센터 …) → 앱 안에 덮는 창(iframe)으로 엶 · 바깥 주소 → 이동하지 않고 주소를 복사해 알려 줌 · 같은 페이지 #해시는 그대로
 //   window.open 은 바꾸지 않음(원스토어 SDK 가 쓸 수 있음) — 우리 코드가 바깥 주소를 열 때는 openOut() 을 씀 (전광판 링크 등)
-import * as OS from './onestore.js?v=0.99.94';
+import * as OS from './onestore.js?v=0.99.95';
 
 const S = { on: false, toast: null };
 const sameSite = u => u.origin === location.origin;
@@ -59,3 +59,18 @@ export function openOut(url) {
   if (!S.on) return window.open(url, '_blank', 'noopener');
   const u = new URL(url, location.href); return sameSite(u) ? openGuide(u.href) : copyOut(u.href);
 }
+
+/* 원스토어 앱 안 그림 저장 · 공유 (대표 11-28 실서버 제보 「다꾸 이미지 저장 · 공유가 안 돼요」): 웹뷰가 파일 내려받기 · 공유 창을 막아 눌러도 아무 일이 없음
+   → 카드를 화면 가득 보여 주고 '화면을 캡처해 주세요' 안내 (폰 캡처는 늘 됨) · 같은 주소 게임 iframe 도 parent.OAD_SHOT 으로 부름 */
+export function showShot(src) {
+  let el = document.getElementById('osShot');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'osShot';
+    el.innerHTML = '<img alt="카드"><p>원스토어 앱에서는 사진첩 저장 · 공유가 막혀 있어요<br><b>지금 화면을 캡처해서 저장해 주세요</b><small>보통 전원 + 볼륨 아래 버튼을 함께 눌러요</small></p><button type="button">닫기</button>';
+    el.querySelector('button').onclick = () => { el.hidden = true; };
+    document.body.appendChild(el);
+  }
+  const img = el.querySelector('img'); if (src instanceof Blob) { const u = URL.createObjectURL(src); img.onload = () => URL.revokeObjectURL(u); img.src = u; } else img.src = src;
+  el.hidden = false;
+}
+if (OS.looks) window.OAD_SHOT = showShot;
