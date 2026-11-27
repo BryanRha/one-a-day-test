@@ -3,19 +3,20 @@
 //   · 세로: 원작 판을 시계 방향 90° 돌려 10×15칸 · 위 띠는 원작 그림 그대로 · 카드 줄(HERO + 병사 6)은 아래 엄지 자리
 //   · 병사 · 영웅을 누르면 원작 메뉴: 전신 일러스트 · 이름 · lv · 능력치 4줄 · 판매 · 전직(다음 직업 미리보기) · 레벨 업 · 필살기 → 확인 창(예/아니오) → 전직 컷인(일러스트 바뀜)
 //   · 메뉴가 열려 있으면 판 시간이 멈춘다 (원작 update_GAME_PLAYING: 메뉴 상태에선 효과만 움직임)
-import { W, H, C, SCALE } from '../config.js?v=0.99.74';
-import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.74';
-import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.74';
-import * as M from '../core/meta.js?v=0.99.74';
-import { BUNDLE } from '../core/balance.js?v=0.99.74';
-import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.74';
-import { text, panel, button, toast, icon } from '../ui.js?v=0.99.74';
-import { audio, S } from '../audio.js?v=0.99.74';
-import { load, save, saveResume, dayKey } from '../save.js?v=0.99.74';
-import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.74';
-import { T0, img, num, label, inRect } from './orig.js?v=0.99.74';
-import { pushBack } from '../oad.js?v=0.99.74';
-import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.74';
+import { W, H, C, SCALE } from '../config.js?v=0.99.75';
+import { T, A, STAGE_NAMES, FACE_KEY, NAME_KEY, UPFACE_KEY, CARD_KEY, MON_KEY, monOrder } from '../core/data.js?v=0.99.75';
+import { Sim, TICK, BUY_ROWS, BUY_ORDER, DETAIL_SPRITE, HERO_SPRITE, CHAR, DOWNGRADE_DETAIL, effectName, attackSpeed, runSummary, clearScore } from '../core/sim.js?v=0.99.75';
+import * as M from '../core/meta.js?v=0.99.75';
+import { BUNDLE } from '../core/balance.js?v=0.99.75';
+import { checkAwards, noteMissions, AWARDS } from '../core/awards.js?v=0.99.75';
+import { text, panel, button, toast, icon } from '../ui.js?v=0.99.75';
+import { audio, S } from '../audio.js?v=0.99.75';
+import { load, save, saveResume, dayKey } from '../save.js?v=0.99.75';
+import { FRAME_ATLAS, queueStage, indexFrames } from './Boot.js?v=0.99.75';
+import { T0, img, num, label, inRect } from './orig.js?v=0.99.75';
+import { pushBack } from '../oad.js?v=0.99.75';
+import { bm, oadOn, owned, adReady, track } from '../bmflow.js?v=0.99.75';
+import { BOARD, isArena, weekOf, lineOf } from '../rank.js?v=0.99.75';
 
 const US = 2.25;                 // 원작 UI 배율 (가로 화면 480 → 1080)
 const HUD_H = 196, HUD_TOP = 14, CARD_PAD = 16, CS = 2.4;   // 세로 화면: 위 띠 높이 · 자원 줄 위 여백 · 카드 줄 위아래 최소 여백 · 카드 배율
@@ -50,8 +51,11 @@ export class PlayScene extends Phaser.Scene {
     this.speed = dd.speed === 3 ? 3 : 1; this.ended = false; this.cutin = null; this.contUsed = 0; this.contAd = false; this.offer = null; this.offerClose = null;
     this.hintStep = dd.tips.place ? 9 : 0; this.coachOn = false; this.coachTick = 0; this.hint = null;
     this.pauseUI = null; this.pauseGlow = null; this.menuUI = null; this.menuUIBack = null; this.menuBack = null; this.pendingSpecial = null; this.menuWasRunning = false;
-    this.heroRow = false; this.upAnim = 0; this.lvAnim = 0; this.uiTick = 0; this.uiAcc = 0; this.mview = null; this.trayBand = false; this.mviewWait = undefined; this.blink = 0; this.goalBlink = 0; this.lastGoalTick = -1; this.needRelayout = false; this.result = null;
+    this.heroRow = false; this.upAnim = 0; this.lvAnim = 0; this.uiTick = 0; this.uiAcc = 0; this.mview = null; this.trayBand = false; this.mviewWait = undefined; this.blink = 0; this.goalBlink = 0; this.lastGoalTick = -1; this.needRelayout = false; this.result = null; this.rankShown = null;
     dd.tries[this.stageNo] = (dd.tries[this.stageNo] || 0) + 1; save();
+    // 공통 랭킹 '이번 주 무한 전장' (rank.js): 이번 주 전장의 무한 판만 순위에 올림 · 판 시작을 알려 둠(B 등급 · 원어데이 밖이면 그냥 넘어감)
+    this.rank = isArena(this.stageNo, this.mode) ? { week: weekOf(), run: null, p: null } : null;
+    if (this.rank) { const rk = this.rank; Promise.resolve(bm.rank.start(BOARD)).then(x => { if (x && x.ok && x.run) rk.run = x.run; }).catch(() => {}); }
     this.build();
     this.input.on('pointerdown', this.onDown, this);
     this.input.on('pointermove', this.onMove, this);
@@ -1279,6 +1283,13 @@ export class PlayScene extends Phaser.Scene {
     const missionDone = noteMissions(d, day, r);
     save();
     track('round_end', { stage: this.stageNo, mode: this.mode, win: win ? 1 : 0, wave: s.wave, sec: r.sec, cont: this.contUsed });
+    // 순위 올리기: 버틴 웨이브 = 점수 · 처치 수 = 같은 웨이브끼리 가름 · 이어하기 판도 그대로 올림(대표 11-27) · 판 도중 주가 바뀌면 지난 전장 판이라 안 올림
+    const rk = this.rank;
+    if (rk && oadOn() && s.wave >= 1) {
+      if (weekOf() === rk.week) rk.p = bm.rank.submit(BOARD, s.wave, { run: rk.run, tie: s.kills, meta: { stage: this.stageNo, cont: this.contUsed, ad: this.contAd ? 1 : 0, sec: r.sec }, assisted: this.contUsed > 0 }).catch(() => null);
+      else rk.p = Promise.resolve({ ok: false, reason: 'week' });
+      try { (window.__rankLog || (window.__rankLog = [])).push({ board: BOARD, score: s.wave, tie: s.kills, cont: this.contUsed, week: rk.week }); } catch { /* */ }
+    }
     audio.id(win ? S.CLEAR : S.OVER, { volume: 0.8 });
     const SW = this.scale.width, SH = this.scale.height, T = this.popT();
     const c = this.add.container(0, 0).setDepth(9900); this.result = c;
@@ -1318,6 +1329,7 @@ export class PlayScene extends Phaser.Scene {
         step(5, [at]); panelC.add(z);
         z.on('pointerup', async () => { z.disableInteractive(); const rr = await bm.rewardedAd('reward2x'); if (rr && rr.ok) { ads.x2++; d.heroism += hero; save(); hn.set(hero * 2); at.setText('2배로 받았어요'); } else z.setInteractive(); });
       }
+      if (rk && rk.p) this.rankCard(panelC, T, rk.p, step);
       // 아래 단추 (원작 y 382)
       const next = win && this.mode === 0 && this.stageNo < 49;
       const go = { stage: () => this.leave(() => this.scene.start('Home')), up: () => this.leave(() => this.scene.start('Home', { tab: 'up' })), next: () => this.leave(() => this.scene.start('Play', { stage: this.stageNo + 1, mode: 0 })), retry: () => this.leave(() => this.scene.restart({ stage: this.stageNo, mode: this.mode })) };
@@ -1333,6 +1345,34 @@ export class PlayScene extends Phaser.Scene {
     dim.on('pointerup', showPanel);
     this.time.delayedCall(1300, showPanel);
     this.resultShow = showPanel;
+  }
+  // 결과 화면 순위 카드 + '순위 보기'(원어데이 순위표 시트) — 원작 결과 판은 그대로 두고 빈자리에: 세로 = 아래 단추 밑 · 가로 = 결과 판 왼쪽 (오른쪽은 명예 2배 · 카드 열)
+  //   글자는 원작 배율(T.s)이 아니라 화면 px 로 (세로 판 배율이 작아 원작 크기면 폰에서 6px 밖에 안 됨)
+  rankCard(panelC, T, p, step) {
+    const land = !!this.land;
+    const x = land ? T.x(46) : this.scale.width / 2 - 450, y = land ? T.y(104) : T.y(450), w = land ? 108 * T.s : 900, h = land ? 176 * T.s : 196;
+    const g = this.add.graphics();
+    g.fillStyle(0x0C1220, 0.94).fillRoundedRect(x, y, w, h, 26).lineStyle(4, 0xFFC94A, 0.9).strokeRoundedRect(x, y, w, h, 26);
+    const bw = land ? w - 36 : 236, bh = land ? 92 : 100, bx = land ? x + 18 : x + w - bw - 26, by = land ? y + h - bh - 20 : y + (h - bh) / 2;
+    g.fillStyle(0x5A3B12, 1).fillRoundedRect(bx, by, bw, bh, 22).lineStyle(4, 0xFFC94A, 1).strokeRoundedRect(bx, by, bw, bh, 22);
+    const tx = land ? x + w / 2 : x + 36, o = land ? { ox: 0.5, oy: 0 } : { ox: 0, oy: 0 }, room = land ? w - 30 : w - bw - 90;
+    const eb = text(this, tx, y + (land ? 24 : 24), '이번 주 무한 전장', 28, C.gold, { ...o, weight: '800' });
+    const t1 = text(this, tx, y + (land ? 74 : 62), '순위를 확인하고 있어요', land ? 38 : 44, C.ink, { ...o, align: land ? 'center' : 'left', wrap: land ? room : undefined });
+    const t2 = text(this, tx, y + (land ? 170 : 124), '', 30, '#BFE59A', { ...o, weight: '700', align: land ? 'center' : 'left', wrap: land ? room : undefined });
+    const bt = text(this, bx + bw / 2, by + bh / 2, '순위 보기', 36, C.gold, { weight: '800' });
+    const z = this.add.zone(bx - 10, by - 10, bw + 20, bh + 20).setOrigin(0).setInteractive({ useHandCursor: true });
+    this.rankOpen = () => { audio.id(14, { volume: 0.5 }); track('rank_open', { where: 'result' }); bm.rank.open(BOARD); };
+    z.on('pointerup', () => this.rankOpen());
+    step(7, [g, eb, t1, t2, bt]); panelC.add(z);
+    const fit = t => { t.setScale(1); if (!land && t.width > room) t.setScale(room / t.width); };
+    const place = () => { if (land) t2.y = t1.y + t1.height + 14; };
+    Promise.resolve(p).then(r => {
+      if (!t1.active) return;
+      const l = r && r.ok ? lineOf(bm, r) : r && r.reason === 'week' ? { title: '지난주 전장 판이에요', sub: '이번 주 전장에서 다시 겨뤄 보세요' } : r && r.reason === 'login' ? { title: '로그인하면 순위에 올라요', sub: '' } : { title: '이번 판은 순위에 못 올렸어요', sub: '순위 보기에서 이번 주 기록을 볼 수 있어요' };
+      t1.setText(l ? l.title : ''); t2.setText(l ? l.sub : ''); fit(t1); fit(t2); place();
+      this.rankShown = { title: t1.text, sub: t2.text };
+    });
+    fit(t1); place();
   }
   async leave(go) { try { if (oadOn()) await bm.interstitial('round_end'); } catch { /* 늘 넘어감 */ } go(); }
   stageBanner() {

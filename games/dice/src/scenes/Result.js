@@ -1,11 +1,12 @@
 // 결과: 도달 웨이브 · 처치 · 보스 · 최고 눈 · 받은 수정 · 새 해금
-import { W, H } from '../config.js?v=0.99.74';
-import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load } from '../save.js?v=0.99.74';
-import * as M from '../meta.js?v=0.99.74';
-import * as BM from '../bmflow.js?v=0.99.74';
-import { RUNES } from '../core/sim.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load } from '../save.js?v=0.99.75';
+import * as M from '../meta.js?v=0.99.75';
+import * as BM from '../bmflow.js?v=0.99.75';
+import { RUNES } from '../core/sim.js?v=0.99.75';
+import { rankScore } from '../core/daily.js?v=0.99.75';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -34,6 +35,7 @@ export class ResultScene extends Phaser.Scene {
       /* 홈 카드와 같은 형식 (QA 20): '보상' 꼬리표 + 한 줄에 한 항목 */
       if (nm) this.rwNext = rewardBlock(this, 250, cy + 236, [M.milestoneLine(nm), `지금 최고 웨이브 ${nm.best} · 처음 도달하면 받아요`], { size: 28, gap: 44 });
     }
+    if (r.rank) this.rankCard(r, cy + 310);
     if (r.items) T(this, W / 2, cy - 222, `아이템 ${r.items}번 사용한 판`, 22, C.dim, { w: 800 });
     const by = Math.min(H - 150, cy + 700);
     // 광고 보고 수정 2배 (원어데이 안 · 하루 3번 · 소장자는 바로) — 판을 살리는 게 아니라 받은 보상만 한 번 더
@@ -48,10 +50,35 @@ export class ResultScene extends Phaser.Scene {
       }, { style: 'green', icon: own ? 'i_crown' : 'i_film', size: 32 });
       T(this, W / 2, by - 98, `오늘 ${BM.x2Left()}번 남음`, 22, C.dim, { w: 800 });
     }
-    btn(this, W / 2 + 90, by, 560, 140, A ? '아케이드로' : '다시 입장', () => A ? this.go('Arcade') : this.go('Play', { mode: r.mode === 'daily' ? 'run' : r.mode }), { style: 'gold', icon: 'i_retry', size: 44 });
+    btn(this, W / 2 + 90, by, 560, 140, A ? '아케이드로' : '다시 입장', () => A ? this.go('Arcade') : this.go('Play', { mode: r.mode }), { style: 'gold', icon: 'i_retry', size: 44 });
     iconBtn(this, W / 2 - 300, by - 4, 'i_home', () => this.go('Home'), 130);
     this.cameras.main.fadeIn(300, 5, 6, 26);
     window.__result = r;
+  }
+  /* 공통 랭킹 한 줄 (오늘의 도전 · 원어데이 안): 왼쪽 = 이번 주 순위 글(SDK bm.rank.line) · 오른쪽 = '순위 보기'(원어데이 순위표 시트)
+     답이 오기 전엔 '기록을 올리는 중' · 밖/실패(standalone · off)면 카드를 거둠 · 로그인 안 함이면 그 안내만 */
+  rankCard(r, y) {
+    const c = this.add.container(W / 2, y), x0 = -410;
+    c.add(panel(this, 0, 0, 900, 190, { tone: 'gold' }));
+    const pts = rankScore(r);
+    c.add(T(this, x0, -56, `이번 주 순위 · 도전 점수 ${fmt(pts)}`, 26, C.dim, { ox: 0, w: 700, fit: 560 }));
+    const title = T(this, x0, 0, '기록을 올리는 중…', 40, C.gold, { ox: 0, w: 900, fit: 560 });
+    const sub = T(this, x0, 52, `웨이브 ${r.wave} · 처치 ${fmt(r.kills)} — 같은 웨이브면 더 많이 잡은 쪽이 위`, 26, C.sub, { ox: 0, w: 700, fit: 560 });
+    c.add([title, sub]);
+    const b = btn(this, 300, 0, 240, 104, '순위 보기', () => BM.rankOpen(), { style: 'indigo', icon: 'i_crown', size: 28 });
+    c.add(b);
+    this.rkCard = c; this.rkTitle = title; this.rkSub = sub;
+    const run = this.runId;
+    Promise.resolve(r.rank).then(res => {
+      if (run !== this.runId || !c.scene) return;
+      window.__rank = res;
+      const ln = BM.rankLine(res);
+      if (!ln) { c.destroy(); this.rkCard = null; return; }
+      title.setText(ln.title);
+      if (ln.sub) sub.setText(ln.sub);
+      if (res && res.ok && res.newBest) this.tweens.add({ targets: title, alpha: 0.35, duration: 160, yoyo: true, repeat: 1 });
+      if (res && !res.ok && res.reason === 'login') b.setVisible(false);
+    });
   }
   // 넘어갈 때 판 끝 전면 광고를 한 번 물어봄 (앱이 그룹 · 간격 · 소장 · 첫날을 보고 정함 · 실패 순간엔 안 부름)
   async go(k, data) { if (this.leaving) return; this.leaving = true; await BM.afterRound(); this.cameras.main.fadeOut(220, 5, 6, 26); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(k, data)); }

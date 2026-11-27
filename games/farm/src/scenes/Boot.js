@@ -1,8 +1,8 @@
 // 로딩: 건물 · 물건 · 땅 · 인물 · 소리
-import { W, H, TITLE } from '../config.js?v=0.99.74';
-import { SFX, BGM, audio } from '../audio.js?v=0.99.74';
-import { makeTextures } from '../ui.js?v=0.99.74';
-import { ITEMS, BUILDS, CROPS } from '../data.js?v=0.99.74';
+import { W, H, TITLE } from '../config.js?v=0.99.75';
+import { SFX, BGM, audio } from '../audio.js?v=0.99.75';
+import { makeTextures } from '../ui.js?v=0.99.75';
+import { ITEMS, BUILDS, CROPS } from '../data.js?v=0.99.75';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }

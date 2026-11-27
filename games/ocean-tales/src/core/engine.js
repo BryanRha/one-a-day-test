@@ -44,7 +44,7 @@ export class Engine {
     const h = layout.length, w = layout[0].length;
     const s = this.s = {
       w, h, levelId: level.id, moves: level.moves, score: 0, nextId: 1, rng: seed >>> 0,
-      nColors: level.colors || 5, status: 'play', turn: 0,
+      nColors: level.colors || 5, status: 'play', turn: 0, attack: !!level.attack,
       stars: level.stars || [1000, 2000, 3000],
       dropSpawn: level.dropSpawn || { chance: 0.12, maxOnBoard: 1 },
       timerMoves: level.timerMoves || 10,
@@ -655,6 +655,7 @@ export class Engine {
     this.ensurePlayable(steps);
   }
   goalsMet() {
+    if (this.s.attack) return false;   /* 점수 겨루기 판(주간 도전): 목표 없음 · 이동을 다 쓸 때까지 */
     return this.s.goals.every(g => g.type === 'score' ? this.s.score >= g.target : g.progress >= g.target);
   }
   starsEarned() { const sc = this.s.score; return this.s.stars.filter(t => sc >= t).length; }

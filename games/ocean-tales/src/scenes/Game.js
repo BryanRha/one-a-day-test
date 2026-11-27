@@ -1,17 +1,19 @@
 // 인게임: 엔진(core/engine.js)이 만든 steps 를 순서대로 애니메이션으로 재생한다.
-import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.99.74';
-import { Engine } from '../core/engine.js?v=0.99.74';
-import { LEVELS } from '../core/levels.js?v=0.99.74';
-import { t } from '../i18n.js?v=0.99.74';
-import { audio, WORLD_BGM } from '../audio.js?v=0.99.74';
-import { pickTip } from '../tips.js?v=0.99.74';
-import { track, flush, onMissionDone } from '../missions.js?v=0.99.74';
-import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.99.74';
-import { button, iconButton, popup, toast, starsRow, enableGlow, quake, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.74';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.74';
-import { bm } from '../oad_bm.js?v=0.99.74';
-import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.99.74';
-import { goldify, bt, failMsg, adLeft, adShown, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.99.74';
+import { W, H, CELL, TXT, COLOR_HEX, COLOR_NAMES, BOOSTER_PRICE, asset, themeOf } from '../config.js?v=0.99.75';
+import { Engine } from '../core/engine.js?v=0.99.75';
+import { LEVELS } from '../core/levels.js?v=0.99.75';
+import { t } from '../i18n.js?v=0.99.75';
+import { audio, WORLD_BGM } from '../audio.js?v=0.99.75';
+import { pickTip } from '../tips.js?v=0.99.75';
+import { track, flush, onMissionDone } from '../missions.js?v=0.99.75';
+import { load, save, addStreak, breakStreak, recordWin, addCoins, addBooster, spendCoins, useBooster } from '../save.js?v=0.99.75';
+import { button, iconButton, popup, toast, starsRow, enableGlow, quake, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.75';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.75';
+import { bm } from '../oad_bm.js?v=0.99.75';
+import { COUNTDOWN, contOffer, goalProgress, boosterOffer } from '../core/cont.js?v=0.99.75';
+import { goldify, bt, failMsg, adLeft, adShown, noteAd, plays, notePlay, roundOver, afterRound, helpCheck, helpNoteEnd, helpStreak, oadTrack, paused, oadOn } from '../bmflow.js?v=0.99.75';
+import { BOARD as WK_BOARD, MOVES as WK_MOVES, BOOST_MAX, weeklyLevel, seedOf, hopeOf, coinsFor } from '../core/weekly.js?v=0.99.75';
+import { wt, wkState, wkStart, wkFinish, wkOpen, wkLine, wkLeft } from '../weeklyflow.js?v=0.99.75';
 
 const BOARD_TOP = 436;
 // 별 게이지: 별 3개를 같은 간격에 두고, 점수는 별 사이 구간별로 선형 보간 (기준 점수 간격이 달라도 보기 좋게)
@@ -31,11 +33,14 @@ export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
 
   init(data) {
-    this.levelId = data.levelId || 1;
-    this.level = LEVELS.find(l => l.id === this.levelId);
+    /* 주간 도전 판(data.weekly = '2026-W48'): 모두 같은 판 · 같은 씨앗 · 이동 25 안 점수 (core/weekly.js) */
+    this.weekly = data.weekly ? { p: data.weekly } : null;
+    this.levelId = this.weekly ? 0 : data.levelId || 1;
+    this.level = this.weekly ? weeklyLevel(this.weekly.p) : LEVELS.find(l => l.id === this.levelId);
     // scene.restart 는 같은 장면 객체를 다시 쓰므로, 판마다 바뀌는 표시는 여기서 초기화
     this.worldCleared = null; this.comboImg = null; this.ptcLive = 0; this.pendingPause = false;
-    this.engine = new Engine(this.level, (Date.now() % 1e9) | 0);
+    this.engine = new Engine(this.level, this.weekly ? seedOf(this.weekly.p) : (Date.now() % 1e9) | 0);
+    this.wkUsed = { hammer: 0, swap: 0, shuffle: 0 }; this.wkCont = 0; this.wkT0 = 0; this.wkRun = null; this.wkBeat = false; this.wkBestText = null; this.wkDone = false;
     this.sprites = new Map();
     this.jellySprites = new Map();
     this.busy = true;
@@ -271,13 +276,21 @@ export class GameScene extends Phaser.Scene {
       const check = this.add.image(x, y + 44, 'hud_goal_check').setScale(0.5 * gk).setDepth(22).setVisible(false);
       this.goalViews.push({ g, icon, txt, check, x, y });
     });
+    /* 주간 도전: 목표 칸 자리에 '이번 주 내 최고' (넘으면 금색으로) */
+    if (this.weekly) {
+      const x = 600, y = 114, best = wkState(this.weekly.p).best;
+      this.add.nineslice(x, y, 'hud_goal_box', null, 560, 156, 40, 40, 40, 40).setDepth(20);
+      this.add.text(x, y - 34, wt('hudBest'), { ...TXT.dark, fontSize: '28px' }).setOrigin(0.5).setDepth(21);
+      this.wkBestText = this.add.bitmapText(x, y + 22, 'font_num_white', `${best}`, 46).setOrigin(0.5).setDepth(22);
+      this.wkBest0 = best;
+    }
     // 점수 바
     // 물결 아래 상태 패널: [레벨 | 점수 + 별 게이지] 를 하나로 묶는다
     // 상단 물결(≈y272)과 보드 테두리 위쪽 사이 빈 공간의 한가운데에 둔다
     const PY = Math.max(336, Math.round((272 + (this.oy - 24 * this.k)) / 2));
     this.add.nineslice(W / 2, PY, 'hud_goal_box', null, 900, 124, 40, 40, 40, 40).setDepth(20);
-    this.add.text(170, PY - 22, t('level'), { ...TXT.dark, fontSize: '26px' }).setOrigin(0.5).setDepth(21);
-    this.add.text(170, PY + 18, `${this.levelId}`, { ...TXT.dark, fontSize: '48px' }).setOrigin(0.5).setDepth(21);
+    this.add.text(170, PY - 22, this.weekly ? wt('hudTag') : t('level'), { ...TXT.dark, fontSize: '26px' }).setOrigin(0.5).setDepth(21);
+    this.add.text(170, PY + 18, this.weekly ? wt('hudBig') : `${this.levelId}`, { ...TXT.dark, fontSize: this.weekly ? '42px' : '48px' }).setOrigin(0.5).setDepth(21);
     const div = this.add.graphics().setDepth(21);
     div.lineStyle(4, 0x2EA8E6, 0.6).lineBetween(250, PY - 40, 250, PY + 40);
     // "점수 1,234" 는 게이지 위 가운데 (점수가 늘어나도 가운데 유지 → layoutScore)
@@ -324,6 +337,12 @@ export class GameScene extends Phaser.Scene {
   updateHUD(snap) {
     const s = this.engine.s;
     if (snap.moves !== undefined) this.movesText.setText(`${Math.max(0, snap.moves)}`);
+    if (this.weekly && snap.score !== undefined && this.wkBestText && snap.score > this.wkBest0 && !this.wkBeat) {
+      this.wkBeat = true;   /* 판 안에서 이번 주 내 최고를 넘는 순간 한 번 */
+      this.wkBestText.setFont('font_num_gold');
+      this.tweens.add({ targets: this.wkBestText, scale: 1.25, yoyo: true, duration: 160, repeat: 1 });
+    }
+    if (this.wkBeat && snap.score !== undefined) this.wkBestText.setText(snap.score.toLocaleString('en-US'));
     if (snap.score !== undefined) {
       this.scoreText.setText(snap.score.toLocaleString('en-US'));
       this.layoutScore();
@@ -379,10 +398,11 @@ export class GameScene extends Phaser.Scene {
   onBooster(k) {
     if (this.busy && !this.armed) return;
     if (this.armed === k) { this.armed = null; this.refreshBoosters(); this.hideArmHint(); return; }
+    if (this.weekly && this.wkUsed[k] >= BOOST_MAX[k]) { toast(this, wt('boostMax')); return; }   /* 주간 도전: 판당 상한 */
     const d = load();
     if ((d.boosters[k] || 0) <= 0) return this.buyPopup(k);
     if (k === 'shuffle') {
-      useBooster('shuffle'); this.refreshBoosters();
+      useBooster('shuffle'); this.wkUsed.shuffle++; this.refreshBoosters();
       this.busy = true;
       audio.play('sfx_booster');
       const res = this.engine.useShuffle();
@@ -489,7 +509,7 @@ export class GameScene extends Phaser.Scene {
       this.busy = false; this.scheduleHint();
       return;
     }
-    if (free) { useBooster('swap'); this.armed = null; this.hideArmHint(); this.refreshBoosters(); audio.play('sfx_booster'); }
+    if (free) { useBooster('swap'); this.wkUsed.swap++; this.armed = null; this.hideArmHint(); this.refreshBoosters(); audio.play('sfx_booster'); }
     if (this.tutorialHand) { this.tutorialHand.destroy(); this.tutorialHand = null; }
     await this.playSteps(res.steps);
     this.afterTurn();
@@ -499,7 +519,7 @@ export class GameScene extends Phaser.Scene {
     const useful = cl && (cl.cover || cl.jelly > 0 || (cl.p && cl.p.k !== 'drop'));
     if (!useful) { toast(this, t('hammerNo'), BOARD_TOP + 40); return; }   // 재료·빈칸: 부스터를 쓰지 않음
     this.busy = true; this.armed = null; this.hideArmHint();
-    useBooster('hammer'); this.refreshBoosters();
+    useBooster('hammer'); this.wkUsed.hammer++; this.refreshBoosters();
     const res = this.engine.useHammer(...cell);
     await this.playSteps(res.steps);
     this.afterTurn();
@@ -1242,6 +1262,7 @@ export class GameScene extends Phaser.Scene {
 
   loseSequence() {
     this.busy = true; this.resetHint();
+    if (this.weekly) return this.wkOutOfMoves();
     if (this.engine.s.loseReason === 'timer') return this.failPopup(t('timerBoom'));
     const img = this.bigText('txt_out_of_moves');
     audio.voice('almost');
@@ -1402,7 +1423,7 @@ export class GameScene extends Phaser.Scene {
     /* 화면 흔들림 · 진동 켜고 끄기 (QA 6) */
     p.box.add([this.add.text(-280, -30, t('shakeFx'), TXT.dark).setOrigin(0, 0.5), toggleButton(this, 220, -30, () => d.shake !== false, toggleShake, t('on'), t('off'))]);
     p.box.add(button(this, 0, 150, t('resume'), () => p.close(), { width: 520, height: 150, size: 56 }));
-    const abandon = () => { if (this.engine.s.turn > 0) breakStreak(); this.endRound(false, true); };
+    const abandon = () => { if (this.engine.s.turn > 0 && !this.weekly) breakStreak(); this.endRound(false, true); };
     p.box.add(button(this, -150, 330, t('retry'), () => { abandon(); this.restart(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
     p.box.add(button(this, 150, 330, t('quit'), () => { abandon(); this.toMap(); }, { kind: 'secondary', width: 280, height: 120, size: 40 }));
   }
@@ -1465,6 +1486,8 @@ export class GameScene extends Phaser.Scene {
 
   async startPlay() {
     notePlay(); this.moves0 = this.engine.s.moves;
+    /* 주간 도전: 연승 보너스 · 튜토리얼 없음 (모두 같은 출발선) */
+    if (this.weekly) { this.wkT0 = Date.now(); this.wkRun = wkStart(this.weekly.p); this.busy = false; this.scheduleHint(); return; }
     await this.applyStreakBonus();
     const tut = this.level.tutorial;
     const d = load();
@@ -1526,7 +1549,7 @@ export class GameScene extends Phaser.Scene {
   // ═══ 화면 이동 ═════════════════════════════════════════════
   // 판이 끝난 뒤 다른 화면으로 갈 때 판 끝 전면 광고를 한 번 물어봄 (앱이 그룹 · 간격 · 소장을 보고 정함 · 실패 순간엔 안 부름)
   async leaveAfter(fn) { if (this.leaving) return; this.leaving = true; await afterRound(); if (this.sys.isActive() || this.sys.isPaused()) fn(); }
-  restart() { this.leaveAfter(() => this.scene.restart({ levelId: this.levelId })); }
+  restart() { this.leaveAfter(() => this.scene.restart(this.weekly ? { weekly: this.weekly.p } : { levelId: this.levelId })); }
   toMap() {
     this.leaveAfter(() => {
       if (this.worldCleared) return this.scene.start('WorldClear', { world: this.worldCleared });
@@ -1547,10 +1570,12 @@ export class GameScene extends Phaser.Scene {
     if (this.ended) return;
     this.ended = true;
     if (!quit) roundOver();
+    if (this.weekly) return;   /* 주간 도전은 응원 선물(레벨 연속 실패)에 세지 않음 */
     helpNoteEnd({ levelId: this.levelId, won, quit, turn: this.engine.s.turn, moves0: this.moves0 });
   }
   // 레벨 시작: 같은 레벨 3연속 실패면 응원 선물 창을 먼저 (core/help.js · docs/bm-policy.md 6장)
   beginRound() {
+    if (this.weekly) return this.wkStartPopup();
     const n = helpCheck(this.levelId);
     if (n) this.giftPopup(n); else this.levelStartPopup();
   }
@@ -1579,6 +1604,190 @@ export class GameScene extends Phaser.Scene {
     B.add(button(this, 0, 300, bt('giftTake'), () => take(true), { width: 520, height: 150, size: 54 }));
     B.add(button(this, 0, 440, bt('giftDecline'), () => take(false), { kind: 'secondary', width: 420, height: 110, size: 38 }));
   }
+  // ═══ 주간 도전 판 (core/weekly.js · weeklyflow.js) ══════════════
+  // 시작 창: 판 이름 · 규칙 한 줄 · 마감까지 · 이번 주 내 최고 · 별 기준 · (원어데이) 부스터 줄
+  wkStartPopup() {
+    const lv = this.level, w = wkState(this.weekly.p);
+    const bmRow = !!boosterOffer(bm.info, adLeft('booster')), extra = bmRow ? 150 : 0;
+    const p = popup(this, { title: wt('title'), width: 900, height: 1120 + extra, closeButton: false, onBack: () => { p.close(true); this.toMap(); } });
+    window.__startPop = p;
+    const B = this.add.container(0, -extra / 2); p.box.add(B);
+    B.add(this.add.text(0, -400, wt(`boards.${lv.key}`), { ...TXT.mid, fontSize: '50px', color: '#FFE14D', stroke: '#0B3E8A' }).setOrigin(0.5));
+    B.add(this.add.text(0, -330, wt('closes', wkLeft(this.weekly.p)), { ...TXT.small, fontSize: '30px', stroke: '#0B3E8A' }).setOrigin(0.5));
+    B.add(this.add.nineslice(0, -185, 'hud_goal_box', null, 760, 200, 40, 40, 40, 40));
+    B.add(this.add.text(0, -215, wt('lead', WK_MOVES), { ...TXT.dark, fontSize: '42px' }).setOrigin(0.5));
+    B.add(this.add.text(0, -152, wt('same'), { ...TXT.dark, fontSize: '30px' }).setOrigin(0.5).setAlpha(0.85));
+    /* 별 기준 점수 (판 모양마다 · 사람 봇 30 · 60 · 90% 자리) */
+    lv.stars.forEach((th, i) => {
+      const x = (i - 1) * 230;
+      B.add(this.add.image(x, -10, 'star_small_on').setScale(1.15));
+      B.add(this.add.text(x, 52, th.toLocaleString('en-US'), { ...TXT.small, fontSize: '32px' }).setOrigin(0.5));
+    });
+    B.add(this.add.text(0, 150, w.best ? wt('myBest', w.best) : wt('noBest'), { ...TXT.small, fontSize: w.best ? '38px' : '30px', color: w.best ? '#FFE14D' : '#FFFFFF', stroke: w.best ? '#C2410C' : '#123A6E', strokeThickness: 8 }).setOrigin(0.5));
+    const m = this.add.image(-350, 290, 'mascot_talk').setScale(0.15); B.add(m);
+    this.tweens.add({ targets: m, y: m.y - 8, yoyo: true, repeat: -1, duration: 600, ease: 'Sine.InOut' });
+    B.add(this.add.nineslice(40, 290, 'hud_goal_box', null, 700, 120, 40, 40, 40, 40));
+    B.add(this.add.text(40, 290, pickTip(), { ...TXT.body, fontSize: '26px', wordWrap: { width: 620, useAdvancedWrap: true }, lineSpacing: 4 }).setOrigin(0.5));
+    if (bmRow) this.boosterRow(p.box, 375);
+    const go = button(this, 0, 455 + extra / 2, t('start'), () => { p.close(); this.startPlay(); }, { width: 520, height: 160, size: 60 });
+    p.box.add(go);
+    this.tweens.add({ targets: go, scale: 1.05, yoyo: true, repeat: -1, duration: 600, delay: 900, ease: 'Sine.InOut' });
+  }
+
+  // 이동을 다 씀 = 판 끝: '도전 끝!' → (희망일 때만) 이어하기 권유 → 결과
+  wkOutOfMoves() {
+    const s = this.engine.s;
+    const txt = this.add.text(W / 2, (BOARD_TOP + this.boardBottom) / 2, wt('done'), { ...TXT.title, fontSize: '110px' }).setOrigin(0.5).setDepth(60).setScale(0);
+    this.tweens.add({ targets: txt, scale: 1, duration: 320, ease: 'Back.Out' });
+    audio.play('jingle_win');
+    const w = wkState(this.weekly.p);
+    const h = oadOn() ? hopeOf({ score: s.score, plays: plays() - 1, used: this.wkCont, cut: w.cut, best: w.best }) : null;
+    this.time.delayedCall(1100, () => {
+      this.tweens.add({ targets: txt, alpha: 0, duration: 200, onComplete: () => txt.destroy() });
+      const offer = h && contOffer({ levelId: 99, plays: 99, progress: 1 }, this.contUsed, bm.info, adLeft('moves5'), this.adRound);
+      if (offer) this.wkContPopup(h, offer); else this.wkResult();
+    });
+  }
+
+  // 이어하기 권유 (사업 bm.md 2-3 ①): 구간 · 거리만 말함 (골드 보상 숫자 X) · 10초 고리 · 판당 2번(어느 길이든 합쳐서)
+  wkContPopup(h, offer) {
+    oadTrack('rank_offer', { board: WK_BOARD, where: h.why === 'tier' ? 'tier_gap' : 'best_gap', gap: h.gap });
+    const d = load();
+    const p = popup(this, { title: wt('contTitle'), width: 900, height: 1120, closeButton: false, onBack: () => toResult() });
+    window.__contPop = p;
+    const B = p.box, ringY = -300;
+    B.add(this.add.image(0, ringY, 'ptc_glow').setDisplaySize(330, 330).setTint(0xFFE9A8).setAlpha(0.5));
+    B.add(this.add.image(0, ringY, 'boost_moves').setScale(1.15));
+    const ring = this.add.graphics(); B.add(ring);
+    const secT = this.add.text(0, ringY + 150, '', { ...TXT.dark, fontSize: '30px' }).setOrigin(0.5); B.add(secT);
+    B.add(this.add.text(0, -80, h.why === 'tier' ? wt('gapTier', h.gap, h.tier) : wt('gapBest', h.gap), { ...TXT.mid, fontSize: '46px', color: '#FFE14D', stroke: '#C2410C', strokeThickness: 10 }).setOrigin(0.5));
+    B.add(this.add.text(0, -10, wt('contHope'), { ...TXT.body, fontSize: '34px' }).setOrigin(0.5));
+    let left = COUNTDOWN, done = false;
+    const draw = () => {
+      ring.clear();
+      ring.lineStyle(16, 0xFFFFFF, 0.35).strokeCircle(0, ringY, 125);
+      ring.lineStyle(16, 0xFFB020, 1).beginPath().arc(0, ringY, 125, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (left / COUNTDOWN), false).strokePath();
+      secT.setText(`${Math.ceil(left)}`);
+    };
+    draw();
+    const timer = this.time.addEvent({ delay: 100, loop: true, callback: () => {
+      if (done || this.contBusy || paused()) return;
+      left = Math.max(0, left - 0.1); draw();
+      if (left <= 0) toResult();
+    } });
+    const finish = () => { done = true; timer.remove(); window.__contPop = null; };
+    const toResult = () => { if (done || this.contBusy) return; finish(); p.close(true); this.wkResult(); };
+    const grant = bmCont => {
+      finish();
+      if (bmCont) this.contUsed++;
+      this.wkCont++; this.continued = true;
+      audio.play('sfx_booster');
+      this.engine.addMoves(5);
+      p.close();
+      this.updateHUD({ moves: this.engine.s.moves });
+      this.engine.ensurePlayable();
+      this.syncAll();
+      this.busy = false; this.scheduleHint();
+    };
+    const run = async fn => { if (done || this.contBusy) return; this.contBusy = true; try { await fn(); } finally { this.contBusy = false; } };
+    const viaAd = () => run(async () => {
+      const r = await bm.rewardedAd('moves5');
+      if (r && r.ok) { noteAd('moves5'); this.adRound++; grant(true); } else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
+    });
+    const viaGold = sku => run(async () => {
+      const r = await bm.spend(sku);
+      if (r && r.ok) grant(true); else if (!r || r.reason !== 'cancel') toast(this, failMsg(r));
+    });
+    const Y = 170;
+    if (offer.kind === 'first' && offer.owner) B.add(button(this, 0, Y, bt('freeBtn', bt('plus5')), viaAd, { width: 620, height: 150, size: 46 }));
+    else if (offer.kind === 'first') {
+      const both = offer.ad && offer.gold;
+      if (offer.ad) B.add(button(this, both ? -205 : 0, Y, bt('adBtn', bt('plus5')), viaAd, { width: both ? 390 : 620, height: 150, size: 38 }));
+      if (offer.gold) B.add(goldify(this, button(this, both ? 205 : 0, Y, bt('goldBtn', offer.gold, bt('plus5')), () => viaGold('continue'), { width: both ? 390 : 620, height: 150, size: 38 })));
+    } else B.add(goldify(this, button(this, 0, Y, bt('goldBtn', offer.gold, bt('plus5More')), () => viaGold('continue2'), { width: 620, height: 150, size: 42 })));
+    /* 게임 안 길 (보유 +5 이동 · 코인) — 무과금으로도 같은 거리를 메울 수 있게 */
+    const owned = d.boosters.moves || 0;
+    B.add(button(this, 0, Y + 155, owned > 0 ? bt('inGame', owned) : bt('inGameCoins', BOOSTER_PRICE.moves), () => {
+      if (done || this.contBusy) return;
+      if (owned > 0) useBooster('moves');
+      else if (!spendCoins(BOOSTER_PRICE.moves)) { toast(this, t('notEnough')); return; }
+      grant(false);
+    }, { kind: 'secondary', width: 620, height: 110, size: 36 }));
+    B.add(button(this, 0, Y + 290, bt('seeResult'), () => toResult(), { kind: 'secondary', width: 380, height: 110, size: 38 }));
+  }
+
+  // 결과: 점수 · 별 · 이번 주 내 최고 · 원어데이 순위 한 줄 · [다시 도전] [순위 보기] [지도]
+  wkResult() {
+    if (this.wkDone) return;
+    this.wkDone = true;
+    const e = this.engine, score = e.s.score, th = e.s.stars;
+    const stars = th.filter(v => score >= v).length;
+    const prevBest = wkState(this.weekly.p).best;
+    const coins = coinsFor(score, th);
+    this.endRound(true);
+    addCoins(coins); flush();
+    const meta = { moves: e.s.turn, cont: this.wkCont, boost: this.wkUsed.hammer + this.wkUsed.swap + this.wkUsed.shuffle, sec: Math.round((Date.now() - (this.wkT0 || Date.now())) / 1000), key: this.level.key, p: this.weekly.p };
+    const sent = (this.wkRun || Promise.resolve()).catch(() => null).then(() => wkFinish(this.weekly.p, score, meta));
+    window.__wkSent = sent;
+
+    const p = popup(this, { title: wt('resultTitle'), width: 900, height: 1200, closeButton: false, onBack: () => this.toMap() });
+    window.__wkResult = p;
+    const B = p.box;
+    const rays = this.add.image(0, -390, 'ptc_rays').setScale(1.5).setAlpha(0).setTint(0xFFF1A8); B.add(rays);
+    this.tweens.add({ targets: rays, alpha: 0.5, duration: 500, delay: 300 });
+    this.tweens.add({ targets: rays, angle: 360, duration: 9000, repeat: -1 });
+    const slots = [0, 1, 2].map(i => {
+      const x = (i - 1) * 210, y = -400 + (i === 1 ? -26 : 0), size = i === 1 ? 190 : 160;
+      B.add(this.add.image(x, y, 'star_big_off').setDisplaySize(size, size));
+      return { x, y, size };
+    });
+    const popStar = i => {
+      const sl = slots[i], st = this.add.image(sl.x, sl.y, 'star_big_on').setDisplaySize(sl.size, sl.size);
+      const target = st.scale; st.setScale(target * 2.4).setAlpha(0); B.add(st);
+      audio.play(`sfx_star_${i + 1}`);
+      this.tweens.add({ targets: st, scale: target, alpha: 1, duration: 240, ease: 'Quad.In', onComplete: () => { audio.play('sfx_star_slam'); quake(this, 120 + i * 40, 0.004 + i * 0.002); } });
+    };
+    B.add(this.add.text(0, -250, wt(`boards.${this.level.key}`), { ...TXT.dark, fontSize: '32px' }).setOrigin(0.5).setAlpha(0.85));
+    const sc = this.add.bitmapText(0, -175, 'font_num_gold', '0', 92).setOrigin(0.5); B.add(sc);
+    const info = this.add.text(0, -95, '', { ...TXT.dark, fontSize: '34px', align: 'center' }).setOrigin(0.5); B.add(info);
+    /* 원어데이 순위 한 줄 (제목 · 보조) */
+    const card = this.add.nineslice(0, 30, 'hud_goal_box', null, 760, 170, 40, 40, 40, 40); B.add(card);
+    const rkT = this.add.text(0, oadOn() ? 6 : 30, oadOn() ? wt('rankWait') : wt('rankOff'), { ...TXT.dark, fontSize: oadOn() ? '40px' : '32px', align: 'center', wordWrap: { width: 700, useAdvancedWrap: true } }).setOrigin(0.5); B.add(rkT);
+    const rkS = this.add.text(0, 62, '', { ...TXT.dark, fontSize: '28px', color: '#0B6E4F' }).setOrigin(0.5); B.add(rkS);
+    const coinIc = this.add.image(-50, 165, 'ico_coin').setScale(0); B.add(coinIc);
+    const coinT = this.add.text(-10, 165, '+0', { ...TXT.mid, stroke: '#7A3F00' }).setOrigin(0, 0.5).setAlpha(0); B.add(coinT);
+    let shown = 0;
+    this.time.delayedCall(300, () => this.tweens.addCounter({
+      from: 0, to: score, duration: 1500, ease: 'Cubic.Out',
+      onUpdate: tw => { const v = Math.round(tw.getValue()); sc.setText(v.toLocaleString('en-US')); while (shown < stars && v >= th[shown]) popStar(shown++); },
+      onComplete: () => {
+        while (shown < stars) popStar(shown++);
+        if (score > prevBest) {
+          info.setText(wt('newBest')).setColor('#FF6A1F').setScale(1.8).setAlpha(0);
+          this.tweens.add({ targets: info, scale: 1, alpha: 1, duration: 300, ease: 'Back.Out' });
+          if (prevBest) this.confetti();
+        } else info.setText(wt('best', prevBest));
+        this.tweens.add({ targets: coinIc, scale: 0.42, duration: 300, ease: 'Back.Out' });
+        this.tweens.add({ targets: coinT, alpha: 1, duration: 200 });
+        this.tweens.addCounter({ from: 0, to: coins, duration: 600, onUpdate: tw => coinT.setText(`+${Math.round(tw.getValue())}`) });
+        audio.play('sfx_coin');
+      },
+    }));
+    sent.then(res => {
+      if (!this.sys.isActive() || !rkT.active || !oadOn()) return;
+      const L = wkLine(res && res.r);
+      rkT.setText(L.title); rkS.setText(L.sub || '');
+      rkT.y = L.sub ? 6 : 30;
+      this.tweens.add({ targets: [rkT, rkS], scale: { from: 1.15, to: 1 }, duration: 260, ease: 'Back.Out' });
+    });
+    const again = button(this, oadOn() ? -170 : 0, 340, wt('again'), () => this.restart(), { width: oadOn() ? 420 : 520, height: 150, size: 52 });
+    B.add(again);
+    if (oadOn()) B.add(button(this, 220, 340, wt('seeRank'), () => { oadTrack('rank_open', { board: WK_BOARD, from: 'result' }); wkOpen(); }, { kind: 'secondary', width: 330, height: 150, size: 44 }));
+    B.add(button(this, 0, 485, t('map'), () => this.toMap(), { kind: 'secondary', width: 360, height: 110, size: 40 }));
+    const m = this.add.image(360, -440, stars >= 2 ? 'mascot_happy' : 'mascot_idle').setScale(0.16); B.add(m);
+    this.tweens.add({ targets: m, y: m.y - 12, yoyo: true, repeat: -1, duration: stars === 3 ? 300 : 700 });
+  }
+
   // 시작 창 아래: 광고 1회 → 삼지창 1 (하루 3 · 소장자는 광고 없이) · 🪙60 → 부스터 3종 1개씩 (같은 크기)
   boosterRow(parent, y) {
     const row = this.add.container(0, y); parent.add(row);

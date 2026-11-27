@@ -1,15 +1,16 @@
 // 홈: 세계 지도(출정) · 강화 · 영웅 · 기록 — 아래 탭 4개, 시작까지 탭 1번
-import { W, H, C, FONT } from '../config.js?v=0.99.74';
-import { T, CHAPTERS, STAGE_NAMES, UP_NAMES, HERO_UP_NAMES, HERO_NAMES, ITEM_NAMES, ITEM_ICONS, UNIT_ICONS, itemDesc, SPECIAL_NAMES } from '../core/data.js?v=0.99.74';
-import * as M from '../core/meta.js?v=0.99.74';
-import { AWARDS, missions, claimMission, checkAwards, MISSION_REWARD, MISSION_BONUS } from '../core/awards.js?v=0.99.74';
-import { EST } from '../core/balance.js?v=0.99.74';
-import { text, panel, button, toast, icon, scrollList } from '../ui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save, loadResume, saveResume, dayKey } from '../save.js?v=0.99.74';
-import { FRAME_ATLAS, queueHome, indexFrames } from './Boot.js?v=0.99.74';
-import { pushBack } from '../oad.js?v=0.99.74';
-import { oadOn, owned, bm, track } from '../bmflow.js?v=0.99.74';
+import { W, H, C, FONT } from '../config.js?v=0.99.75';
+import { T, CHAPTERS, STAGE_NAMES, UP_NAMES, HERO_UP_NAMES, HERO_NAMES, ITEM_NAMES, ITEM_ICONS, UNIT_ICONS, itemDesc, SPECIAL_NAMES } from '../core/data.js?v=0.99.75';
+import * as M from '../core/meta.js?v=0.99.75';
+import { AWARDS, missions, claimMission, checkAwards, MISSION_REWARD, MISSION_BONUS } from '../core/awards.js?v=0.99.75';
+import { EST } from '../core/balance.js?v=0.99.75';
+import { text, panel, button, toast, icon, scrollList } from '../ui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save, loadResume, saveResume, dayKey } from '../save.js?v=0.99.75';
+import { FRAME_ATLAS, queueHome, indexFrames } from './Boot.js?v=0.99.75';
+import { pushBack } from '../oad.js?v=0.99.75';
+import { oadOn, owned, bm, track } from '../bmflow.js?v=0.99.75';
+import { BOARD, arenaStage, leftText } from '../rank.js?v=0.99.75';
 
 const TOP = 150, TAB = 176;
 const CH_POS = [[0.28, 0.83], [0.70, 0.67], [0.25, 0.43], [0.74, 0.29], [0.28, 0.10]];
@@ -91,6 +92,7 @@ export class HomeScene extends Phaser.Scene {
     const curCh = Math.floor(sel / 10);
     const g = this.L(this.add.graphics());
     const pts = CH_POS.map(([fx, fy]) => [mx + fx * mw, my + fy * mh]);
+    this.chPts = pts;
     g.lineStyle(8, 0xFFE7A0, 0.5);
     for (let i = 0; i < 4; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[i + 1]; const n = 14; for (let k = 0; k < n; k += 2) g.lineBetween(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n, x1 + (x2 - x1) * (k + 1) / n, y1 + (y2 - y1) * (k + 1) / n); }
     pts.forEach(([x, y], c) => {
@@ -110,6 +112,7 @@ export class HomeScene extends Phaser.Scene {
       const z = this.add.zone(0, 0, 150, 150).setInteractive({ useHandCursor: true }); mk.add(z);
       z.on('pointerup', () => { if (!open) { toast(this, `${c}장 마지막 스테이지를 깨면 열려요`, sheetY - 40, C.life); return; } let st = c * 10; for (let i = 9; i >= 0; i--) if (this.unlockedSt(c * 10 + i)) { st = c * 10 + i; break; } d.sel.stage = st; d.sel.mode = 0; save(); this.show('map'); });
     });
+    this.arenaBtn = null; if (d.cleared[0]) this.drawArena(TOP + 22);
     // 아래 판
     this.L(panel(this, 0, sheetY, W, SHEET + 40, { r: 44, fill: 0x121620, alpha: 0.98 }));
     const ch = curCh;
@@ -150,6 +153,25 @@ export class HomeScene extends Phaser.Scene {
       this.tweens.add({ targets: go, scale: 1.02, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     }
     this.L(text(this, W / 2, y0 + 250, sub, 30, C.mute, { weight: '700' }));
+  }
+  // 공통 랭킹 '이번 주 무한 전장' 줄 (rank.js · 1-1 을 깬 사람부터 · 그 전장을 아직 못 깼어도 이 줄로는 들어감)
+  drawArena(y) {
+    /* 지도 오른쪽 위 (5장 표지는 왼쪽 위 · 4장은 그 아래라 겹치지 않음) */
+    /* 지도가 작아지는 화면(폴드 · PC · 짧은 폰)은 5장 표지 오른쪽부터만 쓰고, 좁으면 '순위' 단추는 뺌(순위표는 결과 화면 · 원어데이 게임 상세에도 있음) */
+    const c5 = this.chPts ? this.chPts[4][0] + 84 : 0, x = Math.max(W - 32 - 626, c5), w = W - 32 - x;
+    const d = this.d, st = arenaStage(), h = 156, oad = oadOn() && w >= 600;
+    const nm = `${Math.floor(st / 10) + 1}-${st % 10 + 1} ${STAGE_NAMES[Math.floor(st / 10)][st % 10]}`, best = d.infBest[st] || 0;
+    const c = this.L(this.add.container(0, 0).setDepth(20));
+    c.add(panel(this, x, y, w, h, { r: 30, fill: 0x1A1408, alpha: 0.92, line: C.accent, lineAlpha: 0.85 }));
+    c.add(icon(this, 'trophy', x + 50, y + h / 2, 1.2));
+    const bw = oad ? 128 : 0, room = w - 96 - (oad ? bw + 36 : 24);
+    const rows = [text(this, x + 94, y + 34, '이번 주 무한 전장', 28, C.gold, { ox: 0 }), text(this, x + 94, y + 76, nm, 36, C.ink, { ox: 0 }), text(this, x + 94, y + 120, `${best ? `내 최고 웨이브 ${best}` : '아직 기록 없음'} · ${leftText()}`, 28, C.mute, { ox: 0, weight: '700' })];
+    for (const t of rows) { c.add(t); if (t.width > room) t.setScale(room / t.width); }
+    const go = () => { track('rank_arena', { stage: st }); this.go(st, 1); };
+    const z = this.add.zone(x, y, w - (oad ? bw + 20 : 0), h).setOrigin(0).setInteractive({ useHandCursor: true }); c.add(z);
+    z.on('pointerup', () => { audio.id(14, { volume: 0.4 }); go(); });
+    if (oad) c.add(button(this, x + w - bw / 2 - 16, y + h / 2, bw, 96, '순위', () => { track('rank_open', { where: 'home' }); bm.rank.open(BOARD); }, { size: 32, fill: 0x5A3B12, edge: C.accent, color: C.gold, r: 22 }));
+    this.arenaBtn = { label: `이번 주 무한 전장 ${rows[1].text} ${rows[2].text}`, bounds: [x, y, w, h], go };
   }
   go(stage, mode, resume = null, giftGold = 0) {
     const d = this.d; d.sel.stage = stage; d.sel.mode = mode; save();

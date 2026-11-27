@@ -1,16 +1,18 @@
 // 월드맵: 월드(10레벨씩)를 세로로 이어 붙이고, 레벨 노드를 구불구불한 길로 연결한다. 화면 근처 월드만 그린다.
-import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.74';
-import { t } from '../i18n.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save, availableStars } from '../save.js?v=0.99.74';
-import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.74';
-import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.74';
-import { dailyState, claimableCount } from '../missions.js?v=0.99.74';
-import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.74';
-import { dexClaimable, achClaimable } from '../progress.js?v=0.99.74';
-import { LEVELS } from '../core/levels.js?v=0.99.74';
-import { popup, button, iconButton, toast, enableGlow, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.74';
-import { inOAD, toOAD } from '../oad.js?v=0.99.74';
+import { W, H, TXT, INK, WORLD_COUNT, MAP_THEME } from '../config.js?v=0.99.75';
+import { t } from '../i18n.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save, availableStars } from '../save.js?v=0.99.75';
+import { RESTORE_TASKS, taskCost } from '../restore.js?v=0.99.75';
+import { dailyPopup, missionPopup } from '../ui/meta.js?v=0.99.75';
+import { dailyState, claimableCount } from '../missions.js?v=0.99.75';
+import { dexPopup, achPopup } from '../ui/collection.js?v=0.99.75';
+import { dexClaimable, achClaimable } from '../progress.js?v=0.99.75';
+import { LEVELS } from '../core/levels.js?v=0.99.75';
+import { popup, button, iconButton, toast, enableGlow, toggleButton, toggleShake } from '../ui/widgets.js?v=0.99.75';
+import { inOAD, toOAD } from '../oad.js?v=0.99.75';
+import { UNLOCK as WK_UNLOCK, weekOf } from '../core/weekly.js?v=0.99.75';
+import { wt, wkPlayed } from '../weeklyflow.js?v=0.99.75';
 
 const WORLD_H = 3840;
 const WORLDS = WORLD_COUNT;
@@ -64,13 +66,30 @@ export class MapScene extends Phaser.Scene {
     this.built = new Map();
     this.mapData = data;
     // 고정 UI
-    const top = this.add.image(W / 2, 0, 'hud_topbar').setOrigin(0.5, 0).setScrollFactor(0).setScale(1, 0.62);
-    iconButton(this, 90, 85, 'ico_home', () => this.scene.start('Title'), { size: 120 }).setScrollFactor(0);
-    iconButton(this, W - 90, 85, 'ico_settings', () => settingsPopup(this), { size: 120 }).setScrollFactor(0);
-    const coin = this.add.image(W / 2 - 180, 80, 'ico_coin').setScale(0.42).setScrollFactor(0);
-    this.coinText = this.add.text(coin.x + 50, 80, `${d.coins}`, TXT.mid).setOrigin(0, 0.5).setScrollFactor(0);
-    const star = this.add.image(W / 2 + 110, 80, 'star_small_on').setScale(1.1).setScrollFactor(0);
-    this.add.text(star.x + 46, 80, `${availableStars()}`, TXT.mid).setOrigin(0, 0.5).setScrollFactor(0);
+    /* 위 고정 바는 월드(나중에 만들어 위에 그려짐)보다 앞에 (depth 29~30) — 예전엔 월드 그림에 가려 홈 · 설정 · 코인이 안 보였음 */
+    const top = this.add.image(W / 2, 0, 'hud_topbar').setOrigin(0.5, 0).setScrollFactor(0).setScale(1, 0.62).setDepth(29);
+    iconButton(this, 90, 85, 'ico_home', () => this.scene.start('Title'), { size: 120 }).setScrollFactor(0).setDepth(30);
+    iconButton(this, W - 90, 85, 'ico_settings', () => settingsPopup(this), { size: 120 }).setScrollFactor(0).setDepth(30);
+    const coin = this.add.image(W / 2 - 180, 80, 'ico_coin').setScale(0.42).setScrollFactor(0).setDepth(30);
+    this.coinText = this.add.text(coin.x + 50, 80, `${d.coins}`, TXT.mid).setOrigin(0, 0.5).setScrollFactor(0).setDepth(30);
+    const star = this.add.image(W / 2 + 110, 80, 'star_small_on').setScale(1.1).setScrollFactor(0).setDepth(30);
+    this.add.text(star.x + 46, 80, `${availableStars()}`, TXT.mid).setOrigin(0, 0.5).setScrollFactor(0).setDepth(30);
+    /* 주간 도전 (10레벨을 깨면 열림 · 이번 주에 아직 안 했으면 빨간 점) */
+    const wkOpen = d.unlocked >= WK_UNLOCK;
+    const wkX = W - 236, wkY = top.displayHeight + 64;
+    const wk = button(this, wkX, wkY, wt('mapBtn'), () => {
+      if (!wkOpen) { toast(this, wt('unlock')); return; }
+      this.cameras.main.fadeOut(220, 189, 235, 255);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Game', { weekly: weekOf() }));
+    }, { width: 420, height: 108, size: 38 }).setScrollFactor(0).setDepth(30);
+    const tro = this.add.image(-150, -6, 'ico_trophy').setDisplaySize(78, 78); wk.add(tro); wk.label.x += 36;
+    wk.list.forEach(o => o.setScrollFactor && o.setScrollFactor(0));
+    if (!wkOpen) wk.setAlpha(0.6);
+    else if (!wkPlayed()) {
+      const dot = this.add.circle(wkX + 196, wkY - 44, 20, 0xFF3B4A).setStrokeStyle(5, 0xffffff).setScrollFactor(0).setDepth(31);
+      this.tweens.add({ targets: dot, scale: 1.18, yoyo: true, repeat: -1, duration: 420, ease: 'Sine.InOut' });
+    }
+    this.wkBtn = wk;
     // ── 아래 고정 바: 미션 · 도감 · 업적 · 바다 복원 (받을 보상·할 일이 있으면 빨간 알림)
     const dockBg = this.add.image(W / 2, H, 'hud_topbar').setOrigin(0.5, 0).setFlipY(true).setDisplaySize(W, 270).setScrollFactor(0).setDepth(29);
     dockBg.setOrigin(0.5, 1);

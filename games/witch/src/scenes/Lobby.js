@@ -1,16 +1,16 @@
 // 로비: 마녀 선택·강화 · 고양이(입양/성장/장착/산책) · 부스터 · 미션 · 출석 · 업적 · 주간 랭킹 · 상점 · 설정 → 출발
-import { W, H } from '../config.js?v=0.99.74';
-import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save, reset } from '../save.js?v=0.99.74';
-import { CATS } from '../core/run.js?v=0.99.74';
-import * as M from '../meta.js?v=0.99.74';
-import { wind, ELEMENT } from '../fx.js?v=0.99.74';
-import { WITCHES } from '../core/run.js?v=0.99.74';
-import { bm } from '../oad_bm.js?v=0.99.74';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.74';
-import { hofShown, hofPopup } from '../hof.js?v=0.99.74';
-import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { txt, fmt, fit, button, iconButton, currencyBar, popup, toast, rewardText, scrollArea } from '../ui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save, reset } from '../save.js?v=0.99.75';
+import { CATS } from '../core/run.js?v=0.99.75';
+import * as M from '../meta.js?v=0.99.75';
+import { wind, ELEMENT } from '../fx.js?v=0.99.75';
+import { WITCHES } from '../core/run.js?v=0.99.75';
+import { bm } from '../oad_bm.js?v=0.99.75';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.75';
+import { hofShown, hofPopup } from '../hof.js?v=0.99.75';
+import { OUTFITS, OUTFIT_ORDER, outfitShown, outfitUnlocked, activeOutfit, wear, buyGold, outfitKey, outfitFx } from '../outfit.js?v=0.99.75';
 
 export class LobbyScene extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -468,7 +468,7 @@ export class LobbyScene extends Phaser.Scene {
     const pop = popup(this, '주간 랭킹', ph);
     const b = pop.box;
     b.add(txt(this, 0, -ph / 2 + 120, '이번 주 최고 점수로 겨뤄요 · 월요일에 새로 시작', 32, '#D8CCFF'));
-    /* 원어데이 안: 아래에 '이번 주 명예의 전당' (진짜 사람들 · 소장자 혜택) */
+    /* 원어데이 안: 아래에 '이번 주 명예의 전당' (진짜 사람들 · 로그인한 누구나) */
     const hof = hofShown();
     const area = scrollArea(this, b, 0, -ph / 2 + 170, 900, ph - 220 - (hof ? 150 : 0));
     if (hof) b.add(button(this, 0, ph / 2 - 100, '이번 주 명예의 전당', () => hofPopup(this), { key: 'btn_gold', w: 640, h: 120, size: 40 }));

@@ -1,17 +1,17 @@
 // 작전 결과: 승패 · 별 · 전과 · 경험치 · 계급 · 새 지휘관
-import { W, H } from '../config.js?v=0.99.74';
-import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load } from '../save.js?v=0.99.74';
-import * as M from '../meta.js?v=0.99.74';
-import { COS } from '../core/data.js?v=0.99.74';
-import { MAPS } from '../core/maps.js?v=0.99.74';
-import { insignia } from './Home.js?v=0.99.74';
-import { rankOn } from '../rank.js?v=0.99.74';
-import { rankPopup, postScore } from '../rankui.js?v=0.99.74';
-import { bm } from '../oad_bm.js?v=0.99.74';
-import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.74';
-import { SUPPORT } from '../core/support.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { T, C, fmt, panel, btn, iconBtn, toast } from '../pui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load } from '../save.js?v=0.99.75';
+import * as M from '../meta.js?v=0.99.75';
+import { COS } from '../core/data.js?v=0.99.75';
+import { MAPS } from '../core/maps.js?v=0.99.75';
+import { insignia } from './Home.js?v=0.99.75';
+import { rankOn } from '../rank.js?v=0.99.75';
+import { rankPopup, postScore } from '../rankui.js?v=0.99.75';
+import { bm } from '../oad_bm.js?v=0.99.75';
+import { supplyShow, supplyLeft, takeSupply, owned, between, track, autoShow } from '../bmwar.js?v=0.99.75';
+import { SUPPORT } from '../core/support.js?v=0.99.75';
 
 const PRAISE = ['완벽한 작전!', '훌륭한 지휘였어요!', '전선이 무너졌어요, 대승!', '역시 명지휘관!'];
 export class ResultScene extends Phaser.Scene {
@@ -20,6 +20,7 @@ export class ResultScene extends Phaser.Scene {
     this.leaving = false; this.supplyC = null; this.supplyNote = null;   // 화면 객체를 다시 쓰므로 판마다 초기화
     this.add.rectangle(W / 2, H / 2, W, H, 0x262A14);
     if (r.mode === 'versus') return this.versus(r);
+    if (r.mode === 'war' && r.week) return this.weekRoom(r);
     if (r.mode === 'war') return this.warRoom(r);
     const win = r.win, top = 230 + Math.max(0, (H - 1920) / 4), map = MAPS.find(m => m.id === r.mapId);
     if (win) { const ry = this.add.image(W / 2, top + 120, 'rays').setTint(0xFFD45A).setAlpha(0.35).setScale(2.2).setBlendMode('ADD'); this.tweens.add({ targets: ry, angle: 360, duration: 20000, repeat: -1 }); }
@@ -89,6 +90,59 @@ export class ResultScene extends Phaser.Scene {
     const by = Math.min(H - 130, top + 990);
     btn(this, W / 2 + 90, by, 560, 140, '다시 대전', () => this.go('Brief', { mode: 'free', versus: true, mapId: r.mapId, custom: r.custom }), { style: 'gold', icon: 'i_play', size: 42 });
     iconBtn(this, W / 2 - 300, by, 'i_home', () => this.go('Home'), 130);
+    this.cameras.main.fadeIn(300, 20, 22, 10);
+    window.__result = r;
+  }
+  // 주간 작전 결과 (공통 랭킹 'war:week'): 점수 · 세 칸 · 이번 주 순위 한 줄 · [다시 도전] [순위 보기]
+  weekRoom(r) {
+    const top = 200 + Math.max(0, (H - 1920) / 4), m = M.WAR.find(x => x.id === r.mapId), w = r.week && r.win ? M.weekScore(r, m.par) : null;
+    const live = r.week.key === M.weekKey(), inApp = bm.info.ok;
+    T(this, W / 2, top, 'WEEKLY OPERATION', 30, C.gold, { w: 900, ls: 8 });
+    T(this, W / 2, top + 100, r.win ? `${m.name} 돌파!` : '작전 실패', 84, C.text, { w: 900, stroke: '#2B2416', thick: 10 });
+    T(this, W / 2, top + 180, `이번 주 작전 · ${COS[r.co].name} 지휘관 · ${r.day}일`, 28, C.sub, { w: 800 });
+    let y = top + 250;
+    if (w) {
+      const prev = (r.weekRes && r.weekRes.prev) || 0, best = !prev || w.total > prev;
+      if (best) { const ry = this.add.image(W / 2, y + 110, 'rays').setTint(0xFFD45A).setAlpha(0.3).setScale(1.8).setBlendMode('ADD'); this.tweens.add({ targets: ry, angle: 360, duration: 20000, repeat: -1 }); }
+      const num = T(this, W / 2, y + 110, '0', 150, C.gold, { w: 900, stroke: '#2B2416', thick: 12 }), cnt = { v: 0 };
+      this.tweens.add({ targets: cnt, v: w.total, duration: 1100, delay: 250, ease: 'Cubic.easeOut', onUpdate: () => num.setText(fmt(cnt.v)), onComplete: () => { num.setText(fmt(w.total)); audio.play(best ? 'sfx_rank' : 'sfx_power', { volume: 0.7 }); this.tweens.add({ targets: num, scale: 1.08, duration: 140, yoyo: true }); } });
+      T(this, W / 2, y + 220, best ? (prev ? `이번 주 최고 기록 갱신! (전 ${fmt(prev)})` : '이번 주 첫 기록!') : `이번 주 최고 ${fmt(prev)}점`, 30, best ? C.green : C.sub, { w: 900 });
+      y += 290;
+      this.add.existing(panel(this, W / 2, y + 160, 920, 340, { tone: 'paper' }));
+      [['속도', w.speed, `${r.day}일 (기준 ${m.par}일)`], ['전력', w.power, `격파 ${r.kills}기`], ['기술', w.tech, `잃은 유닛 ${r.lost}기`]].forEach(([k, v, sub], i) => {
+        const yy = y + 60 + i * 100, g = this.add.graphics(), over = v > 1000;
+        T(this, 110, yy, k, 34, '#2B2416', { ox: 0, w: 900, shadow: false }); T(this, 110, yy + 38, sub, 22, '#6B5A2A', { ox: 0, w: 800, shadow: false });
+        const bar = { k: 0 }; this.tweens.add({ targets: bar, k: Math.min(1, v / 1000), duration: 600, delay: 300 + i * 300, onUpdate: () => g.clear().fillStyle(0x000000, 0.15).fillRoundedRect(300, yy - 14, 460, 28, 14).fillStyle(over || v >= 900 ? 0xE8B020 : 0x6FAE3A, 1).fillRoundedRect(300, yy - 14, Math.max(28, 460 * bar.k), 28, 14) });
+        T(this, W - 110, yy, over ? `${fmt(v)}+` : fmt(v), 38, over ? '#9A6A10' : '#2B2416', { ox: 1, w: 900, shadow: false });
+      });
+      y += 360;
+    } else {
+      T(this, W / 2, y + 30, '이겨야 점수가 남아요', 34, C.text, { w: 900 });
+      T(this, W / 2, y + 84, '적은 늘 같은 수를 둬요 · 지난 판에서 막힌 길을 다르게 풀어 봐요', 26, C.sub, { w: 800, wrap: 860 });
+      y += 160;
+    }
+    // 이번 주 순위 한 줄 (원어데이 안 · 이긴 판만 올림 — 결제 · 이어하기도 그대로, 이 판엔 도움 아이템이 없음)
+    this.add.existing(panel(this, W / 2, y + 70, 920, 150, { tone: 'gold' }));
+    const lt = T(this, W / 2, y + 44, '', 34, C.gold, { w: 900 }), ls = T(this, W / 2, y + 96, '', 24, C.text, { w: 800 });
+    const say = (a, b = '') => { if (!lt.active) return; lt.setText(a); ls.setText(b); };
+    if (!live) say('지난주 작전은 마감됐어요', '이번 주 작전은 전쟁실 맨 위에서');
+    else if (!inApp) say('원어데이 앱에서 하면 이번 주 순위에 올라요', '기록은 이 폰에 남아요');
+    else if (!w) { say('이번 주 순위', '불러오는 중…'); bm.rank.mine(M.WEEK_BOARD).then(x => { const me = x && x.ok && x.me; say(me ? (me.rank ? `이번 주 ${me.rank}위` : me.tier ? `상위 ${me.tier}% 안` : '이번 주 순위') : '이번 주 순위', me ? `내 최고 ${fmt(me.score)}점` : '이기면 첫 기록이 올라가요'); }).catch(() => say('이번 주 순위', '')); }
+    else {
+      say('이번 주 순위에 올리는 중…');
+      const meta = { map: m.id, co: r.co, day: r.day, lost: r.lost, kills: r.kills, built: r.built, speed: w.speed, power: w.power, tech: w.tech, v: 1 };
+      bm.rank.submit(M.WEEK_BOARD, w.total, { run: r.week.run || undefined, meta, assisted: false }).then(res => {
+        window.__weekRes = res; track('week_submit', { m: m.id, s: w.total, ok: res && res.ok ? 1 : 0, why: res && res.reason });
+        const ln = bm.rank.line(res);
+        if (ln) return say(ln.title, ln.sub);
+        say('지금은 순위에 올리지 못했어요', { offline: '연결되면 원어데이가 다시 보내요', fast: '조금 뒤 다시 이겨서 올려 주세요', limit: '한 시간에 올릴 수 있는 횟수를 넘었어요' }[res && res.reason] || '기록은 이 폰에 남아요');
+      }).catch(() => say('지금은 순위에 올리지 못했어요', '기록은 이 폰에 남아요'));
+    }
+    y += 170;
+    const by = Math.min(H - 260, y + 110);
+    btn(this, W / 2 + 90, by, 560, 140, '다시 도전', () => this.go('Brief', { mode: 'war', mapId: r.mapId, week: true }), { style: 'gold', icon: 'i_play', size: 42 });
+    iconBtn(this, W / 2 - 300, by, 'i_home', () => this.go('Home'), 130);
+    if (inApp && live) btn(this, W / 2, by + 150, 420, 96, '순위 보기', () => bm.rank.open(M.WEEK_BOARD), { style: 'blue', size: 30 });
     this.cameras.main.fadeIn(300, 20, 22, 10);
     window.__result = r;
   }

@@ -1,16 +1,16 @@
 // 작업대 (원작의 주방 보드): 7×9 머지-2 · 생산기 · 잠긴 상자 · 비눗방울 · 창고 · 주문 3장 · 팔기
-import { W, H } from '../config.js?v=0.99.74';
-import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast, coach } from '../ui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save } from '../save.js?v=0.99.74';
-import { goPrev } from '../nav.js?v=0.99.74';
-import { hud } from '../hud.js?v=0.99.74';
-import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.99.74';
-import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today, curTask } from '../state.js?v=0.99.74';
-import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.99.74';
-import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.99.74';
-import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.99.74';
-import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { T, R, C, TS, btn, iconBtn, sheet, rbox, chips, toast, coach } from '../ui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save } from '../save.js?v=0.99.75';
+import { goPrev } from '../nav.js?v=0.99.75';
+import { hud } from '../hud.js?v=0.99.75';
+import { CHAINS, GENS, GEN_MAX, MAX_LV, SPECIAL, specialNext, itemKey, itemName, genImg, genName, ENERGY, STORAGE } from '../data.js?v=0.99.75';
+import { spendEnergy, tickEnergy, addXp, unlockedChains, storageSize, makeOrder, fillOrders, addGoal, discover, giveReward, today, curTask } from '../state.js?v=0.99.75';
+import { adsOpen, canAd, adLeft, adLabel, rewardAd, isOwner, goldPrice, spendGold, goldMsg, AD_ENERGY, helpOn, track, fillNeed, fillGold, fillPrice, buyFill } from '../store.js?v=0.99.75';
+import { album, addPack, ORDERS_PER_PACK, piggyAdd } from '../album.js?v=0.99.75';
+import { raceAdd, ladderAdd, vipAdd, VIP, theme } from '../events.js?v=0.99.75';
+import { bingoAdd, digAddOrder, digAdd, spinAdd, duoAdd } from '../minigames.js?v=0.99.75';
 const E_GIFT = 15;   /* 하루 첫 에너지 바닥 응원 선물 */
 
 const COLS = 7, ROWS = 9, CS = 142, X0 = (1080 - COLS * CS) / 2, Y0 = 440;

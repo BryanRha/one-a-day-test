@@ -1,28 +1,27 @@
-// 이번 주 명예의 전당 (원어데이 소장자 혜택 · 아케이드 공통) — 원어데이 밖에서는 버튼부터 숨김
-//   점수 올리기: 결과 화면에서 bm.submitScore(점수, { assisted }) — 이어하기(골드 · 광고 · 별가루) · 응원 선물을 받은 판은 assisted
-//   보기: bm.board() 상위 20 · 내 순위 강조 · 이름은 서버가 가려서 줌
-import { W, H } from './config.js?v=0.99.74';
-import { txt, fmt, popup, scrollArea } from './ui.js?v=0.99.74';
-import { bm } from './oad_bm.js?v=0.99.74';
+// 이번 주 명예의 전당 (원어데이 공통 랭킹 · 아케이드 공통) — 원어데이 밖에서는 버튼부터 숨김
+//   2026-11-27 대표 결정: 로그인한 누구나 · 이어하기 · 응원 선물 · 골드를 쓴 판도 그대로 순위에 오름 (소장 조건 없음)
+//   점수 올리기: 결과 화면에서 bm.submitScore(점수, { assisted }) — assisted 는 기록용으로만 보냄(서버가 순위에 쓰지 않음)
+//   보기: bm.board() 상위 20 · 내 순위 강조 · 이름은 닉네임(최대 10자)
+import { W, H } from './config.js?v=0.99.75';
+import { txt, fmt, popup, scrollArea } from './ui.js?v=0.99.75';
+import { bm } from './oad_bm.js?v=0.99.75';
 
 export const hofShown = () => bm.info.ok;
 export const HOF_MSG = {
-  owned: '소장하면 내 기록이 올라가요',
   login: '로그인하면 내 기록이 올라가요',
-  assisted: '도움 받은 판은 쉬어 가요 · 다음 판에 도전!',
+  offline: '연결되면 기록을 다시 올려요',
 };
 // 판 결과 올리기 → 화면에 보여 줄 한 줄 (조용히 실패하면 null)
 export async function submitRun(score, assisted) {
   if (!hofShown() || !score) return null;
   const r = await bm.submitScore(score, { assisted });
-  if (r.ok) return r.rank ? `명예의 전당 ${fmt(r.rank)}위!` : '명예의 전당에 올렸어요';
+  if (r.ok) return r.rank ? `명예의 전당 ${fmt(r.rank)}위!` : r.tier ? `명예의 전당 상위 ${r.tier}%!` : '명예의 전당에 올렸어요';
   return HOF_MSG[r.reason] || null;
 }
-// 하단 안내: 소장 · 로그인 상태
+// 하단 안내: 내 순위 · 로그인 상태
 function footNote(me) {
   const info = bm.info;
   if (me) return `내 순위 ${fmt(me.rank)}위 · ${fmt(me.score)}점`;
-  if (!info.owned) return HOF_MSG.owned;
   if (!info.login) return HOF_MSG.login;
   return '이번 주 첫 기록을 올려 보세요';
 }
@@ -30,7 +29,7 @@ export function hofPopup(scene, o = {}) {
   const ph = Math.min(H - 200, 1500);
   const pop = popup(scene, '이번 주 명예의 전당', ph, { depth: o.depth || 1100 });
   const b = pop.box;
-  b.add(txt(scene, 0, -ph / 2 + 120, '원어데이 소장자 · 도움 없이 낸 점수로 겨뤄요', 32, '#D8CCFF'));
+  b.add(txt(scene, 0, -ph / 2 + 120, '이번 주 최고 점수로 겨뤄요 · 월요일에 새로 시작', 32, '#D8CCFF'));
   const loading = txt(scene, 0, 0, '불러오는 중…', 40, '#B8A6F0'); b.add(loading);
   bm.board().then(r => {
     if (!pop.active || pop.closing) return;

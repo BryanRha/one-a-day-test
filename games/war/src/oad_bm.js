@@ -8,13 +8,17 @@
 //   const r = await bm.rewardedAd('revive'); // { ok: true, via: 'ad'|'owner'|'test' } | { ok: false, reason: 'cancel'|'limit'|'off'|'standalone'|'timeout' }
 //   const s = await bm.spend('continue');    // { ok: true, gold } | { ok: false, reason: 'cancel'|'short'|'login'|'limit'|'off'|'standalone' }
 //   await bm.interstitial('round_end');      // 판이 끝날 때 불러 두면 앱이 조건(그룹 · 간격 · 소장)에 맞을 때만 보여 줌
-//   명예의 전당(아케이드 · 소장자 혜택): await bm.submitScore(점수, { assisted })  → { ok, best, rank } | { ok:false, reason:'owned'|'login'|'assisted'|'standalone' }
-//                                      await bm.board()  → { ok, week, top: [{ name, score, me }], me: { rank, score } | null }
-//   이어하기 · 응원 선물을 받은 판은 assisted: true (순위에 안 올라감)
+//   공통 랭킹 (v3 · 2026-11-27 — 로그인한 누구나 · 결제 · 이어하기 · 아이템 · 응원 선물을 쓴 판도 그대로 순위에 오름 · 대표 결정)
+//     v2 그대로: await bm.submitScore(점수, { assisted })  → { ok, best, rank, week, tier, total, newBest } | { ok:false, reason:'login'|'fast'|'limit'|'cap'|'offline'|'standalone' }
+//                await bm.board()  → { ok, week, top: [{ name(닉네임), score, me }], me: { rank, score } | null }   (판 = 게임 id 의 주간 판)
+//     새 판(곡 판 · 같은 편성 판): const s = await bm.rank.start('rhythm:s05:hard')  → { ok, run, seed, period }   (판 이름은 '<게임 id>' 또는 '<게임 id>:…' 만)
+//                await bm.rank.submit(판, 점수, { run, tie, meta, inputs, assisted }) → { ok, best, rank(100위 안만), tier(1·5·10·25·50 | null), total, newBest, next: { tier, gap } | null }
+//                bm.rank.open(판)  → 원어데이가 순위표 시트를 띄움 (게임은 그리지 않아도 됨) · bm.rank.line(결과) → { title, sub } 결과 화면 한 줄 글
+//     assisted 는 받기만 하고 순위 · 화면에는 쓰지 않음 · 연결이 끊기면 원어데이가 그 판 마지막 기록을 보관했다가 다시 보냄(reason 'offline')
 //   실시간 게임은 광고 · 확인 창 동안 스스로 멈출 것: bm.onPause = on => { ... }
 //   브랜드 매장 쿠폰(실물 경품): await bm.couponOn() 이 true 일 때만 발급 — 실서버(oneaday.kr)는 계약 · 게임위 자문 전까지 false
 //     앱 안이면 hello().coupon, 앱 밖(단독 링크)이면 window.OAD_ENV !== 'prod'
-export const V = 2;
+export const V = 3;
 const inFrame = (() => { try { return window.parent !== window; } catch { return true; } })();
 const TEST = /[?&]oadtest=1/.test(location.search);
 let seq = 0, cache = null;
@@ -48,8 +52,9 @@ function fake(fn, args) {
   if (fn === 'hello') return { ok: true, test: true, group: 'B', login: true, owned: false, noAds: false, gold: wallet, prices: FAKEP, items: [], ads: { reward: true, rewardLeft: 5, inter: false }, help: !/[?&]help=0/.test(location.search), coupon: true };
   if (fn === 'spend') { const p = (cache && cache.prices[args[0]]) || 20; if (wallet < p) return { ok: false, reason: 'short' }; wallet -= p; return { ok: true, gold: wallet }; }
   if (fn === 'rewardedAd') return { ok: true, via: 'test' };
-  if (fn === 'score') return args[1] && args[1].assisted ? { ok: false, reason: 'assisted' } : { ok: true, best: args[0], rank: 3 };
-  if (fn === 'board') return { ok: true, week: '2026-W44', top: [{ name: '루○○', score: 99999 }, { name: '별○○', score: 50000 }, { name: '나', score: 30000, me: true }], me: { rank: 3, score: 30000 } };
+  if (fn === 'score') return { ok: true, best: args[0], rank: 3, week: '2026-W48', tier: 5, total: 318, newBest: true };
+  if (fn === 'board') return { ok: true, week: '2026-W48', top: [{ name: '새벽고래', score: 99999 }, { name: '초록여우', score: 50000 }, { name: '파란고래', score: 30000, me: true }], me: { rank: 3, score: 30000 } };
+  if (fn === 'rank') { const [sub, a] = args; return sub === 'start' ? { ok: true, run: 'test-run', seed: 7, period: '2026-W48' } : sub === 'submit' ? { ok: true, best: a.score, rank: 12, tier: 5, total: 318, newBest: true, next: { tier: 1, gap: 1200 } } : sub === 'mine' ? { ok: true, me: { score: 30000, rank: 12, tier: 5 } } : { ok: true }; }
   return { ok: true, shown: false };
 }
 const paused = async (p) => { try { bm.onPause && bm.onPause(true); } catch { /* */ } try { return await p; } finally { try { bm.onPause && bm.onPause(false); } catch { /* */ } } };
@@ -66,5 +71,19 @@ export const bm = {
   helpOn() { return cache && cache.ok ? cache.help !== false : true; },
   async submitScore(score, opt = {}) { await bm.hello(); if (!cache.ok) return { ok: false, reason: 'standalone' }; return ask('score', [Math.floor(Number(score) || 0), { assisted: !!opt.assisted }], 8000); },
   async board() { await bm.hello(); if (!cache.ok) return { ok: false, reason: 'standalone' }; return ask('board', [], 8000); },
+  rank: {
+    start: async board => { await bm.hello(); return cache.ok ? ask('rank', ['start', { board: String(board || '') }], 8000) : { ok: false, reason: 'standalone' }; },
+    submit: async (board, score, opt = {}) => { await bm.hello(); return cache.ok ? ask('rank', ['submit', { board: String(board || ''), score: Math.floor(Number(score) || 0), opt: { run: opt.run, tie: opt.tie, meta: opt.meta, inputs: opt.inputs, assisted: !!opt.assisted } }], 15000) : { ok: false, reason: 'standalone' }; },
+    open: async board => { await bm.hello(); return cache.ok ? ask('rank', ['open', { board: String(board || '') }], 4000) : { ok: false, reason: 'standalone' }; },
+    mine: async board => { await bm.hello(); return cache.ok ? ask('rank', ['mine', { board: String(board || '') }], 8000) : { ok: false, reason: 'standalone' }; },
+    /* 결과 화면 한 줄 (원어데이 순위표 글과 같은 규칙: 100위 안 = 등수 · 그 밖 = 구간 · 아래 절반 = 내 최고) */
+    line(r) {
+      if (!r || !r.ok) return r && r.reason === 'login' ? { title: '로그인하면 순위에 올라요', sub: '' } : null;
+      if (r.review) return { title: '기록을 확인하고 있어요', sub: '확인되면 순위에 보여요' };
+      const f = n => Number(n || 0).toLocaleString('ko-KR');
+      const sub = [r.rank && r.tier ? `상위 ${r.tier}% 안` : '', r.newBest ? '개인 최고 갱신' : '', r.next && r.next.gap > 0 ? `${f(r.next.gap)}점 더면 상위 ${r.next.tier}%` : ''].filter(Boolean).slice(0, 2).join(' · ');
+      return { title: r.rank ? `이번 주 ${f(r.rank)}위` : r.tier ? `상위 ${r.tier}% 안` : `이번 주 내 최고 ${f(r.best)}`, sub };
+    },
+  },
   async interstitial(placement) { await bm.hello(); if (!cache.ok || !cache.ads.inter) return { ok: true, shown: false }; return paused(ask('interstitial', [placement], 180000, true)); },
 };

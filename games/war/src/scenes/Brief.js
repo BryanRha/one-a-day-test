@@ -1,24 +1,24 @@
 // 작전 준비: 세로로 넘기는 작전 카드 목록 (다음 작전은 펼쳐서 · 잠긴 작전은 어둡게) → [출격] → 아래에서 올라오는 출격 준비(지휘관·난이도)
-import { W, H } from '../config.js?v=0.99.74';
-import { T, C, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save } from '../save.js?v=0.99.74';
-import { pushBack } from '../oad.js?v=0.99.74';
-import * as M from '../meta.js?v=0.99.74';
-import { COS, WEATHER, UNITS } from '../core/data.js?v=0.99.74';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.74';
-import { STORY } from '../story.js?v=0.99.74';
-import { rankOn } from '../rank.js?v=0.99.74';
-import { rankPopup } from '../rankui.js?v=0.99.74';
-import { Sim } from '../core/sim.js?v=0.99.74';
-import { SUPPORT } from '../core/support.js?v=0.99.74';
-import { helpCheck, fails, track, autoShow, autoLeft, takeAuto, owned as ownedOAD } from '../bmwar.js?v=0.99.74';
-import { bm } from '../oad_bm.js?v=0.99.74';
-import { KITS, KIT_ORDER, kitMode, kitCount, takeKits, failMsg } from '../shop.js?v=0.99.74';
-import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.74';
-import { firstGuide, modeGuide } from '../guide.js?v=0.99.74';
-import { demoPlay, demoOffer } from '../demo.js?v=0.99.74';
-import { paintKey } from '../color.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { T, C, fmt, panel, btn, iconBtn, toast, popup } from '../pui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save } from '../save.js?v=0.99.75';
+import { pushBack } from '../oad.js?v=0.99.75';
+import * as M from '../meta.js?v=0.99.75';
+import { COS, WEATHER, UNITS } from '../core/data.js?v=0.99.75';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.75';
+import { STORY } from '../story.js?v=0.99.75';
+import { rankOn } from '../rank.js?v=0.99.75';
+import { rankPopup } from '../rankui.js?v=0.99.75';
+import { Sim } from '../core/sim.js?v=0.99.75';
+import { SUPPORT } from '../core/support.js?v=0.99.75';
+import { helpCheck, fails, track, autoShow, autoLeft, takeAuto, owned as ownedOAD } from '../bmwar.js?v=0.99.75';
+import { bm } from '../oad_bm.js?v=0.99.75';
+import { KITS, KIT_ORDER, kitMode, kitCount, takeKits, failMsg } from '../shop.js?v=0.99.75';
+import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.75';
+import { firstGuide, modeGuide } from '../guide.js?v=0.99.75';
+import { demoPlay, demoOffer } from '../demo.js?v=0.99.75';
+import { paintKey } from '../color.js?v=0.99.75';
 
 const LV = { easy: '쉬움', normal: '보통', hard: '어려움' };
 const TCOL = { pipe: 0x8A8F96, seam: 0xC8A040, silo: 0x5A5048, silo_e: 0x6A6A5A, plain: 0x8DB05A, farm: 0x9BB45A, wheat: 0xD8B85A, forest: 0x3E7A34, mountain: 0x9A8C78, road: 0xC8A878, bridge: 0xB0A090, river: 0x4A9AD8, beach: 0xE8D8A0, sea: 0x2A6AB0, reef: 0x3A7A90, trench: 0x8A7A50 };
@@ -30,7 +30,7 @@ export class BriefScene extends Phaser.Scene {
   constructor() { super('Brief'); }
   create(data = {}) {
     const d = load();
-    Object.assign(this, { autoPop: null, kitSel: [], giftPop: null, data0: data, mode: data.mode || 'campaign', custom: data.custom || null, sheet: null, sheetIn: false, listC: null, vy: 0, dragFrom: null, dragged: false, mapId: null, unback: null });
+    Object.assign(this, { weekGo: false, autoPop: null, kitSel: [], giftPop: null, data0: data, mode: data.mode || 'campaign', custom: data.custom || null, sheet: null, sheetIn: false, listC: null, vy: 0, dragFrom: null, dragged: false, mapId: null, unback: null });
     this.versus = this.mode === 'free' && !!data.versus;
     this.level = data.level || d.level || 'normal';
     this.co = data.co1 && (this.versus || d.cos[data.co1]) ? data.co1 : d.cos[d.co] ? d.co : 'ella';
@@ -38,7 +38,7 @@ export class BriefScene extends Phaser.Scene {
     this.tag = data.tag !== undefined ? data.tag : d.tag && d.tag !== this.co && d.cos[d.tag] ? d.tag : null;
     this.items = this.buildItems(d);
     // 고른 작전: 넘겨받은 것 · 아니면 다음에 할 작전
-    const want = this.custom ? this.items.find(it => it.custom && it.custom.name === this.custom.name) : this.items.find(it => it.id === data.mapId);
+    const want = this.custom ? this.items.find(it => it.custom && it.custom.name === this.custom.name) : data.week ? this.items.find(it => it.week) : this.items.find(it => it.id === data.mapId && !it.week);
     this.sel = want || this.items.find(it => it.next) || this.items.find(it => it.open) || this.items[0];
     this.add.rectangle(W / 2, H / 2, W, H, 0x262A14).setScrollFactor(0);
     this.drawList(true);
@@ -66,7 +66,7 @@ export class BriefScene extends Phaser.Scene {
   // ── 목록 만들기 ──
   buildItems(d) {
     if (this.mode === 'daily') { const op = M.dailyOp(); return [{ id: op.map.id, map: op.map, open: true, next: true, daily: op }]; }
-    if (this.mode === 'war') return WAR.map((m, i) => ({ id: m.id, map: m, n: i + 1, open: true, best: d.war[m.id] || null, next: !d.war[m.id] && WAR.slice(0, i).every(w => d.war[w.id]) }));
+    if (this.mode === 'war') { const wk = M.weekOp(); return [{ id: 'week', map: wk.map, n: WAR.indexOf(wk.map) + 1, open: true, next: true, week: wk }, ...WAR.map((m, i) => ({ id: m.id, map: m, n: i + 1, open: true, best: d.war[m.id] || null, next: false }))]; }   /* 주간 작전(공통 랭킹)이 맨 위 · 펼쳐서 시작 */
     if (this.mode === 'free') return [...M.STAGES.filter((s, i) => M.stageOpen(i)).map(s => ({ id: s.id, map: MAPS.find(m => m.id === s.id), n: s.n, open: true })), ...customMaps().map((m, i) => ({ id: `c${i}`, map: m, custom: m, n: `내${i + 1}`, open: true }))];
     let first = true;
     return M.STAGES.map((s, i) => { const open = M.stageOpen(i), stars = d.stars[s.id] || 0, next = open && !stars && first; if (next) first = false; return { id: s.id, map: MAPS.find(m => m.id === s.id), st: s, n: s.n, open, stars, next }; });
@@ -85,10 +85,10 @@ export class BriefScene extends Phaser.Scene {
   drawList(first) {
     if (this.listC) this.listC.destroy();
     const c = this.listC = this.add.container(0, 0); let y = TOPH + 10, selY = 0;
-    const part = it => (this.mode === 'campaign' ? (it.n === 1 ? '1부 · 붉은 군단의 침공' : it.n === 16 ? '2부 · 설원과 사막의 전선' : null) : null);
+    const part = it => (this.mode === 'campaign' ? (it.n === 1 ? '1부 · 붉은 군단의 침공' : it.n === 16 ? '2부 · 설원과 사막의 전선' : null) : this.mode === 'war' ? (!it.week && it.n === 1 ? '전쟁실 지도 · 연습 · 등급' : null) : null);
     for (const it of this.items) {
       const ph = part(it); if (ph) { c.add(T(this, CX + 6, y + 30, ph, 30, C.gold, { ox: 0, w: 900, ls: 1 })); c.add(this.add.rectangle(CX + CW / 2 + 180, y + 30, CW - 400, 2, 0xFFD45A, 0.35)); y += 70; }
-      const big = it === this.sel, h = big ? BIG : SMALL;
+      const big = it === this.sel, h = big ? BIG + (it.week ? 90 : 0) : SMALL;   /* 주간 작전 카드는 규칙 두 줄만큼 더 큼 */
       if (big) selY = y;
       this.card(c, it, y, h, big); y += h + 22;
     }
@@ -113,15 +113,16 @@ export class BriefScene extends Phaser.Scene {
     // 왼쪽: 적 지휘관 얼굴 (번호표)
     const fx = CX + 100, fy = y + 100; this.face(c, eco, fx, fy, 150, locked);
     const nb = this.add.graphics(); nb.fillStyle(locked ? 0x333328 : 0xFFD45A, 1).fillRoundedRect(CX + 14, y + 14, 76, 44, 22); c.add(nb);
-    c.add(T(this, CX + 52, y + 36, it.daily ? '오늘' : `${it.n}`, 26, locked ? '#888870' : '#2B2416', { w: 900, shadow: false }));
+    c.add(T(this, CX + 52, y + 36, it.daily ? '오늘' : it.week ? '주간' : `${it.n}`, 26, locked ? '#888870' : '#2B2416', { w: 900, shadow: false }));
     if (locked) c.add(this.add.image(fx, fy, 'i_lock').setDisplaySize(64, 64).setTint(0xC8C0A0));
     // 제목 · 태그
     const tx = CX + 200;
-    c.add(T(this, tx, y + 44, this.mode === 'war' ? `전쟁실 ${it.n}` : it.custom ? '내 지도' : it.daily ? '특수 작전' : `작전 ${it.n}`, 22, big ? '#9A6A10' : C.gold, { ox: 0, w: 900, shadow: false, ls: 1 }));
+    c.add(T(this, tx, y + 44, it.week ? `이번 주 작전 · 전쟁실 ${it.n}` : this.mode === 'war' ? `전쟁실 ${it.n}` : it.custom ? '내 지도' : it.daily ? '특수 작전' : `작전 ${it.n}`, 22, big ? '#9A6A10' : C.gold, { ox: 0, w: 900, shadow: false, ls: 1 }));
     c.add(T(this, tx, y + 88, map.name, 40, locked ? '#77775F' : ink, { ox: 0, w: 900, shadow: !big }));
     if (locked) c.add(T(this, tx, y + 146, `작전 ${it.n - 1} 승리 시 개방`, 24, '#99997A', { ox: 0, w: 800, shadow: false }));
     else {
       let cx2 = tx; const tags = [];
+      if (it.week) tags.push([`지휘관 ${COS[it.week.co].name}`, '#FFD45A']);
       if (!it.custom) tags.push([`적 ${COS[eco].name}`, '#FFB0A0']);
       if (map.fog) tags.push(['안개', '#D8C0FF']);
       const wp = map.weather; if (wp) for (const w of [...new Set([].concat(wp))].filter(w => w !== 'clear')) tags.push([WEATHER[w].name, '#BFE6FF']);
@@ -132,7 +133,8 @@ export class BriefScene extends Phaser.Scene {
     // 오른쪽: 별 · 등급 · 새 작전
     const rx = CX + CW - 40;
     if (this.mode === 'campaign' && !locked) c.add(T(this, rx, y + 60, '★'.repeat(it.stars) + '☆'.repeat(3 - it.stars), 40, big ? '#C89010' : C.gold, { ox: 1, w: 900, shadow: false }));
-    if (this.mode === 'war') { if (it.best) { c.add(T(this, rx - 20, y + 70, it.best.rank, 72, RCOL[it.best.rank], { ox: 1, w: 900, stroke: '#2B2416', thick: 6 })); c.add(T(this, rx - 20, y + 128, `${it.best.total}점`, 22, big ? '#5A4A22' : C.sub, { ox: 1, w: 800, shadow: false })); } else c.add(T(this, rx, y + 60, '도전 전', 24, big ? '#8A7A50' : C.dim, { ox: 1, w: 800, shadow: false })); }
+    if (it.week) { if (it.week.best) { c.add(T(this, rx - 20, y + 64, fmt(it.week.best), 50, big ? '#9A6A10' : C.gold, { ox: 1, w: 900, shadow: false })); c.add(T(this, rx - 20, y + 116, '이번 주 최고', 22, big ? '#5A4A22' : C.sub, { ox: 1, w: 800, shadow: false })); } else c.add(T(this, rx, y + 60, '도전 전', 24, big ? '#8A7A50' : C.dim, { ox: 1, w: 800, shadow: false })); }
+    else if (this.mode === 'war') { if (it.best) { c.add(T(this, rx - 20, y + 70, it.best.rank, 72, RCOL[it.best.rank], { ox: 1, w: 900, stroke: '#2B2416', thick: 6 })); c.add(T(this, rx - 20, y + 128, `${it.best.total}점`, 22, big ? '#5A4A22' : C.sub, { ox: 1, w: 800, shadow: false })); } else c.add(T(this, rx, y + 60, '도전 전', 24, big ? '#8A7A50' : C.dim, { ox: 1, w: 800, shadow: false })); }
     if (it.next && !big) { const nw = this.add.container(rx - 50, y + 150); const g = this.add.graphics(); g.fillStyle(0xFF6A3D, 1).fillRoundedRect(-50, -20, 100, 40, 20); nw.add([g, T(this, 0, 0, 'NEW', 22, '#FFFFFF', { w: 900, shadow: false })]); c.add(nw); this.tweens.add({ targets: nw, scale: 1.08, duration: 600, yoyo: true, repeat: -1 }); }
     if (locked) { const sh = this.add.graphics(); sh.fillStyle(0x000000, 0.35).fillRoundedRect(CX, y, CW, h, 26); c.add(sh); }
     // 누르면 펼침
@@ -145,7 +147,13 @@ export class BriefScene extends Phaser.Scene {
     const d = load(), map = it.map, x0 = CX + 40, wTxt = 560, lines = [];
     lines.push([it.custom ? '직접 만든 지도' : map.desc, '#4A3E1E', 26]);
     if (this.mode === 'campaign') { lines.push([`별 ★ 승리 · ★ ${map.par}일 안 · ★ 잃은 유닛 ${M.lossCap(map.par)}기 이하`, '#7A5A10', 23]); const best = d.bestDays[map.id]; if (best) lines.push([`최단 승리 ${best}일`, '#2F6A18', 23]); }
-    if (this.mode === 'war') { lines.push([`점수 = 속도 + 전력 + 기술 (각 100) · 기준 ${map.par}일`, '#7A5A10', 23]); lines.push([it.best ? `최고 ${it.best.total}점 · ${it.best.rank} 등급 (${it.best.day}일)` : '아직 기록 없음 · S 등급은 270점 이상', '#2F6A18', 23]); }
+    if (it.week) {
+      const wk = it.week, left = Math.max(0, wk.ends - Date.now()), dd = Math.floor(left / 864e5), hh = Math.floor(left / 3600e3) % 24;
+      lines.push([`모두 ${COS[wk.co].name} 지휘관 · 교대 · 보급품 · 되돌리기 없음`, '#7A5A10', 23]);
+      lines.push([`속도 + 전력 + 기술 · 기준 ${map.par}일보다 하루 빠르면 +${Math.round(1000 / map.par)}점`, '#7A5A10', 23]);
+      lines.push([wk.best ? `이번 주 최고 ${fmt(wk.best)}점 (${wk.day}일) · ${wk.tries}번 도전` : `이번 주 첫 도전 · 마감까지 ${dd ? `${dd}일 ` : ''}${hh}시간`, '#2F6A18', 23]);
+    }
+    else if (this.mode === 'war') { lines.push([`점수 = 속도 + 전력 + 기술 (각 100) · 기준 ${map.par}일`, '#7A5A10', 23]); lines.push([it.best ? `최고 ${it.best.total}점 · ${it.best.rank} 등급 (${it.best.day}일)` : '아직 기록 없음 · S 등급은 270점 이상', '#2F6A18', 23]); }
     if (it.daily) lines.push([it.daily.best ? `오늘 최단 ${it.daily.best}일 · ${it.daily.tries}번 도전` : '오늘 처음 도전 · 어려움', '#2F6A18', 23]);
     const E = COS[map.enemyCo || 'scarlet'];
     if (!it.custom) lines.push([`적 ${E.name} · ${E.desc}`, '#8E2414', 22]);
@@ -164,7 +172,12 @@ export class BriefScene extends Phaser.Scene {
     this.mini(c, it.custom || this.mode === 'free' ? map : campaignMap(map), CX + CW - 200, y + 340, 300, 250);
     const by = y + h - 70;
     if (this.mode === 'campaign' && STORY[map.id]) c.add(btn(this, x0 + 150, by, 300, 96, '이야기', () => { if (this.tapOk()) { this.mapId = map.id; this.story(STORY[map.id].pre, ['Brief', { ...this.data0, mapId: map.id, tag: this.tag ?? null }]); } }, { style: 'ghost', size: 28 }));
-    if (this.mode === 'war' && rankOn()) c.add(btn(this, x0 + 150, by, 300, 96, '순위표', () => { if (this.tapOk()) rankPopup(this, `war:${map.id}`, `${map.name} 순위`, x => `${x.score}점 ${x.extra && x.extra.rank ? x.extra.rank : ''}`); }, { style: 'ghost', size: 28 }));
+    if (it.week && bm.info.ok) {   /* 원어데이 안: 순위표는 원어데이 시트 · 내 자리 한 줄 */
+      c.add(btn(this, x0 + 150, by, 300, 96, '순위 보기', () => { if (this.tapOk()) bm.rank.open(M.WEEK_BOARD); }, { style: 'ghost', size: 28 }));
+      const mt = T(this, x0 + 320, by, '', 22, '#5A4A22', { ox: 0, w: 800, shadow: false }); c.add(mt);
+      bm.rank.mine(M.WEEK_BOARD).then(r => { if (!mt.active || !r || !r.ok || !r.me) return; const me = r.me; mt.setText(me.rank ? `${me.rank}위` : me.tier ? `상위 ${me.tier}%` : ''); }).catch(() => {});
+    }
+    if (this.mode === 'war' && !it.week && rankOn()) c.add(btn(this, x0 + 150, by, 300, 96, '순위표', () => { if (this.tapOk()) rankPopup(this, `war:${map.id}`, `${map.name} 순위`, x => `${x.score}점 ${x.extra && x.extra.rank ? x.extra.rank : ''}`); }, { style: 'ghost', size: 28 }));
     const go = btn(this, CX + CW - 250, by, 420, 110, '출격', () => { if (this.tapOk()) this.openSheet(); }, { style: 'gold', icon: 'i_play', size: 40 }); c.add(go);
     this.tweens.add({ targets: go, scale: 1.04, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
@@ -173,12 +186,12 @@ export class BriefScene extends Phaser.Scene {
   openSheet() {
     if (this.sheet) this.sheet.destroy();
     const d = load(), it = this.sel, map = it.map;
-    this.custom = it.custom || null; this.mapId = it.custom ? null : it.id;
+    this.custom = it.custom || null; this.mapId = it.custom ? null : it.week ? it.map.id : it.id;
     this.ai = this.mode === 'campaign' ? it.st.ai : this.mode === 'daily' || this.mode === 'war' ? 'hard' : this.level;
     const root = this.add.container(0, 0).setDepth(900).setScrollFactor(0); this.sheet = root;
     const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x0A0C06, 0.7).setInteractive(); root.add(dim);
     const box = this.add.container(0, 0); root.add(box);
-    const owned = k => this.versus || d.cos[k], keys = Object.keys(COS).filter(owned);
+    const owned = k => (it.week ? k === it.week.co : this.versus || d.cos[k]), keys = Object.keys(COS).filter(owned);   /* 주간 작전: 그 주 지휘관 하나 (없는 지휘관도 빌려 줌) */
     const rowsOf = n => Math.ceil(n / (n > 8 ? Math.ceil(n / 2) : 8)), rowH = n => 70 + (rowsOf(n) - 1) * 112 + 150;
     const kitsOn = kitMode(this.mode) && !this.versus, kitH = kitsOn ? 170 : 0;
     const sh = 150 + rowH(keys.length) + (this.versus ? rowH(16) : keys.length > 1 ? rowH(keys.length) : 0) + (this.mode === 'free' ? (this.versus ? 130 : 230) : 0) + kitH + 190;
@@ -186,7 +199,7 @@ export class BriefScene extends Phaser.Scene {
     box.add(this.add.existing(panel(this, W / 2, top + sh / 2 + 20, W - 20, sh + 40, { r: 40 })));
     box.add(this.add.rectangle(W / 2, top + 26, 120, 10, 0xFFFFFF, 0.25));
     box.add(T(this, 60, top + 82, '출격 준비', 40, C.text, { ox: 0, w: 900 }));
-    box.add(T(this, W - 60, top + 82, `${it.daily ? '특수 작전' : this.mode === 'war' ? `전쟁실 ${it.n}` : it.custom ? '내 지도' : `작전 ${it.n}`} · ${map.name}`, 26, C.gold, { ox: 1, w: 800 }));
+    box.add(T(this, W - 60, top + 82, `${it.daily ? '특수 작전' : it.week ? '이번 주 작전' : this.mode === 'war' ? `전쟁실 ${it.n}` : it.custom ? '내 지도' : `작전 ${it.n}`} · ${map.name}`, 26, C.gold, { ox: 1, w: 800 }));
     let y = top + 150;
     if (this.mode === 'free') {
       box.add(btn(this, W / 2 - 250, y + 30, 460, 84, 'AI 상대', () => { this.versus = false; this.openSheet(); }, { style: this.versus ? 'ghost' : 'gold', size: 30 }));
@@ -207,9 +220,10 @@ export class BriefScene extends Phaser.Scene {
       const C1 = COS[cur]; box.add(T(this, 60, lastY + 34, C1 ? `${C1.name} · ${C1.desc}` : '고르면 전투 중 얼굴을 눌러 교대 · 두 게이지가 다 차면 합동 필살기', 22, C.sub, { ox: 0, w: 800, wrap: W - 120 }));
       y = lastY + 100;
     };
-    row(this.versus ? '파랑 지휘관' : '출전 지휘관', this.co, owned, k => { this.co = k; if (!this.versus) { d.co = k; save(); } if (this.tag === k) this.tag = null; this.openSheet(); }, 0xFFD45A);
+    if (it.week) row('이번 주 지휘관 (모두 같은 지휘관)', it.week.co, owned, () => toast(this, '이번 주는 모두 같은 지휘관으로 겨뤄요', C.sub), 0xFFD45A);
+    else row(this.versus ? '파랑 지휘관' : '출전 지휘관', this.co, owned, k => { this.co = k; if (!this.versus) { d.co = k; save(); } if (this.tag === k) this.tag = null; this.openSheet(); }, 0xFFD45A);
     if (this.versus) row('빨강 지휘관', this.co2, () => true, k => { this.co2 = k; this.openSheet(); }, 0xFF6A55);
-    else if (keys.length > 1) row('교대 지휘관 (선택 · 다시 누르면 해제)', this.tag, owned, k => { if (k === this.co) return toast(this, '출전 지휘관과 다른 지휘관을 골라요', C.sub); this.tag = this.tag === k ? null : k; d.tag = this.tag; save(); this.openSheet(); }, 0x9BE07A);
+    else if (keys.length > 1 && !it.week) row('교대 지휘관 (선택 · 다시 누르면 해제)', this.tag, owned, k => { if (k === this.co) return toast(this, '출전 지휘관과 다른 지휘관을 골라요', C.sub); this.tag = this.tag === k ? null : k; d.tag = this.tag; save(); this.openSheet(); }, 0x9BE07A);
     if (kitsOn) this.kitRow(box, y - 20);
     const autoOn = !this.versus && autoShow(this.mode, this.mapId);
     if (autoOn) box.add(btn(this, 230, H - 100, 380, 130, '자동 작전', () => this.autoOffer(), { style: 'olive', icon: ownedOAD() ? null : 'i_film', size: 34 }));
@@ -226,9 +240,10 @@ export class BriefScene extends Phaser.Scene {
   restart(o) { this.scene.restart({ ...this.data0, mapId: this.mapId || (this.sel && this.sel.id), custom: this.custom, level: this.level, versus: this.versus, co1: this.co, co2: this.co2, tag: this.tag ?? null, ...o }); }
   start(gift, autoplay) {
     if (this.giftPop && this.giftPop.active && !this.giftPop.closing) return;
-    if (!this.mapId && !this.custom) { const it = this.sel; this.custom = it.custom || null; this.mapId = it.custom ? null : it.id; this.ai = this.mode === 'campaign' ? it.st.ai : this.mode === 'daily' || this.mode === 'war' ? 'hard' : this.level; }
+    if (!this.mapId && !this.custom) { const it = this.sel; this.custom = it.custom || null; this.mapId = it.custom ? null : it.week ? it.map.id : it.id; this.ai = this.mode === 'campaign' ? it.st.ai : this.mode === 'daily' || this.mode === 'war' ? 'hard' : this.level; }
     const mode = this.versus ? 'versus' : this.mode, d = load();
     const play = { mode, mapId: this.custom ? null : this.mapId, custom: this.custom, level: this.ai, co: this.co, enemyCo: this.versus ? this.co2 : undefined, tag: this.versus || this.tag === this.co ? null : this.tag };
+    if (this.sel && this.sel.week && mode === 'war') return this.startWeek(play);
     if (autoplay && mode === 'campaign') { play.autoplay = true; gift = gift || null; }
     // 응원 선물: 같은 캠페인 작전 3연속 패배 → 이번 출격 시작 때 (순위 경쟁 판 · 자유 대전엔 없음)
     if (gift === undefined && mode === 'campaign') { const kind = helpCheck(this.mapId); if (kind) return this.offerGift(kind); }
@@ -237,6 +252,13 @@ export class BriefScene extends Phaser.Scene {
     const st = mode === 'campaign' && STORY[this.mapId];
     if (st && st.pre && !(d.seen || {})[this.mapId]) { (d.seen ||= {})[this.mapId] = 1; save(); return this.story(st.pre, ['Play', play]); }
     this.go('Play', play);
+  }
+  // 주간 작전 시작: 원어데이에 판 표(run)를 받고 그 주 지휘관으로 (밖 · 끊김이면 표 없이 — 기록은 이 폰에만)
+  async startWeek(play) {
+    if (this.weekGo) return; this.weekGo = true;
+    const wk = M.weekOp(), r = await bm.rank.start(M.WEEK_BOARD).catch(() => null);
+    track('week_start', { m: wk.map.id, co: wk.co, ok: r && r.ok ? 1 : 0 });
+    this.go('Play', { ...play, mapId: wk.map.id, co: wk.co, tag: null, week: { key: wk.key, co: wk.co, run: r && r.ok ? r.run : null } });
   }
   // 보급품 고르기 (보급 상점에서 산 것 · 한 판 소모) — 누르면 켜고 끄기
   kitRow(box, y) {

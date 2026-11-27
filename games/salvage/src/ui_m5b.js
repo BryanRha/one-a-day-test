@@ -1,14 +1,15 @@
 // M5-B 화면 — 은신처 '도전' 탭(주간 도전 · 깊은 물 · 업적) · 도전 결과 · 출격 준비 깊은 물 카드 · 업적 알림 · 칭호
 //  스타일은 여기서 넣음(style.css 안 건드림) · 로직은 challenge.js · abyss.js · ach.js
-import { S, save } from './save.js?v=0.99.74';
-import { MAPS, ENEMIES, GEAR, WEAPONS } from './data.js?v=0.99.74';
-import { ACHIEVEMENTS, ACH_CATS, ACH_CAT_KEYS } from './data/achievements.js?v=0.99.74';
-import { CH, CH_RULES, ABYSS, TITLES, M5B_COS } from './data/m5b.js?v=0.99.74';
-import { WEATHER } from './data/weather.js?v=0.99.74';
-import * as CHL from './challenge.js?v=0.99.74';
-import * as AB from './abyss.js?v=0.99.74';
-import * as AC from './ach.js?v=0.99.74';
-import { sfx, unlock } from './audio.js?v=0.99.74';
+import { S, save } from './save.js?v=0.99.75';
+import { MAPS, ENEMIES, GEAR, WEAPONS } from './data.js?v=0.99.75';
+import { ACHIEVEMENTS, ACH_CATS, ACH_CAT_KEYS } from './data/achievements.js?v=0.99.75';
+import { CH, CH_RULES, ABYSS, TITLES, M5B_COS } from './data/m5b.js?v=0.99.75';
+import { WEATHER } from './data/weather.js?v=0.99.75';
+import * as CHL from './challenge.js?v=0.99.75';
+import * as AB from './abyss.js?v=0.99.75';
+import * as AC from './ach.js?v=0.99.75';
+import * as RK from './rank.js?v=0.99.75'; /* 공통 랭킹 — 주간 도전 판 'salvage:weekly' (원어데이 안에서만) */
+import { sfx, unlock } from './audio.js?v=0.99.75';
 
 const $ = (s, r = document) => r.querySelector(s);
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -73,6 +74,8 @@ function style() {
 .m5pop b{display:block;font-size:15px;color:#fff}.m5pop.many b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m5pop em{display:block;font-style:normal;font-size:12px;color:#e8dcc0;margin-top:1px}
 .m5pop.abyss{background:linear-gradient(180deg,rgba(40,24,70,.96),rgba(18,12,36,.96));border-color:rgba(170,130,255,.6)}.m5pop.abyss small{color:#cdb6ff}
 .m5pop.chal{background:linear-gradient(180deg,rgba(10,40,52,.96),rgba(6,22,30,.96));border-color:rgba(95,208,224,.6)}.m5pop.chal small{color:#9ff0ff}
+.rkline{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid rgba(95,208,224,.45);min-height:52px}.rkline[hidden]{display:none}.rkline .rk-i{font-size:22px}.rkline .rk-t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}.rkline .rk-t b{font-size:15px;color:#fff}.rkline .rk-t small{font-size:12px;color:#9ff0ff}.rkline .rk-go{font-size:13px;font-weight:700;color:#9ff0ff;white-space:nowrap}
+.rkopen{display:block;margin:2px 0 8px;width:100%;min-height:44px}.rkopen[hidden]{display:none}
 .result.chal .rh h2{color:#9ff0ff}.chsc{display:flex;flex-direction:column;gap:3px;font-size:13px}.chsc div{display:flex;justify-content:space-between;color:#cfe3ea}.chsc div.t{border-top:1px solid rgba(255,255,255,.12);padding-top:5px;margin-top:3px;font-weight:800;color:#fff;font-size:15px}
 .chmed{font-size:44px;text-align:center;line-height:1.1}.chmed small{display:block;font-size:13px;color:#cfe3ea}
 .abres{border-color:rgba(160,120,255,.45)!important;background:rgba(30,18,56,.8)!important}
@@ -151,8 +154,9 @@ function weekView(ui, c, body) {
     <div class="card"><div class="fh"><b>물결 표 ${pts}</b><span class="lv">주마다 최고 메달만큼 (동 1 · 은 2 · 금 3)</span></div>
       ${nextT ? `<div class="tbar"><i style="width:${Math.min(100, (pts - prevN) / Math.max(1, nextT[0] - prevN) * 100)}%"></i></div><small class="hint">다음 ${nextT[0]}: ${rwTxt({ kind: nextT[1], key: nextT[2] })}</small>` : '<small class="hint">물결 표 보상을 모두 받았어요!</small>'}
       <div class="track" style="margin-top:8px">${CH.track.map(([n, kind, key]) => `<div class="trk ${ch.got.includes(key) ? 'got' : ''}"><i>${n}</i>${rwTxt({ kind, key })}<small>${ch.got.includes(key) ? '받음' : kind === 'cos' && !M5B_COS[key] ? '' : '도전 전용'}</small></div>`).join('')}</div></div>
-    <div class="card"><div class="fh"><b>주간 순위</b><span class="lv">${CHL.BOARD.fetch ? '' : '순위표는 서버가 생기면 열려요 — 지금은 내 기록'}</span></div>
+    <div class="card"><div class="fh"><b>주간 순위</b><span class="lv" id="rkLv">내 기록</span></div><button class="btn rkopen" id="rkOpen" hidden>이번 주 순위 보기 ›</button>
       <div class="hist">${hist.length ? hist.map(([no, w]) => `<div><span>#${no}</span><span>${MAPS[CHL.weekly(no).map]?.name || ''}</span><b>${w.best.toLocaleString()}점 ${MEDAL(w.medal)?.[3] || ''}</b></div>`).join('') : '<small class="hint">아직 도전 기록이 없어요</small>'}</div></div>`;
+  RK.inApp().then(on => { const b = $('#rkOpen', c), lv = $('#rkLv', c); if (!b || !lv) return; if (on) { b.hidden = false; lv.textContent = '모두 같은 판 · 원어데이 순위'; b.onclick = () => { sfx.ui(); RK.open(); }; } else lv.textContent = '원어데이 앱에서 순위가 열려요 — 지금은 내 기록'; });
   $('#chalGo', c).onclick = () => {
     unlock(); const v = CHL.canStart(S, nol);
     if (!v.ok && v.why === 'buy') { const r = CHL.buyEntry(S); if (!r.ok) { sfx.empty(); return ui.toast(r.why === 'cost' ? `조개가 모자라요 (${CH.extra.cost})` : '이번 주 추가 판을 다 썼어요', 'soft'); } save(); ui.toast(`도전 한 판 더 — 조개 −${CH.extra.cost}`, 'good'); }
@@ -205,10 +209,13 @@ export function chalEnd(app, res, spec) {
     <div class="card"><div class="fh"><b>이번 주 내 최고 ${rec.best.toLocaleString()}점</b><span class="lv">물결 표 ${rec.pts}${rec.ptsGain ? ` (+${rec.ptsGain})` : ''}</span></div>
       <small class="hint" style="margin:0">${rec.next ? `${rec.next[3]} ${rec.next[2]}메달까지 ${(rec.next[1] - rec.best).toLocaleString()}점` : '이번 주 금메달!'} · 들고 나온 건 점수로만 셈 (창고 X)</small>
       ${rec.rewards.length ? `<div class="track" style="margin-top:8px">${rec.rewards.map(r => `<div class="trk got"><i>${r.n}</i>${rwTxt(r)}<small>새로 받음</small></div>`).join('')}</div>` : ''}</div>
+    <button class="card rkline" id="rkLine" hidden><span class="rk-i">🏆</span><span class="rk-t"><b></b><small></small></span><span class="rk-go">순위 보기 ›</span></button>
     </div><div class="rbtns" style="display:flex;flex-direction:column;gap:8px;padding:10px 16px 18px"><button class="btn cta" id="home">은신처로</button>${CHL.leftFree(S) > 0 || app.nolimit ? '<button class="btn" id="again">한 번 더 도전</button>' : ''}</div>`);
   ui.root.appendChild(el); app.showHideout?.(true);
   $('#home', el).onclick = () => { sfx.ui(); ui.tab = 'chal'; ui.m5seg = 'week'; ui.hideout(); };
   $('#again', el) && ($('#again', el).onclick = () => { unlock(); sfx.ui(); const r = app.startChal(); if (r && !r.ok) { ui.tab = 'chal'; ui.hideout(); } });
+  RK.submit(rec, res, spec).then(r => { res.rank = r; const L = RK.line(r); const b = $('#rkLine', el); if (!L || !b || !b.isConnected) return;
+    $('b', b).textContent = L.title; $('small', b).textContent = L.sub || ''; $('small', b).hidden = !L.sub; b.hidden = false; b.onclick = () => { sfx.ui(); RK.open(); }; }).catch(() => { /* 순위는 덤 — 실패해도 결과 화면 그대로 */ });
   setTimeout(() => { popAch(ach); if (rec.rewards.length) pop(rec.rewards.map(r => ({ kind: 'chal', icon: r.kind === 'title' ? '🎖' : '👕', head: `물결 표 ${r.n} — 도전 전용`, name: r.kind === 'title' ? TITLES[r.key]?.name : AC.cosName(r.key), sub: r.kind === 'cos' ? cosSub(r.key) : '칭호를 달 수 있어요' }))); }, 700);
   return res;
 }

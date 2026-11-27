@@ -1,10 +1,10 @@
 // 위 막대: 레벨(경험치) · 에너지(다음 회복까지) · 코인 · 보석 — 모든 화면 공용
-import { W } from './config.js?v=0.99.74';
-import { T, R, C, TS, iconBtn } from './ui.js?v=0.99.74';
-import { goPrev } from './nav.js?v=0.99.74';
-import { load } from './save.js?v=0.99.74';
-import { tickEnergy, nextEnergyIn, xpNeed } from './state.js?v=0.99.74';
-import { ENERGY } from './data.js?v=0.99.74';
+import { W } from './config.js?v=0.99.75';
+import { T, R, C, TS, iconBtn } from './ui.js?v=0.99.75';
+import { goPrev } from './nav.js?v=0.99.75';
+import { load } from './save.js?v=0.99.75';
+import { tickEnergy, nextEnergyIn, xpNeed } from './state.js?v=0.99.75';
+import { ENERGY } from './data.js?v=0.99.75';
 
 export function hud(sc, o = {}) {
   const c = sc.add.container(0, 0).setDepth(50), g = sc.add.graphics();

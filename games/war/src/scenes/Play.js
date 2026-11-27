@@ -1,22 +1,22 @@
 // 전투 화면: 지도 · 유닛 선택 → 이동(파란 칸) → 행동(공격 · 점령 · 하차 · 대기) · 기지 생산 · 지휘관 필살기 · 상대 AI 턴
-import { W, H } from '../config.js?v=0.99.74';
-import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save } from '../save.js?v=0.99.74';
-import * as M from '../meta.js?v=0.99.74';
-import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.99.74';
-import { Sim, dist, hpOf } from '../core/sim.js?v=0.99.74';
-import { AI, apply } from '../core/ai.js?v=0.99.74';
-import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.99.74';
-import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.74';
-import { STORY } from '../story.js?v=0.99.74';
-import { TALK, RADIO } from '../talk.js?v=0.99.74';
-import { withSupport, SUPPORT } from '../core/support.js?v=0.99.74';
-import { COLORS, teamColor, paintKey } from '../color.js?v=0.99.74';
-import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.99.74';
-import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.74';
-import { runDemo, demoWanted } from '../demo.js?v=0.99.74';
-import { bm } from '../oad_bm.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { T, C, fmt, panel, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save } from '../save.js?v=0.99.75';
+import * as M from '../meta.js?v=0.99.75';
+import { inOAD, exitToOAD, pushBack } from '../oad.js?v=0.99.75';
+import { Sim, dist, hpOf } from '../core/sim.js?v=0.99.75';
+import { AI, apply } from '../core/ai.js?v=0.99.75';
+import { UNITS, UNIT_ORDER, TERRAIN, COS, FOOT, WEATHER, coInstant, base } from '../core/data.js?v=0.99.75';
+import { MAPS, WAR, campaignMap } from '../core/maps.js?v=0.99.75';
+import { STORY } from '../story.js?v=0.99.75';
+import { TALK, RADIO } from '../talk.js?v=0.99.75';
+import { withSupport, SUPPORT } from '../core/support.js?v=0.99.75';
+import { COLORS, teamColor, paintKey } from '../color.js?v=0.99.75';
+import { undoMode, undoFreeLeft, payUndo, owned, noteResult, track } from '../bmwar.js?v=0.99.75';
+import { mapAdvice, RIVER_HOW } from '../advice.js?v=0.99.75';
+import { runDemo, demoWanted } from '../demo.js?v=0.99.75';
+import { bm } from '../oad_bm.js?v=0.99.75';
 
 const TOP = 196, BOTTOM = 360;
 const TEAM = { 1: 0x3E7FD8, 2: 0xD9472E }, TEAMS = { 1: 'b', 2: 'r' };
@@ -52,9 +52,10 @@ export class PlayScene extends Phaser.Scene {
     this.snaps = (data.undo && data.undo.snaps) || []; this.undoN = (data.undo && data.undo.n) || 0;
     // 부대 색 (꾸미기): 2인 대전은 파랑 · 빨강 그대로
     this.colorK = this.mode === 'versus' ? 'blue' : teamColor(); TEAM[1] = COLORS[this.colorK].hex;
-    this.tagCo = data.tag || null;
+    this.week = this.mode === 'war' ? (data.week || (data.resume && data.resume.week) || null) : null;   /* 주간 작전(공통 랭킹) — 지휘관 · 판 표를 이어하기에도 */
+    this.tagCo = this.week ? null : data.tag || null;
     this.level = data.level || 'normal';
-    this.co = data.co || d.co || 'ella';
+    this.co = (this.week && this.week.co) || data.co || d.co || 'ella';
     this.enemyCo = data.enemyCo || this.map.enemyCo || 'scarlet';
     this.s = new Sim(this.simMap, [null, this.co, this.enemyCo], { limit: data.limit || this.map.par + 8, tag: [null, this.tagCo, data.enemyTag || this.map.enemyTag || null] });
     for (const su of (this.simMap.units || []).filter(u => u.support)) { const u = this.s.unitAt(su.x, su.y); if (u) u.support = 1; }
@@ -486,7 +487,7 @@ export class PlayScene extends Phaser.Scene {
   // 이어하기 저장 (아군 턴 시작마다)
   autosave() {
     if (this.auto || this.mode === 'versus' || this.map.custom) return;
-    try { localStorage.setItem('front_tactics_resume', JSON.stringify({ mode: this.mode, mapId: this.map.id, level: this.level, co: this.co, enemyCo: this.enemyCo, tag: this.tagCo, captures: this.captures, powers: this.powers, support: this.support, kits: this.kits, autoplay: this.autoplay, autoUsed: this.autoUsed, sim: this.s.snapshot(), at: Date.now() })); } catch { /* */ }
+    try { localStorage.setItem('front_tactics_resume', JSON.stringify({ mode: this.mode, mapId: this.map.id, level: this.level, co: this.co, enemyCo: this.enemyCo, tag: this.tagCo, captures: this.captures, powers: this.powers, support: this.support, kits: this.kits, autoplay: this.autoplay, autoUsed: this.autoUsed, week: this.week, sim: this.s.snapshot(), at: Date.now() })); } catch { /* */ }
   }
 
   // ── 범위 칸 ──
@@ -1101,7 +1102,7 @@ export class PlayScene extends Phaser.Scene {
       this.time.delayedCall(surrender ? 100 : 900, () => { this.cameras.main.fadeOut(500, 20, 22, 10); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', r)); });
       return;
     }
-    const r = { mode: this.mode, mapId: this.map.id, win, day: s.day, lost: s.stats.lost[1], kills: s.stats.kills[1], captures: this.captures, built: s.stats.built[1], powers: this.powers, co: this.co, tag: this.tagCo, why: surrender ? 'surrender' : this.winWhy, dealt: s.stats.dealt.slice(), units0: (this.simMap.units || []).filter(u => u.p === 1 && !u.support).length, support: this.support, kits: this.kits, auto: this.autoUsed, undos: this.undoN, custom: this.map.custom ? this.map : null, enemyTag: this.data0.enemyTag, limit: this.data0.limit };
+    const r = { mode: this.mode, mapId: this.map.id, win, day: s.day, lost: s.stats.lost[1], kills: s.stats.kills[1], captures: this.captures, built: s.stats.built[1], powers: this.powers, co: this.co, tag: this.tagCo, why: surrender ? 'surrender' : this.winWhy, dealt: s.stats.dealt.slice(), units0: (this.simMap.units || []).filter(u => u.p === 1 && !u.support).length, support: this.support, kits: this.kits, auto: this.autoUsed, undos: this.undoN, custom: this.map.custom ? this.map : null, enemyTag: this.data0.enemyTag, limit: this.data0.limit, week: this.week };
     const res = M.finish(r); r.fails = noteResult(r);
     const rd = { ...r, ...res, level: this.level, enemyCo: this.enemyCo }, st = this.mode === 'campaign' && win && STORY[this.map.id], d = load();
     const to = st && st.win && !(d.seenWin || {})[this.map.id] ? (((d.seenWin ||= {})[this.map.id] = 1), save(), ['Story', { lines: st.win, foe: this.enemyCo, title: '작전 성공', next: ['Result', rd] }]) : ['Result', rd];

@@ -1,13 +1,13 @@
 // 판 끝: 이번 판에 얻은 것부터(꽃잎 · 도감) → 기록 → 독설 한 줄 → 꽃잎 2배(광고/골드) → 다시
-import { W, H, C } from '../config.js?v=0.99.74';
-import { load, save } from '../save.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { txt, button, toast, boxTex, fmt } from '../ui.js?v=0.99.74';
-import { burst } from '../fx.js?v=0.99.74';
-import { endLine, tipLine, rules } from '../meta.js?v=0.99.74';
-import { Run } from '../core/run.js?v=0.99.74';
-import { GOD } from '../core/gods.js?v=0.99.74';
-import { bm, bmOn, owned, price, adLeft, dblUsed, noteDbl, afterRound, track } from '../bmflow.js?v=0.99.74';
+import { W, H, C } from '../config.js?v=0.99.75';
+import { load, save } from '../save.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { txt, button, toast, boxTex, fmt } from '../ui.js?v=0.99.75';
+import { burst } from '../fx.js?v=0.99.75';
+import { endLine, tipLine, rules } from '../meta.js?v=0.99.75';
+import { Run } from '../core/run.js?v=0.99.75';
+import { GOD } from '../core/gods.js?v=0.99.75';
+import { bm, bmOn, owned, price, adLeft, dblUsed, noteDbl, afterRound, track } from '../bmflow.js?v=0.99.75';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -42,11 +42,15 @@ export class ResultScene extends Phaser.Scene {
     txt(this, W / 2, fy - 20, '오늘의 한 줄', 24, '#8A6A3A', { stroke: null, weight: '800', ls: 4 });
     txt(this, W / 2, fy + 50, endLine({ phase: s.won ? 'won' : 'over', cleared: s.cleared, total: s.total }), 32, '#2A1C10', { stroke: null, weight: '800', wrap: 860 });
     txt(this, W / 2, fy + 180, `다음 판엔: ${tipLine(d.plays)}`, 26, C.jade, { thick: 3, weight: '700', wrap: 940 });
-    // 4) 순위 (오늘의 판 · 소장자 · 도움 안 받은 판만)
+    // 4) 순위 (오늘의 판 · 로그인한 누구나 · 이어하기 · 응원 판도 오름 — 2026-11-27 대표 결정 · assisted 는 기록용)
     if (s.mode === 'daily' && bmOn()) {
       const rt = txt(this, W / 2, fy + 236, '', 26, C.dim, { thick: 2, weight: '700' });
-      if (s.assisted) rt.setText('이어하기 · 응원을 받은 판은 오늘의 순위에 오르지 않아요');
-      else if (owned()) bm.submitScore(s.total, { assisted: false }).then(r => { if (r && r.ok) rt.setText(`오늘의 판 명예의 전당 ${r.rank}위 · 상품 없이 이름만 올라가요`).setColor(C.goldHi); });
+      bm.submitScore(s.total, { assisted: !!s.assisted }).then(r => {
+        window.__submit = r;
+        if (!rt.active || !r) return;
+        if (r.ok) rt.setText(r.rank ? `오늘의 판 명예의 전당 ${r.rank}위 · 상품 없이 이름만 올라가요` : r.tier ? `오늘의 판 명예의 전당 상위 ${r.tier}% · 이름만 올라가요` : '오늘의 판 명예의 전당에 올렸어요').setColor(C.goldHi);
+        else if (r.reason === 'login') rt.setText('로그인하면 오늘의 순위에 이름이 올라가요');
+      }).catch(() => {});
     }
     // 5) 꽃잎 2배 (3달 이상 간 판 · 하루 5번 · 광고 1회 또는 20골드)
     const by = H - 420;

@@ -1,7 +1,7 @@
 // 진행 · 재방문: 계급(경험치) · 캠페인 별 · 지휘관 해금 · 연속 출석 · 오늘의 미션 · 오늘의 작전
-import { load, save } from './save.js?v=0.99.74';
-import { MAPS, WAR } from './core/maps.js?v=0.99.74';
-import { JOINS } from './story.js?v=0.99.74';
+import { load, save } from './save.js?v=0.99.75';
+import { MAPS, WAR } from './core/maps.js?v=0.99.75';
+import { JOINS } from './story.js?v=0.99.75';
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
@@ -92,6 +92,45 @@ export function warScore(r, par) {
 }
 export const warBest = id => load().war[id] || null;
 
+// ── 주간 작전 (공통 랭킹 'war:week' · 2026-11-27): 한 주 동안 모두 같은 전쟁실 지도 · 같은 지휘관(빌려 줌) · 교대 · 보급품 · 되돌리기 없음
+//    어려움 AI 는 흔들림(noise) 0 이라 같은 수를 두면 같은 결과 → 실력만 드러나는 '같은 편성' 판
+//    점수 = 전쟁실 세 칸 × 10 · 속도만 위를 열어 둠(기준 일수보다 하루 빠를수록 +1000/기준일) → 적은 턴이 가장 큰 차이
+export const WEEK_BOARD = 'war:week';
+/* 한 주 = KST 월 0시 ~ 일 24시 (서버 gold.js weekOf 와 같은 주) */
+export const weekIdx = (ms = Date.now()) => Math.floor((ms + 9 * 3600e3 - 4 * 864e5) / (7 * 864e5));
+export const WEEK0 = 2968;   /* 2026-W48 (11-23 월) = 전쟁실 1 · 엘라부터 */
+export const weekKey = (ms = Date.now()) => { const d = new Date(ms + 9 * 3600e3); d.setUTCHours(0, 0, 0, 0); const day = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 4 - day); const y = d.getUTCFullYear(); const w = Math.ceil(((d - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7); return `${y}-W${String(w).padStart(2, '0')}`; };
+/* 지도마다 빌려 줄 지휘관 차례 (tools/week_bot.mjs 로 어려움 AI 가 이기는 조합만 · 적 지휘관과 겹치지 않음) */
+export const WEEK_COS = {
+  w1: ['ella', 'jun', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w2: ['ella', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w3: ['viktor', 'jun', 'marin', 'sora', 'doo', 'hana', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w4: ['ella', 'viktor', 'jun', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w5: ['ella', 'viktor', 'jun', 'marin', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w6: ['ella', 'viktor', 'jun', 'marin', 'sora', 'doo', 'iris', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra'],
+  w7: ['ella', 'viktor', 'jun', 'marin', 'sora', 'doo', 'iris', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'scarlet'],
+  w8: ['ella', 'jun', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w9: ['ella', 'viktor', 'jun', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w10: ['ella', 'viktor', 'jun', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w11: ['ella', 'viktor', 'jun', 'marin', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra', 'scarlet'],
+  w12: ['ella', 'viktor', 'jun', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'sera', 'titan', 'terra', 'scarlet'],
+  w13: ['ella', 'viktor', 'jun', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'terra', 'scarlet'],
+  w14: ['ella', 'viktor', 'jun', 'marin', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'titan', 'terra', 'scarlet'],
+  w15: ['ella', 'jun', 'sora', 'doo', 'iris', 'yuki', 'hana', 'leon', 'kai', 'bas', 'sera', 'titan', 'terra'],
+};
+export function weekOp(ms = Date.now()) {
+  const k = weekIdx(ms), i = k - WEEK0, n = WAR.length, map = WAR[((i % n) + n) % n], pool = WEEK_COS[map.id], co = pool[(((i * 7 + Math.floor(i / n)) % pool.length) + pool.length) % pool.length];   /* 주마다 지휘관도 바뀜 */
+  const d = load(), key = weekKey(ms); if (!d.week || d.week.key !== key) { d.week = { key, best: 0, tries: 0, day: 0 }; save(); }
+  return { key, map, co, best: d.week.best, tries: d.week.tries, day: d.week.day, ends: (k + 1) * 7 * 864e5 + 4 * 864e5 - 9 * 3600e3 };
+}
+export function weekScore(r, par) {
+  const d1 = r.dealt ? r.dealt[1] : 0, d2 = r.dealt ? r.dealt[2] : 0;
+  const speed = Math.max(0, Math.round((200 - r.day * 100 / par) * 10));
+  const power = Math.max(0, Math.min(1000, Math.round(((d1 / Math.max(1, d1 + d2)) * 150 - 25) * 10)));
+  const tech = Math.max(0, Math.min(1000, Math.round((100 - r.lost * 100 / Math.max(6, (r.units0 || 4) + r.built)) * 10)));
+  return { speed, power, tech, total: Math.max(1, speed + power + tech) };
+}
+
 // ── 전투 결과 반영 ──
 // r: { mode, mapId, win, day, lost, kills, captures, built, powers, co }
 export function finish(r) {
@@ -107,6 +146,8 @@ export function finish(r) {
   }
   let war = null, warPrev = null;
   if (r.mode === 'war') { const m = WAR.find(x => x.id === r.mapId); warPrev = d.war[r.mapId] || null; if (r.win && m) { war = warScore(r, m.par); if (!warPrev || war.total > warPrev.total) d.war[r.mapId] = { ...war, day: r.day, co: r.co }; } }
+  let week = null;
+  if (r.mode === 'war' && r.week && r.week.key === weekKey()) { const m = WAR.find(x => x.id === r.mapId); weekOp(); d.week.tries++; if (r.win && m) { week = weekScore(r, m.par); week.prev = d.week.best; if (week.total > d.week.best) { d.week.best = week.total; d.week.day = r.day; } } }
   if (r.mode === 'daily') { d.daily.tries++; if (r.win && (!d.daily.best || r.day < d.daily.best)) d.daily.best = r.day; if (r.win) d.daily.won = true; }
   d.coXp[r.co] = (d.coXp[r.co] || 0) + (r.win ? 30 : 10);
   const xp = 20 + (r.win ? 50 : 0) + newStars * 30 + r.kills * 3 + r.captures * 2 + (war ? Math.round(war.total / 6) : 0);
@@ -114,6 +155,6 @@ export function finish(r) {
   const up = addXp(xp);
   track('win', r.win ? 1 : 0); track('capture', r.captures); track('kill', r.kills); track('build', r.built); track('power', r.powers);
   if (stars === 3) track('stars3'); if (r.mode === 'daily') track('daily');
-  return { stars, newStars, unlocked, xp, rankUp: up, war, warPrev };
+  return { stars, newStars, unlocked, xp, rankUp: up, war, warPrev, weekRes: week };
 }
 export const coLevel = co => 1 + Math.floor(Math.sqrt((load().coXp[co] || 0) / 40));

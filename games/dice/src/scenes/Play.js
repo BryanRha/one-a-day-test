@@ -1,16 +1,16 @@
 // 전투 화면: 판 5×3 + 둘레 길. 소환(탭) · 합성(끌어 놓기) · 판 안 강화. 로직은 core/sim.js
-import { W, H } from '../config.js?v=0.99.74';
-import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.74';
-import { DESC } from './Deck.js?v=0.99.74';
-import { act } from '../core/ai.js?v=0.99.74';
-import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save } from '../save.js?v=0.99.74';
-import * as M from '../meta.js?v=0.99.74';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.74';
-import * as BM from '../bmflow.js?v=0.99.74';
-import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.74';
-import { guidePop } from '../guide.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { Sim, RUNES, COLS, ROWS, SLOTS, MAX_PIPS, BOSSES, RARITY, RARITY_NAME, RARITY_COLOR, synergiesOf } from '../core/sim.js?v=0.99.75';
+import { DESC } from './Deck.js?v=0.99.75';
+import { act } from '../core/ai.js?v=0.99.75';
+import { T, C, fmt, btn, iconBtn, popup, toast } from '../pui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save } from '../save.js?v=0.99.75';
+import * as M from '../meta.js?v=0.99.75';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.75';
+import * as BM from '../bmflow.js?v=0.99.75';
+import { ITEMS, itemsOn, left as itemLeft } from '../core/items.js?v=0.99.75';
+import { guidePop } from '../guide.js?v=0.99.75';
 
 // 판 크기: 양옆 길 위 몬스터(보스 포함)가 화면 밖으로 잘리지 않게 여백 확보
 const CS = 188, GAP = 14, BW = COLS * CS + (COLS - 1) * GAP, BH = ROWS * CS + (ROWS - 1) * GAP;
@@ -36,6 +36,7 @@ const RUN0 = () => ({
   drag: null, drag0moved: false, frozen: [], hints: [], targets: [], powerHintObj: null, rarFxT: 0, popT: 0,
   pulseQ: [], links: [], linked: new Set(), lastLink: null, fingerObj: null, pick: null, itemBusy: false, autoBought: false, itemBar: null, itemTray: null, items: [], itemY: null, itemNote: null,
   bossLag: 1, bossLagId: null, bossHitT: 0,
+  rankSt: null, dailyDay: null,
 });
 
 export class PlayScene extends Phaser.Scene {
@@ -57,6 +58,8 @@ export class PlayScene extends Phaser.Scene {
     else if (this.mode === 'abyss') this.s = new Sim({ ...base, deck: d.deck, startWave: 10 });
     else this.s = new Sim({ ...base, deck: d.deck });
     Object.assign(this, RUN0());   /* 씬 재사용: 판마다 새로 시작할 값은 모두 RUN0 한 곳에서 (위) */
+    /* 공통 랭킹: 오늘의 도전만 · 원어데이 안 · 봇 판 X (bmflow.rankStart — B 등급이라 판 표는 없지만 SDK 순서대로 시작을 알림) */
+    if (this.mode === 'daily') { this.dailyDay = M.dailyChallenge().day; if (!this.bot) this.rankSt = BM.rankStart(); }
     /* 판 안 아이템: 메인 원정 · 원어데이 안 · 서버 가격이 있을 때만 (core/items.js) */
     this.items = itemsOn(this.mode, this.bot) ? ITEMS.filter(it => BM.itemPrice(it.sku) > 0) : [];
 
@@ -947,7 +950,7 @@ export class PlayScene extends Phaser.Scene {
     c.add(T(this, 0, 214, '화면을 누르면 시작', 26, C.gold, { w: 800 }));
     this.paused = true;
     const z = this.add.zone(W / 2, H / 2, W, H).setInteractive().setDepth(96);
-    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.74').then(m => m.save()); });
+    z.once('pointerup', () => { c.destroy(); z.destroy(); this.paused = false; const d = load(); d.tips.dice = 1; import('../save.js?v=0.99.75').then(m => m.save()); });
   }
 
   // 연속 실패 응원 선물 (core/help.js) — 다음 판 시작 때 · 노력 인정 먼저 · 받기/거절 · 게임은 그동안 멈춤
@@ -988,8 +991,10 @@ export class PlayScene extends Phaser.Scene {
     const res = M.finishRun(r, this.mode);
     /* 아이템을 쓴 판은 응원 선물 연속에선 '도움 받은 판'(연속 0)으로 · AI 실력 보정에도 안 넣음 (meta.finishRun) */
     if (!this.bot) { BM.helpNote({ mode: this.mode, wave: s.wave, t: s.t, quit: this.quit, helped: this.helped || r.items > 0 }); BM.roundOver(); }
+    /* 공통 랭킹: 오늘의 도전 판을 끝나자마자 올림 (포기한 판도 — 주간 최고만 남음) · 결과 화면은 답을 기다리지 않고 그 자리에 한 줄을 채움 */
+    const rank = this.mode === 'daily' && !this.bot && BM.rankOn() ? Promise.resolve(this.rankSt).then(st => BM.rankSubmit({ wave: s.wave, kills: s.kills, t: s.t, day: this.dailyDay, quit: this.quit }, st)) : null;
     this.cameras.main.fadeOut(1400, 5, 6, 26);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', { ...r, ...res, mode: this.mode, bot: this.bot, helped: this.helped }));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Result', { ...r, ...res, mode: this.mode, bot: this.bot, helped: this.helped, rank, t: s.t }));
   }
   // 랜덤 아레나: 셋 중 하나를 골라 덱에 추가 (그동안 멈춤)
   arenaPick() {

@@ -1,14 +1,14 @@
 // 결과: 거리 · 점수(최고 기록) · 코인 · 칼치기 기록 → 다시 달리기 / 차고
-import { W, H } from '../config.js?v=0.99.74';
-import { txt, fmt, fit, button, iconButton } from '../ui.js?v=0.99.74';
-import { audio } from '../audio.js?v=0.99.74';
-import { load, save } from '../save.js?v=0.99.74';
-import { wind } from '../fx.js?v=0.99.74';
-import { applyRun } from '../meta.js?v=0.99.74';
-import { bm } from '../oad_bm.js?v=0.99.74';
-import { canDouble, AD_DAY } from '../core/cont.js?v=0.99.74';
-import { adLeft, adUse } from '../bmflow.js?v=0.99.74';
-import { hallShown, submitLine, hallPopup } from '../hall.js?v=0.99.74';
+import { W, H } from '../config.js?v=0.99.75';
+import { txt, fmt, fit, button, iconButton } from '../ui.js?v=0.99.75';
+import { audio } from '../audio.js?v=0.99.75';
+import { load, save } from '../save.js?v=0.99.75';
+import { wind } from '../fx.js?v=0.99.75';
+import { applyRun } from '../meta.js?v=0.99.75';
+import { bm } from '../oad_bm.js?v=0.99.75';
+import { canDouble, AD_DAY } from '../core/cont.js?v=0.99.75';
+import { adLeft, adUse } from '../bmflow.js?v=0.99.75';
+import { hallShown, submitLine, hallPopup } from '../hall.js?v=0.99.75';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
@@ -47,7 +47,7 @@ export class ResultScene extends Phaser.Scene {
     this.add.image(cx0, cy + 340, 'item_coin').setDisplaySize(64, 64);
     const coinT = txt(this, cx0 + 50, cy + 340, `+${fmt(r.coins)}`, 52, '#FFFFFF', { ox: 0, stroke: '#1E2A52', thick: 10 });
     if (two) this.coins2x(r, coinT, W / 2 + 200, cy + 340);
-    /* 명예의 전당 (원어데이 안 · 소장자 혜택): 이어하기 · 응원 선물을 받은 판은 assisted */
+    /* 명예의 전당 (원어데이 안 · 로그인한 누구나): 이어하기 · 응원 선물 판도 순위에 오름 (assisted 는 기록용) */
     if (hallShown()) {
       const line = txt(this, W / 2, cy + 455, '', 30, '#FFFFFF', { stroke: '#1E2A52', thick: 6 });
       bm.submitScore(r.score, { assisted: !!(r.revived || r.helped) }).then(res => { this.submit = res; const l = submitLine(res); if (l && line.active) line.setText(l.text).setColor(l.color); }).catch(() => {});

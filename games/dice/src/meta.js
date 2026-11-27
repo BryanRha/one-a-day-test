@@ -1,7 +1,8 @@
 // 진행·재방문: 룬 해금(최고 웨이브) · 수정으로 영구 등급업(확정, 뽑기 없음) · 연속 출석 · 오늘의 미션 · 오늘의 도전
-import { load, save } from './save.js?v=0.99.74';
-import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.99.74';
-import { fieldOpen } from './bmflow.js?v=0.99.74';
+import { load, save } from './save.js?v=0.99.75';
+import { RUNE_ORDER, RARITY } from './core/sim.js?v=0.99.75';
+import { fieldOpen } from './bmflow.js?v=0.99.75';
+import { dailyOf } from './core/daily.js?v=0.99.75';
 
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -229,11 +230,9 @@ export function checkIn() {
 
 // ── 오늘의 도전: 모두 같은 시드·같은 덱·등급 1 (공정) ──
 export function dailyChallenge() {
-  const day = dayKey(); let h = 7; for (const ch of day) h = (h * 131 + ch.charCodeAt(0)) >>> 0;
-  const pool = RUNE_ORDER.slice(), deck = [];
-  let x = h; while (deck.length < 5) { x = (x * 1103515245 + 12345) >>> 0; const r = pool.splice(x % pool.length, 1)[0]; deck.push(r); }
+  const day = dayKey(), { seed, deck } = dailyOf(day);   /* 판 만들기는 core/daily.js (봇 · 랭킹 상한 측정과 같은 함수) */
   const d = load(); if (d.daily.date !== day) { d.daily = { date: day, best: 0, tries: 0 }; save(); }
-  return { day, seed: h, deck, best: d.daily.best, tries: d.daily.tries };
+  return { day, seed, deck, best: d.daily.best, tries: d.daily.tries };
 }
 
 // ── 아케이드 ──

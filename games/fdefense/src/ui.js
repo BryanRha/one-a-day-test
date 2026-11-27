@@ -1,6 +1,6 @@
 // 공용 UI: 판 · 버튼 · 글자 (세련된 어두운 유리판 + 금빛 강조)
-import { FONT, C } from './config.js?v=0.99.74';
-import { audio, S } from './audio.js?v=0.99.74';
+import { FONT, C } from './config.js?v=0.99.75';
+import { audio, S } from './audio.js?v=0.99.75';
 
 export function text(sc, x, y, s, size = 40, color = C.ink, opt = {}) {
   const t = sc.add.text(x, y, s, { fontFamily: FONT, fontSize: `${size}px`, fontStyle: opt.weight || '800', color, align: opt.align || 'center', stroke: opt.stroke || '#0B0D12', strokeThickness: opt.st ?? Math.round(size / 9), wordWrap: opt.wrap ? { width: opt.wrap } : undefined, lineSpacing: opt.ls ?? 4 });
@@ -67,6 +67,7 @@ export function icon(sc, kind, x, y, s = 1) {
   if (kind === 'mana') { g.fillStyle(0x2C7BD6, 1); g.fillPoints([{ x: 0, y: -22 * s }, { x: 15 * s, y: 0 }, { x: 0, y: 22 * s }, { x: -15 * s, y: 0 }], true); g.fillStyle(0x8FE3FF, 1); g.fillPoints([{ x: 0, y: -18 * s }, { x: 9 * s, y: -2 * s }, { x: 0, y: 6 * s }, { x: -9 * s, y: -2 * s }], true); }
   if (kind === 'medal') { g.fillStyle(0xB0322E, 1).fillTriangle(-14 * s, -24 * s, -2 * s, -24 * s, -10 * s, 0); g.fillStyle(0x2E5DB0, 1).fillTriangle(14 * s, -24 * s, 2 * s, -24 * s, 10 * s, 0); g.fillStyle(0xB8862B, 1).fillCircle(0, 8 * s, 17 * s); g.fillStyle(0xFFD45A, 1).fillCircle(0, 6 * s, 16 * s); g.fillStyle(0xC9962F, 1); g.fillPoints([{ x: 0, y: -4 * s }, { x: 3 * s, y: 3 * s }, { x: 10 * s, y: 4 * s }, { x: 4 * s, y: 9 * s }, { x: 6 * s, y: 16 * s }, { x: 0, y: 12 * s }, { x: -6 * s, y: 16 * s }, { x: -4 * s, y: 9 * s }, { x: -10 * s, y: 4 * s }, { x: -3 * s, y: 3 * s }], true); }
   if (kind === 'lock') { g.fillStyle(0x0B0D12, 0.85).fillRoundedRect(-16 * s, -4 * s, 32 * s, 26 * s, 5 * s); g.lineStyle(5 * s, 0xA9A391, 1).strokeCircle(0, -6 * s, 10 * s); g.fillStyle(0xA9A391, 1).fillRoundedRect(-16 * s, -4 * s, 32 * s, 26 * s, 5 * s); g.fillStyle(0x30343E, 1).fillCircle(0, 7 * s, 4 * s); }
+  if (kind === 'trophy') { g.fillStyle(0xB8862B, 1).fillRoundedRect(-13 * s, 14 * s, 26 * s, 8 * s, 2 * s).fillRect(-4 * s, 4 * s, 8 * s, 11 * s); g.lineStyle(5 * s, 0xE0AE3C, 1).strokeCircle(-16 * s, -9 * s, 8 * s).strokeCircle(16 * s, -9 * s, 8 * s); g.fillStyle(0xFFD45A, 1).fillRoundedRect(-17 * s, -22 * s, 34 * s, 10 * s, 3 * s).fillTriangle(-17 * s, -14 * s, 17 * s, -14 * s, 0, 8 * s).fillCircle(0, -10 * s, 13 * s); g.fillStyle(0xFFFFFF, 0.55).fillCircle(-6 * s, -14 * s, 3.5 * s); }
   if (kind === 'gear') { g.fillStyle(0xC9C3B0, 1); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.fillCircle(Math.cos(a) * 17 * s, Math.sin(a) * 17 * s, 6 * s); } g.fillCircle(0, 0, 16 * s); g.fillStyle(0x1B2130, 1).fillCircle(0, 0, 7 * s); }
   return g;
 }
