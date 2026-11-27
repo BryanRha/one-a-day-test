@@ -1,13 +1,13 @@
 // 탭 화면 — 장부(주간 이야기 · 정산 · 지난 주) · 단골 도감 · 꾸미기 · 설정 · 공유 카드
-import { D, H, can, DECO, FUR, face, tagOf } from './state.js?v=0.99.86';
-import { S, save, today, week, reset } from './save.js?v=0.99.86';
-import * as A from './audio.js?v=0.99.86';
-import { $, $$, esc, I, toast, modal, closeModal, sp, praise, fmt, setHaptic, coinFly, center, sparks } from './ui.js?v=0.99.86';
-import { mainGuest, slot, addDays, WD, GRADE, CHN, won, topAxis, AXN, weekTitle, COIN, nextTease, dayNo, EPOCH, levelOf, LEVELS, TOOLS, toolOn } from './engine.js?v=0.99.86';
-import { show, openShop, hud, refreshCoins, replayDay, findGuest, track } from './main.js?v=0.99.86';
-import { sceneHTML, layout } from './scene.js?v=0.99.86';
-import { bm } from './oad_bm.js?v=0.99.86';
-import { inOAD, exitToOAD } from './oad.js?v=0.99.86';
+import { D, H, can, DECO, FUR, face, tagOf } from './state.js?v=0.99.87';
+import { S, save, today, week, reset } from './save.js?v=0.99.87';
+import * as A from './audio.js?v=0.99.87';
+import { $, $$, esc, I, toast, modal, closeModal, sp, praise, fmt, setHaptic, coinFly, center, sparks } from './ui.js?v=0.99.87';
+import { mainGuest, slot, addDays, WD, GRADE, CHN, won, topAxis, AXN, weekTitle, COIN, nextTease, dayNo, EPOCH, levelOf, LEVELS, TOOLS, toolOn } from './engine.js?v=0.99.87';
+import { show, openShop, hud, refreshCoins, replayDay, findGuest, track } from './main.js?v=0.99.87';
+import { sceneHTML, layout } from './scene.js?v=0.99.87';
+import { bm } from './oad_bm.js?v=0.99.87';
+import { inOAD, exitToOAD } from './oad.js?v=0.99.87';
 
 export function refreshTabs(id) {
   const t = $('#tabs'), on = id === 'shop' ? 'shop' : id;
