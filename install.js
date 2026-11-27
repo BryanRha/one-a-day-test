@@ -69,7 +69,9 @@ const isStandalone = () => { if (framedWin) return false; try { return matchMedi
 export const env = detect(nav.userAgent, nav.platform, nav.maxTouchPoints, typeof window !== 'undefined' && isStandalone());
 export const standalone = isStandalone;
 /* 배너 · 넛지를 숨길지: 설치 앱으로 열림 · 이 브라우저에서 설치 완료(appinstalled) · '이미 추가했어요'(30일, ops F1) */
-export const installed = () => isStandalone() || LS.get('oad_installed') === '1' || Number(LS.get('oad_install_done') || 0) > Date.now();
+/* 다른 화면이 감싼 iframe(원스토어 앱 등)은 이미 앱 안 — 설치 배너 · 넛지 · '브라우저로 열기'를 띄우지 않음 (11-27 대표: 원스토어 앱에서 '브라우저로 열기'가 나옴) */
+export const hosted = () => framedWin;
+export const installed = () => framedWin || isStandalone() || LS.get('oad_installed') === '1' || Number(LS.get('oad_install_done') || 0) > Date.now();
 export const markDone = (days = 30) => LS.set('oad_install_done', String(Date.now() + days * 864e5));
 export const clearMarks = () => { LS.del('oad_installed'); LS.del('oad_install_done'); };
 export const canPrompt = () => !!deferred;
@@ -138,7 +140,7 @@ export function bannerHTML(o = {}) {
 
 /* 그림 안내 모듈 (열 때만 불러옴) */
 let G = null;
-export const ui = () => G || (G = import('./install-guide.js?v=0.99.78'));
+export const ui = () => G || (G = import('./install-guide.js?v=0.99.79'));
 
 /* ── 글 안내 (PC · 그림 모듈을 못 불러올 때의 폴백) ── */
 const SHARE_IOS = '<svg viewBox="0 0 24 24" width="22" height="22" style="vertical-align:-5px"><path fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M7.5 7.5L12 3l4.5 4.5M6 11H5v10h14V11h-1"/></svg>';
