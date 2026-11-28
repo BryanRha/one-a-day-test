@@ -1818,7 +1818,7 @@ A.onChange(m => { if (m) { RS.resend(); setTimeout(() => { if (tab === 'today' &
 /* 처음 열 때: 주소(#fortune · #box · #game … · 옛 #library · #collection · #settings)대로 · 없으면 오늘 허브 */
 { const r = parseRoute(location.hash) || { tab: 'today' }; go(r.tab, 'open', r.seg); if (r.games) setTimeout(() => toGames(false), 60); if (r.settings) setTimeout(openSettings, 300); setTimeout(() => moveNote(r.moved), 1200); }
 if (!R.state().intro && !LAND) setTimeout(intro, 400);   /* 공유 링크로 온 첫 방문은 친구 화면 먼저 · 소개는 다음에 */
-window.__oad = { R, go, play, SY };
+window.__oad = { R, go, play, SY, PV };   /* 시험 손잡이 (PV: adsound_check 가 원스토어 광고를 띄움) */
 /* 원스토어 앱 안 (onestore.js): 백키는 200ms 안에 동기로 답함 — 열린 창 닫기 → 게임에게 바로 묻기(첫 화면이면 게임 닫기) → 오늘 탭으로 → 그다음은 원스토어의 '종료할까요'
    종료(exit): 게임 화면 저장은 onestore.js 가 먼저(동기) · 소장 게임은 계정 저장도 보냄(keepalive) · 첫 화면을 그린 뒤 로딩 화면을 걷음(startGameAsync) */
 if (OS.looks) OS.ready.then(on => { if (!on) { refreshSettings(); return; }
