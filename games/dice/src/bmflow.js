@@ -3,10 +3,10 @@
 //   뽑기는 수정으로만 (골드로 직접 뽑기 X · 확률 공개 · 천장 그대로) · 광고로는 열쇠만 하루 1개(QA 23 · 2026-11-09) — 골드로는 여전히 뽑기 X
 //   광고 보상: 판 보상 2배(하루 3) · 무료 상자(하루 1, 수정 + 등급업 카드) — 소장자는 광고 없이 바로(횟수 같음)
 //   원어데이 밖(hello().ok = false): 골드 · 광고 · 전용 전장 전부 숨김, 게임은 그대로
-import { bm } from './oad_bm.js?v=0.99.106';
-import { load, save } from './save.js?v=0.99.106';
-import { HELP, roll, note, eligible, used } from './core/help.js?v=0.99.106';
-import { RANK_BOARD, rankScore, rankTie } from './core/daily.js?v=0.99.106';
+import { bm } from './oad_bm.js?v=0.99.107';
+import { load, save } from './save.js?v=0.99.107';
+import { HELP, roll, note, eligible, used } from './core/help.js?v=0.99.107';
+import { RANK_BOARD, RANK_RUN, rankScore, rankTie } from './core/daily.js?v=0.99.107';
 
 export { bm };
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -201,19 +201,20 @@ export async function afterRound() {
 //   메인 원정은 덱 등급(뽑기 · 수정)에 따라 달라지고, 아레나 · 시련은 고르는 룬이 무작위, 심연은 하루 3번 + 골드라 같은 조건이 아님
 //   원어데이 밖 · 봇 판은 안 부름 · 실패해도 게임은 그대로 (결과 화면 한 줄만 바뀜)
 export const rankOn = () => oadOn();
-export async function rankStart() {
+export const rankBoardOf = mode => (mode === 'daily' ? RANK_BOARD : mode === 'run' ? RANK_RUN : null);   /* 판 'dice' = 오늘의 도전 · 'dice:run' = 메인 원정 */
+export async function rankStart(board = RANK_BOARD) {
   if (!oadOn()) return null;
-  try { const s = await bm.rank.start(RANK_BOARD); return s && s.ok ? s : null; } catch { return null; }
+  try { const s = await bm.rank.start(board); return s && s.ok ? s : null; } catch { return null; }
 }
-export async function rankSubmit(r, st) {
+export async function rankSubmit(r, st, board = RANK_BOARD) {
   if (!oadOn()) return null;
   const score = rankScore(r), tie = rankTie(r);
   try {
-    return await bm.rank.submit(RANK_BOARD, score, { run: st && st.run, tie, meta: { day: r.day, wave: r.wave, kills: r.kills, t: tie, quit: r.quit ? 1 : 0 }, assisted: false });
+    return await bm.rank.submit(board, score, { run: st && st.run, tie, meta: { day: r.day, wave: r.wave, kills: r.kills, t: tie, quit: r.quit ? 1 : 0 }, assisted: false });
   } catch { return { ok: false, reason: 'offline' }; }
 }
 export const rankLine = res => { try { return bm.rank.line(res); } catch { return null; } };
-export const rankOpen = () => (oadOn() ? bm.rank.open(RANK_BOARD).catch(() => null) : null);
+export const rankOpen = (board = RANK_BOARD) => (oadOn() ? bm.rank.open(board).catch(() => null) : null);
 
 // ── 기록 (앱 운영실) ──
 const inFrame = (() => { try { return window.parent !== window; } catch { return true; } })();

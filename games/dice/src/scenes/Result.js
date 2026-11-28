@@ -1,16 +1,17 @@
 // 결과: 도달 웨이브 · 처치 · 보스 · 최고 눈 · 받은 수정 · 새 해금
-import { W, H } from '../config.js?v=0.99.106';
-import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.106';
-import { audio } from '../audio.js?v=0.99.106';
-import { load } from '../save.js?v=0.99.106';
-import * as M from '../meta.js?v=0.99.106';
-import * as BM from '../bmflow.js?v=0.99.106';
-import { RUNES } from '../core/sim.js?v=0.99.106';
-import { rankScore } from '../core/daily.js?v=0.99.106';
+import { W, H } from '../config.js?v=0.99.107';
+import { T, C, fmt, panel, btn, iconBtn, rewardBlock, toast } from '../pui.js?v=0.99.107';
+import { audio } from '../audio.js?v=0.99.107';
+import { load } from '../save.js?v=0.99.107';
+import * as M from '../meta.js?v=0.99.107';
+import * as BM from '../bmflow.js?v=0.99.107';
+import { RUNES } from '../core/sim.js?v=0.99.107';
+import { rankScore } from '../core/daily.js?v=0.99.107';
 
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(r) {
+    this.rkCard = this.rkTitle = this.rkSub = null;   /* 씬 재사용: 앞 판의 순위 카드를 들고 있지 않게 (11-28) */
     BM.refreshHello();   /* 다음 판 전에 가격 다시 확인 (v0.10.1) */
     this.busy = false; this.leaving = false; this.x2 = null;
     const bg = this.add.image(W / 2, H / 2, M.bgKey()); bg.setScale(Math.max(W / bg.width, H / bg.height));
@@ -35,9 +36,9 @@ export class ResultScene extends Phaser.Scene {
       /* 홈 카드와 같은 형식 (QA 20): '보상' 꼬리표 + 한 줄에 한 항목 */
       if (nm) this.rwNext = rewardBlock(this, 250, cy + 236, [M.milestoneLine(nm), `지금 최고 웨이브 ${nm.best} · 처음 도달하면 받아요`], { size: 28, gap: 44 });
     }
-    if (r.rank) this.rankCard(r, cy + 310);
+    if (r.rank) this.rankCard(r, r.mode === 'run' ? cy + 520 : cy + 310);   /* 메인 원정은 위에 이정표 안내 · 제단 단추가 있어 그 아래로 (11-28) */
     if (r.items) T(this, W / 2, cy - 222, `아이템 ${r.items}번 사용한 판`, 22, C.dim, { w: 800 });
-    const by = Math.min(H - 150, cy + 700);
+    const by = Math.min(H - 150, cy + (r.rank && r.mode === 'run' ? 780 : 700));   /* 메인 원정 순위 카드가 있으면 단추를 한 칸 아래로 (11-28) */
     // 광고 보고 수정 2배 (원어데이 안 · 하루 3번 · 소장자는 바로) — 판을 살리는 게 아니라 받은 보상만 한 번 더
     const add = Math.min(BM.AD.x2Cap, r.crystals || 0);
     if (add > 0 && BM.oadOn() && BM.x2Left() && (BM.owned() || BM.adReady()) && !r.bot) {
@@ -61,11 +62,11 @@ export class ResultScene extends Phaser.Scene {
     const c = this.add.container(W / 2, y), x0 = -410;
     c.add(panel(this, 0, 0, 900, 190, { tone: 'gold' }));
     const pts = rankScore(r);
-    c.add(T(this, x0, -56, `이번 주 순위 · 도전 점수 ${fmt(pts)}`, 26, C.dim, { ox: 0, w: 700, fit: 560 }));
+    c.add(T(this, x0, -56, `이번 주 순위 · ${r.mode === 'run' ? '원정' : '도전'} 점수 ${fmt(pts)}`, 26, C.dim, { ox: 0, w: 700, fit: 560 }));
     const title = T(this, x0, 0, '기록을 올리는 중…', 40, C.gold, { ox: 0, w: 900, fit: 560 });
     const sub = T(this, x0, 52, `웨이브 ${r.wave} · 처치 ${fmt(r.kills)} — 같은 웨이브면 더 많이 잡은 쪽이 위`, 26, C.sub, { ox: 0, w: 700, fit: 560 });
     c.add([title, sub]);
-    const b = btn(this, 300, 0, 240, 104, '순위 보기', () => BM.rankOpen(), { style: 'indigo', icon: 'i_crown', size: 28 });
+    const b = btn(this, 300, 0, 240, 104, '순위 보기', () => BM.rankOpen(r.rankBoard), { style: 'indigo', icon: 'i_crown', size: 28 });
     c.add(b);
     this.rkCard = c; this.rkTitle = title; this.rkSub = sub;
     const run = this.runId;

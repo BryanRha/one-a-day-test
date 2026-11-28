@@ -3,7 +3,7 @@
 //   서버: /api/me — GET ?rank=<판>|top3|today (CDN 캐시 · 로그인 없음) · POST act 'rank'(start · submit · mine · gifts · claim) · 'nick'
 //   광고 · 결제 단추는 이 화면들에 두지 않음 (사업 bm.md 4-1 — 자랑하는 자리)
 //   app.js 가 init(ctx) 로 시트 · 토스트 · 계정 · 기록 함수를 넘겨 줌 (아래 보관 줄 함수는 ctx 없이도 동작 — tools/rank_check.mjs 가 node 에서 시험)
-import { ic, coin } from './ui.js?v=0.99.106';
+import { ic, coin } from './ui.js?v=0.99.107';
 
 /* ── 오프라인 보관 (판마다 마지막 제출 하나 · 다시 연결되면 한 번 · 마감 + 10분 지나면 버림) ── */
 const KQ = 'oad_rank_q', GRACE = 10 * 60e3;
@@ -127,9 +127,11 @@ export async function resend() {
 const S = { board: '', tab: 'now', data: {}, mine: null, more: false };
 const gameOf = board => board.split(':')[0];
 /* 게임 안 한 모드 판의 이름 · 점수 단위 (11-27 랭킹 2차 — 판 이름은 server/api/_lib/rank.js RANK 와 같게) */
-const MODE = { 'fdefense:inf': '이번 주 무한 전장', 'ocean:weekly': '이번 주 도전', 'salvage:weekly': '주간 도전', 'war:week': '주간 작전' };
+const MODE = { dice: '오늘의 도전', 'dice:run': '이번 주 원정', 'fdefense:inf': '이번 주 무한 전장', 'ocean:weekly': '이번 주 도전', 'salvage:weekly': '주간 도전', 'war:week': '주간 작전' };
 const UNIT = { 'fdefense:inf': '웨이브' };
-const sc = (board, n) => fmt(n) + (UNIT[board] ? ' ' + UNIT[board] : '');
+/* 룬다이스 점수 = 웨이브×10000 + 처치 → '웨이브 15 · 처치 230' 으로 읽게 (11-28) */
+const WAVE = { dice: 1, 'dice:run': 1 };
+const sc = (board, n) => (WAVE[board] ? `웨이브 ${fmt(Math.floor(n / 10000))} · 처치 ${fmt(n % 10000)}` : fmt(n) + (UNIT[board] ? ' ' + UNIT[board] : ''));
 const titleOf = board => { const g = X.G(gameOf(board)); const m = /^rhythm:(s\d\d):(\w+)$/.exec(board); return (g ? g.title : gameOf(board)) + (m ? ` · 이번 주의 곡 ${DIFF[m[2]] || ''}` : MODE[board] ? ` · ${MODE[board]}` : ''); };
 export async function openBoard(board, { from = 'app' } = {}) {
   S.board = board; S.tab = 'now'; S.more = false; S.data = {}; S.mine = null;
