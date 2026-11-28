@@ -1,22 +1,22 @@
 // 숨은 물건 맵 (Find It Out® 식): 고밀도 세로 맵 · 아래 아이콘 5칸(찾으면 다음 물건이 채워짐) · 실패·시간 제한 없음
 // + 이야기 단서: 분홍 테두리 아이콘 · 찾으면 서윤 혼잣말 · 물건마다 코인 · 힌트는 코인
-import { W, H } from '../config.js?v=0.99.98';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.98';
-import { audio } from '../audio.js?v=0.99.98';
-import { goPrev } from '../nav.js?v=0.99.98';
-import { pushBack } from '../oad.js?v=0.99.98';
-import { load, save } from '../save.js?v=0.99.98';
-import { Viewer } from '../viewer.js?v=0.99.98';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.98';
-import { starOnce } from '../cafe/state.js?v=0.99.98';
-import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.98';
+import { W, H } from '../config.js?v=0.99.99';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.99';
+import { audio } from '../audio.js?v=0.99.99';
+import { goPrev } from '../nav.js?v=0.99.99';
+import { pushBack } from '../oad.js?v=0.99.99';
+import { load, save } from '../save.js?v=0.99.99';
+import { Viewer } from '../viewer.js?v=0.99.99';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.99';
+import { starOnce } from '../cafe/state.js?v=0.99.99';
+import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.99';
 
-import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.98';
-import { hintOffer } from '../bmui.js?v=0.99.98';
+import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.99';
+import { hintOffer } from '../bmui.js?v=0.99.99';
 
 const SPAM = { n: 3, t: 2, lock: 3 };
 // 1~3화는 아래 칸 그림을 크게 (QA 시트 #6) — 11-16 '더 키워야': 5칸 196 은 이미 화면 폭을 다 써서, 1~3화는 한 번에 4칸 · 248 로 (4화부터 5칸 · 160) · 칸을 누르면 크게 보기(모든 화)
-// 1화는 10초 동안 못 찾으면 자리를 부드럽게 안내 (QA 시트 #2, 무료 · 힌트로 안 셈) — 다시 하기에서도 (1화를 이미 끝낸 사람은 다시 하기로만 1화에 들어갈 수 있어 안내를 볼 길이 없었음)
+// (뺌 11-28 대표) 1화는 10초 동안 못 찾으면 자리를 부드럽게 안내 (QA 시트 #2, 무료 · 힌트로 안 셈) — 다시 하기에서도 (1화를 이미 끝낸 사람은 다시 하기로만 1화에 들어갈 수 있어 안내를 볼 길이 없었음)
 export const BIG_EPS = 3, GUIDE = { sec: 10 }, TRAY = { big: { n: 4, box: 248, gap: 16, h: 446 }, small: { n: 5, box: 160, gap: 16, h: 358 } };
 export class HuntScene extends Phaser.Scene {
   constructor() { super('Hunt'); }
@@ -27,7 +27,7 @@ export class HuntScene extends Phaser.Scene {
     const again = passed(ep.id, 'hunt'); this.replay = again && stepOf(ep.id) === 'done'; this.fresh = again; if (!again) advance(ep.id, 'hunt');
     const prog = d.ep[ep.id] ||= { step: 'hunt' }; prog.found ||= []; save();
     Object.assign(this, { misses: [], lock: 0, t: 0, ended: false, paused: false, blur: null, got: 0, hints: 0, idle: 0, guides: 0, peeks: 0 });
-    const idx = EPISODES.indexOf(ep); this.big = idx < BIG_EPS; this.guideOn = idx === 0;
+    const idx = EPISODES.indexOf(ep); this.big = idx < BIG_EPS; this.guideOn = false;   /* 1화 10초 자리 안내는 뺌 (대표 11-28: 단서 위치는 힌트 · 광고 · 미리 보기로) — guide() 는 남겨 둠 */
     // 순서: 일반 물건 사이사이에 단서 · 결정적 단서(last)는 맨 끝
     const normal = hu.items.filter(i => !i.clue).sort(() => Math.random() - 0.5), clues = hu.items.filter(i => i.clue && !i.last), last = hu.items.find(i => i.last);
     const q = [...normal]; clues.forEach((c, k) => q.splice(Math.min(q.length, 3 + k * 4), 0, c)); if (last) q.push(last);

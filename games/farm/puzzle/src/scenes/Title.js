@@ -1,10 +1,10 @@
-import { exitToOAD } from '../oad.js?v=0.99.98';
-import { W, H, TXT, VERSION } from '../config.js?v=0.99.98';
-import { t } from '../i18n.js?v=0.99.98';
-import { audio } from '../audio.js?v=0.99.98';
-import { load } from '../save.js?v=0.99.98';
-import { button, iconButton, popup, toast, enableGlow } from '../ui/widgets.js?v=0.99.98';
-import { settingsPopup } from './Map.js?v=0.99.98';
+import { exitToOAD } from '../oad.js?v=0.99.99';
+import { W, H, TXT, VERSION } from '../config.js?v=0.99.99';
+import { t } from '../i18n.js?v=0.99.99';
+import { audio } from '../audio.js?v=0.99.99';
+import { load } from '../save.js?v=0.99.99';
+import { button, iconButton, popup, toast, enableGlow } from '../ui/widgets.js?v=0.99.99';
+import { settingsPopup } from './Map.js?v=0.99.99';
 
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
