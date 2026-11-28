@@ -1,11 +1,11 @@
 // 화면 정보와 창: 돈 · 지점 진행 · 쿠폰 · 광고 ×2 · 미션 · 지점 지도 · 설정 · 열기 칸 글자 · +돈 글자 · 조이스틱
 import * as THREE from 'three';
-import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.101';
-import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.101';
-import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.101';
-import { sfx, setAudio } from './audio.js?v=0.99.101';
-import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.101';
-import { bm } from './oad_bm.js?v=0.99.101';
+import { OUT_ZONE, BRAND, GAME, BRANCHES, COUPON, MENU, UPGRADES, UP_MAX, upCost, BRANCH_INFO, FINISHED_RATE, STAFF, STAFF_UP, DECO, REGULARS, FAVOR, MASTERY, MASTERY_K, josa, BRANCH_MENU, OUTFITS, SHOP_ITEMS, FX, AD_REWARDS, AD_DAY, GIFT, TIER_AT, TIER_NAME, tierOf } from './data.js?v=0.99.102';
+import { starOf, favLv, fxOn, stLv, stName, L as LV } from './game.js?v=0.99.102';
+import { S, save, couponReady, claimCoupon, missionsNow, missionReady, claimMission, mult, today, KEY, resetAll, mission } from './state.js?v=0.99.102';
+import { sfx, setAudio } from './audio.js?v=0.99.102';
+import { pushBack, inOAD, exitToOAD } from './oad.js?v=0.99.102';
+import { bm } from './oad_bm.js?v=0.99.102';
 /* 실서버 주소인가 (oneaday.kr · www — test.oneaday.kr 은 아님): 테스트 도구는 실서버에서 안 보이게 */
 const PROD_HOST = /(^|\.)oneaday\.kr$/i.test(location.hostname) && !/^test\./i.test(location.hostname);
 

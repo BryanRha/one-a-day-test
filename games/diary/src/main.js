@@ -1,15 +1,15 @@
 // 오늘의 다꾸 v0.2.1 — 시작 · 화면 잇기 · 판 끝 보상 (메인 다꾸 · 스피드 다꾸 · 자유 다꾸)
 //   오늘의 페이지(하루 3판 → 날짜 도장 페이지 한 장) · 자유 다꾸(무제한 · 스티커 서랍 · 테마 노트) · 진행 맵 30단계
-import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.99.101';
-import { S, load, save, day, dayKey, give } from './save.js?v=0.99.101';
-import * as A from './audio.js?v=0.99.101';
-import * as Game from './game.js?v=0.99.101';
-import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.99.101';
-import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.99.101';
-import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.99.101';
-import { bm } from './oad_bm.js?v=0.99.101';
-import { installBack } from './oad.js?v=0.99.101';
-import { cur, closeSheets } from './screens.js?v=0.99.101';
+import { dailyCfg, dailySet, stageCfg, freeCfg, stageKind, FREE_REWARD, NOTES, img, nameOf, isFoil, SHOP, PAGE_TPL } from './data.js?v=0.99.102';
+import { S, load, save, day, dayKey, give } from './save.js?v=0.99.102';
+import * as A from './audio.js?v=0.99.102';
+import * as Game from './game.js?v=0.99.102';
+import { renderPage, completeToday, openShare, pickStickers } from './page.js?v=0.99.102';
+import { show, bind, goldChip, grant, openEditor, openDay } from './screens.js?v=0.99.102';
+import { $, sp, toast, modal, closeModal, burst, praise, app, setHaptic, buzz } from './ui.js?v=0.99.102';
+import { bm } from './oad_bm.js?v=0.99.102';
+import { installBack } from './oad.js?v=0.99.102';
+import { cur, closeSheets } from './screens.js?v=0.99.102';
 /* 원스토어 앱 안(원어데이 셸이 OAD_SHOT 을 줌): 웹뷰가 그림 저장 · 공유를 막아 '공유 카드 만들기'를 숨김 (대표 11-28) */
 const OS_IN = (() => { try { return parent !== window && !!parent.OAD_SHOT; } catch { return false; } })();
 

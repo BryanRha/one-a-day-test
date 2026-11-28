@@ -1,15 +1,15 @@
 // 첫 화면: 오늘의 패(화투점) 한 장 뒤집기 · 오늘의 판 / 자유 판 / 이어서 · 도감 · 꽃 덱 · 꾸미기 · 소리
-import { W, H, C, TITLE, VERSION } from '../config.js?v=0.99.101';
-import { load, save } from '../save.js?v=0.99.101';
-import { audio } from '../audio.js?v=0.99.101';
-import { txt, button, roundButton, modal, toast, boxTex, fmt } from '../ui.js?v=0.99.101';
-import { CardView } from '../cards.js?v=0.99.101';
-import { DECK, rules, fortuneCard, dailySeed, todayCharm, today, helpDue, helpGiven } from '../meta.js?v=0.99.101';
-import { DECKS, Run } from '../core/run.js?v=0.99.101';
-import { CHARM, CHEER } from '../core/charms.js?v=0.99.101';
-import { GOD } from '../core/gods.js?v=0.99.101';
-import { bmOn, owned, BACKS, backShown, backOpen, buyBack, effBack, price, fortuneSeed, helpOn, track } from '../bmflow.js?v=0.99.101';
-import { toOAD } from '../exit.js?v=0.99.101';
+import { W, H, C, TITLE, VERSION } from '../config.js?v=0.99.102';
+import { load, save } from '../save.js?v=0.99.102';
+import { audio } from '../audio.js?v=0.99.102';
+import { txt, button, roundButton, modal, toast, boxTex, fmt } from '../ui.js?v=0.99.102';
+import { CardView } from '../cards.js?v=0.99.102';
+import { DECK, rules, fortuneCard, dailySeed, todayCharm, today, helpDue, helpGiven } from '../meta.js?v=0.99.102';
+import { DECKS, Run } from '../core/run.js?v=0.99.102';
+import { CHARM, CHEER } from '../core/charms.js?v=0.99.102';
+import { GOD } from '../core/gods.js?v=0.99.102';
+import { bmOn, owned, BACKS, backShown, backOpen, buyBack, effBack, price, fortuneSeed, helpOn, track } from '../bmflow.js?v=0.99.102';
+import { toOAD } from '../exit.js?v=0.99.102';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }

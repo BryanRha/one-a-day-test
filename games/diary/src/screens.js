@@ -1,11 +1,11 @@
 // 화면들 — 홈 · 진행 맵 · 테마 노트(책장 · 꾸미기) · 스티커 서랍 · 상점 · 다이어리(달력)
-import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.99.101';
-import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.99.101';
-import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.99.101';
-import { inOAD, exitToOAD } from './oad.js?v=0.99.101';
-import * as A from './audio.js?v=0.99.101';
-import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.99.101';
-import { bm } from './oad_bm.js?v=0.99.101';
+import { NOTES, PAGES, PAGE_DONE, COUNT, img, nameOf, isFoil, SHOP, PACKS, BUNDLE, OBSTACLE_AT, stageCfg, MOODS, TAPES, PAPERS, PAGE_TPL, dailySet } from './data.js?v=0.99.102';
+import { S, save, day, dayKey, parseDay, missedDays, give, take, note } from './save.js?v=0.99.102';
+import { renderPage, openShare, miniHTML, fillMinis } from './page.js?v=0.99.102';
+import { inOAD, exitToOAD } from './oad.js?v=0.99.102';
+import * as A from './audio.js?v=0.99.102';
+import { $, sp, toast, modal, closeModal, DAYS, burst, praise, app, ICON, coin, moodSVG, esc, buzz } from './ui.js?v=0.99.102';
+import { bm } from './oad_bm.js?v=0.99.102';
 /* 원스토어 앱 안(원어데이 셸이 OAD_SHOT 을 줌): 웹뷰가 그림 저장 · 공유를 막아 '공유 카드 만들기'를 숨김 (대표 11-28) */
 const OS_IN = (() => { try { return parent !== window && !!parent.OAD_SHOT; } catch { return false; } })();
 
