@@ -4,7 +4,7 @@
 //   막는 법(한 곳): 원스토어 안(OS.looks)이면 셸 문서와 같은 주소 iframe(게임 · 너랑 · 안내 창) 안에서 틀을 벗기는 링크(새 창 · 최상위 창) 누름을 여기서 받음
 //     우리 주소 페이지(약관 · 환불 · 고객센터 …) → 앱 안에 덮는 창(iframe)으로 엶 · 바깥 주소 → 이동하지 않고 주소를 복사해 알려 줌 · 같은 페이지 #해시는 그대로
 //   window.open 은 바꾸지 않음(원스토어 SDK 가 쓸 수 있음) — 우리 코드가 바깥 주소를 열 때는 openOut() 을 씀 (전광판 링크 등)
-import * as OS from './onestore.js?v=0.99.105';
+import * as OS from './onestore.js?v=0.99.106';
 
 const S = { on: false, toast: null };
 const sameSite = u => u.origin === location.origin;

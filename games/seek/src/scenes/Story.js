@@ -1,14 +1,14 @@
 // 이야기 (Choices 식): 배경 · 인물 상반신(표정) · 이름표 말풍선 · 한 글자씩 · 선택지 → 다음 단계(hunt/evidence/toon)
-import { W, H } from '../config.js?v=0.99.105';
-import { T, C, btn, iconBtn } from '../ui.js?v=0.99.105';
-import { audio } from '../audio.js?v=0.99.105';
-import { goPrev } from '../nav.js?v=0.99.105';
-import { load, save } from '../save.js?v=0.99.105';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.105';
-import { advance } from '../replay.js?v=0.99.105';
-import { SPECIAL, spShown, spOwned, tasteLeft, spPrice, spUnlock, addCard } from '../special.js?v=0.99.105';
-import { failText } from '../bm.js?v=0.99.105';
-import { toast } from '../ui.js?v=0.99.105';
+import { W, H } from '../config.js?v=0.99.106';
+import { T, C, btn, iconBtn } from '../ui.js?v=0.99.106';
+import { audio } from '../audio.js?v=0.99.106';
+import { goPrev } from '../nav.js?v=0.99.106';
+import { load, save } from '../save.js?v=0.99.106';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.106';
+import { advance } from '../replay.js?v=0.99.106';
+import { SPECIAL, spShown, spOwned, tasteLeft, spPrice, spUnlock, addCard } from '../special.js?v=0.99.106';
+import { failText } from '../bm.js?v=0.99.106';
+import { toast } from '../ui.js?v=0.99.106';
 
 export class StoryScene extends Phaser.Scene {
   constructor() { super('Story'); }
