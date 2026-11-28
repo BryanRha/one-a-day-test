@@ -4,9 +4,9 @@
 //   합치기: 링 · 출석 날은 합집합(켜진 것은 안 꺼짐) · 게임 판 수는 큰 쪽 · 날짜는 늦은 쪽 · 이용권은 장부 합집합 · 설정은 늦게 바꾼 쪽
 //   흐름: 계정이 생기면 pull → 합침 → 기기에 씀 → (달라졌으면) push · 그 뒤 15초마다 바뀐 게 있으면 push · 화면을 떠날 때 한 번 · 충돌(409)이면 다시 받아 합쳐 올림
 //   점방 내 정보: 카카오 · 구글 계정만(게스트 안 됨) · 동의(기본 켬 · rules.js FORTUNE_ME_CLOUD_DEFAULT)일 때만 · 서버가 암호화해 저장 · 계산은 기기에서
-import * as R from './rules.js?v=0.99.103';
-import * as A from './account.js?v=0.99.103';
-import * as OS from './onestore.js?v=0.99.103';
+import * as R from './rules.js?v=0.99.104';
+import * as A from './account.js?v=0.99.104';
+import * as OS from './onestore.js?v=0.99.104';
 
 const DKEY = 'oad_days', SETAT = 'oad_set_at', MEK = 'oad_fortune_me', MEC = 'oad_fme_cloud';
 const js = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
