@@ -1,13 +1,13 @@
 // 홈: 메인 원정 · 오늘의 도전 · 아케이드 · 덱 · 미션 · 연속 출석 (카드마다 받을 보상 한 줄) · 들어가는 버튼은 모두 '입장'(QA 25)
-import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.104';
-import { T, C, fmt, panel, btn, iconBtn, pillBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.104';
-import { inOAD, exitToOAD } from '../oad.js?v=0.99.104';
-import { audio } from '../audio.js?v=0.99.104';
-import { load } from '../save.js?v=0.99.104';
-import * as M from '../meta.js?v=0.99.104';
-import * as BM from '../bmflow.js?v=0.99.104';
-import { guidePop } from '../guide.js?v=0.99.104';
-import { RUNES } from '../core/sim.js?v=0.99.104';
+import { W, H, TITLE, TITLE_EN } from '../config.js?v=0.99.105';
+import { T, C, fmt, panel, btn, iconBtn, pillBtn, rewardBlock, popup, toast } from '../pui.js?v=0.99.105';
+import { inOAD, exitToOAD } from '../oad.js?v=0.99.105';
+import { audio } from '../audio.js?v=0.99.105';
+import { load } from '../save.js?v=0.99.105';
+import * as M from '../meta.js?v=0.99.105';
+import * as BM from '../bmflow.js?v=0.99.105';
+import { guidePop } from '../guide.js?v=0.99.105';
+import { RUNES } from '../core/sim.js?v=0.99.105';
 
 export class HomeScene extends Phaser.Scene {
   constructor() { super('Home'); }

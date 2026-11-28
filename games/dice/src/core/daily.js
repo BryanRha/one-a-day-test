@@ -1,6 +1,6 @@
 // 오늘의 도전 판 만들기 (순수 함수 — 게임 · 봇 · 랭킹 상한 측정이 같은 것을 씀)
 //   날짜 글자(YYYY-MM-DD) → 시드 · 덱 5개 (모두 같은 날 = 같은 덱 · 같은 적 · 등급 1)
-import { RUNE_ORDER } from './sim.js?v=0.99.104';
+import { RUNE_ORDER } from './sim.js?v=0.99.105';
 
 export function dailyOf(day) {
   let h = 7; for (const ch of day) h = (h * 131 + ch.charCodeAt(0)) >>> 0;
