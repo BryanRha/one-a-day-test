@@ -1,23 +1,23 @@
 // 숨은 물건 맵 (Find It Out® 식): 고밀도 세로 맵 · 아래 아이콘 5칸(찾으면 다음 물건이 채워짐) · 실패·시간 제한 없음
 // + 이야기 단서: 분홍 테두리 아이콘 · 찾으면 서윤 혼잣말 · 물건마다 코인 · 힌트는 코인
-import { W, H } from '../config.js?v=0.99.99';
-import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.99';
-import { audio } from '../audio.js?v=0.99.99';
-import { goPrev } from '../nav.js?v=0.99.99';
-import { pushBack } from '../oad.js?v=0.99.99';
-import { load, save } from '../save.js?v=0.99.99';
-import { Viewer } from '../viewer.js?v=0.99.99';
-import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.99';
-import { starOnce } from '../cafe/state.js?v=0.99.99';
-import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.99';
+import { W, H } from '../config.js?v=0.99.100';
+import { T, C, btn, iconBtn, popup, toast } from '../ui.js?v=0.99.100';
+import { audio } from '../audio.js?v=0.99.100';
+import { goPrev } from '../nav.js?v=0.99.100';
+import { pushBack } from '../oad.js?v=0.99.100';
+import { load, save } from '../save.js?v=0.99.100';
+import { Viewer } from '../viewer.js?v=0.99.100';
+import { EPISODES, epNo, hero } from '../episodes.js?v=0.99.100';
+import { starOnce } from '../cafe/state.js?v=0.99.100';
+import { advance, passed, stepOf, replayResult, medal, TIERS } from '../replay.js?v=0.99.100';
 
-import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.99';
-import { hintOffer } from '../bmui.js?v=0.99.99';
+import { HINT_COST, roundEnd, owner, adLeft, adOn, watchAd, failText, peekPrice, buyPeek, PEEK_SEC, testOff, TEST_NOTE } from '../bm.js?v=0.99.100';
+import { hintOffer } from '../bmui.js?v=0.99.100';
 
 const SPAM = { n: 3, t: 2, lock: 3 };
 // 1~3화는 아래 칸 그림을 크게 (QA 시트 #6) — 11-16 '더 키워야': 5칸 196 은 이미 화면 폭을 다 써서, 1~3화는 한 번에 4칸 · 248 로 (4화부터 5칸 · 160) · 칸을 누르면 크게 보기(모든 화)
-// (뺌 11-28 대표) 1화는 10초 동안 못 찾으면 자리를 부드럽게 안내 (QA 시트 #2, 무료 · 힌트로 안 셈) — 다시 하기에서도 (1화를 이미 끝낸 사람은 다시 하기로만 1화에 들어갈 수 있어 안내를 볼 길이 없었음)
-export const BIG_EPS = 3, GUIDE = { sec: 10 }, TRAY = { big: { n: 4, box: 248, gap: 16, h: 446 }, small: { n: 5, box: 160, gap: 16, h: 358 } };
+// 처음 하는 1화 안내 (대표 11-28): 시작 1.2초 뒤 한 곳을 바로 보여 주고(찾는 법) · 그 뒤 10초 못 찾으면 한 번 더 · 모두 2번까지 (무료 · 힌트로 안 셈 · 다시 하기엔 없음) — 다시 하기에서도 (1화를 이미 끝낸 사람은 다시 하기로만 1화에 들어갈 수 있어 안내를 볼 길이 없었음)
+export const BIG_EPS = 3, GUIDE = { first: 1.2, sec: 10, max: 2 }, TRAY = { big: { n: 4, box: 248, gap: 16, h: 446 }, small: { n: 5, box: 160, gap: 16, h: 358 } };
 export class HuntScene extends Phaser.Scene {
   constructor() { super('Hunt'); }
   create(data) {
@@ -27,7 +27,7 @@ export class HuntScene extends Phaser.Scene {
     const again = passed(ep.id, 'hunt'); this.replay = again && stepOf(ep.id) === 'done'; this.fresh = again; if (!again) advance(ep.id, 'hunt');
     const prog = d.ep[ep.id] ||= { step: 'hunt' }; prog.found ||= []; save();
     Object.assign(this, { misses: [], lock: 0, t: 0, ended: false, paused: false, blur: null, got: 0, hints: 0, idle: 0, guides: 0, peeks: 0 });
-    const idx = EPISODES.indexOf(ep); this.big = idx < BIG_EPS; this.guideOn = false;   /* 1화 10초 자리 안내는 뺌 (대표 11-28: 단서 위치는 힌트 · 광고 · 미리 보기로) — guide() 는 남겨 둠 */
+    const idx = EPISODES.indexOf(ep); this.big = idx < BIG_EPS; this.guideOn = idx === 0 && !again; this.firstGuide = this.guideOn;   /* 처음 하는 1화만 (대표 11-28): 시작하자마자 한 곳을 바로 보여 줘 찾는 법을 익히고, 그 뒤 10초 못 찾으면 한 번 더 — 그다음은 힌트 · 광고 · 미리 보기 */
     // 순서: 일반 물건 사이사이에 단서 · 결정적 단서(last)는 맨 끝
     const normal = hu.items.filter(i => !i.clue).sort(() => Math.random() - 0.5), clues = hu.items.filter(i => i.clue && !i.last), last = hu.items.find(i => i.last);
     const q = [...normal]; clues.forEach((c, k) => q.splice(Math.min(q.length, 3 + k * 4), 0, c)); if (last) q.push(last);
@@ -91,7 +91,8 @@ export class HuntScene extends Phaser.Scene {
     }
   }
   update(time, delta) { if (this.ended || this.paused) return; const dt = Math.min(0.05, delta / 1000); const s0 = Math.floor(this.t); this.t += dt;
-    if (this.guideOn) { this.idle += dt; if (this.idle >= GUIDE.sec) { this.idle = 0; this.guide(); } } if (this.replay && Math.floor(this.t) !== s0 && this.progT) this.ui(); if (this.lock > 0) { this.lock -= dt; if (this.lock <= 0 && this.blur) { this.blur.destroy(); this.blur = null; } } }
+    if (this.firstGuide && this.t >= GUIDE.first) { this.firstGuide = false; this.idle = 0; this.guide(); }
+    if (this.guideOn && !this.firstGuide) { this.idle += dt; if (this.idle >= GUIDE.sec) { this.idle = 0; this.guide(); } } if (this.guides >= GUIDE.max) this.guideOn = false; if (this.replay && Math.floor(this.t) !== s0 && this.progT) this.ui(); if (this.lock > 0) { this.lock -= dt; if (this.lock <= 0 && this.blur) { this.blur.destroy(); this.blur = null; } } }
   tap(ip, p, later) {
     if (this.ended || this.paused) return; if (this.lock > 0) { audio.play('sfx_miss', { volume: 0.3 }); return; }
     const s = this.slots.find(s => s.it && (ip.x - s.it.x) ** 2 + (ip.y - s.it.y) ** 2 <= s.it.r ** 2);
@@ -159,7 +160,7 @@ export class HuntScene extends Phaser.Scene {
     this.tweens.add({ targets: ring, scale: it.r * 2.4 / 160, duration: 1400, repeat: 1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: s.c, scale: 1.1, duration: 220, yoyo: true, repeat: 1 });
     audio.play('sfx_hint', { volume: 0.4 });
-    toast(this, this.guides === 1 ? `「${it.n}」, 바로 이 근처예요 · 천천히 찾아봐요` : '반짝이는 곳 근처를 살펴봐요', 260);
+    toast(this, this.guides === 1 ? `아래 그림과 같은 물건을 찾아 눌러요 · 「${it.n}」은 바로 여기!` : `「${it.n}」, 반짝이는 곳 근처를 살펴봐요`, 260);
   }
   // 광고 보고 주요 단서 자리: 아래 칸의 단서(분홍)를 짚어 줌 · 칸에 단서가 없으면 물건 하나
   async clueAd() {

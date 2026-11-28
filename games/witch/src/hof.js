@@ -2,9 +2,9 @@
 //   2026-11-27 대표 결정: 로그인한 누구나 · 이어하기 · 응원 선물 · 골드를 쓴 판도 그대로 순위에 오름 (소장 조건 없음)
 //   점수 올리기: 결과 화면에서 bm.submitScore(점수, { assisted }) — assisted 는 기록용으로만 보냄(서버가 순위에 쓰지 않음)
 //   보기: bm.board() 상위 20 · 내 순위 강조 · 이름은 닉네임(최대 10자)
-import { W, H } from './config.js?v=0.99.99';
-import { txt, fmt, popup, scrollArea } from './ui.js?v=0.99.99';
-import { bm } from './oad_bm.js?v=0.99.99';
+import { W, H } from './config.js?v=0.99.100';
+import { txt, fmt, popup, scrollArea } from './ui.js?v=0.99.100';
+import { bm } from './oad_bm.js?v=0.99.100';
 
 export const hofShown = () => bm.info.ok;
 export const HOF_MSG = {
