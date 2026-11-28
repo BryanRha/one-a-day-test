@@ -865,3 +865,6 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #result .extra .tipl{line-height:1.35}
 /* v0.7.1 안내는 캐스트 말풍선이 (새 줄 없음) — 금빛 테두리 · TIP 표시 */
 #result .say .bub.tip{background:rgba(255,246,226,.97);box-shadow:0 0 0 1.5px var(--gold),0 10px 30px rgba(0,0,0,.4)}
+
+/* 원스토어 앱 안(셸이 html.in-os 를 붙임): 공유 단추 숨김 — 웹뷰가 공유 창을 막음 (대표 11-28 · 저장소 rhythm/game/src/style.css 와 같은 줄) */
+.in-os [data-s="share"], .in-os [data-b="share"] { display: none !important; }

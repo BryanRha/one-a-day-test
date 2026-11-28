@@ -391,3 +391,6 @@ body.reduce * { animation-duration: .01s !important; transition-duration: .01s !
 .lvcard .tools div { font-size: 12.5px; color: var(--ink2); display: flex; gap: 8px; } .lvcard .tools b { color: var(--ink); min-width: 70px; }
 /* 다시 온 손님 · 골목 인연 한 줄 (2026-11-02) */
 .recall { font: 700 12px/1.4 var(--sf); color: var(--gold); margin: 0 0 4px; letter-spacing: .01em; }
+
+/* 원스토어 앱 안(셸이 html.in-os 를 붙임): 공유 카드 단추 숨김 (대표 11-28) */
+.in-os [data-a="share"] { display: none !important; }

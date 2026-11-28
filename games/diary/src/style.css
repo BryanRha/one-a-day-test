@@ -454,3 +454,6 @@ body.gray { filter: grayscale(1); }
 .ehint .pdots { display: inline-flex; gap: 3px; } .ehint .pdots i { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid rgba(184,146,74,.7); } .ehint .pdots i.on { background: var(--gold2, #e3c98d); border-color: #b8924a; }
 .ehint.got { color: var(--ink2) !important; }
 .gstar { color: var(--gold); letter-spacing: 1px; }
+
+/* 원스토어 앱 안(셸이 html.in-os 를 붙임): 공유 카드 단추 숨김 — main.js · screens.js OS_IN 과 같은 뜻 (대표 11-28) */
+.in-os [data-p="share"] { display: none !important; }

@@ -620,3 +620,4 @@ html.still .ig .sheet.u-ofs, html.still .ig .u-ofs-badge { animation: none !impo
 #osShot button { min-width: 160px; height: 48px; border-radius: 24px; border: 0; background: #fff; color: #111; font: 600 1rem var(--u-font, system-ui); }
 /* 원스토어 앱 안: 그림 저장 · 링크 공유 단추 숨김 (대표 11-28 · oslinks.js 가 html.in-os) */
 .in-os [data-share], .in-os [data-sharecard], .in-os [data-tyshare], .in-os [data-tycard] { display: none !important; }
+.in-os [data-ow="save"], .in-os [data-ow="cmpsave"], .in-os [data-ow="link"] { display: none !important; }   /* 한 단어 카드 저장 · 비교 · 친구 부르기 (11-28) */

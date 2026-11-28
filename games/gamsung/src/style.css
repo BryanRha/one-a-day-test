@@ -315,3 +315,6 @@ body.dslim .poemp, body.dslim .hint { bottom: calc(var(--sb) + 132px); } body.wi
 .chip.jobc.zz { background: #3B2A20F0; color: #fff; padding: 3px 10px 3px 3px; font-size: 11px; } .chip.jobc.zz i { background: #ffffff26; width: 22px; height: 22px; font-size: 12px; } .chip.jobc.zz::after { border-top-color: #3B2A20F0; }
 /* 꾸미기: 가구 그림 = 실제 모델 (17번) · 옷 탭 (10번) */
 .fi i .fth { width: 62px; height: 62px; display: block; margin: -6px auto -4px; object-fit: contain; } .fi.wear i .sw { display: block; width: 34px; height: 40px; margin: 3px auto 5px; border-radius: 9px 9px 14px 14px; box-shadow: inset 0 -8px 0 #0000001f, 0 2px 0 var(--line); text-decoration: none; } .fi.wear.cur { outline: 2px solid var(--red); }
+
+/* 원스토어 앱 안(셸이 html.in-os 를 붙임): 공유 카드 단추 숨김 (대표 11-28) */
+.in-os #mSh { display: none !important; }
