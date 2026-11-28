@@ -1,9 +1,9 @@
 // 출석 보상 · 일일 미션 팝업 (지도에서 연다)
-import { W, H, TXT } from '../config.js?v=0.99.102';
-import { t } from '../i18n.js?v=0.99.102';
-import { audio } from '../audio.js?v=0.99.102';
-import { popup, button } from './widgets.js?v=0.99.102';
-import { DAILY_REWARDS, ALL_BONUS, dailyState, claimDaily, missions, claimMission, canClaimBonus, claimBonus, today } from '../missions.js?v=0.99.102';
+import { W, H, TXT } from '../config.js?v=0.99.103';
+import { t } from '../i18n.js?v=0.99.103';
+import { audio } from '../audio.js?v=0.99.103';
+import { popup, button } from './widgets.js?v=0.99.103';
+import { DAILY_REWARDS, ALL_BONUS, dailyState, claimDaily, missions, claimMission, canClaimBonus, claimBonus, today } from '../missions.js?v=0.99.103';
 
 const BOOST_ICON = { hammer: 'boost_hammer', shuffle: 'boost_shuffle', swap: 'boost_swap', moves: 'boost_moves' };
 const MISSION_ICON = {

@@ -3,8 +3,7 @@
 //   서버: /api/me — GET ?rank=<판>|top3|today (CDN 캐시 · 로그인 없음) · POST act 'rank'(start · submit · mine · gifts · claim) · 'nick'
 //   광고 · 결제 단추는 이 화면들에 두지 않음 (사업 bm.md 4-1 — 자랑하는 자리)
 //   app.js 가 init(ctx) 로 시트 · 토스트 · 계정 · 기록 함수를 넘겨 줌 (아래 보관 줄 함수는 ctx 없이도 동작 — tools/rank_check.mjs 가 node 에서 시험)
-import { ic, coin } from './ui.js?v=0.99.102';
-import * as LK from './oslinks.js?v=0.99.102';
+import { ic, coin } from './ui.js?v=0.99.103';
 
 /* ── 오프라인 보관 (판마다 마지막 제출 하나 · 다시 연결되면 한 번 · 마감 + 10분 지나면 버림) ── */
 const KQ = 'oad_rank_q', GRACE = 10 * 60e3;
@@ -273,6 +272,8 @@ export function slides() {
   const d = TOP;
   if (d && d.boards) for (const b of d.boards) { if (!X.G(b.game)) continue; const n = Math.min(3, b.top.length);
     b.top.slice(0, 3).forEach((x, k) => Q.rank.push({ kind: 'rank', key: 'r:' + b.board + ':' + k, icon: { game: b.game }, eb: `${titleOf(b.board)} · 이번 주 순위`, medal: k + 1, main: x.nick, tag: x.tag, right: sc(b.board, x.score), sayx: `${k + 1}위 ${x.nick} ${sc(b.board, x.score)}${UNIT[b.board] ? '' : '점'}`, go: { type: 'board', to: b.board }, k, n })); }
+  /* 이번 주 기록이 아직 없는 열린 판도 한 장씩 (대표 11-28 — 내가 열지 않은 게임도 모두): 누르면 그 판 순위표 */
+  if (d && Array.isArray(d.open)) { const has = new Set((d.boards || []).map(b => b.board)); for (const bd of d.open) { const g = gameOf(bd); if (has.has(bd) || !X.G(g)) continue; Q.rank.push({ kind: 'rank', key: 'r0:' + bd, icon: { game: g }, eb: `${titleOf(bd)} · 이번 주 순위`, main: '아직 1위가 없어요', right: '첫 1위 도전', go: { type: 'board', to: bd }, k: 0, n: 1 }); } }
   const T0 = TODAY, L = T0 && T0.luck;
   const lk = (key, eb, main, v, k) => ({ kind: 'luck', key, icon: { kind: 'luck' }, eb: '점방 · ' + eb, main, right: `평균 ${Number(v).toFixed(1)}점`, go: { type: 'luck' }, k, n: 3 });
   if (L && L.zodiac && L.zodiac[0]) Q.luck.push(lk('l:z', '오늘의 대박 띠', `${L.zodiac[0].name}띠`, L.zodiac[0].avg, 0));
@@ -323,7 +324,7 @@ function tickerGo(s) {
   if (g.type === 'game') return X.openGame(g.to);
   if (g.type === 'games') return X.toGames();
   if (g.type === 'tab' && ['today', 'fortune', 'neorang', 'box'].includes(g.to)) return X.goTab(g.to);
-  if (g.type === 'link' && /^https:\/\//.test(g.to || '')) return LK.openOut(g.to);   /* 원스토어 안이면 틀을 안 벗어나게 (oslinks.js) */
+  if (g.type === 'link' && /^https:\/\//.test(g.to || '')) return X.openOut ? X.openOut(g.to) : window.open(g.to, '_blank', 'noopener');   /* 원스토어 안이면 틀을 안 벗어나게 (app.js 가 oslinks openOut 을 넘김 · 이 파일은 node 시험에서도 불러서 브라우저 모듈을 직접 들이지 않음) */
   if (g.type === 'sheet') return X.openSheet(`<div class="intro"><h2>${esc(g.title || s.main)}</h2><p class="fsub">${esc(g.body || '')}</p><div class="stack"><button class="btn ghost" type="button" data-close>닫기</button></div></div>`, 'u');
 }
 const still = () => (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.classList.contains('still');
